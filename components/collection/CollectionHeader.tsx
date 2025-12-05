@@ -1,6 +1,5 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import { GlassCard } from '../common/GlassCard';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { View, Text, ScrollView, Pressable, Platform, StyleSheet } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 interface CollectionHeaderProps {
   categories: string[];
@@ -11,53 +10,199 @@ interface CollectionHeaderProps {
 
 export function CollectionHeader({ categories, selectedCategory, onSelectCategory, categoryCounts }: CollectionHeaderProps) {
   return (
-    <GlassCard className="p-6 mb-6 rounded-[32px]" variant="dark" intensity={50}>
-      <View className="mb-4">
-        <View className="flex-row items-center justify-between mb-5">
-          <View className="flex-row items-center gap-3">
-            <View className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center shadow-lg">
-              <Ionicons name="library" size={24} color="#fff" />
-            </View>
-            <Text className="text-white text-3xl font-bold tracking-tight">Collector</Text>
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <View style={styles.titleRow}>
+          <View style={styles.iconContainer}>
+            <MaterialIcons name="collections" size={24} color="rgba(255, 255, 255, 0.87)" />
           </View>
-          <View className="flex-row items-center gap-3">
-            <Pressable className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center active:bg-white/10">
-              <Ionicons name="search" size={22} color="#fff" />
-            </Pressable>
-            <Pressable className="w-12 h-12 rounded-full bg-white/5 border border-white/10 items-center justify-center active:bg-white/10">
-              <Ionicons name="add" size={24} color="#fff" />
-            </Pressable>
-          </View>
+          <Text style={styles.title}>Collector</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-3">
-            {categories.map((category) => {
-              const count = categoryCounts[category] || 0;
-              const isSelected = selectedCategory === category;
-              return (
-                <Pressable
-                  key={category}
-                  onPress={() => onSelectCategory(category)}
-                  className={`px-6 py-3 rounded-full border ${isSelected ? 'bg-white border-white' : 'bg-white/5 border-white/10'}`}
-                >
-                  <View className="flex-row items-center gap-2">
-                    <Text className={`text-sm font-bold tracking-wide ${isSelected ? 'text-black' : 'text-white'}`}>
-                      {category}
-                    </Text>
-                    {count > 0 && (
-                      <View className={`px-2 py-0.5 rounded-full ${isSelected ? 'bg-black/10' : 'bg-white/10'}`}>
-                        <Text className={`text-[10px] font-bold ${isSelected ? 'text-black/60' : 'text-white/60'}`}>
-                          {count}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
+        <View style={styles.actionsRow}>
+          <Pressable style={styles.actionButton}>
+            <MaterialIcons name="search" size={22} color="rgba(255, 255, 255, 0.87)" />
+          </Pressable>
+          <Pressable style={styles.actionButton}>
+            <MaterialIcons name="add" size={24} color="rgba(255, 255, 255, 0.87)" />
+          </Pressable>
+        </View>
       </View>
-    </GlassCard>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesContainer}
+      >
+        {categories.map((category) => {
+          const count = categoryCounts[category] || 0;
+          const isSelected = selectedCategory === category;
+          return (
+            <Pressable
+              key={category}
+              onPress={() => onSelectCategory(category)}
+              style={[
+                styles.categoryButton,
+                isSelected && styles.categoryButtonActive
+              ]}
+            >
+              <View style={styles.categoryContent}>
+                <Text style={[
+                  styles.categoryText,
+                  isSelected && styles.categoryTextActive
+                ]}>
+                  {category}
+                </Text>
+                {count > 0 && (
+                  <View style={[
+                    styles.countBadge,
+                    isSelected && styles.countBadgeActive
+                  ]}>
+                    <Text style={[
+                      styles.countText,
+                      isSelected && styles.countTextActive
+                    ]}>
+                      {count}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        backgroundColor: '#1E1E1E',
+        elevation: 2,
+      },
+    }),
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  title: {
+    color: 'rgba(255, 255, 255, 0.87)',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Roboto',
+    }),
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  categoryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  categoryButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  categoryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryText: {
+    color: 'rgba(255, 255, 255, 0.87)',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Roboto',
+    }),
+  },
+  categoryTextActive: {
+    color: '#121212',
+  },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  countBadgeActive: {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  countText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Roboto',
+    }),
+  },
+  countTextActive: {
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+});

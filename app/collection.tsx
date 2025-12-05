@@ -1,4 +1,4 @@
-import { View, ScrollView, RefreshControl } from 'react-native';
+import { View, ScrollView, RefreshControl, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { CollectionHeader } from '../components/collection/CollectionHeader';
@@ -47,32 +47,63 @@ export default function CollectionScreen() {
   }, []);
 
   return (
-    <View className="flex-1 bg-bg-dark">
+    <View style={styles.container}>
       <LinearGradient
-        colors={['#1a1b2e', '#13131f', '#0f0f16']}
-        className="absolute inset-0"
+        colors={['#121212', '#1E1E1E', '#121212']}
+        style={StyleSheet.absoluteFill}
       />
-      <SafeAreaView style={{ paddingTop: top }} className="flex-1">
+      <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 100, paddingLeft: 20, paddingRight: 20 }}
-          refreshControl={<RefreshControl tintColor="#fff" refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-            <View className="pt-2">
-                <CollectionHeader 
-                    categories={categories}
-                    selectedCategory={selectedCategory}
-                    onSelectCategory={setSelectedCategory}
-                    categoryCounts={categoryCounts}
-                />
-            </View>
-
-            <FolderList 
-                folders={folders}
-                folderPreviews={folderPreviews}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl 
+              tintColor="#fff" 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={['#6200EE']}
+              progressBackgroundColor="#1E1E1E"
             />
+          }
+        >
+          <View style={styles.headerContainer}>
+            <CollectionHeader 
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              categoryCounts={categoryCounts}
+            />
+          </View>
+
+          <FolderList 
+            folders={folders}
+            folderPreviews={folderPreviews}
+          />
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#121212',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingTop: 8,
+  },
+  headerContainer: {
+    marginBottom: 8,
+  },
+});
