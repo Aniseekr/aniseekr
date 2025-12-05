@@ -43,11 +43,12 @@ export function GenreCarousel({ data, onSelect }: Props) {
       keyExtractor={keyExtractor}
       getItemLayout={itemLayout}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 18 }}
-      ItemSeparatorComponent={() => <View className="w-1" />}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingVertical: 8      }}
+      ItemSeparatorComponent={() => <View className="w-4" />}
       snapToInterval={304}
       decelerationRate={0.998}
       scrollEventThrottle={16}
+      style={{ minHeight: 450 }}
     />
   );
 }

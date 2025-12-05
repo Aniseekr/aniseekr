@@ -13,21 +13,22 @@ type Props = {
 function RecommendationItem({ item, onSelect }: { item: Recommendation; onSelect?: (id: string) => void }) {
   return (
     <Pressable onPress={() => onSelect?.(item.id)} className="w-56 mr-3">
-      <GlassCard className="overflow-hidden">
-      <Image
-        source={{ uri: item.anime.image }}
-        className="w-full h-64 bg-black/20"
-        contentFit="cover"
-        transition={120}
-      />
-      <View className="p-3 gap-1">
-        <Text className="text-white font-semibold" numberOfLines={2}>
-          {item.anime.title}
-        </Text>
-        <Text className="text-white/70 text-xs" numberOfLines={2}>
-          {item.reason}
-        </Text>
-      </View>
+      <GlassCard style={{ overflow: 'hidden' }}>
+        <Image
+          source={{ uri: item.anime.image }}
+          style={{ width: '100%', height: 256 }}
+          className="bg-black/20"
+          contentFit="cover"
+          transition={120}
+        />
+        <View className="p-3 gap-1">
+          <Text className="text-white font-semibold" numberOfLines={2}>
+            {item.anime.title}
+          </Text>
+          <Text className="text-white/70 text-xs" numberOfLines={2}>
+            {item.reason}
+          </Text>
+        </View>
       </GlassCard>
     </Pressable>
   );

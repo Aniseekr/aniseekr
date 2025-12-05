@@ -81,19 +81,17 @@ export default function HomeRateScreen() {
           <Text className="text-white/80">Loading genres...</Text>
         </View>
       ) : listMode ? (
-        <FlatList
-          data={state.availableGenres}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View className="mb-4">
+        <View>
+          {state.availableGenres.map((item) => (
+            <View key={item.id} className="mb-4">
               <GenreCard title={item.displayName} image={item.image} />
             </View>
-          )}
-          scrollEnabled={false}
-          ItemSeparatorComponent={() => <View className="h-2" />}
-        />
+          ))}
+        </View>
       ) : (
-        <GenreCarousel data={state.availableGenres} />
+        <View style={{ minHeight: 450 }}>
+          <GenreCarousel data={state.availableGenres} />
+        </View>
       )}
     </View>
   );
@@ -125,7 +123,7 @@ export default function HomeRateScreen() {
       keyExtractor={(item) => item.id}
       renderItem={({ item, index }) => <TrendCard anime={item} rank={index + 1} />}
       ItemSeparatorComponent={() => <View className="h-3" />}
-      contentContainerStyle={{ paddingVertical: 12, paddingHorizontal: 16 }}
+      contentContainerStyle={{ paddingVertical: 12, paddingHorizontal: 16, paddingBottom: 100 }}
       refreshControl={
         <RefreshControl
           tintColor="#fff"
@@ -197,7 +195,7 @@ export default function HomeRateScreen() {
         {apiStatus}
 
         {state.viewMode === "trend" ? (
-          <View className="flex-1">{trendContent}</View>
+          trendContent
         ) : state.viewMode === "tracking" ? (
           trackingContent
         ) : (
