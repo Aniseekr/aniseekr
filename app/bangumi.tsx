@@ -2,9 +2,12 @@ import { View, ScrollView, RefreshControl, Dimensions, Text } from 'react-native
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo } from 'react';
 import { SeasonHeader } from '../components/bangumi/SeasonHeader';
-import { WeeklyCalendar, Anime } from '../components/bangumi/WeeklyCalendar';
+import { WeeklyCalendar } from '../components/bangumi/WeeklyCalendar';
+import { Anime } from '../components/rate/types';
 import { AnimeList, AnimeRowCard } from '../components/bangumi/AnimeList';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AnimeRepository } from '../libs/anime-repository';
+import { useEffect } from 'react';
 
 type ViewMode = 'calendar' | 'list';
 type FilterMode = 'all' | 'tracking';
@@ -69,14 +72,49 @@ export default function BangumiScreen() {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [groupedAnime, setGroupedAnime] = useState<DailyAnime[]>([]);
 
+  useEffect(() => {
+    onRefresh();
+  }, [selectedSeason, selectedYear]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setIsLoading(true);
-    // TODO: Fetch seasonal anime from API
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setRefreshing(false);
-    setIsLoading(false);
-  }, []);
+    try {
+        const rawAnime = await AnimeRepository.getSeasonalAnime(selectedSeason.toUpperCase(), selectedYear);
+        
+        // Group by Day
+        const days = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+        const grouped: { [key: string]: Anime[] } = {};
+        days.forEach(d => grouped[d] = []);
+        grouped['Unknown'] = [];
+
+        rawAnime.forEach((anime: any) => { // Cast to any to access nextAiringEpisode if type is loose, or rely on Anime interface update
+            // Check nextAiringEpisode
+            if (anime.nextAiringEpisode && anime.nextAiringEpisode.airingAt) {
+                const date = new Date(anime.nextAiringEpisode.airingAt * 1000);
+                const dayIndex = date.getDay();
+                const dayName = days[dayIndex];
+                grouped[dayName].push(anime);
+            } else {
+                 // Try fallback or put in Unknown
+                 grouped['Unknown'].push(anime);
+            }
+        });
+
+        const dailyAnimeList: DailyAnime[] = [
+             ...days.map(day => ({ day, anime: grouped[day] })),
+             { day: 'Unknown', anime: grouped['Unknown'] }
+        ];
+
+        setGroupedAnime(dailyAnimeList);
+
+    } catch (e) {
+        console.error("Failed to fetch bangumi", e);
+    } finally {
+        setRefreshing(false);
+        setIsLoading(false);
+    }
+  }, [selectedSeason, selectedYear]);
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === 'calendar' ? 'list' : 'calendar'));

@@ -1,14 +1,28 @@
 export type ViewMode = "discovery" | "tracking" | "trend";
 
-export type Anime = {
+export interface Anime {
   id: string;
   title: string;
   image: string;
+  bannerImage?: string;
   rank?: number;
   tags?: string[];
   mood?: string;
+  description?: string;
   durationMinutes?: number;
-};
+  studios?: string[];
+  startDate?: {
+    year: number | null;
+    month: number | null;
+    day: number | null;
+  };
+  status?: string;
+  format?: string;
+  nextAiringEpisode?: {
+    airingAt: number;
+    episode: number;
+  };
+}
 
 export type Genre = {
   id: string;

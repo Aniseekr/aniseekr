@@ -1,122 +1,106 @@
-import { JikanClient } from "./jikan-client";
+import { AniListClient, AniListAnime } from "./anilist-client";
 import { Anime, Genre, Photo } from "../components/rate/types";
-
-// Types for Jikan API Responses
-interface JikanResponse<T> {
-  data: T;
-  pagination: {
-    last_visible_page: number;
-    has_next_page: boolean;
-  };
-}
-
-interface JikanAnime {
-  mal_id: number;
-  title: string;
-  images: {
-    jpg: { image_url: string; large_image_url: string };
-    webp: { image_url: string; large_image_url: string };
-  };
-  score: number;
-  genres: Array<{ mal_id: number; name: string }>;
-  themes: Array<{ mal_id: number; name: string }>;
-  demographics: Array<{ mal_id: number; name: string }>;
-  duration: string;
-  synopsis: string;
-}
-
-interface JikanGenre {
-  mal_id: number;
-  name: string;
-  count: number;
-}
 
 export class AnimeRepository {
   static async getTopAnime(page = 1): Promise<Anime[]> {
-    const response = await JikanClient.get<JikanResponse<JikanAnime[]>>("/top/anime", { page });
-    return response.data.map(this.mapJikanToAnime);
+    const data = await AniListClient.getTopAnime(page);
+    return data.map(this.mapAniListToAnime);
   }
 
-  static async getSeasonalAnime(page = 1): Promise<Anime[]> {
-    const response = await JikanClient.get<JikanResponse<JikanAnime[]>>("/seasons/now", { page, sfw: true });
-    return response.data.map(this.mapJikanToAnime);
+  static async getSeasonalAnime(season?: string, year?: number, page = 1): Promise<Anime[]> {
+    // Determine current season and year if not provided
+    const date = new Date();
+    const currentMonth = date.getMonth();
+    const currentYear = date.getFullYear();
+    
+    let targetSeason = season;
+    if (!targetSeason) {
+        if (currentMonth >= 2 && currentMonth <= 4) targetSeason = "SPRING";
+        else if (currentMonth >= 5 && currentMonth <= 7) targetSeason = "SUMMER";
+        else if (currentMonth >= 8 && currentMonth <= 10) targetSeason = "FALL";
+        else targetSeason = "WINTER";
+    }
+
+    const targetYear = year || currentYear;
+
+    const data = await AniListClient.getSeasonalAnime(targetSeason, targetYear, page);
+    return data.map(this.mapAniListDetailToAnime);
   }
 
   static async searchAnime(query: string, page = 1): Promise<Anime[]> {
-    const response = await JikanClient.get<JikanResponse<JikanAnime[]>>("/anime", { q: query, page, sfw: true });
-    return response.data.map(this.mapJikanToAnime);
+    const data = await AniListClient.searchAnime(query, page);
+    return data.map(this.mapAniListToAnime);
   }
 
-  static async getAnimeByGenre(genreId: number, page = 1): Promise<Anime[]> {
-    const response = await JikanClient.get<JikanResponse<JikanAnime[]>>("/anime", { genres: genreId, page, sfw: true });
-    return response.data.map(this.mapJikanToAnime);
+  static async getAnimeByGenre(genre: string, page = 1): Promise<Anime[]> {
+    const data = await AniListClient.getAnimeByGenre(genre, page);
+    return data.map(this.mapAniListToAnime);
   }
 
   static async getGenres(): Promise<Genre[]> {
-    const response = await JikanClient.get<JikanResponse<JikanGenre[]>>("/genres/anime");
-    const genres = await Promise.all(
-      response.data.map(async (g) => {
-        // Fetch a sample anime from this genre to get an image
+    const genres = await AniListClient.getGenres();
+    // Helper to get image for genre
+    const genresWithImages: Genre[] = await Promise.all(
+      genres.slice(0, 20).map(async (name) => { // Limit to 20 to avoid rate limits
         try {
-          const animeResponse = await JikanClient.get<JikanResponse<JikanAnime[]>>(
-            "/anime",
-            { genres: g.mal_id, page: 1, sfw: true }
-          );
-          const sampleAnime = animeResponse.data?.[0];
-          if (sampleAnime) {
-            const image = sampleAnime.images?.webp?.large_image_url || 
-                         sampleAnime.images?.jpg?.large_image_url || 
-                         sampleAnime.images?.webp?.image_url ||
-                         sampleAnime.images?.jpg?.image_url ||
-                         "";
-            console.log(`✅ Genre ${g.name}: Found image ${image ? image.substring(0, 50) + '...' : 'NONE'}`);
-            return {
-              id: String(g.mal_id),
-              displayName: g.name,
-              image,
-            };
-          } else {
-            console.warn(`⚠️ Genre ${g.name}: No anime found in response`);
-            return {
-              id: String(g.mal_id),
-              displayName: g.name,
-              image: "",
-            };
-          }
-        } catch (error) {
-          console.warn(`❌ Failed to fetch image for genre ${g.name}:`, error);
+          const anime = await AniListClient.getAnimeByGenre(name, 1, 1);
+          const image = anime[0]?.coverImage?.extraLarge || anime[0]?.coverImage?.large || "";
           return {
-            id: String(g.mal_id),
-            displayName: g.name,
+            id: name,
+            displayName: name,
+            image,
+          };
+        } catch (e) {
+          return {
+            id: name,
+            displayName: name,
             image: "",
           };
         }
       })
     );
-    // Log summary
-    const withImages = genres.filter(g => g.image && g.image.trim() !== "").length;
-    console.log(`📊 Loaded ${genres.length} genres, ${withImages} with images`);
-    return genres;
+    return genresWithImages;
+  }
+
+  static async getAnimeDetails(id: string): Promise<Anime> {
+    const data = await AniListClient.getAnimeDetails(Number(id));
+    return this.mapAniListDetailToAnime(data);
   }
 
   // --- Mappers ---
 
-  private static mapJikanToAnime(item: JikanAnime): Anime {
-    const tags = [
-      ...(item.genres?.map((g) => g.name) || []),
-      ...(item.themes?.map((t) => t.name) || []),
-      ...(item.demographics?.map((d) => d.name) || []),
-    ];
-
+  private static mapAniListToAnime(item: AniListAnime): Anime {
     return {
-      id: String(item.mal_id),
-      title: item.title,
-      image: item.images.webp.large_image_url || item.images.jpg.large_image_url,
-      rank: item.score, // Using score as rank for now
-      tags: tags.slice(0, 3), // Top 3 tags
-      durationMinutes: 24, // Approximation or parse `item.duration`
-      // Extra fields for Photo logic
-      mood: item.synopsis, // Mapping synopsis to mood temporarily for types compatibility if needed
+      id: String(item.id),
+      title: item.title.english || item.title.romaji || item.title.native || "Unknown Title",
+      image: item.coverImage.extraLarge || item.coverImage.large,
+      rank: item.averageScore || 0,
+      tags: item.genres.slice(0, 3), 
+      mood: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + "..." : "", 
+      durationMinutes: item.duration || 24,
+    };
+  }
+
+  private static mapAniListDetailToAnime(item: AniListAnime): Anime {
+    // Defines a richer object if needed, for now reusing Anime type but ideally we extend it
+    // I should probably extend the Anime type in types.ts too, but for now passing extra data via 'mood' or just mapping basics.
+    // To do it right, I will stick to Anime type but ensure it has what we need or update types.ts.
+    // The current Anime type is minimal. I'll stick to it conformant to the interface.
+    // We should rely on a separate specific type for details if checking types.ts showed limitations.
+    // However, I will rely on the mapped object potentially having more fields if I used 'any' or intersection, 
+    // but Typescript will complain.
+    // Let's return Anime for now, but I will assume we might cast it in the View or update Type later.
+    return {
+      id: String(item.id),
+      title: item.title.english || item.title.romaji || item.title.native || "Unknown Title",
+      image: item.coverImage.extraLarge || item.coverImage.large,
+      rank: item.averageScore || 0,
+      tags: item.genres,
+      mood: item.description ? item.description : "", // Full description
+      durationMinutes: item.duration || 24,
+      // We are missing fields like 'streaming', 'relations' in the base Anime type.
+      // I'll add them to the implementation even if type doesn't say so, 
+      // or better: I will update types.ts in the next step.
     };
   }
 
@@ -124,11 +108,12 @@ export class AnimeRepository {
     return {
       id: anime.id,
       url: anime.image,
-      userId: "jikan",
+      userId: "anilist",
       title: anime.title,
       tags: anime.tags,
       score: anime.rank,
-      year: 2024, // Placeholder if Anime type doesn't have it yet, or add it to Anime type
+      year: new Date().getFullYear(), // Placeholder
+      type: "Anime",
     };
   }
 }

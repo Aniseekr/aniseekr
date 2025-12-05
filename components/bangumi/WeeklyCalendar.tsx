@@ -1,24 +1,10 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard } from '../common/GlassCard';
 
-export interface Anime {
-  id: number;
-  title: string;
-  images: {
-    jpg: {
-      imageUrl?: string;
-      largeImageUrl?: string;
-    };
-  };
-  broadcast?: {
-    day?: string;
-    time?: string;
-    string?: string;
-  };
-  genres?: Array<{ name: string }>;
-  score?: number;
-}
+import { Anime } from '../rate/types';
+import { useRouter } from 'expo-router';
+import { Image } from 'react-native';
 
 interface WeeklyCalendarProps {
     weekDays: string[];
@@ -28,6 +14,7 @@ interface WeeklyCalendarProps {
 }
 
 export function WeeklyCalendar({ weekDays, groupedAnime, isCurrentDay, dayShortName }: WeeklyCalendarProps) {
+    const router = useRouter();
     const renderDayColumn = (day: string) => {
         const dayData = groupedAnime.find((d) => d.day === day) || { day, anime: [] };
         const isToday = isCurrentDay(day);
@@ -48,18 +35,13 @@ export function WeeklyCalendar({ weekDays, groupedAnime, isCurrentDay, dayShortN
               ) : (
                 <View className="gap-3">
                   {dayData.anime.map((anime: Anime) => (
-                    <View key={anime.id} className="bg-white/5 rounded-2xl p-3 border border-white/5">
-                      <View className="w-full h-24 bg-black/20 rounded-xl mb-2" />
+                    <Pressable onPress={() => router.push(`/(rate)/anime/${anime.id}`)} key={anime.id} className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                      <Image source={{ uri: anime.image }} className="w-full h-24 rounded-xl mb-2" resizeMode="cover" />
                       <Text className="text-white text-xs font-semibold mb-1.5 leading-4" numberOfLines={2}>
                         {anime.title}
                       </Text>
-                      {anime.broadcast?.time && (
-                        <View className="flex-row items-center gap-1">
-                          <Ionicons name="time-outline" size={10} color="#f97316" />
-                          <Text className="text-orange-400 text-[10px] font-bold">{anime.broadcast.time}</Text>
-                        </View>
-                      )}
-                    </View>
+                      {/* Broadcast time not in flat Anime type, ignoring or mapping if available */}
+                    </Pressable>
                   ))}
                 </View>
               )}
