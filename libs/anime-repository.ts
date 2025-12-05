@@ -87,7 +87,10 @@ export class AnimeRepository {
       id: anime.id,
       url: anime.image,
       userId: "jikan",
-      // attaching extra data if needed by extending Photo type later
+      title: anime.title,
+      tags: anime.tags,
+      score: anime.rank,
+      year: 2024, // Placeholder if Anime type doesn't have it yet, or add it to Anime type
     };
   }
 }

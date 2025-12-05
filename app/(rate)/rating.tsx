@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, Pressable, Text, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PhotoCard } from '../../components/rate/PhotoCard';
@@ -7,6 +7,7 @@ import { Photo } from '../../components/rate/types';
 import { AnimeRepository } from '../../libs/anime-repository';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard } from '../../components/common/GlassCard';
+import { RatingInfoOverlay } from '../../components/rate/RatingInfoOverlay';
 
 const MAX_VISIBLE_CARDS = 3;
 const CARD_SPACING = 8;
@@ -76,24 +77,49 @@ export default function RatingScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#050505' }} className="flex-1">
-      {/* Header */}
-      <View className="absolute top-0 left-0 right-0 z-50" style={{ paddingTop: top }}>
-        <View className="flex-row items-center justify-between px-5 py-3">
-          <Pressable onPress={handleClose} className="w-10 h-10 rounded-3xl bg-white/10 items-center justify-center">
-            <Ionicons name="close" size={20} color="#fff" />
-          </Pressable>
-          <View className="flex-row items-center gap-2">
-            <GlassCard className="px-4 py-2">
-              <Text className="text-white text-sm font-semibold">
-                {loading ? "Loading..." : `${currentIndex + 1} / ${photos.length}`}
-              </Text>
+      {/* Header & Filters */}
+      <View className="absolute top-0 left-0 right-0 z-50">
+         {/* Top Bar */}
+         <View className="flex-row items-center justify-between px-4 pb-2" style={{ paddingTop: top + 10 }}>
+            {/* Close */}
+            <Pressable onPress={handleClose} className="w-10 h-10 rounded-full bg-black/20 items-center justify-center">
+              <Ionicons name="close" size={24} color="#fff" />
+            </Pressable>
+
+            {/* Center Status */}
+            <GlassCard className="flex-row items-center gap-2 px-3 py-1.5 rounded-full" intensity={20}>
+               <Text className="text-white font-bold text-sm">{loading ? "..." : `${currentIndex + 1}`}</Text>
+               <Ionicons name="swap-horizontal" size={14} color="#fff" />
             </GlassCard>
-          </View>
-        </View>
+
+            {/* Right Actions */}
+            <View className="flex-row items-center gap-3">
+               <Pressable className="w-10 h-10 rounded-full bg-black/20 items-center justify-center">
+                  <Ionicons name="sparkles" size={20} color="#fff" />
+               </Pressable>
+               <Pressable className="w-10 h-10 rounded-full bg-black/20 items-center justify-center">
+                  <Ionicons name="eye" size={22} color="#fff" />
+               </Pressable>
+               <Pressable className="w-10 h-10 rounded-full bg-black/20 items-center justify-center">
+                  <Ionicons name="folder-open" size={20} color="#fff" />
+               </Pressable>
+            </View>
+         </View>
+
+         {/* Genre Pills */}
+         <View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 10 }}>
+               {["All", "Action", "Adventure", "Comedy", "Drama", "Sci-Fi", "Fantasy"].map((genre, i) => (
+                  <Pressable key={genre} className={`px-4 py-1.5 rounded-full ${i === 1 ? 'bg-zinc-800' : 'bg-black/20'} border border-white/10`}>
+                     <Text className="text-white/90 text-sm font-medium">{genre}</Text>
+                  </Pressable>
+               ))}
+            </ScrollView>
+         </View>
       </View>
 
-      {/* Card Stack */}
-      <View className="flex-1 items-center justify-center" style={{ paddingTop: top + 60, paddingBottom: bottom + 120 }}>
+      {/* Card Stack (Full Screen) */}
+      <View className="flex-1 bg-zinc-900">
         {loading ? (
            <View className="items-center justify-center flex-1">
              <Text className="text-white/80 text-lg">Loading Anime...</Text>
@@ -106,22 +132,27 @@ export default function RatingScreen() {
             </Pressable>
           </View>
         ) : (
-          <View className="w-full h-full items-center justify-center" style={{ position: 'relative' }}>
+          <View className="flex-1 w-full relative">
             {visibleCardIndices.map((photoIndex, stackIndex) => {
               const photo = photos[photoIndex];
               const isTopCard = stackIndex === 0;
 
+              // Full screen stack logic
               return (
                 <View
                   key={`${photo.id}-${photoIndex}`}
                   style={{
                     position: 'absolute',
+                    top: 0, bottom: 0, left: 0, right: 0,
                     zIndex: MAX_VISIBLE_CARDS - stackIndex,
                     transform: [
-                      { translateY: stackIndex * CARD_SPACING },
-                      { scale: 1 - stackIndex * 0.05 },
+                      // Slight scale down for cards behind
+                      { scale: 1 - stackIndex * 0.02 },
+                      // Slight downward offset for cards behind (optional, or keep centered)
+                      // { translateY: stackIndex * 10 }, 
                     ],
-                    opacity: 1 - stackIndex * 0.1,
+                    // Don't fade out too much, keep it visible behind
+                    opacity: 1, 
                   }}
                 >
                   <PhotoCard
@@ -137,22 +168,45 @@ export default function RatingScreen() {
         )}
       </View>
 
-      {/* Bottom Action Buttons */}
-      <View className="absolute bottom-0 left-0 right-0 z-50" style={{ paddingBottom: bottom + 20 }}>
-        <View className="flex-row justify-center gap-6 px-5">
-          <Pressable
-            onPress={() => handleSwipe('left')}
-            className="w-16 h-16 rounded-3xl bg-white/10 items-center justify-center"
-          >
-            <Ionicons name="close" size={28} color="#fff" />
-          </Pressable>
-          <Pressable
-            onPress={() => handleSwipe('right')}
-            className="w-16 h-16 rounded-3xl bg-white/10 items-center justify-center"
-          >
-            <Ionicons name="heart" size={28} color="#fff" />
-          </Pressable>
-        </View>
+      {/* Overlays (Info & Buttons) */}
+      <View pointerEvents="box-none" className="absolute bottom-0 left-0 right-0 z-50 pb-8">
+          {photos.length > 0 && (
+             <RatingInfoOverlay 
+                photo={photos[currentIndex]} 
+                onClose={() => console.log("Close overlay")}
+                onMoreDetails={() => console.log("More details")}
+             />
+          )}
+          
+          {/* Bottom Action Buttons (3 Buttons) */}
+          <View className="flex-row justify-center items-center gap-8 mt-4 pt-4">
+             {/* Skip (Cross) */}
+             <Pressable
+                onPress={() => handleSwipe('left')}
+                className="w-14 h-14 rounded-full bg-white shadow-lg items-center justify-center"
+                style={{ shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 }}
+             >
+                <Ionicons name="close" size={28} color="#000" />
+             </Pressable>
+
+             {/* Like (Flame) - Main Button */}
+             <Pressable
+                onPress={() => handleSwipe('right')}
+                className="w-20 h-20 rounded-full bg-orange-500 shadow-xl items-center justify-center border-4 border-white/10"
+                style={{ shadowColor: '#F97316', shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 }}
+             >
+                <Ionicons name="flame" size={40} color="#fff" />
+             </Pressable>
+
+             {/* Check (Alt Like) */}
+             <Pressable
+                onPress={() => handleSwipe('right')}
+                className="w-14 h-14 rounded-full bg-white shadow-lg items-center justify-center"
+                style={{ shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 }}
+             >
+                <Ionicons name="checkmark" size={28} color="#000" />
+             </Pressable>
+          </View>
       </View>
     </SafeAreaView>
   );

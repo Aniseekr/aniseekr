@@ -158,7 +158,7 @@ export function PhotoCard({ photo, index, isTop, onSwipe, onLongPress, offset }:
       <GestureDetector gesture={composed}>
         <AnimatedPressable
           style={animatedStyle}
-          className="w-[88%] aspect-[9/16] rounded-2xl overflow-hidden bg-black/20"
+          className="w-full h-full bg-zinc-900" 
         >
           <Image
             source={{ uri: photo.url }}

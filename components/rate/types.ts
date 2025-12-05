@@ -26,6 +26,13 @@ export type Photo = {
   id: string;
   url: string;
   userId: string;
+  title?: string;
+  tags?: string[];
+  score?: number;
+  year?: number;
+  type?: string;
+  jpTitle?: string;
+  enTitle?: string;
 };
 
 export type AIRecommendation = {
