@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { hapticsBridge } from "../../modules/haptics/hapticsBridge";
 import { Photo } from "./types";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Props = {
   photo: Photo;
@@ -19,19 +20,27 @@ type Props = {
   isTop: boolean;
   onSwipe: (direction: "left" | "right") => void;
   onLongPress?: () => void;
+  offset?: { x: number; y: number };
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function PhotoCard({ photo, index, isTop, onSwipe, onLongPress }: Props) {
+export function PhotoCard({ photo, index, isTop, onSwipe, onLongPress, offset }: Props) {
   const [blurEnabled, setBlurEnabled] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
+  const translateX = useSharedValue(offset?.x || 0);
+  const translateY = useSharedValue(offset?.y || 0);
   const scale = useSharedValue(1);
   const pressScale = useSharedValue(1);
   const rotate = useSharedValue(0);
   const hasThresholdHaptic = useSharedValue(false);
+
+  useEffect(() => {
+    if (offset) {
+      translateX.value = offset.x;
+      translateY.value = offset.y;
+    }
+  }, [offset, translateX, translateY]);
 
   const resetPosition = () => {
     translateX.value = withSpring(0);
@@ -173,20 +182,20 @@ export function PhotoCard({ photo, index, isTop, onSwipe, onLongPress }: Props) 
           ) : null}
           {loadFailed ? (
             <View className="absolute inset-0 items-center justify-center bg-black/40">
-              <Text className="text-white text-xl">⚠️</Text>
+              <Ionicons name="warning" size={48} color="#fff" />
               <Text className="text-white/80 mt-2">Image failed to load</Text>
             </View>
           ) : null}
           {isTop ? (
             <>
               <Animated.View style={flameStyle} className="absolute right-6 top-6">
-                <View className="w-16 h-16 rounded-full bg-white/15 items-center justify-center">
-                  <Text className="text-white text-3xl">🔥</Text>
+                <View className="w-16 h-16 rounded-3xl bg-white/15 items-center justify-center">
+                  <Ionicons name="flame" size={32} color="#fff" />
                 </View>
               </Animated.View>
               <Animated.View style={xStyle} className="absolute left-6 top-6">
-                <View className="w-16 h-16 rounded-full bg-white/15 items-center justify-center">
-                  <Text className="text-white text-3xl">✕</Text>
+                <View className="w-16 h-16 rounded-3xl bg-white/15 items-center justify-center">
+                  <Ionicons name="close" size={28} color="#fff" />
                 </View>
               </Animated.View>
             </>

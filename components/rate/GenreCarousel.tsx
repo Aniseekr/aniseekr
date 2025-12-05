@@ -16,6 +16,7 @@ export function GenreCarousel({ data, onSelect }: Props) {
           <GenreCard
             title={item.displayName}
             image={item.image}
+            genreId={item.id}
             onPress={() => onSelect?.(item)}
           />
         </View>

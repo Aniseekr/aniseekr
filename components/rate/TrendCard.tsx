@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { Anime } from "./types";
 import { GlassCard } from "../common/GlassCard";
 
@@ -11,8 +12,21 @@ type Props = {
 };
 
 function TrendCardComponent({ anime, rank, onPress }: Props) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push({
+        pathname: "/(rate)/rating",
+        params: { animeId: anime.id, genreName: anime.title },
+      });
+    }
+  };
+
   return (
-    <Pressable onPress={onPress}>
+    <Pressable onPress={handlePress}>
       <GlassCard className="flex-row items-center p-4">
         <Text className="text-white text-xl font-bold w-10 text-center">#{rank}</Text>
         <Image

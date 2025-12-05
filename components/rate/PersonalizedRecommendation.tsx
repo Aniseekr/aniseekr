@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { memo } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { Recommendation } from "./types";
 import { GlassCard } from "../common/GlassCard";
 
@@ -11,8 +12,21 @@ type Props = {
 };
 
 function RecommendationItem({ item, onSelect }: { item: Recommendation; onSelect?: (id: string) => void }) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (onSelect) {
+      onSelect(item.id);
+    } else {
+      router.push({
+        pathname: "/(rate)/rating",
+        params: { animeId: item.anime.id, genreName: item.anime.title },
+      });
+    }
+  };
+
   return (
-    <Pressable onPress={() => onSelect?.(item.id)} className="w-56 mr-3">
+    <Pressable onPress={handlePress} className="w-56 mr-3">
       <GlassCard style={{ overflow: 'hidden' }}>
         <Image
           source={{ uri: item.anime.image }}

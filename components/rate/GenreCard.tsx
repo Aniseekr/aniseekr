@@ -1,17 +1,32 @@
 import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { GlassCard } from "../common/GlassCard";
 
 type Props = {
   title: string;
   image: string;
+  genreId?: string;
   onPress?: () => void;
 };
 
-function GenreCardComponent({ title, image, onPress }: Props) {
+function GenreCardComponent({ title, image, genreId, onPress }: Props) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push({
+        pathname: "/(rate)/rating",
+        params: { genreId: genreId || title.toLowerCase(), genreName: title },
+      });
+    }
+  };
+
   return (
-    <Pressable onPress={onPress} className="w-72 h-[420px] mx-2">
+    <Pressable onPress={handlePress} className="w-72 h-[420px] mx-2">
       <GlassCard className="flex-1" style={{ overflow: 'hidden' }}>
         <Image
           source={{ uri: image }}

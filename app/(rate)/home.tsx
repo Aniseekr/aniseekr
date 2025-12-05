@@ -84,7 +84,7 @@ export default function HomeRateScreen() {
         <View>
           {state.availableGenres.map((item) => (
             <View key={item.id} className="mb-4">
-              <GenreCard title={item.displayName} image={item.image} />
+              <GenreCard title={item.displayName} image={item.image} genreId={item.id} />
             </View>
           ))}
         </View>
