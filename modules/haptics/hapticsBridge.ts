@@ -86,6 +86,21 @@ export const hapticsBridge = {
     // Best-effort fallback: use notification haptic
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   },
+  cardDraw() {
+    if (Platform.OS === "android" && Native?.custom) {
+      // Simulate rumble (vibrate 500ms) then snap (wait 0, vibrate 20ms)
+      // Pattern: [delay before, vibrate duration, delay before next...]
+      // [0, 500, 50, 20]
+      this.custom([0, 400, 50, 40], [128, 255]); 
+      return;
+    }
+    // iOS / Fallback
+    // Trigger a light impact, wait, then heavy impact
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }, 400); 
+  },
   pressIn() {
     playPattern(ANDROID_PATTERNS.pressIn, () =>
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)

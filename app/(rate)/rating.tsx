@@ -1,36 +1,47 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, Pressable, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PhotoCard } from '../../components/rate/PhotoCard';
 import { Photo } from '../../components/rate/types';
+import { AnimeRepository } from '../../libs/anime-repository';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard } from '../../components/common/GlassCard';
 
 const MAX_VISIBLE_CARDS = 3;
 const CARD_SPACING = 8;
 
-// Generate sample photos for rating
-function generatePhotosFromGenre(genreId?: string, genreName?: string): Photo[] {
-  const basePhotos: Photo[] = [
-    { id: '1', url: 'https://picsum.photos/seed/anime1/720/1280', userId: 'u1' },
-    { id: '2', url: 'https://picsum.photos/seed/anime2/720/1280', userId: 'u2' },
-    { id: '3', url: 'https://picsum.photos/seed/anime3/720/1280', userId: 'u3' },
-    { id: '4', url: 'https://picsum.photos/seed/anime4/720/1280', userId: 'u4' },
-    { id: '5', url: 'https://picsum.photos/seed/anime5/720/1280', userId: 'u5' },
-    { id: '6', url: 'https://picsum.photos/seed/anime6/720/1280', userId: 'u6' },
-    { id: '7', url: 'https://picsum.photos/seed/anime7/720/1280', userId: 'u7' },
-    { id: '8', url: 'https://picsum.photos/seed/anime8/720/1280', userId: 'u8' },
-  ];
-  return basePhotos;
-}
-
 export default function RatingScreen() {
   const { top, bottom } = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ genreId?: string; genreName?: string; animeId?: string }>();
-  const [photos, setPhotos] = useState<Photo[]>(() => generatePhotosFromGenre(params.genreId, params.genreName));
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPhotos();
+  }, [params.genreId]);
+
+  const loadPhotos = async () => {
+    setLoading(true);
+    try {
+      let animeList;
+      if (params.genreId) {
+        animeList = await AnimeRepository.getAnimeByGenre(Number(params.genreId));
+      } else {
+        // Fallback to trending or seasonal if no genre
+        animeList = await AnimeRepository.getSeasonalAnime();
+      }
+      const mappedPhotos = animeList.map(AnimeRepository.mapAnimeToPhoto);
+      // Filter out photos without URL
+      setPhotos(mappedPhotos.filter(p => !!p.url));
+    } catch (error) {
+      console.error("Failed to load photos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const visibleCardIndices = useMemo(() => {
     const maxIndex = Math.min(currentIndex + MAX_VISIBLE_CARDS, photos.length);
@@ -42,21 +53,21 @@ export default function RatingScreen() {
       // Save rating based on direction
       if (direction === 'right') {
         // Like/Track
-        console.log('Liked photo:', currentIndex);
+        console.log('Liked photo:', photos[currentIndex]?.id);
       } else {
         // Skip
-        console.log('Skipped photo:', currentIndex);
+        console.log('Skipped photo:', photos[currentIndex]?.id);
       }
 
       // Move to next photo
       if (currentIndex < photos.length - 1) {
         setCurrentIndex((prev) => prev + 1);
       } else {
-        // No more photos, go back
+        // No more photos, go back or fetch more
         router.back();
       }
     },
-    [currentIndex, photos.length, router]
+    [currentIndex, photos, router]
   );
 
   const handleClose = useCallback(() => {
@@ -74,7 +85,7 @@ export default function RatingScreen() {
           <View className="flex-row items-center gap-2">
             <GlassCard className="px-4 py-2">
               <Text className="text-white text-sm font-semibold">
-                {currentIndex + 1} / {photos.length}
+                {loading ? "Loading..." : `${currentIndex + 1} / ${photos.length}`}
               </Text>
             </GlassCard>
           </View>
@@ -83,7 +94,11 @@ export default function RatingScreen() {
 
       {/* Card Stack */}
       <View className="flex-1 items-center justify-center" style={{ paddingTop: top + 60, paddingBottom: bottom + 120 }}>
-        {photos.length === 0 ? (
+        {loading ? (
+           <View className="items-center justify-center flex-1">
+             <Text className="text-white/80 text-lg">Loading Anime...</Text>
+           </View>
+        ) : photos.length === 0 ? (
           <View className="items-center justify-center flex-1">
             <Text className="text-white/80 text-lg mb-4">No photos available</Text>
             <Pressable onPress={handleClose} className="px-6 py-3 bg-white rounded-3xl">
@@ -142,3 +157,4 @@ export default function RatingScreen() {
     </SafeAreaView>
   );
 }
+
