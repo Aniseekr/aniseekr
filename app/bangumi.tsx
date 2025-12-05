@@ -1,8 +1,10 @@
-import { ScrollView, Text, View, RefreshControl, Pressable } from 'react-native';
+import { View, ScrollView, RefreshControl, Dimensions, Text } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo } from 'react';
-import { GlassCard } from '../components/common/GlassCard';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { SeasonHeader } from '../components/bangumi/SeasonHeader';
+import { WeeklyCalendar, Anime } from '../components/bangumi/WeeklyCalendar';
+import { AnimeList, AnimeRowCard } from '../components/bangumi/AnimeList';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type ViewMode = 'calendar' | 'list';
 type FilterMode = 'all' | 'tracking';
@@ -11,24 +13,6 @@ type Season = 'winter' | 'spring' | 'summer' | 'fall';
 interface DailyAnime {
   day: string;
   anime: Anime[];
-}
-
-interface Anime {
-  id: number;
-  title: string;
-  images: {
-    jpg: {
-      imageUrl?: string;
-      largeImageUrl?: string;
-    };
-  };
-  broadcast?: {
-    day?: string;
-    time?: string;
-    string?: string;
-  };
-  genres?: Array<{ name: string }>;
-  score?: number;
 }
 
 const weekDays = ['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'];
@@ -71,10 +55,6 @@ function dayShortName(day: string): string {
     Sundays: 'Sun',
   };
   return mapping[day] || day;
-}
-
-function isCurrentDay(day: string): boolean {
-  return day === getTodayDayString();
 }
 
 export default function BangumiScreen() {
@@ -130,182 +110,52 @@ export default function BangumiScreen() {
     return `${selectedYear} ${selectedSeason.charAt(0).toUpperCase() + selectedSeason.slice(1)}`;
   }, [selectedSeason, selectedYear]);
 
-  const headerSection = (
-    <GlassCard className="p-6 mb-6">
-      <View className="mb-4">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-white text-2xl font-bold">Weekly Schedule</Text>
-          <View className="flex-row items-center gap-3">
-            <Pressable
-              onPress={switchToPreviousSeason}
-              className="w-10 h-10 rounded-2xl bg-white/10 items-center justify-center"
-            >
-              <Text className="text-white text-base font-semibold">←</Text>
-            </Pressable>
-            <View className="px-5 py-2.5 bg-white/10 rounded-3xl">
-              <Text className="text-white text-base font-semibold">{seasonDisplayName}</Text>
-            </View>
-            <Pressable
-              onPress={switchToNextSeason}
-              className="w-10 h-10 rounded-2xl bg-white/10 items-center justify-center"
-            >
-              <Text className="text-white text-base font-semibold">→</Text>
-            </Pressable>
-          </View>
-        </View>
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row bg-white/10 rounded-3xl p-1.5" style={{ width: 180 }}>
-            <Pressable
-              onPress={() => setFilterMode('tracking')}
-              className={`flex-1 py-3 rounded-3xl ${filterMode === 'tracking' ? 'bg-white' : ''}`}
-            >
-              <Text
-                className={`text-center text-sm font-semibold ${filterMode === 'tracking' ? 'text-black' : 'text-white/70'}`}
-              >
-                Tracking
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setFilterMode('all')}
-              className={`flex-1 py-3 rounded-3xl ${filterMode === 'all' ? 'bg-white' : ''}`}
-            >
-              <Text
-                className={`text-center text-sm font-semibold ${filterMode === 'all' ? 'text-black' : 'text-white/70'}`}
-              >
-                All
-              </Text>
-            </Pressable>
-          </View>
-          <Pressable onPress={toggleViewMode} className="w-12 h-12 rounded-3xl bg-white/15 items-center justify-center">
-            <Ionicons name={viewMode === 'calendar' ? 'list' : 'calendar'} size={20} color="#fff" />
-          </Pressable>
-        </View>
-      </View>
-    </GlassCard>
-  );
-
-  const renderDayColumn = (day: string) => {
-    const dayData = groupedAnime.find((d) => d.day === day) || { day, anime: [] };
-    const isToday = isCurrentDay(day);
-
-    return (
-      <View key={day} className="w-[160px] p-4 rounded-3xl bg-white/5 border border-white/10">
-        <View className="mb-3">
-          <Text className={`text-white text-base font-bold ${isToday ? 'text-orange-500' : ''}`}>
-            {dayShortName(day)}
-          </Text>
-          <Text className="text-white/60 text-sm">{dayData.anime.length} shows</Text>
-        </View>
-        <ScrollView showsVerticalScrollIndicator>
-          {dayData.anime.length === 0 ? (
-            <View className="py-6 items-center">
-              <Text className="text-white/30 text-sm">No anime</Text>
-            </View>
-          ) : (
-            <View className="gap-3">
-              {dayData.anime.map((anime) => (
-                <View key={anime.id} className="bg-white/5 rounded-2xl p-2.5">
-                  <View className="w-full h-24 bg-white/10 rounded-2xl mb-2" />
-                  <Text className="text-white text-xs font-semibold mb-1.5" numberOfLines={2}>
-                    {anime.title}
-                  </Text>
-                  {anime.broadcast?.time && (
-                    <View className="flex-row items-center gap-1">
-                      <Ionicons name="time-outline" size={12} color="#f97316" />
-                      <Text className="text-orange-500 text-xs">{anime.broadcast.time}</Text>
-                    </View>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  const renderAnimeCard = ({ item: anime }: { item: Anime }) => (
-    <GlassCard className="p-5 mb-5">
-      <View className="flex-row gap-4">
-        <View className="w-24 h-36 bg-white/10 rounded-3xl" />
-        <View className="flex-1">
-          <Text className="text-white text-lg font-bold mb-2" numberOfLines={2}>
-            {anime.title}
-          </Text>
-          {anime.broadcast?.string && (
-            <View className="flex-row items-center gap-2 mb-3">
-              <Ionicons name="time-outline" size={14} color="#f97316" />
-              <Text className="text-orange-500 text-sm">{anime.broadcast.string}</Text>
-            </View>
-          )}
-          {anime.genres && anime.genres.length > 0 && (
-            <View className="flex-row flex-wrap gap-2 mb-3">
-              {anime.genres.slice(0, 3).map((genre, idx) => (
-                <View key={idx} className="px-3 py-1.5 bg-orange-500/20 rounded-2xl">
-                  <Text className="text-orange-500 text-xs font-medium">{genre.name}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-          <Pressable className="self-start px-5 py-2.5 bg-white/10 rounded-3xl">
-            <Text className="text-white text-sm font-medium">Remind Me</Text>
-          </Pressable>
-        </View>
-      </View>
-    </GlassCard>
-  );
-
-  const calendarView = (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false} 
-      className="flex-1"
-      contentContainerStyle={{ paddingBottom: 100 }}
-    >
-      <View className="flex-row gap-4 px-5 py-5">
-        {weekDays.map((day) => renderDayColumn(day))}
-      </View>
-    </ScrollView>
-  );
-
   const listViewData = groupedAnime.filter((g) => g.anime.length > 0 || (g.day === 'Unknown' && showUnknownDays));
-
-  const listView = (
-    <View className="px-5">
-      {listViewData.map((group) => (
-        <View key={group.day} className="mb-6">
-          <Text className="text-white text-xl font-bold mb-4">{group.day}</Text>
-          {group.anime.map((anime) => renderAnimeCard({ item: anime }))}
-        </View>
-      ))}
-    </View>
-  );
 
   if (isLoading && !refreshing) {
     return (
       <SafeAreaView style={{ paddingTop: top }} className="flex-1 bg-bg-dark items-center justify-center">
-        <Text className="text-white/80 text-base">Loading seasonal anime...</Text>
+        <Text className="text-white/80 text-base">Loading...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ paddingTop: top }} className="flex-1 bg-bg-dark">
-      <View className="px-5 pt-5">
-        {headerSection}
-      </View>
-      {viewMode === 'calendar' ? (
-        calendarView
-      ) : (
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ paddingBottom: 100 }}
-          refreshControl={<RefreshControl tintColor="#fff" refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {listView}
-        </ScrollView>
-      )}
-    </SafeAreaView>
+    <View className="flex-1 bg-bg-dark">
+        <LinearGradient
+            colors={['#1a1b2e', '#13131f', '#0f0f16']}
+            className="absolute inset-0"
+        />
+        <SafeAreaView style={{ paddingTop: top }} className="flex-1">
+            <View className="px-5 pt-5">
+                <SeasonHeader 
+                    seasonDisplayName={seasonDisplayName}
+                    onPrevSeason={switchToPreviousSeason}
+                    onNextSeason={switchToNextSeason}
+                    filterMode={filterMode}
+                    onFilterChange={setFilterMode}
+                    viewMode={viewMode}
+                    onViewModeToggle={toggleViewMode}
+                />
+            </View>
+
+            {viewMode === 'calendar' ? (
+                 <WeeklyCalendar 
+                    weekDays={weekDays}
+                    groupedAnime={groupedAnime}
+                    isCurrentDay={(day) => day === getTodayDayString()}
+                    dayShortName={dayShortName}
+                 />
+            ) : (
+                <ScrollView
+                    className="flex-1"
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    refreshControl={<RefreshControl tintColor="#fff" refreshing={refreshing} onRefresh={onRefresh} />}
+                >
+                    <AnimeList listViewData={listViewData} renderAnimeCard={(anime) => <AnimeRowCard key={anime.id} anime={anime} />} />
+                </ScrollView>
+            )}
+        </SafeAreaView>
+    </View>
   );
 }
-
