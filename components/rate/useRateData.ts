@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AIRecommendation, Anime, Genre, Recommendation, ViewMode } from "./types";
-import { AnimeRepository } from "../../libs/anime-repository";
+import { AnimeRepository } from "../../libs/repositories/anime-repository";
 
 type DiscoveryMode = "genres" | "mood" | "duration";
 

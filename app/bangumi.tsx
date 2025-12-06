@@ -6,7 +6,7 @@ import { WeeklyCalendar } from '../components/bangumi/WeeklyCalendar';
 import { Anime } from '../components/rate/types';
 import { AnimeList, AnimeRowCard } from '../components/bangumi/AnimeList';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AnimeRepository } from '../libs/anime-repository';
+import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { animeNotificationService } from '../modules/notifications/animeNotificationService';
 
 type ViewMode = 'calendar' | 'list';

@@ -4,49 +4,17 @@ import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import FloatingTabBar from '../components/FloatingTabBar';
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <Tabs
+        tabBar={(props) => <FloatingTabBar {...props} />}
         screenOptions={{
           headerShown: false,
-          tabBarStyle: {
-            position: 'absolute',
-            bottom: Platform.OS === 'ios' ? 0 : 0,
-            left: 0,
-            right: 0,
-            height: Platform.OS === 'ios' ? 88 : 70,
-            backgroundColor: Platform.OS === 'ios' 
-              ? 'rgba(18, 18, 18, 0.95)' 
-              : '#121212', 
-            borderTopWidth: 0,
-            borderTopColor: 'transparent',
-            ...Platform.select({
-              ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: -4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-              },
-              android: {
-                elevation: 8,
-              },
-            }),
-            paddingBottom: Platform.OS === 'ios' ? 20 : 12,
-            paddingTop: 12,
-          },
           tabBarActiveTintColor: '#fff', 
           tabBarInactiveTintColor: '#FFFFFF60',
-          tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: '500',
-            marginTop: 4,
-            fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-          },
-          tabBarIconStyle: {
-            // marginTop: 4,
-          },
         }}
       >
         <Tabs.Screen

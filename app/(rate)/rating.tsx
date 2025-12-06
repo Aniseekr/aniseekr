@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PhotoCard, PhotoCardRef } from '../../components/rate/PhotoCard';
 import { Photo } from '../../components/rate/types';
-import { AnimeRepository } from '../../libs/anime-repository';
+import { AnimeRepository } from '../../libs/repositories/anime-repository';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard } from '../../components/common/GlassCard';
 import { RatingInfoOverlay } from '../../components/rate/RatingInfoOverlay';

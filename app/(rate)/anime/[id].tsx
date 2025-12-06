@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, Pressable, Platform, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AnimeRepository } from '../../../libs/anime-repository';
+import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { Anime } from '../../../components/rate/types';
 import { GlassCard } from '../../../components/common/GlassCard';
 import Ionicons from '@expo/vector-icons/Ionicons';

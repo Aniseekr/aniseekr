@@ -5,7 +5,7 @@ import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { CollectionStats } from '../components/profile/CollectionStats';
 import { QuickActions } from '../components/profile/QuickActions';
 import { LinearGradient } from 'expo-linear-gradient';
-import { UserRepository, UserProfile } from '../libs/user-repository';
+import { UserRepository, UserProfile } from '../libs/repositories/user-repository';
 import { router } from 'expo-router';
 import { gachaService } from '../libs/gacha-service';
 

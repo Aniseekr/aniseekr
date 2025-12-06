@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { CollectionHeader } from '../components/collection/CollectionHeader';
 import { FolderList, CollectionFolder, AnimePreview } from '../components/collection/FolderList';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AnimeRepository } from '../libs/repositories/anime-repository';
+import { useEffect } from 'react';
 
 export default function CollectionScreen() {
   const { top } = useSafeAreaInsets();
@@ -13,12 +15,24 @@ export default function CollectionScreen() {
   const categories = ['All', 'Wishlist', 'Favorites', 'Watching', 'Completed', 'Dropped'];
   const categoryCounts = { 'All': 156, 'Wishlist': 42, 'Favorites': 12, 'Watching': 8, 'Completed': 85 };
 
+  // State for data
+  const [favorites, setFavorites] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadCollection();
+  }, []);
+
+  const loadCollection = async () => {
+    const data = await AnimeRepository.getCollection();
+    setFavorites(data);
+  };
+
   const folders: CollectionFolder[] = [
     { id: '1', name: 'Wishlist', icon: 'bookmark', isR18: false, isShared: false, isSystemFolder: true },
     { id: '2', name: 'Watching', icon: 'play-circle', isR18: false, isShared: false, isSystemFolder: true, folderType: 'all' },
     { id: '3', name: 'Favorites', icon: 'heart', isR18: false, isShared: true, isSystemFolder: true },
     { id: '4', name: 'Summer 2024', icon: 'folder', isR18: false, isShared: false, isSystemFolder: false },
-    { id: '5', name: 'Sci-Fi Masterpieces', icon: 'rocket', isR18: false, isShared: true, isSystemFolder: false },
+    // { id: '5', name: 'Sci-Fi Masterpieces', icon: 'rocket', isR18: false, isShared: true, isSystemFolder: false },
   ];
 
   // Mock data for previews

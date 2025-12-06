@@ -1,4 +1,5 @@
-import { JikanClient } from "./jikan-client";
+import { JikanClient } from "../clients/jikan-client";
+import { AnimeRepository } from "./anime-repository";
 
 export interface UserProfile {
   id: string;
@@ -17,19 +18,18 @@ export interface UserProfile {
 // In the future this will connect to AniList or a local database.
 export class UserRepository {
   static async getProfile(): Promise<UserProfile> {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    const stats = await AnimeRepository.getUserStats();
 
     return {
       id: "u1",
       username: "Kidney", // Or fetch from local storage
-      avatarUrl: "https://github.com/kidney.png", // Placeholder or from AniList
+      avatarUrl: "https://github.com/kidney.png",
       isDonator: true,
       stats: {
-        totalRated: 207,
-        likedCount: 140,
+        totalRated: stats.totalRated,
+        likedCount: stats.likedCount,
         cardsCount: 0,
-        foldersCount: 8
+        foldersCount: 1 // Default
       }
     };
   }

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, View, Platform, StyleSheet } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { GenreCarousel } from "../../components/rate/GenreCarousel";
 import { GenreCard } from "../../components/rate/GenreCard";
 import { PersonalizedRecommendation } from "../../components/rate/PersonalizedRecommendation";
@@ -9,30 +10,18 @@ import { TrackingSelector } from "../../components/rate/TrackingSelector";
 import { TrendCard } from "../../components/rate/TrendCard";
 import { AIRecommendationSheet } from "../../components/rate/AIRecommendationSheet";
 import { useRateData } from "../../components/rate/useRateData";
-import { Photo, ViewMode } from "../../components/rate/types";
+import { Genre, Photo, ViewMode } from "../../components/rate/types";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-
-const samplePhotos: Photo[] = [
-  { id: "p1", url: "https://picsum.photos/seed/p1/720/1280", userId: "u1" },
-  { id: "p2", url: "https://picsum.photos/seed/p2/720/1280", userId: "u2" },
-  { id: "p3", url: "https://picsum.photos/seed/p3/720/1280", userId: "u3" },
-];
 
 export default function HomeRateScreen() {
   const { top } = useSafeAreaInsets();
   const { state, actions } = useRateData();
+  const router = useRouter();
   const [listMode, setListMode] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
-  const [photos, setPhotos] = useState(samplePhotos);
 
-  const onSwipe = useCallback(
-    (direction: "left" | "right") => {
-      setPhotos((prev) => prev.slice(1));
-    },
-    [setPhotos]
-  );
 
   const headerToggle = useMemo(
     () => (mode: ViewMode) => {
@@ -80,6 +69,13 @@ export default function HomeRateScreen() {
     );
   }, [state.nextAvailableAt, state.queueSize]);
 
+  const handleGenreSelect = useCallback((genre: Genre) => {
+    router.push({
+      pathname: "/(rate)/rating",
+      params: { genreId: genre.id, genreName: genre.displayName },
+    });
+  }, [router]);
+
   const discoveryContent = (
     <View className="gap-4">
       {state.availableGenres.length === 0 ? (
@@ -90,13 +86,19 @@ export default function HomeRateScreen() {
         <View>
           {state.availableGenres.map((item) => (
             <View key={item.id} className="mb-4">
-              <GenreCard title={item.displayName} image={item.image} genreId={item.id} showButton={false} />
+              <GenreCard 
+                title={item.displayName} 
+                image={item.image} 
+                genreId={item.id} 
+                showButton={false}
+                onPress={() => handleGenreSelect(item)}
+              />
             </View>
           ))}
         </View>
       ) : (
         <View style={{ minHeight: 450 }}>
-          <GenreCarousel data={state.availableGenres} />
+          <GenreCarousel data={state.availableGenres} onSelect={handleGenreSelect} />
         </View>
       )}
     </View>
@@ -122,13 +124,19 @@ export default function HomeRateScreen() {
             <View>
               {state.availableGenres.map((item) => (
                 <View key={item.id} className="mb-4">
-                  <GenreCard title={item.displayName} image={item.image} genreId={item.id} showButton={false} />
+                  <GenreCard 
+                    title={item.displayName} 
+                    image={item.image} 
+                    genreId={item.id} 
+                    showButton={false}
+                    onPress={() => handleGenreSelect(item)}
+                  />
                 </View>
               ))}
             </View>
           ) : (
             <View style={{ minHeight: 450 }}>
-              <GenreCarousel data={state.availableGenres} />
+              <GenreCarousel data={state.availableGenres} onSelect={handleGenreSelect} />
             </View>
           )}
         </View>

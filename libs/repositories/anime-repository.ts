@@ -1,5 +1,6 @@
-import { AniListClient, AniListAnime } from "./anilist-client";
-import { Anime, Genre, Photo } from "../components/rate/types";
+import { AniListClient, AniListAnime } from "../clients/anilist-client";
+import { Anime, Genre, Photo } from "../../components/rate/types";
+import { LocalDB } from "../db";
 
 export class AnimeRepository {
   static async getTopAnime(page = 1): Promise<Anime[]> {
@@ -69,7 +70,33 @@ export class AnimeRepository {
 
   static async rateAnime(id: string, action: 'like' | 'pass'): Promise<void> {
     console.log(`[Repository] Rated anime ${id}: ${action}`);
-    // TODO: Connect to backend or local storage
+    await LocalDB.addRating(id, action);
+    if (action === 'like') {
+        const anime = await this.getAnimeDetails(id);
+        await LocalDB.addFavorite({
+            id: anime.id,
+            title: anime.title,
+            image: anime.image
+        });
+    }
+  }
+
+  static async getCollection(): Promise<Anime[]> {
+    const favorites = await LocalDB.getFavorites();
+    // Convert favorite items to simplified Anime objects
+    return favorites.map(fav => ({
+        id: fav.id,
+        title: fav.title,
+        image: fav.image,
+        rank: 0, // Not stored in simplified favs
+        tags: [],
+        mood: "",
+        durationMinutes: 0
+    }));
+  }
+
+  static async getUserStats() {
+    return await LocalDB.getStats();
   }
 
   // --- Mappers ---

@@ -1,4 +1,4 @@
-import { JikanClient } from './jikan-client';
+import { JikanClient } from './clients/jikan-client';
 
 export interface Character {
   id: number;
