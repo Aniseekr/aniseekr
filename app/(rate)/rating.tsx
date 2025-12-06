@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PhotoCard, PhotoCardRef } from '../../components/rate/PhotoCard';
@@ -82,6 +83,26 @@ export default function RatingScreen() {
     return Array.from({ length: maxIndex - currentIndex }, (_, i) => currentIndex + i);
   }, [currentIndex, photos.length]);
 
+  // 🟢 Prefetch images for smoother experience
+  useEffect(() => {
+    if (photos.length > 0) {
+      // Prefetch next 5 photos
+      const nextPhotos = photos.slice(currentIndex + 1, currentIndex + 6);
+      nextPhotos.forEach(photo => {
+         if (photo.url) Image.prefetch(photo.url);
+      });
+    }
+  }, [currentIndex, photos]);
+
+  // Reset translation after the outgoing card is removed to avoid jumpy stack
+  const resetActiveTranslation = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        activeTranslationX.value = 0;
+      });
+    });
+  }, [activeTranslationX]);
+
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
       // Save rating logic
@@ -93,12 +114,12 @@ export default function RatingScreen() {
 
       if (currentIndex < photos.length - 1) {
         setCurrentIndex((prev) => prev + 1);
-        activeTranslationX.value = 0; 
+        resetActiveTranslation();
       } else {
         router.back();
       }
     },
-    [currentIndex, photos, router]
+    [currentIndex, photos, resetActiveTranslation, router]
   );
   
   const triggerSwipe = (direction: 'left' | 'right') => {
@@ -266,6 +287,15 @@ function CardWrapper({
         return Math.min(Math.abs(activeTranslationX.value) / 300, 1);
     });
     
+    // Non-linear progress for "pop" effect
+    const nonLinearProgress = useDerivedValue(() => {
+        return interpolate(
+            Math.pow(progress.value, 2), 
+            [0, 1],
+            [0, 1]
+        );
+    });
+    
     const animatedStyle = useAnimatedStyle(() => {
         if (isTop) {
             return { 
@@ -289,14 +319,14 @@ function CardWrapper({
         
         // Interpolate based on progress
         const currentScale = interpolate(
-            progress.value,
+            nonLinearProgress.value,
             [0, 1],
             [baseScale, nextScale],
             Extrapolation.CLAMP
         );
         
         const currentTranslateY = interpolate(
-            progress.value,
+            nonLinearProgress.value,
             [0, 1],
             [baseTranslateY, nextTranslateY],
             Extrapolation.CLAMP
@@ -306,7 +336,7 @@ function CardWrapper({
         const baseOpacity = 1 - (stackIndex * 0.15);
         const nextOpacity = 1 - ((stackIndex - 1) * 0.15);
         const currentOpacity = interpolate(
-            progress.value,
+            nonLinearProgress.value,
             [0, 1],
             [baseOpacity, nextOpacity],
             Extrapolation.CLAMP

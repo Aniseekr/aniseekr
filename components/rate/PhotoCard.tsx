@@ -4,30 +4,40 @@ import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
 import { ActivityIndicator, Dimensions, Pressable, Text, View, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-    Easing,
     SharedValue,
-    runOnJS,
     useAnimatedStyle,
     useSharedValue,
     withSpring,
-    withTiming,
     interpolate,
     Extrapolation
 } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { hapticsBridge } from "../../modules/haptics/hapticsBridge";
 import { Photo } from "./types";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-// Spring config matching Swift's spring(response: 0.6, dampingFraction: 0.8)
-const SPRING_CONFIG = {
-    damping: 20,
-    stiffness: 200,
+// 🟢 Recommended (Lighter, more responsive):
+const LIVE_SPRING_CONFIG = {
+    damping: 15,    // Lower resistance for smoother slide
+    stiffness: 150, // Slightly lower stiffness, less pulling feel
+    mass: 0.8,      // Lower mass, faster inertia start
+    overshootClamping: false, // Allow slight bounce (more like real objects)
+    restDisplacementThreshold: 0.01,
+    restSpeedThreshold: 2,
+};
+  
+// Configuration for Reset - Needs to be stable, avoid wobble
+const RESET_SPRING_CONFIG = {
+    damping: 18, 
+    stiffness: 180,
     mass: 1,
+    overshootClamping: true, // No overshoot on reset to avoid visual noise
 };
 
 const SWIPE_THRESHOLD = 120;
+const RESET_THRESHOLD = 80; // <--- Key: Smaller than trigger value (Hysteresis)
 const VELOCITY_THRESHOLD = 800;
 const ROTATION_DEG = 15;
 
@@ -48,7 +58,6 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const PhotoCard = forwardRef<PhotoCardRef, Props>(({ photo, isTop, onSwipe, onLongPress, activeTranslation }, ref) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
   
   // Internal values if no external shared value is provided
   const internalTranslateX = useSharedValue(0);
@@ -58,61 +67,105 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(({ photo, isTop, onSwip
   const scale = useSharedValue(1);
   const pressScale = useSharedValue(1);
   const rotate = useSharedValue(0);
+  const touchY = useSharedValue(0); // Track touch Y for smart rotation anchor
   const hasThresholdHaptic = useSharedValue(false);
 
   // Expose swipe method
   useImperativeHandle(ref, () => ({
     swipe: (direction: "left" | "right") => {
-        flingOut(direction);
+        // Programmatic swipe needs a synthetic velocity
+        const syntheticVelocity = direction === "right" ? 2000 : -2000;
+        flingOut(direction, syntheticVelocity);
     }
   }));
 
   const resetPosition = () => {
-    translateX.value = withSpring(0, SPRING_CONFIG);
-    translateY.value = withSpring(0, SPRING_CONFIG);
-    rotate.value = withSpring(0, SPRING_CONFIG);
-    scale.value = withSpring(1, SPRING_CONFIG);
+    translateX.value = withSpring(0, RESET_SPRING_CONFIG, (finished) => {
+        if (finished) {
+           // Subtle thud when card settles back
+           scheduleOnRN(hapticsBridge.impact, 'light');
+        }
+    });
+    translateY.value = withSpring(0, RESET_SPRING_CONFIG);
+    rotate.value = withSpring(0, RESET_SPRING_CONFIG);
+    scale.value = withSpring(1, RESET_SPRING_CONFIG);
     pressScale.value = withSpring(1, { damping: 14 });
     hasThresholdHaptic.value = false;
   };
 
-  const flingOut = (direction: "left" | "right") => {
+  const flingOut = (direction: "left" | "right", velocityX: number) => {
     const targetX = direction === "right" ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
-    translateX.value = withTiming(targetX, { duration: 280, easing: Easing.out(Easing.cubic) }, () =>
-      runOnJS(onSwipe)(direction)
+    
+    // Velocity Preservation: Use Spring to simulate real throwing physics
+    // Increased stiffness slightly for "snappier" exit
+    translateX.value = withSpring(
+        targetX, 
+        { 
+            velocity: velocityX,
+            damping: 20,
+            stiffness: 120, // Increased from 90 to 120 for better exit snap
+            overshootClamping: true,
+        }, 
+        () => scheduleOnRN(onSwipe, direction)
     );
-    rotate.value = withTiming(direction === "right" ? 18 : -18, { duration: 280 });
-    translateY.value = withTiming(-50, { duration: 280 });
+
+    // Rotation should also follow physics
+    rotate.value = withSpring(direction === "right" ? 25 : -25, { 
+        velocity: velocityX / 10,
+        damping: 20,
+        stiffness: 120 
+    });
+
+    translateY.value = withSpring(-50, { 
+        damping: 20, 
+        stiffness: 120 
+    });
   };
 
   const pan = useMemo(
     () =>
       Gesture.Pan()
         .enabled(isTop)
-        .onBegin(() => {
-          pressScale.value = withSpring(0.98, { damping: 15 });
-          runOnJS(hapticsBridge.pressIn)();
+        .onBegin((event) => {
+          touchY.value = event.y;
+          pressScale.value = withSpring(0.96, { damping: 10, stiffness: 300 }); // Quick response
+          scheduleOnRN(hapticsBridge.selectionSoft); // Soft "snapping" feel
           hasThresholdHaptic.value = false;
         })
         .onChange((event) => {
-          translateX.value = event.translationX;
+          translateX.value = event.translationX; // Direct 1:1 movement
           translateY.value = event.translationY * 0.5; // Dampen vertical movement
-          // Interpolate rotation based on X translation specifically for a natural feel
-          rotate.value = interpolate(
-              event.translationX,
-              [-300, 300],
-              [-ROTATION_DEG, ROTATION_DEG],
+          
+          // 🟢 Smart Rotation Logic
+          const CARD_HEIGHT = SCREEN_HEIGHT * 0.6; // Approx height
+          const rotateFactor = interpolate(
+              touchY.value,
+              [0, CARD_HEIGHT],
+              [1, -1],
               Extrapolation.CLAMP
           );
           
+          rotate.value = interpolate(
+              event.translationX,
+              [-SCREEN_WIDTH, SCREEN_WIDTH],
+              [-ROTATION_DEG * rotateFactor, ROTATION_DEG * rotateFactor],
+              Extrapolation.EXTEND
+          );
+          
           const distance = Math.abs(event.translationX);
-          if (distance > 60) {
-            if (!hasThresholdHaptic.value) {
-              hasThresholdHaptic.value = true;
-              runOnJS(hapticsBridge.swipeThreshold)();
-            }
-          } else {
-            hasThresholdHaptic.value = false;
+
+          // 🟢 Hysteresis Logic
+          if (distance > SWIPE_THRESHOLD) {
+             if (!hasThresholdHaptic.value) {
+                hasThresholdHaptic.value = true;
+                scheduleOnRN(hapticsBridge.swipeThreshold);
+             }
+          } else if (distance < RESET_THRESHOLD) {
+             // Only allow reset if back within inner circle (80px)
+             if (hasThresholdHaptic.value) {
+                hasThresholdHaptic.value = false;
+                // Optional: very light feedback when returning to center
+             }
           }
         })
         .onEnd((event) => {
@@ -122,11 +175,18 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(({ photo, isTop, onSwip
           // Threshold for commiting the swipe
           if (Math.abs(distance) > SWIPE_THRESHOLD || Math.abs(velocity) > VELOCITY_THRESHOLD) {
             const dir = distance > 0 ? "right" : "left";
-            runOnJS(hapticsBridge.impact)(distance > 0 ? "heavy" : "light");
-            runOnJS(flingOut)(dir);
+            
+            // Velocity-based Haptics
+            if (Math.abs(velocity) > 2000) {
+                 scheduleOnRN(hapticsBridge.impact, 'heavy');
+            } else {
+                 scheduleOnRN(hapticsBridge.impact, 'medium');
+            }
+            
+            scheduleOnRN(flingOut, dir, velocity);
           } else {
-            runOnJS(hapticsBridge.swipeCancel)();
-            runOnJS(resetPosition)();
+            scheduleOnRN(hapticsBridge.swipeCancel);
+            scheduleOnRN(resetPosition);
           }
           hasThresholdHaptic.value = false;
         })
@@ -151,31 +211,44 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(({ photo, isTop, onSwip
         .minDuration(450)
         .onStart(() => {
           pressScale.value = withSpring(0.95, { damping: 12 });
-          runOnJS(hapticsBridge.pressIn)();
-          if (onLongPress) runOnJS(onLongPress)();
+          scheduleOnRN(hapticsBridge.pressIn);
+          if (onLongPress) scheduleOnRN(onLongPress);
         })
         .onEnd(() => {
             pressScale.value = withSpring(1, { damping: 12 });
-            runOnJS(hapticsBridge.pressOut)();
+            scheduleOnRN(hapticsBridge.pressOut);
         });
 
   const composed = Gesture.Simultaneous(pan, pinch, longPress);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { rotateZ: `${rotate.value}deg` },
-      { scale: scale.value * pressScale.value },
-    ],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    // Dynamic Shadow based on drag distance
+    const dragProgress = Math.min(Math.abs(translateX.value) / 100, 1);
+    
+    return {
+        transform: [
+            { translateX: translateX.value },
+            { translateY: translateY.value },
+            { rotateZ: `${rotate.value}deg` },
+            { scale: scale.value * pressScale.value },
+        ],
+        // 🟢 Dynamic Shadow Change
+        shadowOpacity: interpolate(dragProgress, [0, 1], [0.3, 0.6]),
+        shadowRadius: interpolate(dragProgress, [0, 1], [8, 20]),
+        elevation: interpolate(dragProgress, [0, 1], [5, 15]),
+    };
+  });
 
-  // Swipe indicator animations
+  // Swipe indicator animations with Parallax
   const flameStyle = useAnimatedStyle(() => {
     const progress = translateX.value;
     return {
       opacity: interpolate(progress, [0, 100], [0, 1], Extrapolation.CLAMP),
-      transform: [{ scale: interpolate(progress, [0, 150], [0.6, 1.2], Extrapolation.CLAMP) }],
+      transform: [
+          { scale: interpolate(progress, [0, 150], [0.6, 1.2], Extrapolation.CLAMP) },
+          // Parallax effect: moves slightly as it fades in
+          { translateX: interpolate(progress, [0, 100], [-20, 0], Extrapolation.CLAMP) }
+      ],
     };
   });
 
@@ -183,7 +256,11 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(({ photo, isTop, onSwip
     const progress = -translateX.value;
     return {
       opacity: interpolate(progress, [0, 100], [0, 1], Extrapolation.CLAMP),
-      transform: [{ scale: interpolate(progress, [0, 150], [0.6, 1.2], Extrapolation.CLAMP) }],
+      transform: [
+          { scale: interpolate(progress, [0, 150], [0.6, 1.2], Extrapolation.CLAMP) },
+          // Parallax effect
+          { translateX: interpolate(progress, [0, 100], [20, 0], Extrapolation.CLAMP) }
+      ],
     };
   });
 
@@ -197,42 +274,27 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(({ photo, isTop, onSwip
             hapticsBridge.selection();
           }}
         >
-          {/* Loading Placeholder */}
-          {isLoading && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#fff" />
-              <Text style={styles.loadingText}>Loading...</Text>
-            </View>
-          )}
-          
+          {/* 🟢 Background Color (Prevents transparency before image load) */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a1a1a' }]} />
+
           {/* Main Image */}
           <Image
             source={{ uri: photo.url }}
             style={styles.image}
             contentFit="cover"
-            transition={300}
+            // 🟢 Disable transition or set very short to avoid ghosting on fast swipes
+            transition={0} 
+            // 🟢 Ensure memory-disk cache usage
             cachePolicy="memory-disk"
-            onLoadStart={() => {
-              setIsLoading(true);
-              setLoadFailed(false);
-            }}
-            onLoad={() => {
-              setIsLoading(false);
-              setLoadFailed(false);
-            }}
-            onError={() => {
-              console.error("Image load failed:", photo.url);
-              setIsLoading(false);
-              setLoadFailed(true);
-            }}
+            // 🟢 Don't hide Image based on isLoading, keep it mounted
+            // Removed onLoadStart to prevent resetting isLoading to true on cache hits/updates
+            onLoad={() => setIsLoading(false)}
           />
-          
-          {/* Error Placeholder */}
-          {loadFailed && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="image-outline" size={64} color="#666" />
-              <Text style={styles.errorText}>Image unavailable</Text>
-              <Text style={styles.errorSubtext}>{photo.title || "Unknown"}</Text>
+
+          {/* Loading indicator just overlays, doesn't replace Image */}
+          {isLoading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#fff" />
             </View>
           )}
 
@@ -290,34 +352,10 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'rgba(26,26,26,0.5)', // Semi-transparent
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
-  },
-  loadingText: {
-    color: '#888',
-    fontSize: 16,
-    marginTop: 12,
-    fontWeight: '500',
-  },
-  errorContainer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1a1a1a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  errorText: {
-    color: '#888',
-    fontSize: 18,
-    marginTop: 16,
-    fontWeight: '600',
-  },
-  errorSubtext: {
-    color: '#555',
-    fontSize: 14,
-    marginTop: 8,
   },
   bottomGradient: {
     position: 'absolute',

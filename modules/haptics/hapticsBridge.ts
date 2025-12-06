@@ -52,7 +52,7 @@ export const hapticsBridge = {
   },
   selectionSoft() {
     if (Platform.OS === "android" && callNative(Native?.selectionSoft)) return;
-    Haptics.selectionAsync();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   },
   impact(type: ImpactType) {
     if (Platform.OS === "android") {
