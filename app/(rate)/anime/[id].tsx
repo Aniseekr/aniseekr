@@ -106,6 +106,13 @@ export default function AnimeDetailScreen() {
             <Pressable className="w-12 h-12 bg-zinc-800 rounded-full items-center justify-center border border-white/10">
               <Ionicons name="share-outline" size={22} color="white" />
             </Pressable>
+            {/* Rate Button */}
+            <Pressable 
+                onPress={() => router.push(`/(rate)/rating?animeId=${anime.id}`)}
+                className="w-12 h-12 bg-zinc-800 rounded-full items-center justify-center border border-white/10"
+            >
+              <Ionicons name="flame-outline" size={22} color="#fbbf24" />
+            </Pressable>
           </View>
 
           {/* Description */}

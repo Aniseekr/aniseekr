@@ -64,7 +64,7 @@ interface GenreCollectionResponse {
 }
 
 export class AniListClient {
-  private static async fetch<T>(query: string, variables: any = {}): Promise<T> {
+  private static async fetch<T>(query: string, variables: any = {}, retries = 3): Promise<T> {
     const response = await fetch(ANILIST_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -76,6 +76,13 @@ export class AniListClient {
         variables,
       }),
     });
+
+    if (response.status === 429 && retries > 0) {
+       const retryAfter = parseInt(response.headers.get('Retry-After') || '2', 10);
+       console.warn(`Rate limit hit. Retrying in ${retryAfter}s...`);
+       await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+       return this.fetch<T>(query, variables, retries - 1);
+    }
 
     if (!response.ok) {
       throw new Error(`AniList API Error: ${response.status} ${response.statusText}`);

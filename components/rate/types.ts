@@ -6,6 +6,8 @@ export interface Anime {
   image: string;
   bannerImage?: string;
   rank?: number;
+  score?: number; // [NEW] 0-100 or 0-10
+  type?: string; // [NEW] TV, MOVIE, etc.
   tags?: string[];
   mood?: string;
   description?: string;

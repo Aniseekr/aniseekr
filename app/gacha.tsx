@@ -7,8 +7,8 @@ import { PackCarousel } from '../components/gacha/PackCarousel';
 import { GachaControls } from '../components/gacha/GachaControls';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { gachaService, GachaCard, CardRarity, PULL_COST_CONST } from '../libs/gacha-service';
-import { characterService } from '../libs/character-service';
+import { gachaService, GachaCard, CardRarity, PULL_COST_CONST } from '../libs/services/gacha-service';
+import { characterService } from '../libs/services/character-service';
 
 const CARDS_PER_PULL = 5;
 const PULL_COST = PULL_COST_CONST;

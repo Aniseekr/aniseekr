@@ -51,13 +51,19 @@ export default function RatingScreen() {
 
   useEffect(() => {
     loadPhotos();
-  }, [params.genreId]);
+  }, [params.genreId, params.animeId]);
 
   const loadPhotos = async () => {
     setLoading(true);
     try {
       let animeList;
-      if (params.genreId) {
+      if (params.animeId) {
+        // [NEW] Load specific anime if requested
+        const specificAnime = await AnimeRepository.getAnimeDetails(params.animeId);
+        animeList = [specificAnime];
+        // Optional: fetch recommendations based on this anime to fill the stack?
+        // For now, just the one to rate.
+      } else if (params.genreId) {
         // Genre is a string name in AniList (e.g. "Action")
         animeList = await AnimeRepository.getAnimeByGenre(params.genreId);
       } else {
