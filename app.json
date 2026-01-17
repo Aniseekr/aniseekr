@@ -19,7 +19,8 @@
           "color": "#6200EE",
           "sounds": []
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",

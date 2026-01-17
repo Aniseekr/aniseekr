@@ -1,7 +1,10 @@
-import { View, Text, Image, Pressable, Platform, StyleSheet } from 'react-native';
+import { View, Text, Image, Platform, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 
 interface ProfileHeaderProps {
   username: string;
@@ -11,23 +14,29 @@ interface ProfileHeaderProps {
   shards?: number;
 }
 
-export function ProfileHeader({ username, profileImageURL, isDonator, coins = 0, shards = 0 }: ProfileHeaderProps) {
+export function ProfileHeader({
+  username,
+  profileImageURL,
+  isDonator,
+  coins = 0,
+  shards = 0,
+}: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
       {/* Decorative background blur */}
       <View style={styles.backgroundBlur} />
-      
+
       <View style={styles.content}>
         <View style={styles.avatarContainer}>
           {profileImageURL ? (
             <Image source={{ uri: profileImageURL }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={64} color="rgba(255,255,255,0.3)" />
+              <Ionicons name="person" size={64} color={Colors.text.disabled} />
             </View>
           )}
         </View>
-        
+
         <View style={styles.nameRow}>
           <Text style={styles.username}>{username}</Text>
           {isDonator && (
@@ -50,61 +59,32 @@ export function ProfileHeader({ username, profileImageURL, isDonator, coins = 0,
             <Text style={styles.currencyText}>{shards}</Text>
           </View>
         </View>
-
-        <View style={styles.socialRow}>
-          <SocialLink 
-            icon={<Ionicons name="logo-github" size={24} color="#fff" />} 
-            backgroundColor="#1f2937"
-            onPress={() => {}}
-          />
-          <SocialLink 
-            icon={<Ionicons name="logo-twitter" size={24} color="#fff" />} 
-            backgroundColor="#0ea5e9"
-            onPress={() => {}}
-          />
-          <SocialLink 
-            icon={<Ionicons name="mail" size={24} color="#fff" />} 
-            backgroundColor="#a855f7"
-            onPress={() => {}}
-          />
-        </View>
       </View>
     </View>
   );
 }
 
-function SocialLink({ icon, backgroundColor, onPress }: { icon: any, backgroundColor: string, onPress: () => void }) {
-  return (
-    <Pressable 
-      onPress={onPress}
-      style={[styles.socialButton, { backgroundColor }]}
-    >
-      {icon}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 32,
-    padding: 32,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 32,
+    backgroundColor: Colors.glass.medium,
+    borderRadius: Radius.xxl,
+    padding: Spacing.xxl,
+    marginHorizontal: Spacing.screenPadding,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xxl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
       },
       android: {
-        backgroundColor: '#1E1E1E',
-        elevation: 4,
+        backgroundColor: Colors.background.secondary,
+        elevation: 8,
       },
     }),
   },
@@ -114,24 +94,24 @@ const styles = StyleSheet.create({
     right: 0,
     width: 128,
     height: 128,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: `${Colors.secondary}33`,
     borderRadius: 64,
     opacity: 0.5,
   },
   content: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
   },
   avatarContainer: {
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: Colors.glass.dark,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
     overflow: 'hidden',
     ...Platform.select({
       android: {
@@ -153,13 +133,12 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   username: {
-    color: 'rgba(255, 255, 255, 0.87)',
-    fontSize: 32,
-    fontWeight: '700',
+    color: Colors.text.primary,
+    ...Typography.headlineLarge,
     letterSpacing: -0.5,
     fontFamily: Platform.select({
       ios: 'System',
@@ -194,14 +173,13 @@ const styles = StyleSheet.create({
   currencyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.glass.dark,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
   },
   currencyItem: {
     flexDirection: 'row',
@@ -209,9 +187,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   currencyText: {
-    color: 'rgba(255, 255, 255, 0.87)',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.text.primary,
+    ...Typography.titleMedium,
     fontFamily: Platform.select({
       ios: 'System',
       android: 'Roboto',
@@ -220,22 +197,6 @@ const styles = StyleSheet.create({
   currencyDivider: {
     width: 1,
     height: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  socialButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      android: {
-        elevation: 2,
-      },
-    }),
+    backgroundColor: Colors.glass.border,
   },
 });

@@ -5,9 +5,10 @@ import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { CollectionStats } from '../components/profile/CollectionStats';
 import { QuickActions } from '../components/profile/QuickActions';
 import { LinearGradient } from 'expo-linear-gradient';
-import { UserRepository, UserProfile } from '../libs/user-repository';
+import { UserRepository, UserProfile } from '../libs/repositories/user-repository';
 import { router } from 'expo-router';
-import { gachaService } from '../libs/gacha-service';
+import { gachaService } from '../libs/services/gacha-service';
+import { Colors } from '../constants/DesignSystem';
 
 export default function ProfileScreen() {
   const { top } = useSafeAreaInsets();
@@ -21,7 +22,7 @@ export default function ProfileScreen() {
     try {
       const data = await UserRepository.getProfile();
       setUser(data);
-      
+
       // Load gacha data
       try {
         const cards = await gachaService.getUserCards();
@@ -49,22 +50,24 @@ export default function ProfileScreen() {
   }, [loadData]);
 
   // Default stats for loading state
-  const defaultStats = { 
-    totalRated: 0, 
-    likedCount: 0, 
-    cardsCount: cardsCount, 
-    foldersCount: 0 
+  const defaultStats = {
+    totalRated: 0,
+    likedCount: 0,
+    cardsCount: cardsCount,
+    foldersCount: 0,
   };
 
-  const stats = user ? {
-    ...user.stats,
-    cardsCount: cardsCount || user.stats.cardsCount,
-  } : defaultStats;
+  const stats = user
+    ? {
+        ...user.stats,
+        cardsCount: cardsCount || user.stats.cardsCount,
+      }
+    : defaultStats;
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#121212', '#1E1E1E', '#121212']}
+        colors={Colors.gradients.background as [string, string, ...string[]]}
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
@@ -72,33 +75,30 @@ export default function ProfileScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl 
-              tintColor="#fff" 
-              refreshing={refreshing} 
+            <RefreshControl
+              tintColor={Colors.text.primary}
+              refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#6200EE']}
-              progressBackgroundColor="#1E1E1E"
+              colors={[Colors.secondary]}
+              progressBackgroundColor={Colors.background.secondary}
             />
-          }
-        >
-          <ProfileHeader 
-            username={user ? user.username : "Loading..."}
-            profileImageURL={user ? user.avatarUrl : ""}
+          }>
+          <ProfileHeader
+            username={user ? user.username : 'Loading...'}
+            profileImageURL={user ? user.avatarUrl : ''}
             isDonator={user ? user.isDonator : false}
             coins={coins}
             shards={shards}
           />
-          
-          <CollectionStats 
-            stats={stats}
-          />
 
-          <QuickActions 
+          <CollectionStats stats={stats} />
+
+          <QuickActions
             actions={{
               onPremium: () => {},
-              onSync: () => {},
-              onSettings: () => router.push("/(setting)/settings"),
-              onBackup: () => {},
+              onSync: () => router.push('/(setting)/sync'),
+              onSettings: () => router.push('/(setting)/settings'),
+              onBackup: () => alert('Backup feature coming soon!'),
               onDNA: () => {},
             }}
           />
@@ -111,7 +111,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: Colors.background.primary,
   },
   safeArea: {
     flex: 1,

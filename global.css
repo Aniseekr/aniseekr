@@ -5,7 +5,39 @@
 @import 'nativewind/theme';
 
 @theme {
-  --color-bg-dark: #000000;
+  --color-bg-dark: #0d0d0d;
+  --color-bg-secondary: #1a1a1a;
+  --color-bg-tertiary: #242424;
+
+  --color-primary: #ff6b35;
+  --color-secondary: #6c5ce7;
+  --color-accent: #00d9ff;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-tertiary: rgba(255, 255, 255, 0.5);
+
   --color-card-surface: rgba(255, 255, 255, 0.05);
+  --color-card-glass: rgba(255, 255, 255, 0.12);
   --color-card-border: rgba(255, 255, 255, 0.1);
+
+  --color-status-success: #00e676;
+  --color-status-warning: #ffb300;
+  --color-status-error: #ff3d00;
+  --color-status-info: #2979ff;
+
+  --spacing-xxs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  --spacing-xxxl: 40px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-xxl: 32px;
 }

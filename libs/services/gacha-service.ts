@@ -269,3 +269,4 @@ class GachaService {
 
 export const gachaService = GachaService.getInstance();
 export const PULL_COST_CONST = PULL_COST;
+

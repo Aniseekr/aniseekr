@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PhotoCard, PhotoCardRef } from '../../components/rate/PhotoCard';
 import { Photo } from '../../components/rate/types';
-import { AnimeRepository } from '../../libs/anime-repository';
+import { AnimeRepository } from '../../libs/repositories/anime-repository';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard } from '../../components/common/GlassCard';
 import { RatingInfoOverlay } from '../../components/rate/RatingInfoOverlay';
@@ -51,13 +51,19 @@ export default function RatingScreen() {
 
   useEffect(() => {
     loadPhotos();
-  }, [params.genreId]);
+  }, [params.genreId, params.animeId]);
 
   const loadPhotos = async () => {
     setLoading(true);
     try {
       let animeList;
-      if (params.genreId) {
+      if (params.animeId) {
+        // [NEW] Load specific anime if requested
+        const specificAnime = await AnimeRepository.getAnimeDetails(params.animeId);
+        animeList = [specificAnime];
+        // Optional: fetch recommendations based on this anime to fill the stack?
+        // For now, just the one to rate.
+      } else if (params.genreId) {
         // Genre is a string name in AniList (e.g. "Action")
         animeList = await AnimeRepository.getAnimeByGenre(params.genreId);
       } else {

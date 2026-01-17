@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, Pressable, Platform, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AnimeRepository } from '../../../libs/anime-repository';
+import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { Anime } from '../../../components/rate/types';
 import { GlassCard } from '../../../components/common/GlassCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -105,6 +105,13 @@ export default function AnimeDetailScreen() {
             </Pressable>
             <Pressable className="w-12 h-12 bg-zinc-800 rounded-full items-center justify-center border border-white/10">
               <Ionicons name="share-outline" size={22} color="white" />
+            </Pressable>
+            {/* Rate Button */}
+            <Pressable 
+                onPress={() => router.push(`/(rate)/rating?animeId=${anime.id}`)}
+                className="w-12 h-12 bg-zinc-800 rounded-full items-center justify-center border border-white/10"
+            >
+              <Ionicons name="flame-outline" size={22} color="#fbbf24" />
             </Pressable>
           </View>
 

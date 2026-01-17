@@ -1,109 +1,300 @@
-import { View, ScrollView, RefreshControl, Platform, StyleSheet } from 'react-native';
+import {
+  View,
+  FlatList,
+  RefreshControl,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState, useCallback } from 'react';
-import { CollectionHeader } from '../components/collection/CollectionHeader';
-import { FolderList, CollectionFolder, AnimePreview } from '../components/collection/FolderList';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CollectionHeader } from '../components/collection/CollectionHeader';
+import { FolderList } from '../components/collection/FolderList';
+import { CollectionFolder } from '../types';
+import { collectionService } from '../libs/services/collection/collection-service';
+import { CreateFolderModal } from '../components/collection/CreateFolderModal';
+import { useRouter } from 'expo-router';
+import { Colors, Radius, Spacing, Typography } from '../constants/DesignSystem';
+
+type SortMode = 'newest' | 'oldest' | 'rarity' | 'popularity' | 'count' | 'id';
 
 export default function CollectionScreen() {
   const { top } = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [collections, setCollections] = useState<CollectionFolder[]>([]);
+  const [isCreateModalVisible, setCreateModalVisible] = useState(false);
+  const router = useRouter();
 
   const categories = ['All', 'Wishlist', 'Favorites', 'Watching', 'Completed', 'Dropped'];
-  const categoryCounts = { 'All': 156, 'Wishlist': 42, 'Favorites': 12, 'Watching': 8, 'Completed': 85 };
-
-  const folders: CollectionFolder[] = [
-    { id: '1', name: 'Wishlist', icon: 'bookmark', isR18: false, isShared: false, isSystemFolder: true },
-    { id: '2', name: 'Watching', icon: 'play-circle', isR18: false, isShared: false, isSystemFolder: true, folderType: 'all' },
-    { id: '3', name: 'Favorites', icon: 'heart', isR18: false, isShared: true, isSystemFolder: true },
-    { id: '4', name: 'Summer 2024', icon: 'folder', isR18: false, isShared: false, isSystemFolder: false },
-    { id: '5', name: 'Sci-Fi Masterpieces', icon: 'rocket', isR18: false, isShared: true, isSystemFolder: false },
-  ];
-
-  // Mock data for previews
-  const folderPreviews: { [key: string]: AnimePreview[] } = {
-    '1': [{ id: 101, title: 'Frieren: Beyond Journey\'s End', score: 9.4, year: 2023, image: '...' }],
-    '2': [
-        { id: 201, title: 'Oshi no Ko', score: 8.9 },
-        { id: 202, title: 'Jujutsu Kaisen', score: 8.7 },
-        { id: 203, title: 'One Piece', score: 9.0 },
-        { id: 204, title: 'Bleach', score: 8.5 },
-        { id: 205, title: 'Naruto', score: 8.2 },
-        { id: 206, title: 'Attack on Titan', score: 9.1 },
-    ],
-    '3': [
-        { id: 301, title: 'Steins;Gate' },
-        { id: 302, title: 'Fullmetal Alchemist' },
-        { id: 303, title: 'Cowboy Bebop' },
-    ],
-    '4': [],
-    '5': [{ id: 501, title: 'Neon Genesis Evangelion' }, { id: 502, title: 'Ghost in the Shell' }],
+  const categoryIcons: Record<string, string> = {
+    All: 'bookmark',
+    Wishlist: 'heart',
+    Favorites: 'heart',
+    Watching: 'play-circle',
+    Completed: 'checkmark-circle',
+    Dropped: 'x-circle',
   };
+
+  const loadCollection = async () => {
+    try {
+      const data = await collectionService.getFolders();
+      setCollections(data);
+    } catch (error) {
+      console.error('Failed to load collection:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadCollection();
+  }, []);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    collections.forEach((folder) => {
+      if (folder.name === 'All') counts['All'] = folder.animeCount;
+      if (folder.name === 'Favorites') counts['Favorites'] = folder.animeCount;
+      if (folder.name === 'Watching') counts['Watching'] = folder.animeCount;
+      if (folder.name === 'Completed') counts['Completed'] = folder.animeCount;
+      if (folder.name === 'Dropped') counts['Dropped'] = folder.animeCount;
+      if (folder.name === 'Plan to Watch') counts['Wishlist'] = folder.animeCount;
+    });
+    return counts;
+  }, [collections]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await collectionService.deleteFolder(id);
+      loadCollection();
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+    }
+  }, []);
+
+  const handleSort = useCallback((mode: SortMode) => {
+    setSortMode(mode);
+  }, []);
+
+  const filteredCollections = useMemo(() => {
+    let filtered = collections;
+
+    if (selectedCategory !== 'All') {
+      const targetTypeMap: Record<string, string> = {
+        Wishlist: 'wishlist',
+        Favorites: 'favorites',
+        Watching: 'watching',
+        Completed: 'completed',
+        Dropped: 'dropped',
+      };
+      const targetType = targetTypeMap[selectedCategory];
+
+      if (targetType) {
+        filtered = collections.filter((f) => f.folderType === targetType);
+      }
+    }
+
+    return [...filtered].sort((a, b) => {
+      if (sortMode === 'newest') return b.createdAt.getTime() - a.createdAt.getTime();
+      if (sortMode === 'oldest') return a.createdAt.getTime() - b.createdAt.getTime();
+      if (sortMode === 'rarity') return (b.isR18 ? 1 : 0) - (a.isR18 ? 1 : 0);
+      if (sortMode === 'popularity') return b.sharedBy - a.sharedBy;
+      if (sortMode === 'count') return b.animeCount - a.animeCount;
+      if (sortMode === 'id') return a.id.localeCompare(b.id);
+      return 0;
+    });
+  }, [collections, selectedCategory, sortMode]);
+
+  const renderFolder = useCallback(({ item }: { item: CollectionFolder }) => {
+    return (
+      <FolderList
+        folders={[item]}
+        folderPreviews={{}}
+        onFolderPress={(folder) => router.push(`/collection/${folder.id}?name=${folder.name}`)}
+      />
+    );
+  }, []);
+
+  const keyExtractor = useCallback((item: CollectionFolder) => item.id, []);
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyIcon}>📁</Text>
+      <Text style={styles.emptyText}>Your collection is empty</Text>
+      <Text style={styles.emptySubtext}>Start adding anime to build your collection</Text>
+    </View>
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    loadCollection().then(() => {
+      setRefreshing(false);
+    });
   }, []);
 
+  const renderSortButtons = () => {
+    const sortOptions: { label: string; value: SortMode }[] = [
+      { label: 'Newest', value: 'newest' },
+      { label: 'Oldest', value: 'oldest' },
+      { label: 'Rarity', value: 'rarity' },
+      { label: 'Popularity', value: 'popularity' },
+      { label: 'Count', value: 'count' },
+      { label: 'ID', value: 'id' },
+    ];
+
+    return (
+      <View style={styles.sortContainer}>
+        {sortOptions.map((option) => {
+          const isActive = sortMode === option.value;
+
+          return (
+            <TouchableOpacity
+              key={option.value}
+              onPress={() => handleSort(option.value)}
+              style={[styles.sortButton, isActive && styles.sortButtonActive]}>
+              <Text style={[styles.sortButtonText, isActive && styles.sortButtonTextActive]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const flatListRef = useRef<FlatList>(null);
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
       <LinearGradient
-        colors={['#121212', '#1E1E1E', '#121212']}
+        colors={Colors.gradients.background as [string, string, ...string[]]}
         style={StyleSheet.absoluteFill}
       />
-      <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+      <View style={styles.container}>
+        <CollectionHeader
+          categories={categories}
+          selectedCategory={selectedCategory}
+          categoryCounts={categoryCounts}
+          categoryIcons={categoryIcons}
+          onSelectCategory={setSelectedCategory}
+          onAddFolder={() => setCreateModalVisible(true)}
+        />
+
+        {selectedCategory !== 'All' && renderSortButtons()}
+
+        <FlatList
+          ref={flatListRef}
+          data={filteredCollections}
+          renderItem={renderFolder}
+          keyExtractor={keyExtractor}
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
           refreshControl={
-            <RefreshControl 
-              tintColor="#fff" 
-              refreshing={refreshing} 
+            <RefreshControl
+              tintColor={Colors.text.primary}
+              refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#6200EE']}
-              progressBackgroundColor="#1E1E1E"
+              colors={[Colors.primary]}
+              progressBackgroundColor={Colors.background.secondary}
             />
           }
-        >
-          <View style={styles.headerContainer}>
-            <CollectionHeader 
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-              categoryCounts={categoryCounts}
-            />
-          </View>
+          removeClippedSubviews={Platform.OS === 'android'}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={10}
+          scrollEventThrottle={16}
+        />
 
-          <FolderList 
-            folders={folders}
-            folderPreviews={folderPreviews}
-          />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        <CreateFolderModal
+          visible={isCreateModalVisible}
+          onClose={() => setCreateModalVisible(false)}
+          onCreated={loadCollection}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
   safeArea: {
     flex: 1,
   },
-  scrollView: {
+
+  container: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: 100,
-    paddingLeft: 20,
-    paddingRight: 20,
-    paddingTop: 8,
+
+  listContent: {
+    paddingHorizontal: Spacing.screenPadding,
+    paddingBottom: 40,
   },
-  headerContainer: {
-    marginBottom: 8,
+
+  sortContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginHorizontal: Spacing.screenPadding,
+    marginBottom: Spacing.md,
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+  },
+
+  sortButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.glass.light,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    marginBottom: Spacing.xs,
+  },
+
+  sortButtonActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.text.primary,
+  },
+
+  sortButtonText: {
+    ...Typography.bodySmall,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+
+  sortButtonTextActive: {
+    color: Colors.text.primary,
+    fontWeight: '700',
+  },
+
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: Spacing.md,
+  },
+
+  emptyText: {
+    ...Typography.headlineSmall,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+
+  emptySubtext: {
+    ...Typography.bodyLarge,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+
+  separator: {
+    height: 1,
+    backgroundColor: Colors.glass.border,
   },
 });

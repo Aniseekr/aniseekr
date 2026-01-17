@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AIRecommendation, Anime, Genre, Recommendation, ViewMode } from "./types";
-import { AnimeRepository } from "../../libs/anime-repository";
+import { AnimeRepository } from "../../libs/repositories/anime-repository";
 
 type DiscoveryMode = "genres" | "mood" | "duration";
 
@@ -10,6 +10,7 @@ export function useRateData() {
   const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
   const [trendAnime, setTrendAnime] = useState<Anime[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [seasonalAnime, setSeasonalAnime] = useState<Anime[]>([]); // [NEW]
   const [aiRecommendation, setAIRecommendation] = useState<AIRecommendation>({ anime: null, loading: false });
   
   // These were for direct API rate limiting visibility, 
@@ -54,6 +55,16 @@ export function useRateData() {
     }
   }, [recommendations.length]);
 
+  const loadSeasonal = useCallback(async () => {
+    if (seasonalAnime.length > 0) return;
+    try {
+      const anime = await AnimeRepository.getSeasonalAnime();
+      setSeasonalAnime(anime);
+    } catch (error) {
+      console.error("Failed to load seasonal anime:", error);
+    }
+  }, [seasonalAnime.length]);
+
   const loadAIRecommendation = useCallback(async () => {
     setAIRecommendation({ anime: null, loading: true });
     try {
@@ -80,7 +91,9 @@ export function useRateData() {
     if (viewMode === "tracking") {
       loadRecommendations();
     }
-  }, [loadTrend, loadRecommendations, viewMode]);
+    // Always load seasonal for dashboard
+    loadSeasonal();
+  }, [loadTrend, loadRecommendations, loadSeasonal, viewMode]);
 
   const state = useMemo(
     () => ({
@@ -89,11 +102,12 @@ export function useRateData() {
       availableGenres,
       trendAnime,
       recommendations,
+      seasonalAnime,
       aiRecommendation,
       queueSize,
       nextAvailableAt,
     }),
-    [aiRecommendation, availableGenres, discoveryMode, nextAvailableAt, queueSize, recommendations, trendAnime, viewMode]
+    [aiRecommendation, availableGenres, discoveryMode, nextAvailableAt, queueSize, recommendations, seasonalAnime, trendAnime, viewMode]
   );
 
   const actions = useMemo(
@@ -103,9 +117,10 @@ export function useRateData() {
       loadGenres,
       loadTrend,
       loadRecommendations,
+      loadSeasonal,
       loadAIRecommendation,
     }),
-    [loadAIRecommendation, loadGenres, loadRecommendations, loadTrend]
+    [loadAIRecommendation, loadGenres, loadRecommendations, loadSeasonal, loadTrend]
   );
 
   return { state, actions };
