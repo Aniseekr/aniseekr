@@ -108,35 +108,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <Text style={styles.errorMessage}>{this.state.error.message}</Text>
 
             {this.state.errorInfo.field && (
-              <Text style={styles.errorField}>
-                Field: {this.state.errorInfo.field}
-              </Text>
+              <Text style={styles.errorField}>Field: {this.state.errorInfo.field}</Text>
             )}
 
             {this.state.errorInfo.statusCode && (
-              <Text style={styles.errorField}>
-                Status Code: {this.state.errorInfo.statusCode}
-              </Text>
+              <Text style={styles.errorField}>Status Code: {this.state.errorInfo.statusCode}</Text>
             )}
 
             {this.state.errorInfo.value !== undefined && (
-              <Text style={styles.errorField}>
-                Value: {this.state.errorInfo.value}
-              </Text>
+              <Text style={styles.errorField}>Value: {this.state.errorInfo.value}</Text>
             )}
 
             <View style={styles.errorActions}>
-              <TouchableOpacity
-                style={styles.errorButton}
-                onPress={this.handleRetry}
-              >
+              <TouchableOpacity style={styles.errorButton} onPress={this.handleRetry}>
                 <Text style={styles.errorButtonText}>Retry</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.errorButton}
-                onPress={this.handleReload}
-              >
+              <TouchableOpacity style={styles.errorButton} onPress={this.handleReload}>
                 <Text style={styles.errorButtonText}>Reload App</Text>
               </TouchableOpacity>
             </View>
@@ -157,10 +145,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <Text style={styles.errorMessage}>{this.state.error.message}</Text>
             <Text style={styles.errorHint}>This error has been logged for investigation.</Text>
 
-            <TouchableOpacity
-              style={styles.errorButton}
-              onPress={this.handleReload}
-            >
+            <TouchableOpacity style={styles.errorButton} onPress={this.handleReload}>
               <Text style={styles.errorButtonText}>Reload App</Text>
             </TouchableOpacity>
           </View>
@@ -169,11 +154,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     return (
-      <>
-        {this.props.fallback && this.state.hasError ? (
-          this.props.fallback
-        ) : this.props.children}
-      </>
+      <>{this.props.fallback && this.state.hasError ? this.props.fallback : this.props.children}</>
     );
   }
 }
@@ -253,7 +234,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity:  Error 0.3,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
   },

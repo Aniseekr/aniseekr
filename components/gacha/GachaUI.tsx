@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Modal, Pressable, TouchableOpacity, Dimensions, ScrollView, Platform } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Modal,
+  Pressable,
+  TouchableOpacity,
+  Dimensions,
+  ScrollView,
+  Platform,
+} from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -73,14 +80,12 @@ export function CardDetailView({ visible, card, onClose, onShardExchange }: Card
       transparent
       onRequestClose={handleClose}
       animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
-      style={styles.modalContainer}
-    >
+      style={styles.modalContainer}>
       <Pressable style={styles.backdrop} onPress={handleClose}>
         <View style={styles.content}>
           <TouchableOpacity
             style={[styles.closeButton, styles.closeButtonTop]}
-            onPress={handleClose}
-          >
+            onPress={handleClose}>
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
 
@@ -100,8 +105,7 @@ export function CardDetailView({ visible, card, onClose, onShardExchange }: Card
 
             <TouchableOpacity
               style={styles.shardButton}
-              onPress={() => setShowFullStats(!showFullStats)}
-            >
+              onPress={() => setShowFullStats(!showFullStats)}>
               <Text style={styles.shardButtonText}>{card.shards} Shards</Text>
             </TouchableOpacity>
 
@@ -114,30 +118,18 @@ export function CardDetailView({ visible, card, onClose, onShardExchange }: Card
           </View>
 
           {card.totalShards > 0 && (
-            <TouchableOpacity
-              style={styles.exchangeButton}
-              onPress={() => onShardExchange?.()}
-            >
+            <TouchableOpacity style={styles.exchangeButton} onPress={() => onShardExchange?.()}>
               <Text style={styles.exchangeButtonText}>Exchange {card.totalShards} Shards</Text>
             </TouchableOpacity>
           )}
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 export function ShardCounter({ totalShards, shardsPerCard, exchangeRate }: ShardCounterProps) {
   const scale = useSharedValue(1);
-
-  const handlePressIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    scale.value = withSpring(0.95, { damping: 10, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 300 });
-  };
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -171,14 +163,10 @@ export function SortSelector({ currentSort, onSortChange, visible, onClose }: So
       visible={visible}
       transparent
       onRequestClose={onClose}
-      animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
-    >
+      animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <View style={styles.content}>
-          <TouchableOpacity
-            style={[styles.closeButton, styles.closeButtonTop]}
-            onPress={onClose}
-          >
+          <TouchableOpacity style={[styles.closeButton, styles.closeButtonTop]} onPress={onClose}>
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
 
@@ -192,21 +180,19 @@ export function SortSelector({ currentSort, onSortChange, visible, onClose }: So
                 <TouchableOpacity
                   key={option.id}
                   style={[styles.sortOption, isSelected && styles.sortOptionSelected]}
-                  onPress={() => handleSortSelect(option.id)}
-                >
-                  <Text style={[styles.sortOptionText, isSelected && styles.sortOptionTextSelected]}>
+                  onPress={() => handleSortSelect(option.id)}>
+                  <Text
+                    style={[styles.sortOptionText, isSelected && styles.sortOptionTextSelected]}>
                     {option.label}
                   </Text>
-                  {isSelected && (
-                    <Text style={styles.checkmark}>✓</Text>
-                  )}
+                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -219,32 +205,39 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   content: {
-    backgroundColor: '#1e293b',
-    borderRadius: 24,
-    padding: 20,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
     width: SCREEN_WIDTH * 0.9,
     maxHeight: SCREEN_HEIGHT * 0.8,
   },
 
+  closeButton: {
+    padding: 8,
+  },
+
   closeButtonText: {
     fontSize: 24,
-    color: '#fff',
+    color: Colors.text.secondary,
   },
 
   closeButtonTop: {
     position: 'absolute',
     top: Platform.select({ ios: 20, android: 16 }),
     right: 20,
+    zIndex: 10,
   },
 
   cardImage: {
     width: '100%',
     height: SCREEN_WIDTH * 0.5,
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.md,
   },
 
   cardInfo: {
@@ -252,9 +245,9 @@ const styles = StyleSheet.create({
   },
 
   rarityBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
     borderWidth: 3,
     borderColor: '#fff',
   },
@@ -266,84 +259,80 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
+    ...Typography.headlineMedium,
+    color: Colors.text.primary,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: Spacing.sm,
   },
 
   shardButton: {
-    backgroundColor: 'rgba(251, 191, 36, 0.3)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 16,
+    backgroundColor: Colors.glass.light,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: '#fff',
-    marginTop: 8,
+    borderColor: Colors.text.primary,
+    marginTop: Spacing.xs,
   },
 
   shardButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.titleMedium,
+    color: Colors.text.primary,
   },
 
   fullStats: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 12,
+    backgroundColor: Colors.glass.medium,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    marginTop: Spacing.sm,
   },
 
   statsLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.bodySmall,
+    color: Colors.text.secondary,
     marginBottom: 4,
   },
 
   statsValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    ...Typography.headlineSmall,
+    color: Colors.text.primary,
   },
 
   exchangeButton: {
-    backgroundColor: '#fbbf24',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginTop: 16,
+    backgroundColor: Colors.warning,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
+    alignItems: 'center',
   },
 
   exchangeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.titleMedium,
+    color: '#000',
   },
 
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 30,
-    padding: 16,
+    backgroundColor: Colors.glass.medium,
+    borderRadius: Radius.full,
+    padding: Spacing.md,
   },
 
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fbbf24',
+    backgroundColor: Colors.warning,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: Spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -362,29 +351,26 @@ const styles = StyleSheet.create({
   },
 
   counter: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#fff',
+    ...Typography.headlineLarge,
+    color: Colors.text.primary,
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    ...Typography.bodySmall,
+    color: Colors.text.secondary,
     marginLeft: 4,
   },
 
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 20,
+    ...Typography.headlineSmall,
+    color: Colors.text.primary,
+    marginBottom: Spacing.lg,
   },
 
   sortList: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: Colors.glass.dark,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm,
     maxHeight: SCREEN_HEIGHT * 0.6,
   },
 
@@ -394,32 +380,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.glass.light,
     marginBottom: 8,
   },
 
   sortOptionSelected: {
-    backgroundColor: '#fbbf24',
+    backgroundColor: Colors.warning,
     borderWidth: 1,
     borderColor: '#fff',
   },
 
   sortOptionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.bodyLarge,
+    color: Colors.text.primary,
     flex: 1,
   },
 
   sortOptionTextSelected: {
-    color: '#fff',
+    color: '#000',
   },
 
   checkmark: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#000',
     marginLeft: 12,
   },
 });

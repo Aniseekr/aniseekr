@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
-import Animated, {
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, withSpring, useAnimatedStyle } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 
 interface EditProfileSheetProps {
   visible: boolean;
@@ -34,7 +32,7 @@ export function EditProfileSheet({ visible, onClose, currentUser, onSave }: Edit
       setIsSaving(true);
 
       setTimeout(() => {
-        onSave({ username: username.trim(), email: email.trim() });
+        if (onSave) onSave({ username: username.trim(), email: email.trim() });
         setIsSaving(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -56,13 +54,11 @@ export function EditProfileSheet({ visible, onClose, currentUser, onSave }: Edit
   return (
     <Animated.View
       style={[styles.overlay, containerStyle]}
-      pointerEvents={visible ? 'box-none' : 'auto'}
-    >
+      pointerEvents={visible ? 'box-none' : 'auto'}>
       <TouchableOpacity
         activeOpacity={visible ? 0 : 1}
         style={styles.backdrop}
-        onPress={handleClose}
-      >
+        onPress={handleClose}>
         <View style={styles.sheet}>
           <View style={styles.handle}>
             <View style={styles.handleBar} />
@@ -77,7 +73,7 @@ export function EditProfileSheet({ visible, onClose, currentUser, onSave }: Edit
               value={username}
               onChangeText={setUsername}
               placeholder="Enter username"
-              placeholderTextColor="#999"
+              placeholderTextColor={Colors.text.placeholder}
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isSaving}
@@ -90,7 +86,7 @@ export function EditProfileSheet({ visible, onClose, currentUser, onSave }: Edit
               onChangeText={setEmail}
               placeholder="Enter email"
               keyboardType="email-address"
-              placeholderTextColor="#999"
+              placeholderTextColor={Colors.text.placeholder}
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isSaving}
@@ -100,22 +96,16 @@ export function EditProfileSheet({ visible, onClose, currentUser, onSave }: Edit
               style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={isSaving}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.saveButtonText}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Text>
+              activeOpacity={0.7}>
+              <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save Changes'}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={handleClose}
-        >
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
           <Text style={styles.closeButtonText}>Cancel</Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
@@ -127,10 +117,10 @@ const styles = StyleSheet.create({
   },
 
   sheet: {
-    backgroundColor: '#1e293b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 20,
+    backgroundColor: Colors.background.secondary,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingTop: Spacing.lg,
     paddingBottom: Platform.select({ ios: 34, android: 20 }),
   },
 
@@ -142,7 +132,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.text.primary,
   },
 
   handleBar: {
@@ -152,43 +142,43 @@ const styles = StyleSheet.create({
     right: 0,
     width: 40,
     height: 5,
-    backgroundColor: '#2d2d2d',
+    backgroundColor: Colors.text.disabled,
     borderRadius: 2.5,
   },
 
   backdrop: {
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
 
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xl,
     paddingBottom: 40,
   },
 
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 24,
+    ...Typography.headlineMedium,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xl,
   },
 
   sectionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 12,
-    marginTop: 8,
+    ...Typography.titleMedium,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.xs,
   },
 
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: Colors.glass.light,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#fff',
+    color: Colors.text.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
   },
 
   inputIOS: {
@@ -196,20 +186,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 2,
   },
 
   saveButton: {
-    backgroundColor: '#fbbf24',
+    backgroundColor: Colors.warning,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 28,
+    borderRadius: Radius.full,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+    marginTop: Spacing.xl,
   },
 
   saveButtonDisabled: {
@@ -219,12 +209,18 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#000',
+  },
+
+  closeButton: {
+    backgroundColor: Colors.background.primary,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
 
   closeButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: Colors.text.secondary,
   },
 });

@@ -16,6 +16,7 @@ import { CollectionFolder } from '../types';
 import { collectionService } from '../libs/services/collection/collection-service';
 import { CreateFolderModal } from '../components/collection/CreateFolderModal';
 import { useRouter } from 'expo-router';
+import { Colors, Radius, Spacing, Typography } from '../constants/DesignSystem';
 
 type SortMode = 'newest' | 'oldest' | 'rarity' | 'popularity' | 'count' | 'id';
 
@@ -167,7 +168,10 @@ export default function CollectionScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
-      <LinearGradient colors={['#121212', '#1E1E1E']} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={Colors.gradients.background as [string, string, ...string[]]}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.container}>
         <CollectionHeader
           categories={categories}
@@ -190,11 +194,11 @@ export default function CollectionScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           refreshControl={
             <RefreshControl
-              tintColor="#fff"
+              tintColor={Colors.text.primary}
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#6200EE']}
-              progressBackgroundColor="#6200EE"
+              colors={[Colors.primary]}
+              progressBackgroundColor={Colors.background.secondary}
             />
           }
           removeClippedSubviews={Platform.OS === 'android'}
@@ -225,43 +229,43 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screenPadding,
     paddingBottom: 40,
   },
 
   sortContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginHorizontal: 20,
-    marginBottom: 16,
+    marginHorizontal: Spacing.screenPadding,
+    marginBottom: Spacing.md,
     flexWrap: 'wrap',
-    gap: 8,
+    gap: Spacing.xs,
   },
 
   sortButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.glass.light,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    marginBottom: 8,
+    borderColor: Colors.glass.border,
+    marginBottom: Spacing.xs,
   },
 
   sortButtonActive: {
-    backgroundColor: 'rgba(251, 191, 36, 1)',
-    borderColor: '#fff',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.text.primary,
   },
 
   sortButtonText: {
-    fontSize: 12,
+    ...Typography.bodySmall,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: Colors.text.secondary,
     textAlign: 'center',
   },
 
   sortButtonTextActive: {
-    color: '#fff',
+    color: Colors.text.primary,
     fontWeight: '700',
   },
 
@@ -273,26 +277,24 @@ const styles = StyleSheet.create({
 
   emptyIcon: {
     fontSize: 64,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
 
   emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.headlineSmall,
+    color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.xs,
   },
 
   emptySubtext: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.6)',
+    ...Typography.bodyLarge,
+    color: Colors.text.secondary,
     textAlign: 'center',
   },
 
   separator: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: Colors.glass.border,
   },
 });

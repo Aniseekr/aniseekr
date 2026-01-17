@@ -1,6 +1,7 @@
 import { View, ViewProps, Platform, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { memo } from 'react';
+import { Colors, Radius } from '../../constants/DesignSystem';
 
 type GlassVariant = 'default' | 'clear' | 'frosted' | 'dark';
 
@@ -8,25 +9,41 @@ interface GlassCardProps extends ViewProps {
   children: React.ReactNode;
   intensity?: number;
   variant?: GlassVariant;
+  className?: string;
 }
 
-function GlassCardComponent({ children, style, intensity, variant = 'default', className, ...props }: GlassCardProps & { className?: string }) {
+function GlassCardComponent({
+  children,
+  style,
+  intensity,
+  variant = 'default',
+  className,
+  ...props
+}: GlassCardProps) {
   const getIntensity = () => {
     if (intensity !== undefined) return intensity;
     switch (variant) {
-      case 'clear': return 10;
-      case 'frosted': return 60;
-      case 'dark': return 40;
-      default: return 30;
+      case 'clear':
+        return 10;
+      case 'frosted':
+        return 60;
+      case 'dark':
+        return 40;
+      default:
+        return 30;
     }
   };
 
   const getTint = () => {
     switch (variant) {
-      case 'clear': return 'light';
-      case 'frosted': return 'default';
-      case 'dark': return 'dark';
-      default: return 'dark';
+      case 'clear':
+        return 'light';
+      case 'frosted':
+        return 'default';
+      case 'dark':
+        return 'dark';
+      default:
+        return 'dark';
     }
   };
 
@@ -43,7 +60,10 @@ function GlassCardComponent({ children, style, intensity, variant = 'default', c
 
   // Android fallback
   return (
-    <View className={`bg-white/10 ${className || ''}`} style={[styles.base, styles.android, style]} {...props}>
+    <View
+      className={`bg-white/10 ${className || ''}`}
+      style={[styles.base, styles.android, style]}
+      {...props}>
       {children}
     </View>
   );
@@ -51,16 +71,16 @@ function GlassCardComponent({ children, style, intensity, variant = 'default', c
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 32,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)', // Slightly more visible border for "liquid" edge
+    borderColor: Colors.glass.border,
   },
   darkBorder: {
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: Colors.glass.dark,
   },
   android: {
-    backgroundColor: 'rgba(30, 30, 30, 0.6)', 
+    backgroundColor: Colors.background.secondary,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -70,5 +90,3 @@ const styles = StyleSheet.create({
 });
 
 export const GlassCard = memo(GlassCardComponent);
-
-

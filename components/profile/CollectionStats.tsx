@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Platform, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 
 interface AccountStatCardProps {
   title: string;
@@ -12,7 +13,8 @@ interface AccountStatCardProps {
 }
 
 function AccountStatCard({ title, value, icon, iconSet, color }: AccountStatCardProps) {
-  const IconComponent = iconSet === 'Ionicons' ? Ionicons : iconSet === 'MaterialIcons' ? MaterialIcons : FontAwesome5;
+  const IconComponent =
+    iconSet === 'Ionicons' ? Ionicons : iconSet === 'MaterialIcons' ? MaterialIcons : FontAwesome5;
   return (
     <View style={styles.statCard}>
       <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
@@ -25,50 +27,49 @@ function AccountStatCard({ title, value, icon, iconSet, color }: AccountStatCard
 }
 
 interface CollectionStatsProps {
-    stats: {
-        totalRated: number;
-        likedCount: number;
-        cardsCount: number;
-        foldersCount: number;
-    }
+  stats: {
+    totalRated: number;
+    likedCount: number;
+    cardsCount: number;
+    foldersCount: number;
+  };
 }
 
 export function CollectionStats({ stats }: CollectionStatsProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Overview</Text>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        contentContainerStyle={styles.scrollContent}
-      >
-        <AccountStatCard 
-          title="Rated" 
-          value={stats.totalRated.toString()} 
-          icon="star" 
-          iconSet="Ionicons" 
-          color="#fbbf24" 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}>
+        <AccountStatCard
+          title="Rated"
+          value={stats.totalRated.toString()}
+          icon="star"
+          iconSet="Ionicons"
+          color={Colors.warning}
         />
-        <AccountStatCard 
-          title="Liked" 
-          value={stats.likedCount.toString()} 
-          icon="heart" 
-          iconSet="Ionicons" 
-          color="#ef4444" 
+        <AccountStatCard
+          title="Liked"
+          value={stats.likedCount.toString()}
+          icon="heart"
+          iconSet="Ionicons"
+          color={Colors.error}
         />
-        <AccountStatCard 
-          title="Cards" 
-          value={stats.cardsCount.toString()} 
-          icon="collections" 
-          iconSet="MaterialIcons" 
-          color="#3b82f6" 
+        <AccountStatCard
+          title="Cards"
+          value={stats.cardsCount.toString()}
+          icon="collections"
+          iconSet="MaterialIcons"
+          color={Colors.info}
         />
-        <AccountStatCard 
-          title="Folders" 
-          value={stats.foldersCount.toString()} 
-          icon="folder" 
-          iconSet="Ionicons" 
-          color="#10b981" 
+        <AccountStatCard
+          title="Folders"
+          value={stats.foldersCount.toString()}
+          icon="folder"
+          iconSet="Ionicons"
+          color={Colors.success}
         />
       </ScrollView>
     </View>
@@ -77,14 +78,13 @@ export function CollectionStats({ stats }: CollectionStatsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 40,
+    marginBottom: Spacing.xxxl,
   },
   sectionTitle: {
-    color: 'rgba(255, 255, 255, 0.87)',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    color: Colors.text.primary,
+    ...Typography.headlineSmall,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.screenPadding,
     letterSpacing: -0.5,
     fontFamily: Platform.select({
       ios: 'System',
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     }),
   },
   scrollContent: {
-    paddingLeft: 20,
+    paddingLeft: Spacing.screenPadding,
     paddingRight: 4,
   },
   statCard: {
@@ -100,15 +100,15 @@ const styles = StyleSheet.create({
     height: 170,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    marginRight: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
+    padding: Spacing.xl,
+    marginRight: Spacing.md,
+    backgroundColor: Colors.glass.medium,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
     ...Platform.select({
       android: {
-        backgroundColor: '#1E1E1E',
+        backgroundColor: Colors.background.secondary,
         elevation: 2,
       },
     }),
@@ -116,17 +116,16 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
   },
   value: {
-    color: 'rgba(255, 255, 255, 0.87)',
-    fontSize: 28,
-    fontWeight: '700',
+    color: Colors.text.primary,
+    ...Typography.headlineLarge,
     marginBottom: 4,
     letterSpacing: -0.5,
     fontFamily: Platform.select({
@@ -135,9 +134,8 @@ const styles = StyleSheet.create({
     }),
   },
   title: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 10,
-    fontWeight: '700',
+    color: Colors.text.placeholder,
+    ...Typography.caption,
     textTransform: 'uppercase',
     letterSpacing: 2,
     fontFamily: Platform.select({

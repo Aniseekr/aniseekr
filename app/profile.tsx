@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { UserRepository, UserProfile } from '../libs/repositories/user-repository';
 import { router } from 'expo-router';
 import { gachaService } from '../libs/services/gacha-service';
+import { Colors } from '../constants/DesignSystem';
 
 export default function ProfileScreen() {
   const { top } = useSafeAreaInsets();
@@ -65,18 +66,21 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#121212', '#1E1E1E', '#121212']} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={Colors.gradients.background as [string, string, ...string[]]}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
-              tintColor="#fff"
+              tintColor={Colors.text.primary}
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#6200EE']}
-              progressBackgroundColor="#1E1E1E"
+              colors={[Colors.secondary]}
+              progressBackgroundColor={Colors.background.secondary}
             />
           }>
           <ProfileHeader
@@ -107,7 +111,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: Colors.background.primary,
   },
   safeArea: {
     flex: 1,

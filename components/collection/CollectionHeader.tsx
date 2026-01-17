@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Pressable, Platform, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 
 interface CollectionHeaderProps {
   categories: string[];
@@ -23,16 +24,16 @@ export function CollectionHeader({
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <View style={styles.iconContainer}>
-            <MaterialIcons name="collections" size={24} color="rgba(255, 255, 255, 0.87)" />
+            <MaterialIcons name="collections" size={24} color={Colors.text.primary} />
           </View>
           <Text style={styles.title}>Collector</Text>
         </View>
         <View style={styles.actionsRow}>
           <Pressable style={styles.actionButton}>
-            <MaterialIcons name="search" size={22} color="rgba(255, 255, 255, 0.87)" />
+            <MaterialIcons name="search" size={22} color={Colors.text.primary} />
           </Pressable>
           <Pressable style={styles.actionButton} onPress={onAddFolder}>
-            <MaterialIcons name="add" size={24} color="rgba(255, 255, 255, 0.87)" />
+            <MaterialIcons name="add" size={24} color={Colors.text.primary} />
           </Pressable>
         </View>
       </View>
@@ -70,12 +71,12 @@ export function CollectionHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    backgroundColor: Colors.glass.medium,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: {
-        backgroundColor: '#1E1E1E',
+        backgroundColor: Colors.background.secondary,
         elevation: 2,
       },
     }),
@@ -93,20 +94,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.sm,
   },
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.glass.light,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
@@ -116,27 +117,22 @@ const styles = StyleSheet.create({
     }),
   },
   title: {
-    color: 'rgba(255, 255, 255, 0.87)',
-    fontSize: 28,
-    fontWeight: '700',
+    color: Colors.text.primary,
+    ...Typography.headlineMedium,
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.sm,
   },
   actionButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: Radius.full,
+    backgroundColor: Colors.glass.light,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
@@ -147,27 +143,27 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.sm,
   },
   categoryButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.glass.light,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.glass.border,
   },
   categoryButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: Colors.text.primary,
+    borderColor: Colors.text.primary,
   },
   categoryContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.xs,
   },
   categoryText: {
-    color: 'rgba(255, 255, 255, 0.87)',
+    color: Colors.text.primary,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -177,19 +173,19 @@ const styles = StyleSheet.create({
     }),
   },
   categoryTextActive: {
-    color: '#121212',
+    color: Colors.background.primary,
   },
   countBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.glass.medium,
   },
   countBadgeActive: {
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   countText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: Colors.text.secondary,
     fontSize: 10,
     fontWeight: '700',
     fontFamily: Platform.select({

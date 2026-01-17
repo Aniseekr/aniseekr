@@ -47,14 +47,14 @@ export class UserRepository {
 
     return {
       id: 'local-user',
-      username: 'Kidney', // Or fetch from local storage
-      avatarUrl: 'https://github.com/kidney.png',
+      username: 'Not signed in',
+      avatarUrl: '',
       isDonator: false,
       stats: {
         totalRated: stats.totalRated,
         likedCount: stats.likedCount,
         cardsCount: 0,
-        foldersCount: 1,
+        foldersCount: 0,
       },
     };
   }
