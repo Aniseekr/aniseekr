@@ -158,6 +158,18 @@ mock.module('expo-sqlite', () => ({
   openDatabaseAsync: async (_name: string) => new FakeDatabase(),
 }));
 
+// expo-file-system shim — IDMappingService.updateMappings() reads/downloads,
+// tests never invoke that path but the static import must resolve.
+mock.module('expo-file-system', () => ({
+  cacheDirectory: '/tmp/test-cache/',
+  documentDirectory: '/tmp/test-docs/',
+  downloadAsync: async (_url: string, _dest: string) => ({ status: 200 }),
+  readAsStringAsync: async (_path: string) => '[]',
+  writeAsStringAsync: async (_path: string, _content: string) => undefined,
+  deleteAsync: async (_path: string) => undefined,
+  getInfoAsync: async (_path: string) => ({ exists: false }),
+}));
+
 // expo-haptics no-op shim
 mock.module('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },

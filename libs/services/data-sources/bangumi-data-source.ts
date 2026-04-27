@@ -25,6 +25,7 @@ import type {
   PlatformRatingData,
 } from './anime-data-source';
 import { defaultMediaStubs, defaultStatsStub } from './anime-data-source';
+import { AniListDataSource } from './anilist-data-source';
 import { DataSourceError } from './data-source-error';
 import { UnifiedAnimeItem } from '../../models/unified-anime-item';
 import type { PlatformImageData } from '../../models/platform-image-data';
@@ -217,25 +218,11 @@ export class BangumiDataSource implements AnimeDataSource {
 // MARK: - Module-level helpers (exported for tests where useful)
 
 /**
- * Default lazy resolver for the AniList data source. Production code uses
- * dynamic import so this module never has a static dependency on the AniList
- * file (which is owned by a sibling agent). Tests inject a mock via
- * the constructor and never hit this path.
+ * Default resolver for the AniList data source. Static import so Hermes
+ * can compile the production bundle (it doesn't support `import()`
+ * expressions). Tests inject a mock via the constructor.
  */
-const defaultAniListResolver: AniListResolver = async () => {
-  const mod: { AniListDataSource?: new () => AnimeDataSource } = await import(
-    /* webpackIgnore: true */ './anilist-data-source' as string
-  );
-  if (!mod.AniListDataSource) {
-    throw new DataSourceError({
-      code: 'UNKNOWN',
-      message:
-        'AniListDataSource not available. Inject one via BangumiDataSource constructor.',
-      platform: 'bangumi',
-    });
-  }
-  return new mod.AniListDataSource();
-};
+const defaultAniListResolver: AniListResolver = async () => new AniListDataSource();
 
 /**
  * Convert a Bangumi v0 subject into a UnifiedAnimeItem.

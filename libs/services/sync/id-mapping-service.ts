@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import { LocalDB } from '../../db';
 import type { PlatformType } from '../auth/types';
 
@@ -57,14 +58,11 @@ export class IDMappingService {
    * 100k+ row file.
    */
   async updateMappings(): Promise<void> {
-    // Defer the expo-file-system import — it pulls in react-native via
-    // expo-modules-core, which the test environment cannot resolve.
-    const FileSystem = (await import('expo-file-system')) as unknown as {
+    const fs = FileSystem as unknown as {
       cacheDirectory?: string;
       downloadAsync(url: string, dest: string): Promise<{ status: number }>;
       readAsStringAsync(path: string): Promise<string>;
     };
-    const fs = FileSystem;
     const cacheDir = fs.cacheDirectory;
 
     if (!cacheDir) {
