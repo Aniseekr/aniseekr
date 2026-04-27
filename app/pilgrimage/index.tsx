@@ -86,15 +86,23 @@ export default function PilgrimageHubScreen() {
 
   const mapEntries = useMemo(
     () =>
-      anime.map((item) => ({
-        anime: item,
-        distanceKm: userLocation
-          ? locationService.getDistanceKm(userLocation, {
-              latitude: item.geo?.[0] ?? 0,
-              longitude: item.geo?.[1] ?? 0,
-            })
-          : undefined,
-      })),
+      anime.map((item) => {
+        const [latitude, longitude] = item.geo ?? [];
+        const hasValidGeo =
+          typeof latitude === 'number' &&
+          typeof longitude === 'number' &&
+          Number.isFinite(latitude) &&
+          Number.isFinite(longitude) &&
+          (latitude !== 0 || longitude !== 0);
+
+        return {
+          anime: item,
+          distanceKm:
+            userLocation && hasValidGeo
+              ? locationService.getDistanceKm(userLocation, { latitude, longitude })
+              : undefined,
+        };
+      }),
     [anime, userLocation]
   );
 
