@@ -1,16 +1,19 @@
-import React from 'react';
-import { View, Text, Platform, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Platform, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Colors, Radius, TabBar as TabBarTokens } from '../constants/DesignSystem';
+
+const PILL_HORIZONTAL_MARGIN = 16;
+const PILL_INNER_PADDING = 8;
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   const bottomMargin = Platform.select({
-    ios: insets.bottom > 0 ? insets.bottom : 20,
-    android: insets.bottom > 0 ? insets.bottom + 12 : 24,
+    ios: insets.bottom > 0 ? insets.bottom : 16,
+    android: insets.bottom > 0 ? insets.bottom + 12 : 20,
   });
 
   const isHidden = (options: any) =>
@@ -24,157 +27,183 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     return null;
   }
 
+  const visibleRoutes = state.routes.filter((route) => {
+    const { options } = descriptors[route.key];
+    return !isHidden(options);
+  });
+
   return (
-    <View style={[styles.container, { bottom: bottomMargin }]}>
-      <BlurView
-        intensity={Platform.OS === 'ios' ? 30 : 50}
-        tint="dark"
-        style={StyleSheet.absoluteFill}
-      />
-      
-      {/* Optional: Add a subtle border overlay if BlurView doesn't support border directly nicely on all platforms */}
-      <View style={styles.glassBorder} />
+    <View style={[styles.container, { bottom: bottomMargin }]} pointerEvents="box-none">
+      <View style={styles.pill}>
+        <BlurView
+          intensity={Platform.OS === 'ios' ? 60 : 80}
+          tint="dark"
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.pillBackground} pointerEvents="none" />
+        <View style={styles.pillBorder} pointerEvents="none" />
 
-      <View style={styles.tabRow}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
+        <View style={styles.tabRow}>
+          {visibleRoutes.map((route) => {
+            const { options } = descriptors[route.key];
+            const realIndex = state.routes.findIndex((r) => r.key === route.key);
+            const isFocused = state.index === realIndex;
 
-          // Hide hidden tabs for custom bar as well
-          if (isHidden(options)) {
-            return null;
-          }
+            const label =
+              options.tabBarLabel !== undefined
+                ? options.tabBarLabel
+                : options.title !== undefined
+                  ? options.title
+                  : route.name;
 
-          const label =
-            options.tabBarLabel !== undefined
-              ? options.tabBarLabel
-              : options.title !== undefined
-              ? options.title
-              : route.name;
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
+            };
 
-          const isFocused = state.index === index;
+            const onLongPress = () => {
+              navigation.emit({ type: 'tabLongPress', target: route.key });
+            };
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
-
-          const onLongPress = () => {
-             navigation.emit({
-              type: 'tabLongPress',
-              target: route.key,
-            });
-          };
-
-          return (
-            <TabItem 
-              key={route.key}
-              isFocused={isFocused}
-              label={label}
-              onPress={onPress}
-              onLongPress={onLongPress}
-              options={options}
-            />
-          );
-        })}
+            return (
+              <TabItem
+                key={route.key}
+                isFocused={isFocused}
+                label={label}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                options={options}
+              />
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 }
 
 function TabItem({ isFocused, label, onPress, onLongPress, options }: any) {
-    const scale = useSharedValue(1);
+  const scale = useSharedValue(1);
+  const indicatorScale = useSharedValue(isFocused ? 1 : 0);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
-    const handlePressIn = () => {
-        scale.value = withSpring(0.94, { damping: 10, stiffness: 300 });
-    };
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: indicatorScale.value }],
+    opacity: indicatorScale.value,
+  }));
 
-    const handlePressOut = () => {
-        scale.value = withSpring(1, { damping: 10, stiffness: 300 });
-    };
+  if (isFocused) {
+    indicatorScale.value = withSpring(1, { damping: 14, stiffness: 200 });
+  } else {
+    indicatorScale.value = withSpring(0, { damping: 14, stiffness: 200 });
+  }
 
-    return (
-        <Pressable
-            onPress={onPress}
-            onLongPress={onLongPress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            style={styles.tabItem}
-        >
-            <Animated.View style={[styles.tabContent, animatedStyle]}>
-                {options.tabBarIcon && options.tabBarIcon({
-                    focused: isFocused,
-                    color: isFocused ? '#fff' : 'rgba(255,255,255,0.4)',
-                    size: 24
-                })}
-                <Text style={[
-                    styles.label, 
-                    { color: isFocused ? '#fff' : 'rgba(255,255,255,0.4)' }
-                ]}>
-                    {typeof label === 'string' ? label : ''}
-                </Text>
-            </Animated.View>
-        </Pressable>
-    )
+  const handlePressIn = () => {
+    scale.value = withSpring(0.94, { damping: 10, stiffness: 300 });
+  };
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.tabItem}>
+      <Animated.View style={[styles.indicator, indicatorStyle]} pointerEvents="none" />
+      <Animated.View style={[styles.tabContent, animatedStyle]}>
+        {options.tabBarIcon &&
+          options.tabBarIcon({
+            focused: isFocused,
+            color: isFocused ? '#fff' : Colors.text.tertiary,
+            size: TabBarTokens.iconSize + 4,
+          })}
+        <Text
+          style={[
+            styles.label,
+            { color: isFocused ? '#fff' : Colors.text.tertiary },
+          ]}
+          numberOfLines={1}>
+          {typeof label === 'string' ? label : ''}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    borderRadius: 32,
+    left: PILL_HORIZONTAL_MARGIN,
+    right: PILL_HORIZONTAL_MARGIN,
+    alignItems: 'center',
+  },
+  pill: {
+    width: '100%',
+    borderRadius: Radius.tabBar,
     overflow: 'hidden',
-    backgroundColor: 'rgba(18,18,18,0.35)', // Semi-transparent background
+    paddingHorizontal: PILL_INNER_PADDING,
+    height: TabBarTokens.height,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
       },
-      android: {
-        elevation: 12,
-      },
+      android: { elevation: 12 },
     }),
   },
-  glassBorder: {
+  pillBackground: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 32,
+    backgroundColor: 'rgba(28,28,30,0.78)',
+  },
+  pillBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: Radius.tabBar,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    pointerEvents: 'none',
+    borderColor: Colors.glass.border,
   },
   tabRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    height: '100%',
+  },
+  indicator: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    right: 4,
+    borderRadius: Radius.tabActive,
+    backgroundColor: Colors.primary,
   },
   tabContent: {
-      alignItems: 'center',
-      justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: TabBarTokens.itemGap,
   },
   label: {
-    fontSize: 10,
+    fontSize: TabBarTokens.labelSize,
     fontWeight: '600',
-    marginTop: 4,
     textAlign: 'center',
   },
 });
