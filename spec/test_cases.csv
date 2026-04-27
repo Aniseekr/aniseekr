@@ -1,0 +1,161 @@
+case_id,domain,execution_group,priority,title,description,edge_class,status
+UAI-001,UnifiedAnimeItem,deterministic,P0,Construct minimal item,Item built with only title has UUID id and null sourcePlatform,nullability,active
+UAI-002,UnifiedAnimeItem,deterministic,P0,Bangumi platformData wins id,When platformData has bangumi entry the item id equals bangumi id,mapping,active
+UAI-003,UnifiedAnimeItem,deterministic,P0,MAL second priority,When only myanimelist platformData provided id equals MAL id,mapping,active
+UAI-004,UnifiedAnimeItem,deterministic,P0,AniList third priority,When only anilist platformData provided id equals AniList id,mapping,active
+UAI-005,UnifiedAnimeItem,deterministic,P0,Empty platform id falls back to UUID,If primary platform id is empty string fall back to UUID,fallback,active
+UAI-010,UnifiedAnimeItem,deterministic,P0,Search keywords lowercased,buildSearchKeywords returns concatenated lowercased titles plus synonyms,mapping,active
+UAI-011,UnifiedAnimeItem,deterministic,P1,Search keywords excludes nulls,Null titles are filtered out before joining,nullability,active
+UAI-012,UnifiedAnimeItem,deterministic,P1,Custom search keywords passthrough,Explicit searchKeywords arg overrides auto-build,mapping,active
+UAI-020,UnifiedAnimeItem,deterministic,P0,Normalized score AniList over 10,AniList score 85 normalizes to 8.5,mapping,active
+UAI-021,UnifiedAnimeItem,deterministic,P0,Normalized score AniList already small,AniList score 8.5 stays at 8.5 not 0.85,boundary,active
+UAI-022,UnifiedAnimeItem,deterministic,P0,Normalized score MAL passthrough,MAL score 7.5 returns 7.5 when no AniList score,mapping,active
+UAI-023,UnifiedAnimeItem,deterministic,P0,Normalized score Bangumi fallback,Bangumi score 8.2 returns 8.2 when no AniList or MAL,mapping,active
+UAI-024,UnifiedAnimeItem,deterministic,P0,Normalized score nil chain,Returns null when no scores set,nullability,active
+UAI-030,UnifiedAnimeItem,deterministic,P0,Image priority AniList first,bestImage prefers AniList platformImages over Bangumi,mapping,active
+UAI-031,UnifiedAnimeItem,deterministic,P0,Image priority Bangumi second,bestImage prefers Bangumi when AniList missing,mapping,active
+UAI-032,UnifiedAnimeItem,deterministic,P0,Image fallback to coverImageURL,bestImage falls back to top-level cover when no platformImages,fallback,active
+UAI-033,UnifiedAnimeItem,deterministic,P1,Image extraLarge separate fallback,extraLarge image type uses extraLarge field not large,mapping,active
+UAI-034,UnifiedAnimeItem,deterministic,P1,Image banner separate fallback,banner image type uses bannerImage field not large,mapping,active
+UAI-040,UnifiedAnimeItem,deterministic,P0,Equality by id,Two items with same id are equal regardless of other fields,boundary,active
+UAI-041,UnifiedAnimeItem,deterministic,P0,Hash by id,Hashable hash code stable across equal items,boundary,active
+UAI-050,UnifiedAnimeItem,deterministic,P0,Merge picks Bangumi title,merge() with bangumi+anilist items uses bangumi title,mapping,active
+UAI-051,UnifiedAnimeItem,deterministic,P0,Merge picks AniList cover,merge() picks anilist cover when present,mapping,active
+UAI-052,UnifiedAnimeItem,deterministic,P0,Merge max progress wins,merge() picks max progress across input items,mapping,active
+UAI-053,UnifiedAnimeItem,deterministic,P0,Merge most advanced status,merge() picks watching over completed when both present,mapping,active
+UAI-054,UnifiedAnimeItem,deterministic,P0,Merge unique sorted genres,merge() returns unique sorted genres from all sources,mapping,active
+UAI-055,UnifiedAnimeItem,deterministic,P1,Merge empty input returns null,merge([]) returns null not throws,nullability,active
+UAI-060,UnifiedAnimeItem,deterministic,P1,Traditional title autoconvert,titleChineseTraditional is computed from titleChinese when not provided,localization,active
+UAI-061,UnifiedAnimeItem,deterministic,P1,Synonyms preserved,Synonyms array stored as-is,mapping,active
+ADS-001,DataSource,deterministic,P0,Protocol type field,Every data source exposes a type matching its PlatformType,mapping,active
+ADS-002,DataSource,deterministic,P0,Default media stubs return empty,Default impl of fetchAnimeStaff returns empty array not error,fallback,active
+ADS-003,DataSource,deterministic,P0,Default themes stub returns null,Default impl of fetchAnimeThemes returns null,nullability,active
+ADS-004,DataSource,deterministic,P0,Default statistics stub returns null,Default impl of fetchStatistics returns null,nullability,active
+ADS-010,DataSourceError,deterministic,P0,NOT_FOUND code on 404,Provider maps HTTP 404 to NOT_FOUND error code,error-handling,active
+ADS-011,DataSourceError,deterministic,P0,RATE_LIMITED on 429,Provider maps 429 to RATE_LIMITED error,error-handling,active
+ADS-012,DataSourceError,deterministic,P0,UNAUTHORIZED on 401,Provider maps 401 to UNAUTHORIZED error,error-handling,active
+ADS-013,DataSourceError,deterministic,P0,DECODING_ERROR on bad JSON,Provider wraps JSON parse failure as DECODING_ERROR,error-handling,active
+REPO-001,Repository,deterministic,P0,Resolve preferred source,resolveSource returns preferred when available,mapping,active
+REPO-002,Repository,deterministic,P0,Resolve browse source,resolveSource returns config browseSource when no preferred,mapping,active
+REPO-003,Repository,deterministic,P0,Resolve AniList fallback,resolveSource returns AniList when no preferred and no config,fallback,active
+REPO-004,Repository,deterministic,P0,Default sources initialized,Constructor initializes 7 default data sources,boundary,active
+REPO-005,Repository,deterministic,P0,Custom sources injected,Constructor accepts and uses custom source map,mapping,active
+REPO-010,Repository,deterministic,P0,QueryClient dedup search,Two parallel searchAnime with same args produce one HTTP call,timing,active
+REPO-011,Repository,deterministic,P0,QueryClient dedup detail,Two parallel fetchAnimeDetail with same args produce one HTTP call,timing,active
+REPO-012,Repository,deterministic,P0,Cache empty result not persisted,Empty seasonal result is not written to disk cache,fallback,active
+REPO-013,Repository,deterministic,P0,Cache hit returns immediately,Disk cache hit short-circuits HTTP call,timing,active
+REPO-020,Repository,deterministic,P0,Genres fallback to AniList,Non-AniList source genre fetch failure falls back to AniList,fallback,active
+REPO-021,Repository,deterministic,P0,Media empty falls back to Jikan,Empty staff result triggers Jikan fallback when source non-MAL,fallback,active
+REPO-022,Repository,deterministic,P0,Media fallback uses ID mapping,Jikan fallback resolves source ID to MAL ID via IDMappingService,mapping,active
+REPO-023,Repository,deterministic,P0,Media no fallback when MAL source,Empty result from MAL itself does not double-fetch,boundary,active
+REPO-030,Repository,deterministic,P0,Cancellation on browse switch,Mid-flight seasonal fetch throws when browse source changes,error-handling,active
+REPO-031,Repository,deterministic,P1,Translate ID same platform,translateID returns same ID when source equals target,boundary,active
+REPO-032,Repository,deterministic,P1,Translate ID unknown returns original,translateID returns original ID when mapping unknown,fallback,active
+DSCFG-001,DataSourceConfig,deterministic,P0,Default browse source AniList,Default browseSource is anilist before any user change,fallback,active
+DSCFG-002,DataSourceConfig,deterministic,P0,Persists via AsyncStorage,setBrowseSource writes to storage,mapping,active
+DSCFG-003,DataSourceConfig,deterministic,P0,Restores on init,init reads stored browseSource,mapping,active
+DSCFG-004,DataSourceConfig,deterministic,P0,SFW default true,allowR18Content defaults to false,boundary,active
+DSCFG-005,DataSourceConfig,deterministic,P1,Reject unsupported source,setBrowseSource rejects platform without read support,error-handling,active
+DSSW-001,SwitchCoordinator,deterministic,P0,Initial state idle,Coordinator starts in idle state,boundary,active
+DSSW-002,SwitchCoordinator,deterministic,P0,Switching exposes from-to,switching state exposes from and to platforms,mapping,active
+DSSW-003,SwitchCoordinator,deterministic,P0,Completed transitions back to idle,completed state transitions to idle after delay,timing,active
+DSSW-004,SwitchCoordinator,deterministic,P0,Failed exposes error,failed state carries error code,error-handling,active
+DSSW-005,SwitchCoordinator,deterministic,P1,clearError resets error,clearError returns coordinator to idle,error-handling,active
+QC-001,QueryClient,deterministic,P0,Fetch returns fetcher result,fetch returns the fetcher's resolved value,mapping,active
+QC-002,QueryClient,deterministic,P0,Dedup parallel,Two parallel fetches with same key call fetcher once,timing,active
+QC-003,QueryClient,deterministic,P0,Cache hit within stale time,Second sequential call within stale time skips fetcher,timing,active
+QC-004,QueryClient,deterministic,P0,Refresh after stale,Second sequential call after stale time invokes fetcher,timing,active
+QC-005,QueryClient,deterministic,P0,Failed fetch removes inflight,Rejected fetcher does not poison cache,error-handling,active
+QC-006,QueryClient,deterministic,P0,Invalidate platform key,invalidateForPlatform clears all entries for platform,mapping,active
+CACHE-001,CacheService,deterministic,P0,Set then get returns value,SetGetValue retrieves stored JSON value,mapping,active
+CACHE-002,CacheService,deterministic,P0,Get returns null after TTL,Get returns null when entry expired,timing,active
+CACHE-003,CacheService,deterministic,P0,Get returns null for unknown key,Unknown key returns null,nullability,active
+CACHE-004,CacheService,deterministic,P0,Invalidate by prefix,Pattern-based invalidate clears matching keys,mapping,active
+CACHE-005,CacheService,deterministic,P0,Init creates table idempotent,Multiple init calls do not error,boundary,active
+RL-001,RateLimiter,deterministic,P0,First request immediate,First call to waitForAvailability resolves under 10ms,timing,active
+RL-002,RateLimiter,deterministic,P0,Enforces min interval,Second call within minInterval waits until interval elapsed,timing,active
+RL-003,RateLimiter,deterministic,P0,Cooldown enforced,registerCooldown delays next request by cooldown ms,timing,active
+RL-004,RateLimiter,deterministic,P1,Longer cooldown wins,Two cooldowns: longer one preserved,boundary,active
+RL-005,RateLimiter,deterministic,P0,Per-channel isolation,Cooldown on one channel does not affect other,boundary,active
+IDM-001,IDMapping,deterministic,P0,MAL to AniList path,Known mapping returns mapped ID,mapping,active
+IDM-002,IDMapping,deterministic,P0,Unknown returns null,Unknown ID returns null,nullability,active
+IDM-003,IDMapping,deterministic,P0,Same platform passthrough,Mapping from X to X returns same ID,boundary,active
+IDM-004,IDMapping,deterministic,P0,Manual mapping persisted,setManualMapping write retrievable,mapping,active
+IDM-005,IDMapping,deterministic,P1,Bangumi to MAL path,Bangumi ID translates to MAL ID when mapping exists,mapping,active
+IDM-006,IDMapping,deterministic,P1,Bulk update transactional,Bulk insert wraps in transaction,boundary,active
+ANIL-001,AniList,deterministic,P0,Search query maps to media list,Search response decoded to UnifiedAnimeItem array,mapping,active
+ANIL-002,AniList,deterministic,P0,Detail by id,fetchAnimeDetail uses id variable,mapping,active
+ANIL-003,AniList,deterministic,P0,Detail by idMal when source MAL,fetchAnimeDetail with MAL source uses idMal variable,mapping,active
+ANIL-004,AniList,deterministic,P0,Title English priority,Maps title.english to titleEnglish,mapping,active
+ANIL-005,AniList,deterministic,P0,AniList score raw 0-100,Maps averageScore to anilistScore as raw 0-100,mapping,active
+ANIL-006,AniList,deterministic,P0,Strip HTML from description,description with <br> stripped to plain text,mapping,active
+ANIL-007,AniList,deterministic,P0,Genres list,Genres collection returned as ordered list with synthetic ids,mapping,active
+ANIL-008,AniList,deterministic,P0,Tags filter spoilers,Tags with isMediaSpoiler true are excluded,mapping,active
+ANIL-009,AniList,integration,P1,Live search returns results,Live search for keyword Naruto returns array,timing,active
+ANIL-010,AniList,integration,P1,Live detail Cowboy Bebop,Live fetch id 1 returns Cowboy Bebop,mapping,active
+MAL-001,MAL,deterministic,P0,Detail by mal id,fetchAnimeDetail uses path /anime/{id},mapping,active
+MAL-002,MAL,deterministic,P0,Search uses q param,searchAnime uses ?q query param,mapping,active
+MAL-003,MAL,deterministic,P0,SFW param when filter on,SFW true appends ?sfw to search,mapping,active
+MAL-004,MAL,deterministic,P0,Top uses /top/anime,fetchTopAnime hits /top/anime?page=,mapping,active
+MAL-005,MAL,deterministic,P0,Seasonal explicit year and season,fetchSeasonalAnime with year and season uses path /seasons/{year}/{season},mapping,active
+MAL-006,MAL,deterministic,P0,Seasonal current uses /seasons/now,fetchSeasonalAnime with no args uses /seasons/now,fallback,active
+MAL-007,MAL,deterministic,P0,Score 0-10 raw,score field maps to malScore unchanged,mapping,active
+MAL-008,MAL,deterministic,P0,Webp image preferred over jpg,images.webp.large_image_url preferred when present,mapping,active
+MAL-009,MAL,deterministic,P0,429 backoff retries up to 3,429 response retries with exponential backoff up to 3 attempts,error-handling,active
+MAL-010,MAL,integration,P1,Live top anime,Live fetchTopAnime returns at least 5 items,boundary,active
+BGM-001,Bangumi,deterministic,P0,User-Agent header set,All requests include User-Agent: Aniseekr/1.0,mapping,active
+BGM-002,Bangumi,deterministic,P0,Detail uses /v0/subjects,fetchAnimeDetail hits /v0/subjects/{id},mapping,active
+BGM-003,Bangumi,deterministic,P0,Image http to https rewrite,bgm.tv image URL with http rewritten to https,mapping,active
+BGM-004,Bangumi,deterministic,P0,Chinese title to titleChinese,name_cn mapped to titleChinese,localization,active
+BGM-005,Bangumi,deterministic,P0,Bangumi takes title priority,Bangumi name_cn over English when present in merge,mapping,active
+BGM-006,Bangumi,deterministic,P0,Search delegates to AniList,Search method calls AniList searchAnime then enriches,mapping,active
+BGM-007,Bangumi,deterministic,P0,Top delegates to AniList,fetchTopAnime delegates to AniList,fallback,active
+BGM-008,Bangumi,deterministic,P0,Seasonal delegates to AniList,fetchSeasonalAnime delegates to AniList,fallback,active
+BGM-009,Bangumi,integration,P1,Live detail subject 7157,Live fetch of subject 7157 returns Hyouka with Chinese title,mapping,active
+ANNICT-001,Annict,deterministic,P0,Token cache reused,Second call within token expiry reuses cached token,timing,active
+ANNICT-002,Annict,deterministic,P0,Token refreshed when expired,Expired token triggers new /oauth/token request,timing,active
+ANNICT-003,Annict,deterministic,P0,Search uses filter_title,searchAnime uses /v1/works?filter_title=,mapping,active
+ANNICT-004,Annict,deterministic,P0,Detail uses filter_ids,fetchAnimeDetail uses filter_ids equal to id,mapping,active
+ANNICT-005,Annict,deterministic,P0,Image fallback to AniList,Empty Annict image triggers AniList batch fetch via mal_anime_id,fallback,active
+ANNICT-006,Annict,deterministic,P0,Image batch dedup,Multiple items in same batch share one AniList batch call,timing,active
+KITSU-001,Kitsu,deterministic,P0,JSON-API accept header,All requests include Accept: application/vnd.api+json,mapping,active
+KITSU-002,Kitsu,deterministic,P0,Detail uses /anime/{id},fetchAnimeDetail hits /anime/{id},mapping,active
+KITSU-003,Kitsu,deterministic,P0,Search uses filter[text],searchAnime uses filter[text]= param,mapping,active
+KITSU-004,Kitsu,deterministic,P0,Pagination offset based,Page 2 calls page[offset]=20,mapping,active
+KITSU-005,Kitsu,deterministic,P0,Top uses sort minus averageRating,fetchTopAnime uses sort=-averageRating,mapping,active
+KITSU-006,Kitsu,deterministic,P0,Score 0-100 string parsed,averageRating string parsed to number,mapping,active
+SHIK-001,Shikimori,deterministic,P0,User-Agent header set,All requests include User-Agent,mapping,active
+SHIK-002,Shikimori,deterministic,P0,Detail uses /animes/{id},fetchAnimeDetail hits /animes/{id},mapping,active
+SHIK-003,Shikimori,deterministic,P0,Image base prefixed,Relative image URL prefixed with https://shikimori.one,mapping,active
+SHIK-004,Shikimori,deterministic,P0,Russian title preserved,russian field mapped to titleRussian,localization,active
+SHIK-005,Shikimori,deterministic,P0,Top uses order ranked,fetchTopAnime uses order=ranked,mapping,active
+SIMKL-001,Simkl,deterministic,P0,API key header on every request,All requests include simkl-api-key header,mapping,active
+SIMKL-002,Simkl,deterministic,P0,Detail uses /anime/{id} extended full,fetchAnimeDetail uses extended=full param,mapping,active
+SIMKL-003,Simkl,deterministic,P0,Search uses /search/anime,searchAnime uses /search/anime?q=,mapping,active
+SIMKL-004,Simkl,deterministic,P0,Top uses best of current year,fetchTopAnime uses /anime/best/{currentYear},mapping,active
+SIMKL-005,Simkl,deterministic,P0,Cross-platform IDs captured,Response ids.mal and ids.anilist captured into platformData,mapping,active
+SIMKL-006,Simkl,deterministic,P0,Poster URL constructed via wsrv proxy,poster path wrapped in wsrv.nl/?url=,mapping,active
+LOC-001,Localization,deterministic,P0,Display title never empty,Display title falls through chain and returns non-empty,fallback,active
+LOC-002,Localization,deterministic,P0,Chinese language uses titleChinese,User pref zh-Hans returns titleChinese when present,localization,active
+LOC-003,Localization,deterministic,P0,Falls back to title when missing,No localized title returns canonical title,fallback,active
+LOC-004,Localization,deterministic,P1,Search includes synonyms,searchKeywords includes synonyms,localization,active
+PILG-001,Pilgrimage,deterministic,P0,getAnimePilgrimage 404 returns null,AnitabiService 404 maps to null not error,fallback,active
+PILG-002,Pilgrimage,deterministic,P0,In-memory cache hit,Second call within session does not call fetch,timing,active
+PILG-003,Pilgrimage,deterministic,P0,SQLite persistence,Result cached in pilgrimage_spots table,mapping,active
+PILG-004,Pilgrimage,deterministic,P0,Cache expiry 7 days,Stale entry beyond TTL refetches,timing,active
+PILG-005,Pilgrimage,deterministic,P0,Card renders required fields,AnimePilgrimageCard renders title city points count,mapping,active
+PILG-006,Pilgrimage,deterministic,P1,Card distance badge optional,Card hides distance when prop absent,nullability,active
+PILG-007,Pilgrimage,deterministic,P0,Card onPress callback fires,onPress invoked with full anime object,mapping,active
+PILG-008,Pilgrimage,deterministic,P1,Card haptic on press,Card calls Haptics.impact on press,boundary,active
+PILG-009,Pilgrimage,deterministic,P0,Badge renders nothing until loaded,NearbyPilgrimageBadge returns null while fetching,boundary,active
+PILG-010,Pilgrimage,deterministic,P0,Badge swallows fetch errors,Badge does not throw on fetch failure,error-handling,active
+PILG-011,Pilgrimage,deterministic,P0,Repository falls back to ID mapping,Anime without bangumi id translated via IDMappingService,fallback,active
+PILG-012,Pilgrimage,deterministic,P1,SQLite migration idempotent,init creates pilgrimage_spots table only once,boundary,active
+PILG-013,Pilgrimage,integration,P1,Live anitabi fetch,Live fetch of subject 7157 returns Hyouka pilgrimage data,mapping,active
+SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
+SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
+SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active
+E2E-001,EndToEnd,integration,P0,Search to detail,Search returns items detail fetch returns same item,mapping,active
+E2E-002,EndToEnd,integration,P0,Browse switch invalidates cache,Switching browseSource invalidates seasonal cache,timing,active
+E2E-003,EndToEnd,integration,P0,Detail to pilgrimage,Anime detail with bangumi id navigates to pilgrimage list,mapping,active
+E2E-004,EndToEnd,integration,P0,Cross-platform ID resolution,Detail by Bangumi id resolves staff via Jikan fallback,fallback,active
