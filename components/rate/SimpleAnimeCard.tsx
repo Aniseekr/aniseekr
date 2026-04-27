@@ -4,12 +4,18 @@ import { Pressable, Text, View, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Anime } from './types';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { NearbyPilgrimageBadge } from '../pilgrimage/NearbyPilgrimageBadge';
 
 type Props = {
   anime: Anime;
   onPress?: () => void;
   width?: number;
   height?: number;
+  /**
+   * Optional Bangumi subject id. When supplied, a small location badge is
+   * rendered in the top-right when pilgrimage data exists for this anime.
+   */
+  bangumiId?: number;
 };
 
 const DEFAULT_WIDTH = 140;
@@ -20,6 +26,7 @@ function SimpleAnimeCardComponent({
   onPress,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
+  bangumiId,
 }: Props) {
   return (
     <Pressable onPress={onPress} style={{ width, marginRight: Spacing.sm }}>
@@ -33,6 +40,11 @@ function SimpleAnimeCardComponent({
         />
         {/* Gradient overlay for text readability */}
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.gradient} />
+        {bangumiId !== undefined ? (
+          <View style={styles.pilgrimageBadge}>
+            <NearbyPilgrimageBadge bangumiId={bangumiId} variant="icon" />
+          </View>
+        ) : null}
         <View style={styles.textContainer}>
           <Text style={styles.title} numberOfLines={2}>
             {anime.title}
@@ -89,6 +101,11 @@ const styles = StyleSheet.create({
     color: Colors.warning,
     fontSize: 11,
     fontWeight: 'bold',
+  },
+  pilgrimageBadge: {
+    position: 'absolute',
+    top: Spacing.xxs,
+    right: Spacing.xxs,
   },
 });
 

@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { animeNotificationService } from '../modules/notifications/animeNotificationService';
 import { Colors, Radius, Spacing, Typography } from '../constants/DesignSystem';
+import { BrowseSourceChip } from '../components/common/BrowseSourceChip';
 
 type ViewMode = 'calendar' | 'list';
 type FilterMode = 'all' | 'tracking';
@@ -211,6 +212,9 @@ export default function BangumiScreen() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={{ paddingTop: top }} className="flex-1">
+        <View style={styles.chipRow}>
+          <BrowseSourceChip />
+        </View>
         <View className="px-5 pt-5">
           <SeasonHeader
             seasonDisplayName={seasonDisplayName}
@@ -272,5 +276,11 @@ const styles = StyleSheet.create({
   calendarContainer: {
     flex: 1,
     minHeight: 400,
+  },
+  chipRow: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
 });

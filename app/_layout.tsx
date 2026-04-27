@@ -78,7 +78,23 @@ export default function RootLayout() {
           }}
         />
         <Tabs.Screen
+          name="(setting)/data-source"
+          options={{
+            href: null,
+            tabBarStyle: { display: 'none' },
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
           name="collection/[id]"
+          options={{
+            href: null,
+            tabBarStyle: { display: 'none' },
+            headerShown: false,
+          }}
+        />
+        <Tabs.Screen
+          name="pilgrimage/[animeId]"
           options={{
             href: null,
             tabBarStyle: { display: 'none' },

@@ -10,6 +10,7 @@ import { useRateData } from "../../components/rate/useRateData";
 import { Genre, Anime, ViewMode } from "../../components/rate/types";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { BrowseSourceChip } from "../../components/common/BrowseSourceChip";
 
 export default function HomeRateScreen() {
   const { top } = useSafeAreaInsets();
@@ -95,6 +96,11 @@ export default function HomeRateScreen() {
               <Ionicons name="settings-outline" size={22} color="rgba(255,255,255,0.8)" />
             </Pressable>
           </View>
+      </View>
+
+      {/* Browse source chip */}
+      <View style={styles.sourceChipRow}>
+          <BrowseSourceChip />
       </View>
 
       {/* Tabs */}
@@ -250,6 +256,12 @@ const styles = StyleSheet.create({
   headerIcons: {
       flexDirection: 'row',
       gap: 12,
+  },
+  sourceChipRow: {
+      paddingHorizontal: 16,
+      marginBottom: 12,
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
   },
   iconButton: {
       width: 40,

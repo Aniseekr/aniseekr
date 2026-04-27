@@ -6,6 +6,7 @@ import { Anime } from '../rate/types';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
+import { NearbyPilgrimageBadge } from '../pilgrimage/NearbyPilgrimageBadge';
 
 interface AnimeListProps {
   listViewData: { day: string; anime: Anime[] }[];
@@ -25,7 +26,13 @@ export function AnimeList({ listViewData, renderAnimeCard }: AnimeListProps) {
   );
 }
 
-export function AnimeRowCard({ anime }: { anime: Anime }) {
+export function AnimeRowCard({
+  anime,
+  bangumiId,
+}: {
+  anime: Anime;
+  bangumiId?: number;
+}) {
     const router = useRouter();
     const [isScheduled, setIsScheduled] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +78,13 @@ export function AnimeRowCard({ anime }: { anime: Anime }) {
                     <Text style={styles.cardTitle} numberOfLines={2}>
                         {anime.title}
                     </Text>
-                    
+
+                    {bangumiId !== undefined && (
+                        <View style={{ marginTop: 4, marginBottom: 4 }}>
+                            <NearbyPilgrimageBadge bangumiId={bangumiId} variant="pill" />
+                        </View>
+                    )}
+
                     {anime.tags && anime.tags.length > 0 && (
                         <View className="flex-row flex-wrap gap-2 mb-4 mt-2">
                             {anime.tags.slice(0, 3).map((tag, idx) => (

@@ -7,6 +7,9 @@ import { Anime } from '../../../components/rate/types';
 import { GlassCard } from '../../../components/common/GlassCard';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
+import { AnimePilgrimageCard } from '../../../components/pilgrimage/AnimePilgrimageCard';
+import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 
 export default function AnimeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,11 +17,36 @@ export default function AnimeDetailScreen() {
   const insets = useSafeAreaInsets();
   const [anime, setAnime] = useState<Anime | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pilgrimage, setPilgrimage] = useState<AnitabiBangumi | null>(null);
 
   useEffect(() => {
     if (id) {
       loadDetails();
     }
+  }, [id]);
+
+  // Lazy-load pilgrimage data once we have an anime id. The legacy `Anime`
+  // shape has no `bangumi.id`, so we fall back to ID mapping from anilist.
+  useEffect(() => {
+    let cancelled = false;
+    if (!id) return;
+    setPilgrimage(null);
+
+    pilgrimageRepository
+      .getSpotsForAnime({ sourcePlatform: 'anilist', id })
+      .then((result) => {
+        if (cancelled) return;
+        setPilgrimage(result);
+      })
+      .catch((err: unknown) => {
+        // Pilgrimage is supplementary; never break the page on error.
+        // eslint-disable-next-line no-console
+        console.warn('[AnimeDetail] pilgrimage fetch failed:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const loadDetails = async () => {
@@ -134,7 +162,20 @@ export default function AnimeDetailScreen() {
               ))}
             </View>
           </View>
-          
+
+          {/* Pilgrimage spots (鑑賞 / 聖地巡礼) */}
+          {pilgrimage ? (
+            <View className="mt-8">
+              <Text className="text-white text-lg font-bold mb-3">Pilgrimage</Text>
+              <AnimePilgrimageCard
+                anime={pilgrimage}
+                onPress={(target) =>
+                  router.push(`/pilgrimage/${target.id}`)
+                }
+              />
+            </View>
+          ) : null}
+
            {/* Detailed Info Grid */}
           <View className="mt-8 bg-zinc-900/50 rounded-2xl p-4 border border-white/5">
              <Text className="text-white text-lg font-bold mb-4">Information</Text>
