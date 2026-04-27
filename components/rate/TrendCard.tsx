@@ -32,14 +32,17 @@ function TrendCardComponent({ anime, rank, onPress }: Props) {
     rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : Colors.text.tertiary;
 
   return (
-    <Pressable onPress={handlePress}>
-      <GlassCard className="mb-3 flex-row items-center p-3" intensity={15}>
+    <Pressable onPress={handlePress} style={styles.pressable}>
+      <GlassCard
+        intensity={20}
+        style={{ borderRadius: Radius.card }}
+        className="flex-row items-center p-4">
         {/* Rank Badge */}
         <View style={styles.rankContainer}>
           <Text
             style={[
               styles.rankText,
-              { color: rankColor, fontSize: isTop3 ? 24 : 18, fontWeight: isTop3 ? '800' : '600' },
+              { color: rankColor, fontSize: isTop3 ? 26 : 18, fontWeight: isTop3 ? '800' : '700' },
             ]}>
             #{rank}
           </Text>
@@ -68,7 +71,7 @@ function TrendCardComponent({ anime, rank, onPress }: Props) {
             </View>
             {anime.score && (
               <View style={styles.scoreContainer}>
-                <Ionicons name="star" size={10} color={Colors.warning} />
+                <Ionicons name="star" size={10} color={Colors.primary} />
                 <Text style={styles.scoreText}>{anime.score}</Text>
               </View>
             )}
@@ -84,27 +87,30 @@ function TrendCardComponent({ anime, rank, onPress }: Props) {
         </View>
 
         {/* Arrow Hint */}
-        <Ionicons name="chevron-forward" size={16} color={Colors.text.disabled} />
+        <Ionicons name="chevron-forward" size={16} color={Colors.text.tertiary} />
       </GlassCard>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressable: {
+    marginBottom: Spacing.sm,
+  },
   image: {
-    width: 70,
-    height: 100, // Standard poster ratio
-    borderRadius: Radius.sm,
+    width: 72,
+    height: 104,
+    borderRadius: Radius.md,
     backgroundColor: Colors.background.tertiary,
   },
   rankContainer: {
-    width: 40,
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.xs,
   },
   rankText: {
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontFamily: Platform.OS === 'ios' ? 'SF Pro Rounded' : 'Roboto',
   },
   infoContainer: {
     flex: 1,
@@ -123,10 +129,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   typeBadge: {
-    backgroundColor: Colors.glass.light,
+    backgroundColor: Colors.glass.medium,
     paddingHorizontal: Spacing.xs,
     paddingVertical: 2,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.chip,
   },
   typeText: {
     color: Colors.text.secondary,
@@ -139,9 +145,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   scoreText: {
-    color: Colors.warning,
+    color: Colors.primary,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   tagsContainer: {
     flexDirection: 'row',

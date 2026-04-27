@@ -58,19 +58,21 @@ function SimpleAnimeCardComponent({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    borderRadius: Radius.md,
+    borderRadius: Radius.card,
     overflow: 'hidden',
     backgroundColor: Colors.background.secondary,
     position: 'relative',
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 3,
+        elevation: 4,
       },
     }),
   },
@@ -79,28 +81,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: '50%',
+    height: '55%',
   },
   textContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: Spacing.xs,
+    padding: Spacing.sm,
   },
   title: {
     color: Colors.text.primary,
-    ...Typography.bodySmall,
-    fontWeight: '600',
+    ...Typography.titleSmall,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   score: {
-    color: Colors.warning,
+    color: Colors.primary,
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   pilgrimageBadge: {
     position: 'absolute',
