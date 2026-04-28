@@ -1,14 +1,20 @@
-import { View, ScrollView, RefreshControl, Platform, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { CollectionStats } from '../components/profile/CollectionStats';
 import { QuickActions } from '../components/profile/QuickActions';
-import { LinearGradient } from 'expo-linear-gradient';
+import { PlatformSwitcher } from '../components/profile/PlatformSwitcher';
 import { UserRepository, UserProfile } from '../libs/repositories/user-repository';
 import { router } from 'expo-router';
 import { gachaService } from '../libs/services/gacha-service';
-import { Colors } from '../constants/DesignSystem';
+import {
+  Colors,
+  FontFamily,
+  Spacing,
+  Typography,
+} from '../constants/DesignSystem';
 
 export default function ProfileScreen() {
   const { top } = useSafeAreaInsets();
@@ -17,13 +23,13 @@ export default function ProfileScreen() {
   const [cardsCount, setCardsCount] = useState(0);
   const [coins, setCoins] = useState(0);
   const [shards, setShards] = useState(0);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | undefined>(undefined);
 
   const loadData = useCallback(async () => {
     try {
       const data = await UserRepository.getProfile();
       setUser(data);
 
-      // Load gacha data
       try {
         const cards = await gachaService.getUserCards();
         const userCoins = await gachaService.getCoins();
@@ -49,7 +55,6 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, [loadData]);
 
-  // Default stats for loading state
   const defaultStats = {
     totalRated: 0,
     likedCount: 0,
@@ -70,7 +75,12 @@ export default function ProfileScreen() {
         colors={Colors.gradients.background as [string, string, ...string[]]}
         style={StyleSheet.absoluteFill}
       />
+      <View style={styles.glowOrange} pointerEvents="none" />
+      <View style={styles.glowPurple} pointerEvents="none" />
       <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
+        <View style={styles.headerRow}>
+          <Text style={styles.screenTitle}>Profile</Text>
+        </View>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -79,7 +89,7 @@ export default function ProfileScreen() {
               tintColor={Colors.text.primary}
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[Colors.secondary]}
+              colors={[Colors.primary]}
               progressBackgroundColor={Colors.background.secondary}
             />
           }>
@@ -89,6 +99,11 @@ export default function ProfileScreen() {
             isDonator={user ? user.isDonator : false}
             coins={coins}
             shards={shards}
+          />
+
+          <PlatformSwitcher
+            selected={selectedPlatform}
+            onSelect={setSelectedPlatform}
           />
 
           <CollectionStats stats={stats} />
@@ -113,13 +128,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
+  glowOrange: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: `${Colors.primary}33`,
+    opacity: 0.55,
+  },
+  glowPurple: {
+    position: 'absolute',
+    top: 160,
+    left: -100,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: `${Colors.secondary}33`,
+    opacity: 0.4,
+  },
   safeArea: {
     flex: 1,
+  },
+  headerRow: {
+    paddingHorizontal: Spacing.screenPadding,
+    paddingVertical: Spacing.sm,
+  },
+  screenTitle: {
+    ...Typography.headlineLarge,
+    color: Colors.text.primary,
+    fontFamily: FontFamily.rounded,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
 });

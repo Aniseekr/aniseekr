@@ -1,0 +1,161 @@
+case_id,test_file,test_name,status
+UAI-001,__tests__/unit/unified-anime-item.test.ts,constructs minimal item with UUID id,covered
+UAI-002,__tests__/unit/unified-anime-item.test.ts,bangumi platform data wins as id,covered
+UAI-003,__tests__/unit/unified-anime-item.test.ts,mal platform data is second priority,covered
+UAI-004,__tests__/unit/unified-anime-item.test.ts,anilist platform data is third priority,covered
+UAI-005,__tests__/unit/unified-anime-item.test.ts,empty platform id falls back to UUID,covered
+UAI-010,__tests__/unit/unified-anime-item.test.ts,buildSearchKeywords returns lowercased concatenation,covered
+UAI-011,__tests__/unit/unified-anime-item.test.ts,buildSearchKeywords filters null titles,covered
+UAI-012,__tests__/unit/unified-anime-item.test.ts,custom searchKeywords arg overrides auto-build,covered
+UAI-020,__tests__/unit/unified-anime-item.test.ts,normalizedScore divides anilist score over 10 by 10,covered
+UAI-021,__tests__/unit/unified-anime-item.test.ts,normalizedScore preserves anilist score under 10,covered
+UAI-022,__tests__/unit/unified-anime-item.test.ts,normalizedScore returns mal score when no anilist,covered
+UAI-023,__tests__/unit/unified-anime-item.test.ts,normalizedScore returns bangumi score as last fallback,covered
+UAI-024,__tests__/unit/unified-anime-item.test.ts,normalizedScore returns null when no scores,covered
+UAI-030,__tests__/unit/unified-anime-item.test.ts,bestImage prefers anilist over bangumi,covered
+UAI-031,__tests__/unit/unified-anime-item.test.ts,bestImage prefers bangumi when anilist absent,covered
+UAI-032,__tests__/unit/unified-anime-item.test.ts,bestImage falls back to coverImageURL,covered
+UAI-033,__tests__/unit/unified-anime-item.test.ts,bestImage extraLarge uses extraLarge field,covered
+UAI-034,__tests__/unit/unified-anime-item.test.ts,bestImage banner uses banner field,covered
+UAI-040,__tests__/unit/unified-anime-item.test.ts,equal items by id,covered
+UAI-041,__tests__/unit/unified-anime-item.test.ts,hash code stable for equal items,covered
+UAI-050,__tests__/unit/unified-anime-item.test.ts,merge picks bangumi title,covered
+UAI-051,__tests__/unit/unified-anime-item.test.ts,merge picks anilist cover,covered
+UAI-052,__tests__/unit/unified-anime-item.test.ts,merge picks max progress,covered
+UAI-053,__tests__/unit/unified-anime-item.test.ts,merge picks watching over completed,covered
+UAI-054,__tests__/unit/unified-anime-item.test.ts,merge returns unique sorted genres,covered
+UAI-055,__tests__/unit/unified-anime-item.test.ts,merge of empty array returns null,covered
+UAI-060,__tests__/unit/unified-anime-item.test.ts,traditional title autoconverted from chinese,covered
+UAI-061,__tests__/unit/unified-anime-item.test.ts,synonyms preserved as-is,covered
+ADS-001,__tests__/unit/data-source-protocol.test.ts,every data source exposes type,covered
+ADS-002,__tests__/unit/data-source-protocol.test.ts,default fetchAnimeStaff returns empty,covered
+ADS-003,__tests__/unit/data-source-protocol.test.ts,default fetchAnimeThemes returns null,covered
+ADS-004,__tests__/unit/data-source-protocol.test.ts,default fetchStatistics returns null,covered
+ADS-010,__tests__/unit/data-source-error.test.ts,maps 404 to NOT_FOUND,covered
+ADS-011,__tests__/unit/data-source-error.test.ts,maps 429 to RATE_LIMITED,covered
+ADS-012,__tests__/unit/data-source-error.test.ts,maps 401 to UNAUTHORIZED,covered
+ADS-013,__tests__/unit/data-source-error.test.ts,wraps json parse failure as DECODING_ERROR,covered
+REPO-001,__tests__/unit/repositories/anime-repository.test.ts,resolveSource returns preferred,covered
+REPO-002,__tests__/unit/repositories/anime-repository.test.ts,resolveSource returns browse source,covered
+REPO-003,__tests__/unit/repositories/anime-repository.test.ts,resolveSource falls back to anilist,covered
+REPO-004,__tests__/unit/repositories/anime-repository.test.ts,constructor inits 7 default sources,covered
+REPO-005,__tests__/unit/repositories/anime-repository.test.ts,constructor accepts custom sources,covered
+REPO-010,__tests__/unit/repositories/anime-repository.test.ts,parallel search dedup,covered
+REPO-011,__tests__/unit/repositories/anime-repository.test.ts,parallel detail dedup,covered
+REPO-012,__tests__/unit/repositories/anime-repository.test.ts,empty seasonal not cached,covered
+REPO-013,__tests__/unit/repositories/anime-repository.test.ts,disk cache hit short-circuits,covered
+REPO-020,__tests__/unit/repositories/anime-repository.test.ts,genres fallback to anilist,covered
+REPO-021,__tests__/unit/repositories/anime-repository.test.ts,empty staff falls back to jikan,covered
+REPO-022,__tests__/unit/repositories/anime-repository.test.ts,jikan fallback uses id mapping,covered
+REPO-023,__tests__/unit/repositories/anime-repository.test.ts,no double fetch for mal source,covered
+REPO-030,__tests__/unit/repositories/anime-repository.test.ts,cancellation on browse switch,covered
+REPO-031,__tests__/unit/repositories/anime-repository.test.ts,translateID same platform passthrough,covered
+REPO-032,__tests__/unit/repositories/anime-repository.test.ts,translateID unknown returns original,covered
+DSCFG-001,__tests__/unit/data-source-config.test.ts,default browse source is anilist,covered
+DSCFG-002,__tests__/unit/data-source-config.test.ts,setBrowseSource persists,covered
+DSCFG-003,__tests__/unit/data-source-config.test.ts,init restores from storage,covered
+DSCFG-004,__tests__/unit/data-source-config.test.ts,allowR18Content defaults false,covered
+DSCFG-005,__tests__/unit/data-source-config.test.ts,setBrowseSource rejects unsupported,covered
+DSSW-001,__tests__/unit/data-source-switching-coordinator.test.ts,initial state is idle,covered
+DSSW-002,__tests__/unit/data-source-switching-coordinator.test.ts,switching exposes from and to,covered
+DSSW-003,__tests__/unit/data-source-switching-coordinator.test.ts,completed transitions to idle after delay,covered
+DSSW-004,__tests__/unit/data-source-switching-coordinator.test.ts,failed exposes error,covered
+DSSW-005,__tests__/unit/data-source-switching-coordinator.test.ts,clearError resets to idle,covered
+QC-001,__tests__/unit/query-client.test.ts,fetch returns fetcher result,covered
+QC-002,__tests__/unit/query-client.test.ts,parallel fetch dedup,covered
+QC-003,__tests__/unit/query-client.test.ts,cache hit within stale time,covered
+QC-004,__tests__/unit/query-client.test.ts,refresh after stale,covered
+QC-005,__tests__/unit/query-client.test.ts,failed fetch removes inflight,covered
+QC-006,__tests__/unit/query-client.test.ts,invalidate by platform,covered
+CACHE-001,__tests__/unit/cache-service.test.ts,set then get returns value,covered
+CACHE-002,__tests__/unit/cache-service.test.ts,get returns null after TTL,covered
+CACHE-003,__tests__/unit/cache-service.test.ts,get returns null for unknown key,covered
+CACHE-004,__tests__/unit/cache-service.test.ts,invalidate by prefix,covered
+CACHE-005,__tests__/unit/cache-service.test.ts,init idempotent,covered
+RL-001,__tests__/unit/rate-limiter.test.ts,first request immediate,covered
+RL-002,__tests__/unit/rate-limiter.test.ts,second request waits min interval,covered
+RL-003,__tests__/unit/rate-limiter.test.ts,registerCooldown delays next,covered
+RL-004,__tests__/unit/rate-limiter.test.ts,longer cooldown wins,covered
+RL-005,__tests__/unit/rate-limiter.test.ts,per channel isolation,covered
+IDM-001,__tests__/unit/id-mapping-service.test.ts,mal to anilist mapping,covered
+IDM-002,__tests__/unit/id-mapping-service.test.ts,unknown returns null,covered
+IDM-003,__tests__/unit/id-mapping-service.test.ts,same platform passthrough,covered
+IDM-004,__tests__/unit/id-mapping-service.test.ts,manual mapping persisted,covered
+IDM-005,__tests__/unit/id-mapping-service.test.ts,bangumi to mal,covered
+IDM-006,__tests__/unit/id-mapping-service.test.ts,bulk update transactional,covered
+ANIL-001,__tests__/unit/providers/anilist-data-source.test.ts,search maps to UnifiedAnimeItem array,covered
+ANIL-002,__tests__/unit/providers/anilist-data-source.test.ts,detail by id,covered
+ANIL-003,__tests__/unit/providers/anilist-data-source.test.ts,detail by idMal when source mal,covered
+ANIL-004,__tests__/unit/providers/anilist-data-source.test.ts,maps title.english to titleEnglish,covered
+ANIL-005,__tests__/unit/providers/anilist-data-source.test.ts,maps averageScore as raw 0-100,covered
+ANIL-006,__tests__/unit/providers/anilist-data-source.test.ts,strips HTML from description,covered
+ANIL-007,__tests__/unit/providers/anilist-data-source.test.ts,genres list with synthetic ids,covered
+ANIL-008,__tests__/unit/providers/anilist-data-source.test.ts,filters spoiler tags,covered
+ANIL-009,__tests__/integration/anilist-live.test.ts,live search returns results,covered
+ANIL-010,__tests__/integration/anilist-live.test.ts,live detail Cowboy Bebop id 1,covered
+MAL-001,__tests__/unit/providers/jikan-data-source.test.ts,detail by mal id path,covered
+MAL-002,__tests__/unit/providers/jikan-data-source.test.ts,search uses q param,covered
+MAL-003,__tests__/unit/providers/jikan-data-source.test.ts,sfw param appended,covered
+MAL-004,__tests__/unit/providers/jikan-data-source.test.ts,top uses /top/anime,covered
+MAL-005,__tests__/unit/providers/jikan-data-source.test.ts,seasonal explicit year and season,covered
+MAL-006,__tests__/unit/providers/jikan-data-source.test.ts,seasonal current uses /seasons/now,covered
+MAL-007,__tests__/unit/providers/jikan-data-source.test.ts,score raw to malScore,covered
+MAL-008,__tests__/unit/providers/jikan-data-source.test.ts,webp preferred over jpg,covered
+MAL-009,__tests__/unit/providers/jikan-data-source.test.ts,429 backoff retries,covered
+MAL-010,__tests__/integration/jikan-live.test.ts,live top anime returns 5+,covered
+BGM-001,__tests__/unit/providers/bangumi-data-source.test.ts,user-agent header set,covered
+BGM-002,__tests__/unit/providers/bangumi-data-source.test.ts,detail uses /v0/subjects,covered
+BGM-003,__tests__/unit/providers/bangumi-data-source.test.ts,image http to https rewrite,covered
+BGM-004,__tests__/unit/providers/bangumi-data-source.test.ts,name_cn to titleChinese,covered
+BGM-005,__tests__/unit/providers/bangumi-data-source.test.ts,bangumi title takes priority,covered
+BGM-006,__tests__/unit/providers/bangumi-data-source.test.ts,search delegates to anilist,covered
+BGM-007,__tests__/unit/providers/bangumi-data-source.test.ts,top delegates to anilist,covered
+BGM-008,__tests__/unit/providers/bangumi-data-source.test.ts,seasonal delegates to anilist,covered
+BGM-009,__tests__/integration/bangumi-live.test.ts,live detail subject 7157 Hyouka,covered
+ANNICT-001,__tests__/unit/providers/annict-data-source.test.ts,token cache reused,covered
+ANNICT-002,__tests__/unit/providers/annict-data-source.test.ts,token refreshed when expired,covered
+ANNICT-003,__tests__/unit/providers/annict-data-source.test.ts,search uses filter_title,covered
+ANNICT-004,__tests__/unit/providers/annict-data-source.test.ts,detail uses filter_ids,covered
+ANNICT-005,__tests__/unit/providers/annict-data-source.test.ts,image fallback to anilist,covered
+ANNICT-006,__tests__/unit/providers/annict-data-source.test.ts,image batch dedup,covered
+KITSU-001,__tests__/unit/providers/kitsu-data-source.test.ts,jsonapi accept header,covered
+KITSU-002,__tests__/unit/providers/kitsu-data-source.test.ts,detail uses /anime/{id},covered
+KITSU-003,__tests__/unit/providers/kitsu-data-source.test.ts,search uses filter[text],covered
+KITSU-004,__tests__/unit/providers/kitsu-data-source.test.ts,pagination offset,covered
+KITSU-005,__tests__/unit/providers/kitsu-data-source.test.ts,top uses sort -averageRating,covered
+KITSU-006,__tests__/unit/providers/kitsu-data-source.test.ts,score string parsed,covered
+SHIK-001,__tests__/unit/providers/shikimori-data-source.test.ts,user-agent header set,covered
+SHIK-002,__tests__/unit/providers/shikimori-data-source.test.ts,detail uses /animes/{id},covered
+SHIK-003,__tests__/unit/providers/shikimori-data-source.test.ts,image base prefixed,covered
+SHIK-004,__tests__/unit/providers/shikimori-data-source.test.ts,russian title preserved,covered
+SHIK-005,__tests__/unit/providers/shikimori-data-source.test.ts,top uses order=ranked,covered
+SIMKL-001,__tests__/unit/providers/simkl-data-source.test.ts,api key header set,covered
+SIMKL-002,__tests__/unit/providers/simkl-data-source.test.ts,detail uses extended=full,covered
+SIMKL-003,__tests__/unit/providers/simkl-data-source.test.ts,search uses /search/anime,covered
+SIMKL-004,__tests__/unit/providers/simkl-data-source.test.ts,top uses /anime/best/{year},covered
+SIMKL-005,__tests__/unit/providers/simkl-data-source.test.ts,cross-platform ids captured,covered
+SIMKL-006,__tests__/unit/providers/simkl-data-source.test.ts,poster wrapped in wsrv proxy,covered
+LOC-001,__tests__/unit/anime-localization-service.test.ts,display title never empty,covered
+LOC-002,__tests__/unit/anime-localization-service.test.ts,zh-Hans uses titleChinese,covered
+LOC-003,__tests__/unit/anime-localization-service.test.ts,fallback to title,covered
+LOC-004,__tests__/unit/anime-localization-service.test.ts,search keywords includes synonyms,covered
+PILG-001,__tests__/unit/pilgrimage/anitabi-service.test.ts,404 returns null,covered
+PILG-002,__tests__/unit/pilgrimage/anitabi-service.test.ts,in-memory cache hit,covered
+PILG-003,__tests__/unit/pilgrimage/anitabi-service.test.ts,sqlite persistence,covered
+PILG-004,__tests__/unit/pilgrimage/anitabi-service.test.ts,cache expiry 7 days,covered
+PILG-005,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,renders required fields,covered
+PILG-006,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,distance badge optional,covered
+PILG-007,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,onPress callback fires,covered
+PILG-008,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,haptic on press,covered
+PILG-009,__tests__/unit/pilgrimage/nearby-pilgrimage-badge.test.tsx,renders nothing until loaded,covered
+PILG-010,__tests__/unit/pilgrimage/nearby-pilgrimage-badge.test.tsx,swallows fetch errors,covered
+PILG-011,__tests__/unit/pilgrimage/pilgrimage-repository.test.ts,falls back to id mapping,covered
+PILG-012,__tests__/unit/pilgrimage/pilgrimage-repository.test.ts,sqlite migration idempotent,covered
+PILG-013,__tests__/integration/anitabi-live.test.ts,live fetch subject 7157,covered
+SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
+SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
+SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending
+E2E-001,__tests__/integration/e2e-flow.test.ts,search to detail,covered
+E2E-002,__tests__/integration/e2e-flow.test.ts,browse switch invalidates cache,covered
+E2E-003,__tests__/integration/e2e-flow.test.ts,detail to pilgrimage,covered
+E2E-004,__tests__/integration/e2e-flow.test.ts,cross-platform id resolution,covered

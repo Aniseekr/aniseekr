@@ -1,0 +1,9 @@
+platform,base_url,auth,rate_limit_ms,supports_search,supports_detail,supports_top,supports_seasonal,supports_genres,supports_staff,supports_relations,supports_streaming,supports_themes,supports_statistics,delegates_to_anilist,fallback_target,native_chinese_title,native_japanese_title,native_russian_title,id_format,score_scale,notes
+anilist,https://graphql.anilist.co,oauth2_optional,666,true,true,true,true,true,true,true,true,false,false,false,none,false,true,false,numeric,0-100,GraphQL POST single endpoint
+myanimelist,https://api.jikan.moe/v4,none,350,true,true,true,true,true,true,true,true,true,true,false,none,false,true,false,numeric,0-10,Jikan v4 unofficial REST proxy
+bangumi,https://api.bgm.tv,oauth2_optional,333,true,true,true,true,false,false,false,false,false,false,true,anilist,true,true,false,numeric,0-10,Delegates list ops to AniList; native detail
+annict,https://api.annict.com/v1,oauth2_required,500,true,true,false,false,false,false,false,false,false,false,false,anilist,false,true,false,numeric,0-5,Image fallback to AniList; no top/seasonal endpoints
+kitsu,https://kitsu.io/api/edge,none,333,true,true,true,true,false,true,true,false,false,false,false,none,false,true,false,numeric,0-100,JSON:API format; offset pagination
+shikimori,https://shikimori.one/api,oauth2_optional,200,true,true,true,true,true,true,true,false,false,false,false,none,false,true,true,numeric,0-10,Russian-language site; image base prefix needed
+simkl,https://api.simkl.com,apikey,500,true,true,true,true,false,false,false,false,false,false,false,none,false,true,false,numeric,0-10,Cross-platform IDs in response
+anitabi,https://api.anitabi.cn,none,200,false,true,false,false,false,false,false,false,false,false,false,none,true,true,false,numeric,n/a,Pilgrimage-only; linked by Bangumi ID

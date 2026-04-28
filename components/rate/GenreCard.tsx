@@ -1,9 +1,13 @@
-import { Image } from "expo-image";
-import { memo } from "react";
-import { Pressable, Text, View, Platform, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+// 9:16 portrait genre card matching the iOS GenreCardView aesthetic.
+// Image fills the card, gradient fades the bottom, big title + "Tap to Explore" hint.
+
+import { Image } from 'expo-image';
+import { memo } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Colors, FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
 
 type Props = {
   title: string;
@@ -11,26 +15,42 @@ type Props = {
   genreId?: string;
   onPress?: () => void;
   showButton?: boolean;
+  width?: number;
+  height?: number;
 };
 
-function GenreCardComponent({ title, image, genreId, onPress, showButton = true }: Props) {
+function GenreCardComponent({
+  title,
+  image,
+  genreId,
+  onPress,
+  showButton = true,
+  width,
+  height,
+}: Props) {
   const router = useRouter();
 
   const handlePress = () => {
     if (onPress) {
       onPress();
-    } else {
-      router.push({
-        pathname: "/(rate)/rating",
-        params: { genreId: genreId || title.toLowerCase(), genreName: title },
-      });
+      return;
     }
+    router.push({
+      pathname: '/(rate)/rating',
+      params: { genreId: genreId || title.toLowerCase(), genreName: title },
+    });
   };
 
   return (
-    <Pressable onPress={handlePress} style={styles.card}>
+    <Pressable
+      onPress={handlePress}
+      style={[
+        styles.card,
+        width !== undefined ? { width } : null,
+        height !== undefined ? { height } : null,
+      ]}>
       <View style={styles.imageContainer}>
-        {image && image.trim() !== "" ? (
+        {image && image.trim() !== '' ? (
           <Image
             source={{ uri: image }}
             style={styles.image}
@@ -40,18 +60,29 @@ function GenreCardComponent({ title, image, genreId, onPress, showButton = true 
           />
         ) : (
           <View style={styles.placeholder}>
-            <MaterialIcons name="image" size={48} color="rgba(255,255,255,0.3)" />
+            <MaterialIcons name="image" size={48} color={Colors.text.tertiary} />
           </View>
         )}
+
+        {/* Bottom-to-top gradient fade for text readability */}
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          colors={[
+            'transparent',
+            'rgba(0,0,0,0.25)',
+            'rgba(0,0,0,0.65)',
+            'rgba(0,0,0,0.92)',
+          ]}
           style={styles.gradient}
         />
-        {showButton && (
+
+        {showButton ? (
           <View style={styles.content}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.title} numberOfLines={2}>
+              {title.toUpperCase()}
+            </Text>
+            <Text style={styles.hint}>Tap to Explore</Text>
           </View>
-        )}
+        ) : null}
       </View>
     </Pressable>
   );
@@ -59,16 +90,12 @@ function GenreCardComponent({ title, image, genreId, onPress, showButton = true 
 
 const styles = StyleSheet.create({
   card: {
-    width: 288,
-    height: 420,
-    marginHorizontal: 8,
-    borderRadius: 24,
+    width: 270,
+    aspectRatio: 9 / 16,
+    borderRadius: Radius.xxl,
     overflow: 'hidden',
-    ...Platform.select({
-      android: {
-        elevation: 4,
-      },
-    }),
+    backgroundColor: Colors.background.secondary,
+    ...Shadow.medium,
   },
   imageContainer: {
     width: '100%',
@@ -82,35 +109,47 @@ const styles = StyleSheet.create({
   placeholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.glass.dark,
   },
   gradient: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: '40%',
+    height: '55%',
   },
   content: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 28,
     left: 0,
     right: 0,
-    padding: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   title: {
-    color: '#fff',
+    color: Colors.text.primary,
     fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    fontFamily: FontFamily.rounded,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  hint: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 10,
     fontFamily: Platform.select({
       ios: 'System',
       android: 'Roboto',
     }),
+    letterSpacing: 0.4,
   },
 });
 
 export const GenreCard = memo(GenreCardComponent);
-

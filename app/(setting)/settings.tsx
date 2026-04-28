@@ -46,7 +46,17 @@ export default function SettingsScreen() {
           <View>
             <Text style={styles.sectionTitle}>Sync & Data</Text>
             <GlassCard variant="frosted" style={styles.card}>
-              <SettingItem label="Sync Now" icon="sync-outline" onPress={() => {}} />
+              <SettingItem
+                label="Browse Source"
+                icon="cloud-outline"
+                onPress={() => router.push('/(setting)/data-source')}
+              />
+              <View style={styles.separator} />
+              <SettingItem
+                label="Platform Sync"
+                icon="git-branch-outline"
+                onPress={() => router.push('/(setting)/sync')}
+              />
               <View style={styles.separator} />
               <SettingItem label="Backup" icon="cloud-upload-outline" onPress={() => {}} />
               <View style={styles.separator} />

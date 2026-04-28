@@ -20,6 +20,40 @@ export interface UserStats {
   likedCount: number;
 }
 
+export interface PilgrimageRow {
+  bangumi_id: number;
+  title: string;
+  title_cn: string | null;
+  city: string | null;
+  cover: string | null;
+  color: string | null;
+  center_lat: number | null;
+  center_lng: number | null;
+  zoom: number | null;
+  points_length: number | null;
+  images_length: number | null;
+  lite_points_json: string | null;
+  cached_at: number;
+  expires_at: number;
+}
+
+export interface PilgrimageSaveInput {
+  bangumiId: number;
+  title: string;
+  titleCn?: string | null;
+  city?: string | null;
+  cover?: string | null;
+  color?: string | null;
+  centerLat?: number | null;
+  centerLng?: number | null;
+  zoom?: number | null;
+  pointsLength?: number | null;
+  imagesLength?: number | null;
+  litePointsJson?: string | null;
+  cachedAt: number;
+  expiresAt: number;
+}
+
 let db: SQLite.SQLiteDatabase | null = null;
 
 export const LocalDB = {
@@ -92,6 +126,25 @@ export const LocalDB = {
         PRIMARY KEY (folder_id, anime_id),
         FOREIGN KEY (folder_id) REFERENCES collection_folders (id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS pilgrimage_spots (
+        bangumi_id INTEGER PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        title_cn TEXT,
+        city TEXT,
+        cover TEXT,
+        color TEXT,
+        center_lat REAL,
+        center_lng REAL,
+        zoom INTEGER,
+        points_length INTEGER,
+        images_length INTEGER,
+        lite_points_json TEXT,
+        cached_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_pilg_city ON pilgrimage_spots(city);
+      CREATE INDEX IF NOT EXISTS idx_pilg_expires ON pilgrimage_spots(expires_at);
     `);
     console.log('[LocalDB] Initialized');
   },
@@ -154,5 +207,49 @@ export const LocalDB = {
       totalRated: totalResult?.count || 0,
       likedCount: likedResult?.count || 0,
     };
+  },
+
+  async getPilgrimage(bangumiId: number): Promise<PilgrimageRow | null> {
+    if (!db) await this.init();
+    const row = await db?.getFirstAsync<PilgrimageRow>(
+      'SELECT * FROM pilgrimage_spots WHERE bangumi_id = ?',
+      bangumiId
+    );
+    return row ?? null;
+  },
+
+  async savePilgrimage(entry: PilgrimageSaveInput): Promise<void> {
+    if (!db) await this.init();
+    await db?.runAsync(
+      `INSERT OR REPLACE INTO pilgrimage_spots (
+        bangumi_id, title, title_cn, city, cover, color,
+        center_lat, center_lng, zoom,
+        points_length, images_length, lite_points_json,
+        cached_at, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      entry.bangumiId,
+      entry.title,
+      entry.titleCn ?? null,
+      entry.city ?? null,
+      entry.cover ?? null,
+      entry.color ?? null,
+      entry.centerLat ?? null,
+      entry.centerLng ?? null,
+      entry.zoom ?? null,
+      entry.pointsLength ?? null,
+      entry.imagesLength ?? null,
+      entry.litePointsJson ?? null,
+      entry.cachedAt,
+      entry.expiresAt
+    );
+  },
+
+  async cleanExpiredPilgrimage(now: number = Date.now()): Promise<number> {
+    if (!db) await this.init();
+    const result = await db?.runAsync(
+      'DELETE FROM pilgrimage_spots WHERE expires_at <= ?',
+      now
+    );
+    return result?.changes ?? 0;
   },
 };
