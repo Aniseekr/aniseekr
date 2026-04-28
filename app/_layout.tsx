@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import '../global.css';
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -7,8 +8,15 @@ import { StatusBar } from 'expo-status-bar';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FloatingTabBar from '../components/FloatingTabBar';
 import { ThemeProvider } from '../context/ThemeContext';
+import { notificationService } from '../libs/services/notifications/notification-service';
+import { authService } from '../libs/services/auth/auth-service';
 
 export default function RootLayout() {
+  useEffect(() => {
+    void authService.initialize();
+    void notificationService.initialize();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

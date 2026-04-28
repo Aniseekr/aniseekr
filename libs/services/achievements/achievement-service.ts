@@ -123,6 +123,7 @@ export class AchievementService {
           unlockedAt: updated.unlockedAt!,
           rewardBalanceAfter: balance,
         });
+        void this.dispatchUnlockNotification(def);
       }
     }
 
@@ -143,6 +144,28 @@ export class AchievementService {
     await db.runAsync('DELETE FROM user_achievements');
     this.cache.clear();
     this.hydrated = false;
+  }
+
+  private async dispatchUnlockNotification(def: AchievementDefinition): Promise<void> {
+    try {
+      const { notificationService } = await import(
+        '../notifications/notification-service'
+      );
+      const reward = `+${def.reward.amount} ${def.reward.currency}`;
+      await notificationService.sendAchievementUnlock(
+        def.id,
+        `Unlocked: ${def.title}`,
+        `${def.description} · ${reward}`
+      );
+      const state = this.cache.get(def.id);
+      if (state) {
+        const next: AchievementProgress = { ...state, notified: true };
+        this.cache.set(def.id, next);
+        await this.persist(next);
+      }
+    } catch (error) {
+      console.warn('[achievements] notify failed', error);
+    }
   }
 
   private toView(def: AchievementDefinition): AchievementWithProgress {

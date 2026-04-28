@@ -219,6 +219,18 @@ export const LocalDB = {
         created_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_ledger_currency ON economy_ledger(currency, created_at);
+
+      CREATE TABLE IF NOT EXISTS scheduled_notifications (
+        id TEXT PRIMARY KEY NOT NULL,
+        kind TEXT NOT NULL,
+        ref_id TEXT,
+        title TEXT NOT NULL,
+        body TEXT,
+        scheduled_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_sched_notif_ref
+        ON scheduled_notifications(kind, ref_id);
     `);
     console.log('[LocalDB] Initialized');
   },

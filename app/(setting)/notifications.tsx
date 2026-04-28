@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,6 +9,12 @@ import {
   SettingsRow,
   SettingsSection,
 } from '../../components/setting/SettingsScreenLayout';
+import { useNotifications } from '../../hooks/useNotifications';
+import {
+  notificationService,
+  DEFAULT_PREFERENCES,
+  NotificationPreferences,
+} from '../../libs/services/notifications/notification-service';
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -32,66 +37,46 @@ try {
 
 const PREFS_KEY = '@aniseekr/notifications/prefs';
 
-interface NotifPrefs {
-  episodeReminders: boolean;
-  weeklyDigest: boolean;
-  movieDrops: boolean;
-  leadTimeMinutes: number;
-}
-
-const DEFAULTS: NotifPrefs = {
-  episodeReminders: true,
-  weeklyDigest: false,
-  movieDrops: true,
-  leadTimeMinutes: 15,
-};
-
 const LEAD_OPTIONS = [5, 15, 30, 60];
 
 export default function NotificationsScreen() {
   const { theme } = useTheme();
-  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULTS);
-  const [permission, setPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
-  const [pendingCount, setPendingCount] = useState(0);
+  const { permission, scheduled, requestPermission, cancelAll, refreshSchedule } =
+    useNotifications();
+  const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
 
   useEffect(() => {
     AsyncStorage.getItem(PREFS_KEY).then((raw) => {
       if (raw) {
         try {
-          setPrefs({ ...DEFAULTS, ...JSON.parse(raw) });
-        } catch {}
+          setPrefs({ ...DEFAULT_PREFERENCES, ...JSON.parse(raw) });
+        } catch {
+          // ignore — fall back to defaults
+        }
       }
     });
-    refreshStatus();
   }, []);
 
-  const refreshStatus = async () => {
-    try {
-      const status = await Notifications.getPermissionsAsync();
-      setPermission(status.granted ? 'granted' : status.canAskAgain ? 'undetermined' : 'denied');
-      const pending = await Notifications.getAllScheduledNotificationsAsync();
-      setPendingCount(pending.length);
-    } catch {
-      setPermission('undetermined');
-    }
-  };
-
-  const update = async (next: NotifPrefs) => {
+  const update = async (next: NotificationPreferences) => {
     hapticsBridge.selection();
     setPrefs(next);
     try {
       await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next));
-    } catch {}
+    } catch {
+      // best-effort persistence
+    }
+    if (!next.weeklyDigest) {
+      await notificationService.cancelByKind('daily_digest');
+    }
+    await refreshSchedule();
   };
 
-  const requestPermission = async () => {
-    const result = await Notifications.requestPermissionsAsync();
-    if (result.granted) {
+  const handleRequestPermission = async () => {
+    const status = await requestPermission();
+    if (status.granted) {
       hapticsBridge.success();
-      setPermission('granted');
     } else {
       hapticsBridge.error();
-      setPermission('denied');
       Alert.alert(
         'Permission required',
         'Open system settings to enable notifications for Aniseekr.',
@@ -106,7 +91,7 @@ export default function NotificationsScreen() {
     }
   };
 
-  const cancelAll = async () => {
+  const handleCancelAll = () => {
     Alert.alert(
       'Cancel all reminders?',
       'You can re-enable individual reminders by tapping the bell on an episode.',
@@ -116,20 +101,25 @@ export default function NotificationsScreen() {
           text: 'Cancel all',
           style: 'destructive',
           onPress: async () => {
-            await Notifications.cancelAllScheduledNotificationsAsync();
+            await cancelAll();
             hapticsBridge.warning();
-            await refreshStatus();
           },
         },
       ]
     );
   };
 
+  const permissionLabel = permission.granted
+    ? 'granted'
+    : permission.canAskAgain
+      ? 'undetermined'
+      : 'denied';
+
   return (
     <SettingsScreenLayout
       title="Notifications"
-      subtitle={`${pendingCount} scheduled · ${permission}`}>
-      {permission !== 'granted' ? (
+      subtitle={`${scheduled.length} scheduled · ${permissionLabel}`}>
+      {!permission.granted ? (
         <View
           style={[
             styles.banner,
@@ -148,7 +138,7 @@ export default function NotificationsScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={requestPermission}
+            onPress={handleRequestPermission}
             style={({ pressed }) => [
               styles.bannerAction,
               { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
@@ -181,6 +171,14 @@ export default function NotificationsScreen() {
           value={prefs.movieDrops}
           onChange={(v) => update({ ...prefs, movieDrops: v })}
           icon="movie-creation"
+        />
+        <Divider />
+        <ToggleSwitchRow
+          label="Achievement unlocks"
+          description="Local pings when you earn a badge"
+          value={prefs.achievementAlerts}
+          onChange={(v) => update({ ...prefs, achievementAlerts: v })}
+          icon="emoji-events"
         />
       </SettingsSection>
 
@@ -228,7 +226,7 @@ export default function NotificationsScreen() {
           icon="delete-sweep"
           label="Cancel all reminders"
           destructive
-          onPress={cancelAll}
+          onPress={handleCancelAll}
         />
       </SettingsSection>
 
