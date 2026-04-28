@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,7 +10,13 @@ import {
   SettingsSection,
 } from '../../components/setting/SettingsScreenLayout';
 import { authService } from '../../libs/services/auth/auth-service';
+import { isAuthRequiresFormError } from '../../libs/services/auth/auth-errors';
 import type { PlatformType } from '../../libs/services/auth/types';
+import {
+  PlatformAuthSheet,
+  PlatformAuthInput,
+} from '../../components/auth/PlatformAuthSheet';
+import type { AuthFormKind } from '../../libs/services/auth/auth-errors';
 
 interface PlatformDef {
   id: PlatformType;
@@ -27,14 +33,30 @@ const PLATFORMS: PlatformDef[] = [
   { id: 'annict', name: 'Annict', icon: 'language', color: '#F65B5B' },
   { id: 'shikimori', name: 'Shikimori', icon: 'public', color: '#1E90FF' },
   { id: 'simkl', name: 'SIMKL', icon: 'movie', color: '#1B1B1B' },
+  { id: 'kavita', name: 'Kavita', icon: 'menu-book', color: '#4A8B3C' },
 ];
 
 type ConnectionState = Record<PlatformType, boolean>;
+
+interface SheetState {
+  visible: boolean;
+  platform: PlatformDef | null;
+  kind: AuthFormKind | null;
+  requiresServerUrl: boolean;
+}
+
+const HIDDEN_SHEET: SheetState = {
+  visible: false,
+  platform: null,
+  kind: null,
+  requiresServerUrl: false,
+};
 
 export default function AccountScreen() {
   const { theme } = useTheme();
   const [connections, setConnections] = useState<ConnectionState>({} as ConnectionState);
   const [loading, setLoading] = useState(false);
+  const [sheet, setSheet] = useState<SheetState>(HIDDEN_SHEET);
 
   useEffect(() => {
     refreshAll();
@@ -44,7 +66,7 @@ export default function AccountScreen() {
     const next: Partial<ConnectionState> = {};
     for (const p of PLATFORMS) {
       try {
-        const token = await tryGetToken(p.id);
+        const token = await authService.getToken(p.id);
         next[p.id] = !!token;
       } catch {
         next[p.id] = false;
@@ -53,35 +75,21 @@ export default function AccountScreen() {
     setConnections(next as ConnectionState);
   };
 
-  const tryGetToken = async (platform: PlatformType): Promise<string | null> => {
-    const svc = authService as any;
-    if (typeof svc.getToken === 'function') {
-      return await svc.getToken(platform);
-    }
-    if (typeof svc.isAuthenticated === 'function') {
-      const ok = await svc.isAuthenticated(platform);
-      return ok ? 'connected' : null;
-    }
-    return null;
-  };
-
   const handleConnect = async (platform: PlatformDef) => {
     setLoading(true);
     try {
-      const svc = authService as any;
-      if (typeof svc.signIn === 'function') {
-        await svc.signIn(platform.id);
-        hapticsBridge.success();
-      } else if (typeof svc.authenticate === 'function') {
-        await svc.authenticate(platform.id);
-        hapticsBridge.success();
-      } else {
-        Alert.alert(
-          'Sign-in unavailable',
-          `${platform.name} OAuth is not implemented yet in this build.`
-        );
-      }
+      await authService.signIn(platform.id);
+      hapticsBridge.success();
     } catch (e) {
+      if (isAuthRequiresFormError(e)) {
+        setSheet({
+          visible: true,
+          platform,
+          kind: e.kind,
+          requiresServerUrl: e.requiresServerUrl,
+        });
+        return;
+      }
       hapticsBridge.error();
       Alert.alert(
         `Couldn't connect to ${platform.name}`,
@@ -91,6 +99,24 @@ export default function AccountScreen() {
       await refreshAll();
       setLoading(false);
     }
+  };
+
+  const handleSheetSubmit = async (input: PlatformAuthInput) => {
+    if (!sheet.platform || !sheet.kind) return;
+    const platform = sheet.platform;
+    if (sheet.kind === 'password') {
+      if (!input.username || !input.password) {
+        throw new Error('Username and password are required');
+      }
+      await authService.connectWithPassword(platform.id, input.username, input.password);
+    } else {
+      if (!input.apiKey) {
+        throw new Error('API key is required');
+      }
+      await authService.connectWithApiKey(platform.id, input.apiKey, input.serverUrl);
+    }
+    setSheet(HIDDEN_SHEET);
+    await refreshAll();
   };
 
   const handleDisconnect = (platform: PlatformDef) => {
@@ -104,12 +130,7 @@ export default function AccountScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const svc = authService as any;
-              if (typeof svc.signOut === 'function') {
-                await svc.signOut(platform.id);
-              } else if (typeof svc.logout === 'function') {
-                await svc.logout(platform.id);
-              }
+              await authService.signOut(platform.id);
               hapticsBridge.warning();
             } catch (e) {
               hapticsBridge.error();
@@ -210,6 +231,16 @@ export default function AccountScreen() {
         Tokens live in your device's secure enclave. Reset them by uninstalling
         the app or revoking access in each platform's account settings.
       </Text>
+
+      <PlatformAuthSheet
+        visible={sheet.visible}
+        platform={sheet.platform?.id ?? null}
+        platformName={sheet.platform?.name ?? ''}
+        kind={sheet.kind}
+        requiresServerUrl={sheet.requiresServerUrl}
+        onClose={() => setSheet(HIDDEN_SHEET)}
+        onSubmit={handleSheetSubmit}
+      />
     </SettingsScreenLayout>
   );
 }
