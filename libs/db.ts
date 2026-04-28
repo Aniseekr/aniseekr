@@ -145,6 +145,54 @@ export const LocalDB = {
       );
       CREATE INDEX IF NOT EXISTS idx_pilg_city ON pilgrimage_spots(city);
       CREATE INDEX IF NOT EXISTS idx_pilg_expires ON pilgrimage_spots(expires_at);
+
+      CREATE TABLE IF NOT EXISTS sync_dirty_records (
+        anime_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        field TEXT NOT NULL,
+        marked_at INTEGER NOT NULL,
+        PRIMARY KEY (anime_id, platform, field)
+      );
+      CREATE INDEX IF NOT EXISTS idx_dirty_platform ON sync_dirty_records(platform);
+
+      CREATE TABLE IF NOT EXISTS sync_jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_type TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        attempts INTEGER DEFAULT 0,
+        next_attempt_at INTEGER NOT NULL,
+        last_error TEXT,
+        state TEXT NOT NULL DEFAULT 'pending',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_jobs_state ON sync_jobs(state, next_attempt_at);
+
+      CREATE TABLE IF NOT EXISTS sync_conflicts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        anime_id TEXT NOT NULL,
+        field TEXT NOT NULL,
+        values_json TEXT NOT NULL,
+        resolved INTEGER DEFAULT 0,
+        resolution TEXT,
+        detected_at INTEGER NOT NULL,
+        resolved_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_conflicts_resolved
+        ON sync_conflicts(resolved, detected_at);
+
+      CREATE TABLE IF NOT EXISTS platform_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_platform TEXT NOT NULL,
+        to_platform TEXT NOT NULL,
+        total INTEGER NOT NULL,
+        succeeded INTEGER DEFAULT 0,
+        failed INTEGER DEFAULT 0,
+        state TEXT NOT NULL DEFAULT 'running',
+        started_at INTEGER NOT NULL,
+        finished_at INTEGER
+      );
     `);
     console.log('[LocalDB] Initialized');
   },
