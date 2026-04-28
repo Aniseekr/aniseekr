@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FloatingTabBar from '../components/FloatingTabBar';
 import { ThemeProvider } from '../context/ThemeContext';
+import { SubscriptionProvider } from '../context/SubscriptionContext';
 import { notificationService } from '../libs/services/notifications/notification-service';
 import { authService } from '../libs/services/auth/auth-service';
 
@@ -20,6 +21,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
+        <SubscriptionProvider>
         <StatusBar style="light" translucent={Platform.OS === 'android'} />
         <Tabs
           tabBar={(props) => <FloatingTabBar {...props} />}
@@ -152,6 +154,7 @@ export default function RootLayout() {
             options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
           />
         </Tabs>
+        </SubscriptionProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
