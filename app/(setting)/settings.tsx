@@ -27,17 +27,38 @@ export default function SettingsScreen() {
         </View>
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {/* General */}
+          {/* Account */}
           <View>
-            <Text style={styles.sectionTitle}>General</Text>
+            <Text style={styles.sectionTitle}>Account</Text>
             <GlassCard variant="frosted" style={styles.card}>
-              <SettingItem label="Profile" icon="person-outline" onPress={() => {}} />
+              <SettingItem
+                label="Connected platforms"
+                icon="people-circle-outline"
+                onPress={() => router.push('/(setting)/account')}
+              />
               <View style={styles.separator} />
               <SettingItem
-                label="Language"
+                label="Otaku DNA"
+                icon="finger-print-outline"
+                onPress={() => router.push('/(setting)/otaku-dna')}
+              />
+            </GlassCard>
+          </View>
+
+          {/* Appearance */}
+          <View>
+            <Text style={styles.sectionTitle}>Appearance</Text>
+            <GlassCard variant="frosted" style={styles.card}>
+              <SettingItem
+                label="Theme"
+                icon="color-palette-outline"
+                onPress={() => router.push('/(setting)/theme')}
+              />
+              <View style={styles.separator} />
+              <SettingItem
+                label="Title language priority"
                 icon="language-outline"
-                value="English"
-                onPress={() => {}}
+                onPress={() => router.push('/(setting)/language-priority')}
               />
             </GlassCard>
           </View>
@@ -47,23 +68,33 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>Sync & Data</Text>
             <GlassCard variant="frosted" style={styles.card}>
               <SettingItem
-                label="Browse Source"
+                label="Browse source"
                 icon="cloud-outline"
                 onPress={() => router.push('/(setting)/data-source')}
               />
               <View style={styles.separator} />
               <SettingItem
-                label="Platform Sync"
+                label="Sync hub"
                 icon="git-branch-outline"
-                onPress={() => router.push('/(setting)/sync')}
+                onPress={() => router.push('/(setting)/sync-hub')}
               />
               <View style={styles.separator} />
-              <SettingItem label="Backup" icon="cloud-upload-outline" onPress={() => {}} />
+              <SettingItem
+                label="Import wizard"
+                icon="cloud-upload-outline"
+                onPress={() => router.push('/(setting)/import-wizard')}
+              />
+              <View style={styles.separator} />
+              <SettingItem
+                label="Cache"
+                icon="server-outline"
+                onPress={() => router.push('/(setting)/cache')}
+              />
               <View style={styles.separator} />
               <View style={styles.switchRow}>
                 <View style={styles.rowLeft}>
                   <Ionicons name="cellular-outline" size={22} color={Colors.text.primary} />
-                  <Text style={styles.rowLabel}>Data Saver</Text>
+                  <Text style={styles.rowLabel}>Data saver</Text>
                 </View>
                 <Switch
                   value={dataSaver}
@@ -75,27 +106,38 @@ export default function SettingsScreen() {
             </GlassCard>
           </View>
 
-          {/* Otaku DNA */}
+          {/* Notifications */}
           <View>
-            <Text style={styles.sectionTitle}>Otaku DNA</Text>
+            <Text style={styles.sectionTitle}>Notifications</Text>
             <GlassCard variant="frosted" style={styles.card}>
-              <SettingItem label="DNA Analysis" icon="finger-print-outline" onPress={() => {}} />
+              <SettingItem
+                label="Reminders"
+                icon="notifications-outline"
+                onPress={() => router.push('/(setting)/notifications')}
+              />
             </GlassCard>
           </View>
 
           {/* About */}
           <View>
-            <Text style={styles.sectionTitle}>App</Text>
+            <Text style={styles.sectionTitle}>About</Text>
             <GlassCard variant="frosted" style={styles.card}>
-              <SettingItem label="About" icon="information-circle-outline" onPress={() => {}} />
-              <View style={styles.separator} />
-              <SettingItem label="Help & Support" icon="help-circle-outline" onPress={() => {}} />
+              <SettingItem
+                label="Attribution"
+                icon="ribbon-outline"
+                onPress={() => router.push('/(setting)/attribution')}
+              />
               <View style={styles.separator} />
               <SettingItem
-                label="Log Out"
-                icon="log-out-outline"
-                color={Colors.error}
-                onPress={() => {}}
+                label="Privacy policy"
+                icon="lock-closed-outline"
+                onPress={() => router.push('/(setting)/privacy')}
+              />
+              <View style={styles.separator} />
+              <SettingItem
+                label="Terms of service"
+                icon="document-text-outline"
+                onPress={() => router.push('/(setting)/terms')}
               />
             </GlassCard>
           </View>

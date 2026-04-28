@@ -110,11 +110,11 @@ export default function ProfileScreen() {
 
           <QuickActions
             actions={{
-              onPremium: () => {},
-              onSync: () => router.push('/(setting)/sync'),
+              onPremium: () => router.push('/(setting)/account'),
+              onSync: () => router.push('/(setting)/sync-hub'),
               onSettings: () => router.push('/(setting)/settings'),
-              onBackup: () => alert('Backup feature coming soon!'),
-              onDNA: () => {},
+              onBackup: () => router.push('/(setting)/import-wizard'),
+              onDNA: () => router.push('/(setting)/otaku-dna'),
             }}
           />
         </ScrollView>

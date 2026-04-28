@@ -3,6 +3,7 @@ import {
   FlatList,
   RefreshControl,
   Platform,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
   Text,
@@ -11,12 +12,15 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CollectionHeader } from '../components/collection/CollectionHeader';
 import { FolderList } from '../components/collection/FolderList';
 import { CollectionOverviewCard } from '../components/collection/CollectionOverviewCard';
+import { CollectionTips } from '../components/collection/CollectionTips';
 import { CollectionFolder } from '../types';
 import { collectionService } from '../libs/services/collection/collection-service';
 import { CreateFolderModal } from '../components/collection/CreateFolderModal';
+import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../constants/DesignSystem';
 
 type SortMode = 'newest' | 'oldest' | 'rarity' | 'popularity' | 'count' | 'id';
@@ -223,6 +227,29 @@ export default function CollectionScreen() {
           onViewAll={() => setSelectedCategory('All')}
         />
 
+        <View style={styles.statsButtonRow}>
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              router.push('/collection/stats');
+            }}
+            style={({ pressed }) => [
+              styles.statsButton,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}>
+            <MaterialIcons name="bar-chart" size={16} color={Colors.primary} />
+            <Text style={styles.statsButtonLabel}>Library stats</Text>
+            <MaterialIcons name="chevron-right" size={18} color={Colors.text.tertiary} />
+          </Pressable>
+        </View>
+
+        <CollectionTips
+          context={{
+            folderCount: collections.filter((f) => !f.isSystemFolder).length,
+            hasUnrated: false,
+          }}
+        />
+
         {selectedCategory !== 'All' && renderSortButtons()}
 
         <FlatList
@@ -276,6 +303,28 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     backgroundColor: `${Colors.primary}26`,
     opacity: 0.5,
+  },
+  statsButtonRow: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.sm,
+  },
+  statsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.glass.medium,
+    borderRadius: Radius.chipLg,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  statsButtonLabel: {
+    flex: 1,
+    color: Colors.text.primary,
+    ...Typography.titleSmall,
+    fontWeight: '600',
   },
   listContent: {
     paddingHorizontal: Spacing.screenPadding,

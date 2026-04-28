@@ -5,8 +5,6 @@
 import { useCallback, useState } from 'react';
 import {
   FlatList,
-  Modal,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -24,14 +22,19 @@ import { SimpleAnimeCard } from '../../components/rate/SimpleAnimeCard';
 import { TrendCard } from '../../components/rate/TrendCard';
 import { AIRecommendationSheet } from '../../components/rate/AIRecommendationSheet';
 import { ModeSelector } from '../../components/rate/ModeSelector';
+import {
+  ImageDisplaySettingsSheet,
+  DEFAULT_RATING_PREFS,
+  RatingPreferences,
+} from '../../components/rate/ImageDisplaySettingsSheet';
 import { useRateData } from '../../components/rate/useRateData';
 import { Anime, Genre, ViewMode } from '../../components/rate/types';
 import { BrowseSourceChip } from '../../components/common/BrowseSourceChip';
 import { AniCard } from '../../components/common/AniCard';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
   Colors,
   FontFamily,
-  Radius,
   Spacing,
   Typography,
 } from '../../constants/DesignSystem';
@@ -48,6 +51,7 @@ export default function HomeRateScreen() {
   const router = useRouter();
   const [showAI, setShowAI] = useState(false);
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
+  const [ratingPrefs, setRatingPrefs] = useState<RatingPreferences>(DEFAULT_RATING_PREFS);
 
   const handleGenreSelect = useCallback(
     (genre: Genre) => {
@@ -95,11 +99,23 @@ export default function HomeRateScreen() {
           <Text style={styles.appSubtitle}>{subtitle}</Text>
         </View>
         <View style={styles.headerIcons}>
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              router.push('/search');
+            }}
+            style={styles.iconButton}
+            hitSlop={8}>
+            <Ionicons name="search" size={20} color={Colors.text.secondary} />
+          </Pressable>
           <Pressable onPress={handlePullAI} style={styles.iconButton} hitSlop={8}>
             <MaterialIcons name="auto-awesome" size={22} color={Colors.primary} />
           </Pressable>
           <Pressable
-            onPress={() => setShowDisplaySettings(true)}
+            onPress={() => {
+              hapticsBridge.tap();
+              setShowDisplaySettings(true);
+            }}
             style={styles.iconButton}
             hitSlop={8}>
             <Ionicons name="settings-outline" size={20} color={Colors.text.secondary} />
@@ -129,23 +145,12 @@ export default function HomeRateScreen() {
       />
 
       <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
-        {/* Display settings sheet */}
-        <Modal
+        <ImageDisplaySettingsSheet
           visible={showDisplaySettings}
-          transparent
-          animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
-          onRequestClose={() => setShowDisplaySettings(false)}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setShowDisplaySettings(false)}>
-            <View style={styles.modalSheet}>
-              <Text style={styles.modalTitle}>Display Settings</Text>
-              <Text style={styles.modalText}>
-                Customize your feed layout and content filtering here.
-              </Text>
-            </View>
-          </Pressable>
-        </Modal>
+          preferences={ratingPrefs}
+          onClose={() => setShowDisplaySettings(false)}
+          onChange={setRatingPrefs}
+        />
 
         <AIRecommendationSheet
           visible={showAI}
@@ -385,39 +390,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   emptyText: {
-    ...Typography.bodyMedium,
-    color: Colors.text.secondary,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: Colors.background.secondary,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    borderTopWidth: 1,
-    borderColor: Colors.glass.border,
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-      },
-      android: { elevation: 12 },
-    }),
-  },
-  modalTitle: {
-    ...Typography.headlineSmall,
-    color: Colors.text.primary,
-    fontFamily: FontFamily.rounded,
-    marginBottom: Spacing.xs,
-  },
-  modalText: {
     ...Typography.bodyMedium,
     color: Colors.text.secondary,
   },
