@@ -30,9 +30,7 @@ export default function PrivacyScreen() {
   const { theme } = useTheme();
 
   return (
-    <SettingsScreenLayout
-      title="Privacy policy"
-      subtitle="What happens to your data">
+    <SettingsScreenLayout title="Privacy policy" subtitle="What happens to your data">
       <Text style={[styles.lead, { color: theme.text.primary }]}>
         Aniseekr is built on the principle that your library belongs to you.
       </Text>
@@ -46,12 +44,8 @@ export default function PrivacyScreen() {
               borderColor: theme.glassBorder,
             },
           ]}>
-          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-            {section.title}
-          </Text>
-          <Text style={[styles.body, { color: theme.text.secondary }]}>
-            {section.body}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>{section.title}</Text>
+          <Text style={[styles.body, { color: theme.text.secondary }]}>{section.body}</Text>
         </View>
       ))}
       <Text style={[styles.updated, { color: theme.text.tertiary }]}>

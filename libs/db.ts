@@ -332,10 +332,7 @@ export const LocalDB = {
 
   async cleanExpiredPilgrimage(now: number = Date.now()): Promise<number> {
     if (!db) await this.init();
-    const result = await db?.runAsync(
-      'DELETE FROM pilgrimage_spots WHERE expires_at <= ?',
-      now
-    );
+    const result = await db?.runAsync('DELETE FROM pilgrimage_spots WHERE expires_at <= ?', now);
     return result?.changes ?? 0;
   },
 };

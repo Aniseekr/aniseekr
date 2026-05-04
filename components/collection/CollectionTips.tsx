@@ -117,17 +117,11 @@ function CollectionTipsComponent({ context }: CollectionTipsProps) {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.card, { borderColor: theme.glassBorder }]}>
-        <View
-          style={[
-            styles.iconWrap,
-            { backgroundColor: theme.accent + '32' },
-          ]}>
+        <View style={[styles.iconWrap, { backgroundColor: theme.accent + '32' }]}>
           <MaterialIcons name={tip.icon} size={22} color={theme.accent} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: theme.text.primary }]}>
-            {tip.title}
-          </Text>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{tip.title}</Text>
           <Text style={[styles.description, { color: theme.text.secondary }]}>
             {tip.description}
           </Text>

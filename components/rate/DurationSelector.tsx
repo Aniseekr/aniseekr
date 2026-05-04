@@ -65,15 +65,11 @@ function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
   const { theme } = useTheme();
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {DURATION_OPTIONS.map((option, idx) => {
         const isSelected = option.key === value;
         return (
-          <Animated.View
-            key={option.key}
-            entering={FadeInDown.delay(idx * 50).springify()}>
+          <Animated.View key={option.key} entering={FadeInDown.delay(idx * 50).springify()}>
             <Pressable
               onPress={() => {
                 hapticsBridge.selection();
@@ -82,9 +78,7 @@ function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
               style={({ pressed }) => [
                 styles.row,
                 {
-                  backgroundColor: isSelected
-                    ? theme.accent + '24'
-                    : theme.background.secondary,
+                  backgroundColor: isSelected ? theme.accent + '24' : theme.background.secondary,
                   borderColor: isSelected ? theme.accent : theme.glassBorder,
                   opacity: pressed ? 0.85 : 1,
                 },
@@ -93,9 +87,7 @@ function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
                 style={[
                   styles.iconWrap,
                   {
-                    backgroundColor: isSelected
-                      ? theme.accent
-                      : theme.background.tertiary,
+                    backgroundColor: isSelected ? theme.accent : theme.background.tertiary,
                   },
                 ]}>
                 <MaterialIcons
@@ -105,11 +97,8 @@ function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: theme.text.primary }]}>
-                  {option.label}
-                </Text>
-                <Text
-                  style={[styles.description, { color: theme.text.secondary }]}>
+                <Text style={[styles.label, { color: theme.text.primary }]}>{option.label}</Text>
+                <Text style={[styles.description, { color: theme.text.secondary }]}>
                   {option.description}
                 </Text>
               </View>

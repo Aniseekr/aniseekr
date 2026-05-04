@@ -1,6 +1,6 @@
-import { ReactElement, useEffect, useState } from 'react';
+import { ReactElement, useState } from 'react';
 import { View } from 'react-native';
-import { adsService } from '../../libs/services/ads/ads-service';
+import { getAdUnitId } from '../../libs/services/ads/ad-config';
 import { useSubscription } from '../../context/SubscriptionContext';
 
 type BannerProps = {
@@ -28,24 +28,10 @@ export interface AdBannerProps {
 
 export function AdBanner({ slot = 'home_banner', fallbackHeight = 0 }: AdBannerProps) {
   const subscription = useSubscription();
-  const [unitId, setUnitId] = useState<string | null>(null);
   const [errored, setErrored] = useState(false);
 
-  useEffect(() => {
-    if (subscription.isPro) {
-      setUnitId(null);
-      return;
-    }
-    let mounted = true;
-    adsService.getBannerUnitId(slot).then((id) => {
-      if (mounted) setUnitId(id);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [subscription.isPro, slot]);
+  const unitId = subscription.isPro ? null : getAdUnitId(slot);
 
-  if (subscription.isPro) return null;
   if (!unitId || !BannerAdComponent || !BannerSize || errored) {
     return fallbackHeight > 0 ? <View style={{ height: fallbackHeight }} /> : null;
   }

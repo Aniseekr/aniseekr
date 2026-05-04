@@ -125,8 +125,7 @@ export default function ImportWizardScreen() {
                   style={[
                     styles.stepLine,
                     {
-                      backgroundColor:
-                        done ? theme.accent : theme.background.tertiary,
+                      backgroundColor: done ? theme.accent : theme.background.tertiary,
                     },
                   ]}
                 />
@@ -150,24 +149,16 @@ export default function ImportWizardScreen() {
                 style={({ pressed }) => [
                   styles.sourceCard,
                   {
-                    backgroundColor: active
-                      ? theme.accent + '24'
-                      : theme.background.secondary,
+                    backgroundColor: active ? theme.accent + '24' : theme.background.secondary,
                     borderColor: active ? theme.accent : theme.glassBorder,
                     opacity: pressed ? 0.85 : 1,
                   },
                 ]}>
-                <View
-                  style={[
-                    styles.sourceIcon,
-                    { backgroundColor: s.color + '24' },
-                  ]}>
+                <View style={[styles.sourceIcon, { backgroundColor: s.color + '24' }]}>
                   <MaterialIcons name={s.icon} size={22} color={s.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sourceName, { color: theme.text.primary }]}>
-                    {s.name}
-                  </Text>
+                  <Text style={[styles.sourceName, { color: theme.text.primary }]}>{s.name}</Text>
                   <Text style={[styles.sourceDesc, { color: theme.text.secondary }]}>
                     {s.description}
                   </Text>
@@ -178,11 +169,7 @@ export default function ImportWizardScreen() {
               </Pressable>
             );
           })}
-          <PrimaryButton
-            label="Continue"
-            disabled={!source}
-            onPress={() => next('mode')}
-          />
+          <PrimaryButton label="Continue" disabled={!source} onPress={() => next('mode')} />
         </Animated.View>
       ) : null}
 
@@ -200,9 +187,7 @@ export default function ImportWizardScreen() {
                 style={({ pressed }) => [
                   styles.modeCard,
                   {
-                    backgroundColor: active
-                      ? theme.accent + '24'
-                      : theme.background.secondary,
+                    backgroundColor: active ? theme.accent + '24' : theme.background.secondary,
                     borderColor: active ? theme.accent : theme.glassBorder,
                     opacity: pressed ? 0.85 : 1,
                   },
@@ -217,9 +202,7 @@ export default function ImportWizardScreen() {
                   ) : null}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.modeLabel, { color: theme.text.primary }]}>
-                    {m.label}
-                  </Text>
+                  <Text style={[styles.modeLabel, { color: theme.text.primary }]}>{m.label}</Text>
                   <Text style={[styles.modeDesc, { color: theme.text.secondary }]}>
                     {m.description}
                   </Text>
@@ -246,15 +229,18 @@ export default function ImportWizardScreen() {
             ]}>
             <SummaryRow label="Source" value={SOURCES.find((s) => s.id === source)?.name ?? '—'} />
             <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
-            <SummaryRow label="Conflict mode" value={MODES.find((m) => m.id === mode)?.label ?? '—'} />
+            <SummaryRow
+              label="Conflict mode"
+              value={MODES.find((m) => m.id === mode)?.label ?? '—'}
+            />
             <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
             <SummaryRow label="Backup before import" value="Enabled" />
           </View>
 
           <Text style={[styles.note, { color: theme.text.tertiary }]}>
-            Importing copies the file into the local cache, validates each row,
-            and writes new entries via the collection service. You can cancel
-            mid-flight without affecting your current library.
+            Importing copies the file into the local cache, validates each row, and writes new
+            entries via the collection service. You can cancel mid-flight without affecting your
+            current library.
           </Text>
 
           <View style={styles.row}>

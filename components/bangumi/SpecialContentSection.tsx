@@ -47,9 +47,7 @@ function SpecialContentSectionComponent({
               </Text>
             </Text>
             {subtitle ? (
-              <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
-                {subtitle}
-              </Text>
+              <Text style={[styles.subtitle, { color: theme.text.secondary }]}>{subtitle}</Text>
             ) : null}
           </View>
         </View>
@@ -87,21 +85,13 @@ function SpecialContentSectionComponent({
               borderRadius={14}
             />
             <View style={styles.cardBody}>
-              <Text
-                style={[styles.cardTitle, { color: theme.text.primary }]}
-                numberOfLines={2}>
+              <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={2}>
                 {item.title}
               </Text>
               <View style={styles.metaRow}>
                 {item.format ? (
-                  <View
-                    style={[
-                      styles.formatBadge,
-                      { backgroundColor: theme.accent + '24' },
-                    ]}>
-                    <Text style={[styles.formatLabel, { color: theme.accent }]}>
-                      {item.format}
-                    </Text>
+                  <View style={[styles.formatBadge, { backgroundColor: theme.accent + '24' }]}>
+                    <Text style={[styles.formatLabel, { color: theme.accent }]}>{item.format}</Text>
                   </View>
                 ) : null}
                 {item.startDate?.year ? (

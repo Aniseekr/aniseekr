@@ -92,9 +92,7 @@ export default function SyncHubScreen() {
         <MaterialIcons name="sync" size={24} color={theme.accent} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.statusTitle, { color: theme.text.primary }]}>
-            {lastSync
-              ? `Last sync ${formatRelative(lastSync)}`
-              : 'No sync yet'}
+            {lastSync ? `Last sync ${formatRelative(lastSync)}` : 'No sync yet'}
           </Text>
           <Text style={[styles.statusBody, { color: theme.text.secondary }]}>
             Sync runs in the background when your library changes.
@@ -158,12 +156,8 @@ export default function SyncHubScreen() {
                   ) : null}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.optionLabel, { color: theme.text.primary }]}>
-                    {label}
-                  </Text>
-                  <Text style={[styles.optionDesc, { color: theme.text.secondary }]}>
-                    {desc}
-                  </Text>
+                  <Text style={[styles.optionLabel, { color: theme.text.primary }]}>{label}</Text>
+                  <Text style={[styles.optionDesc, { color: theme.text.secondary }]}>{desc}</Text>
                 </View>
               </Pressable>
               {idx < arr.length - 1 ? <Divider /> : null}
@@ -213,11 +207,7 @@ function ToggleRow({
   const { theme } = useTheme();
   return (
     <View style={styles.toggleRow}>
-      <View
-        style={[
-          styles.toggleIcon,
-          { backgroundColor: theme.background.tertiary },
-        ]}>
+      <View style={[styles.toggleIcon, { backgroundColor: theme.background.tertiary }]}>
         <MaterialIcons name={icon} size={18} color={theme.accent} />
       </View>
       <View style={{ flex: 1 }}>

@@ -1,11 +1,7 @@
 import { memo, ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Colors, Radius } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
@@ -61,12 +57,8 @@ function GlassButtonComponent({
   const radius = shape === 'circle' ? size / 2 : Radius.full;
   const padding = innerPadding ?? (shape === 'circle' ? 0 : 12);
 
-  const tintColor = isActive
-    ? (highlightColor ?? Colors.primary) + 'CC'
-    : Colors.glass.medium;
-  const borderColor = isActive
-    ? highlightColor ?? Colors.primary
-    : Colors.glass.border;
+  const tintColor = isActive ? (highlightColor ?? Colors.primary) + 'CC' : Colors.glass.medium;
+  const borderColor = isActive ? (highlightColor ?? Colors.primary) : Colors.glass.border;
 
   return (
     <Animated.View style={[animatedStyle, { borderRadius: radius }, style]}>
@@ -90,7 +82,7 @@ function GlassButtonComponent({
         {Platform.OS === 'ios' ? (
           <BlurView
             intensity={intensity}
-            tint="dark"
+            tint="systemThickMaterialDark"
             style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
           />
         ) : null}

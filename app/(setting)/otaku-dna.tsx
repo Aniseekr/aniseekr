@@ -23,7 +23,12 @@ interface DNATagWeight {
 }
 
 const TRAIT_PRESETS: { key: keyof Stats; label: string; color: string; hint: string }[] = [
-  { key: 'completionRate', label: 'Completionist', color: '#0A84FF', hint: 'Series finished vs added' },
+  {
+    key: 'completionRate',
+    label: 'Completionist',
+    color: '#0A84FF',
+    hint: 'Series finished vs added',
+  },
   { key: 'tasteBreadth', label: 'Taste breadth', color: '#BF5AF2', hint: 'Diversity of folders' },
   { key: 'curator', label: 'Curator', color: '#FF9F0A', hint: 'Custom folder ratio' },
   { key: 'dropper', label: 'Picky', color: '#FF453A', hint: 'How often you drop series' },
@@ -101,7 +106,10 @@ export default function OtakuDNAScreen() {
       .slice(0, 6)
       .map((f, i) => ({
         tag: f.name,
-        weight: Math.min(100, Math.round((f.animeCount / Math.max(1, folders[0].animeCount)) * 100)),
+        weight: Math.min(
+          100,
+          Math.round((f.animeCount / Math.max(1, folders[0].animeCount)) * 100)
+        ),
         color: ['#FF9F0A', '#0A84FF', '#BF5AF2', '#30D158', '#FF6F60', '#5E5CE6'][i % 6],
       }));
   }, [folders]);
@@ -114,19 +122,14 @@ export default function OtakuDNAScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.heroCard, { borderColor: theme.glassBorder }]}>
         <MaterialIcons name="auto-awesome" size={26} color={theme.accent} />
-        <Text style={[styles.heroTitle, { color: theme.text.primary }]}>
-          Profile dynamics
-        </Text>
+        <Text style={[styles.heroTitle, { color: theme.text.primary }]}>Profile dynamics</Text>
         <Text style={[styles.heroBody, { color: theme.text.secondary }]}>
-          A snapshot of how you collect and rate. Updates automatically as your
-          library grows.
+          A snapshot of how you collect and rate. Updates automatically as your library grows.
         </Text>
       </LinearGradient>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-          Traits
-        </Text>
+        <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Traits</Text>
         {!stats ? (
           <View style={{ gap: Spacing.sm }}>
             <ShimmerEffect width="100%" height={50} borderRadius={14} />
@@ -148,11 +151,8 @@ export default function OtakuDNAScreen() {
                 <Text style={[styles.traitLabel, { color: theme.text.primary }]}>
                   {trait.label}
                 </Text>
-                <Text style={[styles.traitHint, { color: theme.text.tertiary }]}>
-                  {trait.hint}
-                </Text>
-                <View
-                  style={[styles.barTrack, { backgroundColor: theme.background.tertiary }]}>
+                <Text style={[styles.traitHint, { color: theme.text.tertiary }]}>{trait.hint}</Text>
+                <View style={[styles.barTrack, { backgroundColor: theme.background.tertiary }]}>
                   <View
                     style={[
                       styles.barFill,
@@ -161,9 +161,7 @@ export default function OtakuDNAScreen() {
                   />
                 </View>
               </View>
-              <Text style={[styles.traitValue, { color: trait.color }]}>
-                {trait.value}
-              </Text>
+              <Text style={[styles.traitValue, { color: trait.color }]}>{trait.value}</Text>
             </View>
           ))
         )}
@@ -171,9 +169,7 @@ export default function OtakuDNAScreen() {
 
       {tagWeights.length > 0 ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-            Top folders
-          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Top folders</Text>
           <View style={styles.tagCloud}>
             {tagWeights.map((t) => (
               <View

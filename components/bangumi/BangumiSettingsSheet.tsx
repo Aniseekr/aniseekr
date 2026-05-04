@@ -1,12 +1,5 @@
 import { memo, useCallback } from 'react';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
@@ -16,19 +9,22 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 export type BangumiViewMode = 'calendar' | 'list';
 export type BangumiFilterMode = 'all' | 'tracking';
+export type BangumiTypeFilter = 'all' | 'tv' | 'movie' | 'ova' | 'special';
 
 export interface BangumiPreferences {
   viewMode: BangumiViewMode;
   filterMode: BangumiFilterMode;
+  typeFilter: BangumiTypeFilter;
   showUnknownDays: boolean;
   notificationsEnabled: boolean;
-  showAdult: boolean;
 }
 
 interface BangumiSettingsSheetProps {
   visible: boolean;
   preferences: BangumiPreferences;
   pendingNotifications?: number;
+  adultContent: boolean;
+  onAdultContentChange: (value: boolean) => void;
   onClose: () => void;
   onChange: (next: BangumiPreferences) => void;
   onOpenNotifications?: () => void;
@@ -39,6 +35,8 @@ function BangumiSettingsSheetComponent({
   visible,
   preferences,
   pendingNotifications = 0,
+  adultContent,
+  onAdultContentChange,
   onClose,
   onChange,
   onOpenNotifications,
@@ -73,17 +71,13 @@ function BangumiSettingsSheetComponent({
           <SafeAreaView edges={['bottom']}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>
-                Bangumi options
-              </Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>Bangumi options</Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialIcons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              View mode
-            </Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>View mode</Text>
             <View style={styles.segmented}>
               {(['calendar', 'list'] as BangumiViewMode[]).map((mode) => {
                 const active = preferences.viewMode === mode;
@@ -94,9 +88,7 @@ function BangumiSettingsSheetComponent({
                     style={({ pressed }) => [
                       styles.segmentItem,
                       {
-                        backgroundColor: active
-                          ? theme.accent
-                          : theme.background.tertiary,
+                        backgroundColor: active ? theme.accent : theme.background.tertiary,
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}>
@@ -117,9 +109,7 @@ function BangumiSettingsSheetComponent({
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              Filter
-            </Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Filter</Text>
             <View style={styles.segmented}>
               {(['tracking', 'all'] as BangumiFilterMode[]).map((mode) => {
                 const active = preferences.filterMode === mode;
@@ -130,9 +120,7 @@ function BangumiSettingsSheetComponent({
                     style={({ pressed }) => [
                       styles.segmentItem,
                       {
-                        backgroundColor: active
-                          ? theme.accent
-                          : theme.background.tertiary,
+                        backgroundColor: active ? theme.accent : theme.background.tertiary,
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}>
@@ -142,6 +130,50 @@ function BangumiSettingsSheetComponent({
                         { color: active ? '#0E0A06' : theme.text.primary },
                       ]}>
                       {mode === 'tracking' ? 'Tracking' : 'All series'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Type</Text>
+            <View style={styles.segmented}>
+              {(
+                [
+                  { key: 'all', icon: 'apps', label: 'All' },
+                  { key: 'tv', icon: 'tv', label: 'TV' },
+                  { key: 'movie', icon: 'movie', label: 'Movie' },
+                  { key: 'ova', icon: 'videocam', label: 'OVA' },
+                  { key: 'special', icon: 'star', label: 'Special' },
+                ] as {
+                  key: BangumiTypeFilter;
+                  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+                  label: string;
+                }[]
+              ).map((item) => {
+                const active = preferences.typeFilter === item.key;
+                return (
+                  <Pressable
+                    key={item.key}
+                    onPress={() => update('typeFilter', item.key)}
+                    style={({ pressed }) => [
+                      styles.typeSegmentItem,
+                      {
+                        backgroundColor: active ? theme.accent : theme.background.tertiary,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}>
+                    <MaterialIcons
+                      name={item.icon}
+                      size={16}
+                      color={active ? '#0E0A06' : theme.text.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.typeSegmentLabel,
+                        { color: active ? '#0E0A06' : theme.text.primary },
+                      ]}>
+                      {item.label}
                     </Text>
                   </Pressable>
                 );
@@ -166,8 +198,8 @@ function BangumiSettingsSheetComponent({
               icon="explicit"
               label="Show adult content"
               description="Reveal R18 series in seasonal lists"
-              value={preferences.showAdult}
-              onChange={(v) => update('showAdult', v)}
+              value={adultContent}
+              onChange={onAdultContentChange}
             />
 
             <View style={styles.actionRow}>
@@ -185,18 +217,12 @@ function BangumiSettingsSheetComponent({
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}>
-                  <MaterialIcons
-                    name="notifications"
-                    size={18}
-                    color={theme.text.primary}
-                  />
-                  <Text
-                    style={[styles.actionLabel, { color: theme.text.primary }]}>
+                  <MaterialIcons name="notifications" size={18} color={theme.text.primary} />
+                  <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
                     Manage reminders
                   </Text>
                   {pendingNotifications > 0 ? (
-                    <View
-                      style={[styles.badge, { backgroundColor: theme.accent }]}>
+                    <View style={[styles.badge, { backgroundColor: theme.accent }]}>
                       <Text style={styles.badgeText}>{pendingNotifications}</Text>
                     </View>
                   ) : null}
@@ -216,13 +242,8 @@ function BangumiSettingsSheetComponent({
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}>
-                  <MaterialIcons
-                    name="ios-share"
-                    size={18}
-                    color={theme.text.primary}
-                  />
-                  <Text
-                    style={[styles.actionLabel, { color: theme.text.primary }]}>
+                  <MaterialIcons name="ios-share" size={18} color={theme.text.primary} />
+                  <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
                     Share schedule
                   </Text>
                 </Pressable>
@@ -278,9 +299,9 @@ function ToggleRow({
 export const DEFAULT_BANGUMI_PREFS: BangumiPreferences = {
   viewMode: 'calendar',
   filterMode: 'tracking',
+  typeFilter: 'all',
   showUnknownDays: true,
   notificationsEnabled: true,
-  showAdult: false,
 };
 
 const styles = StyleSheet.create({
@@ -336,6 +357,20 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     ...Typography.titleSmall,
+    fontWeight: '600',
+  },
+  typeSegmentItem: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: Spacing.xs + 2,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+  },
+  typeSegmentLabel: {
+    ...Typography.captionSmall,
     fontWeight: '600',
   },
   toggleRow: {

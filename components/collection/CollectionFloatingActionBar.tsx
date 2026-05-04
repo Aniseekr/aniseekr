@@ -1,11 +1,17 @@
 import { memo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import {
+  SHARE_TEMPLATES,
+  type ShareTemplate,
+  type ShareTemplateId,
+} from '../../libs/services/collection/share-templates';
+import { ShareTemplateCard } from './ShareTemplateCard';
 
 export type CollectionMode = 'collect' | 'share';
 
@@ -18,6 +24,9 @@ interface CollectionFloatingActionBarProps {
   onQuickShare?: () => void;
   onConfirmShare?: () => void;
   onCancelShare?: () => void;
+  selectedTemplateId?: ShareTemplateId | null;
+  onSelectTemplate?: (template: ShareTemplate) => void;
+  capturing?: boolean;
   bottom?: number;
   style?: ViewStyle;
 }
@@ -31,6 +40,9 @@ function CollectionFloatingActionBarComponent({
   onQuickShare,
   onConfirmShare,
   onCancelShare,
+  selectedTemplateId = null,
+  onSelectTemplate,
+  capturing = false,
   bottom = 96,
   style,
 }: CollectionFloatingActionBarProps) {
@@ -46,7 +58,7 @@ function CollectionFloatingActionBarComponent({
         {Platform.OS === 'ios' ? (
           <BlurView
             intensity={36}
-            tint="dark"
+            tint="systemThickMaterialDark"
             style={[StyleSheet.absoluteFill, styles.barFill]}
           />
         ) : null}
@@ -55,9 +67,7 @@ function CollectionFloatingActionBarComponent({
             styles.barBackground,
             {
               backgroundColor:
-                Platform.OS === 'ios'
-                  ? 'rgba(28,28,30,0.55)'
-                  : theme.background.secondary,
+                Platform.OS === 'ios' ? 'rgba(28,28,30,0.55)' : theme.background.secondary,
               borderColor: theme.glassBorder,
             },
           ]}
@@ -101,36 +111,56 @@ function CollectionFloatingActionBarComponent({
             ) : null}
           </View>
         ) : (
-          <View style={styles.row}>
-            {onCancelShare ? (
-              <ActionButton
-                icon="close"
-                label="Cancel"
-                accent={theme.text.secondary}
-                onPress={() => {
-                  hapticsBridge.tap();
-                  onCancelShare();
-                }}
+          <View style={styles.shareWrap}>
+            {onSelectTemplate ? (
+              <FlatList
+                data={SHARE_TEMPLATES}
+                keyExtractor={(t) => t.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.templateList}
+                renderItem={({ item }) => (
+                  <ShareTemplateCard
+                    template={item}
+                    active={item.id === selectedTemplateId}
+                    onSelect={onSelectTemplate}
+                  />
+                )}
               />
             ) : null}
-            <View style={styles.selectionBadge}>
-              <Text
-                style={[styles.selectionText, { color: theme.text.primary }]}>
-                {selectedCount} selected
-              </Text>
+            <View style={styles.row}>
+              {onCancelShare ? (
+                <ActionButton
+                  icon="close"
+                  label="Cancel"
+                  accent={theme.text.secondary}
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    onCancelShare();
+                  }}
+                />
+              ) : null}
+              {selectedCount > 0 ? (
+                <View style={styles.selectionBadge}>
+                  <Text style={[styles.selectionText, { color: theme.text.primary }]}>
+                    {selectedCount} picks
+                  </Text>
+                </View>
+              ) : null}
+              {onConfirmShare ? (
+                <ActionButton
+                  icon={capturing ? 'hourglass-empty' : 'ios-share'}
+                  label={capturing ? 'Rendering…' : 'Share'}
+                  accent="#0E0A06"
+                  background={theme.accent}
+                  onPress={() => {
+                    if (capturing) return;
+                    hapticsBridge.success();
+                    onConfirmShare();
+                  }}
+                />
+              ) : null}
             </View>
-            {onConfirmShare ? (
-              <ActionButton
-                icon="check"
-                label="Share"
-                accent="#0E0A06"
-                background={theme.accent}
-                onPress={() => {
-                  hapticsBridge.success();
-                  onConfirmShare();
-                }}
-              />
-            ) : null}
           </View>
         )}
       </View>
@@ -164,9 +194,7 @@ function ActionButton({
       <MaterialIcons name={icon} size={20} color={accent} />
       <View>
         <Text style={[styles.buttonLabel, { color: accent }]}>{label}</Text>
-        {hint ? (
-          <Text style={[styles.buttonHint, { color: accent }]}>{hint}</Text>
-        ) : null}
+        {hint ? <Text style={[styles.buttonHint, { color: accent }]}>{hint}</Text> : null}
       </View>
     </Pressable>
   );
@@ -208,6 +236,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.xs,
+  },
+  shareWrap: {
+    gap: 8,
+  },
+  templateList: {
+    paddingVertical: 4,
+    paddingRight: 4,
   },
   button: {
     flex: 1,

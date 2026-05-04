@@ -1,28 +1,9 @@
-import { Platform } from 'react-native';
+import { getAdUnitId } from './ad-config';
 
-export type AdSlot = 'home_banner' | 'detail_banner' | 'interstitial' | 'rewarded';
-
-export interface AdConfig {
-  iosBanner?: string;
-  androidBanner?: string;
-  iosInterstitial?: string;
-  androidInterstitial?: string;
-  iosRewarded?: string;
-  androidRewarded?: string;
-}
-
-const ENV_CONFIG: AdConfig = {
-  iosBanner: process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER,
-  androidBanner: process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER,
-  iosInterstitial: process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL,
-  androidInterstitial: process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL,
-  iosRewarded: process.env.EXPO_PUBLIC_ADMOB_IOS_REWARDED,
-  androidRewarded: process.env.EXPO_PUBLIC_ADMOB_ANDROID_REWARDED,
-};
+export type { AdSlot } from './ad-config';
 
 interface AdsModule {
   default: { initialize: () => Promise<unknown> };
-  TestIds: { BANNER: string; INTERSTITIAL: string; REWARDED: string };
   InterstitialAd: { createForAdRequest: (unitId: string) => InterstitialController };
   RewardedAd: { createForAdRequest: (unitId: string) => RewardedController };
   AdEventType: { LOADED: string; ERROR: string; CLOSED: string };
@@ -110,11 +91,7 @@ export class AdsService {
     if (this.suppressed) return null;
     const mod = await loadAdsModule();
     if (!mod) return null;
-    if (__DEV__) return mod.TestIds.BANNER;
-    if (Platform.OS === 'ios') return ENV_CONFIG.iosBanner ?? null;
-    if (Platform.OS === 'android') return ENV_CONFIG.androidBanner ?? null;
-    void slot;
-    return null;
+    return getAdUnitId(slot);
   }
 
   async preloadInterstitial(): Promise<void> {
@@ -123,7 +100,7 @@ export class AdsService {
     if (!mod) return;
     if (this.interstitial && this.interstitialReady) return;
 
-    const unitId = this.resolveUnitId(mod.TestIds.INTERSTITIAL, 'interstitial');
+    const unitId = getAdUnitId('interstitial');
     if (!unitId) return;
 
     const controller = mod.InterstitialAd.createForAdRequest(unitId);
@@ -162,7 +139,7 @@ export class AdsService {
     if (!mod) return;
     if (this.rewarded && this.rewardedReady) return;
 
-    const unitId = this.resolveUnitId(mod.TestIds.REWARDED, 'rewarded');
+    const unitId = getAdUnitId('rewarded');
     if (!unitId) return;
 
     const controller = mod.RewardedAd.createForAdRequest(unitId);
@@ -212,21 +189,6 @@ export class AdsService {
     } finally {
       cleanup();
     }
-  }
-
-  private resolveUnitId(testFallback: string, kind: 'interstitial' | 'rewarded'): string | null {
-    if (__DEV__) return testFallback;
-    if (Platform.OS === 'ios') {
-      return kind === 'interstitial'
-        ? (ENV_CONFIG.iosInterstitial ?? null)
-        : (ENV_CONFIG.iosRewarded ?? null);
-    }
-    if (Platform.OS === 'android') {
-      return kind === 'interstitial'
-        ? (ENV_CONFIG.androidInterstitial ?? null)
-        : (ENV_CONFIG.androidRewarded ?? null);
-    }
-    return null;
   }
 }
 

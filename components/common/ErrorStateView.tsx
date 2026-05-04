@@ -30,12 +30,7 @@ function ErrorStateViewComponent({
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        variant === 'fullscreen' && styles.fullscreen,
-        style,
-      ]}>
+    <View style={[styles.container, variant === 'fullscreen' && styles.fullscreen, style]}>
       <View style={styles.iconCircle}>
         <MaterialIcons name="error-outline" size={32} color={Colors.error} />
       </View>

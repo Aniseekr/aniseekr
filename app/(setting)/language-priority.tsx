@@ -87,8 +87,8 @@ export default function LanguagePriorityScreen() {
         </Pressable>
       }>
       <Text style={[styles.intro, { color: theme.text.secondary }]}>
-        Titles will be shown in the highest-priority language available for each
-        anime. Tap the arrows to reorder.
+        Titles will be shown in the highest-priority language available for each anime. Tap the
+        arrows to reorder.
       </Text>
       <View
         style={[
@@ -103,18 +103,11 @@ export default function LanguagePriorityScreen() {
           return (
             <View key={id}>
               <View style={styles.row}>
-                <View
-                  style={[
-                    styles.priorityBadge,
-                    { backgroundColor: theme.accent + '24' },
-                  ]}>
-                  <Text style={[styles.priorityText, { color: theme.accent }]}>
-                    {idx + 1}
-                  </Text>
+                <View style={[styles.priorityBadge, { backgroundColor: theme.accent + '24' }]}>
+                  <Text style={[styles.priorityText, { color: theme.accent }]}>{idx + 1}</Text>
                 </View>
                 <Text style={styles.flag}>{lang.icon}</Text>
-                <Text
-                  style={[styles.languageName, { color: theme.text.primary }]}>
+                <Text style={[styles.languageName, { color: theme.text.primary }]}>
                   {lang.name}
                 </Text>
                 <View style={styles.actions}>
@@ -122,24 +115,14 @@ export default function LanguagePriorityScreen() {
                     onPress={() => move(idx, -1)}
                     disabled={idx === 0}
                     hitSlop={8}
-                    style={[
-                      styles.arrowButton,
-                      idx === 0 && { opacity: 0.3 },
-                    ]}>
-                    <MaterialIcons
-                      name="keyboard-arrow-up"
-                      size={22}
-                      color={theme.text.primary}
-                    />
+                    style={[styles.arrowButton, idx === 0 && { opacity: 0.3 }]}>
+                    <MaterialIcons name="keyboard-arrow-up" size={22} color={theme.text.primary} />
                   </Pressable>
                   <Pressable
                     onPress={() => move(idx, 1)}
                     disabled={idx === order.length - 1}
                     hitSlop={8}
-                    style={[
-                      styles.arrowButton,
-                      idx === order.length - 1 && { opacity: 0.3 },
-                    ]}>
+                    style={[styles.arrowButton, idx === order.length - 1 && { opacity: 0.3 }]}>
                     <MaterialIcons
                       name="keyboard-arrow-down"
                       size={22}

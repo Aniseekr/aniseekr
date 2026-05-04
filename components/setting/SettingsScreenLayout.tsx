@@ -1,5 +1,13 @@
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +23,8 @@ interface SettingsScreenLayoutProps {
   rightSlot?: ReactNode;
   scrollable?: boolean;
   contentStyle?: ViewStyle;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 export function SettingsScreenLayout({
@@ -24,6 +34,8 @@ export function SettingsScreenLayout({
   rightSlot,
   scrollable = true,
   contentStyle,
+  refreshing,
+  onRefresh,
 }: SettingsScreenLayoutProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -38,6 +50,13 @@ export function SettingsScreenLayout({
           contentStyle,
         ],
         showsVerticalScrollIndicator: false,
+        refreshControl: onRefresh ? (
+          <RefreshControl
+            refreshing={!!refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.text.primary}
+          />
+        ) : undefined,
       }
     : { style: [styles.content, contentStyle] };
 
@@ -132,21 +151,10 @@ export function SettingsRow({
           onPress();
         }
       }}
-      style={({ pressed }) => [
-        styles.row,
-        { opacity: pressed && onPress ? 0.7 : 1 },
-      ]}>
+      style={({ pressed }) => [styles.row, { opacity: pressed && onPress ? 0.7 : 1 }]}>
       {icon ? (
-        <View
-          style={[
-            styles.rowIcon,
-            { backgroundColor: theme.background.tertiary },
-          ]}>
-          <MaterialIcons
-            name={icon}
-            size={18}
-            color={destructive ? '#FF453A' : theme.accent}
-          />
+        <View style={[styles.rowIcon, { backgroundColor: theme.background.tertiary }]}>
+          <MaterialIcons name={icon} size={18} color={destructive ? '#FF453A' : theme.accent} />
         </View>
       ) : null}
       <View style={{ flex: 1 }}>
@@ -160,9 +168,10 @@ export function SettingsRow({
       {value ? (
         <Text style={[styles.rowValue, { color: theme.text.secondary }]}>{value}</Text>
       ) : null}
-      {rightSlot ?? (onPress ? (
-        <MaterialIcons name="chevron-right" size={20} color={theme.text.tertiary} />
-      ) : null)}
+      {rightSlot ??
+        (onPress ? (
+          <MaterialIcons name="chevron-right" size={20} color={theme.text.tertiary} />
+        ) : null)}
     </Pressable>
   );
 }

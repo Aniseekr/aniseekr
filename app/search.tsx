@@ -80,29 +80,26 @@ export default function SearchScreen() {
     } catch {}
   }, []);
 
-  const runSearch = useCallback(
-    async (q: string) => {
-      const trimmed = q.trim();
-      if (!trimmed) {
-        setResults([]);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
+  const runSearch = useCallback(async (q: string) => {
+    const trimmed = q.trim();
+    if (!trimmed) {
+      setResults([]);
       setError(null);
-      try {
-        const data = await AnimeRepository.searchAnime(trimmed, 1);
-        setResults(data ?? []);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Search failed');
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await AnimeRepository.searchAnime(trimmed, 1);
+      setResults(data ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Search failed');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -117,10 +114,7 @@ export default function SearchScreen() {
   const handleSelect = useCallback(
     (anime: Anime) => {
       hapticsBridge.tap();
-      const next = [
-        anime.title,
-        ...recent.filter((r) => r !== anime.title),
-      ].slice(0, MAX_RECENT);
+      const next = [anime.title, ...recent.filter((r) => r !== anime.title)].slice(0, MAX_RECENT);
       setRecent(next);
       persistRecent(next);
       Keyboard.dismiss();
@@ -148,16 +142,9 @@ export default function SearchScreen() {
   return (
     <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <LinearGradient
-        colors={theme.gradient}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View
-          style={[
-            styles.header,
-            { paddingTop: insets.top > 0 ? 0 : Spacing.sm },
-          ]}>
+        <View style={[styles.header, { paddingTop: insets.top > 0 ? 0 : Spacing.sm }]}>
           <View
             style={[
               styles.searchBar,
@@ -181,11 +168,7 @@ export default function SearchScreen() {
             />
             {query.length > 0 ? (
               <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                <Ionicons
-                  name="close-circle"
-                  size={20}
-                  color={theme.text.tertiary}
-                />
+                <Ionicons name="close-circle" size={20} color={theme.text.tertiary} />
               </Pressable>
             ) : null}
           </View>
@@ -195,11 +178,7 @@ export default function SearchScreen() {
         </View>
 
         {error ? (
-          <ErrorStateView
-            title="Search failed"
-            message={error}
-            onRetry={() => runSearch(query)}
-          />
+          <ErrorStateView title="Search failed" message={error} onRetry={() => runSearch(query)} />
         ) : query.length === 0 ? (
           <ScrollView
             contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
@@ -207,13 +186,9 @@ export default function SearchScreen() {
             {recent.length > 0 ? (
               <View style={styles.recentSection}>
                 <View style={styles.sectionRow}>
-                  <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-                    Recent
-                  </Text>
+                  <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Recent</Text>
                   <Pressable onPress={handleClearRecent} hitSlop={8}>
-                    <Text style={[styles.clearText, { color: theme.accent }]}>
-                      Clear
-                    </Text>
+                    <Text style={[styles.clearText, { color: theme.accent }]}>Clear</Text>
                   </Pressable>
                 </View>
                 <View style={styles.recentRow}>
@@ -229,11 +204,7 @@ export default function SearchScreen() {
                           opacity: pressed ? 0.8 : 1,
                         },
                       ]}>
-                      <MaterialIcons
-                        name="history"
-                        size={14}
-                        color={theme.text.secondary}
-                      />
+                      <MaterialIcons name="history" size={14} color={theme.text.secondary} />
                       <Text
                         style={[styles.recentText, { color: theme.text.primary }]}
                         numberOfLines={1}>
@@ -302,50 +273,33 @@ export default function SearchScreen() {
                   borderRadius={10}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text
-                    style={[styles.title, { color: theme.text.primary }]}
-                    numberOfLines={2}>
+                  <Text style={[styles.title, { color: theme.text.primary }]} numberOfLines={2}>
                     {item.title}
                   </Text>
                   <View style={styles.metaRow}>
                     {item.format ? (
-                      <Text
-                        style={[styles.meta, { color: theme.text.secondary }]}>
+                      <Text style={[styles.meta, { color: theme.text.secondary }]}>
                         {item.format}
                       </Text>
                     ) : null}
                     {item.startDate?.year ? (
-                      <Text
-                        style={[styles.meta, { color: theme.text.secondary }]}>
+                      <Text style={[styles.meta, { color: theme.text.secondary }]}>
                         · {item.startDate.year}
                       </Text>
                     ) : null}
                     {typeof item.score === 'number' ? (
-                      <Text
-                        style={[
-                          styles.score,
-                          { color: theme.accent },
-                        ]}>
+                      <Text style={[styles.score, { color: theme.accent }]}>
                         ★ {(item.score / 10).toFixed(1)}
                       </Text>
                     ) : null}
                   </View>
                   {item.tags?.length ? (
-                    <Text
-                      style={[
-                        styles.tags,
-                        { color: theme.text.tertiary },
-                      ]}
-                      numberOfLines={1}>
+                    <Text style={[styles.tags, { color: theme.text.tertiary }]} numberOfLines={1}>
                       {item.tags.slice(0, 4).join(' · ')}
                     </Text>
                   ) : null}
                 </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={theme.text.tertiary}
-                />
+                <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />
               </Pressable>
             )}
             ListFooterComponent={

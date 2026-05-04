@@ -8,23 +8,20 @@ import { StatusBar } from 'expo-status-bar';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FloatingTabBar from '../components/FloatingTabBar';
 import { ThemeProvider } from '../context/ThemeContext';
-import { SubscriptionProvider, useSubscription } from '../context/SubscriptionContext';
+import { SubscriptionProvider } from '../context/SubscriptionContext';
 import { notificationService } from '../libs/services/notifications/notification-service';
 import { authService } from '../libs/services/auth/auth-service';
-import { adsService } from '../libs/services/ads/ads-service';
 
 export default function RootLayout() {
   useEffect(() => {
     void authService.initialize();
     void notificationService.initialize();
-    void adsService.initialize();
   }, []);
 
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <SubscriptionProvider>
-          <AdGate />
           <StatusBar style="light" translucent={Platform.OS === 'android'} />
           <Tabs
             tabBar={(props) => <FloatingTabBar {...props} />}
@@ -60,11 +57,10 @@ export default function RootLayout() {
                 ),
               }}
             />
-            {/* Platform conditional: Android replaces Gacha with Pilgrimage. iOS keeps Pilgrimage (no Gacha route shipped — gacha is an iOS-platform-specific feature staged via components/gacha but skipped from the Expo port per spec). */}
             <Tabs.Screen
               name="pilgrimage/index"
               options={{
-                title: Platform.OS === 'android' ? '聖地巡禮' : 'Pilgrimage',
+                title: 'Pilgrimage',
                 tabBarIcon: ({ color }) => <MaterialIcons name="explore" size={24} color={color} />,
               }}
             />
@@ -157,16 +153,4 @@ export default function RootLayout() {
       </ThemeProvider>
     </SafeAreaProvider>
   );
-}
-
-function AdGate() {
-  const { isPro } = useSubscription();
-  useEffect(() => {
-    adsService.setSuppressed(isPro);
-    if (!isPro) {
-      void adsService.preloadInterstitial();
-      void adsService.preloadRewarded();
-    }
-  }, [isPro]);
-  return null;
 }

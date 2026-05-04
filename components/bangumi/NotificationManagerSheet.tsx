@@ -29,10 +29,7 @@ interface NotificationManagerSheetProps {
   onClose: () => void;
 }
 
-function NotificationManagerSheetComponent({
-  visible,
-  onClose,
-}: NotificationManagerSheetProps) {
+function NotificationManagerSheetComponent({ visible, onClose }: NotificationManagerSheetProps) {
   const { theme } = useTheme();
   const [pending, setPending] = useState<PendingNotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,9 +109,7 @@ function NotificationManagerSheetComponent({
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>
-                  Reminders
-                </Text>
+                <Text style={[styles.title, { color: theme.text.primary }]}>Reminders</Text>
                 <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
                   {pending.length} pending notification{pending.length === 1 ? '' : 's'}
                 </Text>
@@ -147,13 +142,8 @@ function NotificationManagerSheetComponent({
                           borderColor: theme.glassBorder,
                         },
                       ]}>
-                      <View
-                        style={[styles.icon, { backgroundColor: theme.accent + '24' }]}>
-                        <MaterialIcons
-                          name="notifications-active"
-                          size={20}
-                          color={theme.accent}
-                        />
+                      <View style={[styles.icon, { backgroundColor: theme.accent + '24' }]}>
+                        <MaterialIcons name="notifications-active" size={20} color={theme.accent} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text
@@ -162,19 +152,12 @@ function NotificationManagerSheetComponent({
                           {n.title}
                         </Text>
                         <Text
-                          style={[
-                            styles.rowBody,
-                            { color: theme.text.secondary },
-                          ]}
+                          style={[styles.rowBody, { color: theme.text.secondary }]}
                           numberOfLines={2}>
                           {n.body}
                         </Text>
                         {n.scheduledFor ? (
-                          <Text
-                            style={[
-                              styles.scheduled,
-                              { color: theme.text.tertiary },
-                            ]}>
+                          <Text style={[styles.scheduled, { color: theme.text.tertiary }]}>
                             {n.scheduledFor.toLocaleString()}
                           </Text>
                         ) : null}

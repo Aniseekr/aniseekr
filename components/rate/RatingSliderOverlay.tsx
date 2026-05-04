@@ -47,9 +47,12 @@ function RatingSliderOverlayComponent({
 
   return (
     <Modal transparent animationType="none" onRequestClose={handleCancel}>
-      <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(160)} style={styles.backdrop}>
+      <Animated.View
+        entering={FadeIn.duration(160)}
+        exiting={FadeOut.duration(160)}
+        style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel}>
-          <BlurView intensity={26} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={26} tint="systemThickMaterialDark" style={StyleSheet.absoluteFill} />
         </Pressable>
 
         <Animated.View
@@ -64,15 +67,11 @@ function RatingSliderOverlayComponent({
           ]}>
           <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
           {subtitle ? (
-            <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
-              {subtitle}
-            </Text>
+            <Text style={[styles.subtitle, { color: theme.text.secondary }]}>{subtitle}</Text>
           ) : null}
 
           <View style={styles.scoreRow}>
-            <Text style={[styles.score, { color: theme.accent }]}>
-              {value.toFixed(1)}
-            </Text>
+            <Text style={[styles.score, { color: theme.accent }]}>{value.toFixed(1)}</Text>
             <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
           </View>
 
@@ -97,9 +96,7 @@ function RatingSliderOverlayComponent({
                 styles.cancelButton,
                 { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
               ]}>
-              <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
-                Cancel
-              </Text>
+              <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={handleConfirm}

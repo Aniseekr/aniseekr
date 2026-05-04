@@ -45,15 +45,11 @@ function EmptyStateViewComponent({
   return (
     <View style={[styles.container, style]}>
       <View style={[styles.iconCircle, { backgroundColor: theme.background.secondary }]}>
-        {iconNode ?? (
-          <MaterialIcons name={icon} size={36} color={theme.accent} />
-        )}
+        {iconNode ?? <MaterialIcons name={icon} size={36} color={theme.accent} />}
       </View>
       <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
       {description ? (
-        <Text style={[styles.description, { color: theme.text.secondary }]}>
-          {description}
-        </Text>
+        <Text style={[styles.description, { color: theme.text.secondary }]}>{description}</Text>
       ) : null}
       {actionLabel && onAction ? (
         <Pressable

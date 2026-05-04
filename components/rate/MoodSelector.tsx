@@ -1,7 +1,12 @@
 import { memo } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInUp, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -28,14 +33,62 @@ interface MoodOption {
 }
 
 export const MOOD_OPTIONS: MoodOption[] = [
-  { key: 'cozy', label: 'Cozy', emoji: '🍵', description: 'Slice of life', gradient: ['#F59E0B', '#D97706'] },
-  { key: 'thrilling', label: 'Thrilling', emoji: '⚡', description: 'On the edge', gradient: ['#EF4444', '#B91C1C'] },
-  { key: 'romantic', label: 'Romantic', emoji: '💕', description: 'Heart-fluttering', gradient: ['#EC4899', '#BE185D'] },
-  { key: 'epic', label: 'Epic', emoji: '🐉', description: 'Grand adventure', gradient: ['#8B5CF6', '#6D28D9'] },
-  { key: 'comedic', label: 'Comedic', emoji: '😂', description: 'Laugh out loud', gradient: ['#FBBF24', '#D97706'] },
-  { key: 'mysterious', label: 'Mysterious', emoji: '🔮', description: 'Twists & turns', gradient: ['#6366F1', '#3730A3'] },
-  { key: 'melancholic', label: 'Melancholic', emoji: '🌧️', description: 'Quietly moving', gradient: ['#0EA5E9', '#0369A1'] },
-  { key: 'inspiring', label: 'Inspiring', emoji: '🌅', description: 'Uplifting stories', gradient: ['#10B981', '#047857'] },
+  {
+    key: 'cozy',
+    label: 'Cozy',
+    emoji: '🍵',
+    description: 'Slice of life',
+    gradient: ['#F59E0B', '#D97706'],
+  },
+  {
+    key: 'thrilling',
+    label: 'Thrilling',
+    emoji: '⚡',
+    description: 'On the edge',
+    gradient: ['#EF4444', '#B91C1C'],
+  },
+  {
+    key: 'romantic',
+    label: 'Romantic',
+    emoji: '💕',
+    description: 'Heart-fluttering',
+    gradient: ['#EC4899', '#BE185D'],
+  },
+  {
+    key: 'epic',
+    label: 'Epic',
+    emoji: '🐉',
+    description: 'Grand adventure',
+    gradient: ['#8B5CF6', '#6D28D9'],
+  },
+  {
+    key: 'comedic',
+    label: 'Comedic',
+    emoji: '😂',
+    description: 'Laugh out loud',
+    gradient: ['#FBBF24', '#D97706'],
+  },
+  {
+    key: 'mysterious',
+    label: 'Mysterious',
+    emoji: '🔮',
+    description: 'Twists & turns',
+    gradient: ['#6366F1', '#3730A3'],
+  },
+  {
+    key: 'melancholic',
+    label: 'Melancholic',
+    emoji: '🌧️',
+    description: 'Quietly moving',
+    gradient: ['#0EA5E9', '#0369A1'],
+  },
+  {
+    key: 'inspiring',
+    label: 'Inspiring',
+    emoji: '🌅',
+    description: 'Uplifting stories',
+    gradient: ['#10B981', '#047857'],
+  },
 ];
 
 interface MoodSelectorProps {
@@ -47,9 +100,7 @@ function MoodSelectorComponent({ value, onSelect }: MoodSelectorProps) {
   const { theme } = useTheme();
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
         How do you want to feel?
       </Text>
@@ -100,10 +151,7 @@ function MoodCard({
           scale.value = withSpring(1, { damping: 12, stiffness: 300 });
         }}
         onPress={onPress}
-        style={[
-          styles.cardWrap,
-          isSelected && { borderColor: '#fff', borderWidth: 2 },
-        ]}>
+        style={[styles.cardWrap, isSelected && { borderColor: '#fff', borderWidth: 2 }]}>
         <LinearGradient
           colors={mood.gradient}
           start={{ x: 0, y: 0 }}

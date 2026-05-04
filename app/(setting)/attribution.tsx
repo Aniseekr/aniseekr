@@ -82,8 +82,8 @@ export default function AttributionScreen() {
   return (
     <SettingsScreenLayout title="Attribution" subtitle="The data and tools we stand on">
       <Text style={[styles.intro, { color: theme.text.secondary }]}>
-        Aniseekr aggregates information from these excellent sources. Tap any
-        entry to open the project page.
+        Aniseekr aggregates information from these excellent sources. Tap any entry to open the
+        project page.
       </Text>
 
       <SettingsSection title="Anime data">
@@ -114,17 +114,15 @@ export default function AttributionScreen() {
                   borderColor: theme.glassBorder,
                 },
               ]}>
-              <Text style={[styles.tagText, { color: theme.text.primary }]}>
-                {lib}
-              </Text>
+              <Text style={[styles.tagText, { color: theme.text.primary }]}>{lib}</Text>
             </View>
           ))}
         </View>
       </SettingsSection>
 
       <Text style={[styles.footer, { color: theme.text.tertiary }]}>
-        Trademarks belong to their respective owners. Aniseekr is not affiliated
-        with any of the services listed above.
+        Trademarks belong to their respective owners. Aniseekr is not affiliated with any of the
+        services listed above.
       </Text>
     </SettingsScreenLayout>
   );

@@ -53,11 +53,7 @@ function AnimeStatusBadgeComponent({ status, size = 'md', style }: AnimeStatusBa
         },
         style,
       ]}>
-      <Text
-        style={[
-          isSm ? styles.labelSm : styles.label,
-          { color: config.color },
-        ]}>
+      <Text style={[isSm ? styles.labelSm : styles.label, { color: config.color }]}>
         {config.label.toUpperCase()}
       </Text>
     </View>

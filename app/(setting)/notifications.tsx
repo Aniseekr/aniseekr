@@ -1,6 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Notifications from 'expo-notifications';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -39,11 +50,108 @@ const PREFS_KEY = '@aniseekr/notifications/prefs';
 
 const LEAD_OPTIONS = [5, 15, 30, 60];
 
+interface PendingNotification {
+  identifier: string;
+  title: string;
+  body: string;
+  scheduledFor?: Date;
+  animeTitle?: string;
+}
+
+type GroupKey = 'today' | 'tomorrow' | 'thisWeek' | 'later';
+
+const GROUP_LABELS: Record<GroupKey, string> = {
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  thisWeek: 'Later this week',
+  later: 'Later',
+};
+
+function startOfDay(d: Date): Date {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function bucketize(date?: Date): GroupKey {
+  if (!date) return 'later';
+  const today = startOfDay(new Date());
+  const target = startOfDay(date);
+  const dayMs = 24 * 60 * 60 * 1000;
+  const diff = Math.round((target.getTime() - today.getTime()) / dayMs);
+  if (diff <= 0) return 'today';
+  if (diff === 1) return 'tomorrow';
+  if (diff < 7) return 'thisWeek';
+  return 'later';
+}
+
+function formatScheduled(date?: Date): string {
+  if (!date) return 'Pending';
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return formatter.format(date).replace(',', ' ·');
+}
+
+function extractScheduled(n: Notifications.NotificationRequest): Date | undefined {
+  const trigger = n.trigger as {
+    type?: string;
+    date?: string | number;
+    seconds?: number;
+    value?: number;
+  } | null;
+  if (!trigger) return undefined;
+  if (trigger.date) {
+    const d = new Date(trigger.date);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  if (typeof trigger.seconds === 'number') {
+    return new Date(Date.now() + trigger.seconds * 1000);
+  }
+  if (typeof trigger.value === 'number') {
+    return new Date(trigger.value);
+  }
+  return undefined;
+}
+
 export default function NotificationsScreen() {
   const { theme } = useTheme();
   const { permission, scheduled, requestPermission, cancelAll, refreshSchedule } =
     useNotifications();
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
+  const [pending, setPending] = useState<PendingNotification[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPending = useCallback(async () => {
+    try {
+      const items = await Notifications.getAllScheduledNotificationsAsync();
+      const mapped: PendingNotification[] = items
+        .map((n) => {
+          const scheduledFor = extractScheduled(n);
+          const data = n.content.data as { animeTitle?: string } | undefined;
+          return {
+            identifier: n.identifier,
+            title: n.content.title ?? 'Reminder',
+            body: n.content.body ?? '',
+            scheduledFor,
+            animeTitle: data?.animeTitle,
+          };
+        })
+        .sort(
+          (a, b) =>
+            (a.scheduledFor?.getTime() ?? Infinity) - (b.scheduledFor?.getTime() ?? Infinity)
+        );
+      setPending(mapped);
+    } catch (e) {
+      console.warn('[Notifications] fetch scheduled failed:', e);
+      setPending([]);
+    }
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(PREFS_KEY).then((raw) => {
@@ -56,6 +164,56 @@ export default function NotificationsScreen() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    setPendingLoading(true);
+    fetchPending().finally(() => {
+      if (mounted) setPendingLoading(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [fetchPending, scheduled.length]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refreshSchedule(), fetchPending()]);
+    setRefreshing(false);
+  }, [fetchPending, refreshSchedule]);
+
+  const handleDeleteOne = useCallback(
+    async (id: string) => {
+      hapticsBridge.warning();
+      try {
+        await Notifications.cancelScheduledNotificationAsync(id);
+        setPending((prev) => prev.filter((p) => p.identifier !== id));
+        await refreshSchedule();
+      } catch (e) {
+        console.warn('[Notifications] cancel one failed:', e);
+        hapticsBridge.error();
+      }
+    },
+    [refreshSchedule]
+  );
+
+  const groupedPending = useMemo(() => {
+    if (pending.length <= 5) {
+      return [{ key: 'all' as const, label: '', items: pending }];
+    }
+    const buckets: Record<GroupKey, PendingNotification[]> = {
+      today: [],
+      tomorrow: [],
+      thisWeek: [],
+      later: [],
+    };
+    for (const item of pending) {
+      buckets[bucketize(item.scheduledFor)].push(item);
+    }
+    return (Object.keys(buckets) as GroupKey[])
+      .filter((k) => buckets[k].length > 0)
+      .map((k) => ({ key: k, label: GROUP_LABELS[k], items: buckets[k] }));
+  }, [pending]);
 
   const update = async (next: NotificationPreferences) => {
     hapticsBridge.selection();
@@ -101,7 +259,9 @@ export default function NotificationsScreen() {
           text: 'Cancel all',
           style: 'destructive',
           onPress: async () => {
+            await Notifications.cancelAllScheduledNotificationsAsync();
             await cancelAll();
+            setPending([]);
             hapticsBridge.warning();
           },
         },
@@ -118,7 +278,9 @@ export default function NotificationsScreen() {
   return (
     <SettingsScreenLayout
       title="Notifications"
-      subtitle={`${scheduled.length} scheduled · ${permissionLabel}`}>
+      subtitle={`${pending.length} scheduled · ${permissionLabel}`}
+      refreshing={refreshing}
+      onRefresh={onRefresh}>
       {!permission.granted ? (
         <View
           style={[
@@ -214,6 +376,41 @@ export default function NotificationsScreen() {
         ))}
       </SettingsSection>
 
+      <SettingsSection
+        title={
+          pending.length > 0 ? `Scheduled reminders (${pending.length})` : 'Scheduled reminders'
+        }>
+        {pendingLoading && pending.length === 0 ? (
+          <View style={styles.pendingLoader}>
+            <ActivityIndicator color={theme.accent} />
+          </View>
+        ) : pending.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="notifications-none" size={28} color={theme.text.tertiary} />
+            <Text style={[styles.emptyLabel, { color: theme.text.secondary }]}>
+              No scheduled reminders
+            </Text>
+          </View>
+        ) : (
+          groupedPending.map((group, gIdx) => (
+            <View key={group.key}>
+              {group.label ? (
+                <Text style={[styles.groupHeader, { color: theme.text.secondary }]}>
+                  {group.label}
+                </Text>
+              ) : null}
+              {group.items.map((item, idx) => (
+                <View key={item.identifier}>
+                  <ScheduledRow item={item} onDelete={() => handleDeleteOne(item.identifier)} />
+                  {idx < group.items.length - 1 ? <Divider /> : null}
+                </View>
+              ))}
+              {gIdx < groupedPending.length - 1 ? <Divider /> : null}
+            </View>
+          ))
+        )}
+      </SettingsSection>
+
       <SettingsSection title="Manage">
         <SettingsRow
           icon="settings"
@@ -242,6 +439,32 @@ export default function NotificationsScreen() {
 function Divider() {
   const { theme } = useTheme();
   return <View style={{ height: 1, marginLeft: 56, backgroundColor: theme.glassBorder }} />;
+}
+
+function ScheduledRow({ item, onDelete }: { item: PendingNotification; onDelete: () => void }) {
+  const { theme } = useTheme();
+  const display = item.animeTitle ?? item.title;
+  return (
+    <View style={styles.scheduledRow}>
+      <View style={[styles.scheduledIcon, { backgroundColor: theme.background.tertiary }]}>
+        <MaterialIcons name="notifications-active" size={18} color={theme.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.scheduledTitle, { color: theme.text.primary }]} numberOfLines={1}>
+          {display}
+        </Text>
+        <Text style={[styles.scheduledTime, { color: theme.text.secondary }]} numberOfLines={1}>
+          {formatScheduled(item.scheduledFor)}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onDelete}
+        hitSlop={10}
+        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}>
+        <MaterialIcons name="close" size={20} color={theme.text.tertiary} />
+      </Pressable>
+    </View>
+  );
 }
 
 function ToggleSwitchRow({
@@ -351,5 +574,46 @@ const styles = StyleSheet.create({
     ...Typography.captionSmall,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
+  },
+  pendingLoader: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+  },
+  emptyState: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  emptyLabel: {
+    ...Typography.bodyMedium,
+  },
+  scheduledRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm + 2,
+  },
+  scheduledIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scheduledTitle: {
+    ...Typography.titleSmall,
+    fontWeight: '600',
+  },
+  scheduledTime: {
+    ...Typography.captionSmall,
+    marginTop: 2,
+  },
+  groupHeader: {
+    ...Typography.captionSmall,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
   },
 });

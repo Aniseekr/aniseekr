@@ -1,8 +1,8 @@
-import * as Haptics from "expo-haptics";
-import { NativeModules, Platform } from "react-native";
+import * as Haptics from 'expo-haptics';
+import { NativeModules, Platform } from 'react-native';
 
-type ImpactType = "light" | "medium" | "heavy";
-type NotificationType = "success" | "warning" | "error";
+type ImpactType = 'light' | 'medium' | 'heavy';
+type NotificationType = 'success' | 'warning' | 'error';
 
 type Pattern = { pattern: number[]; amplitudes: number[] };
 
@@ -16,15 +16,15 @@ const Native = NativeModules.AniseekrVibration as
   | undefined;
 
 const ANDROID_PATTERNS: Record<
-  | "pressIn"
-  | "pressOut"
-  | "swipeThreshold"
-  | "swipeCancel"
-  | "tap"
-  | "longPress"
-  | "success"
-  | "warning"
-  | "error",
+  | 'pressIn'
+  | 'pressOut'
+  | 'swipeThreshold'
+  | 'swipeCancel'
+  | 'tap'
+  | 'longPress'
+  | 'success'
+  | 'warning'
+  | 'error',
   Pattern
 > = {
   pressIn: { pattern: [0, 12], amplitudes: [0, 160] },
@@ -48,7 +48,7 @@ function callNative(fn: (() => void) | undefined) {
 }
 
 function playPattern(pattern: Pattern, fallback?: () => Promise<void> | void) {
-  if (Platform.OS === "android" && Native?.custom) {
+  if (Platform.OS === 'android' && Native?.custom) {
     try {
       Native.custom(pattern.pattern, pattern.amplitudes);
       return;
@@ -61,15 +61,15 @@ function playPattern(pattern: Pattern, fallback?: () => Promise<void> | void) {
 
 export const hapticsBridge = {
   selection() {
-    if (Platform.OS === "android" && callNative(Native?.selection)) return;
+    if (Platform.OS === 'android' && callNative(Native?.selection)) return;
     Haptics.selectionAsync();
   },
   selectionSoft() {
-    if (Platform.OS === "android" && callNative(Native?.selectionSoft)) return;
+    if (Platform.OS === 'android' && callNative(Native?.selectionSoft)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   },
   impact(type: ImpactType) {
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       if (Native?.impact) {
         try {
           Native.impact(type);
@@ -98,18 +98,16 @@ export const hapticsBridge = {
     playPattern(ANDROID_PATTERNS[type], fallback);
   },
   success() {
-    this.notification("success");
+    this.notification('success');
   },
   warning() {
-    this.notification("warning");
+    this.notification('warning');
   },
   error() {
-    this.notification("error");
+    this.notification('error');
   },
   tap() {
-    playPattern(ANDROID_PATTERNS.tap, () =>
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    );
+    playPattern(ANDROID_PATTERNS.tap, () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
   },
   longPress() {
     playPattern(ANDROID_PATTERNS.longPress, () =>
@@ -119,7 +117,7 @@ export const hapticsBridge = {
   custom(pattern: number[], amplitudes?: number[]) {
     const validatedPattern = pattern.map((n) => Math.max(0, Math.floor(n)));
     const validatedAmps = (amplitudes || []).map((n) => Math.max(0, Math.min(255, Math.floor(n))));
-    if (Platform.OS === "android" && Native?.custom) {
+    if (Platform.OS === 'android' && Native?.custom) {
       try {
         Native.custom(validatedPattern, validatedAmps);
         return;
@@ -130,7 +128,7 @@ export const hapticsBridge = {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   },
   cardDraw() {
-    if (Platform.OS === "android" && Native?.custom) {
+    if (Platform.OS === 'android' && Native?.custom) {
       this.custom([0, 400, 50, 40], [128, 255]);
       return;
     }
@@ -155,9 +153,7 @@ export const hapticsBridge = {
     );
   },
   swipeCancel() {
-    playPattern(ANDROID_PATTERNS.swipeCancel, () =>
-      Haptics.selectionAsync()
-    );
+    playPattern(ANDROID_PATTERNS.swipeCancel, () => Haptics.selectionAsync());
   },
 };
 

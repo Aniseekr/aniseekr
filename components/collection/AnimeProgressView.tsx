@@ -1,13 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
@@ -36,7 +28,11 @@ export const DEFAULT_PROGRESS: AnimeProgress = {
   notes: '',
 };
 
-const STATUS_OPTIONS: { key: AnimeStatus; label: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }[] = [
+const STATUS_OPTIONS: {
+  key: AnimeStatus;
+  label: string;
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+}[] = [
   { key: 'watching', label: 'Watching', icon: 'play-circle-filled' },
   { key: 'completed', label: 'Completed', icon: 'check-circle' },
   { key: 'on_hold', label: 'On hold', icon: 'pause-circle-filled' },
@@ -81,10 +77,7 @@ function AnimeProgressViewComponent({
   };
 
   const handleEpisodesDelta = (delta: number) => {
-    const next = Math.max(
-      0,
-      Math.min(totalEpisodes ?? 9999, (draft.episodesWatched ?? 0) + delta)
-    );
+    const next = Math.max(0, Math.min(totalEpisodes ?? 9999, (draft.episodesWatched ?? 0) + delta));
     update('episodesWatched', next);
   };
 
@@ -108,12 +101,8 @@ function AnimeProgressViewComponent({
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>
-                  Track progress
-                </Text>
-                <Text
-                  style={[styles.subtitle, { color: theme.text.secondary }]}
-                  numberOfLines={1}>
+                <Text style={[styles.title, { color: theme.text.primary }]}>Track progress</Text>
+                <Text style={[styles.subtitle, { color: theme.text.secondary }]} numberOfLines={1}>
                   {animeTitle}
                 </Text>
               </View>
@@ -121,9 +110,7 @@ function AnimeProgressViewComponent({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                Status
-              </Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Status</Text>
               <View style={styles.statusGrid}>
                 {STATUS_OPTIONS.map((opt) => {
                   const active = draft.status === opt.key;
@@ -134,9 +121,7 @@ function AnimeProgressViewComponent({
                       style={({ pressed }) => [
                         styles.statusItem,
                         {
-                          backgroundColor: active
-                            ? theme.accent
-                            : theme.background.tertiary,
+                          backgroundColor: active ? theme.accent : theme.background.tertiary,
                           borderColor: active ? theme.accent : theme.glassBorder,
                           opacity: pressed ? 0.85 : 1,
                         },
@@ -158,9 +143,7 @@ function AnimeProgressViewComponent({
                 })}
               </View>
 
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                Episodes
-              </Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Episodes</Text>
               <View
                 style={[
                   styles.counterRow,
@@ -179,7 +162,8 @@ function AnimeProgressViewComponent({
                     {draft.episodesWatched}
                     {totalEpisodes ? (
                       <Text style={[styles.counterTotal, { color: theme.text.tertiary }]}>
-                        {' '}/ {totalEpisodes}
+                        {' '}
+                        / {totalEpisodes}
                       </Text>
                     ) : null}
                   </Text>
@@ -191,9 +175,7 @@ function AnimeProgressViewComponent({
                 </Pressable>
               </View>
 
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                Score
-              </Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Score</Text>
               <View style={styles.scoreRow}>
                 <Text style={[styles.scoreValue, { color: theme.accent }]}>
                   {draft.score.toFixed(1)}
@@ -207,9 +189,7 @@ function AnimeProgressViewComponent({
                 step={0.5}
               />
 
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                Notes
-              </Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Notes</Text>
               <TextInput
                 value={draft.notes}
                 onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}
@@ -235,10 +215,7 @@ function AnimeProgressViewComponent({
                   styles.cancelButton,
                   { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
                 ]}>
-                <Text
-                  style={[styles.cancelLabel, { color: theme.text.secondary }]}>
-                  Cancel
-                </Text>
+                <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleSave}

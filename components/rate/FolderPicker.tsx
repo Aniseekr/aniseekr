@@ -100,9 +100,7 @@ function FolderPickerComponent({
     try {
       await collectionService.createCustomFolder(name, newIcon, false, newR18);
       const list = await collectionService.getFolders();
-      const created = list.find(
-        (f) => f.name === name && f.icon === newIcon && !f.isSystemFolder
-      );
+      const created = list.find((f) => f.name === name && f.icon === newIcon && !f.isSystemFolder);
       if (created) {
         await collectionService.addToFolder(animeId, created.id);
         onAdded?.(created.id);
@@ -137,12 +135,8 @@ function FolderPickerComponent({
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>
-                  Add to folder
-                </Text>
-                <Text
-                  style={[styles.subtitle, { color: theme.text.secondary }]}
-                  numberOfLines={1}>
+                <Text style={[styles.title, { color: theme.text.primary }]}>Add to folder</Text>
+                <Text style={[styles.subtitle, { color: theme.text.secondary }]} numberOfLines={1}>
                   {animeTitle}
                 </Text>
               </View>
@@ -170,9 +164,7 @@ function FolderPickerComponent({
                     },
                   ]}
                 />
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                  Icon
-                </Text>
+                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Icon</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -189,9 +181,7 @@ function FolderPickerComponent({
                         style={[
                           styles.iconBubble,
                           {
-                            backgroundColor: active
-                              ? theme.accent
-                              : theme.background.tertiary,
+                            backgroundColor: active ? theme.accent : theme.background.tertiary,
                             borderColor: active ? theme.accent : theme.glassBorder,
                           },
                         ]}>
@@ -209,17 +199,13 @@ function FolderPickerComponent({
                     hapticsBridge.selection();
                     setNewR18(!newR18);
                   }}
-                  style={[
-                    styles.r18Row,
-                    { borderColor: theme.glassBorder },
-                  ]}>
+                  style={[styles.r18Row, { borderColor: theme.glassBorder }]}>
                   <MaterialIcons
                     name={newR18 ? 'check-box' : 'check-box-outline-blank'}
                     size={20}
                     color={newR18 ? theme.accent : theme.text.tertiary}
                   />
-                  <Text
-                    style={[styles.r18Label, { color: theme.text.primary }]}>
+                  <Text style={[styles.r18Label, { color: theme.text.primary }]}>
                     Folder contains R18 content
                   </Text>
                 </Pressable>
@@ -232,9 +218,7 @@ function FolderPickerComponent({
                       styles.cancelButton,
                       { borderColor: theme.glassBorder },
                     ]}>
-                    <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
-                      Back
-                    </Text>
+                    <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>Back</Text>
                   </Pressable>
                   <Pressable
                     disabled={!newName.trim() || adding !== null}
@@ -275,27 +259,14 @@ function FolderPickerComponent({
                             opacity: pressed ? 0.85 : 1,
                           },
                         ]}>
-                        <View
-                          style={[
-                            styles.folderIcon,
-                            { backgroundColor: theme.accent + '24' },
-                          ]}>
-                          <Ionicons
-                            name={folder.icon as any}
-                            size={20}
-                            color={theme.accent}
-                          />
+                        <View style={[styles.folderIcon, { backgroundColor: theme.accent + '24' }]}>
+                          <Ionicons name={folder.icon as any} size={20} color={theme.accent} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text
-                            style={[styles.folderName, { color: theme.text.primary }]}>
+                          <Text style={[styles.folderName, { color: theme.text.primary }]}>
                             {folder.name}
                           </Text>
-                          <Text
-                            style={[
-                              styles.folderMeta,
-                              { color: theme.text.tertiary },
-                            ]}>
+                          <Text style={[styles.folderMeta, { color: theme.text.tertiary }]}>
                             {folder.isSystemFolder ? 'System' : 'Custom'}
                             {folder.isR18 ? ' · R18' : ''}
                           </Text>
@@ -303,11 +274,7 @@ function FolderPickerComponent({
                         {adding === folder.id ? (
                           <ActivityIndicator color={theme.accent} />
                         ) : (
-                          <MaterialIcons
-                            name="add-circle"
-                            size={22}
-                            color={theme.accent}
-                          />
+                          <MaterialIcons name="add-circle" size={22} color={theme.accent} />
                         )}
                       </Pressable>
                     ))}
@@ -318,15 +285,8 @@ function FolderPickerComponent({
                     hapticsBridge.tap();
                     setShowCreate(true);
                   }}
-                  style={[
-                    styles.createNew,
-                    { borderColor: theme.glassBorder },
-                  ]}>
-                  <MaterialIcons
-                    name="create-new-folder"
-                    size={20}
-                    color={theme.accent}
-                  />
+                  style={[styles.createNew, { borderColor: theme.glassBorder }]}>
+                  <MaterialIcons name="create-new-folder" size={20} color={theme.accent} />
                   <Text style={[styles.createNewLabel, { color: theme.accent }]}>
                     Create new folder
                   </Text>

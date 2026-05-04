@@ -1,10 +1,6 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
@@ -41,11 +37,7 @@ function CollectionModeToggleComponent({ mode, onChange }: CollectionModeToggleP
         },
       ]}>
       <Animated.View
-        style={[
-          styles.indicator,
-          { backgroundColor: theme.accent },
-          indicatorStyle,
-        ]}
+        style={[styles.indicator, { backgroundColor: theme.accent }, indicatorStyle]}
       />
       {(['collect', 'share'] as CollectionMode[]).map((m) => {
         const active = m === mode;
@@ -62,11 +54,7 @@ function CollectionModeToggleComponent({ mode, onChange }: CollectionModeToggleP
               size={16}
               color={active ? '#0E0A06' : theme.text.secondary}
             />
-            <Text
-              style={[
-                styles.label,
-                { color: active ? '#0E0A06' : theme.text.secondary },
-              ]}>
+            <Text style={[styles.label, { color: active ? '#0E0A06' : theme.text.secondary }]}>
               {m === 'collect' ? 'Collect' : 'Share'}
             </Text>
           </Pressable>

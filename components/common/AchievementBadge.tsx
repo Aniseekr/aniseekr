@@ -49,10 +49,7 @@ function AchievementBadgeComponent({
         )}
       </View>
       <Text
-        style={[
-          styles.title,
-          { color: unlocked ? theme.text.primary : theme.text.secondary },
-        ]}
+        style={[styles.title, { color: unlocked ? theme.text.primary : theme.text.secondary }]}
         numberOfLines={1}>
         {title}
       </Text>

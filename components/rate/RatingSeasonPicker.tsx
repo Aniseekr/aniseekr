@@ -1,12 +1,5 @@
 import { memo, useMemo, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
@@ -77,9 +70,7 @@ function RatingSeasonPickerComponent({
           ]}>
           <SafeAreaView edges={['bottom']}>
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>
-                Pick season
-              </Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>Pick season</Text>
               <Pressable
                 onPress={() => {
                   hapticsBridge.selection();
@@ -94,9 +85,7 @@ function RatingSeasonPickerComponent({
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              Season
-            </Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Season</Text>
             <View style={styles.seasonRow}>
               {SEASONS.map((s) => {
                 const active = s.key === selectedSeason;
@@ -110,9 +99,7 @@ function RatingSeasonPickerComponent({
                     style={({ pressed }) => [
                       styles.seasonCard,
                       {
-                        backgroundColor: active
-                          ? theme.accent + '24'
-                          : theme.background.tertiary,
+                        backgroundColor: active ? theme.accent + '24' : theme.background.tertiary,
                         borderColor: active ? theme.accent : theme.glassBorder,
                         opacity: pressed ? 0.85 : 1,
                       },
@@ -127,11 +114,7 @@ function RatingSeasonPickerComponent({
                       ]}>
                       {s.label}
                     </Text>
-                    <Text
-                      style={[
-                        styles.seasonRange,
-                        { color: theme.text.tertiary },
-                      ]}>
+                    <Text style={[styles.seasonRange, { color: theme.text.tertiary }]}>
                       {s.range}
                     </Text>
                   </Pressable>
@@ -139,9 +122,7 @@ function RatingSeasonPickerComponent({
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              Year
-            </Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Year</Text>
             {view === 'grid' ? (
               <ScrollView style={{ maxHeight: 240 }}>
                 <View style={styles.yearGrid}>
@@ -157,9 +138,7 @@ function RatingSeasonPickerComponent({
                         style={({ pressed }) => [
                           styles.yearChip,
                           {
-                            backgroundColor: active
-                              ? theme.accent
-                              : theme.background.tertiary,
+                            backgroundColor: active ? theme.accent : theme.background.tertiary,
                             borderColor: active ? theme.accent : theme.glassBorder,
                             opacity: pressed ? 0.85 : 1,
                           },
@@ -190,25 +169,13 @@ function RatingSeasonPickerComponent({
                       style={({ pressed }) => [
                         styles.yearRow,
                         {
-                          backgroundColor: active
-                            ? theme.accent + '20'
-                            : 'transparent',
+                          backgroundColor: active ? theme.accent + '20' : 'transparent',
                           opacity: pressed ? 0.7 : 1,
                         },
                       ]}>
-                      <Text
-                        style={[
-                          styles.yearRowLabel,
-                          { color: theme.text.primary },
-                        ]}>
-                        {y}
-                      </Text>
+                      <Text style={[styles.yearRowLabel, { color: theme.text.primary }]}>{y}</Text>
                       {active ? (
-                        <MaterialIcons
-                          name="check"
-                          size={20}
-                          color={theme.accent}
-                        />
+                        <MaterialIcons name="check" size={20} color={theme.accent} />
                       ) : null}
                     </Pressable>
                   );
@@ -227,13 +194,7 @@ function RatingSeasonPickerComponent({
                     opacity: pressed ? 0.7 : 1,
                   },
                 ]}>
-                <Text
-                  style={[
-                    styles.footerLabel,
-                    { color: theme.text.secondary },
-                  ]}>
-                  Cancel
-                </Text>
+                <Text style={[styles.footerLabel, { color: theme.text.secondary }]}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirm}

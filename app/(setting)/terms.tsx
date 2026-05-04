@@ -30,9 +30,7 @@ export default function TermsScreen() {
   const { theme } = useTheme();
 
   return (
-    <SettingsScreenLayout
-      title="Terms of service"
-      subtitle="Ground rules for using Aniseekr">
+    <SettingsScreenLayout title="Terms of service" subtitle="Ground rules for using Aniseekr">
       <Text style={[styles.lead, { color: theme.text.primary }]}>
         By using Aniseekr you agree to the following terms.
       </Text>
@@ -46,12 +44,8 @@ export default function TermsScreen() {
               borderColor: theme.glassBorder,
             },
           ]}>
-          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-            {section.title}
-          </Text>
-          <Text style={[styles.body, { color: theme.text.secondary }]}>
-            {section.body}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>{section.title}</Text>
+          <Text style={[styles.body, { color: theme.text.secondary }]}>{section.body}</Text>
         </View>
       ))}
       <Text style={[styles.updated, { color: theme.text.tertiary }]}>

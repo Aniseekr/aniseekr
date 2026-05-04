@@ -68,17 +68,13 @@ function ImageDisplaySettingsSheetComponent({
           <SafeAreaView edges={['bottom']}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>
-                Display Settings
-              </Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>Display Settings</Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialIcons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              Image fit
-            </Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Image fit</Text>
             <View style={styles.segmented}>
               {(['fill', 'fit'] as ImageContentMode[]).map((mode) => {
                 const active = preferences.contentMode === mode;
@@ -89,9 +85,7 @@ function ImageDisplaySettingsSheetComponent({
                     style={({ pressed }) => [
                       styles.segmentItem,
                       {
-                        backgroundColor: active
-                          ? theme.accent
-                          : theme.background.tertiary,
+                        backgroundColor: active ? theme.accent : theme.background.tertiary,
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}>
@@ -125,9 +119,7 @@ function ImageDisplaySettingsSheetComponent({
                     style={({ pressed }) => [
                       styles.segmentItem,
                       {
-                        backgroundColor: active
-                          ? theme.accent
-                          : theme.background.tertiary,
+                        backgroundColor: active ? theme.accent : theme.background.tertiary,
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}>

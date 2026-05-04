@@ -144,11 +144,7 @@ export default function CacheSettingsScreen() {
       </SettingsSection>
 
       <SettingsSection title="Actions">
-        <SettingsRow
-          icon="refresh"
-          label="Recalculate usage"
-          onPress={measure}
-        />
+        <SettingsRow icon="refresh" label="Recalculate usage" onPress={measure} />
         <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
         <SettingsRow
           icon="cleaning-services"

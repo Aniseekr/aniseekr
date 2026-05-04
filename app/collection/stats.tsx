@@ -1,23 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { collectionService } from '../../libs/services/collection/collection-service';
 import { CollectionFolder } from '../../types';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ShimmerEffect } from '../../components/common/ShimmerEffect';
 import { ErrorStateView } from '../../components/common/ErrorStateView';
 import { EmptyStateView } from '../../components/common/EmptyStateView';
+import { GlassCard } from '../../components/common/GlassCard';
 
 interface StatTile {
   label: string;
@@ -75,10 +71,50 @@ export default function CollectionStatsScreen() {
     { label: 'Dropped', value: stats.dropped, icon: 'cancel', color: '#FF9F0A' },
   ];
 
-  const completionRatio =
-    stats.total > 0 ? Math.min(1, stats.completed / stats.total) : 0;
-  const watchingRatio =
-    stats.total > 0 ? Math.min(1, stats.watching / stats.total) : 0;
+  const completionRatio = stats.total > 0 ? Math.min(1, stats.completed / stats.total) : 0;
+  const watchingRatio = stats.total > 0 ? Math.min(1, stats.watching / stats.total) : 0;
+
+  const statusPieData = useMemo(() => {
+    const slices = [
+      { label: 'Watching', value: stats.watching, color: Colors.success },
+      { label: 'Completed', value: stats.completed, color: Colors.info },
+      { label: 'Wishlist', value: stats.wishlist, color: Colors.secondary },
+      { label: 'Favorites', value: stats.favorites, color: Colors.error },
+      { label: 'Dropped', value: stats.dropped, color: Colors.warning },
+    ];
+    return slices.filter((s) => s.value > 0);
+  }, [stats]);
+
+  const folderBarData = useMemo(() => {
+    const palette = [
+      Colors.primary,
+      Colors.secondary,
+      Colors.success,
+      Colors.info,
+      Colors.warning,
+      Colors.error,
+    ];
+    return [...folders]
+      .filter((f) => (f.animeCount ?? 0) > 0)
+      .sort((a, b) => (b.animeCount ?? 0) - (a.animeCount ?? 0))
+      .slice(0, 6)
+      .map((folder, idx) => ({
+        value: folder.animeCount ?? 0,
+        label: folder.name.length > 8 ? `${folder.name.slice(0, 7)}…` : folder.name,
+        frontColor: palette[idx % palette.length],
+        topLabelComponent: () => (
+          <Text style={[styles.barTopLabel, { color: theme.text.secondary }]}>
+            {folder.animeCount ?? 0}
+          </Text>
+        ),
+      }));
+  }, [folders, theme.text.secondary]);
+
+  const folderBarMax = useMemo(() => {
+    if (folderBarData.length === 0) return 4;
+    const max = Math.max(...folderBarData.map((d) => d.value));
+    return Math.max(4, Math.ceil(max * 1.15));
+  }, [folderBarData]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
@@ -126,10 +162,7 @@ export default function CollectionStatsScreen() {
           />
         ) : (
           <ScrollView
-            contentContainerStyle={[
-              styles.content,
-              { paddingBottom: insets.bottom + 120 },
-            ]}>
+            contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
             <View
               style={[
                 styles.heroCard,
@@ -141,25 +174,15 @@ export default function CollectionStatsScreen() {
               <Text style={[styles.heroLabel, { color: theme.text.secondary }]}>
                 Library health
               </Text>
-              <Text style={[styles.heroValue, { color: theme.text.primary }]}>
-                {stats.total}
-              </Text>
+              <Text style={[styles.heroValue, { color: theme.text.primary }]}>{stats.total}</Text>
               <Text style={[styles.heroSubtitle, { color: theme.text.tertiary }]}>
                 series across {stats.customFolders} custom folder
                 {stats.customFolders === 1 ? '' : 's'}
               </Text>
 
               <View style={styles.progressRow}>
-                <ProgressBar
-                  label="Completed"
-                  value={completionRatio}
-                  color="#0A84FF"
-                />
-                <ProgressBar
-                  label="Watching"
-                  value={watchingRatio}
-                  color="#30D158"
-                />
+                <ProgressBar label="Completed" value={completionRatio} color="#0A84FF" />
+                <ProgressBar label="Watching" value={watchingRatio} color="#30D158" />
               </View>
             </View>
 
@@ -174,11 +197,7 @@ export default function CollectionStatsScreen() {
                       borderColor: theme.glassBorder,
                     },
                   ]}>
-                  <View
-                    style={[
-                      styles.tileIcon,
-                      { backgroundColor: tile.color + '24' },
-                    ]}>
+                  <View style={[styles.tileIcon, { backgroundColor: tile.color + '24' }]}>
                     <MaterialIcons name={tile.icon} size={22} color={tile.color} />
                   </View>
                   <Text style={[styles.tileValue, { color: theme.text.primary }]}>
@@ -190,6 +209,94 @@ export default function CollectionStatsScreen() {
                 </View>
               ))}
             </View>
+
+            <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+              Library snapshot
+            </Text>
+
+            <GlassCard variant="frosted" style={styles.chartCard}>
+              <Text style={[styles.chartTitle, { color: theme.text.primary }]}>
+                Status distribution
+              </Text>
+              <Text style={[styles.chartSubtitle, { color: theme.text.secondary }]}>
+                How your library splits across watching states
+              </Text>
+              {statusPieData.length === 0 ? (
+                <View style={styles.chartEmpty}>
+                  <Text style={[styles.chartEmptyText, { color: theme.text.tertiary }]}>
+                    No data yet
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.pieWrapper}>
+                  <PieChart
+                    data={statusPieData}
+                    radius={80}
+                    innerRadius={45}
+                    donut
+                    showTooltip={false}
+                    centerLabelComponent={() => (
+                      <View style={styles.pieCenter}>
+                        <Text style={[styles.pieCenterValue, { color: theme.text.primary }]}>
+                          {stats.total}
+                        </Text>
+                        <Text style={[styles.pieCenterLabel, { color: theme.text.tertiary }]}>
+                          total
+                        </Text>
+                      </View>
+                    )}
+                  />
+                  <View style={styles.pieLegend}>
+                    {statusPieData.map((slice) => (
+                      <View key={slice.label} style={styles.legendRow}>
+                        <View style={[styles.legendDot, { backgroundColor: slice.color }]} />
+                        <Text style={[styles.legendLabel, { color: theme.text.secondary }]}>
+                          {slice.label}
+                        </Text>
+                        <Text style={[styles.legendValue, { color: theme.text.primary }]}>
+                          {slice.value}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </GlassCard>
+
+            <GlassCard variant="frosted" style={styles.chartCard}>
+              <Text style={[styles.chartTitle, { color: theme.text.primary }]}>Top folders</Text>
+              <Text style={[styles.chartSubtitle, { color: theme.text.secondary }]}>
+                Largest folders by item count
+              </Text>
+              {folderBarData.length === 0 ? (
+                <View style={styles.chartEmpty}>
+                  <Text style={[styles.chartEmptyText, { color: theme.text.tertiary }]}>
+                    No data yet
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.barWrapper}>
+                  <BarChart
+                    data={folderBarData}
+                    barWidth={28}
+                    spacing={20}
+                    hideRules
+                    noOfSections={4}
+                    maxValue={folderBarMax}
+                    barBorderRadius={6}
+                    xAxisThickness={0}
+                    yAxisThickness={0}
+                    hideYAxisText
+                    xAxisLabelTextStyle={{
+                      ...Typography.captionSmall,
+                      color: theme.text.tertiary,
+                    }}
+                    initialSpacing={10}
+                    isAnimated
+                  />
+                </View>
+              )}
+            </GlassCard>
 
             <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
               Folder breakdown
@@ -204,11 +311,7 @@ export default function CollectionStatsScreen() {
                     borderColor: theme.glassBorder,
                   },
                 ]}>
-                <View
-                  style={[
-                    styles.folderIcon,
-                    { backgroundColor: theme.accent + '24' },
-                  ]}>
+                <View style={[styles.folderIcon, { backgroundColor: theme.accent + '24' }]}>
                   <MaterialIcons
                     name={folder.isSystemFolder ? 'folder-special' : 'folder'}
                     size={18}
@@ -235,31 +338,17 @@ export default function CollectionStatsScreen() {
   );
 }
 
-function ProgressBar({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
+function ProgressBar({ label, value, color }: { label: string; value: number; color: string }) {
   const { theme } = useTheme();
   return (
     <View style={styles.progressItem}>
       <View style={styles.progressHeader}>
-        <Text style={[styles.progressLabel, { color: theme.text.secondary }]}>
-          {label}
-        </Text>
+        <Text style={[styles.progressLabel, { color: theme.text.secondary }]}>{label}</Text>
         <Text style={[styles.progressValue, { color: theme.text.primary }]}>
           {Math.round(value * 100)}%
         </Text>
       </View>
-      <View
-        style={[
-          styles.progressTrack,
-          { backgroundColor: theme.background.tertiary },
-        ]}>
+      <View style={[styles.progressTrack, { backgroundColor: theme.background.tertiary }]}>
         <View
           style={[
             styles.progressFill,
@@ -398,5 +487,75 @@ const styles = StyleSheet.create({
   folderCount: {
     ...Typography.titleLarge,
     fontWeight: '700',
+  },
+  chartCard: {
+    padding: Spacing.md,
+    gap: 6,
+  },
+  chartTitle: {
+    ...Typography.titleLarge,
+    fontWeight: '700',
+  },
+  chartSubtitle: {
+    ...Typography.bodySmall,
+    marginBottom: Spacing.sm,
+  },
+  chartEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  chartEmptyText: {
+    ...Typography.bodyMedium,
+  },
+  pieWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  pieCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pieCenterValue: {
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  pieCenterLabel: {
+    ...Typography.captionSmall,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  pieLegend: {
+    flex: 1,
+    gap: 6,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendLabel: {
+    flex: 1,
+    ...Typography.bodySmall,
+  },
+  legendValue: {
+    ...Typography.titleSmall,
+    fontWeight: '700',
+  },
+  barWrapper: {
+    paddingTop: Spacing.sm,
+    paddingRight: Spacing.sm,
+    overflow: 'hidden',
+  },
+  barTopLabel: {
+    ...Typography.captionSmall,
+    fontWeight: '700',
+    marginBottom: 2,
   },
 });

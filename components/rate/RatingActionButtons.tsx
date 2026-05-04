@@ -18,13 +18,13 @@ interface RatingActionButtonsProps {
   style?: ViewStyle;
 }
 
-const FIVE_BUTTONS: Array<{
+const FIVE_BUTTONS: {
   type: RatingType;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   color: string;
   size: number;
   haptic: 'light' | 'medium' | 'heavy';
-}> = [
+}[] = [
   { type: 'skip', icon: 'play-skip-forward', color: '#9CA3AF', size: 22, haptic: 'light' },
   { type: 'dislike', icon: 'thumbs-down', color: '#FF6F60', size: 22, haptic: 'medium' },
   { type: 'neutral', icon: 'remove', color: '#FBBF24', size: 26, haptic: 'light' },

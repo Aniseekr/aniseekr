@@ -3,11 +3,7 @@
 // followed by a Tracking|All filter pill and a calendar/list toggle button.
 
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 
@@ -41,10 +37,10 @@ export function SeasonHeader({
   onOpenSettings,
 }: SeasonHeaderProps) {
   const indicatorX = useSharedValue(filterMode === 'tracking' ? 0 : FILTER_SEGMENT_WIDTH);
-  indicatorX.value = withSpring(
-    filterMode === 'tracking' ? 0 : FILTER_SEGMENT_WIDTH,
-    { damping: 18, stiffness: 220 }
-  );
+  indicatorX.value = withSpring(filterMode === 'tracking' ? 0 : FILTER_SEGMENT_WIDTH, {
+    damping: 18,
+    stiffness: 220,
+  });
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.value }],
@@ -66,10 +62,7 @@ export function SeasonHeader({
             <MaterialIcons name="chevron-left" size={18} color={Colors.text.secondary} />
           </Pressable>
           <View style={styles.capsuleDivider} />
-          <Pressable
-            onPress={onLabelTap}
-            disabled={!onLabelTap}
-            style={styles.seasonLabel}>
+          <Pressable onPress={onLabelTap} disabled={!onLabelTap} style={styles.seasonLabel}>
             <Text style={styles.seasonText}>{seasonDisplayName}</Text>
           </Pressable>
           <View style={styles.capsuleDivider} />
@@ -100,11 +93,7 @@ export function SeasonHeader({
         <View style={styles.actionGroup}>
           {onOpenSettings ? (
             <Pressable onPress={onOpenSettings} style={styles.viewModeButton}>
-              <MaterialIcons
-                name="tune"
-                size={20}
-                color={Colors.text.primary}
-              />
+              <MaterialIcons name="tune" size={20} color={Colors.text.primary} />
             </Pressable>
           ) : null}
           <Pressable onPress={onViewModeToggle} style={styles.viewModeButton}>

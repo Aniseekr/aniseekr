@@ -32,12 +32,7 @@ import { Anime, Genre, ViewMode } from '../../components/rate/types';
 import { BrowseSourceChip } from '../../components/common/BrowseSourceChip';
 import { AniCard } from '../../components/common/AniCard';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import {
-  Colors,
-  FontFamily,
-  Spacing,
-  Typography,
-} from '../../constants/DesignSystem';
+import { Colors, FontFamily, Spacing, Typography } from '../../constants/DesignSystem';
 
 const MODE_OPTIONS: readonly { value: ViewMode; label: string }[] = [
   { value: 'discovery', label: 'Discovery' },
@@ -165,11 +160,7 @@ export default function HomeRateScreen() {
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
               <View style={{ paddingHorizontal: Spacing.md }}>
-                <TrendCard
-                  anime={item}
-                  rank={index + 1}
-                  onPress={() => handleAnimeSelect(item)}
-                />
+                <TrendCard anime={item} rank={index + 1} onPress={() => handleAnimeSelect(item)} />
               </View>
             )}
             contentContainerStyle={{
@@ -212,10 +203,7 @@ export default function HomeRateScreen() {
                   <Text style={styles.sectionTitle}>Browse by Genre</Text>
                   <Text style={styles.sectionSubtitle}>Swipe to explore</Text>
                 </View>
-                <GenreCarousel
-                  data={state.availableGenres}
-                  onSelect={handleGenreSelect}
-                />
+                <GenreCarousel data={state.availableGenres} onSelect={handleGenreSelect} />
               </View>
             ) : null}
 
@@ -233,10 +221,7 @@ export default function HomeRateScreen() {
                     data={state.seasonalAnime}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => (
-                      <SimpleAnimeCard
-                        anime={item}
-                        onPress={() => handleAnimeSelect(item)}
-                      />
+                      <SimpleAnimeCard anime={item} onPress={() => handleAnimeSelect(item)} />
                     )}
                     contentContainerStyle={{
                       paddingHorizontal: Spacing.md,
@@ -254,14 +239,8 @@ export default function HomeRateScreen() {
                 <AniCard variant="glass" intensity={20} style={styles.trackingCard}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>For You</Text>
-                    <Pressable
-                      onPress={() => actions.loadRecommendations()}
-                      hitSlop={8}>
-                      <Ionicons
-                        name="refresh"
-                        size={18}
-                        color={Colors.text.secondary}
-                      />
+                    <Pressable onPress={() => actions.loadRecommendations()} hitSlop={8}>
+                      <Ionicons name="refresh" size={18} color={Colors.text.secondary} />
                     </Pressable>
                   </View>
                   <FlatList
@@ -269,10 +248,7 @@ export default function HomeRateScreen() {
                     data={state.recommendations.map((r) => r.anime)}
                     keyExtractor={(item) => `rec-${item.id}`}
                     renderItem={({ item }) => (
-                      <SimpleAnimeCard
-                        anime={item}
-                        onPress={() => handleAnimeSelect(item)}
-                      />
+                      <SimpleAnimeCard anime={item} onPress={() => handleAnimeSelect(item)} />
                     )}
                     contentContainerStyle={{
                       paddingHorizontal: Spacing.md,

@@ -63,9 +63,7 @@ function CollectionCapsuleFilterComponent({
             style={({ pressed }) => [
               styles.chip,
               {
-                backgroundColor: active
-                  ? theme.accent
-                  : theme.background.secondary,
+                backgroundColor: active ? theme.accent : theme.background.secondary,
                 borderColor: active ? theme.accent : theme.glassBorder,
                 opacity: pressed ? 0.85 : 1,
               },
@@ -75,11 +73,7 @@ function CollectionCapsuleFilterComponent({
               size={16}
               color={active ? '#0E0A06' : theme.text.secondary}
             />
-            <Text
-              style={[
-                styles.label,
-                { color: active ? '#0E0A06' : theme.text.primary },
-              ]}>
+            <Text style={[styles.label, { color: active ? '#0E0A06' : theme.text.primary }]}>
               {f.label}
             </Text>
             {typeof count === 'number' ? (
@@ -87,16 +81,11 @@ function CollectionCapsuleFilterComponent({
                 style={[
                   styles.countBadge,
                   {
-                    backgroundColor: active
-                      ? '#0E0A0626'
-                      : theme.background.tertiary,
+                    backgroundColor: active ? '#0E0A0626' : theme.background.tertiary,
                   },
                 ]}>
                 <Text
-                  style={[
-                    styles.countText,
-                    { color: active ? '#0E0A06' : theme.text.secondary },
-                  ]}>
+                  style={[styles.countText, { color: active ? '#0E0A06' : theme.text.secondary }]}>
                   {count}
                 </Text>
               </View>

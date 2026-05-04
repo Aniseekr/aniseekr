@@ -71,9 +71,7 @@ function RecentlyViewedSectionComponent({
           <MaterialIcons name="history" size={18} color={theme.accent} />
           <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
         </View>
-        <Text style={[styles.count, { color: theme.text.tertiary }]}>
-          {items.length}
-        </Text>
+        <Text style={[styles.count, { color: theme.text.tertiary }]}>{items.length}</Text>
       </View>
 
       <ScrollView
@@ -102,15 +100,11 @@ function RecentlyViewedSectionComponent({
               borderRadius={14}
             />
             <View style={styles.body}>
-              <Text
-                style={[styles.cardTitle, { color: theme.text.primary }]}
-                numberOfLines={2}>
+              <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={2}>
                 {item.title}
               </Text>
               {item.episode ? (
-                <Text style={[styles.episode, { color: theme.accent }]}>
-                  Ep {item.episode}
-                </Text>
+                <Text style={[styles.episode, { color: theme.accent }]}>Ep {item.episode}</Text>
               ) : null}
               <Text style={[styles.time, { color: theme.text.tertiary }]}>
                 {formatRelative(item.visitedAt)}

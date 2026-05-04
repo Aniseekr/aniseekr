@@ -87,12 +87,7 @@ function RatingSliderComponent({
     <GestureDetector gesture={pan}>
       <View style={[styles.container, { width, height }, style]}>
         <View style={[styles.track, { backgroundColor: theme.background.tertiary }]} />
-        <Animated.View
-          style={[
-            styles.fill,
-            { left: 0, top: (height - 12) / 2 },
-            fillStyle,
-          ]}>
+        <Animated.View style={[styles.fill, { left: 0, top: (height - 12) / 2 }, fillStyle]}>
           <LinearGradient
             colors={[theme.accent, theme.accentLight] as [string, string]}
             start={{ x: 0, y: 0.5 }}

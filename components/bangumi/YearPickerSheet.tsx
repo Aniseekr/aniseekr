@@ -1,13 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
@@ -75,9 +67,7 @@ function YearPickerSheetComponent({
           <SafeAreaView edges={['bottom']}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>
-                Pick a year
-              </Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>Pick a year</Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialIcons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
@@ -112,9 +102,7 @@ function YearPickerSheetComponent({
                     style={({ pressed }) => [
                       styles.yearRow,
                       {
-                        backgroundColor: isSelected
-                          ? theme.accent + '20'
-                          : 'transparent',
+                        backgroundColor: isSelected ? theme.accent + '20' : 'transparent',
                         opacity: pressed ? 0.7 : 1,
                       },
                     ]}>
@@ -129,19 +117,13 @@ function YearPickerSheetComponent({
                       {y}
                     </Text>
                     {isSelected ? (
-                      <MaterialIcons
-                        name="check-circle"
-                        size={20}
-                        color={theme.accent}
-                      />
+                      <MaterialIcons name="check-circle" size={20} color={theme.accent} />
                     ) : null}
                   </Pressable>
                 );
               })}
               {filteredYears.length === 0 ? (
-                <Text style={[styles.empty, { color: theme.text.tertiary }]}>
-                  No matches.
-                </Text>
+                <Text style={[styles.empty, { color: theme.text.tertiary }]}>No matches.</Text>
               ) : null}
             </ScrollView>
 
@@ -162,11 +144,7 @@ function YearPickerSheetComponent({
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}>
-                    <MaterialIcons
-                      name="arrow-back"
-                      size={18}
-                      color={theme.text.primary}
-                    />
+                    <MaterialIcons name="arrow-back" size={18} color={theme.text.primary} />
                     <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
                       Previous year
                     </Text>
@@ -190,11 +168,7 @@ function YearPickerSheetComponent({
                     <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
                       Next year
                     </Text>
-                    <MaterialIcons
-                      name="arrow-forward"
-                      size={18}
-                      color={theme.text.primary}
-                    />
+                    <MaterialIcons name="arrow-forward" size={18} color={theme.text.primary} />
                   </Pressable>
                 ) : null}
               </View>
