@@ -217,8 +217,8 @@ export default function AccountScreen() {
       </SettingsSection>
 
       <Text style={[styles.footnote, { color: theme.text.tertiary }]}>
-        Tokens live in your device's secure enclave. Reset them by uninstalling the app or revoking
-        access in each platform's account settings.
+        Tokens live in your device&apos;s secure enclave. Reset them by uninstalling the app or
+        revoking access in each platform&apos;s account settings.
       </Text>
 
       <PlatformAuthSheet
