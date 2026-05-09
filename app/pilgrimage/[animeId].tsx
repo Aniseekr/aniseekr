@@ -10,6 +10,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -35,6 +36,19 @@ import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSyste
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import { anitabiService } from '../../libs/services/pilgrimage/anitabi-service';
 import { locationService, type LatLng } from '../../libs/services/pilgrimage/location-service';
+import {
+  LEAFLET_CSS,
+  LEAFLET_JS,
+  LEAFLET_MARKERCLUSTER_CSS,
+  LEAFLET_MARKERCLUSTER_JS,
+} from '../../libs/services/pilgrimage/leaflet-assets';
+import {
+  MAP_BASE_BODY,
+  MAP_BASE_CSS,
+  MAP_BASE_JS,
+  MAP_BASE_URL,
+  TILE_URL,
+} from '../../libs/services/pilgrimage/leaflet-map';
 import {
   loadVisitedSpots,
   saveVisitedSpots,
@@ -94,27 +108,30 @@ interface MapMarkerPayload {
   visited: boolean;
 }
 
-function buildSpotMapHtml(
-  markers: MapMarkerPayload[],
-  center: { lat: number; lng: number; zoom: number },
-  user: { lat: number; lng: number } | null
-): string {
-  const json = JSON.stringify({ markers, center, user }).replace(/</g, '\\u003c');
+function buildSpotMapHtml(initial: {
+  center: { lat: number; lng: number; zoom: number };
+  user: { lat: number; lng: number } | null;
+  ringColor: string;
+}): string {
+  const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>${LEAFLET_CSS}</style>
+<style>${LEAFLET_MARKERCLUSTER_CSS}</style>
+<style>${MAP_BASE_CSS}</style>
 <style>
-  html, body, #map { margin: 0; padding: 0; height: 100%; width: 100%; background: #1c1c1e; }
   .spot-marker {
     width: 40px; height: 40px; border-radius: 12px;
     border: 2px solid var(--ring, #FF9F0A);
     background: #1c1c1e; overflow: hidden; position: relative;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    transition: transform .15s ease;
   }
+  .spot-marker:active { transform: scale(0.94); }
   .spot-marker img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .spot-marker.visited { border-color: #30D158; border-width: 3px; }
   .spot-marker .ep {
@@ -125,46 +142,82 @@ function buildSpotMapHtml(
     font: 700 9px -apple-system, system-ui, sans-serif;
   }
   .spot-marker.visited .ep { border-color: #30D158; color: #30D158; }
-  .leaflet-control-attribution { font-size: 9px; }
 </style>
 </head>
 <body>
-<div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+${MAP_BASE_BODY}
+<script>${LEAFLET_JS}</script>
+<script>${LEAFLET_MARKERCLUSTER_JS}</script>
+<script>${MAP_BASE_JS}</script>
 <script>
 (function() {
-  var data = ${json};
-  var post = function(payload) {
-    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-      window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+  var initial = ${initialJson};
+  var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
+    .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
+  new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
+    maxZoom: 18,
+    minZoom: 3,
+    attribution: '&copy; OpenStreetMap',
+    keepBuffer: 4,
+    updateWhenIdle: false
+  }).addTo(map);
+
+  if (initial.user) {
+    var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
+    L.marker([initial.user.lat, initial.user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+  }
+
+  var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
+  var initialZoom = initial.center.zoom;
+  var lastBounds = null;
+
+  window.__bindMap(map, function recenter() {
+    if (lastBounds) {
+      try { map.flyToBounds(lastBounds, { padding: [40, 40], maxZoom: 15, duration: 0.4 }); return; } catch (e) {}
+    }
+    map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
+  });
+
+  // Cluster group keyed to the anime's theme color. Disables one zoom level
+  // earlier than the overview map because spots tend to cluster on the same
+  // street, and users want to see individual scenes once they're close.
+  var markerLayer = window.__makeClusterGroup({ ringColor: initial.ringColor, disableAt: 16 });
+  markerLayer.addTo(map);
+  var didFit = false;
+
+  window.__updateMarkers = function(markers) {
+    markerLayer.clearLayers();
+    var batch = [];
+    var bounds = [];
+    for (var i = 0; i < markers.length; i++) {
+      (function(m){
+        var cls = 'spot-marker' + (m.visited ? ' visited' : '');
+        var html = '<div class="' + cls + '" style="--ring:' + m.ringColor + '">' +
+          (m.image ? '<img src="' + m.image + '" loading="lazy" />' : '') +
+          '<span class="ep">EP ' + m.ep + '</span>' +
+        '</div>';
+        var icon = L.divIcon({ className: '', html: html, iconSize: [40,40], iconAnchor: [20,20] });
+        var marker = L.marker([m.lat, m.lng], { icon: icon });
+        marker.__appId = m.id;
+        marker.on('click', function() { window.__post({ type: 'spotPress', id: m.id }); });
+        batch.push(marker);
+        bounds.push([m.lat, m.lng]);
+      })(markers[i]);
+    }
+    if (typeof markerLayer.addLayers === 'function') markerLayer.addLayers(batch);
+    else for (var k = 0; k < batch.length; k++) markerLayer.addLayer(batch[k]);
+
+    if (bounds.length > 0) {
+      try { lastBounds = L.latLngBounds(bounds); } catch (e) { lastBounds = null; }
+    }
+    if (!didFit && bounds.length > 1) {
+      try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: false }); didFit = true; } catch (e) {}
+    } else if (!didFit && bounds.length === 1) {
+      try { map.setView(bounds[0], 14, { animate: false }); didFit = true; } catch (e) {}
     }
   };
-  var map = L.map('map', { zoomControl: false, attributionControl: true })
-    .setView([data.center.lat, data.center.lng], data.center.zoom);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
-  if (data.user) {
-    L.circleMarker([data.user.lat, data.user.lng], {
-      radius: 7, color: '#0A84FF', weight: 2, fillColor: '#0A84FF', fillOpacity: 0.85
-    }).addTo(map);
-  }
-  var bounds = [];
-  data.markers.forEach(function(m) {
-    var cls = 'spot-marker' + (m.visited ? ' visited' : '');
-    var html = '<div class="' + cls + '" style="--ring:' + m.ringColor + '">' +
-      (m.image ? '<img src="' + m.image + '" />' : '') +
-      '<span class="ep">EP ' + m.ep + '</span>' +
-    '</div>';
-    var icon = L.divIcon({ className: '', html: html, iconSize: [40,40], iconAnchor: [20,20] });
-    var marker = L.marker([m.lat, m.lng], { icon: icon }).addTo(map);
-    marker.on('click', function() { post({ type: 'spotPress', id: m.id }); });
-    bounds.push([m.lat, m.lng]);
-  });
-  if (bounds.length > 1) {
-    try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); } catch (e) {}
-  }
+
+  window.__post({ type: 'ready' });
 })();
 </script>
 </body>
@@ -179,6 +232,7 @@ interface SpotMapViewProps {
   centerGeo: readonly [number, number] | null;
   centerZoom: number;
   onSpotPress: (spot: AnitabiPoint) => void;
+  onClusterPick: (spots: readonly AnitabiPoint[]) => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -190,17 +244,34 @@ function SpotMapView({
   centerGeo,
   centerZoom,
   onSpotPress,
+  onClusterPick,
   style,
 }: SpotMapViewProps) {
+  const webviewRef = useRef<WebView>(null);
   const spotsById = useRef(new Map<string, AnitabiPoint>());
+  const [ready, setReady] = useState(false);
 
+  // Stable shell — initial center + theme color captured once. Marker updates
+  // flow via injectJavaScript so toggling visited or loading detailed points
+  // doesn't throw away the cached tiles or reset the user's pan/zoom.
   const html = useMemo(() => {
-    const markers: MapMarkerPayload[] = [];
+    const fallback =
+      centerGeo && hasValidGeo(centerGeo)
+        ? { lat: centerGeo[0], lng: centerGeo[1], zoom: centerZoom || 12 }
+        : { lat: 36.2048, lng: 138.2529, zoom: 5 };
+    const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
+    return buildSpotMapHtml({ center: fallback, user, ringColor });
+    // Captured once on mount intentionally — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const markers = useMemo(() => {
+    const out: MapMarkerPayload[] = [];
     spotsById.current.clear();
     for (const spot of spots) {
       if (!hasValidGeo(spot.geo)) continue;
       spotsById.current.set(spot.id, spot);
-      markers.push({
+      out.push({
         id: spot.id,
         lat: spot.geo[0],
         lng: spot.geo[1],
@@ -211,20 +282,41 @@ function SpotMapView({
         visited: visited[spot.id] === true,
       });
     }
-    const fallback =
-      centerGeo && hasValidGeo(centerGeo)
-        ? { lat: centerGeo[0], lng: centerGeo[1], zoom: centerZoom || 12 }
-        : { lat: 36.2048, lng: 138.2529, zoom: 5 };
-    const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildSpotMapHtml(markers, fallback, user);
-  }, [spots, visited, ringColor, centerGeo, centerZoom, userLocation]);
+    return out;
+  }, [spots, visited, ringColor]);
+
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const json = JSON.stringify(markers).replace(/</g, '\\u003c');
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateMarkers && window.__updateMarkers(${json}); } catch(e) {}
+      true;
+    `);
+  }, [markers, ready]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
-      const data = JSON.parse(event.nativeEvent.data) as { type: string; id?: string };
+      const data = JSON.parse(event.nativeEvent.data) as {
+        type: string;
+        id?: string;
+        ids?: unknown[];
+      };
+      if (data.type === 'ready') {
+        setReady(true);
+        return;
+      }
       if (data.type === 'spotPress' && data.id) {
         const spot = spotsById.current.get(data.id);
         if (spot) onSpotPress(spot);
+        return;
+      }
+      if (data.type === 'clusterPress' && Array.isArray(data.ids)) {
+        const picked: AnitabiPoint[] = [];
+        for (const raw of data.ids) {
+          const s = spotsById.current.get(String(raw));
+          if (s) picked.push(s);
+        }
+        if (picked.length > 0) onClusterPick(picked);
       }
     } catch {
       // ignore
@@ -234,10 +326,15 @@ function SpotMapView({
   return (
     <View style={[mapStyles.container, style]} testID="pilgrimage-spot-map">
       <WebView
+        ref={webviewRef}
         originWhitelist={['*']}
-        source={{ html }}
+        source={{ html, baseUrl: MAP_BASE_URL }}
         javaScriptEnabled
         domStorageEnabled
+        cacheEnabled
+        cacheMode={Platform.OS === 'android' ? 'LOAD_DEFAULT' : undefined}
+        allowsInlineMediaPlayback
+        androidLayerType="hardware"
         onMessage={handleMessage}
         style={mapStyles.webview}
         renderError={() => (
@@ -482,6 +579,7 @@ export default function PilgrimageDetailScreen() {
   const [visited, setVisited] = useState<VisitedMap>({});
   const [browseSource, setBrowseSource] = useState<PlatformType>(dataSourceConfig.browseSource);
   const [activeSpot, setActiveSpot] = useState<AnitabiPoint | null>(null);
+  const [clusterSpots, setClusterSpots] = useState<readonly AnitabiPoint[] | null>(null);
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
@@ -823,6 +921,10 @@ export default function PilgrimageDetailScreen() {
                     Haptics.selectionAsync().catch(() => undefined);
                     setActiveSpot(spot);
                   }}
+                  onClusterPick={(picked) => {
+                    Haptics.selectionAsync().catch(() => undefined);
+                    setClusterSpots(picked);
+                  }}
                   style={styles.mapInner}
                 />
               </View>
@@ -839,8 +941,112 @@ export default function PilgrimageDetailScreen() {
           onToggleVisited={handleToggleVisited}
           onOpenMaps={handleOpenMaps}
         />
+
+        <SpotClusterPicker
+          spots={clusterSpots}
+          themeColor={themeColor}
+          visited={visited}
+          distanceFor={distanceFor}
+          onClose={() => setClusterSpots(null)}
+          onPick={(spot) => {
+            Haptics.selectionAsync().catch(() => undefined);
+            setClusterSpots(null);
+            setActiveSpot(spot);
+          }}
+        />
       </View>
     </>
+  );
+}
+
+interface SpotClusterPickerProps {
+  spots: readonly AnitabiPoint[] | null;
+  themeColor: string;
+  visited: VisitedMap;
+  distanceFor: (spot: AnitabiPoint) => number | null;
+  onClose: () => void;
+  onPick: (spot: AnitabiPoint) => void;
+}
+
+function SpotClusterPicker({
+  spots,
+  themeColor,
+  visited,
+  distanceFor,
+  onClose,
+  onPick,
+}: SpotClusterPickerProps) {
+  if (!spots || spots.length === 0) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={pickerStyles.backdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={pickerStyles.sheet}>
+          <SafeAreaView edges={['bottom']}>
+            <View style={pickerStyles.handle} />
+            <View style={pickerStyles.headerRow}>
+              <Text style={pickerStyles.headerTitle}>{spots.length} scenes here</Text>
+              <Pressable onPress={onClose} hitSlop={12} style={pickerStyles.closeBtn}>
+                <Ionicons name="close" size={20} color={Colors.text.secondary} />
+              </Pressable>
+            </View>
+            <ScrollView
+              style={pickerStyles.list}
+              contentContainerStyle={pickerStyles.listContent}
+              showsVerticalScrollIndicator={false}>
+              {spots.map((spot) => {
+                const isVisited = visited[spot.id] === true;
+                const km = distanceFor(spot);
+                return (
+                  <Pressable
+                    key={spot.id}
+                    onPress={() => onPick(spot)}
+                    style={({ pressed }) => [
+                      pickerStyles.row,
+                      isVisited && { borderColor: `${Colors.success}66` },
+                      pressed && { opacity: 0.78 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${spot.name}`}>
+                    <View style={[pickerStyles.thumbWrap, { borderColor: themeColor }]}>
+                      <Image
+                        source={{ uri: spot.image }}
+                        style={pickerStyles.thumb}
+                        contentFit="cover"
+                        transition={120}
+                      />
+                      <View style={[pickerStyles.epPill, { backgroundColor: `${themeColor}E6` }]}>
+                        <Text style={pickerStyles.epText}>EP {spot.ep}</Text>
+                      </View>
+                    </View>
+                    <View style={pickerStyles.rowBody}>
+                      <Text style={pickerStyles.rowTitle} numberOfLines={2}>
+                        {spot.name}
+                      </Text>
+                      {spot.cn ? (
+                        <Text style={pickerStyles.rowSubtitle} numberOfLines={1}>
+                          {spot.cn}
+                        </Text>
+                      ) : null}
+                      {km != null ? (
+                        <Text style={pickerStyles.rowMeta} numberOfLines={1}>
+                          {formatDistanceKm(km)} away
+                        </Text>
+                      ) : null}
+                    </View>
+                    {isVisited ? (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+                    ) : (
+                      <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -1281,6 +1487,115 @@ const sheetStyles = StyleSheet.create({
   actionBtnText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+});
+
+const pickerStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: Colors.background.secondary,
+    borderTopLeftRadius: Radius.xxl,
+    borderTopRightRadius: Radius.xxl,
+    borderColor: Colors.glass.border,
+    borderTopWidth: 1,
+    paddingHorizontal: Spacing.screenPadding,
+    paddingTop: 8,
+    paddingBottom: Spacing.sm,
+    maxHeight: '70%',
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.glass.borderHeavy,
+    marginBottom: Spacing.xs,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  headerTitle: {
+    ...Typography.titleMedium,
+    color: Colors.text.primary,
+  },
+  closeBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+    backgroundColor: Colors.glass.dark,
+  },
+  list: {
+    marginTop: 4,
+  },
+  listContent: {
+    paddingBottom: Spacing.md,
+    gap: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.glass.medium,
+    borderColor: Colors.glass.border,
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    padding: 10,
+  },
+  thumbWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    backgroundColor: Colors.background.tertiary,
+    position: 'relative',
+  },
+  thumb: {
+    width: '100%',
+    height: '100%',
+  },
+  epPill: {
+    position: 'absolute',
+    left: 4,
+    bottom: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
+  },
+  epText: {
+    color: '#000',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  rowBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowTitle: {
+    color: Colors.text.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rowSubtitle: {
+    color: Colors.text.secondary,
+    fontSize: 12,
+    marginTop: 1,
+  },
+  rowMeta: {
+    color: Colors.text.tertiary,
+    fontSize: 11,
+    marginTop: 3,
+    fontWeight: '500',
   },
 });
 
