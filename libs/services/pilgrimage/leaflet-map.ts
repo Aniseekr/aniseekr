@@ -136,40 +136,26 @@ export const MAP_BASE_CSS = `
   .ms-cluster {
     width: 100%; height: 100%;
     border-radius: 50%;
-    background: rgba(28,28,30,0.94);
-    border: 2px solid var(--ring, #FF9F0A);
-    color: #fff;
+    background: var(--ring, #FF9F0A);
+    border: 2px solid rgba(255,255,255,0.18);
+    color: #0a0a0a;
     display: flex; align-items: center; justify-content: center;
-    font: 800 15px -apple-system, system-ui, sans-serif;
-    letter-spacing: -0.2px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5),
-                0 0 0 5px var(--halo, rgba(255,159,10,0.22));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    transition: transform .12s cubic-bezier(.2,.6,.2,1);
+    font: 800 17px -apple-system, system-ui, sans-serif;
+    letter-spacing: -0.3px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.55),
+                0 0 0 6px var(--halo, rgba(255,159,10,0.22)),
+                inset 0 -3px 8px rgba(0,0,0,0.18),
+                inset 0 3px 6px rgba(255,255,255,0.32);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+    transition: transform .15s cubic-bezier(.2,.6,.2,1), box-shadow .2s ease;
     cursor: pointer;
     position: relative;
   }
-  .ms-cluster .ms-cluster-count { line-height: 1; }
-  .ms-cluster::after {
-    /* "more" affordance — three dots in the corner so users learn the bubble
-       opens a list rather than zooming. */
-    content: '⋯';
-    position: absolute;
-    right: -2px; top: -10px;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: var(--ring, #FF9F0A);
-    color: #1c1c1e;
-    font: 800 13px -apple-system, system-ui, sans-serif;
-    line-height: 16px; text-align: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-    border: 2px solid #1c1c1e;
-  }
+  .ms-cluster .ms-cluster-count { line-height: 1; font-weight: 900; }
   .ms-cluster:active { transform: scale(0.92); }
-  .ms-cluster.sm { font-size: 14px; }
-  .ms-cluster.lg { font-size: 17px; }
-  .ms-cluster.xl { font-size: 19px; }
+  .ms-cluster.sm { font-size: 15px; }
+  .ms-cluster.lg { font-size: 19px; }
+  .ms-cluster.xl { font-size: 22px; }
   /* Animations are off for snappier feel; keep transition only for fades. */
   .leaflet-cluster-anim .leaflet-marker-icon,
   .leaflet-cluster-anim .leaflet-marker-shadow {
@@ -408,7 +394,24 @@ export const MAP_BASE_JS = `
         else if (n < 200)  { size = 64; sizeClass = ' lg'; }
         else               { size = 72; sizeClass = ' xl'; }
         var label = n >= 1000 ? (Math.floor(n / 100) / 10).toFixed(1) + 'k' : String(n);
-        var html = '<div class="ms-cluster' + sizeClass + '" style="--ring:' + ring + ';--halo:' + halo + '">' +
+
+        // Color the bubble after the dominant region color present in the
+        // cluster. Each marker is expected to carry its color via
+        // options.regionColor; older callers without that fall back to the
+        // group's ring color.
+        var children = cluster.getAllChildMarkers();
+        var counts = {};
+        for (var i = 0; i < children.length; i++) {
+          var c = (children[i].options && children[i].options.regionColor) || ring;
+          counts[c] = (counts[c] || 0) + 1;
+        }
+        var pick = ring, pickN = 0;
+        for (var key in counts) {
+          if (counts[key] > pickN) { pick = key; pickN = counts[key]; }
+        }
+        var pickHalo = hexToRgba(pick, 0.22);
+
+        var html = '<div class="ms-cluster' + sizeClass + '" style="--ring:' + pick + ';--halo:' + pickHalo + '">' +
           '<span class="ms-cluster-count">' + label + '</span>' +
         '</div>';
         return L.divIcon({

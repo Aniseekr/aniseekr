@@ -57,6 +57,12 @@ export interface PilgrimageMapViewProps {
   userLocation?: { latitude: number; longitude: number } | null;
   onMarkerPress?: (anime: AnitabiBangumi) => void;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Bump to force the map to re-fit bounds to the currently-rendered markers.
+   * Use when the caller filters `animeList` (e.g. picking a city) and wants
+   * the map to fly to the new subset instead of staying where the user panned.
+   */
+  refitNonce?: number;
 }
 
 const USER_ZOOM = 11;
@@ -66,6 +72,33 @@ const isValidGeo = (geo: readonly [number, number] | null | undefined): geo is [
   const [lat, lng] = geo;
   return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
 };
+
+/**
+ * Stable per-city color palette. Used to tint markers and cluster bubbles so
+ * regions visually separate at low zoom levels (e.g. Tokyo cluster vs Kyoto
+ * cluster). Hash-based so the mapping is consistent across mounts without
+ * needing to maintain an explicit city → color table.
+ */
+const CITY_PALETTE: readonly string[] = [
+  '#FF9F0A', // primary orange
+  '#22D3EE', // cyan
+  '#BF5AF2', // purple
+  '#34D399', // emerald
+  '#F472B6', // pink
+  '#FBBF24', // amber
+  '#60A5FA', // blue
+  '#A3E635', // lime
+];
+
+export function cityToColor(city: string | null | undefined, fallback: string = Colors.primary): string {
+  const trimmed = (city ?? '').trim();
+  if (!trimmed) return fallback;
+  let hash = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    hash = ((hash << 5) - hash + trimmed.charCodeAt(i)) | 0;
+  }
+  return CITY_PALETTE[Math.abs(hash) % CITY_PALETTE.length];
+}
 
 interface MarkerPayload {
   id: string;
@@ -87,13 +120,18 @@ function buildMarkers(list: readonly PilgrimageMapAnime[], idIndex: Map<string, 
     const [lat, lng] = anime.geo;
     const idStr = String(anime.id);
     idIndex.set(idStr, anime);
+    // City-derived color when available so each region gets a distinct
+    // accent; falls back to the anime's brand color (or primary).
+    const ringColor = anime.city
+      ? cityToColor(anime.city, anime.color || Colors.primary)
+      : anime.color || Colors.primary;
     markers.push({
       id: idStr,
       lat,
       lng,
       title: anime.title || anime.cn || '',
       cover: (anime.cover ?? '').replace('?plan=h160', '?plan=h120') || null,
-      ringColor: anime.color || Colors.primary,
+      ringColor,
       pointsLength: anime.pointsLength,
       city: anime.city || null,
       inCollection: !!inCollection,
@@ -193,7 +231,7 @@ ${MAP_BASE_BODY}
   markerLayer.addTo(map);
   var lastMarkerCount = 0;
 
-  window.__updateMarkers = function(markers) {
+  window.__updateMarkers = function(markers, refit) {
     markerLayer.clearLayers();
     var batch = [];
     var bounds = [];
@@ -206,7 +244,9 @@ ${MAP_BASE_BODY}
         (m.inCollection ? '<span class="check">✓</span>' : '') +
       '</div>';
       var icon = L.divIcon({ className: '', html: html, iconSize: [44,44], iconAnchor: [22,22] });
-      var marker = L.marker([m.lat, m.lng], { icon: icon });
+      // regionColor is read by __makeClusterGroup to pick the dominant region
+      // color when this marker is aggregated into a cluster bubble.
+      var marker = L.marker([m.lat, m.lng], { icon: icon, regionColor: ring });
       marker.__appId = m.id;
       var meta = m.pointsLength + ' spot' + (m.pointsLength === 1 ? '' : 's') +
         (m.city ? ' · ' + m.city : '') +
@@ -224,8 +264,11 @@ ${MAP_BASE_BODY}
     else for (var j = 0; j < batch.length; j++) markerLayer.addLayer(batch[j]);
 
     // Only fit bounds when going from empty → populated, otherwise the user's
-    // pan/zoom would jump every filter tick.
-    if (bounds.length > 1 && lastMarkerCount === 0 && !initial.user) {
+    // pan/zoom would jump every filter tick — unless the caller explicitly
+    // asked for a refit (e.g. they just filtered by city).
+    if (refit && bounds.length > 0) {
+      try { map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 12, duration: 0.45 }); } catch (e) {}
+    } else if (bounds.length > 1 && lastMarkerCount === 0 && !initial.user) {
       try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 8, animate: false }); } catch (e) {}
     }
     lastMarkerCount = markers.length;
@@ -245,6 +288,7 @@ export function PilgrimageMapView({
   userLocation,
   onMarkerPress,
   style,
+  refitNonce,
 }: PilgrimageMapViewProps) {
   const webviewRef = useRef<WebView>(null);
   const animeById = useRef(new Map<string, AnitabiBangumi>());
@@ -275,6 +319,22 @@ export function PilgrimageMapView({
       true;
     `);
   }, [markers, ready]);
+
+  // Separate refit effect so it only fires when the caller intentionally
+  // changes refitNonce (e.g. picking a city pill). The plain marker effect
+  // stays passive so user pan/zoom isn't disturbed on incidental updates.
+  useEffect(() => {
+    if (refitNonce === undefined) return;
+    if (!ready || !webviewRef.current) return;
+    const json = JSON.stringify(markers).replace(/</g, '\\u003c');
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateMarkers && window.__updateMarkers(${json}, true); } catch(e) {}
+      true;
+    `);
+    // markers intentionally excluded — we re-fit only on nonce changes, not
+    // every marker tick; the regular effect above handles marker updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refitNonce, ready]);
 
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {

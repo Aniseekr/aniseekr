@@ -890,7 +890,7 @@ export default function PilgrimageDetailScreen() {
                 </View>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionHeaderTitle}>
-                    {viewMode === 'list' ? 'シーン一覧' : 'マップ表示'}
+                    {viewMode === 'list' ? 'Scene list' : 'Map view'}
                   </Text>
                   <Text style={styles.sectionHeaderSubtitle}>
                     {viewMode === 'list'

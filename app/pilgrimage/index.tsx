@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
   type StyleProp,
   type ViewStyle,
@@ -19,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import {
   PilgrimageMapView,
+  cityToColor,
   type PilgrimageMapAnime,
 } from '../../components/pilgrimage/PilgrimageMapView';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
@@ -295,6 +297,8 @@ export default function PilgrimageHubScreen() {
 
         <MiniMapTeaser onPress={handleOpenMap} />
 
+        <PlanTripBanner onPress={() => router.push('/pilgrimage/plan')} />
+
         {isInitialLoading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -303,7 +307,7 @@ export default function PilgrimageHubScreen() {
         ) : null}
 
         {nearbyItems.length > 0 ? (
-          <Section title="近くのスポット" subtitle="Closest locations to you">
+          <Section title="Nearby Spots" subtitle="Closest locations to you">
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -320,7 +324,7 @@ export default function PilgrimageHubScreen() {
         ) : null}
 
         {popularItems.length > 0 ? (
-          <Section title="人気の聖地巡礼" subtitle="Popular anime pilgrimages">
+          <Section title="Popular Pilgrimages" subtitle="Popular anime pilgrimages">
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -338,7 +342,7 @@ export default function PilgrimageHubScreen() {
 
         {filter !== 'mine' && mineItems.length > 0 ? (
           <Section
-            title="マイコレクション"
+            title="My Collection"
             subtitle={`${mineItems.length} of ${collectionTotal} have spots`}>
             <View style={styles.mineList}>
               {mineItems.slice(0, 6).map((item) => (
@@ -363,6 +367,10 @@ export default function PilgrimageHubScreen() {
         onMarkerPress={(a) => {
           setMapOpen(false);
           handleAnimePress(a);
+        }}
+        onOpenPlanner={() => {
+          setMapOpen(false);
+          router.push('/pilgrimage/plan');
         }}
       />
     </View>
@@ -415,7 +423,7 @@ function HeroHeader({
       <View style={styles.heroHeaderRow}>
         <View style={styles.heroLogoBlock}>
           <Text style={styles.heroLogo} accessibilityRole="header">
-            聖地巡礼
+            Pilgrimage
           </Text>
           <Text style={styles.heroTagline}>Anime locations across Japan</Text>
         </View>
@@ -497,6 +505,36 @@ function FilterPill({ label, count, active, onPress }: FilterPillProps) {
         <Text style={[pillStyles.countText, { color: active ? '#000' : Colors.text.secondary }]}>
           {count}
         </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function PlanTripBanner({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Open trip planner"
+      style={({ pressed }) => [styles.planBanner, pressed && { opacity: 0.92 }]}>
+      <LinearGradient
+        colors={['#3A1F70', '#4338CA', '#5B2D8E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.planBannerIconRing}>
+        <Ionicons name="sparkles" size={16} color="#FFF" />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.planBannerTitle}>Build a 1-Day Pilgrimage</Text>
+        <Text style={styles.planBannerSubtitle} numberOfLines={1}>
+          Pick a city · we route the spots in optimal order
+        </Text>
+      </View>
+      <View style={styles.planBannerCta}>
+        <Text style={styles.planBannerCtaText}>Plan</Text>
+        <Ionicons name="chevron-forward" size={12} color="#FFF" />
       </View>
     </Pressable>
   );
@@ -815,10 +853,76 @@ interface MapModalProps {
   entries: PilgrimageMapAnime[];
   userLocation: LatLng | null;
   onMarkerPress: (anime: AnitabiBangumi) => void;
+  onOpenPlanner: () => void;
 }
 
-function MapModal({ visible, onClose, entries, userLocation, onMarkerPress }: MapModalProps) {
+function MapModal({
+  visible,
+  onClose,
+  entries,
+  userLocation,
+  onMarkerPress,
+  onOpenPlanner,
+}: MapModalProps) {
   const insets = useSafeAreaInsets();
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [refitNonce, setRefitNonce] = useState(0);
+
+  // Reset state whenever the modal is dismissed so reopening starts clean.
+  useEffect(() => {
+    if (!visible) {
+      setSelectedCity(null);
+      setSearch('');
+    }
+  }, [visible]);
+
+  // Aggregate cities once per entries list. Counts drive the pill order; the
+  // city color comes from the shared cityToColor helper so map markers and
+  // pills line up visually.
+  const cityList = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of entries) {
+      const city = (e.anime.city ?? '').trim();
+      if (!city) continue;
+      map.set(city, (map.get(city) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([city, count]) => ({ city, count, color: cityToColor(city) }))
+      .sort((a, b) => b.count - a.count);
+  }, [entries]);
+
+  const filteredEntries = useMemo(() => {
+    let list: PilgrimageMapAnime[] = entries;
+    if (selectedCity) {
+      list = list.filter((e) => (e.anime.city ?? '').trim() === selectedCity);
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (e) =>
+          (e.anime.title ?? '').toLowerCase().includes(q) ||
+          (e.anime.cn ?? '').toLowerCase().includes(q) ||
+          (e.anime.city ?? '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [entries, selectedCity, search]);
+
+  // Bump the refit nonce whenever the region filter changes so the map flies
+  // to the new subset. Search-only changes intentionally don't re-fit — the
+  // user expects their pan/zoom to survive incremental typing.
+  useEffect(() => {
+    setRefitNonce((n) => n + 1);
+  }, [selectedCity]);
+
+  const handleCityPick = useCallback((city: string | null) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setSelectedCity(city);
+  }, []);
+
+  const walkableItems = useMemo(() => filteredEntries.slice(0, 12), [filteredEntries]);
+
   return (
     <Modal
       visible={visible}
@@ -840,12 +944,44 @@ function MapModal({ visible, onClose, entries, userLocation, onMarkerPress }: Ma
             <Ionicons name="close" size={22} color={Colors.text.primary} />
           </Pressable>
           <View style={mapModalStyles.headerText}>
-            <Text style={mapModalStyles.title}>Pilgrimage map</Text>
+            <Text style={mapModalStyles.title}>Pilgrimage Map</Text>
             <Text style={mapModalStyles.subtitle}>
-              {entries.length} {entries.length === 1 ? 'anime' : 'anime'} · tap a marker
+              {filteredEntries.length}{' '}
+              {filteredEntries.length === 1 ? 'anime' : 'anime'}
+              {selectedCity ? ` · ${selectedCity}` : ' · all areas'}
             </Text>
           </View>
+          <Pressable
+            onPress={onOpenPlanner}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open trip planner"
+            style={({ pressed }) => [mapModalStyles.planBtn, pressed && { opacity: 0.85 }]}>
+            <Ionicons name="navigate" size={13} color="#000" />
+            <Text style={mapModalStyles.planBtnText}>Plan</Text>
+          </Pressable>
         </View>
+
+        <View style={mapModalStyles.searchBar}>
+          <Ionicons name="search" size={16} color={Colors.text.secondary} />
+          <TextInput
+            placeholder="Search by anime, city, or spot"
+            placeholderTextColor={Colors.text.tertiary}
+            value={search}
+            onChangeText={setSearch}
+            style={mapModalStyles.searchInput}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {search.length > 0 ? (
+            <Pressable onPress={() => setSearch('')} hitSlop={6} accessibilityLabel="Clear search">
+              <View style={mapModalStyles.searchClear}>
+                <Ionicons name="close" size={11} color={Colors.text.primary} />
+              </View>
+            </Pressable>
+          ) : null}
+        </View>
+
         <View style={mapModalStyles.mapWrap}>
           {entries.length === 0 ? (
             <View style={mapModalStyles.empty}>
@@ -854,15 +990,187 @@ function MapModal({ visible, onClose, entries, userLocation, onMarkerPress }: Ma
             </View>
           ) : (
             <PilgrimageMapView
-              animeList={entries}
+              animeList={filteredEntries}
               userLocation={userLocation}
               onMarkerPress={onMarkerPress}
+              refitNonce={refitNonce}
               style={mapModalStyles.map as StyleProp<ViewStyle>}
             />
           )}
         </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={mapModalStyles.regionPillRow}>
+          <RegionPill
+            label="All Areas"
+            count={entries.length}
+            active={selectedCity === null}
+            tint={Colors.primary}
+            onPress={() => handleCityPick(null)}
+          />
+          {cityList.map(({ city, count, color }) => (
+            <RegionPill
+              key={city}
+              label={city}
+              count={count}
+              active={selectedCity === city}
+              tint={color}
+              onPress={() => handleCityPick(city)}
+            />
+          ))}
+        </ScrollView>
+
+        <View style={mapModalStyles.walkableHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={mapModalStyles.walkableTitle}>Walkable Areas</Text>
+            <Text style={mapModalStyles.walkableSubtitle}>
+              {selectedCity
+                ? `One-day walking routes in ${selectedCity}`
+                : 'One-day walking routes by neighborhood'}
+            </Text>
+          </View>
+          <Pressable onPress={onOpenPlanner} hitSlop={6}>
+            <Text style={mapModalStyles.walkableLink}>See all</Text>
+          </Pressable>
+        </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            mapModalStyles.walkableList,
+            { paddingBottom: insets.bottom + 16 },
+          ]}>
+          {walkableItems.length === 0 ? (
+            <View style={mapModalStyles.empty}>
+              <MaterialIcons name="search-off" size={28} color={Colors.text.tertiary} />
+              <Text style={emptyStyles.body}>No matches for this filter.</Text>
+            </View>
+          ) : (
+            walkableItems.map((item) => (
+              <WalkableCard
+                key={`walk-${item.anime.id}`}
+                anime={item.anime}
+                distanceKm={item.distanceKm}
+                onPress={() => onMarkerPress(item.anime)}
+                onPlanPress={onOpenPlanner}
+              />
+            ))
+          )}
+        </ScrollView>
       </View>
     </Modal>
+  );
+}
+
+interface RegionPillProps {
+  label: string;
+  count: number;
+  active: boolean;
+  tint: string;
+  onPress: () => void;
+}
+
+function RegionPill({ label, count, active, tint, onPress }: RegionPillProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label}, ${count} anime`}
+      style={({ pressed }) => [
+        regionPillStyles.pill,
+        active
+          ? { backgroundColor: tint, borderColor: tint }
+          : { backgroundColor: 'rgba(20,20,22,0.78)', borderColor: Colors.glass.border },
+        pressed && { opacity: 0.85 },
+      ]}>
+      <View
+        style={[regionPillStyles.dot, { backgroundColor: active ? 'rgba(0,0,0,0.42)' : tint }]}
+      />
+      <Text
+        style={[
+          regionPillStyles.label,
+          { color: active ? '#000' : Colors.text.primary },
+        ]}>
+        {label}
+      </Text>
+      <Text
+        style={[
+          regionPillStyles.count,
+          { color: active ? 'rgba(0,0,0,0.62)' : Colors.text.tertiary },
+        ]}>
+        {count}
+      </Text>
+    </Pressable>
+  );
+}
+
+interface WalkableCardProps {
+  anime: AnitabiBangumi;
+  distanceKm?: number;
+  onPress: () => void;
+  onPlanPress: () => void;
+}
+
+function WalkableCard({ anime, distanceKm, onPress, onPlanPress }: WalkableCardProps) {
+  const tint = cityToColor(anime.city, anime.color || Colors.primary);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={anime.title}
+      style={({ pressed }) => [
+        walkableStyles.card,
+        { borderLeftColor: tint },
+        pressed && { opacity: 0.85 },
+      ]}>
+      {anime.cover ? (
+        <Image
+          source={{ uri: anime.cover.replace('?plan=h160', '?plan=h360') }}
+          style={walkableStyles.thumb}
+          contentFit="cover"
+          transition={150}
+        />
+      ) : (
+        <View style={[walkableStyles.thumb, { backgroundColor: Colors.background.secondary }]} />
+      )}
+      <View style={walkableStyles.body}>
+        <View style={walkableStyles.cityRow}>
+          <View style={[walkableStyles.cityDot, { backgroundColor: tint }]} />
+          <Text style={walkableStyles.cityText}>{anime.city || 'Unknown area'}</Text>
+        </View>
+        <Text style={walkableStyles.title} numberOfLines={1}>
+          {anime.title || anime.cn || 'Untitled'}
+        </Text>
+        <View style={walkableStyles.metaRow}>
+          <View style={walkableStyles.spotChip}>
+            <Ionicons name="location" size={10} color={Colors.text.secondary} />
+            <Text style={walkableStyles.spotChipText}>{anime.pointsLength} spots</Text>
+          </View>
+          {distanceKm !== undefined ? (
+            <View style={[walkableStyles.spotChip, { backgroundColor: `${tint}22` }]}>
+              <Ionicons name="navigate" size={10} color={tint} />
+              <Text style={[walkableStyles.spotChipText, { color: tint }]}>
+                {formatDistance(distanceKm)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onPlanPress();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Use ${anime.title} as a one-day plan`}
+          style={({ pressed }) => [walkableStyles.planBtn, pressed && { opacity: 0.85 }]}>
+          <Ionicons name="navigate" size={11} color={Colors.primary} />
+          <Text style={walkableStyles.planBtnText}>Use as 1-day plan</Text>
+          <Ionicons name="chevron-forward" size={12} color={Colors.primary} />
+        </Pressable>
+      </View>
+    </Pressable>
   );
 }
 
@@ -990,6 +1298,56 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: 12,
     fontWeight: '600',
+  },
+  planBanner: {
+    marginHorizontal: Spacing.screenPadding,
+    marginTop: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  planBannerIconRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  planBannerTitle: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  planBannerSubtitle: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  planBannerCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  planBannerCtaText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   loadingState: {
     paddingTop: Spacing.xl,
@@ -1312,10 +1670,53 @@ const mapModalStyles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 12,
   },
-  mapWrap: {
-    flex: 1,
+  planBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+  },
+  planBtnText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginHorizontal: Spacing.screenPadding,
-    marginBottom: Spacing.screenPadding,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: 14,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(20,20,22,0.85)',
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+  },
+  searchInput: {
+    flex: 1,
+    color: Colors.text.primary,
+    fontSize: 13,
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  searchClear: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  mapWrap: {
+    height: 280,
+    marginHorizontal: Spacing.screenPadding,
+    marginBottom: Spacing.sm,
     borderRadius: Radius.cardLg,
     overflow: 'hidden',
     borderWidth: 1,
@@ -1324,9 +1725,157 @@ const mapModalStyles = StyleSheet.create({
   },
   map: { flex: 1 },
   empty: {
-    flex: 1,
+    paddingVertical: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
+  },
+  regionPillRow: {
+    paddingHorizontal: Spacing.screenPadding,
+    paddingBottom: Spacing.sm,
+    gap: 8,
+    alignItems: 'center',
+  },
+  walkableHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.screenPadding,
+    paddingTop: 4,
+    paddingBottom: Spacing.xs,
+  },
+  walkableTitle: {
+    color: Colors.text.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  walkableSubtitle: {
+    color: Colors.text.tertiary,
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  walkableLink: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  walkableList: {
+    paddingHorizontal: Spacing.screenPadding,
+    gap: 10,
+  },
+});
+
+const regionPillStyles = StyleSheet.create({
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 10,
+    paddingRight: 12,
+    paddingVertical: 8,
+    borderRadius: 17,
+    borderWidth: 1,
+    minHeight: 34,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+    maxWidth: 130,
+  },
+  count: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});
+
+const walkableStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 10,
+    borderRadius: Radius.lg,
+    backgroundColor: 'rgba(20,20,22,0.78)',
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    borderLeftWidth: 3,
+  },
+  thumb: {
+    width: 70,
+    height: 92,
+    borderRadius: 10,
+    backgroundColor: Colors.background.tertiary,
+  },
+  body: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  cityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cityText: {
+    color: Colors.text.secondary,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: Colors.text.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  spotChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: Colors.glass.medium,
+  },
+  spotChipText: {
+    color: Colors.text.secondary,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  planBtn: {
+    marginTop: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,159,10,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,159,10,0.5)',
+  },
+  planBtnText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
