@@ -7,6 +7,45 @@ import {
   relativeLuminance,
 } from '../../components/themed/contrast';
 
+// Snapshot of every shipped accent surface. Keep in sync with
+// context/ThemeContext.tsx (THEMES, ACCENT_PRESETS, ACCENT_GRADIENTS) and
+// constants/DesignSystem.ts (Colors.gradients). Test guards against
+// regressions on any of these — if you add a new surface, add it here.
+const THEME_ACCENTS = [
+  '#FF9F0A', // aniseeker accent
+  '#FFB340', // aniseeker accentLight
+  '#FF2A6D', // cyberpunk accent
+  '#FF6BA0', // cyberpunk accentLight
+  '#5E5CE6', // midnight accent
+  '#7D7CFF', // midnight accentLight
+  '#10B981', // forest accent
+  '#34D399', // forest accentLight
+  '#06B6D4', // ocean accent
+  '#67E8F9', // ocean accentLight
+  '#8B4513', // attackOnTitan accent
+  '#C68642', // attackOnTitan accentLight
+  '#FB923C', // sunset accent
+  '#FDBA74', // sunset accentLight
+  '#F472B6', // candy accent
+  '#F9A8D4', // candy accentLight
+];
+const ACCENT_PRESET_HEXES = [
+  '#FF9900', '#FF3B30', '#FFD700', '#32D74B',
+  '#00BCD4', '#007AFF', '#AF52DE', '#E8A0BF',
+];
+const ACCENT_GRADIENT_STOPS = [
+  '#FF9900', '#FF3B30', // sunset
+  '#00BCD4', '#007AFF', // ocean
+  '#AF52DE', '#E8A0BF', // bloom
+];
+const COLORS_GRADIENT_SEEDS = [
+  '#BF5AF2', // Colors.gradients.aurora[0]
+  '#FF9F0A', // Colors.gradients.primary[0]
+  '#BF5AF2', // Colors.gradients.secondary[0]
+  '#FF9F0A', // Colors.gradients.sunset[0]
+  '#FF9F0A', // Colors.gradients.neon[0]
+];
+
 describe('themed/contrast', () => {
   it('CONTRAST-001 relativeLuminance returns 0 for pure black and 1 for pure white', () => {
     expect(relativeLuminance('#000000')).toBeCloseTo(0, 5);
@@ -65,5 +104,26 @@ describe('themed/contrast', () => {
   it('CONTRAST-006 invalid hex falls back to white text (treated as black background)', () => {
     expect(readableTextOn('not-a-color')).toBe(ON_DARK);
     expect(readableTextOn('')).toBe(ON_DARK);
+  });
+
+  it('CONTRAST-007 every shipped theme accent + accentLight passes AA-large', () => {
+    for (const hex of THEME_ACCENTS) {
+      const ratio = contrastRatio(hex, readableTextOn(hex));
+      expect(ratio).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('CONTRAST-008 every accent-color preset and gradient stop passes AA-large', () => {
+    for (const hex of [...ACCENT_PRESET_HEXES, ...ACCENT_GRADIENT_STOPS]) {
+      const ratio = contrastRatio(hex, readableTextOn(hex));
+      expect(ratio).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('CONTRAST-009 Colors.gradients used as button-style fills pass AA-large', () => {
+    for (const hex of COLORS_GRADIENT_SEEDS) {
+      const ratio = contrastRatio(hex, readableTextOn(hex));
+      expect(ratio).toBeGreaterThanOrEqual(3);
+    }
   });
 });

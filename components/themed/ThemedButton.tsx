@@ -39,8 +39,6 @@ const SHAPE_RADIUS: Record<ButtonShape, number> = {
   square: Radius.sm,
 };
 
-const DESTRUCTIVE = '#FF453A';
-
 export interface ThemedButtonProps {
   label: string;
   onPress?: () => void;
@@ -130,8 +128,9 @@ function ThemedButtonComponent({
     textColor = accent;
     textWeight = '700';
   } else if (variant === 'destructive') {
-    backgroundColor = DESTRUCTIVE;
-    textColor = readableTextOn(DESTRUCTIVE);
+    const destructive = theme.status.error;
+    backgroundColor = destructive;
+    textColor = readableTextOn(destructive);
     textWeight = '700';
   }
 

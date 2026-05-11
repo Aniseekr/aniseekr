@@ -61,13 +61,13 @@ function ThemedTextComponent({
       color = theme.accent;
       break;
     case 'success':
-      color = '#30D158';
+      color = theme.status.success;
       break;
     case 'warning':
-      color = '#FF9F0A';
+      color = theme.status.warning;
       break;
     case 'error':
-      color = '#FF453A';
+      color = theme.status.error;
       break;
     case 'inverse':
       color = theme.background.primary;

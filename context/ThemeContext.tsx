@@ -101,6 +101,13 @@ export type ThemeId =
   | 'sunset'
   | 'candy';
 
+export interface ThemeStatus {
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+}
+
 export interface ThemePalette {
   id: ThemeId;
   name: string;
@@ -121,7 +128,18 @@ export interface ThemePalette {
   };
   glassBorder: string;
   gradient: [string, string, ...string[]];
+  status: ThemeStatus;
 }
+
+// System-level semantic colors. Themes inherit these unless they override —
+// shipped as a single source so ThemedText/Button can read theme.status.error
+// instead of hardcoding hex per call site.
+const DEFAULT_STATUS: ThemeStatus = {
+  success: '#30D158',
+  warning: '#FF9F0A',
+  error: '#FF453A',
+  info: '#0A84FF',
+};
 
 export const THEMES: Record<ThemeId, ThemePalette> = {
   aniseeker: {
@@ -143,6 +161,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(255, 255, 255, 0.10)',
     gradient: ['#0F0F10', '#1C1C1E', '#0F0F10'],
+    status: DEFAULT_STATUS,
   },
   cyberpunk: {
     id: 'cyberpunk',
@@ -164,6 +183,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(255, 42, 109, 0.18)',
     gradient: ['#0A0014', '#150024', '#0A0014'],
+    status: { ...DEFAULT_STATUS, info: '#05D9E8' },
   },
   midnight: {
     id: 'midnight',
@@ -184,6 +204,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(94, 92, 230, 0.18)',
     gradient: ['#070712', '#101025', '#070712'],
+    status: { ...DEFAULT_STATUS, info: '#64D2FF' },
   },
   forest: {
     id: 'forest',
@@ -204,6 +225,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(16, 185, 129, 0.18)',
     gradient: ['#06120A', '#0E2018', '#06120A'],
+    status: DEFAULT_STATUS,
   },
   ocean: {
     id: 'ocean',
@@ -224,6 +246,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(6, 182, 212, 0.18)',
     gradient: ['#04101A', '#0A1F30', '#04101A'],
+    status: DEFAULT_STATUS,
   },
   attackOnTitan: {
     id: 'attackOnTitan',
@@ -245,6 +268,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(198, 134, 66, 0.20)',
     gradient: ['#0E0A06', '#1A130C', '#0E0A06'],
+    status: DEFAULT_STATUS,
   },
   sunset: {
     id: 'sunset',
@@ -265,6 +289,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(251, 146, 60, 0.20)',
     gradient: ['#180A06', '#28140C', '#180A06'],
+    status: DEFAULT_STATUS,
   },
   candy: {
     id: 'candy',
@@ -285,6 +310,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     },
     glassBorder: 'rgba(244, 114, 182, 0.20)',
     gradient: ['#180614', '#26092A', '#180614'],
+    status: DEFAULT_STATUS,
   },
 };
 
@@ -373,8 +399,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback(async (id: ThemeId) => {
     if (!(id in THEMES)) return;
     setThemeId(id);
+    // Switching theme means "use this palette's accent". Drop any previously
+    // chosen custom accent so the new palette's accent actually takes effect —
+    // otherwise the theme card swatch and the live accent get out of sync.
+    setCustomAccentState(null);
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, id);
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEY, id),
+        AsyncStorage.setItem(CUSTOM_ACCENT_KEY, ''),
+      ]);
     } catch {
       // best-effort persistence; in-memory fallback already updated
     }
