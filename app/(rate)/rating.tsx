@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { PhotoCard, PhotoCardRef } from '../../components/rate/PhotoCard';
@@ -11,16 +10,31 @@ import { isAdSlotEnabled } from '../../libs/services/ads/ad-config';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard } from '../../components/common/GlassCard';
 import { RatingInfoOverlay } from '../../components/rate/RatingInfoOverlay';
+import { ModeSelector } from '../../components/rate/ModeSelector';
+import {
+  RatingActionButtons,
+  type RatingType,
+} from '../../components/rate/RatingActionButtons';
+import { ImageDisplaySettingsSheet } from '../../components/rate/ImageDisplaySettingsSheet';
 import { ImagePreloader } from '../../libs/image-preloader';
+import { trackingService } from '../../libs/services/tracking/tracking-service';
+import { LocalDB } from '../../libs/db';
+import {
+  DEFAULT_SWIPE_PREFS,
+  loadUserPrefs,
+  patchSwipePrefs,
+  type SwipeMode,
+  type SwipePrefs,
+} from '../../libs/services/user-prefs';
+import { useTheme } from '../../context/ThemeContext';
+import { readableTextOn } from '../../components/themed';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import Animated, {
   Extrapolation,
   interpolate,
-  runOnJS,
-  useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
-  withSpring,
   SharedValue,
 } from 'react-native-reanimated';
 
@@ -53,11 +67,57 @@ const SPRING_CONFIG = {
   mass: 1,
 };
 
+function deriveRatingFromDirection(
+  direction: 'left' | 'right',
+  mode: SwipeMode
+): RatingType {
+  if (direction === 'left') return 'skip';
+  return mode === 'plan' ? 'tracking' : 'like';
+}
+
+function isPositiveRating(rating: RatingType): boolean {
+  return rating === 'like' || rating === 'love' || rating === 'tracking';
+}
+
+async function applyOutcome(photo: Photo, rating: RatingType): Promise<void> {
+  try {
+    if (rating === 'skip') return;
+
+    if (rating === 'tracking') {
+      // Plan-mode right-swipe and tracking button: write into the `planned`
+      // status so the item lands in Collection's "Plan to Watch" folder.
+      await trackingService.updateStatus(photo.id, 'planned', {
+        title: photo.title,
+        imageUrl: photo.url,
+      });
+      return;
+    }
+
+    if (rating === 'like' || rating === 'love') {
+      // Existing path: addRating('like') + addFavorite.
+      await AnimeRepository.rateAnime(photo.id, 'like');
+      return;
+    }
+
+    // dislike / neutral / pass — record a 'pass' for stats; nothing lands in
+    // any folder.
+    await LocalDB.addRating(photo.id, 'pass');
+  } catch (err) {
+    console.warn('[Rating] applyOutcome failed', err);
+  }
+}
+
+const MODE_OPTIONS: readonly { value: SwipeMode; label: string }[] = [
+  { value: 'plan', label: 'Plan' },
+  { value: 'like', label: 'Like' },
+];
+
 export default function RatingScreen() {
   const { top, bottom } = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ genreId?: string; genreName?: string; animeId?: string }>();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -69,6 +129,8 @@ export default function RatingScreen() {
   const [deck, setDeck] = useState<DeckItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [swipePrefs, setSwipePrefs] = useState<SwipePrefs>(DEFAULT_SWIPE_PREFS);
+  const [showSettings, setShowSettings] = useState(false);
   const adsEnabled = isAdSlotEnabled('rate_native');
 
   // Shared Value for the ACTIVE card's translation X
@@ -76,6 +138,33 @@ export default function RatingScreen() {
 
   // Ref for the top card (shared shape between PhotoCard and NativeAdCard)
   const topCardRef = useRef<PhotoCardRef | NativeAdCardRef>(null);
+  // When a bottom-button is tapped, the desired rating is stashed here so the
+  // ensuing swipe-callback consumes it instead of inferring an action from the
+  // direction alone (which would lose 'love' vs 'like', 'dislike' vs 'skip', …).
+  const pendingRatingRef = useRef<RatingType | null>(null);
+
+  // Hydrate swipe prefs on mount; the ModeSelector + settings sheet persist
+  // changes via patchSwipePrefs so they survive deck reloads.
+  useEffect(() => {
+    let cancelled = false;
+    void loadUserPrefs().then((p) => {
+      if (!cancelled) setSwipePrefs(p.swipe);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleModeChange = useCallback((mode: SwipeMode) => {
+    setSwipePrefs((prev) => ({ ...prev, mode }));
+    void patchSwipePrefs({ mode });
+    hapticsBridge.selection();
+  }, []);
+
+  const handleSwipePrefsChange = useCallback((next: SwipePrefs) => {
+    setSwipePrefs(next);
+    void patchSwipePrefs(next);
+  }, []);
 
   useEffect(() => {
     loadPhotos();
@@ -133,28 +222,38 @@ export default function RatingScreen() {
 
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
-      // Save rating logic — only photo cards count toward ratings
       const item = deck[currentIndex];
       if (item?.kind === 'photo') {
-        AnimeRepository.rateAnime(item.photo.id, direction === 'right' ? 'like' : 'pass');
+        const pending = pendingRatingRef.current;
+        const rating: RatingType =
+          pending ?? deriveRatingFromDirection(direction, swipePrefs.mode);
+        void applyOutcome(item.photo, rating);
       }
+      pendingRatingRef.current = null;
 
-      // 2. Simply update Index
-      // flingOut in PhotoCard already resets activeTranslationX
-      // New PhotoCard (Next) will initialize its own translateX to 0
+      // flingOut in PhotoCard already resets activeTranslationX; the new top
+      // card will start from its own zero translation.
       if (currentIndex < deck.length - 1) {
         setCurrentIndex((prev) => prev + 1);
-        // ❌ Remove: resetActiveTranslation();
       } else {
         router.back();
       }
     },
-    [currentIndex, deck, router]
+    [currentIndex, deck, router, swipePrefs.mode]
   );
 
-  const triggerSwipe = (direction: 'left' | 'right') => {
+  // Bottom-button taps: stash the desired rating then animate the card out in
+  // a sensible direction so the deck visually matches the action.
+  const handleRateFromButton = useCallback((rating: RatingType) => {
+    pendingRatingRef.current = rating;
+    const direction = isPositiveRating(rating) ? 'right' : 'left';
     topCardRef.current?.swipe(direction);
-  };
+  }, []);
+
+  const triggerSwipe = useCallback((direction: 'left' | 'right') => {
+    pendingRatingRef.current = null;
+    topCardRef.current?.swipe(direction);
+  }, []);
 
   const handleClose = useCallback(() => {
     router.back();
@@ -192,8 +291,14 @@ export default function RatingScreen() {
           </GlassCard>
 
           <View style={styles.headerActions}>
-            <Pressable style={styles.actionButton}>
-              <Ionicons name="sparkles" size={20} color="#fff" />
+            <Pressable
+              style={styles.actionButton}
+              accessibilityLabel="Rating preferences"
+              onPress={() => {
+                hapticsBridge.tap();
+                setShowSettings(true);
+              }}>
+              <Ionicons name="options-outline" size={20} color="#fff" />
             </Pressable>
             {/* Detail View Shortcut */}
             <Pressable
@@ -208,19 +313,19 @@ export default function RatingScreen() {
           </View>
         </View>
 
-        {/* Genre Pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.genrePillsContainer}>
-          {['All', 'Action', 'Adventure', 'Comedy', 'Drama', 'Sci-Fi', 'Fantasy'].map(
-            (genre, i) => (
-              <Pressable key={genre} style={[styles.genrePill, i === 1 && styles.genrePillActive]}>
-                <Text style={styles.genrePillText}>{genre}</Text>
-              </Pressable>
-            )
-          )}
-        </ScrollView>
+        {/* Mode selector: Plan (right swipe → Plan to Watch) / Like (right swipe → Favorites). */}
+        <View style={styles.modeSelectorRow}>
+          <ModeSelector
+            options={MODE_OPTIONS}
+            value={swipePrefs.mode}
+            onChange={handleModeChange}
+          />
+          <Text style={styles.modeHint}>
+            {swipePrefs.mode === 'plan'
+              ? 'Swipe right to add to Plan to Watch'
+              : 'Swipe right to add to Favorites'}
+          </Text>
+        </View>
       </View>
 
       {/* Card Stack (Full Screen) */}
@@ -278,23 +383,37 @@ export default function RatingScreen() {
           />
         )}
 
-        <View style={styles.actionButtonsRow}>
-          {/* Skip */}
-          <Pressable onPress={() => triggerSwipe('left')} style={styles.skipButton}>
-            <Ionicons name="close" size={28} color="#000" />
-          </Pressable>
+        {swipePrefs.mode === 'plan' ? (
+          <View style={styles.actionButtonsRow}>
+            <Pressable
+              onPress={() => triggerSwipe('left')}
+              style={styles.skipButton}
+              accessibilityLabel="Skip">
+              <Ionicons name="close" size={28} color="#000" />
+            </Pressable>
 
-          {/* Like */}
-          <Pressable onPress={() => triggerSwipe('right')} style={styles.likeButton}>
-            <Ionicons name="flame" size={40} color="#fff" />
-          </Pressable>
-
-          {/* Check */}
-          <Pressable onPress={() => triggerSwipe('right')} style={styles.checkButton}>
-            <Ionicons name="checkmark" size={28} color="#000" />
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={() => handleRateFromButton('tracking')}
+              style={[styles.planButton, { backgroundColor: theme.accent }]}
+              accessibilityLabel="Add to Plan to Watch">
+              <Ionicons name="calendar" size={32} color={readableTextOn(theme.accent)} />
+            </Pressable>
+          </View>
+        ) : (
+          <RatingActionButtons
+            style={styles.likeModeButtons}
+            mode={swipePrefs.ratingButtons === 'five' ? 'fiveButtons' : 'threeButtons'}
+            onRate={handleRateFromButton}
+          />
+        )}
       </View>
+
+      <ImageDisplaySettingsSheet
+        visible={showSettings}
+        preferences={swipePrefs}
+        onClose={() => setShowSettings(false)}
+        onChange={handleSwipePrefsChange}
+      />
     </SafeAreaView>
   );
 }
@@ -447,28 +566,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  genrePillsContainer: {
-    paddingHorizontal: 0,
-    paddingVertical: 10,
-    gap: 8,
-    flexDirection: 'row',
+  modeSelectorRow: {
+    paddingTop: 10,
+    paddingBottom: 6,
+    gap: 6,
   },
-  genrePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginRight: 8,
-  },
-  genrePillActive: {
-    backgroundColor: 'rgba(39, 39, 42, 1)', // zinc-800
-  },
-  genrePillText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
+  modeHint: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
     fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 2,
   },
   cardStackContainer: {
     flex: 1,
@@ -554,34 +662,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  likeButton: {
+  planButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F97316', // orange-500
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.15)',
-    // Glow shadow
-    shadowColor: '#F97316',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
     elevation: 10,
   },
-  checkButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+  likeModeButtons: {
+    marginTop: 16,
+    paddingTop: 16,
   },
 });

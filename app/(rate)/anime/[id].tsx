@@ -22,6 +22,10 @@ import type { PlatformType } from '../../../libs/services/auth/types';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { AnimePilgrimageCard } from '../../../components/pilgrimage/AnimePilgrimageCard';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
+import { AddToCollectionSheet } from '../../../components/collection/AddToCollectionSheet';
+import { trackingService } from '../../../libs/services/tracking/tracking-service';
+import { collectionService } from '../../../libs/services/collection/collection-service';
+import { loadUserPrefs, patchUserPrefs } from '../../../libs/services/user-prefs';
 
 type RatingEntry = { platform: PlatformType; data: PlatformRatingData };
 
@@ -49,6 +53,8 @@ export default function AnimeDetailScreen() {
   const [platformRatings, setPlatformRatings] = useState<RatingEntry[]>([]);
   const [mediaLoading, setMediaLoading] = useState(true);
   const [favorite, setFavorite] = useState(false);
+  const [inCollection, setInCollection] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,12 +68,22 @@ export default function AnimeDetailScreen() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    LocalDB.isFavorite(id).then((v) => {
-      if (!cancelled) setFavorite(v);
+    void refreshCollectionFlags(id, () => cancelled).then((flags) => {
+      if (cancelled || !flags) return;
+      setFavorite(flags.favorite);
+      setInCollection(flags.inCollection);
     });
     return () => {
       cancelled = true;
     };
+  }, [id]);
+
+  const refreshFlags = useCallback(async () => {
+    if (!id) return;
+    const flags = await refreshCollectionFlags(id);
+    if (!flags) return;
+    setFavorite(flags.favorite);
+    setInCollection(flags.inCollection);
   }, [id]);
 
   useEffect(() => {
@@ -161,7 +177,61 @@ export default function AnimeDetailScreen() {
     }
   }, [streaming, id]);
 
-  const handleAdd = useCallback(async () => {
+  const openSheet = useCallback(() => {
+    if (!anime) return;
+    Haptics.selectionAsync();
+    setSheetOpen(true);
+  }, [anime]);
+
+  const handleQuickAdd = useCallback(async () => {
+    if (!anime) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const prefs = await loadUserPrefs();
+    const target = prefs.lastAddedFolderId || 'system_favorites';
+    const payload = { id: anime.id, title: anime.title, image: anime.image };
+    try {
+      if (target === 'system_favorites') {
+        await LocalDB.addFavorite(payload);
+      } else if (target === 'system_watching') {
+        await trackingService.updateStatus(anime.id, 'watching', {
+          title: anime.title,
+          imageUrl: anime.image,
+        });
+      } else if (target === 'system_completed') {
+        await trackingService.updateStatus(anime.id, 'completed', {
+          title: anime.title,
+          imageUrl: anime.image,
+        });
+      } else if (target === 'system_dropped') {
+        await trackingService.updateStatus(anime.id, 'dropped', {
+          title: anime.title,
+          imageUrl: anime.image,
+        });
+      } else if (target === 'system_plan_to_watch') {
+        await trackingService.updateStatus(anime.id, 'planned', {
+          title: anime.title,
+          imageUrl: anime.image,
+        });
+      } else if (target.startsWith('system_')) {
+        // 'system_all' or unknown — fall back to favorites.
+        await LocalDB.addFavorite(payload);
+        await patchUserPrefs({ lastAddedFolderId: 'system_favorites' });
+      } else {
+        await trackingService.upsertTracking({
+          animeId: anime.id,
+          status: 'planned',
+          title: anime.title,
+          imageUrl: anime.image,
+        });
+        await collectionService.addToFolder(anime.id, target);
+      }
+      await refreshFlags();
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+  }, [anime, refreshFlags]);
+
+  const handleFavoriteToggle = useCallback(async () => {
     if (!anime) return;
     Haptics.selectionAsync();
     if (favorite) {
@@ -170,6 +240,7 @@ export default function AnimeDetailScreen() {
     } else {
       await LocalDB.addFavorite({ id: anime.id, title: anime.title, image: anime.image });
       setFavorite(true);
+      await patchUserPrefs({ lastAddedFolderId: 'system_favorites' });
     }
   }, [favorite, anime]);
 
@@ -263,13 +334,26 @@ export default function AnimeDetailScreen() {
               <Text className="text-base font-bold text-black">Watch Now</Text>
             </Pressable>
             <Pressable
-              onPress={handleAdd}
+              onPress={openSheet}
+              onLongPress={handleQuickAdd}
+              delayLongPress={320}
+              accessibilityLabel="Add to collection"
+              accessibilityHint="Long press to add to your last-used folder"
+              className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
+              <Ionicons
+                name={inCollection ? 'checkmark' : 'add'}
+                size={24}
+                color={inCollection ? '#34d399' : 'white'}
+              />
+            </Pressable>
+            <Pressable
+              onPress={handleFavoriteToggle}
               accessibilityLabel={favorite ? 'Remove from favorites' : 'Add to favorites'}
               className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
               <Ionicons
-                name={favorite ? 'checkmark' : 'add'}
-                size={24}
-                color={favorite ? '#34d399' : 'white'}
+                name={favorite ? 'heart' : 'heart-outline'}
+                size={22}
+                color={favorite ? '#f87171' : 'white'}
               />
             </Pressable>
             <Pressable
@@ -277,12 +361,6 @@ export default function AnimeDetailScreen() {
               accessibilityLabel="Share anime"
               className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
               <Ionicons name="share-outline" size={22} color="white" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push(`/(rate)/rating?animeId=${anime.id}`)}
-              accessibilityLabel="Rate anime"
-              className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
-              <Ionicons name="flame-outline" size={22} color="#fbbf24" />
             </Pressable>
           </View>
 
@@ -358,8 +436,39 @@ export default function AnimeDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <AddToCollectionSheet
+        visible={sheetOpen}
+        anime={anime ? { id: anime.id, title: anime.title, image: anime.image } : null}
+        onClose={() => setSheetOpen(false)}
+        onChanged={refreshFlags}
+      />
     </View>
   );
+}
+
+async function refreshCollectionFlags(
+  id: string,
+  isCancelled: () => boolean = () => false
+): Promise<{ favorite: boolean; inCollection: boolean } | null> {
+  try {
+    const [fav, status, db] = await Promise.all([
+      LocalDB.isFavorite(id),
+      trackingService.getStatus(id),
+      LocalDB.getDatabase(),
+    ]);
+    if (isCancelled()) return null;
+    const customRow = await db.getFirstAsync(
+      'SELECT 1 FROM collection_folder_items WHERE anime_id = ? LIMIT 1',
+      id
+    );
+    return {
+      favorite: fav,
+      inCollection: fav || status != null || customRow != null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // AniList exposes averageScore as 0-100; rank mirrors it. Native shows it as

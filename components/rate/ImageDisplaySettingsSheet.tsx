@@ -8,31 +8,22 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
+import type {
+  SwipeContentMode,
+  SwipePrefs,
+  SwipeRatingButtons,
+} from '../../libs/services/user-prefs';
 
-export type ImageContentMode = 'fill' | 'fit';
-export type RatingButtonsMode = 'three' | 'five';
-
-export interface RatingPreferences {
-  contentMode: ImageContentMode;
-  ratingMode: RatingButtonsMode;
-  showAIInsights: boolean;
-  trackingEnabled: boolean;
-  showOriginalTitle: boolean;
-}
-
-export const DEFAULT_RATING_PREFS: RatingPreferences = {
-  contentMode: 'fill',
-  ratingMode: 'three',
-  showAIInsights: true,
-  trackingEnabled: false,
-  showOriginalTitle: false,
-};
+// Re-export aliases for any legacy importers (kept stable across the swipe-prefs migration).
+export type ImageContentMode = SwipeContentMode;
+export type RatingButtonsMode = SwipeRatingButtons;
+export type RatingPreferences = SwipePrefs;
 
 interface ImageDisplaySettingsSheetProps {
   visible: boolean;
-  preferences: RatingPreferences;
+  preferences: SwipePrefs;
   onClose: () => void;
-  onChange: (next: RatingPreferences) => void;
+  onChange: (next: SwipePrefs) => void;
 }
 
 function ImageDisplaySettingsSheetComponent({
@@ -44,7 +35,7 @@ function ImageDisplaySettingsSheetComponent({
   const { theme } = useTheme();
 
   const update = useCallback(
-    <K extends keyof RatingPreferences>(key: K, value: RatingPreferences[K]) => {
+    <K extends keyof SwipePrefs>(key: K, value: SwipePrefs[K]) => {
       hapticsBridge.selection();
       onChange({ ...preferences, [key]: value });
     },
@@ -89,7 +80,7 @@ function ImageDisplaySettingsSheetComponent({
 
             <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Image fit</Text>
             <View style={styles.segmented}>
-              {(['fill', 'fit'] as ImageContentMode[]).map((mode) => {
+              {(['fill', 'fit'] as SwipeContentMode[]).map((mode) => {
                 const active = preferences.contentMode === mode;
                 return (
                   <Pressable
@@ -120,15 +111,15 @@ function ImageDisplaySettingsSheetComponent({
             </View>
 
             <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              Rating buttons
+              Rating buttons (Like mode)
             </Text>
             <View style={styles.segmented}>
-              {(['three', 'five'] as RatingButtonsMode[]).map((mode) => {
-                const active = preferences.ratingMode === mode;
+              {(['three', 'five'] as SwipeRatingButtons[]).map((mode) => {
+                const active = preferences.ratingButtons === mode;
                 return (
                   <Pressable
                     key={mode}
-                    onPress={() => update('ratingMode', mode)}
+                    onPress={() => update('ratingButtons', mode)}
                     style={({ pressed }) => [
                       styles.segmentItem,
                       {
@@ -159,8 +150,8 @@ function ImageDisplaySettingsSheetComponent({
               icon="bookmark"
               label="Tracking shortcut"
               description="Add anime to lists directly from the swipe deck"
-              value={preferences.trackingEnabled}
-              onChange={(v) => update('trackingEnabled', v)}
+              value={preferences.trackingShortcut}
+              onChange={(v) => update('trackingShortcut', v)}
             />
             <ToggleRow
               icon="translate"

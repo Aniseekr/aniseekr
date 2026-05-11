@@ -1,11 +1,13 @@
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function RateLayout() {
+  const { theme } = useTheme();
   return (
     <GestureHandlerRootView style={styles.container}>
-      <View style={styles.content}>
+      <View style={[styles.content, { backgroundColor: theme.background.primary }]}>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -23,6 +25,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: '#121212',
   },
 });
