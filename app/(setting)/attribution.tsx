@@ -29,7 +29,7 @@ const DATA_SOURCES: Source[] = [
     icon: 'data-usage',
   },
   {
-    name: 'Bangumi 番组计划',
+    name: 'Bangumi',
     url: 'https://bgm.tv/',
     description: 'Chinese-community anime database & scoring',
     icon: 'translate',
@@ -53,7 +53,7 @@ const DATA_SOURCES: Source[] = [
     icon: 'data-usage',
   },
   {
-    name: 'Anitabi 聖地巡礼',
+    name: 'Anitabi',
     url: 'https://anitabi.cn/',
     description: 'Real-world anime pilgrimage spots',
     icon: 'place',

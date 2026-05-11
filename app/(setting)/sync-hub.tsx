@@ -9,6 +9,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from '../../components/setting/SettingsScreenLayout';
+import { readableTextOn } from '../../components/themed';
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -100,11 +101,13 @@ export default function SyncHubScreen() {
         </View>
         <Pressable
           onPress={runNow}
+          accessibilityRole="button"
+          accessibilityLabel="Sync now"
           style={({ pressed }) => [
             styles.syncButton,
             { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
           ]}>
-          <Text style={styles.syncLabel}>Sync now</Text>
+          <Text style={[styles.syncLabel, { color: readableTextOn(theme.accent) }]}>Sync now</Text>
         </Pressable>
       </View>
 
@@ -266,7 +269,6 @@ const styles = StyleSheet.create({
   },
   syncLabel: {
     ...Typography.titleSmall,
-    color: '#0E0A06',
     fontWeight: '700',
   },
   radio: {

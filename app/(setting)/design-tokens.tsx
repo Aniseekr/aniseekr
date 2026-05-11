@@ -1,16 +1,11 @@
 import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 
 interface Clipboard {
   setStringAsync(value: string): Promise<unknown>;
@@ -22,14 +17,6 @@ try {
 } catch {
   clipboardModule = null;
 }
-
-const BG = '#0A0A0A';
-const SURFACE = '#1A1A1A';
-const SURFACE_ELEVATED = '#141414';
-const BORDER = '#2A2A2A';
-const TEXT_PRIMARY = '#FFFFFF';
-const TEXT_SECONDARY = '#8A8A8A';
-const TEXT_MUTED = '#525252';
 
 type Category = 'all' | 'accent' | 'surface' | 'text' | 'brand';
 
@@ -76,7 +63,9 @@ export default function DesignTokensScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const accent = theme.accent;
+  const accentFg = readableTextOn(accent);
   const [active, setActive] = useState<Category>('all');
   const [toast, setToast] = useState<string | null>(null);
 
@@ -119,16 +108,20 @@ export default function DesignTokensScreen() {
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
+            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
-          <Text style={styles.navTitle}>Design Tokens</Text>
+          <ThemedText variant="titleLarge" weight="600">
+            Design Tokens
+          </ThemedText>
           <View style={{ width: 24 }} />
         </View>
 
-        <Text style={styles.subtitle}>
+        <ThemedText variant="bodySmall" tone="secondary" style={styles.subtitle}>
           {TOKENS.length} tokens · 2 themes (light / dark)
-        </Text>
+        </ThemedText>
 
         <View style={styles.chipsRow}>
           {CATEGORIES.map((c) => {
@@ -140,16 +133,25 @@ export default function DesignTokensScreen() {
                   hapticsBridge.selection();
                   setActive(c.id);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter ${c.label}`}
+                accessibilityState={{ selected: isActive }}
                 style={({ pressed }) => [
                   styles.chip,
                   isActive
                     ? { backgroundColor: accent, borderColor: accent }
-                    : { backgroundColor: SURFACE_ELEVATED, borderColor: BORDER },
+                    : {
+                        backgroundColor: theme.background.tertiary,
+                        borderColor: theme.glassBorder,
+                      },
                   pressed && { opacity: 0.8 },
                 ]}>
-                <Text style={[styles.chipText, { color: isActive ? BG : TEXT_PRIMARY }]}>
+                <ThemedText
+                  variant="bodySmall"
+                  weight="600"
+                  style={{ color: isActive ? accentFg : theme.text.primary }}>
                   {c.label}
-                </Text>
+                </ThemedText>
               </Pressable>
             );
           })}
@@ -160,26 +162,45 @@ export default function DesignTokensScreen() {
           showsVerticalScrollIndicator={false}>
           {groups.map((g) => (
             <View key={g.category} style={{ gap: 10 }}>
-              <Text style={styles.groupHeader}>{g.category.toUpperCase()}</Text>
+              <ThemedText variant="captionSmall" tone="secondary" weight="600" style={styles.groupHeader}>
+                {g.category.toUpperCase()}
+              </ThemedText>
               <View style={styles.tokenList}>
                 {g.tokens.map((t, idx) => (
                   <View key={t.variable}>
                     <Pressable
                       onLongPress={() => copy(t.variable, `$${t.variable}`)}
                       onPress={() => copy(t.hex, t.hex)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Copy ${t.name} ${t.hex}`}
                       style={({ pressed }) => [
                         styles.tokenRow,
                         pressed && { backgroundColor: 'rgba(255,255,255,0.03)' },
                       ]}>
-                      <View style={[styles.tokenSwatch, { backgroundColor: t.hex, borderColor: BORDER }]} />
+                      <View
+                        style={[
+                          styles.tokenSwatch,
+                          { backgroundColor: t.hex, borderColor: theme.glassBorder },
+                        ]}
+                      />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.tokenName}>{t.name}</Text>
-                        <Text style={styles.tokenVar}>${t.variable}</Text>
+                        <ThemedText variant="bodySmall" weight="600">
+                          {t.name}
+                        </ThemedText>
+                        <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 2 }}>
+                          ${t.variable}
+                        </ThemedText>
                       </View>
-                      <Text style={styles.tokenHex}>{t.hex}</Text>
-                      <Ionicons name="copy-outline" size={14} color={TEXT_MUTED} />
+                      <ThemedText variant="bodySmall" tone="secondary" weight="600">
+                        {t.hex}
+                      </ThemedText>
+                      <Ionicons name="copy-outline" size={14} color={theme.text.tertiary} />
                     </Pressable>
-                    {idx < g.tokens.length - 1 ? <View style={styles.separator} /> : null}
+                    {idx < g.tokens.length - 1 ? (
+                      <View
+                        style={[styles.separator, { backgroundColor: theme.glassBorder }]}
+                      />
+                    ) : null}
                   </View>
                 ))}
               </View>
@@ -187,26 +208,44 @@ export default function DesignTokensScreen() {
           ))}
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: Math.max(insets.bottom, 12),
+              backgroundColor: theme.background.primary,
+              borderTopColor: theme.glassBorder,
+            },
+          ]}>
           <View style={styles.footerLeft}>
-            <Ionicons name="document-text-outline" size={14} color={TEXT_SECONDARY} />
-            <Text style={styles.footerLeftText}>tokens.ts</Text>
+            <Ionicons name="document-text-outline" size={14} color={theme.text.secondary} />
+            <ThemedText variant="bodySmall" tone="secondary" weight="500">
+              tokens.ts
+            </ThemedText>
           </View>
-          <Pressable
-            onPress={() => copy('All tokens', TOKENS.map((t) => `$${t.variable}: ${t.hex}`).join('\n'))}
-            style={({ pressed }) => [
-              styles.exportBtn,
-              { backgroundColor: accent },
-              pressed && { opacity: 0.85 },
-            ]}>
-            <Ionicons name="download-outline" size={14} color={BG} />
-            <Text style={styles.exportText}>Export</Text>
-          </Pressable>
+          <ThemedButton
+            label="Export"
+            size="sm"
+            onPress={() =>
+              copy('All tokens', TOKENS.map((t) => `$${t.variable}: ${t.hex}`).join('\n'))
+            }
+            icon={<Ionicons name="download-outline" size={14} color={accentFg} />}
+          />
         </View>
 
         {toast ? (
-          <View style={[styles.toast, { bottom: insets.bottom + 80 }]}>
-            <Text style={styles.toastText}>{toast}</Text>
+          <View
+            style={[
+              styles.toast,
+              {
+                bottom: insets.bottom + 80,
+                backgroundColor: theme.background.tertiary,
+                borderColor: theme.glassBorder,
+              },
+            ]}>
+            <ThemedText variant="bodySmall" weight="600">
+              {toast}
+            </ThemedText>
           </View>
         ) : null}
       </SafeAreaView>
@@ -214,102 +253,79 @@ export default function DesignTokensScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 52,
-  },
-  navBack: { minWidth: 24 },
-  navTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '600' },
-  subtitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 12,
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    flexWrap: 'wrap',
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  chipText: { fontSize: 13, fontWeight: '600' },
-  scroll: { padding: 16, gap: 16 },
-  groupHeader: {
-    color: TEXT_SECONDARY,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-  },
-  tokenList: {
-    backgroundColor: SURFACE,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    overflow: 'hidden',
-  },
-  tokenRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  tokenSwatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  tokenName: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
-  tokenVar: { color: TEXT_SECONDARY, fontSize: 11, marginTop: 2 },
-  tokenHex: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '600' },
-  separator: { height: 1, backgroundColor: BORDER },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    backgroundColor: BG,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-  footerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  footerLeftText: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
-  exportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  exportText: { color: BG, fontSize: 13, fontWeight: '700' },
-  toast: {
-    position: 'absolute',
-    alignSelf: 'center',
-    backgroundColor: SURFACE_ELEVATED,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  toastText: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '600' },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background.primary },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      height: 52,
+    },
+    navBack: { minWidth: 24 },
+    subtitle: {
+      paddingHorizontal: 20,
+      paddingBottom: 8,
+    },
+    chipsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      flexWrap: 'wrap',
+    },
+    chip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+    },
+    scroll: { padding: 16, gap: 16 },
+    groupHeader: {
+      letterSpacing: 1.2,
+    },
+    tokenList: {
+      backgroundColor: theme.background.secondary,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      overflow: 'hidden',
+    },
+    tokenRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    tokenSwatch: {
+      width: 32,
+      height: 32,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    separator: { height: 1 },
+    footer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      borderTopWidth: 1,
+    },
+    footerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    toast: {
+      position: 'absolute',
+      alignSelf: 'center',
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+    },
+  });
+}

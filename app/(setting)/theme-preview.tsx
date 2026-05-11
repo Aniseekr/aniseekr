@@ -1,31 +1,20 @@
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-
-const BG = '#0A0A0A';
-const SURFACE = '#1A1A1A';
-const SURFACE_ALT = '#141414';
-const BORDER = '#2A2A2A';
-const BORDER_SOFT = '#1F1F1F';
-const TEXT_PRIMARY = '#FFFFFF';
-const TEXT_SECONDARY = '#8A8A8A';
-const TEXT_TERTIARY = '#525252';
+import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 
 export default function ThemePreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const accent = theme.accent;
+  const accentFg = readableTextOn(accent);
 
   return (
     <View style={styles.root}>
@@ -35,24 +24,34 @@ export default function ThemePreviewScreen() {
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back to settings"
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
-            <Text style={styles.navBackText}>Settings</Text>
+            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
+            <ThemedText variant="bodyMedium" weight="500">
+              Settings
+            </ThemedText>
           </Pressable>
-          <Text style={styles.navTitle}>Live Preview</Text>
+          <ThemedText variant="titleLarge" weight="600">
+            Live Preview
+          </ThemedText>
           <Pressable
             onPress={() => {
               hapticsBridge.tap();
               router.push('/(setting)/accent-color');
             }}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Switch accent color"
             style={({ pressed }) => [
               styles.switchPill,
               { borderColor: accent },
               pressed && { opacity: 0.7 },
             ]}>
             <View style={[styles.pillDot, { backgroundColor: accent }]} />
-            <Text style={[styles.pillText, { color: accent }]}>Switch</Text>
+            <ThemedText variant="captionSmall" weight="600" style={{ color: accent }}>
+              Switch
+            </ThemedText>
           </Pressable>
         </View>
 
@@ -68,33 +67,37 @@ export default function ThemePreviewScreen() {
               style={styles.heroGradient}>
               <View style={styles.heroTop}>
                 <View style={[styles.heroBadge, { backgroundColor: accent + 'DD' }]}>
-                  <Ionicons name="star" size={10} color={BG} />
-                  <Text style={styles.heroBadgeText}>Featured Today</Text>
+                  <Ionicons name="star" size={10} color={accentFg} />
+                  <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
+                    Featured Today
+                  </ThemedText>
                 </View>
               </View>
               <View style={styles.heroBottom}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.heroTitle}>Demon Slayer: Hashira Arc</Text>
-                  <Text style={styles.heroMeta}>S4 · E12 · 24 min</Text>
+                  <ThemedText variant="titleLarge" weight="800">
+                    Demon Slayer: Hashira Arc
+                  </ThemedText>
+                  <ThemedText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+                    S4 · E12 · 24 min
+                  </ThemedText>
                 </View>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.watchBtn,
-                    { backgroundColor: accent },
-                    pressed && { opacity: 0.85 },
-                  ]}>
-                  <Ionicons name="play" size={14} color={BG} />
-                  <Text style={styles.watchText}>Watch Now</Text>
-                </Pressable>
+                <ThemedButton
+                  label="Watch Now"
+                  onPress={() => hapticsBridge.tap()}
+                  size="sm"
+                  shape="rounded"
+                  icon={<Ionicons name="play" size={14} color={accentFg} />}
+                />
               </View>
             </LinearGradient>
           </View>
 
           {/* Filter chips */}
           <View style={styles.chipsRow}>
-            <Chip label="Action" active accent={accent} />
-            <Chip label="Romance" accent={accent} />
-            <Chip label="SF" accent={accent} />
+            <Chip label="Action" active />
+            <Chip label="Romance" />
+            <Chip label="SF" />
           </View>
 
           {/* Progress card */}
@@ -107,77 +110,108 @@ export default function ThemePreviewScreen() {
                     { borderColor: 'transparent', borderTopColor: accent, borderRightColor: accent },
                   ]}
                 />
-                <Text style={[styles.progressNum, { color: accent }]}>50%</Text>
+                <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
+                  50%
+                </ThemedText>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.progressLabel}>Currently Watching</Text>
-                <Text style={styles.progressTitle}>Ep 12 / 24</Text>
-                <Text style={styles.progressSub}>Next: Pillar Showdown</Text>
+                <ThemedText variant="captionSmall" tone="secondary" weight="500">
+                  Currently Watching
+                </ThemedText>
+                <ThemedText variant="titleMedium" weight="700" style={{ marginTop: 2 }}>
+                  Ep 12 / 24
+                </ThemedText>
+                <ThemedText variant="bodySmall" tone="secondary" style={{ marginTop: 2 }}>
+                  Next: Pillar Showdown
+                </ThemedText>
               </View>
             </View>
           </View>
 
-          {/* Button row */}
+          {/* Button row — actual ThemedButton variants */}
           <View style={styles.buttonRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                { backgroundColor: accent },
-                pressed && { opacity: 0.85 },
-              ]}>
-              <Text style={styles.primaryBtnText}>Primary</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.outlineBtn,
-                { borderColor: accent },
-                pressed && { opacity: 0.7 },
-              ]}>
-              <Text style={[styles.outlineBtnText, { color: accent }]}>Outline</Text>
-            </Pressable>
-            <Pressable style={({ pressed }) => [styles.ghostBtn, pressed && { opacity: 0.7 }]}>
-              <Text style={styles.ghostBtnText}>Ghost</Text>
-            </Pressable>
+            <ThemedButton label="Primary" onPress={() => hapticsBridge.tap()} size="sm" shape="rounded" />
+            <ThemedButton
+              variant="outline"
+              label="Outline"
+              onPress={() => hapticsBridge.tap()}
+              size="sm"
+              shape="rounded"
+            />
+            <ThemedButton
+              variant="ghost"
+              label="Ghost"
+              onPress={() => hapticsBridge.tap()}
+              size="sm"
+              shape="rounded"
+            />
           </View>
 
           {/* Badge row */}
           <View style={styles.badgeRow}>
             <View style={[styles.badge, { backgroundColor: accent + '20', borderColor: accent }]}>
-              <Text style={[styles.badgeText, { color: accent }]}>NEW</Text>
+              <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
+                NEW
+              </ThemedText>
             </View>
             <View style={[styles.badge, { backgroundColor: accent + '14', borderColor: accent + '55' }]}>
               <Ionicons name="trending-up" size={11} color={accent} />
-              <Text style={[styles.badgeText, { color: accent }]}>Trending</Text>
+              <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
+                Trending
+              </ThemedText>
             </View>
-            <View style={[styles.badge, { backgroundColor: SURFACE, borderColor: BORDER }]}>
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+              ]}>
               <Ionicons name="star" size={11} color={accent} />
-              <Text style={[styles.badgeText, { color: TEXT_PRIMARY }]}>8.2</Text>
+              <ThemedText variant="captionSmall" weight="700">
+                8.2
+              </ThemedText>
             </View>
           </View>
         </ScrollView>
 
         {/* Mock tab bar */}
-        <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <TabItem label="Home" icon="home" active accent={accent} />
-          <TabItem label="Search" icon="search" accent={accent} />
-          <TabItem label="Library" icon="bookmark" accent={accent} />
-          <TabItem label="Profile" icon="person" accent={accent} />
+        <View
+          style={[
+            styles.tabBar,
+            {
+              paddingBottom: Math.max(insets.bottom, 12),
+              backgroundColor: theme.background.tertiary,
+              borderTopColor: theme.glassBorder,
+            },
+          ]}>
+          <TabItem label="Home" icon="home" active />
+          <TabItem label="Search" icon="search" />
+          <TabItem label="Library" icon="bookmark" />
+          <TabItem label="Profile" icon="person" />
         </View>
       </SafeAreaView>
     </View>
   );
 }
 
-function Chip({ label, active, accent }: { label: string; active?: boolean; accent: string }) {
+function Chip({ label, active }: { label: string; active?: boolean }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const accent = theme.accent;
+  const accentFg = readableTextOn(accent);
   return (
     <View
       style={[
         styles.chip,
         active
           ? { backgroundColor: accent, borderColor: accent }
-          : { backgroundColor: SURFACE, borderColor: BORDER },
+          : { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
       ]}>
-      <Text style={[styles.chipText, { color: active ? BG : TEXT_PRIMARY }]}>{label}</Text>
+      <ThemedText
+        variant="bodySmall"
+        weight="600"
+        style={{ color: active ? accentFg : theme.text.primary }}>
+        {label}
+      </ThemedText>
     </View>
   );
 }
@@ -186,162 +220,121 @@ function TabItem({
   label,
   icon,
   active,
-  accent,
 }: {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   active?: boolean;
-  accent: string;
 }) {
-  const color = active ? accent : TEXT_TERTIARY;
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const color = active ? theme.accent : theme.text.tertiary;
   return (
     <View style={styles.tabItem}>
       <Ionicons name={icon} size={20} color={color} />
-      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
+      <ThemedText variant="captionSmall" weight="500" style={{ color }}>
+        {label}
+      </ThemedText>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 52,
-  },
-  navBack: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 100 },
-  navBackText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  navTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '600' },
-  switchPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    minWidth: 100,
-    justifyContent: 'center',
-  },
-  pillDot: { width: 8, height: 8, borderRadius: 4 },
-  pillText: { fontSize: 12, fontWeight: '600' },
-  scroll: { padding: 16, gap: 14 },
-  heroCard: {
-    height: 200,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: SURFACE,
-    borderWidth: 1,
-    borderColor: BORDER,
-    // simulated image background
-    backgroundImageOpacity: 0.6,
-  } as any,
-  heroGradient: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: 14,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  heroTop: { flexDirection: 'row' },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  heroBadgeText: { color: BG, fontSize: 10, fontWeight: '700' },
-  heroBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
-  heroTitle: { color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800' },
-  heroMeta: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 4 },
-  watchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  watchText: { color: BG, fontSize: 13, fontWeight: '700' },
-  chipsRow: { flexDirection: 'row', gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  chipText: { fontSize: 13, fontWeight: '600' },
-  progressCard: {
-    backgroundColor: SURFACE,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 16,
-  },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  progressRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressArc: {
-    position: 'absolute',
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 6,
-    transform: [{ rotate: '-45deg' }],
-  },
-  progressNum: { fontSize: 12, fontWeight: '700' },
-  progressLabel: { color: TEXT_SECONDARY, fontSize: 11, fontWeight: '500' },
-  progressTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '700', marginTop: 2 },
-  progressSub: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
-  buttonRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  primaryBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 14,
-  },
-  primaryBtnText: { color: BG, fontSize: 13, fontWeight: '700' },
-  outlineBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  outlineBtnText: { fontSize: 13, fontWeight: '700' },
-  ghostBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 14,
-  },
-  ghostBtnText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  tabBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: SURFACE_ALT,
-    borderTopWidth: 1,
-    borderTopColor: BORDER_SOFT,
-    paddingTop: 10,
-  },
-  tabItem: { alignItems: 'center', gap: 4 },
-  tabLabel: { fontSize: 10, fontWeight: '500' },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background.primary },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      height: 52,
+    },
+    navBack: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 100 },
+    switchPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      minWidth: 100,
+      justifyContent: 'center',
+    },
+    pillDot: { width: 8, height: 8, borderRadius: 4 },
+    scroll: { padding: 16, gap: 14 },
+    heroCard: {
+      height: 200,
+      borderRadius: 20,
+      overflow: 'hidden',
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    heroGradient: {
+      flex: 1,
+      justifyContent: 'space-between',
+      padding: 14,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    heroTop: { flexDirection: 'row' },
+    heroBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    heroBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+    chipsRow: { flexDirection: 'row', gap: 8 },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    progressCard: {
+      backgroundColor: theme.background.secondary,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      padding: 16,
+    },
+    progressRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    progressRing: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      borderWidth: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    progressArc: {
+      position: 'absolute',
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      borderWidth: 6,
+      transform: [{ rotate: '-45deg' }],
+    },
+    buttonRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    tabBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      borderTopWidth: 1,
+      paddingTop: 10,
+    },
+    tabItem: { alignItems: 'center', gap: 4 },
+  });
+}

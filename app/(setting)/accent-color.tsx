@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,14 +12,7 @@ import {
   useTheme,
 } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-
-const BG_PRIMARY = '#0A0A0A';
-const SURFACE_ELEVATED = '#252528';
-const BORDER = '#2A2A2A';
-const TEXT_PRIMARY = '#FFFFFF';
-const TEXT_SECONDARY = '#8A8A8A';
-const TEXT_MUTED = '#525252';
-const SECTION_HEADER_COLOR = '#FF9900';
+import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 
 export default function AccentColorScreen() {
   const router = useRouter();
@@ -52,37 +45,48 @@ export default function AccentColorScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.navBar}>
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back to settings"
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
-            <Text style={styles.navBackText}>Settings</Text>
+            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
+            <ThemedText variant="bodyMedium" weight="500">
+              Settings
+            </ThemedText>
           </Pressable>
-          <Text style={styles.navTitle}>Accent Color</Text>
+          <ThemedText variant="titleLarge" weight="600">
+            Accent Color
+          </ThemedText>
           <Pressable
             onPress={handleReset}
             hitSlop={12}
             disabled={!customAccent}
+            accessibilityRole="button"
+            accessibilityLabel="Reset accent color"
+            accessibilityState={{ disabled: !customAccent }}
             style={({ pressed }) => [
               styles.navReset,
               !customAccent && { opacity: 0.35 },
               pressed && customAccent ? { opacity: 0.6 } : null,
             ]}>
-            <Text style={styles.navResetText}>Reset</Text>
+            <ThemedText variant="bodyMedium" tone="accent" weight="500">
+              Reset
+            </ThemedText>
           </Pressable>
         </View>
 
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}>
-          <Text style={styles.subtitle}>
+          <ThemedText variant="bodySmall" tone="secondary" style={styles.subtitle}>
             Choose an accent color used across buttons, tabs, and highlights throughout aniseekr.
-          </Text>
+          </ThemedText>
 
           <Section title="PRESET ACCENTS">
             <View style={styles.presetGrid}>
@@ -110,46 +114,61 @@ export default function AccentColorScreen() {
             </View>
           </Section>
 
-          {(recentAccents.length > 0 || true) && (
-            <Section title="RECENT">
-              <View style={styles.recentRow}>
-                {recentAccents.map((hex) => (
-                  <Pressable
-                    key={hex}
-                    onPress={() => handleSelect(hex)}
-                    style={({ pressed }) => [
-                      styles.recentDot,
-                      { backgroundColor: hex },
-                      pending === hex && styles.recentDotSelected,
-                      pressed && { opacity: 0.7 },
-                    ]}
-                  />
-                ))}
+          <Section title="RECENT">
+            <View style={styles.recentRow}>
+              {recentAccents.map((hex) => (
                 <Pressable
-                  onPress={() => router.push('/(setting)/custom-color')}
+                  key={hex}
+                  onPress={() => handleSelect(hex)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Use recent color ${hex}`}
                   style={({ pressed }) => [
-                    styles.addCustom,
+                    styles.recentDot,
+                    {
+                      backgroundColor: hex,
+                      borderColor:
+                        pending === hex ? theme.text.primary : theme.glassBorder,
+                      borderWidth: pending === hex ? 2 : 1,
+                    },
                     pressed && { opacity: 0.7 },
-                  ]}>
-                  <Ionicons name="add" size={18} color={TEXT_SECONDARY} />
-                </Pressable>
-              </View>
-            </Section>
-          )}
+                  ]}
+                />
+              ))}
+              <Pressable
+                onPress={() => router.push('/(setting)/custom-color')}
+                accessibilityRole="button"
+                accessibilityLabel="Add custom color"
+                style={({ pressed }) => [
+                  styles.addCustom,
+                  {
+                    backgroundColor: theme.background.tertiary,
+                    borderColor: theme.glassBorder,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}>
+                <Ionicons name="add" size={18} color={theme.text.secondary} />
+              </Pressable>
+            </View>
+          </Section>
         </ScrollView>
 
-        <View style={[styles.applyBar, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
-          <Pressable
-            disabled={!dirty}
+        <View
+          style={[
+            styles.applyBar,
+            {
+              paddingBottom: Math.max(insets.bottom, 12) + 8,
+              backgroundColor: theme.background.primary,
+            },
+          ]}>
+          <ThemedButton
+            label="Apply"
             onPress={handleApply}
-            style={({ pressed }) => [
-              styles.applyButton,
-              { backgroundColor: pending },
-              !dirty && { opacity: 0.5 },
-              pressed && dirty ? { opacity: 0.85 } : null,
-            ]}>
-            <Text style={styles.applyText}>Apply</Text>
-          </Pressable>
+            disabled={!dirty}
+            size="lg"
+            fullWidth
+            accent={pending}
+            haptic="success"
+          />
         </View>
       </SafeAreaView>
     </View>
@@ -159,7 +178,9 @@ export default function AccentColorScreen() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionHeader}>{title}</Text>
+      <ThemedText variant="captionSmall" tone="accent" weight="700" style={styles.sectionHeader}>
+        {title}
+      </ThemedText>
       {children}
     </View>
   );
@@ -174,13 +195,14 @@ function PresetSwatch({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.swatchWrap,
-        pressed && { opacity: 0.85 },
-      ]}>
+      accessibilityRole="button"
+      accessibilityLabel={`Select ${preset.name}`}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [styles.swatchWrap, pressed && { opacity: 0.85 }]}>
       <View
         style={[
           styles.swatchCircle,
@@ -190,15 +212,24 @@ function PresetSwatch({
           },
         ]}>
         {selected ? (
-          <View style={[styles.checkBadge, { backgroundColor: preset.hex }]}>
-            <Ionicons name="checkmark" size={12} color={BG_PRIMARY} />
+          <View
+            style={[
+              styles.checkBadge,
+              { backgroundColor: preset.hex, borderColor: theme.background.primary },
+            ]}>
+            <Ionicons name="checkmark" size={12} color={readableTextOn(preset.hex)} />
           </View>
         ) : null}
       </View>
-      <Text style={[styles.swatchName, selected && { color: TEXT_PRIMARY, fontWeight: '600' }]}>
+      <ThemedText
+        variant="bodySmall"
+        tone={selected ? 'primary' : 'secondary'}
+        weight={selected ? '600' : '500'}>
         {preset.name}
-      </Text>
-      <Text style={styles.swatchHex}>{preset.hex}</Text>
+      </ThemedText>
+      <ThemedText variant="captionSmall" tone="tertiary">
+        {preset.hex}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -212,12 +243,19 @@ function GradientCard({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Select ${gradient.name} gradient`}
+      accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.gradientCard,
-        selected && styles.gradientCardSelected,
+        {
+          borderColor: selected ? theme.text.primary : theme.glassBorder,
+          borderWidth: selected ? 2 : 1,
+        },
         pressed && { opacity: 0.9 },
       ]}>
       <LinearGradient
@@ -226,13 +264,19 @@ function GradientCard({
         end={{ x: 1, y: 0.5 }}
         style={styles.gradientFill}>
         <View style={styles.gradientText}>
-          <Text style={styles.gradientTitle}>{gradient.name}</Text>
-          <Text style={styles.gradientSub}>{gradient.subtitle}</Text>
+          <ThemedText variant="titleMedium" weight="700" style={{ color: readableTextOn(gradient.colors[0]) }}>
+            {gradient.name}
+          </ThemedText>
+          <ThemedText
+            variant="captionSmall"
+            style={{ color: readableTextOn(gradient.colors[0]), opacity: 0.85 }}>
+            {gradient.subtitle}
+          </ThemedText>
         </View>
         {selected ? (
-          <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+          <Ionicons name="checkmark-circle" size={20} color={readableTextOn(gradient.colors[1])} />
         ) : (
-          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          <Ionicons name="chevron-forward" size={18} color={readableTextOn(gradient.colors[1])} />
         )}
       </LinearGradient>
     </Pressable>
@@ -240,7 +284,7 @@ function GradientCard({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG_PRIMARY },
+  root: { flex: 1 },
   safe: { flex: 1 },
   navBar: {
     flexDirection: 'row',
@@ -256,18 +300,13 @@ const styles = StyleSheet.create({
     gap: 2,
     minWidth: 80,
   },
-  navBackText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  navTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '600' },
   navReset: { minWidth: 80, alignItems: 'flex-end' },
-  navResetText: { color: SECTION_HEADER_COLOR, fontSize: 15, fontWeight: '500' },
   scroll: {
     paddingTop: 8,
     paddingHorizontal: 0,
     gap: 18,
   },
   subtitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
     lineHeight: 18,
     paddingHorizontal: 24,
     paddingBottom: 4,
@@ -277,9 +316,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionHeader: {
-    color: SECTION_HEADER_COLOR,
-    fontSize: 11,
-    fontWeight: '700',
     letterSpacing: 1.2,
   },
   presetGrid: {
@@ -311,20 +347,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: BG_PRIMARY,
   },
-  swatchName: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
-  swatchHex: { color: TEXT_MUTED, fontSize: 10 },
   gradientList: { gap: 10 },
   gradientCard: {
     borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  gradientCardSelected: {
-    borderColor: '#FFFFFF',
-    borderWidth: 2,
   },
   gradientFill: {
     flexDirection: 'row',
@@ -334,8 +361,6 @@ const styles = StyleSheet.create({
     height: 64,
   },
   gradientText: { gap: 2 },
-  gradientTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  gradientSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
   recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,33 +370,17 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  recentDotSelected: {
-    borderColor: '#FFFFFF',
-    borderWidth: 2,
   },
   addCustom: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: SURFACE_ELEVATED,
     borderWidth: 1,
-    borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
   },
   applyBar: {
     paddingHorizontal: 24,
     paddingTop: 12,
-    backgroundColor: BG_PRIMARY,
   },
-  applyButton: {
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applyText: { color: '#0A0A0A', fontSize: 16, fontWeight: '700' },
 });

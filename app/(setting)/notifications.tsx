@@ -13,6 +13,7 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Notifications from 'expo-notifications';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { readableTextOn } from '../../components/themed';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -301,11 +302,15 @@ export default function NotificationsScreen() {
           </View>
           <Pressable
             onPress={handleRequestPermission}
+            accessibilityRole="button"
+            accessibilityLabel="Allow notifications"
             style={({ pressed }) => [
               styles.bannerAction,
               { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
             ]}>
-            <Text style={styles.bannerActionLabel}>Allow</Text>
+            <Text style={[styles.bannerActionLabel, { color: readableTextOn(theme.accent) }]}>
+              Allow
+            </Text>
           </Pressable>
         </View>
       ) : null}
@@ -530,7 +535,6 @@ const styles = StyleSheet.create({
   },
   bannerActionLabel: {
     ...Typography.titleSmall,
-    color: '#0E0A06',
     fontWeight: '700',
   },
   radio: {

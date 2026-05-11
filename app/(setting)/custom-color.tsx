@@ -1,27 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { normalizeHex, useTheme } from '../../context/ThemeContext';
+import { normalizeHex, useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 
-const BG = '#0A0A0A';
-const SURFACE = '#1A1A1A';
-const SURFACE_INPUT = '#242424';
-const BORDER = '#2A2A2A';
-const TEXT_PRIMARY = '#FFFFFF';
-const TEXT_SECONDARY = '#8A8A8A';
-const TEXT_MUTED = '#525252';
 const HUE_STOPS: [string, string, ...string[]] = [
   '#FF0000',
   '#FFFF00',
@@ -33,9 +20,9 @@ const HUE_STOPS: [string, string, ...string[]] = [
 ];
 
 interface HSL {
-  h: number; // 0..360
-  s: number; // 0..100
-  l: number; // 0..100
+  h: number;
+  s: number;
+  l: number;
 }
 interface RGB {
   r: number;
@@ -102,6 +89,8 @@ export default function CustomColorScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, customAccent, setCustomAccent, recentAccents } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const initialHex = customAccent ?? theme.accent.toUpperCase();
   const initialRgb = hexToRgb(initialHex) ?? { r: 255, g: 153, b: 0 };
   const initialHsl = rgbToHsl(initialRgb);
@@ -146,15 +135,23 @@ export default function CustomColorScreen() {
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
+            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
-          <Text style={styles.navTitle}>Custom Color</Text>
+          <ThemedText variant="titleLarge" weight="600">
+            Custom Color
+          </ThemedText>
           <Pressable
             onPress={apply}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Save custom color"
             style={({ pressed }) => [styles.navSave, pressed && { opacity: 0.6 }]}>
-            <Text style={[styles.navSaveText, { color: hex }]}>Save</Text>
+            <ThemedText variant="bodyMedium" weight="600" style={{ color: hex }}>
+              Save
+            </ThemedText>
           </Pressable>
         </View>
 
@@ -164,7 +161,12 @@ export default function CustomColorScreen() {
           <View style={styles.previewWrap}>
             <View style={[styles.previewRing, { borderColor: hex }]}>
               <View style={[styles.previewInner, { backgroundColor: hex }]}>
-                <Text style={styles.previewHex}>{hex}</Text>
+                <ThemedText
+                  variant="titleLarge"
+                  weight="700"
+                  style={{ color: readableTextOn(hex), letterSpacing: 1 }}>
+                  {hex}
+                </ThemedText>
               </View>
             </View>
           </View>
@@ -224,10 +226,14 @@ export default function CustomColorScreen() {
             onChange={(v) => setHsl({ ...hsl, l: Math.round(v) })}
           />
 
-          <Text style={styles.sectionHeader}>VALUES</Text>
+          <ThemedText variant="captionSmall" tone="secondary" weight="600" style={styles.sectionHeader}>
+            VALUES
+          </ThemedText>
           <View style={styles.valuesCard}>
             <View style={styles.valueRow}>
-              <Text style={styles.valueLabel}>HEX</Text>
+              <ThemedText variant="bodySmall" tone="secondary" weight="500">
+                HEX
+              </ThemedText>
               <TextInput
                 value={hex}
                 onChangeText={setHexInput}
@@ -235,12 +241,14 @@ export default function CustomColorScreen() {
                 autoCorrect={false}
                 maxLength={7}
                 selectTextOnFocus
-                style={[styles.hexValue, { color: TEXT_PRIMARY }]}
+                style={[styles.hexValue, { color: theme.text.primary }]}
               />
             </View>
             <View style={styles.valueSep} />
             <View style={styles.valueRow}>
-              <Text style={styles.valueLabel}>RGB</Text>
+              <ThemedText variant="bodySmall" tone="secondary" weight="500">
+                RGB
+              </ThemedText>
               <View style={styles.valueInputs}>
                 {(['r', 'g', 'b'] as const).map((c) => (
                   <View key={c} style={styles.inputBox}>
@@ -248,7 +256,7 @@ export default function CustomColorScreen() {
                       keyboardType="number-pad"
                       value={String(rgb[c])}
                       onChangeText={(v) => setRgbChannel(c, v)}
-                      style={styles.inputText}
+                      style={[styles.inputText, { color: theme.text.primary }]}
                       maxLength={3}
                       selectTextOnFocus
                     />
@@ -258,7 +266,9 @@ export default function CustomColorScreen() {
             </View>
             <View style={styles.valueSep} />
             <View style={styles.valueRow}>
-              <Text style={styles.valueLabel}>HSL</Text>
+              <ThemedText variant="bodySmall" tone="secondary" weight="500">
+                HSL
+              </ThemedText>
               <View style={styles.valueInputs}>
                 {(['h', 's', 'l'] as const).map((c) => (
                   <View key={c} style={styles.inputBox}>
@@ -266,7 +276,7 @@ export default function CustomColorScreen() {
                       keyboardType="number-pad"
                       value={String(hsl[c])}
                       onChangeText={(v) => setHslChannel(c, v)}
-                      style={styles.inputText}
+                      style={[styles.inputText, { color: theme.text.primary }]}
                       maxLength={3}
                       selectTextOnFocus
                     />
@@ -276,10 +286,14 @@ export default function CustomColorScreen() {
             </View>
           </View>
 
-          <Text style={styles.sectionHeader}>RECENTLY USED</Text>
+          <ThemedText variant="captionSmall" tone="secondary" weight="600" style={styles.sectionHeader}>
+            RECENTLY USED
+          </ThemedText>
           <View style={styles.recentRow}>
             {recentAccents.length === 0 ? (
-              <Text style={styles.recentEmpty}>Apply a color to see it here.</Text>
+              <ThemedText variant="bodySmall" tone="tertiary">
+                Apply a color to see it here.
+              </ThemedText>
             ) : (
               recentAccents.map((c) => (
                 <Pressable
@@ -289,10 +303,16 @@ export default function CustomColorScreen() {
                     const next = hexToRgb(c);
                     if (next) setHsl(rgbToHsl(next));
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Use ${c}`}
                   style={({ pressed }) => [
                     styles.recentDot,
-                    { backgroundColor: c },
-                    c.toUpperCase() === hex && styles.recentDotSelected,
+                    {
+                      backgroundColor: c,
+                      borderColor:
+                        c.toUpperCase() === hex ? theme.text.primary : theme.glassBorder,
+                      borderWidth: c.toUpperCase() === hex ? 2 : 1,
+                    },
                     pressed && { opacity: 0.7 },
                   ]}
                 />
@@ -300,16 +320,15 @@ export default function CustomColorScreen() {
             )}
           </View>
 
-          <Pressable
+          <ThemedButton
+            label="Apply Custom Color"
             onPress={apply}
-            style={({ pressed }) => [
-              styles.applyBtn,
-              { backgroundColor: hex },
-              pressed && { opacity: 0.85 },
-            ]}>
-            <Ionicons name="checkmark" size={18} color={BG} />
-            <Text style={styles.applyText}>Apply Custom Color</Text>
-          </Pressable>
+            accent={hex}
+            size="lg"
+            fullWidth
+            haptic="success"
+            icon={<Ionicons name="checkmark" size={18} color={readableTextOn(hex)} />}
+          />
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -335,14 +354,18 @@ function SliderRow({
   track: React.ReactNode;
   onChange: (v: number) => void;
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.sliderRow}>
       <View style={styles.sliderHeader}>
-        <Text style={styles.sliderLabel}>{label}</Text>
-        <Text style={styles.sliderValue}>
+        <ThemedText variant="captionSmall" tone="secondary" weight="500">
+          {label}
+        </ThemedText>
+        <ThemedText variant="captionSmall" weight="600">
           {value}
           {suffix}
-        </Text>
+        </ThemedText>
       </View>
       <View style={styles.sliderTrackWrap}>
         <View style={styles.sliderTrackBg}>{track}</View>
@@ -361,125 +384,96 @@ function SliderRow({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 52,
-  },
-  navBack: { minWidth: 60 },
-  navTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '600' },
-  navSave: { minWidth: 60, alignItems: 'flex-end' },
-  navSaveText: { fontSize: 16, fontWeight: '600' },
-  scroll: { paddingHorizontal: 20, paddingBottom: 24, gap: 18 },
-  previewWrap: { alignItems: 'center', paddingVertical: 12 },
-  previewRing: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewInner: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewHex: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowRadius: 4,
-  },
-  sliderRow: { gap: 6 },
-  sliderHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  sliderLabel: { color: TEXT_SECONDARY, fontSize: 12, fontWeight: '500' },
-  sliderValue: { color: TEXT_PRIMARY, fontSize: 12, fontWeight: '600' },
-  sliderTrackWrap: { height: 28, justifyContent: 'center' },
-  sliderTrackBg: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  trackGradient: { flex: 1 },
-  sliderControl: { width: '100%', height: 28 },
-  sectionHeader: {
-    color: TEXT_SECONDARY,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    marginTop: 4,
-  },
-  valuesCard: {
-    backgroundColor: SURFACE,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingHorizontal: 14,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    minHeight: 54,
-  },
-  valueLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500' },
-  hexValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    minWidth: 120,
-    textAlign: 'right',
-  },
-  valueInputs: { flexDirection: 'row', gap: 8 },
-  inputBox: {
-    width: 54,
-    height: 38,
-    backgroundColor: SURFACE_INPUT,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: BORDER,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inputText: {
-    color: TEXT_PRIMARY,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 0,
-    width: '100%',
-  },
-  valueSep: { height: 1, backgroundColor: BORDER },
-  recentRow: { flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
-  recentDot: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  recentDotSelected: { borderColor: '#FFFFFF', borderWidth: 2 },
-  recentEmpty: { color: TEXT_MUTED, fontSize: 13 },
-  applyBtn: {
-    height: 54,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  applyText: { color: BG, fontSize: 16, fontWeight: '700' },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background.primary },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      height: 52,
+    },
+    navBack: { minWidth: 60 },
+    navSave: { minWidth: 60, alignItems: 'flex-end' },
+    scroll: { paddingHorizontal: 20, paddingBottom: 24, gap: 18 },
+    previewWrap: { alignItems: 'center', paddingVertical: 12 },
+    previewRing: {
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      borderWidth: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    previewInner: {
+      width: 180,
+      height: 180,
+      borderRadius: 90,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sliderRow: { gap: 6 },
+    sliderHeader: { flexDirection: 'row', justifyContent: 'space-between' },
+    sliderTrackWrap: { height: 28, justifyContent: 'center' },
+    sliderTrackBg: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 6,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    trackGradient: { flex: 1 },
+    sliderControl: { width: '100%', height: 28 },
+    sectionHeader: {
+      letterSpacing: 1.2,
+      marginTop: 4,
+    },
+    valuesCard: {
+      backgroundColor: theme.background.secondary,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      paddingHorizontal: 14,
+    },
+    valueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
+      minHeight: 54,
+    },
+    hexValue: {
+      fontSize: 15,
+      fontWeight: '600',
+      minWidth: 120,
+      textAlign: 'right',
+    },
+    valueInputs: { flexDirection: 'row', gap: 8 },
+    inputBox: {
+      width: 54,
+      height: 38,
+      backgroundColor: theme.background.tertiary,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    inputText: {
+      fontSize: 14,
+      fontWeight: '600',
+      textAlign: 'center',
+      paddingVertical: 0,
+      width: '100%',
+    },
+    valueSep: { height: 1, backgroundColor: theme.glassBorder },
+    recentRow: { flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
+    recentDot: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+    },
+  });
+}

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { readableTextOn } from '../../components/themed';
 import {
   SettingsScreenLayout,
   SettingsRow,
@@ -25,7 +26,7 @@ interface PlatformDef {
 const PLATFORMS: PlatformDef[] = [
   { id: 'anilist', name: 'AniList', icon: 'public', color: '#02A9FF' },
   { id: 'myanimelist', name: 'MyAnimeList', icon: 'data-usage', color: '#2E51A2' },
-  { id: 'bangumi', name: 'Bangumi 番组计划', icon: 'translate', color: '#F09199' },
+  { id: 'bangumi', name: 'Bangumi', icon: 'translate', color: '#F09199' },
   { id: 'kitsu', name: 'Kitsu', icon: 'collections', color: '#F75239' },
   { id: 'annict', name: 'Annict', icon: 'language', color: '#F65B5B' },
   { id: 'shikimori', name: 'Shikimori', icon: 'public', color: '#1E90FF' },
@@ -163,7 +164,7 @@ export default function AccountScreen() {
                   <Text
                     style={[
                       styles.platformStatus,
-                      { color: connected ? '#30D158' : theme.text.tertiary },
+                      { color: connected ? Colors.success : theme.text.tertiary },
                     ]}>
                     {connected ? 'Connected' : 'Not connected'}
                   </Text>
@@ -171,28 +172,36 @@ export default function AccountScreen() {
                 {connected ? (
                   <Pressable
                     onPress={() => handleDisconnect(platform)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Disconnect ${platform.name}`}
                     style={({ pressed }) => [
                       styles.actionButton,
                       {
-                        borderColor: '#FF453A66',
-                        backgroundColor: '#FF453A14',
+                        borderColor: Colors.error + '66',
+                        backgroundColor: Colors.error + '14',
                         opacity: pressed ? 0.7 : 1,
                       },
                     ]}>
-                    <Text style={[styles.actionLabel, { color: '#FF453A' }]}>Disconnect</Text>
+                    <Text style={[styles.actionLabel, { color: Colors.error }]}>Disconnect</Text>
                   </Pressable>
                 ) : (
                   <Pressable
                     onPress={() => handleConnect(platform)}
                     disabled={loading}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Connect ${platform.name}`}
                     style={({ pressed }) => [
                       styles.actionButton,
                       {
                         backgroundColor: theme.accent,
+                        borderColor: theme.accent,
                         opacity: pressed || loading ? 0.7 : 1,
                       },
                     ]}>
-                    <Text style={[styles.actionLabel, { color: '#0E0A06' }]}>Connect</Text>
+                    <Text
+                      style={[styles.actionLabel, { color: readableTextOn(theme.accent) }]}>
+                      Connect
+                    </Text>
                   </Pressable>
                 )}
               </View>

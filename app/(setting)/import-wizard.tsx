@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
+import { ThemedButton, readableTextOn } from '../../components/themed';
 
 type ImportSource = 'mal' | 'anilist' | 'kitsu' | 'csv';
 type Step = 'source' | 'mode' | 'confirm';
@@ -102,12 +103,16 @@ export default function ImportWizardScreen() {
                   },
                 ]}>
                 {done ? (
-                  <MaterialIcons name="check" size={14} color="#0E0A06" />
+                  <MaterialIcons name="check" size={14} color={readableTextOn(theme.accent)} />
                 ) : (
                   <Text
                     style={[
                       styles.stepNumber,
-                      { color: active ? '#0E0A06' : theme.text.secondary },
+                      {
+                        color: active
+                          ? readableTextOn(theme.accent)
+                          : theme.text.secondary,
+                      },
                     ]}>
                     {idx + 1}
                   </Text>
@@ -169,7 +174,13 @@ export default function ImportWizardScreen() {
               </Pressable>
             );
           })}
-          <PrimaryButton label="Continue" disabled={!source} onPress={() => next('mode')} />
+          <ThemedButton
+            label="Continue"
+            disabled={!source}
+            onPress={() => next('mode')}
+            fullWidth
+            size="md"
+          />
         </Animated.View>
       ) : null}
 
@@ -211,8 +222,17 @@ export default function ImportWizardScreen() {
             );
           })}
           <View style={styles.row}>
-            <SecondaryButton label="Back" onPress={() => next('source')} />
-            <PrimaryButton label="Continue" onPress={() => next('confirm')} />
+            <View style={styles.rowItem}>
+              <ThemedButton
+                variant="secondary"
+                label="Back"
+                onPress={() => next('source')}
+                fullWidth
+              />
+            </View>
+            <View style={styles.rowItem}>
+              <ThemedButton label="Continue" onPress={() => next('confirm')} fullWidth />
+            </View>
           </View>
         </Animated.View>
       ) : null}
@@ -244,8 +264,17 @@ export default function ImportWizardScreen() {
           </Text>
 
           <View style={styles.row}>
-            <SecondaryButton label="Back" onPress={() => next('mode')} />
-            <PrimaryButton label="Start import" onPress={finish} />
+            <View style={styles.rowItem}>
+              <ThemedButton
+                variant="secondary"
+                label="Back"
+                onPress={() => next('mode')}
+                fullWidth
+              />
+            </View>
+            <View style={styles.rowItem}>
+              <ThemedButton label="Start import" onPress={finish} fullWidth haptic="success" />
+            </View>
           </View>
         </Animated.View>
       ) : null}
@@ -260,46 +289,6 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <Text style={[styles.summaryLabel, { color: theme.text.secondary }]}>{label}</Text>
       <Text style={[styles.summaryValue, { color: theme.text.primary }]}>{value}</Text>
     </View>
-  );
-}
-
-function PrimaryButton({
-  label,
-  onPress,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const { theme } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.primaryButton,
-        {
-          backgroundColor: theme.accent,
-          opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
-        },
-      ]}>
-      <Text style={styles.primaryLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { theme } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.secondaryButton,
-        { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
-      ]}>
-      <Text style={[styles.secondaryLabel, { color: theme.text.secondary }]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -390,27 +379,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
-  primaryButton: {
+  rowItem: {
     flex: 1,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  primaryLabel: {
-    ...Typography.titleMedium,
-    color: '#0E0A06',
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  secondaryLabel: {
-    ...Typography.titleMedium,
-    fontWeight: '600',
   },
   summaryCard: {
     borderRadius: 16,

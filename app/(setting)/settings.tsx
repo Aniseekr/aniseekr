@@ -1,28 +1,45 @@
 import {
   Alert,
   View,
-  Text,
   ScrollView,
   Pressable,
-  Switch,
   StyleSheet,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
-import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useSubscription } from '../../context/SubscriptionContext';
+import { useTheme, type ThemeId, type ThemeMode } from '../../context/ThemeContext';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
+import { EditDisplayNameSheet } from '../../components/profile/EditDisplayNameSheet';
+import {
+  SettingsHeader,
+  SettingsSection,
+  SettingsRow,
+  SettingsSwitchRow,
+} from '../../components/settings/SettingsList';
+import {
+  QuickActionSheet,
+  type QuickAction,
+} from '../../components/settings/QuickActionSheet';
+import { ThemedText, readableTextOn } from '../../components/themed';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
   DEFAULT_USER_PREFS,
   loadUserPrefs,
   patchUserPrefs,
   type UserPrefs,
 } from '../../libs/services/user-prefs';
+import { UserRepository, type UserProfile } from '../../libs/repositories/user-repository';
+import { gachaService } from '../../libs/services/gacha-service';
+import { authService } from '../../libs/services/auth/auth-service';
 
 interface PurchasesShowManage {
   default: { showManageSubscriptions: () => Promise<void> };
@@ -37,24 +54,76 @@ async function openManageSubscription(): Promise<void> {
       return;
     }
   } catch {
-    // ignore — fall back to URL
+    // fall through to URL fallback
   }
-  const url = 'https://apps.apple.com/account/subscriptions';
-  await Linking.openURL(url).catch(() => undefined);
+  await Linking.openURL('https://apps.apple.com/account/subscriptions').catch(
+    () => undefined,
+  );
 }
+
+type QuickSheetKind =
+  | 'appearance'
+  | 'theme'
+  | 'themeMode'
+  | 'accent'
+  | 'platforms'
+  | 'premium'
+  | null;
+
+const THEME_MODE_LABEL: Record<ThemeMode, string> = {
+  light: 'Light',
+  dark: 'Dark',
+  auto: 'Auto',
+};
+
+const PRESET_ACCENTS: { hex: string; name: string }[] = [
+  { hex: '#FF9F0A', name: 'Aniseekr Orange' },
+  { hex: '#FF2A6D', name: 'Cyber Pink' },
+  { hex: '#5E5CE6', name: 'Midnight Indigo' },
+  { hex: '#10B981', name: 'Forest Green' },
+  { hex: '#0A84FF', name: 'Ocean Blue' },
+  { hex: '#BF5AF2', name: 'Candy Purple' },
+];
 
 export default function SettingsScreen() {
   const { top } = useSafeAreaInsets();
   const subscription = useSubscription();
+  const {
+    theme,
+    themeId,
+    themeMode,
+    customAccent,
+    setTheme,
+    setThemeMode,
+    setCustomAccent,
+    themes,
+  } = useTheme();
+
   const [dataSaver, setDataSaver] = useState(false);
   const [prefs, setPrefs] = useState<UserPrefs>(DEFAULT_USER_PREFS);
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const [nameSheetVisible, setNameSheetVisible] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [coins, setCoins] = useState(0);
+  const [shards, setShards] = useState(0);
+  const [connectedCount, setConnectedCount] = useState(0);
+  const [activeSheet, setActiveSheet] = useState<QuickSheetKind>(null);
 
   useEffect(() => {
     let mounted = true;
-    loadUserPrefs().then((p) => {
-      if (mounted) setPrefs(p);
-    });
+    loadUserPrefs().then((p) => mounted && setPrefs(p));
+    UserRepository.getProfile().then((u) => mounted && setUser(u));
+    gachaService.getCoins().then((v) => mounted && setCoins(v));
+    gachaService.getShards().then((v) => mounted && setShards(v));
+    (async () => {
+      try {
+        await authService.initialize();
+        const creds = authService.getAllCredentials();
+        if (mounted) setConnectedCount(creds.length);
+      } catch {
+        // ignore
+      }
+    })();
     return () => {
       mounted = false;
     };
@@ -62,7 +131,7 @@ export default function SettingsScreen() {
 
   const updatePref = async <K extends keyof UserPrefs>(
     key: K,
-    value: UserPrefs[K]
+    value: UserPrefs[K],
   ): Promise<void> => {
     const next = await patchUserPrefs({ [key]: value } as Partial<UserPrefs>);
     setPrefs(next);
@@ -80,379 +149,604 @@ export default function SettingsScreen() {
         promptMessage: 'Authenticate to enable adult content',
         cancelLabel: 'Cancel',
       });
-      if (res.success) {
-        await updatePref('allowAdultContent', true);
-      }
+      if (res.success) await updatePref('allowAdultContent', true);
       return;
     }
-    Alert.alert('Enable adult content?', 'Are you sure you want to enable adult content?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Enable',
-        style: 'destructive',
-        onPress: () => {
-          void updatePref('allowAdultContent', true);
+    Alert.alert(
+      'Enable adult content?',
+      'Are you sure you want to enable adult content?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Enable',
+          style: 'destructive',
+          onPress: () => {
+            void updatePref('allowAdultContent', true);
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
+  const isPro = subscription.isPro;
+  const ctaFg = readableTextOn(theme.accent);
+  const upgradeBtnBg = theme.background.primary;
+
+  const activeThemeName = useMemo(() => {
+    const found = themes.find((t) => t.id === themeId);
+    return found?.name ?? 'Aniseekr';
+  }, [themes, themeId]);
+
+  const activeAccentHex = customAccent ?? theme.accent;
+
+  const themeActions: QuickAction[] = useMemo(
+    () =>
+      themes.map((t) => ({
+        key: t.id,
+        label: t.name,
+        description: t.isPremium && !isPro ? 'Premium only' : undefined,
+        icon: 'color-palette-outline',
+        selected: t.id === themeId,
+        onPress: () => {
+          if (t.isPremium && !isPro) {
+            setPaywallVisible(true);
+            return;
+          }
+          void setTheme(t.id as ThemeId);
+        },
+      })),
+    [themes, themeId, isPro, setTheme],
+  );
+
+  const themeModeActions: QuickAction[] = useMemo(
+    () => [
+      {
+        key: 'light',
+        label: 'Light',
+        icon: 'sunny-outline',
+        selected: themeMode === 'light',
+        onPress: () => void setThemeMode('light'),
+      },
+      {
+        key: 'dark',
+        label: 'Dark',
+        icon: 'moon-outline',
+        selected: themeMode === 'dark',
+        onPress: () => void setThemeMode('dark'),
+      },
+      {
+        key: 'auto',
+        label: 'Auto',
+        description: 'Follow system appearance',
+        icon: 'contrast-outline',
+        selected: themeMode === 'auto',
+        onPress: () => void setThemeMode('auto'),
+      },
+    ],
+    [themeMode, setThemeMode],
+  );
+
+  const accentActions: QuickAction[] = useMemo(() => {
+    const actions: QuickAction[] = PRESET_ACCENTS.map((p) => ({
+      key: p.hex,
+      label: p.name,
+      description: p.hex.toUpperCase(),
+      icon: 'ellipse',
+      selected: activeAccentHex.toUpperCase() === p.hex.toUpperCase(),
+      onPress: () => void setCustomAccent(p.hex),
+    }));
+    if (customAccent) {
+      actions.push({
+        key: 'reset',
+        label: 'Reset to theme default',
+        icon: 'refresh-outline',
+        onPress: () => void setCustomAccent(null),
+      });
+    }
+    actions.push({
+      key: 'open-picker',
+      label: 'Open full picker…',
+      icon: 'color-wand-outline',
+      onPress: () => router.push('/(setting)/accent-color'),
+    });
+    return actions;
+  }, [activeAccentHex, customAccent, setCustomAccent]);
+
+  const platformActions: QuickAction[] = useMemo(
+    () => [
+      {
+        key: 'manage',
+        label: 'Manage platforms',
+        description: 'Connect or disconnect accounts',
+        icon: 'link-outline',
+        onPress: () => router.push('/(setting)/account'),
+      },
+      {
+        key: 'sync-now',
+        label: 'Sync now',
+        description: 'Pull the latest from connected sources',
+        icon: 'refresh-circle-outline',
+        onPress: () => {
+          void UserRepository.syncAllPlatforms();
+          hapticsBridge.success();
+        },
+      },
+      {
+        key: 'import',
+        label: 'Import wizard',
+        icon: 'cloud-upload-outline',
+        onPress: () => router.push('/(setting)/import-wizard'),
+      },
+    ],
+    [],
+  );
+
+  const appearanceActions: QuickAction[] = useMemo(() => {
+    const modeRows: QuickAction[] = (
+      [
+        { key: 'light', label: 'Light', icon: 'sunny-outline' as const, mode: 'light' as ThemeMode },
+        { key: 'dark', label: 'Dark', icon: 'moon-outline' as const, mode: 'dark' as ThemeMode },
+        { key: 'auto', label: 'Auto', icon: 'contrast-outline' as const, mode: 'auto' as ThemeMode },
+      ]
+    ).map((m) => ({
+      key: `mode-${m.key}`,
+      label: m.label,
+      description: m.key === 'auto' ? 'Follow system appearance' : 'Theme mode',
+      icon: m.icon,
+      selected: themeMode === m.mode,
+      onPress: () => void setThemeMode(m.mode),
+    }));
+
+    const accentRows: QuickAction[] = PRESET_ACCENTS.slice(0, 4).map((p) => ({
+      key: `accent-${p.hex}`,
+      label: p.name,
+      description: 'Accent color',
+      icon: 'ellipse',
+      selected: activeAccentHex.toUpperCase() === p.hex.toUpperCase(),
+      onPress: () => void setCustomAccent(p.hex),
+    }));
+
+    return [
+      ...modeRows,
+      ...accentRows,
+      {
+        key: 'open-theme',
+        label: 'Switch theme…',
+        description: `Currently ${activeThemeName}`,
+        icon: 'color-palette-outline',
+        onPress: () => setActiveSheet('theme'),
+      },
+      {
+        key: 'open-appearance',
+        label: 'Open full appearance',
+        icon: 'open-outline',
+        onPress: () => router.push('/(setting)/appearance'),
+      },
+    ];
+  }, [
+    themeMode,
+    setThemeMode,
+    activeAccentHex,
+    setCustomAccent,
+    activeThemeName,
+  ]);
+
+  const premiumActions: QuickAction[] = useMemo(() => {
+    if (isPro) {
+      return [
+        {
+          key: 'manage',
+          label: 'Manage subscription',
+          icon: 'card-outline',
+          onPress: () => void openManageSubscription(),
+        },
+        {
+          key: 'benefits',
+          label: 'View benefits',
+          icon: 'sparkles-outline',
+          onPress: () => router.push('/(setting)/account'),
+        },
+      ];
+    }
+    return [
+      {
+        key: 'upgrade',
+        label: 'Upgrade now',
+        description: 'Unlock themes, sync, no ads',
+        icon: 'sparkles-outline',
+        onPress: () => setPaywallVisible(true),
+      },
+      {
+        key: 'restore',
+        label: 'Restore purchases',
+        icon: 'refresh-outline',
+        onPress: () => {
+          void subscription.restore?.();
+        },
+      },
+    ];
+  }, [isPro, subscription]);
+
+  const sheetConfig = useMemo(() => {
+    switch (activeSheet) {
+      case 'appearance':
+        return {
+          title: 'Appearance',
+          subtitle: `${activeThemeName} · ${THEME_MODE_LABEL[themeMode]}`,
+          actions: appearanceActions,
+        };
+      case 'theme':
+        return {
+          title: 'Theme',
+          subtitle: 'Tap to switch · long-press a row anywhere to open quick actions',
+          actions: themeActions,
+        };
+      case 'themeMode':
+        return {
+          title: 'Theme mode',
+          subtitle: 'Choose how surfaces respond to system appearance',
+          actions: themeModeActions,
+        };
+      case 'accent':
+        return {
+          title: 'Accent color',
+          subtitle: 'Pick a preset or open the full picker',
+          actions: accentActions,
+        };
+      case 'platforms':
+        return {
+          title: 'Connected platforms',
+          subtitle: `${connectedCount} connected`,
+          actions: platformActions,
+        };
+      case 'premium':
+        return {
+          title: isPro ? 'Premium' : 'Aniseekr Premium',
+          subtitle: isPro
+            ? 'Manage your subscription'
+            : 'Unlock all themes, sync, no ads',
+          actions: premiumActions,
+        };
+      default:
+        return null;
+    }
+  }, [
+    activeSheet,
+    appearanceActions,
+    themeActions,
+    themeModeActions,
+    accentActions,
+    platformActions,
+    premiumActions,
+    connectedCount,
+    isPro,
+    activeThemeName,
+    themeMode,
+  ]);
+
+  const handleSaveName = useCallback(async (name: string) => {
+    await UserRepository.setDisplayName(name);
+    const next = await UserRepository.getProfile();
+    setUser(next);
+  }, []);
+
+  const displayName = user?.username ?? 'Anime fan';
+  const avatarUri = user?.avatarUrl ?? '';
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join('');
+
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={Colors.gradients.background as [string, string, ...string[]]}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={22} color={Colors.text.primary} />
-          </Pressable>
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.headerTitle}>Settings</Text>
-            <Text style={styles.headerSubtitle}>Your account & preferences</Text>
-          </View>
-        </View>
+        <SettingsHeader
+          title="Settings"
+          subtitle="Long-press a row for quick actions"
+          onBack={() => router.back()}
+        />
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {/* Premium hero */}
-          {subscription.isPro ? (
-            <View style={styles.premiumActiveCard}>
-              <View style={styles.premiumActiveRow}>
-                <View style={styles.premiumActiveLeft}>
-                  <Ionicons name="checkmark-circle" size={22} color={Colors.success} />
-                  <View>
-                    <Text style={styles.premiumActiveTitle}>Premium active</Text>
-                    <Text style={styles.premiumActiveSubtitle}>
-                      Thanks for supporting Aniseekr.
-                    </Text>
-                  </View>
-                </View>
-                <Pressable
-                  onPress={() => {
-                    void openManageSubscription();
-                  }}
-                  style={({ pressed }) => [styles.manageButton, pressed && { opacity: 0.7 }]}>
-                  <Text style={styles.manageButtonText}>Manage</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => setPaywallVisible(true)}
-              style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {/* User header card */}
+          <Pressable
+            onPress={() => setNameSheetVisible(true)}
+            onLongPress={() => {
+              hapticsBridge.longPress();
+              setNameSheetVisible(true);
+            }}
+            style={({ pressed }) => [pressed && { opacity: 0.92 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile name">
+            <View
+              style={[
+                styles.userCard,
+                {
+                  backgroundColor: theme.background.secondary,
+                  borderColor: theme.glassBorder,
+                },
+              ]}>
               <LinearGradient
-                colors={['#FF9900', '#CC5500']}
+                colors={[theme.accent, theme.accentDark]}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={styles.premiumHero}>
-                <View style={styles.premiumHeroLeft}>
-                  <View style={styles.premiumIconBubble}>
-                    <Ionicons name="sparkles" size={20} color="#fff" />
-                  </View>
-                  <View>
-                    <Text style={styles.premiumHeroTitle}>Aniseekr Premium</Text>
-                    <Text style={styles.premiumHeroSubtitle}>Unlock everything</Text>
-                  </View>
-                </View>
-                <View style={styles.premiumCta}>
-                  <Text style={styles.premiumCtaText}>Upgrade</Text>
-                  <Ionicons name="arrow-forward" size={16} color="#fff" />
-                </View>
+                end={{ x: 1, y: 1 }}
+                style={styles.avatar}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                ) : (
+                  <ThemedText
+                    variant="titleMedium"
+                    weight="800"
+                    style={{ color: ctaFg }}>
+                    {initials || 'A'}
+                  </ThemedText>
+                )}
               </LinearGradient>
-            </Pressable>
-          )}
 
-          {/* Account */}
-          <View>
-            <Text style={styles.sectionTitle}>Account</Text>
-            <View style={styles.card}>
-              <SettingItem
-                label="Connected platforms"
-                icon="people-circle-outline"
-                onPress={() => router.push('/(setting)/account')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Otaku DNA"
-                icon="finger-print-outline"
-                onPress={() => router.push('/(setting)/otaku-dna')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Achievements"
-                icon="trophy-outline"
-                onPress={() => router.push('/(setting)/achievements')}
-              />
-            </View>
-          </View>
-
-          {/* Appearance */}
-          <View>
-            <Text style={styles.sectionTitle}>Appearance</Text>
-            <View style={styles.card}>
-              <SettingItem
-                label="Theme"
-                icon="color-palette-outline"
-                onPress={() => router.push('/(setting)/theme')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Theme mode"
-                icon="contrast-outline"
-                onPress={() => router.push('/(setting)/theme-mode')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Accent color"
-                icon="color-fill-outline"
-                onPress={() => router.push('/(setting)/accent-color')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Live preview"
-                icon="eye-outline"
-                onPress={() => router.push('/(setting)/theme-preview')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Design tokens"
-                icon="grid-outline"
-                onPress={() => router.push('/(setting)/design-tokens')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Title language priority"
-                icon="language-outline"
-                onPress={() => router.push('/(setting)/language-priority')}
-              />
-            </View>
-          </View>
-
-          {/* Sync & Data */}
-          <View>
-            <Text style={styles.sectionTitle}>Sync & Data</Text>
-            <View style={styles.card}>
-              <SettingItem
-                label="Browse source"
-                icon="cloud-outline"
-                onPress={() => router.push('/(setting)/data-source')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Sync hub"
-                icon="git-branch-outline"
-                onPress={() => router.push('/(setting)/sync-hub')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Import wizard"
-                icon="cloud-upload-outline"
-                onPress={() => router.push('/(setting)/import-wizard')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Cache"
-                icon="server-outline"
-                onPress={() => router.push('/(setting)/cache')}
-              />
-              <View style={styles.separator} />
-              <View style={styles.switchRow}>
-                <View style={styles.rowLeft}>
-                  <Ionicons name="cellular-outline" size={18} color={ICON_ACCENT} />
-                  <Text style={styles.rowLabel}>Data saver</Text>
+              <View style={styles.userInfo}>
+                <View style={styles.nameRow}>
+                  <ThemedText variant="titleLarge" weight="700" numberOfLines={1}>
+                    {displayName}
+                  </ThemedText>
+                  {isPro ? (
+                    <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
+                      <ThemedText
+                        variant="captionSmall"
+                        weight="800"
+                        style={[styles.proBadgeText, { color: ctaFg }]}>
+                        PRO
+                      </ThemedText>
+                    </View>
+                  ) : null}
                 </View>
-                <Switch
-                  value={dataSaver}
-                  onValueChange={setDataSaver}
-                  trackColor={{ false: '#333', true: Colors.secondary }}
-                  thumbColor={Colors.text.primary}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Content */}
-          <View>
-            <Text style={styles.sectionTitle}>Content</Text>
-            <View style={styles.card}>
-              <View style={styles.switchRow}>
-                <View style={styles.switchTextWrap}>
-                  <View style={styles.rowLeft}>
-                    <Ionicons name="warning-outline" size={18} color={ICON_ACCENT} />
-                    <Text style={styles.rowLabel}>Allow R18 content</Text>
+                <View style={styles.currencyRow}>
+                  <View style={styles.currencyItem}>
+                    <MaterialIcons name="monetization-on" size={14} color="#FFD60A" />
+                    <ThemedText variant="caption" tone="secondary" weight="600">
+                      {coins}
+                    </ThemedText>
                   </View>
-                  <Text style={styles.rowDescription}>
-                    Show 18+ entries in seasonal lists and search
-                  </Text>
-                </View>
-                <Switch
-                  value={prefs.allowAdultContent}
-                  onValueChange={handleAdultToggle}
-                  trackColor={{ false: '#333', true: Colors.secondary }}
-                  thumbColor={Colors.text.primary}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Bangumi options */}
-          <View>
-            <Text style={styles.sectionTitle}>Bangumi options</Text>
-            <View style={styles.card}>
-              <View style={styles.switchRow}>
-                <View style={styles.switchTextWrap}>
-                  <View style={styles.rowLeft}>
-                    <Ionicons name="game-controller-outline" size={18} color={ICON_ACCENT} />
-                    <Text style={styles.rowLabel}>Include games</Text>
+                  <View style={styles.currencyItem}>
+                    <MaterialIcons name="diamond" size={14} color="#06B6D4" />
+                    <ThemedText variant="caption" tone="secondary" weight="600">
+                      {shards}
+                    </ThemedText>
                   </View>
-                  <Text style={styles.rowDescription}>Show video games in Bangumi calendar</Text>
                 </View>
-                <Switch
-                  value={prefs.bangumiIncludeGames}
-                  onValueChange={(v) => void updatePref('bangumiIncludeGames', v)}
-                  trackColor={{ false: '#333', true: Colors.secondary }}
-                  thumbColor={Colors.text.primary}
-                />
               </View>
-              <View style={styles.separator} />
-              <View style={styles.switchRow}>
-                <View style={styles.switchTextWrap}>
-                  <View style={styles.rowLeft}>
-                    <Ionicons name="star-outline" size={18} color={ICON_ACCENT} />
-                    <Text style={styles.rowLabel}>Show score prominently</Text>
-                  </View>
-                  <Text style={styles.rowDescription}>Display rating in card header</Text>
-                </View>
-                <Switch
-                  value={prefs.bangumiShowScoreProminently}
-                  onValueChange={(v) => void updatePref('bangumiShowScoreProminently', v)}
-                  trackColor={{ false: '#333', true: Colors.secondary }}
-                  thumbColor={Colors.text.primary}
-                />
+
+              <View
+                style={[
+                  styles.editPill,
+                  { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
+                ]}>
+                <ThemedText variant="captionSmall" weight="700">
+                  Edit
+                </ThemedText>
               </View>
             </View>
-          </View>
+          </Pressable>
 
-          {/* Notifications */}
-          <View>
-            <Text style={styles.sectionTitle}>Notifications</Text>
-            <View style={styles.card}>
-              <SettingItem
-                label="Reminders"
-                icon="notifications-outline"
-                onPress={() => router.push('/(setting)/notifications')}
-              />
-            </View>
-          </View>
+          {/* Premium hero */}
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              if (isPro) void openManageSubscription();
+              else setPaywallVisible(true);
+            }}
+            onLongPress={() => {
+              hapticsBridge.longPress();
+              setActiveSheet('premium');
+            }}
+            style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}
+            accessibilityRole="button"
+            accessibilityLabel={isPro ? 'Manage subscription' : 'Upgrade to Premium'}>
+            <LinearGradient
+              colors={[theme.accent, theme.accentDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.premiumHero}>
+              <View style={styles.premiumHeroLeft}>
+                <Ionicons name="sparkles" size={22} color={ctaFg} />
+                <View style={styles.premiumTextWrap}>
+                  <ThemedText
+                    variant="titleMedium"
+                    weight="700"
+                    style={{ color: ctaFg }}>
+                    {isPro ? 'Premium active' : 'Unlock Premium'}
+                  </ThemedText>
+                  <ThemedText
+                    variant="bodySmall"
+                    style={{ color: ctaFg, opacity: 0.85 }}>
+                    {isPro
+                      ? 'Manage your subscription and benefits'
+                      : 'No ads, all themes, unlimited sync'}
+                  </ThemedText>
+                </View>
+              </View>
+              <View
+                style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
+                <ThemedText variant="titleSmall" weight="700">
+                  {isPro ? 'Manage' : 'Upgrade'}
+                </ThemedText>
+              </View>
+            </LinearGradient>
+          </Pressable>
 
-          {/* About */}
-          <View>
-            <Text style={styles.sectionTitle}>About</Text>
-            <View style={styles.card}>
-              <SettingItem
-                label="Attribution"
-                icon="ribbon-outline"
-                onPress={() => router.push('/(setting)/attribution')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Privacy policy"
-                icon="lock-closed-outline"
-                onPress={() => router.push('/(setting)/privacy')}
-              />
-              <View style={styles.separator} />
-              <SettingItem
-                label="Terms of service"
-                icon="document-text-outline"
-                onPress={() => router.push('/(setting)/terms')}
-              />
-            </View>
-          </View>
+          <SettingsSection title="ACCOUNT">
+            <SettingsRow
+              icon="people-circle-outline"
+              label="Connected platforms"
+              value={
+                connectedCount > 0
+                  ? `${connectedCount} connected`
+                  : 'None'
+              }
+              onPress={() => router.push('/(setting)/account')}
+              onLongPress={() => setActiveSheet('platforms')}
+            />
+            <SettingsRow
+              icon="finger-print-outline"
+              label="Otaku DNA"
+              onPress={() => router.push('/(setting)/otaku-dna')}
+            />
+            <SettingsRow
+              icon="trophy-outline"
+              label="Achievements"
+              onPress={() => router.push('/(setting)/achievements')}
+            />
+          </SettingsSection>
 
-          <Text style={styles.versionText}>Aniseekr v1.0.0 (Expo)</Text>
+          <SettingsSection title="CONTENT & SYNC">
+            <SettingsRow
+              icon="cloud-outline"
+              label="Browse source"
+              onPress={() => router.push('/(setting)/data-source')}
+            />
+            <SettingsRow
+              icon="git-branch-outline"
+              label="Sync hub"
+              onPress={() => router.push('/(setting)/sync-hub')}
+            />
+            <SettingsRow
+              icon="cloud-upload-outline"
+              label="Import wizard"
+              onPress={() => router.push('/(setting)/import-wizard')}
+            />
+            <SettingsRow
+              icon="server-outline"
+              label="Cache"
+              onPress={() => router.push('/(setting)/cache')}
+            />
+            <SettingsSwitchRow
+              icon="cellular-outline"
+              label="Data saver"
+              value={dataSaver}
+              onValueChange={setDataSaver}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="APPEARANCE">
+            <SettingsRow
+              icon="color-palette-outline"
+              label="Appearance"
+              description={`${activeThemeName} · ${THEME_MODE_LABEL[themeMode]}`}
+              right={
+                <View
+                  style={[
+                    styles.accentSwatch,
+                    { backgroundColor: activeAccentHex, borderColor: theme.glassBorder },
+                  ]}
+                />
+              }
+              onPress={() => router.push('/(setting)/appearance')}
+              onLongPress={() => setActiveSheet('appearance')}
+            />
+            <SettingsRow
+              icon="language-outline"
+              label="Title language priority"
+              onPress={() => router.push('/(setting)/language-priority')}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="PREFERENCES">
+            <SettingsSwitchRow
+              icon="warning-outline"
+              label="Allow R18 content"
+              description="Show 18+ entries in seasonal lists and search"
+              value={prefs.allowAdultContent}
+              onValueChange={handleAdultToggle}
+            />
+            <SettingsSwitchRow
+              icon="game-controller-outline"
+              label="Include games"
+              description="Show video games in Bangumi calendar"
+              value={prefs.bangumiIncludeGames}
+              onValueChange={(v) => void updatePref('bangumiIncludeGames', v)}
+            />
+            <SettingsSwitchRow
+              icon="star-outline"
+              label="Show score prominently"
+              description="Display rating in card header"
+              value={prefs.bangumiShowScoreProminently}
+              onValueChange={(v) => void updatePref('bangumiShowScoreProminently', v)}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="NOTIFICATIONS & ABOUT">
+            <SettingsRow
+              icon="notifications-outline"
+              label="Reminders"
+              onPress={() => router.push('/(setting)/notifications')}
+            />
+            <SettingsRow
+              icon="ribbon-outline"
+              label="Attribution"
+              onPress={() => router.push('/(setting)/attribution')}
+            />
+            <SettingsRow
+              icon="lock-closed-outline"
+              label="Privacy policy"
+              onPress={() => router.push('/(setting)/privacy')}
+            />
+            <SettingsRow
+              icon="document-text-outline"
+              label="Terms of service"
+              onPress={() => router.push('/(setting)/terms')}
+            />
+          </SettingsSection>
+
+          <Pressable
+            onLongPress={() => {
+              hapticsBridge.longPress();
+              router.push('/(setting)/design-tokens');
+            }}
+            delayLongPress={500}
+            accessibilityRole="text"
+            accessibilityLabel="App version. Long-press for developer options.">
+            <ThemedText
+              variant="caption"
+              tone="tertiary"
+              align="center"
+              style={styles.versionText}>
+              Aniseekr v1.0.0 (Expo)
+            </ThemedText>
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
+
       <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
+      <EditDisplayNameSheet
+        visible={nameSheetVisible}
+        currentName={user?.username ?? ''}
+        onClose={() => setNameSheetVisible(false)}
+        onSave={handleSaveName}
+      />
+
+      {sheetConfig ? (
+        <QuickActionSheet
+          visible={activeSheet !== null}
+          onClose={() => setActiveSheet(null)}
+          title={sheetConfig.title}
+          subtitle={sheetConfig.subtitle}
+          actions={sheetConfig.actions}
+        />
+      ) : null}
     </View>
-  );
-}
-
-const ICON_ACCENT = Colors.primary;
-const CARD_BG = '#252528';
-const CARD_BORDER = '#38383A';
-const ROW_LABEL_COLOR = '#FFFFFF';
-const ROW_META_COLOR = '#787878';
-
-function SettingItem({
-  label,
-  icon,
-  value,
-  color,
-  onPress,
-}: {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  value?: string;
-  color?: string;
-  onPress: () => void;
-}) {
-  const iconColor = color ?? ICON_ACCENT;
-  const labelColor = color ?? ROW_LABEL_COLOR;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.itemRow, pressed && { backgroundColor: Colors.glass.light }]}>
-      <View style={styles.rowLeft}>
-        <Ionicons name={icon} size={18} color={iconColor} />
-        <Text style={[styles.rowLabel, { color: labelColor }]}>{label}</Text>
-      </View>
-      <View style={styles.rowRight}>
-        {value && <Text style={styles.valueText}>{value}</Text>}
-        <Ionicons name="chevron-forward" size={16} color={ROW_META_COLOR} />
-      </View>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
   },
   safeArea: {
     flex: 1,
-  },
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.glass.light,
-    borderRadius: Radius.full,
-  },
-  headerTextWrap: {
-    flex: 1,
-    gap: 2,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '800',
-    fontFamily: Typography.headlineMedium?.fontFamily,
-  },
-  headerSubtitle: {
-    color: ROW_META_COLOR,
-    fontSize: 14,
-    fontWeight: '400',
   },
   scrollView: {
     flex: 1,
@@ -461,164 +755,96 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: 120,
     paddingTop: Spacing.xs,
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
-  sectionTitle: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: Spacing.xs,
-    marginLeft: 4,
-  },
-  card: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm + 2,
+    padding: Spacing.sm + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: CARD_BORDER,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
-  separator: {
-    height: 1,
-    backgroundColor: CARD_BORDER,
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+  userInfo: {
     flex: 1,
+    gap: 4,
   },
-  rowLabel: {
-    color: ROW_LABEL_COLOR,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  rowRight: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 6,
   },
-  valueText: {
-    color: ROW_META_COLOR,
-    fontSize: 13,
-    fontWeight: '500',
+  proBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
   },
-  versionText: {
-    color: Colors.text.disabled,
-    textAlign: 'center',
-    ...Typography.caption,
-    marginTop: Spacing.md,
+  proBadgeText: {
+    letterSpacing: 1,
   },
-  rowDescription: {
-    color: ROW_META_COLOR,
-    fontSize: 12,
-    marginTop: 2,
-    marginLeft: 32,
+  currencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  switchTextWrap: {
-    flex: 1,
-    paddingRight: Spacing.sm,
+  currencyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  editPill: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: Radius.chip,
+    borderWidth: 1,
   },
   premiumHeroWrap: {
-    borderRadius: Radius.cardLg,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
   },
   premiumHero: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
     padding: Spacing.md,
-    borderRadius: Radius.cardLg,
+    borderRadius: Radius.lg,
   },
   premiumHeroLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.sm + 2,
     flex: 1,
   },
-  premiumIconBubble: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  premiumHeroTitle: {
-    color: '#fff',
-    ...Typography.titleLarge,
-    fontWeight: '700',
-  },
-  premiumHeroSubtitle: {
-    color: 'rgba(255,255,255,0.85)',
-    ...Typography.bodySmall,
-  },
-  premiumCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.chipLg,
-  },
-  premiumCtaText: {
-    color: '#fff',
-    ...Typography.titleSmall,
-    fontWeight: '700',
-  },
-  premiumActiveCard: {
-    padding: Spacing.md,
-  },
-  premiumActiveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  premiumActiveLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+  premiumTextWrap: {
     flex: 1,
+    gap: 2,
   },
-  premiumActiveTitle: {
-    color: Colors.text.primary,
-    ...Typography.titleMedium,
-    fontWeight: '700',
-  },
-  premiumActiveSubtitle: {
-    color: Colors.text.secondary,
-    ...Typography.bodySmall,
-    marginTop: 2,
-  },
-  manageButton: {
+  upgradePill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.chipLg,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderRadius: Radius.full,
   },
-  manageButtonText: {
-    color: Colors.text.primary,
-    ...Typography.titleSmall,
+  accentSwatch: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+  },
+  versionText: {
+    marginTop: Spacing.md,
   },
 });

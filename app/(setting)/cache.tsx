@@ -3,7 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CacheService } from '../../libs/services/cache-service';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -164,15 +164,18 @@ export default function CacheSettingsScreen() {
       <Pressable
         onPress={confirmClearAll}
         disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel="Clear all caches"
+        accessibilityState={{ disabled: busy }}
         style={({ pressed }) => [
           styles.dangerButton,
           {
-            backgroundColor: '#FF453A14',
-            borderColor: '#FF453A66',
+            backgroundColor: Colors.error + '14',
+            borderColor: Colors.error + '66',
             opacity: pressed || busy ? 0.7 : 1,
           },
         ]}>
-        <MaterialIcons name="delete-forever" size={20} color="#FF453A" />
+        <MaterialIcons name="delete-forever" size={20} color={Colors.error} />
         <Text style={styles.dangerLabel}>Clear all caches</Text>
       </Pressable>
     </SettingsScreenLayout>
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
   },
   dangerLabel: {
     ...Typography.titleMedium,
-    color: '#FF453A',
+    color: Colors.error,
     fontWeight: '700',
   },
 });

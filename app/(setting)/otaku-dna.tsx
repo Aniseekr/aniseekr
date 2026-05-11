@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
 import { ShimmerEffect } from '../../components/common/ShimmerEffect';
@@ -22,16 +22,32 @@ interface DNATagWeight {
   color: string;
 }
 
+// Fixed chart palette (intentionally non-themeable — we want predictable trait
+// colours so the user can visually distinguish each axis across themes).
+const CHART_PALETTE = [
+  Colors.primary, // orange
+  Colors.accent, // blue
+  Colors.secondary, // purple
+  Colors.success, // green
+  '#FF6F60',
+  '#5E5CE6',
+] as const;
+
 const TRAIT_PRESETS: { key: keyof Stats; label: string; color: string; hint: string }[] = [
   {
     key: 'completionRate',
     label: 'Completionist',
-    color: '#0A84FF',
+    color: Colors.accent,
     hint: 'Series finished vs added',
   },
-  { key: 'tasteBreadth', label: 'Taste breadth', color: '#BF5AF2', hint: 'Diversity of folders' },
-  { key: 'curator', label: 'Curator', color: '#FF9F0A', hint: 'Custom folder ratio' },
-  { key: 'dropper', label: 'Picky', color: '#FF453A', hint: 'How often you drop series' },
+  {
+    key: 'tasteBreadth',
+    label: 'Taste breadth',
+    color: Colors.secondary,
+    hint: 'Diversity of folders',
+  },
+  { key: 'curator', label: 'Curator', color: Colors.primary, hint: 'Custom folder ratio' },
+  { key: 'dropper', label: 'Picky', color: Colors.error, hint: 'How often you drop series' },
 ];
 
 interface Stats {
@@ -110,7 +126,7 @@ export default function OtakuDNAScreen() {
           100,
           Math.round((f.animeCount / Math.max(1, folders[0].animeCount)) * 100)
         ),
-        color: ['#FF9F0A', '#0A84FF', '#BF5AF2', '#30D158', '#FF6F60', '#5E5CE6'][i % 6],
+        color: CHART_PALETTE[i % CHART_PALETTE.length],
       }));
   }, [folders]);
 

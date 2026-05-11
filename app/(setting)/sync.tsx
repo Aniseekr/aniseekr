@@ -7,6 +7,7 @@ import { isAuthRequiresFormError, AuthFormKind } from '../../libs/services/auth/
 import { multiPlatformSyncService } from '../../libs/services/sync/multi-platform-sync-service';
 import { AnimatedPressable } from '../../components/common/AnimatedPressable';
 import { PlatformAuthSheet, PlatformAuthInput } from '../../components/auth/PlatformAuthSheet';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SheetState {
   visible: boolean;
@@ -23,6 +24,7 @@ const HIDDEN_SHEET: SheetState = {
 };
 
 export default function SyncSettingsScreen() {
+  const { theme } = useTheme();
   const [connectedPlatforms, setConnectedPlatforms] = useState<PlatformType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -185,7 +187,7 @@ export default function SyncSettingsScreen() {
                           : handleConnect(config.platform)
                       }
                       disabled={isLoading}
-                      trackColor={{ false: '#e2e2e2', true: config.color }}
+                      trackColor={{ false: theme.background.tertiary, true: config.color }}
                     />
                   </View>
                 );

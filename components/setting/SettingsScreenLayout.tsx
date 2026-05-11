@@ -12,7 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
@@ -141,7 +141,7 @@ export function SettingsRow({
   destructive,
 }: SettingsRowProps) {
   const { theme } = useTheme();
-  const labelColor = destructive ? '#FF453A' : theme.text.primary;
+  const labelColor = destructive ? Colors.error : theme.text.primary;
 
   return (
     <Pressable
@@ -154,7 +154,7 @@ export function SettingsRow({
       style={({ pressed }) => [styles.row, { opacity: pressed && onPress ? 0.7 : 1 }]}>
       {icon ? (
         <View style={[styles.rowIcon, { backgroundColor: theme.background.tertiary }]}>
-          <MaterialIcons name={icon} size={18} color={destructive ? '#FF453A' : theme.accent} />
+          <MaterialIcons name={icon} size={18} color={destructive ? Colors.error : theme.accent} />
         </View>
       ) : null}
       <View style={{ flex: 1 }}>

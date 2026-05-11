@@ -5,27 +5,30 @@ import {
   Switch,
   Text,
   View,
-  ViewStyle,
   type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme } from '../../context/ThemeContext';
+import { Spacing, Typography } from '../../constants/DesignSystem';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
-export const SettingsTokens = {
-  cardBg: '#252528',
-  cardBorder: '#38383A',
-  iconAccent: '#8DC5D8',
-  labelColor: '#FFFFFF',
-  metaColor: '#787878',
-  destructive: '#FF453A',
+/**
+ * Static layout values that don't depend on theme.
+ * Color tokens come from `useTheme()` inside each component below.
+ */
+export const SettingsLayout = {
   rowPaddingV: 14,
-  rowPaddingH: 16,
-  rowGap: 14,
+  rowPaddingH: 14,
+  rowGap: 12,
   cardRadius: 16,
-  iconSize: 18,
-  chevronSize: 16,
+  iconSize: 20,
+  chevronSize: 18,
   labelFontSize: 14,
   descriptionFontSize: 12,
 } as const;
+
+const DESTRUCTIVE = '#FF453A';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -40,16 +43,27 @@ export function SettingsHeader({
   onBack?: () => void;
   right?: ReactNode;
 }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.header}>
       {onBack ? (
-        <Pressable onPress={onBack} style={styles.backButton} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color={SettingsTokens.labelColor} />
+        <Pressable
+          onPress={onBack}
+          style={[
+            styles.backButton,
+            { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+          ]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back">
+          <Ionicons name="arrow-back" size={22} color={theme.text.primary} />
         </Pressable>
       ) : null}
       <View style={styles.headerTextWrap}>
-        <Text style={styles.headerTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.headerTitle, { color: theme.text.primary }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.headerSubtitle, { color: theme.text.secondary }]}>{subtitle}</Text>
+        ) : null}
       </View>
       {right ? <View>{right}</View> : null}
     </View>
@@ -65,17 +79,32 @@ export function SettingsSection({
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { theme } = useTheme();
   const items = Children.toArray(children).filter(
-    (child) => isValidElement(child) && child.props && (child.props as { hidden?: boolean }).hidden !== true
+    (child) =>
+      isValidElement(child) &&
+      child.props &&
+      (child.props as { hidden?: boolean }).hidden !== true
   );
   return (
     <View style={style}>
-      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
-      <View style={styles.card}>
+      {title ? (
+        <Text style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</Text>
+      ) : null}
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.background.secondary,
+            borderColor: theme.glassBorder,
+          },
+        ]}>
         {items.map((child, idx) => (
           <Fragment key={idx}>
             {child}
-            {idx < items.length - 1 ? <View style={styles.separator} /> : null}
+            {idx < items.length - 1 ? (
+              <View style={[styles.separator, { backgroundColor: theme.glassBorder }]} />
+            ) : null}
           </Fragment>
         ))}
       </View>
@@ -85,18 +114,28 @@ export function SettingsSection({
 
 function RowShell({
   onPress,
+  onLongPress,
   children,
   disabled,
 }: {
   onPress?: () => void;
+  onLongPress?: () => void;
   children: ReactNode;
   disabled?: boolean;
 }) {
-  if (onPress) {
+  if (onPress || onLongPress) {
+    const handleLongPress = onLongPress
+      ? () => {
+          hapticsBridge.longPress();
+          onLongPress();
+        }
+      : undefined;
     return (
       <Pressable
         disabled={disabled}
         onPress={onPress}
+        onLongPress={handleLongPress}
+        delayLongPress={300}
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
         {children}
       </Pressable>
@@ -111,8 +150,10 @@ export function SettingsRow({
   label,
   description,
   value,
+  valueAccent,
   destructive,
   onPress,
+  onLongPress,
   right,
   trailing,
   hidden: _hidden,
@@ -122,41 +163,52 @@ export function SettingsRow({
   label: string;
   description?: string;
   value?: string;
+  valueAccent?: boolean;
   destructive?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
   right?: ReactNode;
   trailing?: 'chevron' | 'none';
   hidden?: boolean;
 }) {
-  const accent = destructive
-    ? SettingsTokens.destructive
-    : iconColor ?? SettingsTokens.iconAccent;
-  const labelColor = destructive ? SettingsTokens.destructive : SettingsTokens.labelColor;
+  const { theme } = useTheme();
+  const iconTint = destructive
+    ? DESTRUCTIVE
+    : iconColor ?? theme.text.primary;
+  const labelColor = destructive ? DESTRUCTIVE : theme.text.primary;
   const showChevron = (trailing ?? (onPress ? 'chevron' : 'none')) === 'chevron';
+  const valueColor = valueAccent ? theme.accent : theme.text.secondary;
+  const valueWeight = valueAccent ? '600' : '500';
 
   return (
-    <RowShell onPress={onPress}>
+    <RowShell onPress={onPress} onLongPress={onLongPress}>
       <View style={styles.rowLeft}>
-        <Ionicons name={icon} size={SettingsTokens.iconSize} color={accent} />
+        <Ionicons name={icon} size={SettingsLayout.iconSize} color={iconTint} />
         <View style={styles.rowText}>
           <Text style={[styles.rowLabel, { color: labelColor }]} numberOfLines={1}>
             {label}
           </Text>
           {description ? (
-            <Text style={styles.rowDescription} numberOfLines={2}>
+            <Text
+              style={[styles.rowDescription, { color: theme.text.secondary }]}
+              numberOfLines={2}>
               {description}
             </Text>
           ) : null}
         </View>
       </View>
       <View style={styles.rowRight}>
-        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        {value ? (
+          <Text style={[styles.rowValue, { color: valueColor, fontWeight: valueWeight }]}>
+            {value}
+          </Text>
+        ) : null}
         {right}
         {showChevron ? (
           <Ionicons
             name="chevron-forward"
-            size={SettingsTokens.chevronSize}
-            color={SettingsTokens.metaColor}
+            size={SettingsLayout.chevronSize}
+            color={theme.text.tertiary}
           />
         ) : null}
       </View>
@@ -171,6 +223,7 @@ export function SettingsSwitchRow({
   description,
   value,
   onValueChange,
+  onLongPress,
   trackColor,
   thumbColor,
   hidden: _hidden,
@@ -181,24 +234,28 @@ export function SettingsSwitchRow({
   description?: string;
   value: boolean;
   onValueChange: (next: boolean) => void;
+  onLongPress?: () => void;
   trackColor?: { false: string; true: string };
   thumbColor?: string;
   hidden?: boolean;
 }) {
+  const { theme } = useTheme();
   return (
-    <RowShell>
+    <RowShell onLongPress={onLongPress}>
       <View style={styles.rowLeft}>
         <Ionicons
           name={icon}
-          size={SettingsTokens.iconSize}
-          color={iconColor ?? SettingsTokens.iconAccent}
+          size={SettingsLayout.iconSize}
+          color={iconColor ?? theme.text.primary}
         />
         <View style={styles.rowText}>
-          <Text style={styles.rowLabel} numberOfLines={1}>
+          <Text style={[styles.rowLabel, { color: theme.text.primary }]} numberOfLines={1}>
             {label}
           </Text>
           {description ? (
-            <Text style={styles.rowDescription} numberOfLines={2}>
+            <Text
+              style={[styles.rowDescription, { color: theme.text.secondary }]}
+              numberOfLines={2}>
               {description}
             </Text>
           ) : null}
@@ -207,8 +264,8 @@ export function SettingsSwitchRow({
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={trackColor ?? { false: '#333', true: SettingsTokens.iconAccent }}
-        thumbColor={thumbColor ?? SettingsTokens.labelColor}
+        trackColor={trackColor ?? { false: theme.background.tertiary, true: theme.accent }}
+        thumbColor={thumbColor ?? theme.text.primary}
       />
     </RowShell>
   );
@@ -216,61 +273,55 @@ export function SettingsSwitchRow({
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.sm,
   },
   backButton: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 9999,
+    borderWidth: 1,
   },
   headerTextWrap: {
     flex: 1,
     gap: 2,
   },
   headerTitle: {
-    color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '800',
   },
   headerSubtitle: {
-    color: SettingsTokens.metaColor,
     fontSize: 14,
   },
   sectionTitle: {
-    color: SettingsTokens.metaColor,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 8,
+    letterSpacing: 1,
+    marginBottom: Spacing.xs + 2,
     marginLeft: 4,
   },
   card: {
-    backgroundColor: SettingsTokens.cardBg,
-    borderRadius: SettingsTokens.cardRadius,
+    borderRadius: SettingsLayout.cardRadius,
     borderWidth: 1,
-    borderColor: SettingsTokens.cardBorder,
     overflow: 'hidden',
   },
   separator: {
     height: 1,
-    backgroundColor: SettingsTokens.cardBorder,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SettingsTokens.rowPaddingV,
-    paddingHorizontal: SettingsTokens.rowPaddingH,
-    gap: SettingsTokens.rowGap,
+    paddingVertical: SettingsLayout.rowPaddingV,
+    paddingHorizontal: SettingsLayout.rowPaddingH,
+    gap: SettingsLayout.rowGap,
   },
   rowPressed: {
     backgroundColor: 'rgba(255,255,255,0.04)',
@@ -278,7 +329,7 @@ const styles = StyleSheet.create({
   rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SettingsTokens.rowGap,
+    gap: SettingsLayout.rowGap,
     flex: 1,
   },
   rowText: {
@@ -286,13 +337,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rowLabel: {
-    color: SettingsTokens.labelColor,
-    fontSize: SettingsTokens.labelFontSize,
-    fontWeight: '600',
+    fontSize: SettingsLayout.labelFontSize,
+    fontWeight: '500',
+    fontFamily: Typography.titleMedium.fontFamily,
   },
   rowDescription: {
-    color: SettingsTokens.metaColor,
-    fontSize: SettingsTokens.descriptionFontSize,
+    fontSize: SettingsLayout.descriptionFontSize,
   },
   rowRight: {
     flexDirection: 'row',
@@ -300,7 +350,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   rowValue: {
-    color: SettingsTokens.metaColor,
     fontSize: 13,
     fontWeight: '500',
   },

@@ -1,41 +1,32 @@
 import { useMemo } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  TintIntensity,
-  ThemeMode,
-  useTheme,
-} from '../../context/ThemeContext';
+import { TintIntensity, ThemeMode, useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ThemedSurface, ThemedText, readableTextOn } from '../../components/themed';
 
-const BG = '#0A0A0A';
-const SURFACE = '#1A1A1A';
-const BORDER = '#2A2A2A';
-const TEXT_PRIMARY = '#FFFFFF';
-const TEXT_SECONDARY = '#8A8A8A';
-const TEXT_MUTED = '#525252';
+// Mockup palette for the ModeCard previews. These are intentionally fixed
+// hex values that represent what light vs. dark mode look like — they do NOT
+// react to the active theme, because the preview's job is to show the user
+// what each mode will become.
+const MOCK_PALETTE = {
+  lightCanvas: '#F5EDF8',
+  lightSurface: '#FFFFFF',
+  lightHeader: '#1A1A2E',
+  lightSubText: '#6B5B7B',
+  darkCanvas: '#0A0F1C',
+  darkSurface: '#1E293B',
+  darkHeader: '#FFFFFF',
+  darkSubText: '#94A3B8',
+} as const;
 
-const MODES: { id: ThemeMode; label: string; lightSurface: string; darkSurface: string }[] = [
-  { id: 'light', label: 'Light', lightSurface: '#F5EDF8', darkSurface: '#FFFFFF' },
-  { id: 'dark', label: 'Dark', lightSurface: '#0A0F1C', darkSurface: '#1E293B' },
-  { id: 'auto', label: 'Auto', lightSurface: '#F5EDF8', darkSurface: '#0A0F1C' },
-];
-
-const SURFACE_TOKENS = [
-  { name: 'Background', hex: '#0A0F1C', description: 'App background base' },
-  { name: 'Card', hex: '#1A1A1A', description: 'Anime tile surface' },
-  { name: 'Elevated', hex: '#242424', description: 'Sheets & modals' },
-  { name: 'Border', hex: '#2A2A2A', description: 'Divider & outline' },
+const MODES: { id: ThemeMode; label: string; canvas: string; surface: string }[] = [
+  { id: 'light', label: 'Light', canvas: MOCK_PALETTE.lightCanvas, surface: MOCK_PALETTE.lightSurface },
+  { id: 'dark', label: 'Dark', canvas: MOCK_PALETTE.darkCanvas, surface: MOCK_PALETTE.darkSurface },
+  { id: 'auto', label: 'Auto', canvas: MOCK_PALETTE.lightCanvas, surface: MOCK_PALETTE.darkCanvas },
 ];
 
 const TINT_STEPS: TintIntensity[] = ['subtle', 'balanced', 'vivid'];
@@ -56,19 +47,35 @@ export default function ThemeModeScreen() {
   const accent = theme.accent;
   const tintIndex = useMemo(() => TINT_STEPS.indexOf(tintIntensity), [tintIntensity]);
 
+  const surfaceTokens = useMemo(
+    () => [
+      { name: 'Background', hex: theme.background.primary, description: 'App background base' },
+      { name: 'Card', hex: theme.background.secondary, description: 'Tile & list surface' },
+      { name: 'Elevated', hex: theme.background.tertiary, description: 'Sheets & modals' },
+      { name: 'Border', hex: theme.glassBorder, description: 'Divider & outline' },
+    ],
+    [theme.background.primary, theme.background.secondary, theme.background.tertiary, theme.glassBorder]
+  );
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.navBar}>
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back to settings"
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={TEXT_PRIMARY} />
-            <Text style={styles.navBackText}>Settings</Text>
+            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
+            <ThemedText variant="bodyMedium" weight="500">
+              Settings
+            </ThemedText>
           </Pressable>
-          <Text style={styles.navTitle}>Theme Mode</Text>
+          <ThemedText variant="titleLarge" weight="600">
+            Theme Mode
+          </ThemedText>
           <View style={{ width: 80 }} />
         </View>
 
@@ -82,7 +89,6 @@ export default function ThemeModeScreen() {
                 key={m.id}
                 mode={m}
                 selected={themeMode === m.id}
-                accent={accent}
                 onPress={() => {
                   hapticsBridge.selection();
                   void setThemeMode(m.id);
@@ -92,36 +98,47 @@ export default function ThemeModeScreen() {
           </View>
 
           <SectionHeader>SURFACE COLORS</SectionHeader>
-          <View style={styles.surfaceList}>
-            {SURFACE_TOKENS.map((t, idx) => (
+          <ThemedSurface variant="card">
+            {surfaceTokens.map((t, idx) => (
               <View key={t.name}>
                 <View style={styles.surfaceRow}>
                   <View
                     style={[
                       styles.surfaceSwatch,
-                      { backgroundColor: t.hex, borderColor: BORDER },
+                      { backgroundColor: t.hex, borderColor: theme.glassBorder },
                     ]}
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.surfaceName}>{t.name}</Text>
-                    <Text style={styles.surfaceDesc}>{t.description}</Text>
+                    <ThemedText variant="bodyMedium" weight="500">
+                      {t.name}
+                    </ThemedText>
+                    <ThemedText variant="bodySmall" tone="secondary">
+                      {t.description}
+                    </ThemedText>
                   </View>
                   <View style={styles.surfaceRight}>
-                    <Text style={styles.surfaceHex}>{t.hex}</Text>
-                    <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
+                    <ThemedText variant="bodySmall" tone="secondary" weight="500">
+                      {t.hex.toUpperCase()}
+                    </ThemedText>
                   </View>
                 </View>
-                {idx < SURFACE_TOKENS.length - 1 ? <View style={styles.separator} /> : null}
+                {idx < surfaceTokens.length - 1 ? (
+                  <View style={[styles.separator, { backgroundColor: theme.glassBorder }]} />
+                ) : null}
               </View>
             ))}
-          </View>
+          </ThemedSurface>
 
           <SectionHeader>ACCENT TINT INTENSITY</SectionHeader>
-          <View style={styles.tintCard}>
+          <ThemedSurface variant="card" padded>
             <View style={styles.tintHead}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.tintTitle}>{capitalize(tintIntensity)}</Text>
-                <Text style={styles.tintSubtitle}>{tintSubtitle(tintIntensity)}</Text>
+                <ThemedText variant="titleMedium" weight="600">
+                  {capitalize(tintIntensity)}
+                </ThemedText>
+                <ThemedText variant="bodySmall" tone="secondary">
+                  {tintSubtitle(tintIntensity)}
+                </ThemedText>
               </View>
               <View
                 style={[
@@ -129,7 +146,9 @@ export default function ThemeModeScreen() {
                   { backgroundColor: accent + '22', borderColor: accent },
                 ]}>
                 <View style={[styles.sampleDot, { backgroundColor: accent }]} />
-                <Text style={[styles.sampleText, { color: accent }]}>Sample</Text>
+                <ThemedText variant="bodySmall" weight="600" style={{ color: accent }}>
+                  Sample
+                </ThemedText>
               </View>
             </View>
             <Slider
@@ -145,40 +164,45 @@ export default function ThemeModeScreen() {
                 }
               }}
               minimumTrackTintColor={accent}
-              maximumTrackTintColor={BORDER}
-              thumbTintColor={TEXT_PRIMARY}
-              style={{ width: '100%' }}
+              maximumTrackTintColor={theme.glassBorder}
+              thumbTintColor={theme.text.primary}
+              style={styles.slider}
             />
             <View style={styles.marksRow}>
               {TINT_STEPS.map((s) => (
-                <Text
+                <ThemedText
                   key={s}
-                  style={[
-                    styles.markText,
-                    s === tintIntensity && { color: accent, fontWeight: '600' },
-                  ]}>
+                  variant="captionSmall"
+                  tone={s === tintIntensity ? 'accent' : 'tertiary'}
+                  weight={s === tintIntensity ? '600' : '500'}>
                   {capitalize(s)}
-                </Text>
+                </ThemedText>
               ))}
             </View>
-          </View>
+          </ThemedSurface>
 
           <SectionHeader>CONTRAST</SectionHeader>
-          <View style={styles.toggleCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.toggleTitle}>Increase Contrast</Text>
-              <Text style={styles.toggleSubtitle}>Sharper text and borders</Text>
+          <ThemedSurface variant="card" padded>
+            <View style={styles.toggleRow}>
+              <View style={{ flex: 1 }}>
+                <ThemedText variant="titleMedium" weight="500">
+                  Increase Contrast
+                </ThemedText>
+                <ThemedText variant="bodySmall" tone="secondary">
+                  Sharper text and borders
+                </ThemedText>
+              </View>
+              <Switch
+                value={increaseContrast}
+                onValueChange={(v) => {
+                  hapticsBridge.selection();
+                  void setIncreaseContrast(v);
+                }}
+                trackColor={{ false: theme.background.tertiary, true: accent }}
+                thumbColor={theme.text.primary}
+              />
             </View>
-            <Switch
-              value={increaseContrast}
-              onValueChange={(v) => {
-                hapticsBridge.selection();
-                void setIncreaseContrast(v);
-              }}
-              trackColor={{ false: '#333', true: accent }}
-              thumbColor={TEXT_PRIMARY}
-            />
-          </View>
+          </ThemedSurface>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -186,54 +210,77 @@ export default function ThemeModeScreen() {
 }
 
 function SectionHeader({ children }: { children: string }) {
-  return <Text style={styles.sectionHeader}>{children}</Text>;
+  return (
+    <ThemedText
+      variant="captionSmall"
+      tone="tertiary"
+      weight="600"
+      style={styles.sectionHeader}>
+      {children}
+    </ThemedText>
+  );
 }
 
 function ModeCard({
   mode,
   selected,
-  accent,
   onPress,
 }: {
   mode: (typeof MODES)[number];
   selected: boolean;
-  accent: string;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const accent = theme.accent;
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${mode.label} mode`}
+      accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.modeCard,
-        selected && { borderColor: accent, borderWidth: 2 },
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: selected ? accent : theme.glassBorder,
+          borderWidth: selected ? 2 : 1,
+        },
         pressed && { opacity: 0.85 },
       ]}>
       <View style={styles.modePreview}>
         {mode.id === 'auto' ? (
           <View style={{ flex: 1, flexDirection: 'row' }}>
-            <View style={[styles.modeMini, { backgroundColor: mode.lightSurface }]}>
+            <View style={[styles.modeMini, { backgroundColor: mode.canvas }]}>
               <MiniPreview tone="light" />
             </View>
-            <View style={[styles.modeMini, { backgroundColor: mode.darkSurface }]}>
+            <View style={[styles.modeMini, { backgroundColor: mode.surface }]}>
               <MiniPreview tone="dark" />
             </View>
           </View>
         ) : (
-          <View style={[styles.modeMiniFull, { backgroundColor: mode.lightSurface }]}>
+          <View style={[styles.modeMiniFull, { backgroundColor: mode.canvas }]}>
             <MiniPreview tone={mode.id === 'dark' ? 'dark' : 'light'} />
           </View>
         )}
       </View>
       <View style={styles.modeFooter}>
-        <Text style={[styles.modeLabel, selected && { color: accent, fontWeight: '700' }]}>
+        <ThemedText
+          variant="titleSmall"
+          tone={selected ? 'accent' : 'primary'}
+          weight={selected ? '700' : '600'}>
           {mode.label}
-        </Text>
+        </ThemedText>
         {selected ? (
           <View style={[styles.modeCheck, { backgroundColor: accent }]}>
-            <Ionicons name="checkmark" size={10} color={BG} />
+            <Ionicons name="checkmark" size={10} color={readableTextOn(accent)} />
           </View>
         ) : (
-          <View style={[styles.modeCheck, { backgroundColor: BG, borderColor: '#3A3A3A', borderWidth: 1.5 }]} />
+          <View
+            style={[
+              styles.modeCheck,
+              { backgroundColor: theme.background.primary, borderColor: theme.glassBorder, borderWidth: 1.5 },
+            ]}
+          />
         )}
       </View>
     </Pressable>
@@ -241,9 +288,9 @@ function ModeCard({
 }
 
 function MiniPreview({ tone }: { tone: 'light' | 'dark' }) {
-  const headerBar = tone === 'light' ? '#1A1A2E' : '#FFFFFF';
-  const subBar = tone === 'light' ? '#6B5B7B' : '#94A3B8';
-  const rowBg = tone === 'light' ? '#FFFFFF' : '#1E293B';
+  const headerBar = tone === 'light' ? MOCK_PALETTE.lightHeader : MOCK_PALETTE.darkHeader;
+  const subBar = tone === 'light' ? MOCK_PALETTE.lightSubText : MOCK_PALETTE.darkSubText;
+  const rowBg = tone === 'light' ? MOCK_PALETTE.lightSurface : MOCK_PALETTE.darkSurface;
   return (
     <View style={{ flex: 1, padding: 6, gap: 4 }}>
       <View style={{ height: 5, backgroundColor: headerBar, borderRadius: 2, width: '70%' }} />
@@ -269,7 +316,7 @@ function tintSubtitle(t: TintIntensity) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+  root: { flex: 1 },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,23 +325,13 @@ const styles = StyleSheet.create({
     height: 48,
   },
   navBack: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 80 },
-  navBackText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  navTitle: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '600' },
   scroll: { padding: 20, gap: 16 },
-  sectionHeader: {
-    color: TEXT_MUTED,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-  },
+  sectionHeader: { letterSpacing: 1.5 },
   modeRow: { flexDirection: 'row', gap: 8 },
   modeCard: {
     flex: 1,
     height: 170,
-    backgroundColor: SURFACE,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: BORDER,
     padding: 8,
     gap: 8,
     overflow: 'hidden',
@@ -312,20 +349,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 4,
   },
-  modeLabel: { color: TEXT_PRIMARY, fontSize: 13, fontWeight: '600' },
   modeCheck: {
     width: 14,
     height: 14,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  surfaceList: {
-    backgroundColor: SURFACE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    overflow: 'hidden',
   },
   surfaceRow: {
     flexDirection: 'row',
@@ -340,22 +369,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  surfaceName: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  surfaceDesc: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   surfaceRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  surfaceHex: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '500' },
-  separator: { height: 1, backgroundColor: BORDER },
-  tintCard: {
-    backgroundColor: SURFACE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 16,
-    gap: 18,
-  },
+  separator: { height: 1 },
   tintHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  tintTitle: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600' },
-  tintSubtitle: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
   sampleChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -366,20 +382,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   sampleDot: { width: 8, height: 8, borderRadius: 4 },
-  sampleText: { fontSize: 12, fontWeight: '600' },
-  marksRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  markText: { color: TEXT_MUTED, fontSize: 11, fontWeight: '500' },
-  toggleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: SURFACE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  toggleTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '500' },
-  toggleSubtitle: { color: TEXT_SECONDARY, fontSize: 12, marginTop: 2 },
+  slider: { width: '100%', marginTop: 18 },
+  marksRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
 });
