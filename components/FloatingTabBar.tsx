@@ -1,34 +1,37 @@
 import { useEffect, useState } from 'react';
-import { View, Platform, StyleSheet, Pressable } from 'react-native';
+import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Animated, {
-  Easing,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, TabBar as TabBarTokens } from '../constants/DesignSystem';
 
 const PILL_HORIZONTAL_MARGIN = 16;
 const PILL_INNER_PADDING = 8;
-const INDICATOR_INSET = 4;
 
-const SLIDE_SPRING = { damping: 22, stiffness: 240, mass: 0.6 } as const;
-const FOCUS_SPRING = { damping: 18, stiffness: 220, mass: 0.5 } as const;
+const COLLAPSED_WIDTH = 44;
+const TAB_HEIGHT = 44;
+const LABEL_TRAILING_PAD = 14;
+const ACTIVE_ICON_SIZE = 18;
+const INACTIVE_ICON_SIZE = 20;
+
+const FOCUS_SPRING = { damping: 20, stiffness: 220, mass: 0.6 } as const;
 const PRESS_IN_SPRING = { damping: 14, stiffness: 320 } as const;
 const PRESS_OUT_SPRING = { damping: 12, stiffness: 280 } as const;
 
+const ACTIVE_FG = Colors.primary;
+const INACTIVE_FG = Colors.text.tertiary;
+const ACTIVE_BG = 'rgba(255, 159, 10, 0.16)';
+const ACTIVE_BORDER = 'rgba(255, 159, 10, 0.45)';
+
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const [tabRowWidth, setTabRowWidth] = useState(0);
-
-  const indicatorX = useSharedValue(0);
-  const indicatorOpacity = useSharedValue(0);
 
   const bottomMargin = Platform.select({
     ios: insets.bottom > 0 ? insets.bottom : 16,
@@ -47,37 +50,6 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   });
 
   const activeRouteKey = state.routes[state.index]?.key;
-  const focusedVisibleIndex = Math.max(
-    0,
-    visibleRoutes.findIndex((r) => r.key === activeRouteKey)
-  );
-
-  const tabCount = visibleRoutes.length;
-  const tabWidth = tabCount > 0 ? tabRowWidth / tabCount : 0;
-
-  useEffect(() => {
-    if (tabWidth <= 0) {
-      indicatorOpacity.value = 0;
-      return;
-    }
-    const target = focusedVisibleIndex * tabWidth;
-    if (indicatorOpacity.value === 0) {
-      indicatorX.value = target;
-      indicatorOpacity.value = withTiming(1, {
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-      });
-    } else {
-      indicatorX.value = withSpring(target, SLIDE_SPRING);
-    }
-  }, [focusedVisibleIndex, tabWidth, indicatorOpacity, indicatorX]);
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-    width: Math.max(0, tabWidth - INDICATOR_INSET * 2),
-    opacity: indicatorOpacity.value,
-  }));
-
   const activeOptions = activeRouteKey ? descriptors[activeRouteKey]?.options : undefined;
   if (!activeOptions || isHidden(activeOptions)) {
     return null;
@@ -93,10 +65,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         />
         <View style={styles.pillBackground} pointerEvents="none" />
         <View style={styles.pillBorder} pointerEvents="none" />
-        <View style={styles.pillInnerBorder} pointerEvents="none" />
 
-        <View style={styles.tabRow} onLayout={(e) => setTabRowWidth(e.nativeEvent.layout.width)}>
-          <Animated.View style={[styles.indicator, indicatorStyle]} pointerEvents="none" />
+        <View style={styles.tabRow}>
           {visibleRoutes.map((route) => {
             const { options } = descriptors[route.key];
             const realIndex = state.routes.findIndex((r) => r.key === route.key);
@@ -151,6 +121,7 @@ interface TabItemProps {
 }
 
 function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItemProps) {
+  const [labelWidth, setLabelWidth] = useState(0);
   const pressScale = useSharedValue(1);
   const focusProgress = useSharedValue(isFocused ? 1 : 0);
 
@@ -158,38 +129,38 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
     focusProgress.value = withSpring(isFocused ? 1 : 0, FOCUS_SPRING);
   }, [isFocused, focusProgress]);
 
-  const containerStyle = useAnimatedStyle(() => ({
+  const expandedWidth =
+    labelWidth > 0 ? COLLAPSED_WIDTH + labelWidth + LABEL_TRAILING_PAD : COLLAPSED_WIDTH;
+
+  const pillStyle = useAnimatedStyle(() => ({
+    width: COLLAPSED_WIDTH + focusProgress.value * (expandedWidth - COLLAPSED_WIDTH),
+    backgroundColor: interpolateColor(focusProgress.value, [0, 1], ['rgba(0,0,0,0)', ACTIVE_BG]),
+    borderColor: interpolateColor(
+      focusProgress.value,
+      [0, 1],
+      ['rgba(0,0,0,0)', ACTIVE_BORDER]
+    ),
     transform: [{ scale: pressScale.value }],
   }));
 
-  const iconWrapStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: 1 + focusProgress.value * 0.06 },
-      { translateY: -focusProgress.value * 1.5 },
-    ],
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: focusProgress.value,
+    transform: [{ translateX: (1 - focusProgress.value) * -6 }],
   }));
 
   const inactiveIconStyle = useAnimatedStyle(() => ({
     opacity: 1 - focusProgress.value,
   }));
-
   const activeIconStyle = useAnimatedStyle(() => ({
     opacity: focusProgress.value,
   }));
 
-  const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(focusProgress.value, [0, 1], [Colors.text.tertiary, '#FFFFFF']),
-    opacity: 0.75 + focusProgress.value * 0.25,
-  }));
-
   const handlePressIn = () => {
-    pressScale.value = withSpring(0.92, PRESS_IN_SPRING);
+    pressScale.value = withSpring(0.94, PRESS_IN_SPRING);
   };
   const handlePressOut = () => {
     pressScale.value = withSpring(1, PRESS_OUT_SPRING);
   };
-
-  const iconSize = TabBarTokens.iconSize + 4;
 
   return (
     <Pressable
@@ -197,34 +168,45 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
       onLongPress={onLongPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={styles.tabItem}>
-      <Animated.View style={[styles.tabContent, containerStyle]}>
-        <Animated.View style={[styles.iconStack, iconWrapStyle]}>
+      hitSlop={6}>
+      <Animated.View style={[styles.tabPill, pillStyle]}>
+        <View style={styles.iconBox}>
           {renderIcon ? (
             <>
               <Animated.View style={inactiveIconStyle}>
                 {renderIcon({
                   focused: false,
-                  color: Colors.text.tertiary,
-                  size: iconSize,
+                  color: INACTIVE_FG,
+                  size: INACTIVE_ICON_SIZE,
                 })}
               </Animated.View>
-              <Animated.View
-                style={[StyleSheet.absoluteFill, styles.iconCenter, activeIconStyle]}
-                pointerEvents="none">
+              <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, activeIconStyle]}>
                 {renderIcon({
                   focused: true,
-                  color: '#FFFFFF',
-                  size: iconSize,
+                  color: ACTIVE_FG,
+                  size: ACTIVE_ICON_SIZE,
                 })}
               </Animated.View>
             </>
           ) : null}
-        </Animated.View>
-        <Animated.Text style={[styles.label, labelStyle]} numberOfLines={1}>
+        </View>
+        <Animated.Text
+          style={[styles.label, labelStyle]}
+          numberOfLines={1}
+          allowFontScaling={false}>
           {label}
         </Animated.Text>
       </Animated.View>
+      <Text
+        style={styles.labelMeasure}
+        numberOfLines={1}
+        allowFontScaling={false}
+        onLayout={(e) => {
+          const w = Math.ceil(e.nativeEvent.layout.width);
+          if (w !== labelWidth) setLabelWidth(w);
+        }}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -246,15 +228,15 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.18,
-        shadowRadius: 16,
+        shadowOpacity: 0.32,
+        shadowRadius: 24,
       },
-      android: { elevation: 12 },
+      android: { elevation: 14 },
     }),
   },
   pillBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(28,28,30,0.78)',
+    backgroundColor: 'rgba(20,20,22,0.78)',
   },
   pillBorder: {
     ...StyleSheet.absoluteFillObject,
@@ -262,38 +244,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
   },
-  pillInnerBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: Radius.tabBar,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
   tabRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  tabItem: {
-    flex: 1,
+  tabPill: {
+    height: TAB_HEIGHT,
+    borderRadius: TAB_HEIGHT / 2,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
+    overflow: 'hidden',
+    borderWidth: 1,
   },
-  indicator: {
-    position: 'absolute',
-    top: INDICATOR_INSET,
-    bottom: INDICATOR_INSET,
-    left: INDICATOR_INSET,
-    borderRadius: Radius.tabActive,
-    backgroundColor: Colors.primary,
-  },
-  tabContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: TabBarTokens.itemGap,
-  },
-  iconStack: {
-    position: 'relative',
+  iconBox: {
+    width: COLLAPSED_WIDTH,
+    height: TAB_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -302,8 +269,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: TabBarTokens.labelSize,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '700',
+    color: ACTIVE_FG,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginRight: LABEL_TRAILING_PAD,
+  },
+  labelMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });

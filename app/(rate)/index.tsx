@@ -29,7 +29,6 @@ import {
 } from '../../components/rate/ImageDisplaySettingsSheet';
 import { useRateData } from '../../components/rate/useRateData';
 import { Anime, Genre, ViewMode } from '../../components/rate/types';
-import { BrowseSourceChip } from '../../components/common/BrowseSourceChip';
 import { AniCard } from '../../components/common/AniCard';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { Colors, FontFamily, Spacing, Typography } from '../../constants/DesignSystem';
@@ -116,10 +115,6 @@ export default function HomeRateScreen() {
             <Ionicons name="settings-outline" size={20} color={Colors.text.secondary} />
           </Pressable>
         </View>
-      </View>
-
-      <View style={styles.sourceChipRow}>
-        <BrowseSourceChip />
       </View>
 
       <View style={styles.modeSelectorRow}>
@@ -314,12 +309,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.glass.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  sourceChipRow: {
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
   },
   modeSelectorRow: {
     paddingHorizontal: Spacing.md,

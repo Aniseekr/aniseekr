@@ -805,6 +805,14 @@ export default function PilgrimageDetailScreen() {
                 style={styles.heroGradient}
               />
               <View style={styles.heroOverlay}>
+                {anime ? (
+                  <View style={styles.heroSpotBadge}>
+                    <Ionicons name="location" size={11} color={Colors.text.primary} />
+                    <Text style={styles.heroSpotBadgeText}>
+                      {stats.spotCount} {stats.spotCount === 1 ? 'pilgrimage spot' : 'pilgrimage spots'}
+                    </Text>
+                  </View>
+                ) : null}
                 <Text style={styles.heroTitle} numberOfLines={2}>
                   {anime?.title ?? ''}
                 </Text>
@@ -861,22 +869,36 @@ export default function PilgrimageDetailScreen() {
             ) : null}
 
             {!isEmpty && anime ? (
-              <View style={styles.tabsRow}>
-                <ViewModeTab
-                  active={viewMode === 'list'}
-                  label="List"
-                  icon="view-list"
-                  themeColor={themeColor}
-                  onPress={() => handleViewToggle('list')}
-                />
-                <ViewModeTab
-                  active={viewMode === 'map'}
-                  label="Map"
-                  icon="map"
-                  themeColor={themeColor}
-                  onPress={() => handleViewToggle('map')}
-                />
-              </View>
+              <>
+                <View style={styles.tabsRow}>
+                  <ViewModeTab
+                    active={viewMode === 'list'}
+                    label="List"
+                    icon="view-list"
+                    themeColor={themeColor}
+                    count={points.length}
+                    onPress={() => handleViewToggle('list')}
+                  />
+                  <ViewModeTab
+                    active={viewMode === 'map'}
+                    label="Map"
+                    icon="map"
+                    themeColor={themeColor}
+                    count={points.filter((p) => hasValidGeo(p.geo)).length}
+                    onPress={() => handleViewToggle('map')}
+                  />
+                </View>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionHeaderTitle}>
+                    {viewMode === 'list' ? 'シーン一覧' : 'マップ表示'}
+                  </Text>
+                  <Text style={styles.sectionHeaderSubtitle}>
+                    {viewMode === 'list'
+                      ? `${points.length} ${points.length === 1 ? 'scene' : 'scenes'} · ${stats.visitedCount} visited`
+                      : 'Tap a marker to view the scene'}
+                  </Text>
+                </View>
+              </>
             ) : null}
 
             {isEmpty ? (
@@ -1072,24 +1094,43 @@ interface ViewModeTabProps {
   label: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   themeColor: string;
+  count?: number;
   onPress: () => void;
 }
 
-function ViewModeTab({ active, label, icon, themeColor, onPress }: ViewModeTabProps) {
+function ViewModeTab({ active, label, icon, themeColor, count, onPress }: ViewModeTabProps) {
+  // Pen treats the selected tab as an outlined pill (border in theme color over
+  // a card-tone fill) rather than a solid fill — keeps the rail readable while
+  // signalling state.
+  const fg = active ? themeColor : Colors.text.secondary;
+  const dim = active ? themeColor : Colors.text.secondary;
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         tabStyles.tab,
-        active && { backgroundColor: themeColor },
+        active
+          ? {
+              backgroundColor: Colors.background.secondary,
+              borderColor: themeColor,
+              borderWidth: 1.5,
+            }
+          : { backgroundColor: Colors.background.secondary, borderColor: Colors.glass.border },
         pressed && { opacity: 0.85 },
       ]}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}>
-      <MaterialIcons name={icon} size={16} color={active ? '#000' : Colors.text.secondary} />
-      <Text style={[tabStyles.label, { color: active ? '#000' : Colors.text.secondary }]}>
-        {label}
-      </Text>
+      <MaterialIcons name={icon} size={14} color={fg} />
+      <Text style={[tabStyles.label, { color: fg }]}>{label}</Text>
+      {count !== undefined ? (
+        <View
+          style={[
+            tabStyles.countBadge,
+            { backgroundColor: active ? `${themeColor}22` : Colors.glass.medium },
+          ]}>
+          <Text style={[tabStyles.countText, { color: dim }]}>{count}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -1149,7 +1190,22 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: Spacing.screenPadding,
     paddingBottom: Spacing.md,
+    gap: 6,
+  },
+  heroSpotBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.background.secondary,
+  },
+  heroSpotBadgeText: {
+    color: Colors.text.primary,
+    fontSize: 11,
+    fontWeight: '700',
   },
   heroTitle: {
     color: Colors.text.primary,
@@ -1196,15 +1252,26 @@ const styles = StyleSheet.create({
   },
   tabsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.xs,
     marginHorizontal: Spacing.screenPadding,
     marginTop: Spacing.md,
     marginBottom: Spacing.sm,
-    backgroundColor: Colors.glass.dark,
-    padding: 4,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
+  },
+  sectionHeader: {
+    paddingHorizontal: Spacing.screenPadding,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  sectionHeaderTitle: {
+    color: Colors.text.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  sectionHeaderSubtitle: {
+    color: Colors.text.tertiary,
+    ...Typography.bodySmall,
+    marginTop: 2,
   },
   list: {
     paddingHorizontal: Spacing.screenPadding,
@@ -1279,17 +1346,32 @@ const statStyles = StyleSheet.create({
 
 const tabStyles = StyleSheet.create({
   tab: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 36,
+    paddingLeft: 14,
+    paddingRight: 8,
+    paddingVertical: 8,
     borderRadius: Radius.full,
+    borderWidth: 1,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  countBadge: {
+    minWidth: 24,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

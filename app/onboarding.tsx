@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Radius, Spacing, Typography } from '../constants/DesignSystem';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { useTheme } from '../context/ThemeContext';
+import { ThemedButton } from '../components/themed';
 import {
   BROWSE_SUPPORTED_PLATFORMS,
   DEFAULT_BROWSE_SOURCE,
@@ -159,19 +160,17 @@ export default function OnboardingScreen() {
           scrollEventThrottle={16}
           bounces={false}
           style={styles.pager}>
-          <WelcomeStep onContinue={() => goToStep(1)} accent={theme.accent} />
+          <WelcomeStep onContinue={() => goToStep(1)} />
           <BrowseSourceStep
             selected={browseSource}
             onSelect={handleSelectBrowseSource}
             onContinue={() => goToStep(2)}
-            accent={theme.accent}
           />
           <NotificationsStep
             granted={notifGranted}
             busy={notifBusy}
             onAllow={handleAllowNotifications}
             onSkip={handleSkipNotifications}
-            accent={theme.accent}
           />
           <AdultContentStep
             value={allowAdult}
@@ -179,7 +178,7 @@ export default function OnboardingScreen() {
             onContinue={() => goToStep(4)}
             accent={theme.accent}
           />
-          <DoneStep onFinish={handleFinish} busy={completing} accent={theme.accent} />
+          <DoneStep onFinish={handleFinish} busy={completing} />
         </Animated.ScrollView>
 
         <DotIndicator count={STEPS.length} active={stepIndex} accent={theme.accent} />
@@ -188,11 +187,7 @@ export default function OnboardingScreen() {
   );
 }
 
-interface StepProps {
-  accent: string;
-}
-
-function WelcomeStep({ onContinue, accent }: StepProps & { onContinue: () => void }) {
+function WelcomeStep({ onContinue }: { onContinue: () => void }) {
   return (
     <View style={styles.page}>
       <View style={styles.iconHalo}>
@@ -201,7 +196,7 @@ function WelcomeStep({ onContinue, accent }: StepProps & { onContinue: () => voi
       <Text style={styles.wordmark}>Aniseekr</Text>
       <Text style={styles.tagline}>Discover, rate, collect. Locally on your device.</Text>
       <Text style={styles.subtitle}>No account needed.</Text>
-      <PrimaryButton label="Continue" onPress={onContinue} accent={accent} />
+      <ThemedButton label="Continue" onPress={onContinue} size="lg" fullWidth />
     </View>
   );
 }
@@ -210,8 +205,7 @@ function BrowseSourceStep({
   selected,
   onSelect,
   onContinue,
-  accent,
-}: StepProps & {
+}: {
   selected: PlatformType;
   onSelect: (p: PlatformType) => void;
   onContinue: () => void;
@@ -255,7 +249,7 @@ function BrowseSourceStep({
           );
         })}
       </View>
-      <PrimaryButton label="Continue" onPress={onContinue} accent={accent} />
+      <ThemedButton label="Continue" onPress={onContinue} size="lg" fullWidth />
     </View>
   );
 }
@@ -265,8 +259,7 @@ function NotificationsStep({
   busy,
   onAllow,
   onSkip,
-  accent,
-}: StepProps & {
+}: {
   granted: boolean | null;
   busy: boolean;
   onAllow: () => void;
@@ -287,13 +280,25 @@ function NotificationsStep({
         </View>
       ) : null}
       <View style={styles.buttonRow}>
-        <SecondaryButton label="Maybe later" onPress={onSkip} disabled={busy} />
-        <PrimaryButton
-          label={busy ? 'Asking…' : 'Allow'}
-          onPress={onAllow}
-          accent={accent}
-          disabled={busy}
-        />
+        <View style={styles.buttonRowItem}>
+          <ThemedButton
+            variant="secondary"
+            label="Maybe later"
+            onPress={onSkip}
+            disabled={busy}
+            size="lg"
+            fullWidth
+          />
+        </View>
+        <View style={styles.buttonRowItem}>
+          <ThemedButton
+            label={busy ? 'Asking…' : 'Allow'}
+            onPress={onAllow}
+            loading={busy}
+            size="lg"
+            fullWidth
+          />
+        </View>
       </View>
     </View>
   );
@@ -304,10 +309,11 @@ function AdultContentStep({
   onToggle,
   onContinue,
   accent,
-}: StepProps & {
+}: {
   value: boolean;
   onToggle: (v: boolean) => void;
   onContinue: () => void;
+  accent: string;
 }) {
   return (
     <View style={styles.page}>
@@ -329,72 +335,26 @@ function AdultContentStep({
           thumbColor="#FFFFFF"
         />
       </View>
-      <PrimaryButton label="Continue" onPress={onContinue} accent={accent} />
+      <ThemedButton label="Continue" onPress={onContinue} size="lg" fullWidth />
     </View>
   );
 }
 
-function DoneStep({ onFinish, busy, accent }: StepProps & { onFinish: () => void; busy: boolean }) {
+function DoneStep({ onFinish, busy }: { onFinish: () => void; busy: boolean }) {
   return (
     <View style={styles.page}>
       <MaterialIcons name="celebration" size={96} color="#FFFFFF" />
       <Text style={styles.title}>You&apos;re ready</Text>
       <Text style={styles.body}>Start rating, collecting, and exploring.</Text>
-      <PrimaryButton
+      <ThemedButton
         label={busy ? 'Loading…' : 'Get started'}
         onPress={onFinish}
-        accent={accent}
-        disabled={busy}
+        loading={busy}
+        size="lg"
+        fullWidth
+        haptic="success"
       />
     </View>
-  );
-}
-
-function PrimaryButton({
-  label,
-  onPress,
-  accent,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  accent: string;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.primaryButton,
-        { backgroundColor: accent, opacity: disabled ? 0.6 : pressed ? 0.85 : 1 },
-      ]}>
-      <Text style={styles.primaryButtonText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function SecondaryButton({
-  label,
-  onPress,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.secondaryButton,
-        { opacity: disabled ? 0.5 : pressed ? 0.7 : 1 },
-      ]}>
-      <Text style={styles.secondaryButtonText}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -527,33 +487,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     width: '100%',
   },
-  primaryButton: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xxl,
-    borderRadius: Radius.full,
-    alignSelf: 'stretch',
-    alignItems: 'center',
+  buttonRowItem: {
     flex: 1,
-  },
-  primaryButtonText: {
-    ...Typography.titleLarge,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xxl,
-    borderRadius: Radius.full,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.glass.borderHeavy,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  secondaryButtonText: {
-    ...Typography.titleLarge,
-    color: '#FFFFFF',
   },
   toggleRow: {
     flexDirection: 'row',

@@ -54,16 +54,34 @@ export interface PilgrimageSaveInput {
   expiresAt: number;
 }
 
-let db: SQLite.SQLiteDatabase | null = null;
+// Cache the in-flight open as a promise so concurrent callers share one handle.
+// Without this, two parallel `if (!db) await init()` calls both see `db === null`,
+// both call openDatabaseAsync, and one of the handles gets orphaned mid-execAsync —
+// later runAsync on the orphan throws `NativeDatabase.prepareAsync … NullPointerException`
+// on Android.
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-export const LocalDB = {
-  async init() {
-    if (db) return;
-    db = await SQLite.openDatabaseAsync(DB_NAME);
+function openDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      try {
+        const opened = await SQLite.openDatabaseAsync(DB_NAME);
+        // WAL must be set on its own statement (some Android builds choke on it
+        // when bundled with DDL in one execAsync).
+        await opened.execAsync('PRAGMA journal_mode = WAL');
+        await opened.execAsync(DDL);
+        console.log('[LocalDB] Initialized');
+        return opened;
+      } catch (err) {
+        dbPromise = null;
+        throw err;
+      }
+    })();
+  }
+  return dbPromise;
+}
 
-    // Create tables
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
+const DDL = `
       CREATE TABLE IF NOT EXISTS favorites (
         id TEXT PRIMARY KEY NOT NULL,
         title TEXT,
@@ -231,18 +249,20 @@ export const LocalDB = {
       );
       CREATE INDEX IF NOT EXISTS idx_sched_notif_ref
         ON scheduled_notifications(kind, ref_id);
-    `);
-    console.log('[LocalDB] Initialized');
+    `;
+
+export const LocalDB = {
+  async init(): Promise<void> {
+    await openDb();
   },
 
   async getDatabase(): Promise<SQLite.SQLiteDatabase> {
-    if (!db) await this.init();
-    return db!;
+    return openDb();
   },
 
   async addFavorite(anime: { id: string; title: string; image: string }) {
-    if (!db) await this.init();
-    await db?.runAsync(
+    const db = await openDb();
+    await db.runAsync(
       'INSERT OR REPLACE INTO favorites (id, title, image, addedAt) VALUES (?, ?, ?, ?)',
       anime.id,
       anime.title,
@@ -252,27 +272,27 @@ export const LocalDB = {
   },
 
   async removeFavorite(animeId: string) {
-    if (!db) await this.init();
-    await db?.runAsync('DELETE FROM favorites WHERE id = ?', animeId);
+    const db = await openDb();
+    await db.runAsync('DELETE FROM favorites WHERE id = ?', animeId);
   },
 
   async getFavorites(): Promise<FavoriteItem[]> {
-    if (!db) await this.init();
-    const result = await db?.getAllAsync<FavoriteItem>(
+    const db = await openDb();
+    const result = await db.getAllAsync<FavoriteItem>(
       'SELECT * FROM favorites ORDER BY addedAt DESC'
     );
     return result || [];
   },
 
   async isFavorite(animeId: string): Promise<boolean> {
-    if (!db) await this.init();
-    const result = await db?.getFirstAsync('SELECT id FROM favorites WHERE id = ?', animeId);
+    const db = await openDb();
+    const result = await db.getFirstAsync('SELECT id FROM favorites WHERE id = ?', animeId);
     return !!result;
   },
 
   async addRating(animeId: string, rating: 'like' | 'pass') {
-    if (!db) await this.init();
-    await db?.runAsync(
+    const db = await openDb();
+    await db.runAsync(
       'INSERT OR REPLACE INTO ratings (id, rating, timestamp) VALUES (?, ?, ?)',
       animeId,
       rating,
@@ -281,11 +301,11 @@ export const LocalDB = {
   },
 
   async getStats(): Promise<UserStats> {
-    if (!db) await this.init();
-    const totalResult = await db?.getFirstAsync<{ count: number }>(
+    const db = await openDb();
+    const totalResult = await db.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) as count FROM ratings'
     );
-    const likedResult = await db?.getFirstAsync<{ count: number }>(
+    const likedResult = await db.getFirstAsync<{ count: number }>(
       'SELECT COUNT(*) as count FROM ratings WHERE rating = "like"'
     );
 
@@ -296,8 +316,8 @@ export const LocalDB = {
   },
 
   async getPilgrimage(bangumiId: number): Promise<PilgrimageRow | null> {
-    if (!db) await this.init();
-    const row = await db?.getFirstAsync<PilgrimageRow>(
+    const db = await openDb();
+    const row = await db.getFirstAsync<PilgrimageRow>(
       'SELECT * FROM pilgrimage_spots WHERE bangumi_id = ?',
       bangumiId
     );
@@ -305,8 +325,8 @@ export const LocalDB = {
   },
 
   async savePilgrimage(entry: PilgrimageSaveInput): Promise<void> {
-    if (!db) await this.init();
-    await db?.runAsync(
+    const db = await openDb();
+    await db.runAsync(
       `INSERT OR REPLACE INTO pilgrimage_spots (
         bangumi_id, title, title_cn, city, cover, color,
         center_lat, center_lng, zoom,
@@ -331,8 +351,8 @@ export const LocalDB = {
   },
 
   async cleanExpiredPilgrimage(now: number = Date.now()): Promise<number> {
-    if (!db) await this.init();
-    const result = await db?.runAsync('DELETE FROM pilgrimage_spots WHERE expires_at <= ?', now);
+    const db = await openDb();
+    const result = await db.runAsync('DELETE FROM pilgrimage_spots WHERE expires_at <= ?', now);
     return result?.changes ?? 0;
   },
 };

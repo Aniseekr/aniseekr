@@ -2,26 +2,42 @@ import * as SQLite from 'expo-sqlite';
 
 const DB_NAME = 'aniseekr_cache.db';
 
-export class CacheService {
-  private static db: SQLite.SQLiteDatabase | null = null;
+// Cache the in-flight open as a promise so concurrent callers share one handle.
+// See libs/db.ts for the same fix and the Android NullPointerException it avoids.
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+function openDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      try {
+        const opened = await SQLite.openDatabaseAsync(DB_NAME);
+        await opened.execAsync(`
+          CREATE TABLE IF NOT EXISTS cache (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            timestamp INTEGER,
+            ttl INTEGER
+          );
+        `);
+        return opened;
+      } catch (err) {
+        dbPromise = null;
+        throw err;
+      }
+    })();
+  }
+  return dbPromise;
+}
+
+export class CacheService {
   static async init() {
-    if (this.db) return;
-    this.db = await SQLite.openDatabaseAsync(DB_NAME);
-    await this.db.execAsync(`
-      CREATE TABLE IF NOT EXISTS cache (
-        key TEXT PRIMARY KEY,
-        value TEXT,
-        timestamp INTEGER,
-        ttl INTEGER
-      );
-    `);
+    await openDb();
   }
 
   static async get<T>(key: string): Promise<T | null> {
     try {
-      if (!this.db) await this.init();
-      const result = await this.db!.getFirstAsync<{
+      const db = await openDb();
+      const result = await db.getFirstAsync<{
         value: string;
         timestamp: number;
         ttl: number;
@@ -31,7 +47,6 @@ export class CacheService {
 
       const now = Date.now();
       if (now - result.timestamp > result.ttl) {
-        // Expired
         await this.delete(key);
         return null;
       }
@@ -44,12 +59,11 @@ export class CacheService {
   }
 
   static async set(key: string, value: any, ttlMs: number = 3600000) {
-    // Default 1 hour
     try {
-      if (!this.db) await this.init();
+      const db = await openDb();
       const stringValue = JSON.stringify(value);
       const timestamp = Date.now();
-      await this.db!.runAsync(
+      await db.runAsync(
         'INSERT OR REPLACE INTO cache (key, value, timestamp, ttl) VALUES (?, ?, ?, ?)',
         key,
         stringValue,
@@ -63,8 +77,8 @@ export class CacheService {
 
   static async delete(key: string) {
     try {
-      if (!this.db) await this.init();
-      await this.db!.runAsync('DELETE FROM cache WHERE key = ?', key);
+      const db = await openDb();
+      await db.runAsync('DELETE FROM cache WHERE key = ?', key);
     } catch (error) {
       console.warn('CacheService.delete error:', error);
     }
@@ -72,8 +86,8 @@ export class CacheService {
 
   static async clear() {
     try {
-      if (!this.db) await this.init();
-      await this.db!.runAsync('DELETE FROM cache');
+      const db = await openDb();
+      await db.runAsync('DELETE FROM cache');
     } catch (error) {
       console.warn('CacheService.clear error:', error);
     }

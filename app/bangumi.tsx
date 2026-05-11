@@ -39,7 +39,6 @@ import { loadUserPrefs, patchUserPrefs } from '../libs/services/user-prefs';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../constants/DesignSystem';
 import { useTheme } from '../context/ThemeContext';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
-import { BrowseSourceChip } from '../components/common/BrowseSourceChip';
 
 type FilterMode = 'all' | 'tracking';
 type Season = 'winter' | 'spring' | 'summer' | 'fall';
@@ -334,10 +333,6 @@ export default function BangumiScreen() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
-        <View style={styles.chipRow}>
-          <BrowseSourceChip />
-        </View>
-
         <View style={styles.headerWrap}>
           <SeasonHeader
             seasonDisplayName={seasonDisplayName}
@@ -527,12 +522,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 400,
     paddingTop: Spacing.xs,
-  },
-  chipRow: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.xs,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
   },
   headerWrap: {
     paddingHorizontal: Spacing.md,

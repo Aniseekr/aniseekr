@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { PhotoCard, PhotoCardRef } from '../../components/rate/PhotoCard';
 import { Photo } from '../../components/rate/types';
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
@@ -56,7 +56,15 @@ const SPRING_CONFIG = {
 export default function RatingScreen() {
   const { top, bottom } = useSafeAreaInsets();
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ genreId?: string; genreName?: string; animeId?: string }>();
+
+  useEffect(() => {
+    const parent = navigation.getParent();
+    parent?.setOptions({ tabBarStyle: { display: 'none' } });
+    return () => parent?.setOptions({ tabBarStyle: undefined });
+  }, [navigation]);
+
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [deck, setDeck] = useState<DeckItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);

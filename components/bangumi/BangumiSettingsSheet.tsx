@@ -3,9 +3,11 @@ import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import { router } from 'expo-router';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { BrowseSourceChip } from '../common/BrowseSourceChip';
 
 export type BangumiViewMode = 'calendar' | 'list';
 export type BangumiFilterMode = 'all' | 'tracking';
@@ -75,6 +77,17 @@ function BangumiSettingsSheetComponent({
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialIcons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
+            </View>
+
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Data source</Text>
+            <View style={styles.sourceRow}>
+              <BrowseSourceChip
+                onPress={() => {
+                  hapticsBridge.tap();
+                  onClose();
+                  router.push('/(setting)/data-source');
+                }}
+              />
             </View>
 
             <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>View mode</Text>
@@ -340,6 +353,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: Spacing.xs,
   },
   segmented: {

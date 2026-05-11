@@ -18,7 +18,7 @@ export function CollectionHeader({
   selectedCategory,
   onSelectCategory,
   categoryCounts,
-  categoryIcons,
+  categoryIcons: _categoryIcons,
   onAddFolder,
   onPressSearch,
 }: CollectionHeaderProps) {
@@ -35,26 +35,21 @@ export function CollectionHeader({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <View style={styles.titleRow}>
-          <View style={styles.iconContainer}>
-            <MaterialIcons name="collections" size={24} color={Colors.text.primary} />
-          </View>
-          <Text style={styles.title}>Collector</Text>
-        </View>
+        <Text style={styles.title}>Collection</Text>
         <View style={styles.actionsRow}>
           <Pressable
             style={styles.actionButton}
             onPress={handleSearchPress}
             accessibilityRole="button"
             accessibilityLabel="Search collection">
-            <MaterialIcons name="search" size={22} color={Colors.text.primary} />
+            <MaterialIcons name="search" size={18} color={Colors.primary} />
           </Pressable>
           <Pressable
-            style={styles.actionButton}
+            style={styles.actionButtonPrimary}
             onPress={handleAddPress}
             accessibilityRole="button"
             accessibilityLabel="Add folder">
-            <MaterialIcons name="add" size={24} color={Colors.text.primary} />
+            <MaterialIcons name="create-new-folder" size={18} color="#0A0A0A" />
           </Pressable>
         </View>
       </View>
@@ -74,12 +69,8 @@ export function CollectionHeader({
                 <Text style={[styles.categoryText, isSelected && styles.categoryTextActive]}>
                   {category}
                 </Text>
-                {count > 0 && (
-                  <View style={[styles.countBadge, isSelected && styles.countBadgeActive]}>
-                    <Text style={[styles.countText, isSelected && styles.countTextActive]}>
-                      {count}
-                    </Text>
-                  </View>
+                {count > 0 && !isSelected && (
+                  <Text style={styles.countText}>{count}</Text>
                 )}
               </View>
             </Pressable>
@@ -92,55 +83,25 @@ export function CollectionHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.glass.medium,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.xl,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        backgroundColor: Colors.background.secondary,
-        elevation: 2,
-      },
-    }),
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.sm,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.glass.light,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      android: {
-        elevation: 1,
-      },
-    }),
+    marginBottom: Spacing.md,
   },
   title: {
     color: Colors.text.primary,
-    ...Typography.headlineMedium,
+    fontSize: 28,
+    fontWeight: '700',
     letterSpacing: -0.5,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Roboto',
+    }),
   },
   actionsRow: {
     flexDirection: 'row',
@@ -148,29 +109,33 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   actionButton: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.glass.light,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
     borderColor: Colors.glass.border,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      android: {
-        elevation: 1,
-      },
-    }),
+  },
+  actionButtonPrimary: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoriesContainer: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
+    paddingVertical: 2,
   },
   categoryButton: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-    borderRadius: Radius.xl,
-    backgroundColor: Colors.glass.light,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
     borderColor: Colors.glass.border,
   },
@@ -181,40 +146,21 @@ const styles = StyleSheet.create({
   categoryContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 6,
   },
   categoryText: {
-    color: Colors.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
+    ...Typography.bodySmall,
+    color: Colors.text.secondary,
+    fontWeight: '500',
+    letterSpacing: 0,
   },
   categoryTextActive: {
-    color: Colors.background.primary,
-  },
-  countBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.glass.medium,
-  },
-  countBadgeActive: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    color: '#0A0A0A',
+    fontWeight: '700',
   },
   countText: {
-    color: Colors.text.secondary,
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
-  },
-  countTextActive: {
-    color: 'rgba(0, 0, 0, 0.6)',
+    color: Colors.text.tertiary,
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
