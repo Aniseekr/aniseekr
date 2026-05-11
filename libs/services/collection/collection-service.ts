@@ -231,7 +231,7 @@ export class CollectionService {
             watching: 'watching',
             completed: 'completed',
             dropped: 'dropped',
-            wishlist: 'plan_to_watch',
+            wishlist: 'planned',
           };
           const status = statusMap[folder.folderType];
           if (status) {
@@ -279,7 +279,7 @@ export class CollectionService {
         watching: 'watching',
         completed: 'completed',
         dropped: 'dropped',
-        plan_to_watch: 'plan_to_watch',
+        plan_to_watch: 'planned',
       };
 
       const status = statusMap[type] || type;

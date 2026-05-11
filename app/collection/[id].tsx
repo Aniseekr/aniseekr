@@ -40,22 +40,81 @@ export default function FolderDetailScreen() {
     setLoading(true);
     try {
       if (!id) return;
-      const animeIds = await collectionService.getFolderItems(id);
       const db = await LocalDB.getDatabase();
 
+      // Favorites live in their own table and may not have a user_anime row.
+      // Load them directly so the folder isn't empty when nothing is tracked.
+      if (id === 'system_favorites') {
+        const favRows = await db.getAllAsync<{
+          id: string;
+          title: string | null;
+          image: string | null;
+        }>('SELECT id, title, image FROM favorites ORDER BY addedAt DESC');
+
+        let trackingMap = new Map<
+          string,
+          { progress: number; total_episodes: number; status: string; score: number }
+        >();
+        if (favRows.length > 0) {
+          const placeholders = favRows.map(() => '?').join(',');
+          const trackingRows = await db.getAllAsync<{
+            anime_id: string;
+            progress: number;
+            total_episodes: number;
+            status: string;
+            score: number;
+          }>(
+            `SELECT anime_id, progress, total_episodes, status, score
+               FROM user_anime
+              WHERE anime_id IN (${placeholders})`,
+            ...favRows.map((r) => r.id)
+          );
+          trackingMap = new Map(trackingRows.map((t) => [t.anime_id, t]));
+        }
+
+        setItems(
+          favRows.map((r) => {
+            const t = trackingMap.get(r.id);
+            return {
+              id: r.id,
+              title: r.title || 'Unknown Title',
+              image_url: r.image || '',
+              progress: t?.progress ?? 0,
+              total_episodes: t?.total_episodes ?? 0,
+              status: t?.status ?? 'favorites',
+              score: t?.score ?? 0,
+            };
+          })
+        );
+        return;
+      }
+
+      const animeIds = await collectionService.getFolderItems(id);
+      if (animeIds.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      const placeholders = animeIds.map(() => '?').join(',');
+      const rows = await db.getAllAsync<{
+        anime_id: string;
+        title: string;
+        image_url: string;
+        progress: number;
+        total_episodes: number;
+        status: string;
+        score: number;
+      }>(
+        `SELECT anime_id, title, image_url, progress, total_episodes, status, score
+           FROM user_anime
+          WHERE anime_id IN (${placeholders})`,
+        ...animeIds
+      );
+      const byId = new Map(rows.map((r) => [r.anime_id, r]));
+
       const loadedItems: FolderItem[] = [];
-
       for (const animeId of animeIds) {
-        const row = await db.getFirstAsync<{
-          anime_id: string;
-          title: string;
-          image_url: string;
-          progress: number;
-          total_episodes: number;
-          status: string;
-          score: number;
-        }>('SELECT * FROM user_anime WHERE anime_id = ?', animeId);
-
+        const row = byId.get(animeId);
         if (row) {
           loadedItems.push({
             id: row.anime_id,
