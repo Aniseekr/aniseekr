@@ -1,6 +1,6 @@
 // Season header for the Bangumi screen.
 // Mirrors the iOS layout: a glass capsule containing prev / season label / next,
-// followed by a Tracking|All filter pill and a calendar/list toggle button.
+// followed by an All|Tracking filter pill and a calendar/list toggle button.
 
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -36,8 +36,8 @@ export function SeasonHeader({
   onLabelTap,
   onOpenSettings,
 }: SeasonHeaderProps) {
-  const indicatorX = useSharedValue(filterMode === 'tracking' ? 0 : FILTER_SEGMENT_WIDTH);
-  indicatorX.value = withSpring(filterMode === 'tracking' ? 0 : FILTER_SEGMENT_WIDTH, {
+  const indicatorX = useSharedValue(filterMode === 'all' ? 0 : FILTER_SEGMENT_WIDTH);
+  indicatorX.value = withSpring(filterMode === 'all' ? 0 : FILTER_SEGMENT_WIDTH, {
     damping: 18,
     stiffness: 220,
   });
@@ -75,7 +75,7 @@ export function SeasonHeader({
       <View style={styles.bottomRow}>
         <View style={styles.filterPill}>
           <Animated.View style={[styles.filterIndicator, indicatorStyle]} />
-          {(['tracking', 'all'] as FilterMode[]).map((mode) => {
+          {(['all', 'tracking'] as FilterMode[]).map((mode) => {
             const active = filterMode === mode;
             return (
               <Pressable

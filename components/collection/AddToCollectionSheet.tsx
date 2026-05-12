@@ -132,6 +132,7 @@ function AddToCollectionSheetComponent({
           // status-folder queries.
           const db = await LocalDB.getDatabase();
           await db.runAsync('DELETE FROM user_anime WHERE anime_id = ?', anime.id);
+          trackingService.invalidateTrackingCache();
           setCurrentStatus(null);
         }
         hapticsBridge.selection();

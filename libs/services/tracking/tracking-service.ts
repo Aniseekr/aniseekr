@@ -23,6 +23,70 @@ export class TrackingService {
     return TrackingService.instance;
   }
 
+  // In-memory cache of anime ids the user is currently tracking. Populated
+  // lazily on first read and invalidated whenever a write touches user_anime.
+  // Saves a round-trip to SQLite every time a list screen needs to mark which
+  // rows are tracked.
+  private trackedIdsCache: Set<string> | null = null;
+  private trackedIdsPromise: Promise<Set<string>> | null = null;
+  private readonly trackedIdsListeners = new Set<(ids: Set<string>) => void>();
+
+  private invalidateTrackedIds(): void {
+    this.trackedIdsCache = null;
+    this.trackedIdsPromise = null;
+  }
+
+  /**
+   * Public invalidation hook for callers that mutate `user_anime` directly
+   * (collection screens, sync workers) without going through this service.
+   * Keeps the cached set + screens consistent without a manual refresh.
+   */
+  invalidateTrackingCache(): void {
+    this.invalidateTrackedIds();
+    void this.getTrackedIdSet();
+  }
+
+  private notifyTrackedIdsChanged(ids: Set<string>): void {
+    for (const listener of this.trackedIdsListeners) {
+      try {
+        listener(ids);
+      } catch (err) {
+        console.warn('[Tracking] listener error', err);
+      }
+    }
+  }
+
+  /**
+   * Returns the set of anime ids the user is tracking. Cached in memory; reads
+   * after the first call are O(1) until a write invalidates the cache.
+   */
+  async getTrackedIdSet(): Promise<Set<string>> {
+    if (this.trackedIdsCache) return this.trackedIdsCache;
+    if (this.trackedIdsPromise) return this.trackedIdsPromise;
+
+    this.trackedIdsPromise = (async () => {
+      const db = await LocalDB.getDatabase();
+      const rows = await db.getAllAsync<{ anime_id: string }>(
+        'SELECT anime_id FROM user_anime'
+      );
+      const set = new Set(rows.map((r) => r.anime_id));
+      this.trackedIdsCache = set;
+      this.trackedIdsPromise = null;
+      this.notifyTrackedIdsChanged(set);
+      return set;
+    })();
+
+    return this.trackedIdsPromise;
+  }
+
+  /** Subscribe to tracked-id changes. Returns an unsubscribe function. */
+  onTrackedIdsChange(listener: (ids: Set<string>) => void): () => void {
+    this.trackedIdsListeners.add(listener);
+    return () => {
+      this.trackedIdsListeners.delete(listener);
+    };
+  }
+
   async updateProgress(
     animeId: string,
     progress: number,
@@ -69,6 +133,8 @@ export class TrackingService {
     if (imageUrl) args.push(imageUrl);
 
     await db.runAsync(query, ...args);
+    this.invalidateTrackedIds();
+    void this.getTrackedIdSet();
 
     if (animeDetails?.source) {
       const item: UniversalAnimeItem = {
@@ -124,6 +190,8 @@ export class TrackingService {
     if (imageUrl) args.push(imageUrl);
 
     await db.runAsync(query, ...args);
+    this.invalidateTrackedIds();
+    void this.getTrackedIdSet();
 
     if (animeDetails?.source) {
       const item: UniversalAnimeItem = {
@@ -186,6 +254,9 @@ export class TrackingService {
         now
       );
     }
+
+    this.invalidateTrackedIds();
+    void this.getTrackedIdSet();
   }
 
   async getStatus(animeId: string): Promise<UserAnimeStatus | null> {

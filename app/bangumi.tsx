@@ -36,6 +36,7 @@ import { dataSourceConfig } from '../libs/services/data-source-config';
 import { animeNotificationService } from '../modules/notifications/animeNotificationService';
 import { loadBangumiPrefs, saveBangumiPrefs } from '../libs/services/bangumi-prefs';
 import { loadUserPrefs, patchUserPrefs } from '../libs/services/user-prefs';
+import { trackingService } from '../libs/services/tracking/tracking-service';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../constants/DesignSystem';
 import { useTheme } from '../context/ThemeContext';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
@@ -121,6 +122,7 @@ export default function BangumiScreen() {
   const [pendingShare, setPendingShare] = useState(false);
   const [trackingTarget, setTrackingTarget] = useState<Anime | null>(null);
   const [adultContent, setAdultContent] = useState(false);
+  const [trackedIds, setTrackedIds] = useState<Set<string>>(() => new Set());
   const hydratedRef = useRef(false);
   const shareCardRef = useRef<View>(null);
 
@@ -142,16 +144,25 @@ export default function BangumiScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [loaded, userPrefs] = await Promise.all([loadBangumiPrefs(), loadUserPrefs()]);
+      const [loaded, userPrefs, ids] = await Promise.all([
+        loadBangumiPrefs(),
+        loadUserPrefs(),
+        trackingService.getTrackedIdSet(),
+      ]);
       if (cancelled) return;
       setPrefsState(loaded);
       setAdultContent(userPrefs.allowAdultContent);
+      setTrackedIds(ids);
       hydratedRef.current = true;
       setHydrated(true);
     })();
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    return trackingService.onTrackedIdsChange((ids) => setTrackedIds(new Set(ids)));
   }, []);
 
   const handleAdultContentChange = useCallback((value: boolean) => {
@@ -206,10 +217,13 @@ export default function BangumiScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSeason, selectedYear, hydrated]);
 
-  const filteredAnime = useMemo(
-    () => rawAnime.filter((a) => matchesTypeFilter(a, typeFilter)),
-    [rawAnime, typeFilter]
-  );
+  const filteredAnime = useMemo(() => {
+    return rawAnime.filter((a) => {
+      if (!matchesTypeFilter(a, typeFilter)) return false;
+      if (filterMode === 'tracking' && !trackedIds.has(a.id)) return false;
+      return true;
+    });
+  }, [rawAnime, typeFilter, filterMode, trackedIds]);
 
   const groupedAnime = useMemo<DailyAnime[]>(() => {
     const days = [
