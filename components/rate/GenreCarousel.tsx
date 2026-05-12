@@ -3,6 +3,7 @@
 
 import { memo, useMemo } from 'react';
 import { useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -19,14 +20,31 @@ type Props = {
   onSelect?: (genre: Genre) => void;
 };
 
+// Focused card ≈ 70% of screen width so the previous/next cards peek
+// in clearly on both sides after the 0.88 neighbour scale (~12% per side
+// visible — roughly a 1:7:1 visual split). Aspect 16:9 portrait makes the
+// card tall and presence-heavy like an anime poster.
 const CARD_RATIO = 0.7;
-const CARD_HEIGHT_RATIO = CARD_RATIO * (16 / 9);
-const SPACING = 12;
+const CARD_ASPECT = 16 / 9;
+// Wider gap so the side cards don't look glued to the focused one.
+const SPACING = 14;
+// Neighbour scale (focused card stays at 1). Lower = side cards shrink
+// more, making the focused card feel relatively bigger.
+const NEIGHBOUR_SCALE = 0.82;
+const NEIGHBOUR_OPACITY = 0.6;
+// Smaller reserve = taller card. Just enough for the header/pill bar above
+// and the floating tab bar below.
+const VERTICAL_RESERVE = 230;
 
 function GenreCarouselComponent({ data, onSelect }: Props) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const cardWidth = Math.min(screenWidth * CARD_RATIO, 320);
-  const cardHeight = Math.min(cardWidth * (16 / 9), screenHeight * 0.62);
+  const insets = useSafeAreaInsets();
+  const cardWidth = Math.min(screenWidth * CARD_RATIO, 340);
+  const maxByViewport = Math.max(
+    340,
+    screenHeight - insets.top - insets.bottom - VERTICAL_RESERVE
+  );
+  const cardHeight = Math.min(cardWidth * CARD_ASPECT, maxByViewport);
   const itemFullWidth = cardWidth + SPACING;
   const sidePadding = (screenWidth - cardWidth) / 2;
 
@@ -106,8 +124,18 @@ const GenreCarouselItem = memo(function GenreCarouselItem({
   ];
 
   const animatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(scrollX.value, inputRange, [0.88, 1, 0.88], Extrapolation.CLAMP);
-    const opacity = interpolate(scrollX.value, inputRange, [0.55, 1, 0.55], Extrapolation.CLAMP);
+    const scale = interpolate(
+      scrollX.value,
+      inputRange,
+      [NEIGHBOUR_SCALE, 1, NEIGHBOUR_SCALE],
+      Extrapolation.CLAMP,
+    );
+    const opacity = interpolate(
+      scrollX.value,
+      inputRange,
+      [NEIGHBOUR_OPACITY, 1, NEIGHBOUR_OPACITY],
+      Extrapolation.CLAMP,
+    );
     return { transform: [{ scale }], opacity };
   });
 

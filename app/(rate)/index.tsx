@@ -254,10 +254,6 @@ export default function HomeRateScreen() {
 
             {state.viewMode === 'discovery' ? (
               <View style={styles.discoveryWrap}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Browse by Genre</Text>
-                  <Text style={styles.sectionSubtitle}>Swipe to explore</Text>
-                </View>
                 <GenreCarousel data={state.availableGenres} onSelect={handleGenreSelect} />
               </View>
             ) : null}
@@ -613,28 +609,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   discoveryWrap: {
-    minHeight: 480,
-    paddingTop: Spacing.xs,
+    paddingTop: 0,
   },
   trackingWrap: {
     paddingTop: Spacing.xs,
     minHeight: 500,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  sectionTitle: {
-    ...Typography.headlineSmall,
-    color: Colors.text.primary,
-    fontFamily: FontFamily.rounded,
-  },
-  sectionSubtitle: {
-    ...Typography.bodySmall,
-    color: Colors.text.tertiary,
   },
 });
 

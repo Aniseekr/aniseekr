@@ -1,4 +1,4 @@
-// 9:16 portrait genre card matching the iOS GenreCardView aesthetic.
+// 3:5 portrait genre card (poster-like) matching the iOS GenreCardView aesthetic.
 // Image fills the card, gradient fades the bottom, big title + "Tap to Explore" hint.
 
 import { Image } from 'expo-image';
@@ -85,8 +85,8 @@ function GenreCardComponent({
 
 const styles = StyleSheet.create({
   card: {
-    width: 270,
-    aspectRatio: 9 / 16,
+    width: 280,
+    aspectRatio: 3 / 5,
     borderRadius: Radius.xxl,
     overflow: 'hidden',
     backgroundColor: Colors.background.secondary,
