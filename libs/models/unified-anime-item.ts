@@ -101,6 +101,7 @@ export interface UnifiedAnimeItemInit {
   syncStatus?: Partial<Record<PlatformType, PlatformSyncStatus>>;
   displayStatus?: string | null;
   sortDate?: Date | null;
+  isAdult?: boolean | null;
 }
 
 /**
@@ -155,6 +156,8 @@ export class UnifiedAnimeItem {
 
   displayStatus: string | null;
   sortDate: Date | null;
+
+  readonly isAdult: boolean;
 
   constructor(init: UnifiedAnimeItemInit) {
     const platformData = init.platformData ?? {};
@@ -225,6 +228,8 @@ export class UnifiedAnimeItem {
 
     this.displayStatus = init.displayStatus ?? null;
     this.sortDate = init.sortDate ?? null;
+
+    this.isAdult = init.isAdult === true || hasAdultSignal(this.genres, this.tags);
   }
 
   // MARK: - Computed properties
@@ -435,4 +440,29 @@ export class UnifiedAnimeItem {
 
 function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values)).sort();
+}
+
+/**
+ * Genre/tag heuristic for adult content. Sources without an explicit
+ * `isAdult` flag (Simkl, Annict, Bangumi search, Kitsu when nsfw is null)
+ * are covered here so a single `Hentai`/`Erotica` row still gets filtered
+ * when SFW mode is on.
+ */
+const ADULT_LABELS = new Set([
+  'hentai',
+  'erotica',
+  'ecchi 18+',
+  'r18',
+  'r-18',
+  'adult',
+]);
+
+function hasAdultSignal(genres: string[], tags: string[]): boolean {
+  for (const v of genres) {
+    if (ADULT_LABELS.has(v.toLowerCase())) return true;
+  }
+  for (const v of tags) {
+    if (ADULT_LABELS.has(v.toLowerCase())) return true;
+  }
+  return false;
 }

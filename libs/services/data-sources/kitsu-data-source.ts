@@ -174,6 +174,7 @@ function buildKitsuItem(resource: KitsuAnimeResource): UnifiedAnimeItem {
     startDate,
     platformData: { kitsu: { id: resource.id } },
     syncStatus: { kitsu: 'synced' },
+    isAdult: attrs.nsfw === true,
   });
 }
 

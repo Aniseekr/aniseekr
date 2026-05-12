@@ -259,6 +259,14 @@ export class TrackingService {
     void this.getTrackedIdSet();
   }
 
+  async removeTracking(animeId: string): Promise<void> {
+    const db = await LocalDB.getDatabase();
+    await db.runAsync('DELETE FROM user_anime WHERE anime_id = ?', animeId);
+    await db.runAsync('DELETE FROM collection_folder_items WHERE anime_id = ?', animeId);
+    this.invalidateTrackedIds();
+    void this.getTrackedIdSet();
+  }
+
   async getStatus(animeId: string): Promise<UserAnimeStatus | null> {
     const db = await LocalDB.getDatabase();
     const row = await db.getFirstAsync<{

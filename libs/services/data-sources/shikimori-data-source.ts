@@ -210,6 +210,7 @@ function buildShikimoriItem(
     studios,
     platformData: { shikimori: { id: String(item.id) } },
     syncStatus: { shikimori: 'synced' },
+    isAdult: (detail?.rating ?? '').toLowerCase() === 'rx',
   });
 }
 

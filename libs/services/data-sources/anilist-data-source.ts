@@ -536,6 +536,7 @@ export class AniListDataSource implements AnimeDataSource {
           progress: 0,
         },
       },
+      isAdult: media.isAdult ?? null,
     });
   }
 }

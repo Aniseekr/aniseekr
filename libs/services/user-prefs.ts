@@ -1,4 +1,5 @@
 import { Logger } from '../utils/logger';
+import { dataSourceConfig } from './data-source-config';
 import {
   DEFAULT_PROFILE_SHORTCUTS,
   normalizeProfileShortcuts,
@@ -93,7 +94,7 @@ export async function loadUserPrefs(): Promise<UserPrefs> {
     if (!raw) return { ...DEFAULT_USER_PREFS };
     const parsed = JSON.parse(raw) as Partial<UserPrefs>;
     if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_USER_PREFS };
-    return {
+    const result: UserPrefs = {
       ...DEFAULT_USER_PREFS,
       ...parsed,
       profileShortcuts: normalizeProfileShortcuts(parsed.profileShortcuts),
@@ -102,6 +103,11 @@ export async function loadUserPrefs(): Promise<UserPrefs> {
         ? (parsed.seasonalLayout as SeasonalLayout)
         : DEFAULT_USER_PREFS.seasonalLayout,
     };
+    // Mirror the adult-content flag onto the data-source config so the read
+    // pipeline (AniList isAdult, Jikan sfw, repository safety net) reflects
+    // the user's choice without a separate toggle.
+    void syncAdultFlag(result.allowAdultContent);
+    return result;
   } catch (err) {
     Logger.warn('[UserPrefs] load failed, using defaults', err);
     return { ...DEFAULT_USER_PREFS };
@@ -111,6 +117,7 @@ export async function loadUserPrefs(): Promise<UserPrefs> {
 export async function saveUserPrefs(prefs: UserPrefs): Promise<void> {
   try {
     await AsyncStorage.setItem(USER_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+    await syncAdultFlag(prefs.allowAdultContent);
   } catch (err) {
     Logger.warn('[UserPrefs] save failed', err);
   }
@@ -121,6 +128,19 @@ export async function patchUserPrefs(patch: Partial<UserPrefs>): Promise<UserPre
   const next: UserPrefs = { ...current, ...patch };
   await saveUserPrefs(next);
   return next;
+}
+
+async function syncAdultFlag(allow: boolean): Promise<void> {
+  try {
+    if (!dataSourceConfig.isInitialized) {
+      await dataSourceConfig.init();
+    }
+    if (dataSourceConfig.allowR18Content !== allow) {
+      await dataSourceConfig.setAllowR18Content(allow);
+    }
+  } catch (err) {
+    Logger.warn('[UserPrefs] sync adult flag failed', err);
+  }
 }
 
 export async function patchSwipePrefs(patch: Partial<SwipePrefs>): Promise<SwipePrefs> {

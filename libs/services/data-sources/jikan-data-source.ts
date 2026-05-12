@@ -401,6 +401,7 @@ export class JikanDataSource implements AnimeDataSource {
       tags: Array.from(tagSet),
       studios: (anime.studios ?? []).map((s) => s.name).filter((n): n is string => Boolean(n)),
       platformData,
+      isAdult: isJikanAdultRating(anime.rating),
     });
   }
 }
@@ -444,4 +445,16 @@ function parseAiredDate(aired: JikanAired | null | undefined): Date | null {
   if (!aired?.from) return null;
   const d = new Date(aired.from);
   return Number.isFinite(d.getTime()) ? d : null;
+}
+
+/**
+ * Jikan exposes the MAL age rating string. `Rx - Hentai` is the only value
+ * that maps to NSFW; everything else (incl. `R+ - Mild Nudity`) is filtered
+ * by the server when `sfw=true` is set, but we still flag explicit Rx on
+ * detail fetches that bypass the list endpoints.
+ */
+function isJikanAdultRating(rating: string | null | undefined): boolean {
+  if (!rating) return false;
+  const lower = rating.toLowerCase();
+  return lower.startsWith('rx') || lower.includes('hentai');
 }

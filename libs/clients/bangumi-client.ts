@@ -67,6 +67,7 @@ export interface BangumiV0Subject {
   collection?: BangumiCollection;
   tags?: BangumiTag[];
   infobox?: BangumiInfoboxField[];
+  nsfw?: boolean;
 }
 
 export interface BangumiV0SearchResponse {

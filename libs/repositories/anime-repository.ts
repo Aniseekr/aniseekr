@@ -198,17 +198,26 @@ export class AnimeRepository {
       source: source.type,
       q: query,
       page: pageNum,
+      r18: this.config.allowR18Content ? '1' : '0',
     });
 
-    return this.queryClientImpl.fetch(key, async () => source.searchAnime(query, pageNum));
+    const items = await this.queryClientImpl.fetch(key, async () =>
+      source.searchAnime(query, pageNum)
+    );
+    return this.applyAdultFilter(items);
   }
 
   async fetchTopAnime(page?: number, preferredSource?: PlatformType): Promise<UnifiedAnimeItem[]> {
     const source = this.resolveSource(preferredSource);
     const pageNum = page ?? 1;
-    const key = makeKey('topAnime', { source: source.type, page: pageNum });
+    const key = makeKey('topAnime', {
+      source: source.type,
+      page: pageNum,
+      r18: this.config.allowR18Content ? '1' : '0',
+    });
 
-    return this.queryClientImpl.fetch(key, async () => source.fetchTopAnime(pageNum));
+    const items = await this.queryClientImpl.fetch(key, async () => source.fetchTopAnime(pageNum));
+    return this.applyAdultFilter(items);
   }
 
   async fetchSeasonalAnime(
@@ -222,7 +231,8 @@ export class AnimeRepository {
     const pageNum = page ?? 1;
     const seasonStr = season ?? 'current';
     const yearStr = year != null ? String(year) : 'current';
-    const cacheKey = `seasonal_${requestPlatform}_${yearStr}_${seasonStr}_${pageNum}`;
+    const r18Flag = this.config.allowR18Content ? '1' : '0';
+    const cacheKey = `seasonal_${requestPlatform}_${yearStr}_${seasonStr}_${pageNum}_r${r18Flag}`;
 
     // 1. Disk cache check (1h TTL).
     const cached = await this.cacheServiceImpl.get<UnifiedAnimeItem[]>(cacheKey);
@@ -235,9 +245,10 @@ export class AnimeRepository {
       page: pageNum,
       season: seasonStr,
       year: yearStr,
+      r18: r18Flag,
     });
 
-    const result = await this.queryClientImpl.fetch(queryKey, async () => {
+    const fetched = await this.queryClientImpl.fetch(queryKey, async () => {
       const items = await source.fetchSeasonalAnime(pageNum, season, year);
 
       // Cancellation: if user switched browseSource mid-flight (and no
@@ -254,6 +265,7 @@ export class AnimeRepository {
 
       return items;
     });
+    const result = this.applyAdultFilter(fetched);
 
     // 2. Disk cache write — only if non-empty AND source still matches OR
     //    explicit preferredSource was passed.
@@ -277,6 +289,7 @@ export class AnimeRepository {
       source: source.type,
       page,
       genre: genreStr,
+      r18: this.config.allowR18Content ? '1' : '0',
     });
 
     const numericGenreId =
@@ -286,12 +299,24 @@ export class AnimeRepository {
           ? Number.parseInt(genreId, 10)
           : undefined;
 
-    return this.queryClientImpl.fetch(key, async () =>
+    const items = await this.queryClientImpl.fetch(key, async () =>
       source.fetchAnime(
         page,
         Number.isFinite(numericGenreId) ? (numericGenreId as number) : undefined
       )
     );
+    return this.applyAdultFilter(items);
+  }
+
+  /**
+   * Drop items flagged `isAdult` when SFW mode is on. The per-source mappers
+   * already populate `isAdult` from native fields (AniList isAdult, Kitsu
+   * nsfw, Jikan/Shikimori rating); this is the central safety net so a
+   * source that misses one row still gets filtered before reaching the UI.
+   */
+  private applyAdultFilter(items: UnifiedAnimeItem[]): UnifiedAnimeItem[] {
+    if (this.config.allowR18Content) return items;
+    return items.filter((it) => !it.isAdult);
   }
 
   async fetchAnimeGenres(preferredSource?: PlatformType): Promise<AnimeGenre[]> {

@@ -276,6 +276,7 @@ export function convertSubjectToUnifiedItem(subject: BangumiV0Subject): UnifiedA
       },
     },
     syncStatus: { bangumi: 'synced' },
+    isAdult: subject.nsfw === true,
   });
 }
 
