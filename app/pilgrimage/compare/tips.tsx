@@ -5,7 +5,7 @@
 // Composition Tips card (numbered tips with 56×56 rule-of-thirds illustration)
 // → Things to Avoid red warn box → Bottom CTA (orange 開啟相機對齊).
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,15 +14,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../components/themed';
-import {
-  SceneAnalyzer,
-  fallbackAnalysisFromUrl,
-} from '../../../components/pilgrimage/SceneAnalyzer';
+import { useSceneAnalysis } from '../../../components/pilgrimage/SceneAnalyzer';
 import {
   inferBestTime,
+  inferCameraAngle,
   inferDistance,
   inferWeather,
-  type SceneAnalysis,
 } from '../../../libs/services/pilgrimage/scene-analysis';
 
 type SearchParams = {
@@ -46,23 +43,15 @@ export default function PhotoTipsScreen() {
   const accent = params.themeColor || theme.accent;
   const accentFg = readableTextOn(accent);
   const sceneName = params.name || 'Scene';
+  const epLabel = params.ep ? `EP ${params.ep}` : null;
 
-  const [analysis, setAnalysis] = useState<SceneAnalysis | null>(null);
-  const [analysisDone, setAnalysisDone] = useState(false);
-
-  const handleAnalysis = useCallback(
-    (a: SceneAnalysis | null) => {
-      // If WebView analysis fails (offline / unsupported image), fall back to a
-      // hash-seeded plausible signature derived from the URL so the tiles still
-      // render meaningful values instead of an indefinite "分析中…".
-      setAnalysis(a ?? fallbackAnalysisFromUrl(params.imageUrl));
-      setAnalysisDone(true);
-    },
-    [params.imageUrl]
-  );
+  const { status, analysis } = useSceneAnalysis(params.imageUrl);
+  const loading = status === 'loading' || status === 'idle';
+  const errored = status === 'error';
 
   const bestTime = analysis ? inferBestTime(analysis) : null;
   const weather = analysis ? inferWeather(analysis) : null;
+  const cameraAngle = analysis ? inferCameraAngle(analysis) : null;
   const distance = analysis ? inferDistance(analysis) : null;
 
   const handleStart = useCallback(() => {
@@ -85,9 +74,6 @@ export default function PhotoTipsScreen() {
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
-      {!analysisDone && params.imageUrl ? (
-        <SceneAnalyzer imageUrl={params.imageUrl} onResult={handleAnalysis} />
-      ) : null}
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
           <Pressable
@@ -110,7 +96,7 @@ export default function PhotoTipsScreen() {
               <ThemedText
                 weight="500"
                 style={{ color: theme.text.tertiary, fontSize: 10 }}>
-                {params.ep ? `叡山電鉄 · 修学院駅` : sceneName}
+                {sceneName}
               </ThemedText>
             </View>
           </View>
@@ -153,7 +139,7 @@ export default function PhotoTipsScreen() {
               <View style={styles.captionRow}>
                 <Ionicons name="sparkles" size={14} color={accent} />
                 <ThemedText variant="bodySmall" weight="600">
-                  {params.ep ? `原作場景 · K-On! S2 EP${params.ep}` : sceneName}
+                  {epLabel ? `原作場景 · ${epLabel}` : '原作場景'}
                 </ThemedText>
               </View>
               <ThemedText
@@ -163,7 +149,7 @@ export default function PhotoTipsScreen() {
                   fontSize: 11,
                   lineHeight: 16,
                 }}>
-                修学院駅の夕暮れ — 唯と憂が電車を待つ印象的なシーン
+                {sceneName}
               </ThemedText>
             </View>
           </View>
@@ -182,36 +168,40 @@ export default function PhotoTipsScreen() {
               tone={theme.status.warning}
               theme={theme}
               label="Best Time"
-              value={bestTime?.jp ?? '分析中…'}
-              subtitle={bestTime?.range ?? 'Analyzing scene…'}
-              loading={!analysisDone}
+              {...tileState(loading, errored, bestTime, (d) => ({
+                value: d.jp,
+                subtitle: d.range,
+              }))}
             />
             <TipTile
               icon="partly-sunny"
               tone={theme.status.info}
               theme={theme}
               label="Weather"
-              value={weather?.jp ?? '分析中…'}
-              subtitle={weather?.en ?? 'Analyzing scene…'}
-              loading={!analysisDone}
+              {...tileState(loading, errored, weather, (d) => ({
+                value: d.jp,
+                subtitle: d.en,
+              }))}
             />
             <TipTile
               icon="compass"
               tone={theme.secondary}
               theme={theme}
-              label="Direction"
-              value="尚無資料"
-              subtitle="No data"
-              muted
+              label="Camera Angle"
+              {...tileState(loading, errored, cameraAngle, (d) => ({
+                value: d.jp,
+                subtitle: `${d.en} · ${d.light}`,
+              }))}
             />
             <TipTile
               icon="resize"
               tone={theme.status.success}
               theme={theme}
               label="Distance"
-              value={distance?.jp ?? '分析中…'}
-              subtitle={distance?.en ?? 'Analyzing scene…'}
-              loading={!analysisDone}
+              {...tileState(loading, errored, distance, (d) => ({
+                value: d.jp,
+                subtitle: d.en,
+              }))}
             />
           </View>
 
@@ -230,7 +220,7 @@ export default function PhotoTipsScreen() {
               accentFg={accentFg}
               theme={theme}
               title="使用三分構圖法"
-              body="Place the train sign at the right-third intersection for cinematic balance."
+              body="Align the main subject with a third-line intersection for cinematic balance."
               variant="thirds"
             />
             <View style={styles.tipDivider} />
@@ -240,7 +230,11 @@ export default function PhotoTipsScreen() {
               accentFg={accentFg}
               theme={theme}
               title="保持原作視角"
-              body="Match the camera angle to the anime — kneel slightly for low-angle shots."
+              body={
+                cameraAngle
+                  ? `Match the anime — ${cameraAngle.en.toLowerCase()} shot, ${cameraAngle.light.toLowerCase()}.`
+                  : 'Match the camera height and tilt in the reference frame.'
+              }
               variant="angle"
             />
             <View style={styles.tipDivider} />
@@ -250,7 +244,7 @@ export default function PhotoTipsScreen() {
               accentFg={accentFg}
               theme={theme}
               title="包含主體標誌"
-              body="Keep the station sign and platform edge inside the frame."
+              body="Keep the recognisable landmark and its surrounding edges inside the frame."
               variant="frame"
             />
           </View>
@@ -267,8 +261,8 @@ export default function PhotoTipsScreen() {
             <WarnRow
               icon="people"
               theme={theme}
-              title="人潮高峰時段"
-              body="Avoid weekends 14:00–16:00 — tourists block the foreground."
+              title="避開人潮高峰"
+              body="Crowds peak on weekend afternoons — try early morning or weekdays."
             />
             <View style={styles.warnDivider} />
             <WarnRow
@@ -319,6 +313,31 @@ export default function PhotoTipsScreen() {
       </SafeAreaView>
     </View>
   );
+}
+
+function tileState<T>(
+  loading: boolean,
+  errored: boolean,
+  data: T | null,
+  ready: (d: T) => { value: string; subtitle: string }
+): { value: string; subtitle: string; loading: boolean; muted: boolean } {
+  if (loading) {
+    return {
+      value: '分析中…',
+      subtitle: 'Analyzing scene…',
+      loading: true,
+      muted: false,
+    };
+  }
+  if (errored || !data) {
+    return {
+      value: '無法分析',
+      subtitle: 'Image unavailable',
+      loading: false,
+      muted: true,
+    };
+  }
+  return { ...ready(data), loading: false, muted: false };
 }
 
 function SectionHeader({
