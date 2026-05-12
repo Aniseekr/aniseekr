@@ -34,7 +34,6 @@
         "expo-image-picker",
         {
           "photosPermission": "AniSeekr needs access to your photos so you can pick a profile picture.",
-          "cameraPermission": false,
           "microphonePermission": false
         }
       ],
