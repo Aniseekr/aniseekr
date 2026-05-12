@@ -47,9 +47,18 @@ const PREFETCH_THRESHOLD = 5;
 const GENRE_PER_PAGE = 20;
 const SEASONAL_PER_PAGE = 50;
 
-// Card sizing — 1:7:1 ratio (one part side margin, seven parts card, one part
-// side margin) so the deck visually echoes the Discovery hero card.
-const CARD_HORIZONTAL_PADDING = SCREEN_WIDTH / 9;
+// Card sizing — baseline 1:7:1 horizontal ratio, scaled up 1.15x in width so
+// the deck reads as the primary surface. Vertical paddings stay at baseline
+// (bottom padding fully restored) so the card never overlaps the bottom
+// skip/super-like/like buttons; the top trims a touch to balance the wider
+// footprint.
+const CARD_SCALE = 1.15;
+const BASE_CARD_PADDING_TOP = 110;
+const BASE_CARD_PADDING_BOTTOM = 180;
+const BASE_CARD_WIDTH = (SCREEN_WIDTH * 7) / 9;
+const CARD_HORIZONTAL_PADDING = (SCREEN_WIDTH - BASE_CARD_WIDTH * CARD_SCALE) / 2;
+const CARD_PADDING_TOP = 92;
+const CARD_PADDING_BOTTOM = BASE_CARD_PADDING_BOTTOM;
 
 type DeckItem = { kind: 'photo'; photo: Photo } | { kind: 'ad'; id: string };
 
@@ -724,8 +733,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     paddingHorizontal: CARD_HORIZONTAL_PADDING,
-    paddingTop: 110, // Space for header + mode selector
-    paddingBottom: 180, // Space for bottom overlay + action buttons
+    paddingTop: CARD_PADDING_TOP, // Space for header + mode selector
+    paddingBottom: CARD_PADDING_BOTTOM, // Space for bottom overlay + action buttons
   },
   overlayContainer: {
     position: 'absolute',
