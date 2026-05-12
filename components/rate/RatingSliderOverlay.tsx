@@ -1,11 +1,12 @@
 import { memo, useEffect, useState } from 'react';
 import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
+import { sheetEnter } from '../../libs/animations/presets';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - Spacing.md * 2, 360);
@@ -56,7 +57,7 @@ function RatingSliderOverlayComponent({
         </Pressable>
 
         <Animated.View
-          entering={FadeInUp.springify().damping(18)}
+          entering={sheetEnter()}
           style={[
             styles.card,
             {

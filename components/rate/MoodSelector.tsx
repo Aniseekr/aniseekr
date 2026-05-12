@@ -2,7 +2,6 @@ import { memo } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  FadeInUp,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -10,6 +9,7 @@ import Animated, {
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { listItemEnter } from '../../libs/animations/presets';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.md * 2 - Spacing.sm) / 2;
@@ -114,7 +114,7 @@ function MoodSelectorComponent({ value, onSelect }: MoodSelectorProps) {
               hapticsBridge.impact('medium');
               onSelect(mood.key);
             }}
-            delay={idx * 60}
+            index={idx}
           />
         ))}
       </View>
@@ -126,12 +126,12 @@ function MoodCard({
   mood,
   isSelected,
   onPress,
-  delay,
+  index,
 }: {
   mood: MoodOption;
   isSelected: boolean;
   onPress: () => void;
-  delay: number;
+  index: number;
 }) {
   const scale = useSharedValue(1);
 
@@ -141,7 +141,7 @@ function MoodCard({
 
   return (
     <Animated.View
-      entering={FadeInUp.delay(delay).springify()}
+      entering={listItemEnter(index)}
       style={[{ width: CARD_WIDTH }, animatedStyle]}>
       <Pressable
         onPressIn={() => {

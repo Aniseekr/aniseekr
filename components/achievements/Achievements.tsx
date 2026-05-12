@@ -9,10 +9,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
+import { listItemEnter } from '../../libs/animations/presets';
 import { GlassCard } from '../common/GlassCard';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -150,9 +151,7 @@ export function AchievementsGallery({ achievements }: AchievementsGalleryProps) 
         {filtered.map((item, index) => (
           <Animated.View
             key={item.id}
-            entering={FadeInUp.delay(index * 30)
-              .springify()
-              .damping(18)}
+            entering={listItemEnter(index, 30)}
             style={styles.gridItem}>
             <BadgeTile item={item} onPress={() => handleOpen(item)} />
           </Animated.View>

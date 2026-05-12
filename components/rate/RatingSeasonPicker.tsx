@@ -2,10 +2,11 @@ import { memo, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { sheetEnter } from '../../libs/animations/presets';
 
 export type Season = 'winter' | 'spring' | 'summer' | 'fall';
 
@@ -60,7 +61,7 @@ function RatingSeasonPickerComponent({
         style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View
-          entering={FadeInUp.springify().damping(18)}
+          entering={sheetEnter()}
           style={[
             styles.sheet,
             {

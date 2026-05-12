@@ -1,10 +1,11 @@
 import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { listItemEnterDown } from '../../libs/animations/presets';
 
 export type DurationKey = 'all' | 'short' | 'standard' | 'long' | 'movie';
 
@@ -69,7 +70,7 @@ function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
       {DURATION_OPTIONS.map((option, idx) => {
         const isSelected = option.key === value;
         return (
-          <Animated.View key={option.key} entering={FadeInDown.delay(idx * 50).springify()}>
+          <Animated.View key={option.key} entering={listItemEnterDown(idx)}>
             <Pressable
               onPress={() => {
                 hapticsBridge.selection();

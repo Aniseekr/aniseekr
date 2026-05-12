@@ -1,9 +1,10 @@
 import { Platform, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Photo } from './types';
-import Animated, { FadeInUp, FadeOutDown, Layout } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { overlayEnter, overlayExit, overlayLayout } from '../../libs/animations/presets';
 
 type Props = {
   photo: Photo | null;
@@ -22,9 +23,9 @@ export function RatingInfoOverlay({ photo, onClose, onMoreDetails }: Props) {
 
   return (
     <Animated.View
-      entering={FadeInUp.springify().damping(18)}
-      exiting={FadeOutDown.springify()}
-      layout={Layout.springify()}
+      entering={overlayEnter()}
+      exiting={overlayExit()}
+      layout={overlayLayout()}
       style={styles.container}>
       {/* Glassmorphism Card */}
       <View style={styles.card}>
