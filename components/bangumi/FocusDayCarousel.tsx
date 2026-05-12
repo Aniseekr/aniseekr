@@ -27,6 +27,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Anime } from '../rate/types';
 import { NearbyPilgrimageBadge } from '../pilgrimage/NearbyPilgrimageBadge';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 export interface DailyAnime {
   day: string;
@@ -47,6 +48,12 @@ interface FocusDayCarouselProps {
   scrollToTodayKey?: string | number;
   /** Optional browse-source platform — used by the inline pilgrimage badge. */
   sourcePlatform?: string;
+  /** Long-press handler on a row — opens the full tracking sheet. */
+  onLongPressAnime?: (anime: Anime) => void;
+  /** Quick-add wishlist action — fired from the inline + chip on each row. */
+  onQuickAdd?: (anime: Anime) => void;
+  /** Set of anime ids the user already tracks — used to hide the inline +. */
+  trackedIds?: Set<string>;
 }
 
 const CARD_WIDTH_RATIO = 0.88;
@@ -66,6 +73,9 @@ function FocusDayCarouselComponent({
   initialDay,
   scrollToTodayKey,
   sourcePlatform,
+  onLongPressAnime,
+  onQuickAdd,
+  trackedIds,
 }: FocusDayCarouselProps) {
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth * CARD_WIDTH_RATIO;
@@ -154,6 +164,9 @@ function FocusDayCarouselComponent({
             isToday={isToday}
             spacing={SPACING}
             sourcePlatform={sourcePlatform}
+            onLongPressAnime={onLongPressAnime}
+            onQuickAdd={onQuickAdd}
+            trackedIds={trackedIds}
           />
         );
       })}
@@ -171,6 +184,9 @@ interface FocusDayItemProps {
   isToday: boolean;
   spacing: number;
   sourcePlatform?: string;
+  onLongPressAnime?: (anime: Anime) => void;
+  onQuickAdd?: (anime: Anime) => void;
+  trackedIds?: Set<string>;
 }
 
 const FocusDayItem = memo(function FocusDayItem({
@@ -183,6 +199,9 @@ const FocusDayItem = memo(function FocusDayItem({
   isToday,
   spacing,
   sourcePlatform,
+  onLongPressAnime,
+  onQuickAdd,
+  trackedIds,
 }: FocusDayItemProps) {
   const router = useRouter();
   const inputRange = [
@@ -237,39 +256,65 @@ const FocusDayItem = memo(function FocusDayItem({
               <Text style={styles.emptyText}>No anime scheduled</Text>
             </View>
           ) : (
-            previewAnime.map((anime) => (
-              <Pressable
-                key={anime.id}
-                onPress={() => router.push(`/(rate)/anime/${anime.id}`)}
-                style={styles.row}>
-                {isToday ? <View style={styles.trackedBar} /> : null}
-                <Image source={{ uri: anime.image }} style={styles.poster} resizeMode="cover" />
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle} numberOfLines={1}>
-                    {anime.title}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    {anime.score ? (
-                      <View style={styles.scorePill}>
-                        <Ionicons name="star" size={10} color={Colors.warning} />
-                        <Text style={styles.scoreText}>{anime.score}</Text>
-                      </View>
-                    ) : null}
-                    {anime.format || anime.type ? (
-                      <Text style={styles.metaText}>{anime.format ?? anime.type}</Text>
-                    ) : null}
-                    {sourcePlatform ? (
-                      <NearbyPilgrimageBadge
-                        sourcePlatform={sourcePlatform}
-                        id={anime.id}
-                        variant="icon"
-                      />
-                    ) : null}
+            previewAnime.map((anime) => {
+              const isTracked = trackedIds?.has(anime.id) ?? false;
+              return (
+                <Pressable
+                  key={anime.id}
+                  onPress={() => router.push(`/anime/${anime.id}`)}
+                  onLongPress={
+                    onLongPressAnime
+                      ? () => {
+                          hapticsBridge.longPress();
+                          onLongPressAnime(anime);
+                        }
+                      : undefined
+                  }
+                  delayLongPress={280}
+                  style={styles.row}>
+                  {isToday ? <View style={styles.trackedBar} /> : null}
+                  <Image source={{ uri: anime.image }} style={styles.poster} resizeMode="cover" />
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>
+                      {anime.title}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      {anime.score ? (
+                        <View style={styles.scorePill}>
+                          <Ionicons name="star" size={10} color={Colors.warning} />
+                          <Text style={styles.scoreText}>{anime.score}</Text>
+                        </View>
+                      ) : null}
+                      {anime.format || anime.type ? (
+                        <Text style={styles.metaText}>{anime.format ?? anime.type}</Text>
+                      ) : null}
+                      {sourcePlatform ? (
+                        <NearbyPilgrimageBadge
+                          sourcePlatform={sourcePlatform}
+                          id={anime.id}
+                          variant="icon"
+                        />
+                      ) : null}
+                    </View>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color={Colors.text.tertiary} />
-              </Pressable>
-            ))
+                  {onQuickAdd && !isTracked ? (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        onQuickAdd(anime);
+                      }}
+                      hitSlop={8}
+                      style={styles.quickAddBtn}>
+                      <Ionicons name="add" size={16} color={Colors.text.primary} />
+                    </Pressable>
+                  ) : isTracked ? (
+                    <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={14} color={Colors.text.tertiary} />
+                  )}
+                </Pressable>
+              );
+            })
           )}
           {dayData.anime.length > previewAnime.length ? (
             <View style={styles.moreFooter}>
@@ -436,6 +481,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 40,
+  },
+  quickAddBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.glass.medium,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
   },
 });
 
