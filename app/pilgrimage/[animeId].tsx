@@ -393,95 +393,126 @@ function SpotRow({
     <Pressable
       onPress={() => onPress(spot)}
       style={({ pressed }) => [
-        styles.row,
-        visited && { borderColor: `${theme.status.success}66`, backgroundColor: `${theme.status.success}10` },
-        pressed && { opacity: 0.92 },
+        styles.card,
+        visited && {
+          borderColor: `${theme.status.success}66`,
+          backgroundColor: `${theme.status.success}0D`,
+        },
+        pressed && { opacity: 0.94 },
       ]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${spot.name}`}>
-      <View style={styles.thumbWrap}>
-        <Image
-          source={{ uri: spot.image }}
-          style={styles.thumb}
-          contentFit="cover"
-          transition={150}
-        />
-        <View style={[styles.epBadge, { backgroundColor: `${themeColor}E6` }]}>
-          <ThemedText variant="captionSmall" weight="700" style={{ color: themeColorFg }}>
-            EP {spot.ep}
-          </ThemedText>
-        </View>
-        {hasCapture ? (
-          <View style={[styles.captureDot, { borderColor: theme.background.primary }]}>
-            <Ionicons name="camera" size={9} color="#000" />
+      <View style={styles.imageRow}>
+        <View style={styles.imageHalf}>
+          <Image
+            source={{ uri: spot.image }}
+            style={styles.imgFull}
+            contentFit="cover"
+            transition={150}
+          />
+          <View style={styles.labelChip}>
+            <ThemedText variant="captionSmall" weight="800" style={styles.labelText}>
+              REAL
+            </ThemedText>
           </View>
-        ) : null}
-      </View>
-      <View style={styles.body}>
-        <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
-          {spot.name}
-        </ThemedText>
-        {spot.cn ? (
-          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
-            {spot.cn}
-          </ThemedText>
-        ) : null}
-        <View style={styles.metaRow}>
-          {distanceKm != null ? (
-            <View style={[styles.metaTag, { backgroundColor: theme.background.tertiary }]}>
-              <Ionicons name="navigate" size={11} color={theme.text.secondary} />
-              <ThemedText variant="captionSmall" weight="500" tone="secondary">
-                {formatDistanceKm(distanceKm)}
-              </ThemedText>
-            </View>
-          ) : null}
-          {!hasGeo ? (
-            <View style={[styles.metaTag, { backgroundColor: theme.background.tertiary }]}>
-              <Ionicons name="alert-circle" size={11} color={theme.text.tertiary} />
-              <ThemedText variant="captionSmall" weight="500" tone="tertiary">
-                No coordinates
-              </ThemedText>
+        </View>
+        <View style={styles.imageHalf}>
+          <Image
+            source={{ uri: spot.image }}
+            style={[styles.imgFull, { opacity: 0.92 }]}
+            contentFit="cover"
+            transition={150}
+          />
+          <View style={[styles.labelChip, { backgroundColor: `${themeColor}E6` }]}>
+            <ThemedText
+              variant="captionSmall"
+              weight="800"
+              style={[styles.labelText, { color: themeColorFg }]}>
+              ANIME
+            </ThemedText>
+          </View>
+          {hasCapture ? (
+            <View style={[styles.captureDot, { borderColor: theme.background.primary }]}>
+              <Ionicons name="camera" size={9} color="#000" />
             </View>
           ) : null}
         </View>
       </View>
-      <View style={styles.actions}>
-        <Pressable
-          onPress={() => onToggleVisited(spot)}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            { backgroundColor: theme.background.tertiary },
-            visited && { backgroundColor: `${theme.status.success}26` },
-            pressed && { opacity: 0.75 },
-          ]}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: visited }}
-          accessibilityLabel={visited ? 'Mark as not visited' : 'Mark as visited'}
-          hitSlop={8}>
-          <Ionicons
-            name={visited ? 'checkmark-circle' : 'checkmark-circle-outline'}
-            size={22}
-            color={visited ? theme.status.success : theme.text.secondary}
-          />
-        </Pressable>
-        <Pressable
-          onPress={() => onOpenMaps(spot)}
-          disabled={!hasGeo}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            { backgroundColor: theme.background.tertiary },
-            !hasGeo && { opacity: 0.4 },
-            pressed && hasGeo && { opacity: 0.75 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Directions to ${spot.name}`}
-          hitSlop={8}>
-          <MaterialIcons
-            name="directions"
-            size={22}
-            color={hasGeo ? theme.status.info : theme.text.tertiary}
-          />
-        </Pressable>
+      <View style={styles.infoRow}>
+        <View style={styles.infoCol}>
+          <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
+            {spot.cn || spot.name}
+          </ThemedText>
+          <View style={styles.epRow}>
+            <Ionicons name="film-outline" size={11} color={theme.text.tertiary} />
+            <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
+              EP {spot.ep} {spot.name && spot.cn ? `· ${spot.name}` : ''}
+            </ThemedText>
+            {distanceKm != null ? (
+              <>
+                <View style={[styles.dot, { backgroundColor: theme.text.tertiary }]} />
+                <ThemedText
+                  variant="captionSmall"
+                  weight="600"
+                  style={{ color: themeColor }}>
+                  {formatDistanceKm(distanceKm)}
+                </ThemedText>
+              </>
+            ) : null}
+          </View>
+        </View>
+        <View style={styles.actionsCol}>
+          <Pressable
+            onPress={() => onToggleVisited(spot)}
+            style={({ pressed }) => [
+              styles.visitPill,
+              {
+                backgroundColor: visited
+                  ? theme.background.tertiary
+                  : theme.background.secondary,
+                borderColor: visited
+                  ? `${theme.status.success}66`
+                  : theme.glassBorder,
+              },
+              pressed && { opacity: 0.75 },
+            ]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: visited }}
+            accessibilityLabel={visited ? 'Mark as not visited' : 'Mark as visited'}
+            hitSlop={4}>
+            <Ionicons
+              name={visited ? 'checkmark' : 'ellipse-outline'}
+              size={12}
+              color={visited ? theme.status.success : theme.text.secondary}
+            />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{
+                color: visited ? theme.status.success : theme.text.secondary,
+              }}>
+              {visited ? 'Visited' : 'Visit'}
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => onOpenMaps(spot)}
+            disabled={!hasGeo}
+            style={({ pressed }) => [
+              styles.iconPill,
+              { backgroundColor: theme.background.tertiary },
+              !hasGeo && { opacity: 0.4 },
+              pressed && hasGeo && { opacity: 0.75 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Directions to ${spot.name}`}
+            hitSlop={4}>
+            <MaterialIcons
+              name="directions"
+              size={16}
+              color={hasGeo ? theme.status.info : theme.text.tertiary}
+            />
+          </Pressable>
+        </View>
       </View>
     </Pressable>
   );
@@ -1791,16 +1822,18 @@ function makeTabStyles(theme: ThemePalette) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      paddingLeft: 14,
-      paddingRight: 8,
-      paddingVertical: 8,
-      borderRadius: Radius.full,
+      paddingHorizontal: 12,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
     },
     countBadge: {
-      minWidth: 24,
-      height: 20,
-      paddingHorizontal: 6,
-      borderRadius: 10,
+      minWidth: 20,
+      height: 18,
+      paddingHorizontal: 5,
+      borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1831,40 +1864,48 @@ function makePillStyles(theme: ThemePalette) {
 
 function makeRowStyles(theme: ThemePalette) {
   return StyleSheet.create({
-    row: {
-      flexDirection: 'row',
+    card: {
       backgroundColor: theme.background.secondary,
       borderColor: theme.glassBorder,
       borderWidth: 1,
-      borderRadius: Radius.lg,
-      padding: 10,
-      gap: 12,
-      alignItems: 'center',
+      borderRadius: 16,
+      padding: 12,
+      gap: 10,
     },
-    thumbWrap: {
-      position: 'relative',
-      width: 84,
-      height: 84,
-      borderRadius: Radius.md,
+    imageRow: {
+      flexDirection: 'row',
+      gap: 6,
+      height: 120,
+    },
+    imageHalf: {
+      flex: 1,
+      borderRadius: 10,
       overflow: 'hidden',
       backgroundColor: theme.background.tertiary,
+      position: 'relative',
     },
-    thumb: {
+    imgFull: {
       width: '100%',
       height: '100%',
     },
-    epBadge: {
+    labelChip: {
       position: 'absolute',
       top: 6,
       left: 6,
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
+      backgroundColor: 'rgba(10,10,10,0.7)',
+    },
+    labelText: {
+      color: '#FFFFFF',
+      fontSize: 9,
+      letterSpacing: 0.5,
     },
     captureDot: {
       position: 'absolute',
-      bottom: 4,
-      right: 4,
+      bottom: 6,
+      right: 6,
       width: 18,
       height: 18,
       borderRadius: 9,
@@ -1873,35 +1914,48 @@ function makeRowStyles(theme: ThemePalette) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    body: {
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    infoCol: {
       flex: 1,
+      gap: 3,
       minWidth: 0,
     },
-    metaRow: {
+    epRow: {
       flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 6,
     },
-    metaTag: {
+    dot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      opacity: 0.6,
+    },
+    actionsCol: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    visitPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
     },
-    actions: {
-      flexDirection: 'column',
-      gap: 4,
-      alignItems: 'center',
-    },
-    actionBtn: {
-      width: 36,
-      height: 36,
+    iconPill: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: Radius.md,
     },
   });
 }

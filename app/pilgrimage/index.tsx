@@ -1,7 +1,7 @@
-// Pilgrimage hub. Mirrors japanwalker.pen Screen 1 (Pilgrimage Explore).
-// Header → Plan your day intro → Nearby card → Popular Animes carousel →
-// Featured Spots list. Data fetching stays as before; UI was rewritten to
-// match the design.
+// Pilgrimage hub. Matches japanwalker.pen Screen 1 (q3N3pG):
+// Header (聖地巡禮 + map/list segmented + search) → Plan your day intro →
+// Nearby hero (170h with grid + scatter pins) → Popular Animes rail (128x200)
+// → Featured Spots list (72 photo + info + 56 mini map).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -17,7 +17,6 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
-import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../libs/services/pilgrimage/featured-anime';
@@ -58,6 +57,7 @@ export default function PilgrimageHubScreen() {
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'map' | 'list'>('map');
 
   useEffect(() => {
     let cancelled = false;
@@ -147,7 +147,6 @@ export default function PilgrimageHubScreen() {
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
       .slice(0, 6);
     if (withDistance.length >= 4) return withDistance;
-    // fall back to popularity-ordered spots
     return allSpots.slice(0, 6);
   }, [allSpots]);
 
@@ -161,8 +160,6 @@ export default function PilgrimageHubScreen() {
 
   const handleOpenMap = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    // For now the map is part of each anime detail page. A standalone region
-    // map (Screen 4) is a follow-up.
     if (animes.length > 0) {
       router.push(`/pilgrimage/${animes[0].id}`);
     }
@@ -173,15 +170,18 @@ export default function PilgrimageHubScreen() {
     router.push('/search');
   }, [router]);
 
-  const handleOpenPlan = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
-    router.push('/pilgrimage/plan');
-  }, [router]);
-
   const handleOpenAlbum = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/pilgrimage/album');
   }, [router]);
+
+  const handleToggleMode = useCallback(
+    (next: 'map' | 'list') => {
+      Haptics.selectionAsync().catch(() => undefined);
+      setMode(next);
+    },
+    []
+  );
 
   return (
     <View style={styles.root}>
@@ -190,66 +190,91 @@ export default function PilgrimageHubScreen() {
           <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
             聖地巡禮
           </ThemedText>
-          <View style={styles.headerActions}>
-            <Pressable
-              onPress={handleOpenAlbum}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Pilgrimage album"
-              style={({ pressed }) => [
-                styles.headerIcon,
-                { borderColor: `${theme.accent}55` },
-                pressed && { opacity: 0.6 },
-              ]}>
-              <Ionicons name="camera-outline" size={20} color={theme.accent} />
-            </Pressable>
+          <View style={styles.headerRight}>
+            <View style={styles.segment}>
+              <Pressable
+                onPress={() => handleToggleMode('map')}
+                hitSlop={4}
+                accessibilityRole="button"
+                accessibilityLabel="Map view"
+                style={[
+                  styles.segmentBtn,
+                  mode === 'map' && { backgroundColor: theme.background.tertiary },
+                ]}>
+                <Ionicons
+                  name="map"
+                  size={13}
+                  color={mode === 'map' ? theme.text.primary : theme.text.tertiary}
+                />
+                <ThemedText
+                  variant="captionSmall"
+                  weight="600"
+                  style={{
+                    color: mode === 'map' ? theme.text.primary : theme.text.tertiary,
+                  }}>
+                  Map
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => handleToggleMode('list')}
+                hitSlop={4}
+                accessibilityRole="button"
+                accessibilityLabel="List view"
+                style={[
+                  styles.segmentBtn,
+                  mode === 'list' && { backgroundColor: theme.background.tertiary },
+                ]}>
+                <Ionicons
+                  name="list"
+                  size={13}
+                  color={mode === 'list' ? theme.text.primary : theme.text.tertiary}
+                />
+                <ThemedText
+                  variant="captionSmall"
+                  weight="600"
+                  style={{
+                    color: mode === 'list' ? theme.text.primary : theme.text.tertiary,
+                  }}>
+                  List
+                </ThemedText>
+              </Pressable>
+            </View>
             <Pressable
               onPress={handleSearch}
-              hitSlop={12}
+              hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Search"
-              style={({ pressed }) => [styles.headerIcon, pressed && { opacity: 0.6 }]}>
-              <Ionicons name="search" size={20} color={theme.text.primary} />
+              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="search" size={18} color={theme.text.primary} />
             </Pressable>
           </View>
         </View>
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 120 },
+          ]}
           showsVerticalScrollIndicator={false}>
           <View style={styles.intro}>
-            <ThemedText variant="titleLarge" weight="700" style={{ color: theme.accent }}>
-              Plan your day
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={[styles.introCaps, { color: theme.accent }]}>
+              PLAN YOUR DAY
             </ThemedText>
-            <ThemedText variant="bodyMedium" tone="secondary" style={styles.introBody}>
+            <ThemedText variant="bodySmall" style={styles.introBody}>
               Choose an anime and find walkable spots near you.
             </ThemedText>
           </View>
 
-          <NearbyCard
+          <NearbyHero
             theme={theme}
             nearest={nearest}
             hasLocation={!!userLocation}
             onPress={handleOpenMap}
           />
-
-          <View style={styles.quickRow}>
-            <QuickAction
-              icon="calendar-outline"
-              label="Plan trip"
-              tone={theme.accent}
-              onPress={handleOpenPlan}
-              theme={theme}
-            />
-            <QuickAction
-              icon="images-outline"
-              label="Album"
-              tone={theme.secondary}
-              onPress={handleOpenAlbum}
-              theme={theme}
-            />
-          </View>
 
           {loading ? (
             <View style={styles.loadingBox}>
@@ -271,7 +296,7 @@ export default function PilgrimageHubScreen() {
               <SectionHeader
                 title="Popular Animes"
                 cta="See all"
-                onCta={handleOpenMap}
+                onCta={handleOpenAlbum}
                 theme={theme}
               />
               <ScrollView
@@ -321,7 +346,7 @@ export default function PilgrimageHubScreen() {
   );
 }
 
-function NearbyCard({
+function NearbyHero({
   theme,
   nearest,
   hasLocation,
@@ -333,105 +358,118 @@ function NearbyCard({
   onPress: () => void;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const fgPin = readableTextOn(theme.accent);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Nearby pilgrimage spots"
-      style={({ pressed }) => [styles.nearbyCard, pressed && { opacity: 0.92 }]}>
-      <View style={[styles.nearbyMapPreview, { backgroundColor: theme.background.tertiary }]}>
-        <LinearGradient
-          colors={[
-            `${theme.accent}26`,
-            'rgba(0,0,0,0.45)',
-            `${theme.secondary}22`,
-          ]}
-          style={StyleSheet.absoluteFill}
-        />
-        {/* decorative pin cluster */}
-        <View style={[styles.nearbyPinSm, { top: 14, left: 30, backgroundColor: theme.accent }]} />
-        <View style={[styles.nearbyPinSm, { top: 38, left: 110, backgroundColor: theme.secondary }]} />
+      style={({ pressed }) => [styles.heroCard, pressed && { opacity: 0.92 }]}>
+      {/* grid background */}
+      <View style={styles.heroGrid} pointerEvents="none">
+        {[60, 130, 200, 270, 330].map((x) => (
+          <View
+            key={`v${x}`}
+            style={[
+              styles.gridLineV,
+              { left: x, backgroundColor: theme.glassBorder },
+            ]}
+          />
+        ))}
+        {[34, 68, 102, 136].map((y) => (
+          <View
+            key={`h${y}`}
+            style={[
+              styles.gridLineH,
+              { top: y, backgroundColor: theme.glassBorder },
+            ]}
+          />
+        ))}
         <View
           style={[
-            styles.nearbyPinLg,
-            { backgroundColor: theme.accent, borderColor: theme.background.primary },
-          ]}>
-          <Ionicons name="location" size={14} color={readableTextOn(theme.accent)} />
-        </View>
-        <View
-          style={[styles.nearbyPinSm, { bottom: 18, right: 56, backgroundColor: theme.accent }]}
-        />
-        <View
-          style={[styles.nearbyPinSm, { bottom: 36, left: 70, backgroundColor: theme.secondary }]}
+            styles.roadPath,
+            {
+              backgroundColor: theme.glassBorder,
+              opacity: 0.55,
+            },
+          ]}
         />
       </View>
-      <View style={styles.nearbyBody}>
-        <ThemedText variant="titleMedium" weight="700">
-          Nearby Pilgrimage Spots
-        </ThemedText>
-        <ThemedText variant="bodySmall" tone="secondary" style={{ marginTop: 4 }}>
+
+      {/* satellite pins */}
+      <View
+        style={[
+          styles.satPin,
+          { left: 78, top: 48, backgroundColor: theme.background.tertiary },
+        ]}
+      />
+      <View
+        style={[
+          styles.satPin,
+          {
+            left: 266,
+            top: 34,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: theme.background.tertiary,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.satPin,
+          {
+            left: 118,
+            top: 118,
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: theme.background.tertiary,
+          },
+        ]}
+      />
+
+      {/* primary accent pin */}
+      <View
+        style={[
+          styles.primaryPin,
+          {
+            backgroundColor: theme.accent,
+            borderColor: theme.background.primary,
+            shadowColor: theme.accent,
+          },
+        ]}>
+        <Ionicons name="location" size={12} color={fgPin} />
+      </View>
+
+      {/* bottom overlay */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']}
+        style={styles.heroOverlay}
+        pointerEvents="none"
+      />
+      <View style={styles.heroBody}>
+        <View style={styles.heroLabelRow}>
+          <View
+            style={[
+              styles.heroPinBadge,
+              { backgroundColor: theme.background.tertiary },
+            ]}>
+            <Ionicons name="location" size={11} color={theme.text.primary} />
+          </View>
+          <ThemedText variant="bodySmall" weight="700">
+            Nearby Pilgrimage Spots
+          </ThemedText>
+        </View>
+        <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
           {hasLocation
             ? nearest
               ? `Nearest: ${formatKm(nearest.distanceKm!)} · ${nearest.spot.cn || nearest.spot.name}`
               : 'No mapped spots within range yet'
             : 'Enable location to surface walking-distance spots'}
         </ThemedText>
-        <View style={styles.nearbyMeta}>
-          <Ionicons name="navigate" size={11} color={theme.accent} />
-          <ThemedText
-            variant="captionSmall"
-            weight="600"
-            style={{ color: theme.accent }}>
-            Open map
-          </ThemedText>
-          <Ionicons name="chevron-forward" size={12} color={theme.text.tertiary} />
-        </View>
       </View>
-    </Pressable>
-  );
-}
-
-function QuickAction({
-  icon,
-  label,
-  tone,
-  onPress,
-  theme,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  tone: string;
-  onPress: () => void;
-  theme: ThemePalette;
-}) {
-  const styles = useMemo(() => makeStyles(theme), [theme]);
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [
-        styles.quickAction,
-        {
-          backgroundColor: theme.background.secondary,
-          borderColor: theme.glassBorder,
-        },
-        pressed && { opacity: 0.85 },
-      ]}>
-      <View
-        style={[
-          styles.quickIcon,
-          {
-            backgroundColor: `${tone}24`,
-            borderColor: `${tone}66`,
-          },
-        ]}>
-        <Ionicons name={icon} size={18} color={tone} />
-      </View>
-      <ThemedText variant="bodyMedium" weight="600">
-        {label}
-      </ThemedText>
-      <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
     </Pressable>
   );
 }
@@ -450,7 +488,7 @@ function SectionHeader({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.sectionHeader}>
-      <ThemedText variant="titleLarge" weight="700">
+      <ThemedText variant="titleMedium" weight="700">
         {title}
       </ThemedText>
       {cta && onCta ? (
@@ -458,9 +496,10 @@ function SectionHeader({
           onPress={onCta}
           hitSlop={10}
           style={({ pressed }) => [styles.sectionCta, pressed && { opacity: 0.6 }]}>
-          <ThemedText variant="bodySmall" weight="600" style={{ color: theme.accent }}>
+          <ThemedText variant="captionSmall" weight="500" tone="secondary">
             {cta}
           </ThemedText>
+          <Ionicons name="chevron-forward" size={12} color={theme.text.tertiary} />
         </Pressable>
       ) : null}
     </View>
@@ -491,44 +530,43 @@ function PopularCard({
       accessibilityRole="button"
       accessibilityLabel={`${anime.cn || anime.title} pilgrimage`}
       style={({ pressed }) => [styles.popularCard, pressed && { opacity: 0.9 }]}>
-      <Image
-        source={{ uri: anime.cover }}
-        style={styles.popularCover}
-        contentFit="cover"
-        transition={180}
-      />
-      <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.78)']}
-        style={styles.popularGradient}
-      />
-      <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
-        <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
-          {total} spots
-        </ThemedText>
-      </View>
-      {visitedCount > 0 ? (
-        <View style={styles.popularVisitedBadge}>
-          <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            style={{ color: theme.status.success }}>
-            {visitedCount}
+      <View style={styles.popularPosterWrap}>
+        <Image
+          source={{ uri: anime.cover }}
+          style={styles.popularPoster}
+          contentFit="cover"
+          transition={180}
+        />
+        <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
+          <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg, fontSize: 10 }}>
+            {total} spots
           </ThemedText>
         </View>
-      ) : null}
-      <View style={styles.popularBody}>
+        {visitedCount > 0 ? (
+          <View style={styles.popularVisited}>
+            <Ionicons name="checkmark" size={10} color={theme.status.success} />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: theme.status.success, fontSize: 9 }}>
+              {visitedCount}
+            </ThemedText>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.popularMeta}>
         <ThemedText
-          variant="titleSmall"
+          variant="captionSmall"
           weight="700"
           numberOfLines={1}
-          style={{ color: '#fff' }}>
+          style={{ fontSize: 12 }}>
           {anime.cn || anime.title}
         </ThemedText>
         <ThemedText
           variant="captionSmall"
+          tone="tertiary"
           numberOfLines={1}
-          style={{ color: 'rgba(255,255,255,0.78)' }}>
+          style={{ fontSize: 10 }}>
           {anime.city || '—'}
         </ThemedText>
       </View>
@@ -555,7 +593,7 @@ function FeaturedSpotRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${spot.cn || spot.name} from ${anime.cn || anime.title}`}
-      style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.9 }]}>
+      style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.92 }]}>
       <Image
         source={{ uri: spot.image }}
         style={styles.spotThumb}
@@ -563,26 +601,30 @@ function FeaturedSpotRow({
         transition={150}
       />
       <View style={styles.spotBody}>
-        <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
+        <ThemedText variant="bodySmall" weight="700" numberOfLines={1}>
           {spot.cn || spot.name}
         </ThemedText>
         <View style={styles.spotMetaRow}>
-          <Ionicons name="film" size={11} color={theme.text.tertiary} />
+          <Ionicons name="film-outline" size={10} color={theme.text.tertiary} />
           <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
             {anime.cn || anime.title}
           </ThemedText>
-          {distanceKm !== undefined ? (
-            <>
-              <View style={[styles.spotMetaDot, { backgroundColor: theme.text.tertiary }]} />
-              <ThemedText variant="captionSmall" weight="600" style={{ color: theme.accent }}>
-                {formatKm(distanceKm)}
-              </ThemedText>
-            </>
-          ) : null}
         </View>
+        {distanceKm !== undefined ? (
+          <View style={styles.spotDistRow}>
+            <Ionicons name="navigate" size={10} color={theme.accent} />
+            <ThemedText variant="captionSmall" weight="600" style={{ color: theme.accent }}>
+              {formatKm(distanceKm)}
+            </ThemedText>
+          </View>
+        ) : null}
       </View>
-      <View style={[styles.spotChevron, { backgroundColor: theme.background.tertiary }]}>
-        <Ionicons name="chevron-forward" size={14} color={theme.text.secondary} />
+      <View style={[styles.miniMap, { backgroundColor: theme.background.tertiary }]}>
+        <LinearGradient
+          colors={[`${theme.accent}1F`, 'rgba(0,0,0,0.0)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={[styles.miniMapPin, { backgroundColor: theme.accent }]} />
       </View>
     </Pressable>
   );
@@ -595,111 +637,158 @@ function makeStyles(theme: ThemePalette) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 12,
+      paddingHorizontal: 24,
+      paddingTop: 8,
+      paddingBottom: 4,
+      gap: 12,
     },
-    headerTitle: { letterSpacing: 1 },
-    headerActions: {
+    headerTitle: {
+      fontSize: 22,
+    },
+    headerRight: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
     },
-    headerIcon: {
+    segment: {
+      flexDirection: 'row',
+      borderRadius: 16,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      padding: 4,
+      gap: 2,
+    },
+    segmentBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    iconBtn: {
       width: 40,
       height: 40,
       borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: `${theme.background.secondary}CC`,
+      backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
     scrollContent: {
       paddingHorizontal: 20,
-      gap: 18,
+      paddingTop: 20,
+      gap: 22,
     },
     intro: {
-      gap: 6,
+      gap: 4,
+    },
+    introCaps: {
+      letterSpacing: 1.2,
+      fontSize: 12,
     },
     introBody: {
-      lineHeight: 20,
+      lineHeight: 18,
     },
-    nearbyCard: {
-      borderRadius: 20,
+    heroCard: {
+      height: 170,
+      borderRadius: 16,
       overflow: 'hidden',
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
-    nearbyMapPreview: {
-      height: 130,
-      position: 'relative',
-      overflow: 'hidden',
+    heroGrid: {
+      ...StyleSheet.absoluteFillObject,
     },
-    nearbyPinSm: {
+    gridLineV: {
       position: 'absolute',
-      width: 6,
-      height: 6,
-      borderRadius: 3,
+      top: 0,
+      bottom: 0,
+      width: 1,
+      opacity: 0.5,
     },
-    nearbyPinLg: {
+    gridLineH: {
       position: 'absolute',
-      top: '50%',
+      left: 0,
+      right: 0,
+      height: 1,
+      opacity: 0.5,
+    },
+    roadPath: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 90,
+      height: 2,
+      transform: [{ rotate: '-4deg' }],
+    },
+    satPin: {
+      position: 'absolute',
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      opacity: 0.85,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    primaryPin: {
+      position: 'absolute',
       left: '50%',
-      marginLeft: -16,
-      marginTop: -16,
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      top: '40%',
+      marginLeft: -14,
+      marginTop: -14,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 3,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.5,
+      shadowRadius: 10,
+      elevation: 6,
     },
-    nearbyBody: {
-      padding: Spacing.md,
-      gap: 2,
+    heroOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 78,
     },
-    nearbyMeta: {
+    heroBody: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: 14,
+    },
+    heroLabelRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
-      marginTop: 10,
+      gap: 6,
     },
-    quickRow: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-    quickAction: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: Radius.card,
-      borderWidth: 1,
-    },
-    quickIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: 12,
+    heroPinBadge: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
     },
     loadingBox: {
       alignItems: 'center',
-      paddingVertical: 32,
+      paddingVertical: 24,
     },
     errorBox: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      padding: Spacing.md,
+      padding: 12,
       backgroundColor: `${theme.status.warning}14`,
       borderColor: `${theme.status.warning}55`,
       borderWidth: 1,
-      borderRadius: Radius.card,
+      borderRadius: 14,
     },
     section: {
       gap: 12,
@@ -712,41 +801,41 @@ function makeStyles(theme: ThemePalette) {
     sectionCta: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: 2,
     },
     popularRow: {
       gap: 12,
       paddingRight: 4,
     },
     popularCard: {
-      width: 160,
-      height: 200,
+      width: 128,
       borderRadius: 16,
       overflow: 'hidden',
       backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
     },
-    popularCover: {
-      ...StyleSheet.absoluteFillObject,
+    popularPosterWrap: {
+      height: 148,
+      width: '100%',
+      backgroundColor: theme.background.tertiary,
     },
-    popularGradient: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: '60%',
+    popularPoster: {
+      width: '100%',
+      height: '100%',
     },
     popularBadge: {
       position: 'absolute',
-      top: 10,
-      left: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      top: 8,
+      left: 8,
+      paddingHorizontal: 6,
+      paddingVertical: 3,
       borderRadius: 6,
     },
-    popularVisitedBadge: {
+    popularVisited: {
       position: 'absolute',
-      top: 10,
-      right: 10,
+      top: 8,
+      right: 8,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
@@ -757,11 +846,9 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       borderColor: `${theme.status.success}66`,
     },
-    popularBody: {
-      position: 'absolute',
-      left: 12,
-      right: 12,
-      bottom: 12,
+    popularMeta: {
+      padding: 8,
+      paddingHorizontal: 10,
       gap: 2,
     },
     spotList: {
@@ -772,38 +859,46 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
       gap: 12,
       padding: 10,
-      borderRadius: Radius.card,
+      borderRadius: 14,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
     spotThumb: {
-      width: 64,
-      height: 64,
-      borderRadius: 12,
+      width: 72,
+      height: 72,
+      borderRadius: 10,
       backgroundColor: theme.background.tertiary,
     },
     spotBody: {
       flex: 1,
-      gap: 4,
+      gap: 3,
     },
     spotMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
+      gap: 4,
     },
-    spotMetaDot: {
-      width: 3,
-      height: 3,
-      borderRadius: 1.5,
-      opacity: 0.6,
+    spotDistRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 2,
     },
-    spotChevron: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+    miniMap: {
+      width: 56,
+      height: 56,
+      borderRadius: 10,
+      overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    miniMapPin: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
     },
   });
 }
