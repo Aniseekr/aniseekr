@@ -64,6 +64,16 @@ const CATEGORY_TO_STATUS: Record<string, string | null> = {
   Done: 'completed',
 };
 
+// Map UI tag → system folder id (so "See all" deep-links into the folder view).
+const CATEGORY_TO_SYSTEM_FOLDER: Record<string, string> = {
+  All: 'system_all',
+  Watching: 'system_watching',
+  Planned: 'system_plan_to_watch',
+  Done: 'system_completed',
+};
+
+const ANIME_PREVIEW_LIMIT = 6;
+
 export default function CollectionScreen() {
   const { top } = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -372,9 +382,14 @@ export default function CollectionScreen() {
       // straight to Watching/Completed/etc on a fresh install.
       filtered = baseFolders;
     } else {
+      // For a status tag: show the matching system folder plus every custom
+      // folder. Custom folders aren't bound to a single status, so hiding
+      // them when a tag is active would strand the user's own folders.
       const targetType = targetTypeMap[selectedCategory];
       filtered = targetType
-        ? baseFolders.filter((f) => f.folderType === targetType)
+        ? baseFolders.filter(
+            (f) => f.folderType === targetType || f.folderType === 'custom' || f.folderType === 'favorites'
+          )
         : baseFolders;
     }
 
@@ -466,61 +481,6 @@ export default function CollectionScreen() {
               onRefresh={onRefresh}
             />
           }>
-          <View style={styles.section}>
-            {animeCards.length > 0 ? (
-              <CollectionAnimeGrid
-                items={animeCards}
-                onPressItem={(item) => router.push(`/(rate)/anime/${item.id}`)}
-              />
-            ) : (
-              <View style={styles.emptyAnimeState}>
-                <ThemedText variant="titleMedium" weight="700" align="center">
-                  No anime here yet
-                </ThemedText>
-                <ThemedText variant="bodySmall" tone="secondary" align="center">
-                  {selectedCategory === 'All'
-                    ? 'Rate or import anime to start building your library.'
-                    : `Nothing marked as ${selectedCategory.toLowerCase()} yet.`}
-                </ThemedText>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.overviewWrap}>
-            <CollectionOverviewCard total={totalCount} stats={overviewStats} />
-          </View>
-
-          <View style={styles.statsButtonRow}>
-            <Pressable
-              onPress={() => {
-                hapticsBridge.tap();
-                router.push('/collection/stats');
-              }}
-              style={({ pressed }) => [
-                styles.statsButton,
-                {
-                  backgroundColor: theme.background.secondary,
-                  borderColor: theme.glassBorder,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}>
-              <MaterialIcons name="bar-chart" size={16} color={theme.accent} />
-              <ThemedText variant="titleSmall" weight="600" style={styles.statsButtonLabel}>
-                Library stats
-              </ThemedText>
-              <MaterialIcons name="chevron-right" size={18} color={theme.text.tertiary} />
-            </Pressable>
-          </View>
-
-          <View style={styles.section}>
-            <CollectionTips
-              context={{
-                folderCount: collections.filter((f) => !f.isSystemFolder).length,
-                hasUnrated: false,
-              }}
-            />
-          </View>
-
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <ThemedText variant="titleMedium" weight="700">
@@ -625,6 +585,88 @@ export default function CollectionScreen() {
                     </ThemedText>
                   </Pressable>
                 ) : null}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.overviewWrap}>
+            <CollectionOverviewCard total={totalCount} stats={overviewStats} />
+          </View>
+
+          <View style={styles.statsButtonRow}>
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                router.push('/collection/stats');
+              }}
+              style={({ pressed }) => [
+                styles.statsButton,
+                {
+                  backgroundColor: theme.background.secondary,
+                  borderColor: theme.glassBorder,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <MaterialIcons name="bar-chart" size={16} color={theme.accent} />
+              <ThemedText variant="titleSmall" weight="600" style={styles.statsButtonLabel}>
+                Library stats
+              </ThemedText>
+              <MaterialIcons name="chevron-right" size={18} color={theme.text.tertiary} />
+            </Pressable>
+          </View>
+
+          <View style={styles.section}>
+            <CollectionTips
+              context={{
+                folderCount: collections.filter((f) => !f.isSystemFolder).length,
+                hasUnrated: false,
+              }}
+            />
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText variant="titleMedium" weight="700">
+                {selectedCategory === 'All' ? 'Recent anime' : `${selectedCategory} anime`}
+              </ThemedText>
+              {animeCards.length > ANIME_PREVIEW_LIMIT ? (
+                <Pressable
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    const folderId =
+                      CATEGORY_TO_SYSTEM_FOLDER[selectedCategory] ?? 'system_all';
+                    router.push(
+                      `/collection/${folderId}?name=${encodeURIComponent(selectedCategory)}`
+                    );
+                  }}
+                  hitSlop={8}
+                  style={styles.sectionHeaderRight}>
+                  <ThemedText variant="captionSmall" tone="secondary" weight="600">
+                    See all {animeCards.length}
+                  </ThemedText>
+                  <MaterialIcons
+                    name="chevron-right"
+                    size={14}
+                    color={theme.text.tertiary}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
+            {animeCards.length > 0 ? (
+              <CollectionAnimeGrid
+                items={animeCards.slice(0, ANIME_PREVIEW_LIMIT)}
+                onPressItem={(item) => router.push(`/(rate)/anime/${item.id}`)}
+              />
+            ) : (
+              <View style={styles.emptyAnimeState}>
+                <ThemedText variant="titleMedium" weight="700" align="center">
+                  No anime here yet
+                </ThemedText>
+                <ThemedText variant="bodySmall" tone="secondary" align="center">
+                  {selectedCategory === 'All'
+                    ? 'Rate or import anime to start building your library.'
+                    : `Nothing marked as ${selectedCategory.toLowerCase()} yet.`}
+                </ThemedText>
               </View>
             )}
           </View>

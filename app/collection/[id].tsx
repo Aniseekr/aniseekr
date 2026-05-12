@@ -1,22 +1,28 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   StyleSheet,
-  Image,
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { collectionService } from '../../libs/services/collection/collection-service';
-import { LocalDB } from '../../libs/db';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { collectionService } from '../../libs/services/collection/collection-service';
+import { trackingService } from '../../libs/services/tracking/tracking-service';
+import { LocalDB } from '../../libs/db';
 import { NearbyPilgrimageBadge } from '../../components/pilgrimage/NearbyPilgrimageBadge';
 import {
   AnimeProgressView,
   type AnimeProgress,
 } from '../../components/collection/AnimeProgressView';
+import { ThemedText } from '../../components/themed';
+import { useTheme } from '../../context/ThemeContext';
+import { Radius, Spacing } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 interface FolderItem {
@@ -29,12 +35,40 @@ interface FolderItem {
   score: number;
 }
 
+function ProgressBar({
+  progress,
+  indeterminate,
+  color,
+  trackColor,
+}: {
+  progress: number;
+  indeterminate?: boolean;
+  color: string;
+  trackColor: string;
+}) {
+  const pct = Math.max(0, Math.min(1, progress));
+  return (
+    <View style={[styles.progressTrack, { backgroundColor: trackColor }]}>
+      <View
+        style={[
+          styles.progressFill,
+          indeterminate
+            ? { backgroundColor: color, width: '35%', opacity: 0.4 }
+            : { backgroundColor: color, width: `${pct * 100}%` },
+        ]}
+      />
+    </View>
+  );
+}
+
 export default function FolderDetailScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { theme } = useTheme();
   const [items, setItems] = useState<FolderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
-  const router = useRouter();
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -139,6 +173,17 @@ export default function FolderDetailScreen() {
     loadItems();
   }, [loadItems]);
 
+  const handleBack = useCallback(() => {
+    hapticsBridge.tap();
+    // Force return to collection tab even when the back stack is empty
+    // (e.g. deep link or app cold-start landing on this route).
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/collection');
+    }
+  }, [router]);
+
   const handleSaveProgress = async (animeId: string, progress: AnimeProgress) => {
     try {
       const db = await LocalDB.getDatabase();
@@ -161,6 +206,7 @@ export default function FolderDetailScreen() {
         progress.totalEpisodes ?? null,
         now
       );
+      trackingService.invalidateTrackingCache();
       await loadItems();
     } catch (error) {
       console.error('Failed to save progress:', error);
@@ -169,7 +215,14 @@ export default function FolderDetailScreen() {
 
   const renderItem = ({ item }: { item: FolderItem }) => (
     <Pressable
-      style={({ pressed }) => [styles.itemContainer, pressed && styles.itemContainerPressed]}
+      style={({ pressed }) => [
+        styles.itemContainer,
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: theme.glassBorder,
+        },
+        pressed && { opacity: 0.85 },
+      ]}
       onPress={() => {
         hapticsBridge.tap();
         setEditingItem(item);
@@ -180,20 +233,73 @@ export default function FolderDetailScreen() {
       }}
       delayLongPress={350}>
       {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.itemImage} />
+        <Image
+          source={{ uri: item.image_url }}
+          style={[styles.itemImage, { backgroundColor: theme.background.tertiary }]}
+          contentFit="cover"
+          transition={150}
+          cachePolicy="memory-disk"
+        />
       ) : (
-        <View style={styles.itemImage} />
+        <View
+          style={[
+            styles.itemImage,
+            styles.itemImagePlaceholder,
+            { backgroundColor: theme.background.tertiary },
+          ]}>
+          <MaterialIcons name="image" size={24} color={theme.text.tertiary} />
+        </View>
       )}
       <View style={styles.itemContent}>
-        <Text style={styles.itemTitle} numberOfLines={2}>
+        <ThemedText variant="titleSmall" weight="700" numberOfLines={2}>
           {item.title}
-        </Text>
-        <Text style={styles.itemSubtitle}>
-          {item.progress} / {item.total_episodes || '?'} EP
-        </Text>
+        </ThemedText>
+        <View style={styles.progressRow}>
+          <ThemedText variant="captionSmall" tone="secondary" weight="600">
+            {item.progress} / {item.total_episodes || '?'} EP
+          </ThemedText>
+          {item.total_episodes > 0 ? (
+            <ThemedText variant="captionSmall" tone="tertiary" weight="600">
+              {Math.min(100, Math.round((item.progress / item.total_episodes) * 100))}%
+            </ThemedText>
+          ) : null}
+          {item.score > 0 ? (
+            <View style={styles.scoreChip}>
+              <MaterialIcons name="star" size={11} color={theme.accent} />
+              <ThemedText
+                variant="captionSmall"
+                weight="700"
+                style={{ color: theme.accent }}>
+                {(item.score / 10).toFixed(1)}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+        <ProgressBar
+          progress={
+            item.total_episodes > 0
+              ? Math.min(1, item.progress / item.total_episodes)
+              : 0
+          }
+          indeterminate={item.total_episodes === 0 && item.progress > 0}
+          color={theme.accent}
+          trackColor={theme.background.tertiary}
+        />
         <View style={styles.badgeRow}>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.status}</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: `${theme.accent}26`,
+                borderColor: `${theme.accent}40`,
+              },
+            ]}>
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: theme.accent, textTransform: 'capitalize' }}>
+              {item.status}
+            </ThemedText>
           </View>
           <NearbyPilgrimageBadge
             sourcePlatform="anilist"
@@ -202,6 +308,12 @@ export default function FolderDetailScreen() {
           />
         </View>
       </View>
+      <MaterialIcons
+        name="chevron-right"
+        size={20}
+        color={theme.text.tertiary}
+        style={{ alignSelf: 'center' }}
+      />
     </Pressable>
   );
 
@@ -223,59 +335,132 @@ export default function FolderDetailScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen options={{ title: name || 'Folder', headerLargeTitle: false }} />
-      <View style={styles.container}>
-        <LinearGradient colors={['#121212', '#1E1E1E']} style={StyleSheet.absoluteFill} />
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-          </View>
-        ) : (
-          <FlatList
-            data={items}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No items in this folder</Text>
-              </View>
-            }
-          />
-        )}
+    <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
+      <View
+        style={[
+          styles.bgGlow,
+          { backgroundColor: `${theme.accent}1A` },
+        ]}
+        pointerEvents="none"
+      />
 
-        <AnimeProgressView
-          visible={!!editingItem}
-          animeTitle={editingItem?.title ?? ''}
-          totalEpisodes={editingItem?.total_episodes || undefined}
-          progress={
-            editingItem
-              ? {
-                  status: normalizeStatus(editingItem.status),
-                  score: (editingItem.score ?? 0) / 10,
-                  episodesWatched: editingItem.progress ?? 0,
-                  totalEpisodes: editingItem.total_episodes || undefined,
-                  rewatchCount: 0,
-                  notes: '',
-                }
-              : undefined
-          }
-          onClose={() => setEditingItem(null)}
-          onSave={(next) => {
-            if (!editingItem) return;
-            handleSaveProgress(editingItem.id, next);
-          }}
-        />
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <Pressable
+          onPress={handleBack}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          style={({ pressed }) => [
+            styles.headerBtn,
+            {
+              backgroundColor: theme.background.secondary,
+              borderColor: theme.glassBorder,
+            },
+            pressed && { opacity: 0.78 },
+          ]}>
+          <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
+        </Pressable>
+        <View style={styles.headerText}>
+          <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
+            {name || 'Folder'}
+          </ThemedText>
+          <ThemedText variant="captionSmall" tone="tertiary" weight="500">
+            {loading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'anime' : 'anime'}`}
+          </ThemedText>
+        </View>
+        <View style={styles.headerBtnSpacer} />
       </View>
-    </>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 140 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MaterialIcons name="folder-open" size={48} color={theme.text.tertiary} />
+              <ThemedText variant="titleMedium" weight="700" align="center" style={{ marginTop: 12 }}>
+                No items in this folder
+              </ThemedText>
+              <ThemedText variant="bodySmall" tone="secondary" align="center">
+                Add anime to this folder from the rating screen.
+              </ThemedText>
+            </View>
+          }
+        />
+      )}
+
+      <AnimeProgressView
+        visible={!!editingItem}
+        animeTitle={editingItem?.title ?? ''}
+        totalEpisodes={editingItem?.total_episodes || undefined}
+        progress={
+          editingItem
+            ? {
+                status: normalizeStatus(editingItem.status),
+                score: (editingItem.score ?? 0) / 10,
+                episodesWatched: editingItem.progress ?? 0,
+                totalEpisodes: editingItem.total_episodes || undefined,
+                rewatchCount: 0,
+                notes: '',
+              }
+            : undefined
+        }
+        onClose={() => setEditingItem(null)}
+        onSave={(next) => {
+          if (!editingItem) return;
+          handleSaveProgress(editingItem.id, next);
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+  },
+  bgGlow: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    opacity: 0.5,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  headerBtnSpacer: {
+    width: 36,
+    height: 36,
+  },
+  headerText: {
+    flex: 1,
+    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -283,67 +468,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    gap: Spacing.sm,
   },
   itemContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    marginBottom: 12,
+    alignItems: 'stretch',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
     overflow: 'hidden',
-    padding: 8,
-  },
-  itemContainerPressed: {
-    opacity: 0.8,
+    padding: Spacing.xs,
+    gap: Spacing.sm,
   },
   itemImage: {
     width: 60,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#2E2E2E',
+    height: 84,
+    borderRadius: Radius.sm,
+  },
+  itemImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemContent: {
     flex: 1,
-    marginLeft: 12,
     justifyContent: 'center',
+    paddingVertical: 4,
+    gap: 4,
   },
-  itemTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
   },
-  itemSubtitle: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    marginBottom: 6,
+  scoreChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginLeft: 'auto',
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 6,
+    marginTop: 4,
   },
   statusBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusText: {
-    color: '#3b82f6',
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    borderRadius: Radius.chip,
+    borderWidth: 1,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 100,
-  },
-  emptyText: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 16,
+    paddingTop: 80,
+    gap: 4,
   },
 });
