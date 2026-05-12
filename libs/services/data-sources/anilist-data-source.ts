@@ -15,6 +15,7 @@ import { UnifiedAnimeItem } from '../../models/unified-anime-item';
 import type { PlatformImageData } from '../../models/platform-image-data';
 import type { PlatformType } from '../auth/types';
 import { AniListClient } from '../../clients/anilist-client';
+import { dataSourceConfig } from '../data-source-config';
 import { idMappingService } from '../sync/id-mapping-service';
 import { getCurrentSeason, getCurrentYear } from '../../utils/season-utils';
 import {
@@ -165,9 +166,9 @@ const SEARCH_QUERY = `
 `;
 
 const TOP_QUERY = `
-  query ($page: Int, $perPage: Int = 20) {
+  query ($page: Int, $perPage: Int = 20, $isAdult: Boolean) {
     Page(page: $page, perPage: $perPage) {
-      media(type: ANIME, sort: [SCORE_DESC]) {
+      media(type: ANIME, isAdult: $isAdult, sort: [SCORE_DESC]) {
         ${MEDIA_FIELDS}
       }
     }
@@ -175,9 +176,9 @@ const TOP_QUERY = `
 `;
 
 const SEASONAL_QUERY = `
-  query ($season: MediaSeason, $year: Int, $page: Int, $perPage: Int = 20) {
+  query ($season: MediaSeason, $year: Int, $page: Int, $perPage: Int = 20, $isAdult: Boolean) {
     Page(page: $page, perPage: $perPage) {
-      media(season: $season, seasonYear: $year, type: ANIME, sort: [POPULARITY_DESC]) {
+      media(season: $season, seasonYear: $year, type: ANIME, isAdult: $isAdult, sort: [POPULARITY_DESC]) {
         ${MEDIA_FIELDS}
       }
     }
@@ -185,9 +186,9 @@ const SEASONAL_QUERY = `
 `;
 
 const BY_GENRE_QUERY = `
-  query ($genres: [String], $page: Int, $perPage: Int = 20) {
+  query ($genres: [String], $page: Int, $perPage: Int = 20, $isAdult: Boolean) {
     Page(page: $page, perPage: $perPage) {
-      media(genre_in: $genres, type: ANIME, sort: [POPULARITY_DESC]) {
+      media(genre_in: $genres, type: ANIME, isAdult: $isAdult, sort: [POPULARITY_DESC]) {
         ${MEDIA_FIELDS}
       }
     }
@@ -243,22 +244,20 @@ export class AniListDataSource implements AnimeDataSource {
   // MARK: - AnimeSearchable
 
   async searchAnime(query: string, page: number = 1): Promise<UnifiedAnimeItem[]> {
-    const data = await this.client.query<PageWrapper<RawAniListMedia>>(SEARCH_QUERY, {
-      search: query,
-      page,
-    });
-    return (data.Page.media ?? []).map((m) => this.mapMedia(m));
+    const vars: Record<string, unknown> = { search: query, page };
+    if (this.shouldFilterAdult()) vars.isAdult = false;
+    const data = await this.client.query<PageWrapper<RawAniListMedia>>(SEARCH_QUERY, vars);
+    return this.filterAndMap(data.Page.media ?? []);
   }
 
   async fetchAnime(page: number, genreId?: number): Promise<UnifiedAnimeItem[]> {
     if (typeof genreId === 'number') {
       const name = this.genreIdToName.get(genreId);
       if (name) {
-        const data = await this.client.query<PageWrapper<RawAniListMedia>>(BY_GENRE_QUERY, {
-          genres: [name],
-          page,
-        });
-        return (data.Page.media ?? []).map((m) => this.mapMedia(m));
+        const vars: Record<string, unknown> = { genres: [name], page };
+        if (this.shouldFilterAdult()) vars.isAdult = false;
+        const data = await this.client.query<PageWrapper<RawAniListMedia>>(BY_GENRE_QUERY, vars);
+        return this.filterAndMap(data.Page.media ?? []);
       }
     }
     return this.fetchTopAnime(page);
@@ -281,10 +280,10 @@ export class AniListDataSource implements AnimeDataSource {
   }
 
   async fetchTopAnime(page: number = 1): Promise<UnifiedAnimeItem[]> {
-    const data = await this.client.query<PageWrapper<RawAniListMedia>>(TOP_QUERY, {
-      page,
-    });
-    return (data.Page.media ?? []).map((m) => this.mapMedia(m));
+    const vars: Record<string, unknown> = { page };
+    if (this.shouldFilterAdult()) vars.isAdult = false;
+    const data = await this.client.query<PageWrapper<RawAniListMedia>>(TOP_QUERY, vars);
+    return this.filterAndMap(data.Page.media ?? []);
   }
 
   async fetchSeasonalAnime(
@@ -294,12 +293,14 @@ export class AniListDataSource implements AnimeDataSource {
   ): Promise<UnifiedAnimeItem[]> {
     const seasonUpper = (season ?? getCurrentSeason()).toUpperCase();
     const targetYear = year ?? getCurrentYear();
-    const data = await this.client.query<PageWrapper<RawAniListMedia>>(SEASONAL_QUERY, {
+    const vars: Record<string, unknown> = {
       season: seasonUpper,
       year: targetYear,
       page,
-    });
-    return (data.Page.media ?? []).map((m) => this.mapMedia(m));
+    };
+    if (this.shouldFilterAdult()) vars.isAdult = false;
+    const data = await this.client.query<PageWrapper<RawAniListMedia>>(SEASONAL_QUERY, vars);
+    return this.filterAndMap(data.Page.media ?? []);
   }
 
   // MARK: - AnimeDetailProvider
@@ -454,6 +455,21 @@ export class AniListDataSource implements AnimeDataSource {
   }
 
   // MARK: - Internal
+
+  private shouldFilterAdult(): boolean {
+    return !dataSourceConfig.allowR18Content;
+  }
+
+  /**
+   * Map raw media items and filter out adult content when SFW mode is on.
+   * Client-side safety net in case the API-level `isAdult: false` misses
+   * items (per edge_cases.md: isAdult == true AND SFW filter on → exclude).
+   */
+  private filterAndMap(items: RawAniListMedia[]): UnifiedAnimeItem[] {
+    const filter = this.shouldFilterAdult();
+    const source = filter ? items.filter((m) => !m.isAdult) : items;
+    return source.map((m) => this.mapMedia(m));
+  }
 
   /**
    * Fetch the raw `Media` node for a given id without mapping. Used by the
