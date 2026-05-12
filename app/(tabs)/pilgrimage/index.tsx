@@ -46,7 +46,11 @@ import {
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
+  TILE_ATTRIBUTION,
+  TILE_MAX_ZOOM,
+  TILE_SUBDOMAINS,
   TILE_URL,
+  TOKYO_STATION,
 } from '../../../libs/services/pilgrimage/leaflet-map';
 import { ThemedText, readableTextOn } from '../../../components/themed';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
@@ -153,6 +157,8 @@ function buildHubMapHtml(initial: {
   center: { lat: number; lng: number; zoom: number };
   user: { lat: number; lng: number } | null;
   ringColor: string;
+  /** Distance from the WebView bottom to lift map controls. */
+  controlsBottom: number;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
@@ -164,6 +170,10 @@ function buildHubMapHtml(initial: {
 <style>${LEAFLET_MARKERCLUSTER_CSS}</style>
 <style>${MAP_BASE_CSS}</style>
 <style>
+  :root {
+    --mc-bottom: ${initial.controlsBottom}px;
+    --attr-bottom: ${Math.max(0, initial.controlsBottom - 32)}px;
+  }
   .anime-marker {
     width: 44px; height: 44px; border-radius: 12px;
     border: 2px solid var(--ring, #FF9F0A);
@@ -195,19 +205,44 @@ ${MAP_BASE_BODY}
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
   new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: 18, minZoom: 3, attribution: '&copy; OpenStreetMap',
+    maxZoom: ${TILE_MAX_ZOOM}, minZoom: 3,
+    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
+    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
     keepBuffer: 4, updateWhenIdle: false
   }).addTo(map);
 
-  if (initial.user) {
-    var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
-    L.marker([initial.user.lat, initial.user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+  // User location can arrive after the WebView is constructed (the native side
+  // resolves it async). Centralise pin management so the React side can push
+  // updates via window.__updateUser without us re-mounting the page (which
+  // would blow away the tile cache).
+  var userMarker = null;
+  function applyUser(user) {
+    if (userMarker) { try { map.removeLayer(userMarker); } catch (e) {} userMarker = null; }
+    if (user && typeof user.lat === 'number' && typeof user.lng === 'number') {
+      var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
+      userMarker = L.marker([user.lat, user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+    }
+    // Mutate initial.user so the recentre closure sees the freshest value.
+    initial.user = user;
   }
+  applyUser(initial.user);
+  window.__updateUser = applyUser;
 
   var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
   var initialZoom = initial.center.zoom;
   var lastBounds = null;
+  var markerCoords = [];
+  // Tapping the recentre button should answer "what's near me?". If we have
+  // a user fix we frame them with the closest few anime; otherwise we fall
+  // back to fitting all markers, then to flying home (Tokyo Station).
   window.__bindMap(map, function recenter() {
+    if (initial.user && markerCoords.length > 0) {
+      var did = window.__fitNearby(map, initial.user, markerCoords, {
+        k: 5, maxZoom: 11,
+        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
+      });
+      if (did) return;
+    }
     if (lastBounds) {
       try { map.flyToBounds(lastBounds, { padding: [40, 40], maxZoom: 11, duration: 0.4 }); return; } catch (e) {}
     }
@@ -221,6 +256,7 @@ ${MAP_BASE_BODY}
   window.__updateMarkers = function(markers) {
     clusterLayer.clearLayers();
     var bounds = [];
+    var coords = [];
     var batch = [];
     for (var i = 0; i < markers.length; i++) {
       (function(m){
@@ -234,6 +270,7 @@ ${MAP_BASE_BODY}
         marker.on('click', function() { window.__post({ type: 'animePress', id: m.bangumiId }); });
         batch.push(marker);
         bounds.push([m.lat, m.lng]);
+        coords.push([m.lat, m.lng]);
       })(markers[i]);
     }
     if (typeof clusterLayer.addLayers === 'function') clusterLayer.addLayers(batch);
@@ -242,6 +279,7 @@ ${MAP_BASE_BODY}
     if (bounds.length > 0) {
       try { lastBounds = L.latLngBounds(bounds); } catch (e) { lastBounds = null; }
     }
+    markerCoords = coords;
     if (!didFit && bounds.length > 1) {
       try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9, animate: false }); didFit = true; } catch (e) {}
     } else if (!didFit && bounds.length === 1) {
@@ -271,6 +309,12 @@ interface HubMapViewProps {
   ringColor: string;
   theme: ThemePalette;
   focusBangumiId: number | null;
+  /**
+   * Pixels by which to lift the in-WebView map controls off the bottom edge.
+   * The hub passes the floating tab bar's effective height so the +/-/locate
+   * buttons stay tappable instead of getting buried under the dock.
+   */
+  controlsBottomOffset: number;
   onAnimePress: (bangumiId: number) => void;
 }
 
@@ -280,6 +324,7 @@ function HubMapView({
   ringColor,
   theme,
   focusBangumiId,
+  controlsBottomOffset,
   onAnimePress,
 }: HubMapViewProps) {
   const webviewRef = useRef<WebView>(null);
@@ -289,12 +334,15 @@ function HubMapView({
   // The HTML shell uses the cached origin so OSM tiles persist between
   // mounts. Re-rendering the HTML on every prop change destroys that cache,
   // so we capture once and push markers via injectJavaScript instead.
+  //
+  // Default center is Tokyo Station — Japan owns ~all pilgrimage data, and
+  // users opening the map from Taipei/HK don't want to land on their home
+  // city with zero markers and assume the feature is broken. Their location
+  // is preserved as a pin and used by the locate-me bounds fit.
   const html = useMemo(() => {
-    const center = userLocation
-      ? { lat: userLocation.latitude, lng: userLocation.longitude, zoom: 7 }
-      : { lat: 36.2048, lng: 138.2529, zoom: 5 };
+    const center = { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildHubMapHtml({ center, user, ringColor });
+    return buildHubMapHtml({ center, user, ringColor, controlsBottom: controlsBottomOffset });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -306,6 +354,19 @@ function HubMapView({
       true;
     `);
   }, [markers, ready]);
+
+  // Push user-location changes into the WebView so the pin and locate-me
+  // bounds-fit stay accurate when permission is granted after mount.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const payload = userLocation
+      ? JSON.stringify({ lat: userLocation.latitude, lng: userLocation.longitude })
+      : 'null';
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateUser && window.__updateUser(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [userLocation, ready]);
 
   // Fly to a specific anime when the hero asks us to.
   useEffect(() => {
@@ -711,6 +772,10 @@ export default function PilgrimageHubScreen() {
                 ringColor={theme.accent}
                 theme={theme}
                 focusBangumiId={null}
+                // FloatingTabBar pill height (62) + bottom inset + ~14 breathing
+                // room. The WebView is inside mapWrap with marginBottom 8, so
+                // we subtract that to get the effective lift in WebView coords.
+                controlsBottomOffset={Math.max(96, insets.bottom + 62 + 14 - 8)}
                 onAnimePress={handleAnimeIdPress}
               />
             )}

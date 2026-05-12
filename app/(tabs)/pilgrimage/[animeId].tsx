@@ -59,7 +59,11 @@ import {
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
+  TILE_ATTRIBUTION,
+  TILE_MAX_ZOOM,
+  TILE_SUBDOMAINS,
   TILE_URL,
+  TOKYO_STATION,
 } from '../../../libs/services/pilgrimage/leaflet-map';
 import {
   loadVisitedSpots,
@@ -167,9 +171,10 @@ ${MAP_BASE_BODY}
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
   new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: 18,
+    maxZoom: ${TILE_MAX_ZOOM},
     minZoom: 3,
-    attribution: '&copy; OpenStreetMap',
+    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
+    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
     keepBuffer: 4,
     updateWhenIdle: false
   }).addTo(map);
@@ -182,8 +187,19 @@ ${MAP_BASE_BODY}
   var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
   var initialZoom = initial.center.zoom;
   var lastBounds = null;
+  var markerCoords = [];
 
   window.__bindMap(map, function recenter() {
+    // On the detail screen, "near me" means near *the user* among this
+    // anime's spots — fits user + closest few spots so the visited pin and
+    // the next nearest unvisited stop both render in a single tap.
+    if (initial.user && markerCoords.length > 0) {
+      var did = window.__fitNearby(map, initial.user, markerCoords, {
+        k: 5, maxZoom: 15,
+        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
+      });
+      if (did) return;
+    }
     if (lastBounds) {
       try { map.flyToBounds(lastBounds, { padding: [40, 40], maxZoom: 15, duration: 0.4 }); return; } catch (e) {}
     }
@@ -198,6 +214,7 @@ ${MAP_BASE_BODY}
     markerLayer.clearLayers();
     var batch = [];
     var bounds = [];
+    var coords = [];
     for (var i = 0; i < markers.length; i++) {
       (function(m){
         var cls = 'spot-marker' + (m.visited ? ' visited' : '');
@@ -211,6 +228,7 @@ ${MAP_BASE_BODY}
         marker.on('click', function() { window.__post({ type: 'spotPress', id: m.id }); });
         batch.push(marker);
         bounds.push([m.lat, m.lng]);
+        coords.push([m.lat, m.lng]);
       })(markers[i]);
     }
     if (typeof markerLayer.addLayers === 'function') markerLayer.addLayers(batch);
@@ -219,6 +237,7 @@ ${MAP_BASE_BODY}
     if (bounds.length > 0) {
       try { lastBounds = L.latLngBounds(bounds); } catch (e) { lastBounds = null; }
     }
+    markerCoords = coords;
     if (!didFit && bounds.length > 1) {
       try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: false }); didFit = true; } catch (e) {}
     } else if (!didFit && bounds.length === 1) {
@@ -264,10 +283,13 @@ function SpotMapView({
   const styles = useMemo(() => makeMapStyles(theme), [theme]);
 
   const html = useMemo(() => {
+    // Prefer the anime's own center when known; otherwise fall back to Tokyo
+    // Station rather than the dead-middle-of-Honshu/zoom-5 view, so the spot
+    // map never opens on an empty patch of ocean while data loads.
     const fallback =
       centerGeo && hasValidGeo(centerGeo)
         ? { lat: centerGeo[0], lng: centerGeo[1], zoom: centerZoom || 12 }
-        : { lat: 36.2048, lng: 138.2529, zoom: 5 };
+        : { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
     return buildSpotMapHtml({ center: fallback, user, ringColor });
     // Captured once on mount intentionally — see comment above.

@@ -37,12 +37,15 @@ import {
   LEAFLET_MARKERCLUSTER_JS,
 } from '../../libs/services/pilgrimage/leaflet-assets';
 import {
-  JAPAN_CENTER,
   MAP_BASE_BODY,
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
+  TILE_ATTRIBUTION,
+  TILE_MAX_ZOOM,
+  TILE_SUBDOMAINS,
   TILE_URL,
+  TOKYO_STATION,
 } from '../../libs/services/pilgrimage/leaflet-map';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 
@@ -64,6 +67,12 @@ export interface PilgrimageMapViewProps {
    * the map to fly to the new subset instead of staying where the user panned.
    */
   refitNonce?: number;
+  /**
+   * Pixels to lift the in-WebView map controls off the bottom edge. Use this
+   * when the parent renders a floating tab bar / sheet that would otherwise
+   * cover the +/-/locate buttons. Defaults to 12 (true-fullscreen mounts).
+   */
+  controlsBottomOffset?: number;
 }
 
 const USER_ZOOM = 11;
@@ -154,6 +163,8 @@ function buildHtml(initial: {
   center: { lat: number; lng: number; zoom: number };
   user: { lat: number; lng: number } | null;
   themeAccent: string;
+  /** Pixels to lift the map controls off the WebView bottom. */
+  controlsBottom: number;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
@@ -165,6 +176,10 @@ function buildHtml(initial: {
 <style>${LEAFLET_MARKERCLUSTER_CSS}</style>
 <style>${MAP_BASE_CSS}</style>
 <style>
+  :root {
+    --mc-bottom: ${initial.controlsBottom}px;
+    --attr-bottom: ${Math.max(0, initial.controlsBottom - 32)}px;
+  }
   .ani-marker {
     width: 44px; height: 44px; border-radius: 12px;
     border: 2px solid var(--ring, ${initial.themeAccent});
@@ -212,9 +227,10 @@ ${MAP_BASE_BODY}
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
   new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: 18,
+    maxZoom: ${TILE_MAX_ZOOM},
     minZoom: 3,
-    attribution: '&copy; OpenStreetMap',
+    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
+    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
     keepBuffer: 4,
     updateWhenIdle: false
   }).addTo(map);
@@ -226,7 +242,15 @@ ${MAP_BASE_BODY}
 
   var initialZoom = initial.center.zoom;
   var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
+  var markerCoords = [];
   window.__bindMap(map, function recenter() {
+    if (initial.user && markerCoords.length > 0) {
+      var did = window.__fitNearby(map, initial.user, markerCoords, {
+        k: 5, maxZoom: ${USER_ZOOM},
+        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
+      });
+      if (did) return;
+    }
     if (initial.user) map.flyTo([initial.user.lat, initial.user.lng], ${USER_ZOOM}, { duration: 0.4 });
     else map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
   });
@@ -239,6 +263,7 @@ ${MAP_BASE_BODY}
     markerLayer.clearLayers();
     var batch = [];
     var bounds = [];
+    var coords = [];
     for (var i = 0; i < markers.length; i++) {
       var m = markers[i];
       var ring = m.inCollection ? '#30D158' : m.ringColor;
@@ -261,10 +286,12 @@ ${MAP_BASE_BODY}
       marker.bindPopup(popup, { closeButton: false, offset: [0, -18] });
       batch.push(marker);
       bounds.push([m.lat, m.lng]);
+      coords.push([m.lat, m.lng]);
     }
     if (typeof markerLayer.addLayers === 'function') markerLayer.addLayers(batch);
     else for (var j = 0; j < batch.length; j++) markerLayer.addLayer(batch[j]);
 
+    markerCoords = coords;
     if (refit && bounds.length > 0) {
       try { map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 12, duration: 0.45 }); } catch (e) {}
     } else if (bounds.length > 1 && lastMarkerCount === 0 && !initial.user) {
@@ -288,6 +315,7 @@ export function PilgrimageMapView({
   onMarkerPress,
   style,
   refitNonce,
+  controlsBottomOffset = 12,
 }: PilgrimageMapViewProps) {
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -297,13 +325,21 @@ export function PilgrimageMapView({
   const [clusterItems, setClusterItems] = useState<AnitabiBangumi[] | null>(null);
 
   const html = useMemo(() => {
-    const center = userLocation
-      ? { lat: userLocation.latitude, lng: userLocation.longitude, zoom: USER_ZOOM }
-      : JAPAN_CENTER;
+    // Start at Tokyo Station so the map always has useful context even when
+    // the user is outside Japan or hasn't granted location yet. The user pin
+    // (if granted) drives the locate-me bounds fit but doesn't anchor the
+    // initial view.
+    const center = { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildHtml({ center, user, themeAccent: theme.accent });
-    // userLocation/theme intentionally captured once — live location updates
-    // or theme switches would re-warm the tile cache on every change.
+    return buildHtml({
+      center,
+      user,
+      themeAccent: theme.accent,
+      controlsBottom: controlsBottomOffset,
+    });
+    // userLocation/theme/controlsBottomOffset intentionally captured once —
+    // live location updates or theme switches would re-warm the tile cache on
+    // every change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

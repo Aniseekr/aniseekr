@@ -17,14 +17,75 @@
  */
 export const MAP_BASE_URL = 'https://aniseekr.local/';
 
-/** Standard OSM tile endpoint. CORS-enabled so `fetch` + Cache API works. */
-export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+/**
+ * Raster tile providers we support. All are CORS-enabled so the in-WebView
+ * Cache API path works. Pick `voyager` by default — its restrained palette
+ * and clean label rendering hold up far better under colourful anime markers
+ * than the stock OSM raster, which is dense, busy, and shows multi-script
+ * labels (Cyrillic, Korean) that distract from Japan-focused content.
+ */
+export const TILE_STYLES = {
+  voyager: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    subdomains: 'abcd',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 19,
+  },
+  positron: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png',
+    subdomains: 'abcd',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 19,
+  },
+  darkMatter: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png',
+    subdomains: 'abcd',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 19,
+  },
+  osmStandard: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    subdomains: 'abc',
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 18,
+  },
+} as const;
 
-/** Center used when no anime/user location is known — middle of Honshu. */
-export const JAPAN_CENTER = { lat: 36.2048, lng: 138.2529, zoom: 5 } as const;
+export type TileStyleId = keyof typeof TILE_STYLES;
+
+/** Active style — switching this once propagates to every map mount. */
+export const DEFAULT_TILE_STYLE_ID: TileStyleId = 'voyager';
+
+const DEFAULT_TILE = TILE_STYLES[DEFAULT_TILE_STYLE_ID];
+
+/** Default raster tile URL. Consumers pass this to `CachedTileLayer`. */
+export const TILE_URL = DEFAULT_TILE.url;
+
+/** Subdomain pool for the `{s}` placeholder in `TILE_URL`. */
+export const TILE_SUBDOMAINS = DEFAULT_TILE.subdomains;
+
+/** Attribution string for the active tile provider. */
+export const TILE_ATTRIBUTION = DEFAULT_TILE.attribution;
+
+/** Tile provider's maximum zoom. */
+export const TILE_MAX_ZOOM = DEFAULT_TILE.maxZoom;
+
+/**
+ * Default map center when nothing more specific is known.
+ * Tokyo Station — densest pilgrimage region in Japan, much more useful than
+ * the previous middle-of-Honshu/zoom-5 view that just showed open water.
+ */
+export const TOKYO_STATION = { lat: 35.6812, lng: 139.7671, zoom: 11 } as const;
+
+/**
+ * Kept under the old name so existing imports keep compiling. Renaming the
+ * symbol is a follow-up — for now we just want every map that used to land in
+ * the Sea of Japan to land on Tokyo Station instead.
+ */
+export const JAPAN_CENTER = TOKYO_STATION;
 
 /** Bumped when the cache schema changes so old entries are dropped. */
-export const TILE_CACHE_NAME = 'osm-tiles-v1';
+export const TILE_CACHE_NAME = 'osm-tiles-v2';
 
 /**
  * Shared CSS — tile attribution, custom zoom/recenter buttons, loading
@@ -76,10 +137,21 @@ export const MAP_BASE_CSS = `
     100% { box-shadow: 0 0 0 0 rgba(255,159,10,0); }
   }
 
+  /*
+   * --mc-bottom is set per-mount via an inline style on the HTML body.
+   * Defaults to 12px (true-fullscreen maps). Hub-inline maps override it to
+   * something larger so the +/-/recentre buttons clear the floating tab bar.
+   */
   .map-controls {
-    position: absolute; right: 12px; bottom: 12px; z-index: 1000;
+    position: absolute; right: 12px; bottom: var(--mc-bottom, 12px); z-index: 1000;
     display: flex; flex-direction: column; gap: 8px;
+    transition: bottom 0.2s ease;
   }
+  /*
+   * Lift the leaflet attribution chip above the floating tab bar in the same
+   * way. CARTO Voyager attribution is wider so we also tighten its padding.
+   */
+  .leaflet-bottom.leaflet-right { bottom: var(--attr-bottom, 0px); }
   .map-btn {
     width: 40px; height: 40px; border-radius: 12px;
     background: rgba(28,28,30,0.92); color: #fff;
@@ -341,6 +413,68 @@ export const MAP_BASE_JS = `
     if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
       window.ReactNativeWebView.postMessage(JSON.stringify(payload));
     }
+  };
+
+  /**
+   * Frame the user pin together with the closest \`k\` markers so a single tap
+   * on the recentre button answers the obvious question "what's near me?"
+   * instead of just dropping a pin and leaving the rest of the map cropped
+   * out. Falls back to flying to the user (or to the supplied home center)
+   * when no markers are available.
+   *
+   * Inputs:
+   *   map          — leaflet map instance
+   *   user         — { lat, lng } | null  (user location, may be missing)
+   *   coords       — Array<[lat, lng]>    (every rendered marker)
+   *   opts         — { k?: number, maxZoom?: number, home?: {lat,lng,zoom}, duration?: number }
+   *
+   * Returns:
+   *   true if it flew somewhere meaningful, false otherwise.
+   */
+  window.__fitNearby = function(map, user, coords, opts) {
+    opts = opts || {};
+    var k = typeof opts.k === 'number' ? opts.k : 5;
+    var maxZoom = typeof opts.maxZoom === 'number' ? opts.maxZoom : 11;
+    var duration = typeof opts.duration === 'number' ? opts.duration : 0.45;
+    var home = opts.home || null;
+
+    function flyHome() {
+      if (home && typeof home.lat === 'number' && typeof home.lng === 'number') {
+        try { map.flyTo([home.lat, home.lng], home.zoom || maxZoom, { duration: duration }); return true; } catch (e) {}
+      }
+      return false;
+    }
+
+    if (!user || typeof user.lat !== 'number' || typeof user.lng !== 'number') {
+      return flyHome();
+    }
+
+    var ulat = user.lat, ulng = user.lng;
+    if (!coords || coords.length === 0) {
+      try { map.flyTo([ulat, ulng], maxZoom, { duration: duration }); return true; } catch (e) {}
+      return flyHome();
+    }
+
+    // Score by squared planar distance — accurate enough for picking the
+    // nearest few markers at country scale, and avoids the cost/imports of
+    // a real haversine when we just want a partial top-k sort.
+    var scored = [];
+    for (var i = 0; i < coords.length; i++) {
+      var c = coords[i];
+      if (!c || c.length < 2) continue;
+      var dlat = c[0] - ulat;
+      var dlng = c[1] - ulng;
+      scored.push({ c: c, d: dlat * dlat + dlng * dlng });
+    }
+    scored.sort(function(a, b){ return a.d - b.d; });
+    var picked = scored.slice(0, Math.max(1, k)).map(function(s){ return s.c; });
+    var bounds = picked.concat([[ulat, ulng]]);
+    try {
+      map.flyToBounds(bounds, { padding: [60, 60], maxZoom: maxZoom, duration: duration });
+      return true;
+    } catch (e) {}
+    try { map.flyTo([ulat, ulng], maxZoom, { duration: duration }); return true; } catch (e) {}
+    return flyHome();
   };
 
   /**

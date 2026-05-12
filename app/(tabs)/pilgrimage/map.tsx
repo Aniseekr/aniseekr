@@ -35,7 +35,11 @@ import {
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
+  TILE_ATTRIBUTION,
+  TILE_MAX_ZOOM,
+  TILE_SUBDOMAINS,
   TILE_URL,
+  TOKYO_STATION,
 } from '../../../libs/services/pilgrimage/leaflet-map';
 import { getNumberParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
@@ -103,19 +107,37 @@ ${MAP_BASE_BODY}
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
   new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: 18, minZoom: 3, attribution: '&copy; OpenStreetMap',
+    maxZoom: ${TILE_MAX_ZOOM}, minZoom: 3,
+    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
+    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
     keepBuffer: 4, updateWhenIdle: false
   }).addTo(map);
 
-  if (initial.user) {
-    var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
-    L.marker([initial.user.lat, initial.user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+  // See index.tsx for the rationale behind the post-mount user pin update.
+  var userMarker = null;
+  function applyUser(user) {
+    if (userMarker) { try { map.removeLayer(userMarker); } catch (e) {} userMarker = null; }
+    if (user && typeof user.lat === 'number' && typeof user.lng === 'number') {
+      var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
+      userMarker = L.marker([user.lat, user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+    }
+    initial.user = user;
   }
+  applyUser(initial.user);
+  window.__updateUser = applyUser;
 
   var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
   var initialZoom = initial.center.zoom;
   var lastBounds = null;
+  var markerCoords = [];
   window.__bindMap(map, function recenter() {
+    if (initial.user && markerCoords.length > 0) {
+      var did = window.__fitNearby(map, initial.user, markerCoords, {
+        k: 5, maxZoom: 11,
+        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
+      });
+      if (did) return;
+    }
     if (lastBounds) {
       try { map.flyToBounds(lastBounds, { padding: [40, 40], maxZoom: 11, duration: 0.4 }); return; } catch (e) {}
     }
@@ -129,6 +151,7 @@ ${MAP_BASE_BODY}
   window.__updateMarkers = function(markers) {
     clusterLayer.clearLayers();
     var bounds = [];
+    var coords = [];
     var batch = [];
     for (var i = 0; i < markers.length; i++) {
       (function(m){
@@ -142,6 +165,7 @@ ${MAP_BASE_BODY}
         marker.on('click', function() { window.__post({ type: 'animePress', id: m.bangumiId }); });
         batch.push(marker);
         bounds.push([m.lat, m.lng]);
+        coords.push([m.lat, m.lng]);
       })(markers[i]);
     }
     if (typeof clusterLayer.addLayers === 'function') clusterLayer.addLayers(batch);
@@ -150,6 +174,7 @@ ${MAP_BASE_BODY}
     if (bounds.length > 0) {
       try { lastBounds = L.latLngBounds(bounds); } catch (e) { lastBounds = null; }
     }
+    markerCoords = coords;
     if (!didFit && bounds.length > 1) {
       try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9, animate: false }); didFit = true; } catch (e) {}
     } else if (!didFit && bounds.length === 1) {
@@ -332,9 +357,11 @@ function FullscreenMapView({
   const [ready, setReady] = useState(false);
 
   const html = useMemo(() => {
-    const center = userLocation
-      ? { lat: userLocation.latitude, lng: userLocation.longitude, zoom: 7 }
-      : { lat: 36.2048, lng: 138.2529, zoom: 5 };
+    // Default to Tokyo Station so users who haven't granted location (or are
+    // outside Japan) still land in the densest pilgrimage region. The user
+    // pin still renders if granted, and the locate-me button frames it
+    // alongside the nearest markers.
+    const center = { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
     return buildHubMapHtml({ center, user, ringColor });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -348,6 +375,19 @@ function FullscreenMapView({
       true;
     `);
   }, [markers, ready]);
+
+  // Push user-location updates so the locate-me bounds-fit works for users
+  // who only grant permission after mount.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const payload = userLocation
+      ? JSON.stringify({ lat: userLocation.latitude, lng: userLocation.longitude })
+      : 'null';
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateUser && window.__updateUser(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [userLocation, ready]);
 
   useEffect(() => {
     if (!ready || !webviewRef.current || focusBangumiId === null) return;
