@@ -118,6 +118,30 @@ export default function RootLayout() {
               options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
             />
             <Tabs.Screen
+              name="pilgrimage/album"
+              options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
+            />
+            <Tabs.Screen
+              name="pilgrimage/compare/[spotId]"
+              options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
+            />
+            <Tabs.Screen
+              name="pilgrimage/compare/preview"
+              options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
+            />
+            <Tabs.Screen
+              name="pilgrimage/compare/tips"
+              options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
+            />
+            <Tabs.Screen
+              name="pilgrimage/compare/share"
+              options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
+            />
+            <Tabs.Screen
+              name="pilgrimage/compare/align"
+              options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
+            />
+            <Tabs.Screen
               name="search"
               options={{ href: null, tabBarStyle: { display: 'none' }, headerShown: false }}
             />

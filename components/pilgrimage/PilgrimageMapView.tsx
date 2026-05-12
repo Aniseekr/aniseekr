@@ -18,7 +18,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
@@ -28,7 +27,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { ThemedText } from '../themed';
 import {
   LEAFLET_CSS,
   LEAFLET_JS,
@@ -77,7 +78,9 @@ const isValidGeo = (geo: readonly [number, number] | null | undefined): geo is [
  * Stable per-city color palette. Used to tint markers and cluster bubbles so
  * regions visually separate at low zoom levels (e.g. Tokyo cluster vs Kyoto
  * cluster). Hash-based so the mapping is consistent across mounts without
- * needing to maintain an explicit city → color table.
+ * needing to maintain an explicit city → color table. Colors are brand-style
+ * pure hues — not theme-dependent — because the user mental model is "Tokyo is
+ * orange, Kyoto is cyan" regardless of which app theme they've picked.
  */
 const CITY_PALETTE: readonly string[] = [
   '#FF9F0A', // primary orange
@@ -90,7 +93,7 @@ const CITY_PALETTE: readonly string[] = [
   '#A3E635', // lime
 ];
 
-export function cityToColor(city: string | null | undefined, fallback: string = Colors.primary): string {
+export function cityToColor(city: string | null | undefined, fallback: string): string {
   const trimmed = (city ?? '').trim();
   if (!trimmed) return fallback;
   let hash = 0;
@@ -112,7 +115,11 @@ interface MarkerPayload {
   inCollection: boolean;
 }
 
-function buildMarkers(list: readonly PilgrimageMapAnime[], idIndex: Map<string, AnitabiBangumi>) {
+function buildMarkers(
+  list: readonly PilgrimageMapAnime[],
+  idIndex: Map<string, AnitabiBangumi>,
+  themeAccent: string
+) {
   const markers: MarkerPayload[] = [];
   idIndex.clear();
   for (const { anime, inCollection } of list) {
@@ -120,11 +127,9 @@ function buildMarkers(list: readonly PilgrimageMapAnime[], idIndex: Map<string, 
     const [lat, lng] = anime.geo;
     const idStr = String(anime.id);
     idIndex.set(idStr, anime);
-    // City-derived color when available so each region gets a distinct
-    // accent; falls back to the anime's brand color (or primary).
     const ringColor = anime.city
-      ? cityToColor(anime.city, anime.color || Colors.primary)
-      : anime.color || Colors.primary;
+      ? cityToColor(anime.city, anime.color || themeAccent)
+      : anime.color || themeAccent;
     markers.push({
       id: idStr,
       lat,
@@ -148,6 +153,7 @@ function buildMarkers(list: readonly PilgrimageMapAnime[], idIndex: Map<string, 
 function buildHtml(initial: {
   center: { lat: number; lng: number; zoom: number };
   user: { lat: number; lng: number } | null;
+  themeAccent: string;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
@@ -161,7 +167,7 @@ function buildHtml(initial: {
 <style>
   .ani-marker {
     width: 44px; height: 44px; border-radius: 12px;
-    border: 2px solid var(--ring, #FF9F0A);
+    border: 2px solid var(--ring, ${initial.themeAccent});
     background: #1c1c1e;
     overflow: hidden; position: relative;
     display: flex; align-items: center; justify-content: center;
@@ -225,9 +231,7 @@ ${MAP_BASE_BODY}
     else map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
   });
 
-  // Cluster group: aggregates overlapping anime pins. Disables once the user
-  // zooms close enough that individual markers are clearly distinguishable.
-  var markerLayer = window.__makeClusterGroup({ ringColor: '#FF9F0A', disableAt: 10 });
+  var markerLayer = window.__makeClusterGroup({ ringColor: initial.themeAccent, disableAt: 10 });
   markerLayer.addTo(map);
   var lastMarkerCount = 0;
 
@@ -244,8 +248,6 @@ ${MAP_BASE_BODY}
         (m.inCollection ? '<span class="check">✓</span>' : '') +
       '</div>';
       var icon = L.divIcon({ className: '', html: html, iconSize: [44,44], iconAnchor: [22,22] });
-      // regionColor is read by __makeClusterGroup to pick the dominant region
-      // color when this marker is aggregated into a cluster bubble.
       var marker = L.marker([m.lat, m.lng], { icon: icon, regionColor: ring });
       marker.__appId = m.id;
       var meta = m.pointsLength + ' spot' + (m.pointsLength === 1 ? '' : 's') +
@@ -263,9 +265,6 @@ ${MAP_BASE_BODY}
     if (typeof markerLayer.addLayers === 'function') markerLayer.addLayers(batch);
     else for (var j = 0; j < batch.length; j++) markerLayer.addLayer(batch[j]);
 
-    // Only fit bounds when going from empty → populated, otherwise the user's
-    // pan/zoom would jump every filter tick — unless the caller explicitly
-    // asked for a refit (e.g. they just filtered by city).
     if (refit && bounds.length > 0) {
       try { map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 12, duration: 0.45 }); } catch (e) {}
     } else if (bounds.length > 1 && lastMarkerCount === 0 && !initial.user) {
@@ -290,26 +289,28 @@ export function PilgrimageMapView({
   style,
   refitNonce,
 }: PilgrimageMapViewProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const webviewRef = useRef<WebView>(null);
   const animeById = useRef(new Map<string, AnitabiBangumi>());
   const [ready, setReady] = useState(false);
   const [clusterItems, setClusterItems] = useState<AnitabiBangumi[] | null>(null);
 
-  // Stable HTML — only depends on the *initial* user location so the map shell
-  // doesn't reload when the user pans or filters change. Subsequent updates
-  // (markers, recentered location) flow via injectJavaScript.
   const html = useMemo(() => {
     const center = userLocation
       ? { lat: userLocation.latitude, lng: userLocation.longitude, zoom: USER_ZOOM }
       : JAPAN_CENTER;
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildHtml({ center, user });
-    // userLocation intentionally only consumed once; live location updates
-    // would re-warm the tile cache on every fix, which is wasteful.
+    return buildHtml({ center, user, themeAccent: theme.accent });
+    // userLocation/theme intentionally captured once — live location updates
+    // or theme switches would re-warm the tile cache on every change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const markers = useMemo(() => buildMarkers(animeList, animeById.current), [animeList]);
+  const markers = useMemo(
+    () => buildMarkers(animeList, animeById.current, theme.accent),
+    [animeList, theme.accent]
+  );
 
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
@@ -320,9 +321,6 @@ export function PilgrimageMapView({
     `);
   }, [markers, ready]);
 
-  // Separate refit effect so it only fires when the caller intentionally
-  // changes refitNonce (e.g. picking a city pill). The plain marker effect
-  // stays passive so user pan/zoom isn't disturbed on incidental updates.
   useEffect(() => {
     if (refitNonce === undefined) return;
     if (!ready || !webviewRef.current) return;
@@ -396,17 +394,20 @@ export function PilgrimageMapView({
         style={styles.webview}
         renderError={() => (
           <View style={styles.fallback}>
-            <Ionicons name="map-outline" size={32} color={Colors.text.secondary} />
-            <Text style={styles.fallbackTitle}>Map unavailable</Text>
-            <Text style={styles.fallbackBody}>
+            <Ionicons name="map-outline" size={32} color={theme.text.secondary} />
+            <ThemedText variant="titleMedium" weight="600" style={{ marginTop: 8 }}>
+              Map unavailable
+            </ThemedText>
+            <ThemedText variant="bodySmall" tone="secondary" align="center">
               Couldn&apos;t load the map. Check your connection and try again.
-            </Text>
+            </ThemedText>
           </View>
         )}
         startInLoadingState
       />
       <ClusterPickerSheet
         items={clusterItems}
+        theme={theme}
         onClose={() => setClusterItems(null)}
         onPick={handleClusterPick}
       />
@@ -416,31 +417,40 @@ export function PilgrimageMapView({
 
 interface ClusterPickerSheetProps {
   items: AnitabiBangumi[] | null;
+  theme: ThemePalette;
   onClose: () => void;
   onPick: (anime: AnitabiBangumi) => void;
 }
 
-function ClusterPickerSheet({ items, onClose, onPick }: ClusterPickerSheetProps) {
+function ClusterPickerSheet({ items, theme, onClose, onPick }: ClusterPickerSheetProps) {
+  const styles = useMemo(() => makePickerStyles(theme), [theme]);
   if (!items || items.length === 0) return null;
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={pickerStyles.backdrop}>
+      <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={pickerStyles.sheet}>
+        <View style={styles.sheet}>
           <SafeAreaView edges={['bottom']}>
-            <View style={pickerStyles.handle} />
-            <View style={pickerStyles.headerRow}>
-              <Text style={pickerStyles.headerTitle}>{items.length} anime here</Text>
-              <Pressable onPress={onClose} hitSlop={12} style={pickerStyles.closeBtn}>
-                <Ionicons name="close" size={20} color={Colors.text.secondary} />
+            <View style={styles.handle} />
+            <View style={styles.headerRow}>
+              <ThemedText variant="titleMedium" weight="700">
+                {items.length} anime here
+              </ThemedText>
+              <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color={theme.text.secondary} />
               </Pressable>
             </View>
             <ScrollView
-              style={pickerStyles.list}
-              contentContainerStyle={pickerStyles.listContent}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}>
               {items.map((anime) => (
-                <ClusterPickerRow key={anime.id} anime={anime} onPress={() => onPick(anime)} />
+                <ClusterPickerRow
+                  key={anime.id}
+                  anime={anime}
+                  theme={theme}
+                  onPress={() => onPick(anime)}
+                />
               ))}
             </ScrollView>
           </SafeAreaView>
@@ -452,171 +462,147 @@ function ClusterPickerSheet({ items, onClose, onPick }: ClusterPickerSheetProps)
 
 interface ClusterPickerRowProps {
   anime: AnitabiBangumi;
+  theme: ThemePalette;
   onPress: () => void;
 }
 
-function ClusterPickerRow({ anime, onPress }: ClusterPickerRowProps) {
-  const ring = anime.color || Colors.primary;
+function ClusterPickerRow({ anime, theme, onPress }: ClusterPickerRowProps) {
+  const styles = useMemo(() => makePickerStyles(theme), [theme]);
+  const ring = anime.color || theme.accent;
   const cover = (anime.cover ?? '').replace('?plan=h160', '?plan=h120');
   const meta = `${anime.pointsLength} spot${anime.pointsLength === 1 ? '' : 's'}${anime.city ? ` · ${anime.city}` : ''}`;
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [pickerStyles.row, pressed && { opacity: 0.78 }]}
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.78 }]}
       accessibilityRole="button"
       accessibilityLabel={`Open ${anime.title}`}>
-      <View style={[pickerStyles.thumbWrap, { borderColor: ring }]}>
+      <View style={[styles.thumbWrap, { borderColor: ring }]}>
         {cover ? (
           <Image
             source={{ uri: cover }}
-            style={pickerStyles.thumb}
+            style={styles.thumb}
             contentFit="cover"
             transition={120}
           />
         ) : (
-          <View style={[pickerStyles.thumb, { backgroundColor: Colors.background.tertiary }]} />
+          <View style={[styles.thumb, { backgroundColor: theme.background.tertiary }]} />
         )}
       </View>
-      <View style={pickerStyles.rowBody}>
-        <Text style={pickerStyles.rowTitle} numberOfLines={1}>
+      <View style={styles.rowBody}>
+        <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
           {anime.title || anime.cn || 'Untitled'}
-        </Text>
+        </ThemedText>
         {anime.cn && anime.cn !== anime.title ? (
-          <Text style={pickerStyles.rowSubtitle} numberOfLines={1}>
+          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginTop: 1 }}>
             {anime.cn}
-          </Text>
+          </ThemedText>
         ) : null}
-        <Text style={pickerStyles.rowMeta} numberOfLines={1}>
+        <ThemedText variant="captionSmall" tone="tertiary" weight="500" numberOfLines={1} style={{ marginTop: 3 }}>
           {meta}
-        </Text>
+        </ThemedText>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+      <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: Colors.background.secondary,
-  },
-  fallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: Colors.background.secondary,
-    borderRadius: Radius.lg,
-    gap: 8,
-  },
-  fallbackTitle: {
-    ...Typography.titleMedium,
-    color: Colors.text.primary,
-    marginTop: 8,
-  },
-  fallbackBody: {
-    ...Typography.bodySmall,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-  },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      overflow: 'hidden',
+      backgroundColor: theme.background.secondary,
+    },
+    webview: {
+      flex: 1,
+      backgroundColor: theme.background.secondary,
+    },
+    fallback: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      backgroundColor: theme.background.secondary,
+      borderRadius: Radius.lg,
+      gap: 8,
+    },
+  });
+}
 
-const pickerStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: Colors.background.secondary,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderColor: Colors.glass.border,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.screenPadding,
-    paddingTop: 8,
-    paddingBottom: Spacing.sm,
-    maxHeight: '70%',
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.glass.borderHeavy,
-    marginBottom: Spacing.xs,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    marginBottom: Spacing.xs,
-  },
-  headerTitle: {
-    ...Typography.titleMedium,
-    color: Colors.text.primary,
-  },
-  closeBtn: {
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: Colors.glass.dark,
-  },
-  list: {
-    marginTop: 4,
-  },
-  listContent: {
-    paddingBottom: Spacing.md,
-    gap: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colors.glass.medium,
-    borderColor: Colors.glass.border,
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    padding: 10,
-  },
-  thumbWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    backgroundColor: Colors.background.tertiary,
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
-  },
-  rowBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  rowTitle: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  rowSubtitle: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    marginTop: 1,
-  },
-  rowMeta: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    marginTop: 3,
-    fontWeight: '500',
-  },
-});
+function makePickerStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: theme.background.secondary,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      borderColor: theme.glassBorder,
+      borderTopWidth: 1,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingTop: 8,
+      paddingBottom: Spacing.sm,
+      maxHeight: '70%',
+    },
+    handle: {
+      alignSelf: 'center',
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.glassBorder,
+      marginBottom: Spacing.xs,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: Spacing.xs,
+      marginBottom: Spacing.xs,
+    },
+    closeBtn: {
+      width: 30,
+      height: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 15,
+      backgroundColor: theme.background.tertiary,
+    },
+    list: {
+      marginTop: 4,
+    },
+    listContent: {
+      paddingBottom: Spacing.md,
+      gap: 8,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: theme.background.secondary,
+      borderColor: theme.glassBorder,
+      borderWidth: 1,
+      borderRadius: Radius.lg,
+      padding: 10,
+    },
+    thumbWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 2,
+      backgroundColor: theme.background.tertiary,
+    },
+    thumb: {
+      width: '100%',
+      height: '100%',
+    },
+    rowBody: {
+      flex: 1,
+      minWidth: 0,
+    },
+  });
+}

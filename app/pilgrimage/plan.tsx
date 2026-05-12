@@ -2,6 +2,9 @@
 // Derives a "Featured Trip" from the most-documented pilgrimage anime, shows
 // the user's visited stats, and surfaces curated suggested trips. No backing
 // trip-storage exists yet — saved trips would land here when that lands.
+//
+// All surfaces consume useTheme() so changing accent / theme repaints the
+// page; cityToColor is still used per-trip but falls back to theme.accent.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -9,7 +12,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -19,7 +21,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { ThemedText, readableTextOn } from '../../components/themed';
 import { cityToColor } from '../../components/pilgrimage/PilgrimageMapView';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../libs/services/pilgrimage/featured-anime';
@@ -43,14 +47,14 @@ const PLAN_PRESETS: readonly { id: string; label: string; subtitle: string; icon
 export default function PilgrimagePlanScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const [candidates, setCandidates] = useState<TripCandidate[]>([]);
   const [collectedCount, setCollectedCount] = useState(0);
   const [visited, setVisited] = useState<VisitedMap>({});
   const [loading, setLoading] = useState(true);
 
-  // Load the curated featured set + the user's collection stats + their
-  // visited-spot map in parallel. All three feed the stats row + featured
-  // trip card.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -73,7 +77,6 @@ export default function PilgrimagePlanScreen() {
         animeList.sort((a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0));
         const enriched: TripCandidate[] = animeList.map((a) => {
           const spots = a.pointsLength ?? 0;
-          // Heuristic: ~6 spots/day, ~25 minutes per stop including transit.
           const days = Math.max(1, Math.ceil(spots / 6));
           const hours = +(spots * 0.4).toFixed(1);
           return { anime: a, estimatedDays: days, walkingHours: hours };
@@ -118,9 +121,6 @@ export default function PilgrimagePlanScreen() {
   const handlePresetPress = useCallback(
     (presetId: string) => {
       Haptics.selectionAsync().catch(() => undefined);
-      // No preset detail screens yet — preset taps route into the main
-      // pilgrimage hub where the user can pick a region + filter. The id is
-      // forwarded in case we later surface preset-specific defaults there.
       router.push({ pathname: '/pilgrimage', params: { preset: presetId } });
     },
     [router]
@@ -135,11 +135,11 @@ export default function PilgrimagePlanScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient
-        colors={Colors.gradients.background as unknown as [string, string, ...string[]]}
+        colors={theme.gradient}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.bgGlowPrimary} pointerEvents="none" />
-      <View style={styles.bgGlowSecondary} pointerEvents="none" />
+      <View style={[styles.bgGlowPrimary, { backgroundColor: `${theme.accent}1A` }]} pointerEvents="none" />
+      <View style={[styles.bgGlowSecondary, { backgroundColor: `${theme.secondary}1A` }]} pointerEvents="none" />
 
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable
@@ -148,11 +148,15 @@ export default function PilgrimagePlanScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.78 }]}>
-          <Ionicons name="chevron-back" size={20} color={Colors.text.primary} />
+          <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
         </Pressable>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Trip Planner</Text>
-          <Text style={styles.headerSubtitle}>Plan your walking route</Text>
+          <ThemedText variant="titleMedium" weight="700" style={{ letterSpacing: 0.5 }}>
+            Trip Planner
+          </ThemedText>
+          <ThemedText variant="captionSmall" tone="tertiary" weight="500">
+            Plan your walking route
+          </ThemedText>
         </View>
         <Pressable
           onPress={() => Haptics.selectionAsync().catch(() => undefined)}
@@ -160,7 +164,7 @@ export default function PilgrimagePlanScreen() {
           accessibilityRole="button"
           accessibilityLabel="More options"
           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.78 }]}>
-          <Ionicons name="ellipsis-horizontal" size={18} color={Colors.text.primary} />
+          <Ionicons name="ellipsis-horizontal" size={18} color={theme.text.primary} />
         </Pressable>
       </View>
 
@@ -173,14 +177,17 @@ export default function PilgrimagePlanScreen() {
         showsVerticalScrollIndicator={false}>
         {loading && !featured ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Building your trip ideas…</Text>
+            <ActivityIndicator size="large" color={theme.accent} />
+            <ThemedText variant="bodyMedium" tone="secondary">
+              Building your trip ideas…
+            </ThemedText>
           </View>
         ) : null}
 
         {featured ? (
           <FeaturedTripCard
             candidate={featured}
+            theme={theme}
             onPress={() => handleAnimePress(featured.anime)}
           />
         ) : null}
@@ -190,26 +197,33 @@ export default function PilgrimagePlanScreen() {
             icon="map"
             value={String(stats.destinations)}
             label="Destinations"
-            tint={Colors.primary}
+            tint={theme.accent}
+            theme={theme}
           />
           <StatTile
             icon="bookmark"
             value={String(stats.collected)}
             label="Saved"
-            tint={Colors.secondary}
+            tint={theme.secondary}
+            theme={theme}
           />
           <StatTile
             icon="checkmark-circle"
             value={String(stats.visited)}
             label="Spots Visited"
-            tint="#34D399"
+            tint={theme.status.success}
+            theme={theme}
           />
         </View>
 
         <View style={styles.presetSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Presets</Text>
-            <Text style={styles.sectionSubtitle}>Tap to start a plan</Text>
+            <ThemedText variant="titleMedium" weight="700">
+              Quick Presets
+            </ThemedText>
+            <ThemedText variant="captionSmall" tone="tertiary">
+              Tap to start a plan
+            </ThemedText>
           </View>
           <View style={styles.presetGrid}>
             {PLAN_PRESETS.map((p) => (
@@ -218,6 +232,7 @@ export default function PilgrimagePlanScreen() {
                 label={p.label}
                 subtitle={p.subtitle}
                 icon={p.icon}
+                theme={theme}
                 onPress={() => handlePresetPress(p.id)}
               />
             ))}
@@ -225,6 +240,7 @@ export default function PilgrimagePlanScreen() {
         </View>
 
         <BuildOwnBanner
+          theme={theme}
           onPress={() => {
             Haptics.selectionAsync().catch(() => undefined);
             router.push('/pilgrimage');
@@ -235,31 +251,39 @@ export default function PilgrimagePlanScreen() {
           <View style={styles.sectionHeader}>
             <View style={{ flex: 1 }}>
               <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionTitle}>Suggested Trips</Text>
+                <ThemedText variant="titleMedium" weight="700">
+                  Suggested Trips
+                </ThemedText>
                 {suggested.length > 0 ? (
-                  <View style={styles.countBadge}>
-                    <Text style={styles.countBadgeText}>{suggested.length}</Text>
+                  <View style={[styles.countBadge, { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder }]}>
+                    <ThemedText variant="captionSmall" weight="700" tone="secondary">
+                      {suggested.length}
+                    </ThemedText>
                   </View>
                 ) : null}
               </View>
-              <Text style={styles.sectionSubtitle}>
+              <ThemedText variant="captionSmall" tone="tertiary" style={{ marginTop: 2 }}>
                 Curated 1-day plans inspired by featured anime
-              </Text>
+              </ThemedText>
             </View>
             <Pressable
               onPress={() => router.push('/pilgrimage')}
               hitSlop={6}>
-              <Text style={styles.sectionLink}>See all</Text>
+              <ThemedText variant="bodySmall" weight="700" style={{ color: theme.accent }}>
+                See all
+              </ThemedText>
             </Pressable>
           </View>
 
           {suggested.length === 0 && !loading ? (
             <View style={styles.emptyCard}>
-              <MaterialIcons name="explore-off" size={36} color={Colors.text.tertiary} />
-              <Text style={styles.emptyTitle}>No suggested trips yet</Text>
-              <Text style={styles.emptyBody}>
+              <MaterialIcons name="explore-off" size={36} color={theme.text.tertiary} />
+              <ThemedText variant="bodyMedium" weight="700" align="center" style={{ marginTop: 6 }}>
+                No suggested trips yet
+              </ThemedText>
+              <ThemedText variant="captionSmall" tone="secondary" align="center">
                 Curated trip ideas will appear once pilgrimage data finishes loading.
-              </Text>
+              </ThemedText>
             </View>
           ) : (
             <View style={styles.suggestedList}>
@@ -267,6 +291,7 @@ export default function PilgrimagePlanScreen() {
                 <SuggestedTripRow
                   key={`sugg-${c.anime.id}`}
                   candidate={c}
+                  theme={theme}
                   onPress={() => handleAnimePress(c.anime)}
                 />
               ))}
@@ -280,12 +305,15 @@ export default function PilgrimagePlanScreen() {
 
 interface FeaturedTripCardProps {
   candidate: TripCandidate;
+  theme: ThemePalette;
   onPress: () => void;
 }
 
-function FeaturedTripCard({ candidate, onPress }: FeaturedTripCardProps) {
+function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { anime, estimatedDays, walkingHours } = candidate;
-  const tint = cityToColor(anime.city, anime.color || Colors.primary);
+  const tint = cityToColor(anime.city, anime.color || theme.accent);
+  const tintFg = readableTextOn(tint);
   return (
     <Pressable
       onPress={onPress}
@@ -300,37 +328,49 @@ function FeaturedTripCard({ candidate, onPress }: FeaturedTripCardProps) {
           transition={300}
         />
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background.secondary }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.secondary }]} />
       )}
       <LinearGradient
-        colors={['rgba(8,8,8,0)', 'rgba(8,8,8,0.78)', 'rgba(8,8,8,0.96)']}
+        colors={[
+          'rgba(8,8,8,0)',
+          `${theme.background.primary}C4`,
+          `${theme.background.primary}F2`,
+        ]}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.featuredContent}>
-        <View style={styles.featuredBadge}>
-          <Ionicons name="star" size={10} color={Colors.primary} />
-          <Text style={styles.featuredBadgeText}>FEATURED TRIP</Text>
+        <View style={[styles.featuredBadge, { backgroundColor: `${theme.accent}28`, borderColor: `${theme.accent}A6` }]}>
+          <Ionicons name="star" size={10} color={theme.accent} />
+          <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent, letterSpacing: 0.6 }}>
+            FEATURED TRIP
+          </ThemedText>
         </View>
-        <Text style={styles.featuredCity} numberOfLines={1}>
+        <ThemedText variant="bodySmall" tone="secondary" weight="600" numberOfLines={1}>
           {anime.city || 'Featured destination'}
           {anime.cn ? ` · ${anime.cn}` : ''}
-        </Text>
-        <Text style={styles.featuredTitle} numberOfLines={2}>
+        </ThemedText>
+        <ThemedText variant="headlineMedium" weight="800" numberOfLines={2} style={{ marginTop: 2 }}>
           {anime.title || 'Untitled'} · {estimatedDays}-Day
-        </Text>
+        </ThemedText>
         <View style={styles.featuredMetaRow}>
           <View style={styles.featuredChip}>
-            <Ionicons name="calendar" size={11} color={Colors.text.primary} />
-            <Text style={styles.featuredChipText}>{estimatedDays} day</Text>
+            <Ionicons name="calendar" size={11} color={theme.text.primary} />
+            <ThemedText variant="captionSmall" weight="600">
+              {estimatedDays} day
+            </ThemedText>
           </View>
           <View style={styles.featuredChip}>
-            <Ionicons name="location" size={11} color={Colors.text.primary} />
-            <Text style={styles.featuredChipText}>{anime.pointsLength} spots</Text>
+            <Ionicons name="location" size={11} color={theme.text.primary} />
+            <ThemedText variant="captionSmall" weight="600">
+              {anime.pointsLength} spots
+            </ThemedText>
           </View>
           <View style={styles.featuredChip}>
-            <Ionicons name="walk" size={11} color={Colors.text.primary} />
-            <Text style={styles.featuredChipText}>~{walkingHours}h</Text>
+            <Ionicons name="walk" size={11} color={theme.text.primary} />
+            <ThemedText variant="captionSmall" weight="600">
+              ~{walkingHours}h
+            </ThemedText>
           </View>
         </View>
         <View style={styles.featuredActions}>
@@ -341,8 +381,10 @@ function FeaturedTripCard({ candidate, onPress }: FeaturedTripCardProps) {
               { backgroundColor: tint },
               pressed && { opacity: 0.85 },
             ]}>
-            <Text style={styles.featuredCtaText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={14} color="#000" />
+            <ThemedText variant="bodySmall" weight="700" style={{ color: tintFg }}>
+              Continue
+            </ThemedText>
+            <Ionicons name="arrow-forward" size={14} color={tintFg} />
           </Pressable>
         </View>
       </View>
@@ -355,16 +397,22 @@ interface StatTileProps {
   value: string;
   label: string;
   tint: string;
+  theme: ThemePalette;
 }
 
-function StatTile({ icon, value, label, tint }: StatTileProps) {
+function StatTile({ icon, value, label, tint, theme }: StatTileProps) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.statTile}>
       <View style={[styles.statIcon, { backgroundColor: `${tint}22`, borderColor: `${tint}55` }]}>
         <Ionicons name={icon} size={16} color={tint} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <ThemedText variant="titleLarge" weight="800">
+        {value}
+      </ThemedText>
+      <ThemedText variant="captionSmall" tone="tertiary" weight="600">
+        {label}
+      </ThemedText>
     </View>
   );
 }
@@ -373,31 +421,38 @@ interface PresetTileProps {
   label: string;
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
+  theme: ThemePalette;
   onPress: () => void;
 }
 
-function PresetTile({ label, subtitle, icon, onPress }: PresetTileProps) {
+function PresetTile({ label, subtitle, icon, theme, onPress }: PresetTileProps) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => [styles.presetTile, pressed && { opacity: 0.85 }]}>
-      <View style={styles.presetIcon}>
-        <Ionicons name={icon} size={18} color={Colors.primary} />
+      <View style={[styles.presetIcon, { backgroundColor: `${theme.accent}22`, borderColor: `${theme.accent}66` }]}>
+        <Ionicons name={icon} size={18} color={theme.accent} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.presetLabel}>{label}</Text>
-        <Text style={styles.presetSubtitle} numberOfLines={1}>
+        <ThemedText variant="bodySmall" weight="700">
+          {label}
+        </ThemedText>
+        <ThemedText variant="captionSmall" tone="tertiary" weight="500" numberOfLines={1} style={{ marginTop: 1 }}>
           {subtitle}
-        </Text>
+        </ThemedText>
       </View>
-      <Ionicons name="chevron-forward" size={14} color={Colors.text.tertiary} />
+      <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
     </Pressable>
   );
 }
 
-function BuildOwnBanner({ onPress }: { onPress: () => void }) {
+function BuildOwnBanner({ theme, onPress }: { theme: ThemePalette; onPress: () => void }) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  // Use the theme's signature accent + secondary as the banner gradient so it
+  // refreshes per theme switch instead of staying purple.
   return (
     <Pressable
       onPress={onPress}
@@ -405,7 +460,7 @@ function BuildOwnBanner({ onPress }: { onPress: () => void }) {
       accessibilityLabel="Build your own 1-day plan"
       style={({ pressed }) => [styles.buildBanner, pressed && { opacity: 0.92 }]}>
       <LinearGradient
-        colors={['#3A1F70', '#4338CA', '#5B2D8E']}
+        colors={[theme.accentDark, theme.accent, theme.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -414,10 +469,12 @@ function BuildOwnBanner({ onPress }: { onPress: () => void }) {
         <Ionicons name="sparkles" size={18} color="#FFF" />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.buildTitle}>Build Your Own 1-Day Plan</Text>
-        <Text style={styles.buildSubtitle} numberOfLines={2}>
-          Pick a neighborhood, anime, and route — we’ll optimize the order.
-        </Text>
+        <ThemedText variant="bodyMedium" weight="800" style={{ color: '#FFF' }}>
+          Build Your Own 1-Day Plan
+        </ThemedText>
+        <ThemedText variant="captionSmall" numberOfLines={2} style={{ color: 'rgba(255,255,255,0.78)', marginTop: 3 }}>
+          Pick a neighborhood, anime, and route — we&apos;ll optimize the order.
+        </ThemedText>
       </View>
       <Ionicons name="chevron-forward" size={16} color="#FFF" />
     </Pressable>
@@ -426,12 +483,14 @@ function BuildOwnBanner({ onPress }: { onPress: () => void }) {
 
 interface SuggestedTripRowProps {
   candidate: TripCandidate;
+  theme: ThemePalette;
   onPress: () => void;
 }
 
-function SuggestedTripRow({ candidate, onPress }: SuggestedTripRowProps) {
+function SuggestedTripRow({ candidate, theme, onPress }: SuggestedTripRowProps) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { anime, estimatedDays, walkingHours } = candidate;
-  const tint = cityToColor(anime.city, anime.color || Colors.primary);
+  const tint = cityToColor(anime.city, anime.color || theme.accent);
   return (
     <Pressable
       onPress={onPress}
@@ -450,418 +509,298 @@ function SuggestedTripRow({ candidate, onPress }: SuggestedTripRowProps) {
           transition={200}
         />
       ) : (
-        <View style={[styles.suggestedThumb, { backgroundColor: Colors.background.secondary }]} />
+        <View style={[styles.suggestedThumb, { backgroundColor: theme.background.secondary }]} />
       )}
       <View style={styles.suggestedBody}>
         <View style={styles.suggestedCityRow}>
           <View style={[styles.suggestedCityDot, { backgroundColor: tint }]} />
-          <Text style={styles.suggestedCity}>{anime.city || 'Multiple areas'}</Text>
+          <ThemedText
+            variant="captionSmall"
+            tone="secondary"
+            weight="700"
+            style={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
+            {anime.city || 'Multiple areas'}
+          </ThemedText>
         </View>
-        <Text style={styles.suggestedTitle} numberOfLines={1}>
+        <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
           {anime.title}
-        </Text>
+        </ThemedText>
         <View style={styles.suggestedMetaRow}>
-          <Text style={styles.suggestedMeta}>{estimatedDays}d</Text>
-          <Text style={styles.suggestedDot}>·</Text>
-          <Text style={styles.suggestedMeta}>{anime.pointsLength} spots</Text>
-          <Text style={styles.suggestedDot}>·</Text>
-          <Text style={styles.suggestedMeta}>~{walkingHours}h walk</Text>
+          <ThemedText variant="captionSmall" tone="tertiary" weight="600">
+            {estimatedDays}d
+          </ThemedText>
+          <ThemedText variant="captionSmall" tone="tertiary">
+            ·
+          </ThemedText>
+          <ThemedText variant="captionSmall" tone="tertiary" weight="600">
+            {anime.pointsLength} spots
+          </ThemedText>
+          <ThemedText variant="captionSmall" tone="tertiary">
+            ·
+          </ThemedText>
+          <ThemedText variant="captionSmall" tone="tertiary" weight="600">
+            ~{walkingHours}h walk
+          </ThemedText>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.text.tertiary} />
+      <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background.primary,
-  },
-  bgGlowPrimary: {
-    position: 'absolute',
-    top: 220,
-    right: -90,
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    backgroundColor: 'rgba(255, 159, 10, 0.10)',
-    opacity: 0.7,
-  },
-  bgGlowSecondary: {
-    position: 'absolute',
-    bottom: 80,
-    left: -80,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(191, 90, 242, 0.10)',
-    opacity: 0.5,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.screenPadding,
-    paddingBottom: Spacing.sm,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(40,40,44,0.78)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: Colors.text.primary,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  scrollContent: {
-    paddingTop: Spacing.sm,
-    gap: Spacing.md,
-  },
-  loadingState: {
-    paddingVertical: Spacing.xxl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  loadingText: {
-    color: Colors.text.secondary,
-    ...Typography.bodyMedium,
-  },
-  featuredCard: {
-    marginHorizontal: Spacing.screenPadding,
-    height: 270,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.background.secondary,
-    justifyContent: 'flex-end',
-  },
-  featuredContent: {
-    padding: 16,
-    gap: 6,
-  },
-  featuredBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 159, 10, 0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.65)',
-  },
-  featuredBadgeText: {
-    color: Colors.primary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  featuredCity: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  featuredTitle: {
-    color: Colors.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 26,
-    letterSpacing: 0.2,
-  },
-  featuredMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 2,
-  },
-  featuredChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
-  featuredChipText: {
-    color: Colors.text.primary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  featuredActions: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  featuredCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-  },
-  featuredCtaText: {
-    color: '#000',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  statRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.screenPadding,
-    gap: 10,
-  },
-  statTile: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.medium,
-    gap: 4,
-  },
-  statIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  statValue: {
-    color: Colors.text.primary,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  statLabel: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  presetSection: {
-    paddingHorizontal: Spacing.screenPadding,
-    gap: Spacing.sm,
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  presetTile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: 'rgba(20,20,22,0.78)',
-    flexBasis: '47%',
-    flexGrow: 1,
-    minHeight: 64,
-  },
-  presetIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,159,10,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,159,10,0.45)',
-  },
-  presetLabel: {
-    color: Colors.text.primary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  presetSubtitle: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  buildBanner: {
-    marginHorizontal: Spacing.screenPadding,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  buildIconRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  buildTitle: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  buildSubtitle: {
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 12,
-    marginTop: 3,
-  },
-  section: {
-    paddingHorizontal: Spacing.screenPadding,
-    gap: Spacing.sm,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitle: {
-    color: Colors.text.primary,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  sectionSubtitle: {
-    color: Colors.text.tertiary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  sectionLink: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  countBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  countBadgeText: {
-    color: Colors.text.secondary,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  emptyCard: {
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.medium,
-    alignItems: 'center',
-    gap: 6,
-  },
-  emptyTitle: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 17,
-  },
-  suggestedList: {
-    gap: 10,
-  },
-  suggestedCard: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 10,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: 'rgba(20,20,22,0.78)',
-    borderLeftWidth: 3,
-    alignItems: 'center',
-  },
-  suggestedThumb: {
-    width: 56,
-    height: 76,
-    borderRadius: 10,
-  },
-  suggestedBody: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  suggestedCityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  suggestedCityDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  suggestedCity: {
-    color: Colors.text.secondary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
-  suggestedTitle: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  suggestedMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    flexWrap: 'wrap',
-  },
-  suggestedMeta: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  suggestedDot: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-  },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background.primary,
+    },
+    bgGlowPrimary: {
+      position: 'absolute',
+      top: 220,
+      right: -90,
+      width: 360,
+      height: 360,
+      borderRadius: 180,
+      opacity: 0.7,
+    },
+    bgGlowSecondary: {
+      position: 'absolute',
+      bottom: 80,
+      left: -80,
+      width: 320,
+      height: 320,
+      borderRadius: 160,
+      opacity: 0.5,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingBottom: Spacing.sm,
+    },
+    headerBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: `${theme.background.secondary}CC`,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    headerText: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: 'center',
+    },
+    scrollContent: {
+      paddingTop: Spacing.sm,
+      gap: Spacing.md,
+    },
+    loadingState: {
+      paddingVertical: Spacing.xxl,
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    featuredCard: {
+      marginHorizontal: Spacing.screenPadding,
+      height: 270,
+      borderRadius: Radius.xl,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      justifyContent: 'flex-end',
+    },
+    featuredContent: {
+      padding: 16,
+      gap: 6,
+    },
+    featuredBadge: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+    },
+    featuredMetaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 2,
+    },
+    featuredChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255,255,255,0.10)',
+    },
+    featuredActions: {
+      flexDirection: 'row',
+      marginTop: 8,
+    },
+    featuredCta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 18,
+    },
+    statRow: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.screenPadding,
+      gap: 10,
+    },
+    statTile: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      gap: 4,
+    },
+    statIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    presetSection: {
+      paddingHorizontal: Spacing.screenPadding,
+      gap: Spacing.sm,
+    },
+    presetGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    presetTile: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      flexBasis: '47%',
+      flexGrow: 1,
+      minHeight: 64,
+    },
+    presetIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+    },
+    buildBanner: {
+      marginHorizontal: Spacing.screenPadding,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      borderRadius: Radius.lg,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+    },
+    buildIconRing: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.18)',
+    },
+    section: {
+      paddingHorizontal: Spacing.screenPadding,
+      gap: Spacing.sm,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    countBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    emptyCard: {
+      paddingVertical: Spacing.xl,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      alignItems: 'center',
+      gap: 6,
+    },
+    suggestedList: {
+      gap: 10,
+    },
+    suggestedCard: {
+      flexDirection: 'row',
+      gap: 12,
+      padding: 10,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      borderLeftWidth: 3,
+      alignItems: 'center',
+    },
+    suggestedThumb: {
+      width: 56,
+      height: 76,
+      borderRadius: 10,
+    },
+    suggestedBody: {
+      flex: 1,
+      minWidth: 0,
+      gap: 4,
+    },
+    suggestedCityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    suggestedCityDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    suggestedMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      flexWrap: 'wrap',
+    },
+  });
+}

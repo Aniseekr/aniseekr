@@ -2,6 +2,11 @@
 // Path: /pilgrimage/{bangumiId}
 //
 // Spec: spec/pilgrimage_spec.md §8 (Routes).
+//
+// Visual language follows japanwalker.pen: a parallax hero, then a glassy
+// floating header (back / camera / share) whose backdrop and sticky title
+// fade in once the hero scrolls past. All surfaces flow from useTheme() so a
+// theme/accent switch repaints the whole screen.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -11,8 +16,8 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
@@ -25,14 +30,17 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { ThemedText, readableTextOn } from '../../components/themed';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import { anitabiService } from '../../libs/services/pilgrimage/anitabi-service';
 import {
@@ -67,8 +75,10 @@ import type {
 } from '../../libs/services/pilgrimage/types';
 
 type ViewMode = 'list' | 'map';
+type SpotFilter = 'all' | 'visited' | 'unvisited' | 'photos';
 
-const HERO_HEIGHT = 280;
+const HERO_HEIGHT = 320;
+const HEADER_HEIGHT = 56;
 const ANITABI_BASE_PAGE = 'https://anitabi.cn/bangumi/';
 
 function buildMapsURL(lat: number, lng: number, name?: string): string {
@@ -94,9 +104,6 @@ function formatDistanceKm(km: number): string {
 }
 
 function buildBrowseUrl(platform: PlatformType, bangumiId: number): string | null {
-  // Anitabi is the source of truth for the spot dataset; for non-bangumi
-  // browse sources we still surface Anitabi's bangumi page since that is
-  // the location the data originates from.
   if (platform === 'bangumi') return `https://bgm.tv/subject/${bangumiId}`;
   return `${ANITABI_BASE_PAGE}${bangumiId}`;
 }
@@ -182,9 +189,6 @@ ${MAP_BASE_BODY}
     map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
   });
 
-  // Cluster group keyed to the anime's theme color. Disables one zoom level
-  // earlier than the overview map because spots tend to cluster on the same
-  // street, and users want to see individual scenes once they're close.
   var markerLayer = window.__makeClusterGroup({ ringColor: initial.ringColor, disableAt: 16 });
   markerLayer.addTo(map);
   var didFit = false;
@@ -237,6 +241,7 @@ interface SpotMapViewProps {
   centerZoom: number;
   onSpotPress: (spot: AnitabiPoint) => void;
   onClusterPick: (spots: readonly AnitabiPoint[]) => void;
+  theme: ThemePalette;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -249,15 +254,14 @@ function SpotMapView({
   centerZoom,
   onSpotPress,
   onClusterPick,
+  theme,
   style,
 }: SpotMapViewProps) {
   const webviewRef = useRef<WebView>(null);
   const spotsById = useRef(new Map<string, AnitabiPoint>());
   const [ready, setReady] = useState(false);
+  const styles = useMemo(() => makeMapStyles(theme), [theme]);
 
-  // Stable shell — initial center + theme color captured once. Marker updates
-  // flow via injectJavaScript so toggling visited or loading detailed points
-  // doesn't throw away the cached tiles or reset the user's pan/zoom.
   const html = useMemo(() => {
     const fallback =
       centerGeo && hasValidGeo(centerGeo)
@@ -328,7 +332,7 @@ function SpotMapView({
   };
 
   return (
-    <View style={[mapStyles.container, style]} testID="pilgrimage-spot-map">
+    <View style={[styles.container, style]} testID="pilgrimage-spot-map">
       <WebView
         ref={webviewRef}
         originWhitelist={['*']}
@@ -340,14 +344,16 @@ function SpotMapView({
         allowsInlineMediaPlayback
         androidLayerType="hardware"
         onMessage={handleMessage}
-        style={mapStyles.webview}
+        style={styles.webview}
         renderError={() => (
-          <View style={mapStyles.fallback}>
-            <Ionicons name="map-outline" size={32} color={Colors.text.secondary} />
-            <Text style={mapStyles.fallbackTitle}>Map unavailable</Text>
-            <Text style={mapStyles.fallbackBody}>
+          <View style={styles.fallback}>
+            <Ionicons name="map-outline" size={32} color={theme.text.secondary} />
+            <ThemedText variant="titleMedium" weight="600" style={styles.fallbackTitle}>
+              Map unavailable
+            </ThemedText>
+            <ThemedText variant="bodySmall" tone="secondary" align="center">
               Couldn&apos;t load the map. Check your connection and try again.
-            </Text>
+            </ThemedText>
           </View>
         )}
         startInLoadingState
@@ -359,8 +365,12 @@ function SpotMapView({
 interface SpotRowProps {
   spot: AnitabiPoint;
   themeColor: string;
+  themeColorFg: string;
   distanceKm: number | null;
   visited: boolean;
+  hasCapture: boolean;
+  theme: ThemePalette;
+  onPress: (spot: AnitabiPoint) => void;
   onToggleVisited: (spot: AnitabiPoint) => void;
   onOpenMaps: (spot: AnitabiPoint) => void;
 }
@@ -368,56 +378,81 @@ interface SpotRowProps {
 function SpotRow({
   spot,
   themeColor,
+  themeColorFg,
   distanceKm,
   visited,
+  hasCapture,
+  theme,
+  onPress,
   onToggleVisited,
   onOpenMaps,
 }: SpotRowProps) {
+  const styles = useMemo(() => makeRowStyles(theme), [theme]);
   const hasGeo = hasValidGeo(spot.geo);
   return (
-    <View style={[rowStyles.row, visited && rowStyles.rowVisited]}>
-      <View style={rowStyles.thumbWrap}>
+    <Pressable
+      onPress={() => onPress(spot)}
+      style={({ pressed }) => [
+        styles.row,
+        visited && { borderColor: `${theme.status.success}66`, backgroundColor: `${theme.status.success}10` },
+        pressed && { opacity: 0.92 },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${spot.name}`}>
+      <View style={styles.thumbWrap}>
         <Image
           source={{ uri: spot.image }}
-          style={rowStyles.thumb}
+          style={styles.thumb}
           contentFit="cover"
           transition={150}
         />
-        <View style={[rowStyles.epBadge, { backgroundColor: `${themeColor}E6` }]}>
-          <Text style={rowStyles.epBadgeText}>EP {spot.ep}</Text>
+        <View style={[styles.epBadge, { backgroundColor: `${themeColor}E6` }]}>
+          <ThemedText variant="captionSmall" weight="700" style={{ color: themeColorFg }}>
+            EP {spot.ep}
+          </ThemedText>
         </View>
-      </View>
-      <View style={rowStyles.body}>
-        <Text style={rowStyles.name} numberOfLines={2}>
-          {spot.name}
-        </Text>
-        {spot.cn ? (
-          <Text style={rowStyles.nameCN} numberOfLines={1}>
-            {spot.cn}
-          </Text>
+        {hasCapture ? (
+          <View style={[styles.captureDot, { borderColor: theme.background.primary }]}>
+            <Ionicons name="camera" size={9} color="#000" />
+          </View>
         ) : null}
-        <View style={rowStyles.metaRow}>
+      </View>
+      <View style={styles.body}>
+        <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
+          {spot.name}
+        </ThemedText>
+        {spot.cn ? (
+          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+            {spot.cn}
+          </ThemedText>
+        ) : null}
+        <View style={styles.metaRow}>
           {distanceKm != null ? (
-            <View style={rowStyles.metaTag}>
-              <Ionicons name="navigate" size={11} color={Colors.text.secondary} />
-              <Text style={rowStyles.metaText}>{formatDistanceKm(distanceKm)}</Text>
+            <View style={[styles.metaTag, { backgroundColor: theme.background.tertiary }]}>
+              <Ionicons name="navigate" size={11} color={theme.text.secondary} />
+              <ThemedText variant="captionSmall" weight="500" tone="secondary">
+                {formatDistanceKm(distanceKm)}
+              </ThemedText>
             </View>
           ) : null}
           {!hasGeo ? (
-            <View style={rowStyles.metaTag}>
-              <Ionicons name="alert-circle" size={11} color={Colors.text.tertiary} />
-              <Text style={rowStyles.metaTextDim}>No coordinates</Text>
+            <View style={[styles.metaTag, { backgroundColor: theme.background.tertiary }]}>
+              <Ionicons name="alert-circle" size={11} color={theme.text.tertiary} />
+              <ThemedText variant="captionSmall" weight="500" tone="tertiary">
+                No coordinates
+              </ThemedText>
             </View>
           ) : null}
         </View>
       </View>
-      <View style={rowStyles.actions}>
+      <View style={styles.actions}>
         <Pressable
           onPress={() => onToggleVisited(spot)}
           style={({ pressed }) => [
-            rowStyles.actionBtn,
-            visited && rowStyles.actionBtnVisited,
-            pressed && rowStyles.actionBtnPressed,
+            styles.actionBtn,
+            { backgroundColor: theme.background.tertiary },
+            visited && { backgroundColor: `${theme.status.success}26` },
+            pressed && { opacity: 0.75 },
           ]}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: visited }}
@@ -426,16 +461,17 @@ function SpotRow({
           <Ionicons
             name={visited ? 'checkmark-circle' : 'checkmark-circle-outline'}
             size={22}
-            color={visited ? Colors.success : Colors.text.secondary}
+            color={visited ? theme.status.success : theme.text.secondary}
           />
         </Pressable>
         <Pressable
           onPress={() => onOpenMaps(spot)}
           disabled={!hasGeo}
           style={({ pressed }) => [
-            rowStyles.actionBtn,
-            !hasGeo && rowStyles.actionBtnDisabled,
-            pressed && hasGeo && rowStyles.actionBtnPressed,
+            styles.actionBtn,
+            { backgroundColor: theme.background.tertiary },
+            !hasGeo && { opacity: 0.4 },
+            pressed && hasGeo && { opacity: 0.75 },
           ]}
           accessibilityRole="button"
           accessibilityLabel={`Directions to ${spot.name}`}
@@ -443,11 +479,11 @@ function SpotRow({
           <MaterialIcons
             name="directions"
             size={22}
-            color={hasGeo ? Colors.accent : Colors.text.tertiary}
+            color={hasGeo ? theme.status.info : theme.text.tertiary}
           />
         </Pressable>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -455,9 +491,11 @@ interface SpotSheetProps {
   spot: AnitabiPoint | null;
   animeId: string;
   themeColor: string;
+  themeColorFg: string;
   distanceKm: number | null;
   visited: boolean;
   hasCapture: boolean;
+  theme: ThemePalette;
   onClose: () => void;
   onToggleVisited: (spot: AnitabiPoint) => void;
   onOpenMaps: (spot: AnitabiPoint) => void;
@@ -468,61 +506,68 @@ function SpotSheet({
   spot,
   animeId: _animeId,
   themeColor,
+  themeColorFg,
   distanceKm,
   visited,
   hasCapture,
+  theme,
   onClose,
   onToggleVisited,
   onOpenMaps,
   onFrameShot,
 }: SpotSheetProps) {
+  const styles = useMemo(() => makeSheetStyles(theme), [theme]);
   if (!spot) return null;
   const hasGeo = hasValidGeo(spot.geo);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={sheetStyles.backdrop}>
+      <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={sheetStyles.sheet}>
+        <View style={styles.sheet}>
           <SafeAreaView edges={['bottom']}>
-            <View style={sheetStyles.handle} />
-            <View style={sheetStyles.headerRow}>
+            <View style={styles.handle} />
+            <View style={styles.headerRow}>
               <Image
                 source={{ uri: spot.image }}
-                style={sheetStyles.cover}
+                style={styles.cover}
                 contentFit="cover"
                 transition={150}
               />
-              <View style={sheetStyles.headerText}>
-                <View style={[sheetStyles.epPill, { backgroundColor: `${themeColor}E6` }]}>
-                  <Text style={sheetStyles.epPillText}>EP {spot.ep}</Text>
+              <View style={styles.headerText}>
+                <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
+                  <ThemedText variant="captionSmall" weight="700" style={{ color: themeColorFg }}>
+                    EP {spot.ep}
+                  </ThemedText>
                 </View>
-                <Text style={sheetStyles.title} numberOfLines={2}>
+                <ThemedText variant="titleLarge" weight="700" numberOfLines={2} style={{ marginBottom: 2 }}>
                   {spot.name}
-                </Text>
+                </ThemedText>
                 {spot.cn ? (
-                  <Text style={sheetStyles.subtitle} numberOfLines={1}>
+                  <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginBottom: 4 }}>
                     {spot.cn}
-                  </Text>
+                  </ThemedText>
                 ) : null}
                 {distanceKm != null ? (
-                  <Text style={sheetStyles.distance}>{formatDistanceKm(distanceKm)} away</Text>
+                  <ThemedText variant="captionSmall" tone="tertiary" weight="500">
+                    {formatDistanceKm(distanceKm)} away
+                  </ThemedText>
                 ) : null}
               </View>
-              <Pressable onPress={onClose} hitSlop={12} style={sheetStyles.closeBtn}>
-                <Ionicons name="close" size={22} color={Colors.text.secondary} />
+              <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+                <Ionicons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
             </View>
 
-            <View style={sheetStyles.actions}>
+            <View style={styles.actions}>
               <Pressable
                 onPress={() => onToggleVisited(spot)}
                 style={({ pressed }) => [
-                  sheetStyles.actionBtn,
+                  styles.actionBtn,
                   visited
-                    ? { backgroundColor: Colors.success }
+                    ? { backgroundColor: theme.status.success }
                     : {
-                        backgroundColor: Colors.glass.medium,
-                        borderColor: Colors.glass.border,
+                        backgroundColor: theme.background.tertiary,
+                        borderColor: theme.glassBorder,
                         borderWidth: 1,
                       },
                   pressed && { opacity: 0.85 },
@@ -530,26 +575,25 @@ function SpotSheet({
                 <Ionicons
                   name={visited ? 'checkmark-circle' : 'checkmark-circle-outline'}
                   size={18}
-                  color={visited ? '#000' : Colors.text.primary}
+                  color={visited ? readableTextOn(theme.status.success) : theme.text.primary}
                 />
-                <Text
-                  style={[
-                    sheetStyles.actionBtnText,
-                    { color: visited ? '#000' : Colors.text.primary },
-                  ]}>
+                <ThemedText
+                  variant="bodyMedium"
+                  weight="700"
+                  style={{ color: visited ? readableTextOn(theme.status.success) : theme.text.primary }}>
                   {visited ? 'Visited' : 'Mark visited'}
-                </Text>
+                </ThemedText>
               </Pressable>
               <Pressable
                 onPress={() => onOpenMaps(spot)}
                 disabled={!hasGeo}
                 style={({ pressed }) => [
-                  sheetStyles.actionBtn,
+                  styles.actionBtn,
                   hasGeo
-                    ? { backgroundColor: Colors.accent }
+                    ? { backgroundColor: themeColor }
                     : {
-                        backgroundColor: Colors.glass.dark,
-                        borderColor: Colors.glass.border,
+                        backgroundColor: theme.background.tertiary,
+                        borderColor: theme.glassBorder,
                         borderWidth: 1,
                       },
                   pressed && hasGeo && { opacity: 0.85 },
@@ -557,42 +601,40 @@ function SpotSheet({
                 <MaterialIcons
                   name="directions"
                   size={18}
-                  color={hasGeo ? '#FFF' : Colors.text.tertiary}
+                  color={hasGeo ? themeColorFg : theme.text.tertiary}
                 />
-                <Text
-                  style={[
-                    sheetStyles.actionBtnText,
-                    { color: hasGeo ? '#FFF' : Colors.text.tertiary },
-                  ]}>
+                <ThemedText
+                  variant="bodyMedium"
+                  weight="700"
+                  style={{ color: hasGeo ? themeColorFg : theme.text.tertiary }}>
                   Directions
-                </Text>
+                </ThemedText>
               </Pressable>
             </View>
 
             <Pressable
               onPress={() => onFrameShot(spot)}
               style={({ pressed }) => [
-                sheetStyles.frameShotBtn,
+                styles.frameShotBtn,
                 {
-                  backgroundColor: hasCapture ? `${themeColor}22` : Colors.glass.medium,
-                  borderColor: hasCapture ? themeColor : Colors.glass.border,
+                  backgroundColor: hasCapture ? `${themeColor}22` : theme.background.tertiary,
+                  borderColor: hasCapture ? themeColor : theme.glassBorder,
                 },
                 pressed && { opacity: 0.82 },
               ]}>
               <Ionicons
                 name={hasCapture ? 'camera' : 'camera-outline'}
                 size={18}
-                color={hasCapture ? themeColor : Colors.text.primary}
+                color={hasCapture ? themeColor : theme.text.primary}
               />
-              <Text
-                style={[
-                  sheetStyles.frameShotText,
-                  { color: hasCapture ? themeColor : Colors.text.primary },
-                ]}>
+              <ThemedText
+                variant="bodyMedium"
+                weight="600"
+                style={{ color: hasCapture ? themeColor : theme.text.primary }}>
                 {hasCapture ? 'Reframe shot · 重新拍對比' : 'Frame shot · 拍對比照'}
-              </Text>
+              </ThemedText>
               {hasCapture ? (
-                <View style={[sheetStyles.frameShotDot, { backgroundColor: themeColor }]} />
+                <View style={[styles.frameShotDot, { backgroundColor: themeColor }]} />
               ) : null}
             </Pressable>
           </SafeAreaView>
@@ -602,9 +644,37 @@ function SpotSheet({
   );
 }
 
+interface RoundHeaderButtonProps {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  onPress: () => void;
+  accessibilityLabel: string;
+  tint: string;
+  theme: ThemePalette;
+}
+
+function RoundHeaderButton({ icon, onPress, accessibilityLabel, tint, theme }: RoundHeaderButtonProps) {
+  const styles = useMemo(() => makeHeaderStyles(theme), [theme]);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={8}
+      style={({ pressed }) => [
+        styles.roundBtn,
+        { borderColor: `${tint}55` },
+        pressed && { opacity: 0.78, transform: [{ scale: 0.94 }] },
+      ]}>
+      <Ionicons name={icon} size={18} color={tint} />
+    </Pressable>
+  );
+}
+
 export default function PilgrimageDetailScreen() {
   const { animeId } = useLocalSearchParams<{ animeId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const bangumiId = Number(animeId);
 
   const [anime, setAnime] = useState<AnitabiBangumi | null>(null);
@@ -612,12 +682,17 @@ export default function PilgrimageDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [spotFilter, setSpotFilter] = useState<SpotFilter>('all');
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [visited, setVisited] = useState<VisitedMap>({});
   const [browseSource, setBrowseSource] = useState<PlatformType>(dataSourceConfig.browseSource);
   const [activeSpot, setActiveSpot] = useState<AnitabiPoint | null>(null);
   const [clusterSpots, setClusterSpots] = useState<readonly AnitabiPoint[] | null>(null);
   const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>({});
+
+  const themeColor = anime?.color || theme.accent;
+  const themeColorFg = readableTextOn(themeColor);
+  const styles = useMemo(() => makeStyles(theme, insets.top), [theme, insets.top]);
 
   const refreshCaptures = useCallback(() => {
     listCaptures()
@@ -635,8 +710,6 @@ export default function PilgrimageDetailScreen() {
       scrollY.value = event.contentOffset.y;
     },
   });
-
-  const themeColor = anime?.color || Colors.primary;
 
   useEffect(() => {
     let cancelled = false;
@@ -724,6 +797,7 @@ export default function PilgrimageDetailScreen() {
   const stats = useMemo(() => {
     const spotCount = anime?.pointsLength ?? points.length;
     const visitedCount = points.reduce((acc, p) => (visited[p.id] ? acc + 1 : acc), 0);
+    const capturedCount = points.reduce((acc, p) => (captures[p.id] ? acc + 1 : acc), 0);
     let radiusKm = 0;
     if (anime && hasValidGeo(anime.geo)) {
       const [centerLat, centerLng] = anime.geo;
@@ -738,8 +812,21 @@ export default function PilgrimageDetailScreen() {
       }
       radiusKm = max;
     }
-    return { spotCount, visitedCount, radiusKm };
-  }, [anime, points, visited]);
+    return { spotCount, visitedCount, capturedCount, radiusKm };
+  }, [anime, points, visited, captures]);
+
+  const filteredPoints = useMemo(() => {
+    switch (spotFilter) {
+      case 'visited':
+        return points.filter((p) => visited[p.id] === true);
+      case 'unvisited':
+        return points.filter((p) => visited[p.id] !== true);
+      case 'photos':
+        return points.filter((p) => !!captures[p.id]);
+      default:
+        return points;
+    }
+  }, [points, spotFilter, visited, captures]);
 
   const distanceFor = useCallback(
     (spot: AnitabiPoint): number | null => {
@@ -785,17 +872,74 @@ export default function PilgrimageDetailScreen() {
     Linking.openURL(url).catch(() => undefined);
   }, [anime, browseSource]);
 
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.back();
+  }, [router]);
+
+  const handleOpenAlbum = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push({ pathname: '/pilgrimage/album', params: { animeId: String(bangumiId) } });
+  }, [router, bangumiId]);
+
+  const handleShare = useCallback(() => {
+    if (!anime) return;
+    Haptics.selectionAsync().catch(() => undefined);
+    const url = buildBrowseUrl(browseSource, anime.id) ?? '';
+    Share.share({
+      message: `${anime.title || anime.cn || 'Pilgrimage'} · ${stats.spotCount} spots${url ? `\n${url}` : ''}`,
+    }).catch(() => undefined);
+  }, [anime, browseSource, stats.spotCount]);
+
   const heroAnimatedStyle = useAnimatedStyle(() => {
     const translateY = interpolate(
       scrollY.value,
       [-HERO_HEIGHT, 0, HERO_HEIGHT],
-      [-HERO_HEIGHT / 2, 0, HERO_HEIGHT * 0.4],
+      [-HERO_HEIGHT / 2, 0, HERO_HEIGHT * 0.45],
       Extrapolation.CLAMP
     );
-    const scale = interpolate(scrollY.value, [-HERO_HEIGHT, 0], [1.5, 1], Extrapolation.CLAMP);
-    return {
-      transform: [{ translateY }, { scale }],
-    };
+    const scale = interpolate(scrollY.value, [-HERO_HEIGHT, 0], [1.6, 1], Extrapolation.CLAMP);
+    return { transform: [{ translateY }, { scale }] };
+  });
+
+  // Hero content (title, badges) fades out as the user scrolls so the sticky
+  // header can take over without the two titles overlapping.
+  const heroContentStyle = useAnimatedStyle(() => {
+    const op = interpolate(
+      scrollY.value,
+      [HERO_HEIGHT * 0.4, HERO_HEIGHT * 0.7],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
+    return { opacity: op };
+  });
+
+  // Sticky bar backdrop ramps in once the hero clears the top.
+  const stickyBackdropStyle = useAnimatedStyle(() => {
+    const op = interpolate(
+      scrollY.value,
+      [HERO_HEIGHT - HEADER_HEIGHT - 100, HERO_HEIGHT - HEADER_HEIGHT],
+      [0, 1],
+      Extrapolation.CLAMP
+    );
+    return { opacity: op };
+  });
+
+  // Sticky title rises into place slightly behind the backdrop.
+  const stickyTitleStyle = useAnimatedStyle(() => {
+    const op = interpolate(
+      scrollY.value,
+      [HERO_HEIGHT - HEADER_HEIGHT - 60, HERO_HEIGHT - HEADER_HEIGHT],
+      [0, 1],
+      Extrapolation.CLAMP
+    );
+    const ty = interpolate(
+      scrollY.value,
+      [HERO_HEIGHT - HEADER_HEIGHT - 60, HERO_HEIGHT - HEADER_HEIGHT],
+      [10, 0],
+      Extrapolation.CLAMP
+    );
+    return { opacity: op, transform: [{ translateY: ty }] };
   });
 
   const browseLabel = useMemo(() => {
@@ -827,32 +971,88 @@ export default function PilgrimageDetailScreen() {
     },
     [router, bangumiId, themeColor]
   );
+
   const isEmpty = !loading && !error && (!anime || points.length === 0);
+  const heroAccentRgb = themeColor;
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: anime?.title ?? 'Pilgrimage',
-          headerLargeTitle: false,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         <LinearGradient
-          colors={Colors.gradients.background as unknown as [string, string, ...string[]]}
+          colors={theme.gradient}
           style={StyleSheet.absoluteFill}
         />
 
+        {/* Sticky animated header (always rendered, backdrop fades in). */}
+        <View style={styles.headerWrap} pointerEvents="box-none">
+          <Animated.View style={[styles.headerBackdrop, stickyBackdropStyle]} pointerEvents="none">
+            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: `${theme.background.primary}D9` },
+              ]}
+            />
+            <View
+              style={[
+                styles.headerBackdropBorder,
+                { backgroundColor: theme.glassBorder },
+              ]}
+            />
+          </Animated.View>
+
+          <Animated.View style={[styles.headerStickyTitle, stickyTitleStyle]} pointerEvents="none">
+            <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
+              {anime?.title ?? 'Pilgrimage'}
+            </ThemedText>
+          </Animated.View>
+
+          <View style={styles.headerActions}>
+            <RoundHeaderButton
+              icon="chevron-back"
+              onPress={handleBack}
+              accessibilityLabel="Back"
+              tint={theme.text.primary}
+              theme={theme}
+            />
+            <View style={styles.headerRightGroup}>
+              <RoundHeaderButton
+                icon="camera-outline"
+                onPress={handleOpenAlbum}
+                accessibilityLabel="Open pilgrimage album"
+                tint={heroAccentRgb}
+                theme={theme}
+              />
+              <RoundHeaderButton
+                icon="share-outline"
+                onPress={handleShare}
+                accessibilityLabel="Share"
+                tint={theme.text.primary}
+                theme={theme}
+              />
+            </View>
+          </View>
+        </View>
+
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="large" color={theme.accent} />
           </View>
         ) : error ? (
           <SafeAreaView style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>Couldn&apos;t load pilgrimage</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <Pressable style={styles.backBtn} onPress={() => router.back()}>
-              <Text style={styles.backBtnText}>Go back</Text>
+            <ThemedText variant="titleMedium" weight="700" align="center">
+              Couldn&apos;t load pilgrimage
+            </ThemedText>
+            <ThemedText variant="bodyMedium" tone="secondary" align="center">
+              {error}
+            </ThemedText>
+            <Pressable
+              style={[styles.backBtn, { backgroundColor: theme.accent }]}
+              onPress={handleBack}>
+              <ThemedText variant="bodyMedium" weight="700" style={{ color: readableTextOn(theme.accent) }}>
+                Go back
+              </ThemedText>
             </Pressable>
           </SafeAreaView>
         ) : (
@@ -871,30 +1071,36 @@ export default function PilgrimageDetailScreen() {
                 />
               </Animated.View>
               <LinearGradient
-                colors={['transparent', 'rgba(8,8,8,0.55)', 'rgba(8,8,8,0.95)']}
+                colors={[
+                  'rgba(0,0,0,0)',
+                  `${theme.background.primary}66`,
+                  `${theme.background.primary}E6`,
+                  theme.background.primary,
+                ]}
+                locations={[0, 0.4, 0.78, 1]}
                 style={styles.heroGradient}
               />
-              <View style={styles.heroOverlay}>
+              <Animated.View style={[styles.heroOverlay, heroContentStyle]}>
                 {anime ? (
-                  <View style={styles.heroSpotBadge}>
-                    <Ionicons name="location" size={11} color={Colors.text.primary} />
-                    <Text style={styles.heroSpotBadgeText}>
+                  <View style={[styles.heroSpotBadge, { borderColor: `${themeColor}66`, backgroundColor: `${themeColor}1A` }]}>
+                    <Ionicons name="location" size={11} color={themeColor} />
+                    <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
                       {stats.spotCount} {stats.spotCount === 1 ? 'pilgrimage spot' : 'pilgrimage spots'}
-                    </Text>
+                    </ThemedText>
                   </View>
                 ) : null}
-                <Text style={styles.heroTitle} numberOfLines={2}>
+                <ThemedText variant="headlineLarge" weight="800" numberOfLines={2}>
                   {anime?.title ?? ''}
-                </Text>
+                </ThemedText>
                 {anime?.cn ? (
-                  <Text style={styles.heroSubtitle} numberOfLines={1}>
+                  <ThemedText variant="bodyMedium" tone="secondary" numberOfLines={1}>
                     {anime.cn}
                     {anime.city ? ` · ${anime.city}` : ''}
-                  </Text>
+                  </ThemedText>
                 ) : anime?.city ? (
-                  <Text style={styles.heroSubtitle} numberOfLines={1}>
+                  <ThemedText variant="bodyMedium" tone="secondary" numberOfLines={1}>
                     {anime.city}
-                  </Text>
+                  </ThemedText>
                 ) : null}
 
                 {anime ? (
@@ -902,15 +1108,17 @@ export default function PilgrimageDetailScreen() {
                     onPress={handleOpenBrowse}
                     style={({ pressed }) => [
                       styles.browseBtn,
-                      { borderColor: `${themeColor}99` },
+                      { borderColor: `${themeColor}99`, backgroundColor: `${theme.background.primary}80` },
                       pressed && { opacity: 0.85 },
                     ]}
                     accessibilityRole="button">
-                    <Ionicons name="open-outline" size={14} color="#FFFFFF" />
-                    <Text style={styles.browseText}>Open in {browseLabel}</Text>
+                    <Ionicons name="open-outline" size={14} color={theme.text.primary} />
+                    <ThemedText variant="captionSmall" weight="600">
+                      Open in {browseLabel}
+                    </ThemedText>
                   </Pressable>
                 ) : null}
-              </View>
+              </Animated.View>
             </View>
 
             {anime ? (
@@ -920,6 +1128,7 @@ export default function PilgrimageDetailScreen() {
                   value={String(stats.spotCount)}
                   label={stats.spotCount === 1 ? 'spot' : 'spots'}
                   color={themeColor}
+                  theme={theme}
                 />
                 <View style={styles.statDivider} />
                 <StatCell
@@ -927,13 +1136,23 @@ export default function PilgrimageDetailScreen() {
                   value={stats.radiusKm > 0 ? `~${formatDistanceKm(stats.radiusKm)}` : '—'}
                   label="radius"
                   color={themeColor}
+                  theme={theme}
                 />
                 <View style={styles.statDivider} />
                 <StatCell
                   icon="check-circle"
                   value={`${stats.visitedCount}`}
                   label="visited"
-                  color={stats.visitedCount > 0 ? Colors.success : themeColor}
+                  color={stats.visitedCount > 0 ? theme.status.success : themeColor}
+                  theme={theme}
+                />
+                <View style={styles.statDivider} />
+                <StatCell
+                  icon="photo-camera"
+                  value={`${stats.capturedCount}`}
+                  label="photos"
+                  color={stats.capturedCount > 0 ? themeColor : theme.text.tertiary}
+                  theme={theme}
                 />
               </View>
             ) : null}
@@ -946,7 +1165,9 @@ export default function PilgrimageDetailScreen() {
                     label="List"
                     icon="view-list"
                     themeColor={themeColor}
-                    count={points.length}
+                    themeColorFg={themeColorFg}
+                    count={filteredPoints.length}
+                    theme={theme}
                     onPress={() => handleViewToggle('list')}
                   />
                   <ViewModeTab
@@ -954,61 +1175,139 @@ export default function PilgrimageDetailScreen() {
                     label="Map"
                     icon="map"
                     themeColor={themeColor}
-                    count={points.filter((p) => hasValidGeo(p.geo)).length}
+                    themeColorFg={themeColorFg}
+                    count={filteredPoints.filter((p) => hasValidGeo(p.geo)).length}
+                    theme={theme}
                     onPress={() => handleViewToggle('map')}
                   />
                 </View>
+
+                {/* JapanWalker-style filter pills row. */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.pillsRow}>
+                  <FilterPill
+                    label="All"
+                    active={spotFilter === 'all'}
+                    badge={points.length}
+                    themeColor={themeColor}
+                    themeColorFg={themeColorFg}
+                    theme={theme}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => undefined);
+                      setSpotFilter('all');
+                    }}
+                  />
+                  <FilterPill
+                    label="Unvisited"
+                    active={spotFilter === 'unvisited'}
+                    badge={points.length - stats.visitedCount}
+                    themeColor={themeColor}
+                    themeColorFg={themeColorFg}
+                    theme={theme}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => undefined);
+                      setSpotFilter('unvisited');
+                    }}
+                  />
+                  <FilterPill
+                    label="Visited"
+                    active={spotFilter === 'visited'}
+                    badge={stats.visitedCount}
+                    themeColor={themeColor}
+                    themeColorFg={themeColorFg}
+                    theme={theme}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => undefined);
+                      setSpotFilter('visited');
+                    }}
+                  />
+                  <FilterPill
+                    label="Photos"
+                    active={spotFilter === 'photos'}
+                    badge={stats.capturedCount}
+                    themeColor={themeColor}
+                    themeColorFg={themeColorFg}
+                    theme={theme}
+                    icon="camera"
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => undefined);
+                      setSpotFilter('photos');
+                    }}
+                  />
+                </ScrollView>
+
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionHeaderTitle}>
+                  <ThemedText variant="titleLarge" weight="700">
                     {viewMode === 'list' ? 'Scene list' : 'Map view'}
-                  </Text>
-                  <Text style={styles.sectionHeaderSubtitle}>
+                  </ThemedText>
+                  <ThemedText variant="bodySmall" tone="tertiary">
                     {viewMode === 'list'
-                      ? `${points.length} ${points.length === 1 ? 'scene' : 'scenes'} · ${stats.visitedCount} visited`
+                      ? `${filteredPoints.length} ${filteredPoints.length === 1 ? 'scene' : 'scenes'} · ${stats.visitedCount} visited`
                       : 'Tap a marker to view the scene'}
-                  </Text>
+                  </ThemedText>
                 </View>
               </>
             ) : null}
 
             {isEmpty ? (
               <View style={styles.emptyCard}>
-                <MaterialIcons name="explore-off" size={36} color={Colors.text.tertiary} />
-                <Text style={styles.emptyTitle}>No pilgrimage data yet for this anime</Text>
-                <Text style={styles.emptyBody}>
-                  Anitabi crowd-sources scene locations. Help fill the map by contributing on
-                  anitabi.cn.
-                </Text>
+                <MaterialIcons name="explore-off" size={36} color={theme.text.tertiary} />
+                <ThemedText variant="titleMedium" weight="700" align="center">
+                  No pilgrimage data yet for this anime
+                </ThemedText>
+                <ThemedText variant="bodySmall" tone="secondary" align="center">
+                  Anitabi crowd-sources scene locations. Help fill the map by contributing on anitabi.cn.
+                </ThemedText>
                 <Pressable
                   onPress={() => Linking.openURL('https://anitabi.cn').catch(() => undefined)}
-                  style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.85 }]}>
-                  <Ionicons name="open-outline" size={14} color="#000" />
-                  <Text style={styles.emptyBtnText}>Open Anitabi</Text>
+                  style={({ pressed }) => [styles.emptyBtn, { backgroundColor: theme.accent }, pressed && { opacity: 0.85 }]}>
+                  <Ionicons name="open-outline" size={14} color={readableTextOn(theme.accent)} />
+                  <ThemedText variant="bodySmall" weight="700" style={{ color: readableTextOn(theme.accent) }}>
+                    Open Anitabi
+                  </ThemedText>
                 </Pressable>
               </View>
             ) : viewMode === 'list' ? (
               <View style={styles.list}>
-                {points.map((spot) => (
-                  <SpotRow
-                    key={spot.id}
-                    spot={spot}
-                    themeColor={themeColor}
-                    distanceKm={distanceFor(spot)}
-                    visited={visited[spot.id] === true}
-                    onToggleVisited={handleToggleVisited}
-                    onOpenMaps={handleOpenMaps}
-                  />
-                ))}
+                {filteredPoints.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <ThemedText variant="bodyMedium" tone="secondary" align="center">
+                      No scenes match this filter.
+                    </ThemedText>
+                  </View>
+                ) : (
+                  filteredPoints.map((spot) => (
+                    <SpotRow
+                      key={spot.id}
+                      spot={spot}
+                      themeColor={themeColor}
+                      themeColorFg={themeColorFg}
+                      distanceKm={distanceFor(spot)}
+                      visited={visited[spot.id] === true}
+                      hasCapture={!!captures[spot.id]}
+                      theme={theme}
+                      onPress={(s) => {
+                        Haptics.selectionAsync().catch(() => undefined);
+                        setActiveSpot(s);
+                      }}
+                      onToggleVisited={handleToggleVisited}
+                      onOpenMaps={handleOpenMaps}
+                    />
+                  ))
+                )}
               </View>
             ) : (
-              <View style={styles.mapWrap}>
+              <View style={[styles.mapWrap, { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary }]}>
                 <SpotMapView
-                  spots={points}
+                  spots={filteredPoints}
                   visited={visited}
                   ringColor={themeColor}
                   userLocation={userLocation}
                   centerGeo={anime?.geo ?? null}
                   centerZoom={anime?.zoom ?? 12}
+                  theme={theme}
                   onSpotPress={(spot) => {
                     Haptics.selectionAsync().catch(() => undefined);
                     setActiveSpot(spot);
@@ -1028,9 +1327,11 @@ export default function PilgrimageDetailScreen() {
           spot={activeSpot}
           animeId={String(bangumiId)}
           themeColor={themeColor}
+          themeColorFg={themeColorFg}
           distanceKm={activeSpotDistance}
           visited={activeSpotVisited}
           hasCapture={activeSpotHasCapture}
+          theme={theme}
           onClose={() => setActiveSpot(null)}
           onToggleVisited={handleToggleVisited}
           onOpenMaps={handleOpenMaps}
@@ -1040,7 +1341,9 @@ export default function PilgrimageDetailScreen() {
         <SpotClusterPicker
           spots={clusterSpots}
           themeColor={themeColor}
+          themeColorFg={themeColorFg}
           visited={visited}
+          theme={theme}
           distanceFor={distanceFor}
           onClose={() => setClusterSpots(null)}
           onPick={(spot) => {
@@ -1054,10 +1357,57 @@ export default function PilgrimageDetailScreen() {
   );
 }
 
+interface FilterPillProps {
+  label: string;
+  active: boolean;
+  badge: number;
+  themeColor: string;
+  themeColorFg: string;
+  theme: ThemePalette;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  onPress: () => void;
+}
+
+function FilterPill({ label, active, badge, themeColor, themeColorFg, theme, icon, onPress }: FilterPillProps) {
+  const styles = useMemo(() => makePillStyles(theme), [theme]);
+  const fg = active ? themeColorFg : theme.text.secondary;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.pill,
+        active
+          ? { backgroundColor: themeColor, borderColor: themeColor }
+          : { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+        pressed && { opacity: 0.85 },
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}>
+      {icon ? <Ionicons name={icon} size={12} color={fg} /> : null}
+      <ThemedText variant="bodySmall" weight="600" style={{ color: fg }}>
+        {label}
+      </ThemedText>
+      <View
+        style={[
+          styles.pillCount,
+          active
+            ? { backgroundColor: `${themeColorFg}22` }
+            : { backgroundColor: theme.background.tertiary },
+        ]}>
+        <ThemedText variant="captionSmall" weight="700" style={{ color: fg }}>
+          {badge}
+        </ThemedText>
+      </View>
+    </Pressable>
+  );
+}
+
 interface SpotClusterPickerProps {
   spots: readonly AnitabiPoint[] | null;
   themeColor: string;
+  themeColorFg: string;
   visited: VisitedMap;
+  theme: ThemePalette;
   distanceFor: (spot: AnitabiPoint) => number | null;
   onClose: () => void;
   onPick: (spot: AnitabiPoint) => void;
@@ -1066,28 +1416,33 @@ interface SpotClusterPickerProps {
 function SpotClusterPicker({
   spots,
   themeColor,
+  themeColorFg,
   visited,
+  theme,
   distanceFor,
   onClose,
   onPick,
 }: SpotClusterPickerProps) {
+  const styles = useMemo(() => makePickerStyles(theme), [theme]);
   if (!spots || spots.length === 0) return null;
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={pickerStyles.backdrop}>
+      <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={pickerStyles.sheet}>
+        <View style={styles.sheet}>
           <SafeAreaView edges={['bottom']}>
-            <View style={pickerStyles.handle} />
-            <View style={pickerStyles.headerRow}>
-              <Text style={pickerStyles.headerTitle}>{spots.length} scenes here</Text>
-              <Pressable onPress={onClose} hitSlop={12} style={pickerStyles.closeBtn}>
-                <Ionicons name="close" size={20} color={Colors.text.secondary} />
+            <View style={styles.handle} />
+            <View style={styles.headerRow}>
+              <ThemedText variant="titleMedium" weight="700">
+                {spots.length} scenes here
+              </ThemedText>
+              <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color={theme.text.secondary} />
               </Pressable>
             </View>
             <ScrollView
-              style={pickerStyles.list}
-              contentContainerStyle={pickerStyles.listContent}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}>
               {spots.map((spot) => {
                 const isVisited = visited[spot.id] === true;
@@ -1097,42 +1452,44 @@ function SpotClusterPicker({
                     key={spot.id}
                     onPress={() => onPick(spot)}
                     style={({ pressed }) => [
-                      pickerStyles.row,
-                      isVisited && { borderColor: `${Colors.success}66` },
+                      styles.row,
+                      isVisited && { borderColor: `${theme.status.success}66` },
                       pressed && { opacity: 0.78 },
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={`Open ${spot.name}`}>
-                    <View style={[pickerStyles.thumbWrap, { borderColor: themeColor }]}>
+                    <View style={[styles.thumbWrap, { borderColor: themeColor }]}>
                       <Image
                         source={{ uri: spot.image }}
-                        style={pickerStyles.thumb}
+                        style={styles.thumb}
                         contentFit="cover"
                         transition={120}
                       />
-                      <View style={[pickerStyles.epPill, { backgroundColor: `${themeColor}E6` }]}>
-                        <Text style={pickerStyles.epText}>EP {spot.ep}</Text>
+                      <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
+                        <ThemedText variant="captionSmall" weight="800" style={{ color: themeColorFg }}>
+                          EP {spot.ep}
+                        </ThemedText>
                       </View>
                     </View>
-                    <View style={pickerStyles.rowBody}>
-                      <Text style={pickerStyles.rowTitle} numberOfLines={2}>
+                    <View style={styles.rowBody}>
+                      <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
                         {spot.name}
-                      </Text>
+                      </ThemedText>
                       {spot.cn ? (
-                        <Text style={pickerStyles.rowSubtitle} numberOfLines={1}>
+                        <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginTop: 1 }}>
                           {spot.cn}
-                        </Text>
+                        </ThemedText>
                       ) : null}
                       {km != null ? (
-                        <Text style={pickerStyles.rowMeta} numberOfLines={1}>
+                        <ThemedText variant="captionSmall" tone="tertiary" weight="500" style={{ marginTop: 3 }}>
                           {formatDistanceKm(km)} away
-                        </Text>
+                        </ThemedText>
                       ) : null}
                     </View>
                     {isVisited ? (
-                      <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+                      <Ionicons name="checkmark-circle" size={20} color={theme.status.success} />
                     ) : (
-                      <Ionicons name="chevron-forward" size={18} color={Colors.text.tertiary} />
+                      <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />
                     )}
                   </Pressable>
                 );
@@ -1150,14 +1507,20 @@ interface StatCellProps {
   value: string;
   label: string;
   color: string;
+  theme: ThemePalette;
 }
 
-function StatCell({ icon, value, label, color }: StatCellProps) {
+function StatCell({ icon, value, label, color, theme }: StatCellProps) {
+  const styles = useMemo(() => makeStatStyles(theme), [theme]);
   return (
-    <View style={statStyles.cell}>
+    <View style={styles.cell}>
       <MaterialIcons name={icon} size={16} color={color} />
-      <Text style={statStyles.value}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
+      <ThemedText variant="bodyMedium" weight="700">
+        {value}
+      </ThemedText>
+      <ThemedText variant="captionSmall" tone="secondary" weight="500">
+        {label}
+      </ThemedText>
     </View>
   );
 }
@@ -1167,639 +1530,577 @@ interface ViewModeTabProps {
   label: string;
   icon: keyof typeof MaterialIcons.glyphMap;
   themeColor: string;
+  themeColorFg: string;
   count?: number;
+  theme: ThemePalette;
   onPress: () => void;
 }
 
-function ViewModeTab({ active, label, icon, themeColor, count, onPress }: ViewModeTabProps) {
-  // Pen treats the selected tab as an outlined pill (border in theme color over
-  // a card-tone fill) rather than a solid fill — keeps the rail readable while
-  // signalling state.
-  const fg = active ? themeColor : Colors.text.secondary;
-  const dim = active ? themeColor : Colors.text.secondary;
+function ViewModeTab({ active, label, icon, themeColor, themeColorFg, count, theme, onPress }: ViewModeTabProps) {
+  const styles = useMemo(() => makeTabStyles(theme), [theme]);
+  const fg = active ? themeColor : theme.text.secondary;
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        tabStyles.tab,
+        styles.tab,
         active
           ? {
-              backgroundColor: Colors.background.secondary,
+              backgroundColor: `${themeColor}14`,
               borderColor: themeColor,
               borderWidth: 1.5,
             }
-          : { backgroundColor: Colors.background.secondary, borderColor: Colors.glass.border },
+          : { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder, borderWidth: 1 },
         pressed && { opacity: 0.85 },
       ]}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}>
       <MaterialIcons name={icon} size={14} color={fg} />
-      <Text style={[tabStyles.label, { color: fg }]}>{label}</Text>
+      <ThemedText variant="bodySmall" weight="600" style={{ color: fg }}>
+        {label}
+      </ThemedText>
       {count !== undefined ? (
         <View
           style={[
-            tabStyles.countBadge,
-            { backgroundColor: active ? `${themeColor}22` : Colors.glass.medium },
+            styles.countBadge,
+            { backgroundColor: active ? `${themeColor}22` : theme.background.tertiary },
           ]}>
-          <Text style={[tabStyles.countText, { color: dim }]}>{count}</Text>
+          <ThemedText variant="captionSmall" weight="700" style={{ color: fg }}>
+            {count}
+          </ThemedText>
         </View>
       ) : null}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background.primary },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.sm,
-  },
-  errorTitle: {
-    color: Colors.text.primary,
-    ...Typography.titleMedium,
-  },
-  errorText: {
-    color: Colors.text.secondary,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  backBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.md,
-  },
-  backBtnText: { color: '#000', fontWeight: '700' },
-  scroll: { paddingBottom: 48 },
-  heroWrap: {
-    height: HERO_HEIGHT,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  heroImageWrap: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.background.secondary,
-  },
-  heroGradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: HERO_HEIGHT * 0.7,
-  },
-  heroOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: Spacing.screenPadding,
-    paddingBottom: Spacing.md,
-    gap: 6,
-  },
-  heroSpotBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.background.secondary,
-  },
-  heroSpotBadgeText: {
-    color: Colors.text.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  heroTitle: {
-    color: Colors.text.primary,
-    ...Typography.headlineMedium,
-  },
-  heroSubtitle: {
-    color: Colors.text.secondary,
-    ...Typography.bodyMedium,
-    marginBottom: Spacing.xs,
-  },
-  browseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderWidth: 1,
-    marginTop: 4,
-  },
-  browseText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.screenPadding,
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: Colors.glass.border,
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    marginHorizontal: Spacing.screenPadding,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  sectionHeader: {
-    paddingHorizontal: Spacing.screenPadding,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  sectionHeaderTitle: {
-    color: Colors.text.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  sectionHeaderSubtitle: {
-    color: Colors.text.tertiary,
-    ...Typography.bodySmall,
-    marginTop: 2,
-  },
-  list: {
-    paddingHorizontal: Spacing.screenPadding,
-    gap: Spacing.sm,
-    paddingTop: Spacing.xs,
-  },
-  mapWrap: {
-    height: 480,
-    marginHorizontal: Spacing.screenPadding,
-    marginTop: Spacing.xs,
-    borderRadius: Radius.cardLg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.background.secondary,
-  },
-  mapInner: { flex: 1 },
-  emptyCard: {
-    marginHorizontal: Spacing.screenPadding,
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.glass.medium,
-    borderColor: Colors.glass.border,
-    borderWidth: 1,
-    borderRadius: Radius.cardLg,
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  emptyTitle: {
-    color: Colors.text.primary,
-    textAlign: 'center',
-    ...Typography.titleMedium,
-  },
-  emptyBody: {
-    color: Colors.text.secondary,
-    textAlign: 'center',
-    ...Typography.bodySmall,
-  },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    marginTop: Spacing.xs,
-  },
-  emptyBtnText: { color: '#000', fontSize: 13, fontWeight: '700' },
-});
+function makeStyles(theme: ThemePalette, topInset: number) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background.primary },
+    loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    errorContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.xl,
+      gap: Spacing.sm,
+    },
+    backBtn: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs + 2,
+      borderRadius: Radius.md,
+    },
+    scroll: { paddingBottom: 48 },
+    heroWrap: {
+      height: HERO_HEIGHT,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    heroImageWrap: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    heroImage: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: theme.background.secondary,
+    },
+    heroGradient: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: HERO_HEIGHT * 0.85,
+    },
+    heroOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingBottom: Spacing.lg,
+      gap: 6,
+    },
+    heroSpotBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+    },
+    browseBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      marginTop: 6,
+    },
+    // Sticky header lives above the scroll so the hero image scrolls under it.
+    headerWrap: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      height: topInset + HEADER_HEIGHT,
+    },
+    headerBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    headerBackdropBorder: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: StyleSheet.hairlineWidth,
+    },
+    headerStickyTitle: {
+      position: 'absolute',
+      left: 60,
+      right: 120,
+      top: topInset,
+      height: HEADER_HEIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerActions: {
+      position: 'absolute',
+      top: topInset,
+      left: 0,
+      right: 0,
+      height: HEADER_HEIGHT,
+      paddingHorizontal: Spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    headerRightGroup: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    statsCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: Spacing.screenPadding,
+      marginTop: Spacing.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.lg,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    statDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: theme.glassBorder,
+    },
+    tabsRow: {
+      flexDirection: 'row',
+      gap: Spacing.xs,
+      marginHorizontal: Spacing.screenPadding,
+      marginTop: Spacing.md,
+      marginBottom: Spacing.sm,
+    },
+    pillsRow: {
+      gap: 8,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingVertical: 4,
+    },
+    sectionHeader: {
+      paddingHorizontal: Spacing.screenPadding,
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.xs,
+      gap: 2,
+    },
+    list: {
+      paddingHorizontal: Spacing.screenPadding,
+      gap: Spacing.sm,
+      paddingTop: Spacing.xs,
+    },
+    mapWrap: {
+      height: 480,
+      marginHorizontal: Spacing.screenPadding,
+      marginTop: Spacing.xs,
+      borderRadius: Radius.cardLg,
+      overflow: 'hidden',
+      borderWidth: 1,
+    },
+    mapInner: { flex: 1 },
+    emptyCard: {
+      marginHorizontal: Spacing.screenPadding,
+      marginTop: Spacing.lg,
+      paddingVertical: Spacing.xl,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: theme.background.secondary,
+      borderColor: theme.glassBorder,
+      borderWidth: 1,
+      borderRadius: Radius.cardLg,
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    emptyBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: Radius.full,
+      marginTop: Spacing.xs,
+    },
+  });
+}
 
-const statStyles = StyleSheet.create({
-  cell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    gap: 2,
-  },
-  value: {
-    color: Colors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  label: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-});
+function makeHeaderStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    roundBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: `${theme.background.secondary}CC`,
+      borderWidth: 1,
+    },
+  });
+}
 
-const tabStyles = StyleSheet.create({
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingLeft: 14,
-    paddingRight: 8,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  countBadge: {
-    minWidth: 24,
-    height: 20,
-    paddingHorizontal: 6,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-});
+function makeStatStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    cell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 4,
+      gap: 2,
+    },
+  });
+}
 
-const rowStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    backgroundColor: Colors.glass.medium,
-    borderColor: Colors.glass.border,
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    padding: 10,
-    gap: 12,
-    alignItems: 'center',
-  },
-  rowVisited: {
-    borderColor: `${Colors.success}66`,
-    backgroundColor: `${Colors.success}14`,
-  },
-  thumbWrap: {
-    position: 'relative',
-    width: 84,
-    height: 84,
-    borderRadius: Radius.md,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
-  },
-  epBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  epBadgeText: {
-    color: '#000',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  body: {
-    flex: 1,
-    minWidth: 0,
-  },
-  name: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  nameCN: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  metaTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.glass.dark,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  metaText: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  metaTextDim: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  actions: {
-    flexDirection: 'column',
-    gap: 4,
-    alignItems: 'center',
-  },
-  actionBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.md,
-    backgroundColor: Colors.glass.dark,
-  },
-  actionBtnVisited: {
-    backgroundColor: `${Colors.success}26`,
-  },
-  actionBtnPressed: {
-    opacity: 0.75,
-  },
-  actionBtnDisabled: {
-    opacity: 0.4,
-  },
-});
+function makeTabStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingLeft: 14,
+      paddingRight: 8,
+      paddingVertical: 8,
+      borderRadius: Radius.full,
+    },
+    countBadge: {
+      minWidth: 24,
+      height: 20,
+      paddingHorizontal: 6,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}
 
-const sheetStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: Colors.background.secondary,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    borderColor: Colors.glass.border,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.screenPadding,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.glass.borderHeavy,
-    marginBottom: Spacing.sm,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  cover: {
-    width: 88,
-    height: 88,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.background.tertiary,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  epPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    marginBottom: 6,
-  },
-  epPillText: {
-    color: '#000',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  title: {
-    color: Colors.text.primary,
-    ...Typography.titleLarge,
-    marginBottom: 2,
-  },
-  subtitle: {
-    color: Colors.text.secondary,
-    ...Typography.bodySmall,
-    marginBottom: 4,
-  },
-  distance: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    backgroundColor: Colors.glass.dark,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 44,
-    borderRadius: Radius.md,
-  },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  frameShotBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 44,
-    borderRadius: Radius.md,
-    marginTop: Spacing.sm,
-    borderWidth: 1,
-  },
-  frameShotText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  frameShotDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginLeft: 4,
-  },
-});
+function makePillStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+    },
+    pillCount: {
+      minWidth: 22,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}
 
-const pickerStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: Colors.background.secondary,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    borderColor: Colors.glass.border,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.screenPadding,
-    paddingTop: 8,
-    paddingBottom: Spacing.sm,
-    maxHeight: '70%',
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.glass.borderHeavy,
-    marginBottom: Spacing.xs,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    marginBottom: Spacing.xs,
-  },
-  headerTitle: {
-    ...Typography.titleMedium,
-    color: Colors.text.primary,
-  },
-  closeBtn: {
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: Colors.glass.dark,
-  },
-  list: {
-    marginTop: 4,
-  },
-  listContent: {
-    paddingBottom: Spacing.md,
-    gap: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colors.glass.medium,
-    borderColor: Colors.glass.border,
-    borderWidth: 1,
-    borderRadius: Radius.lg,
-    padding: 10,
-  },
-  thumbWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    backgroundColor: Colors.background.tertiary,
-    position: 'relative',
-  },
-  thumb: {
-    width: '100%',
-    height: '100%',
-  },
-  epPill: {
-    position: 'absolute',
-    left: 4,
-    bottom: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 5,
-  },
-  epText: {
-    color: '#000',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  rowBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  rowTitle: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  rowSubtitle: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    marginTop: 1,
-  },
-  rowMeta: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    marginTop: 3,
-    fontWeight: '500',
-  },
-});
+function makeRowStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      backgroundColor: theme.background.secondary,
+      borderColor: theme.glassBorder,
+      borderWidth: 1,
+      borderRadius: Radius.lg,
+      padding: 10,
+      gap: 12,
+      alignItems: 'center',
+    },
+    thumbWrap: {
+      position: 'relative',
+      width: 84,
+      height: 84,
+      borderRadius: Radius.md,
+      overflow: 'hidden',
+      backgroundColor: theme.background.tertiary,
+    },
+    thumb: {
+      width: '100%',
+      height: '100%',
+    },
+    epBadge: {
+      position: 'absolute',
+      top: 6,
+      left: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    captureDot: {
+      position: 'absolute',
+      bottom: 4,
+      right: 4,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: theme.accent,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    body: {
+      flex: 1,
+      minWidth: 0,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 6,
+    },
+    metaTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    actions: {
+      flexDirection: 'column',
+      gap: 4,
+      alignItems: 'center',
+    },
+    actionBtn: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: Radius.md,
+    },
+  });
+}
 
-const mapStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: Colors.background.secondary,
-  },
-  fallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    backgroundColor: Colors.background.secondary,
-    gap: 8,
-  },
-  fallbackTitle: {
-    ...Typography.titleMedium,
-    color: Colors.text.primary,
-    marginTop: 8,
-  },
-  fallbackBody: {
-    ...Typography.bodySmall,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-  },
-});
+function makeSheetStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: theme.background.secondary,
+      borderTopLeftRadius: Radius.xxl,
+      borderTopRightRadius: Radius.xxl,
+      borderColor: theme.glassBorder,
+      borderTopWidth: 1,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingTop: 8,
+      paddingBottom: Spacing.md,
+    },
+    handle: {
+      alignSelf: 'center',
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.glassBorder,
+      marginBottom: Spacing.sm,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    cover: {
+      width: 88,
+      height: 88,
+      borderRadius: Radius.md,
+      backgroundColor: theme.background.tertiary,
+    },
+    headerText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    epPill: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      marginBottom: 6,
+    },
+    closeBtn: {
+      width: 32,
+      height: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 16,
+      backgroundColor: theme.background.tertiary,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    actionBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      height: 44,
+      borderRadius: Radius.md,
+    },
+    frameShotBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      height: 44,
+      borderRadius: Radius.md,
+      marginTop: Spacing.sm,
+      borderWidth: 1,
+    },
+    frameShotDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginLeft: 4,
+    },
+  });
+}
+
+function makePickerStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: theme.background.secondary,
+      borderTopLeftRadius: Radius.xxl,
+      borderTopRightRadius: Radius.xxl,
+      borderColor: theme.glassBorder,
+      borderTopWidth: 1,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingTop: 8,
+      paddingBottom: Spacing.sm,
+      maxHeight: '70%',
+    },
+    handle: {
+      alignSelf: 'center',
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.glassBorder,
+      marginBottom: Spacing.xs,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: Spacing.xs,
+      marginBottom: Spacing.xs,
+    },
+    closeBtn: {
+      width: 30,
+      height: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 15,
+      backgroundColor: theme.background.tertiary,
+    },
+    list: {
+      marginTop: 4,
+    },
+    listContent: {
+      paddingBottom: Spacing.md,
+      gap: 8,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: theme.background.secondary,
+      borderColor: theme.glassBorder,
+      borderWidth: 1,
+      borderRadius: Radius.lg,
+      padding: 10,
+    },
+    thumbWrap: {
+      width: 60,
+      height: 60,
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 2,
+      backgroundColor: theme.background.tertiary,
+      position: 'relative',
+    },
+    thumb: {
+      width: '100%',
+      height: '100%',
+    },
+    epPill: {
+      position: 'absolute',
+      left: 4,
+      bottom: 4,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 5,
+    },
+    rowBody: {
+      flex: 1,
+      minWidth: 0,
+    },
+  });
+}
+
+function makeMapStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      overflow: 'hidden',
+      backgroundColor: theme.background.secondary,
+    },
+    webview: {
+      flex: 1,
+      backgroundColor: theme.background.secondary,
+    },
+    fallback: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      backgroundColor: theme.background.secondary,
+      gap: 8,
+    },
+    fallbackTitle: {
+      marginTop: 8,
+    },
+  });
+}

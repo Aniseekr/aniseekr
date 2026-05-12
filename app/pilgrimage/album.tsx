@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -36,10 +36,11 @@ export default function PilgrimageAlbumScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accentFg = readableTextOn(theme.accent);
+  const { animeId: animeIdParam } = useLocalSearchParams<{ animeId?: string }>();
 
   const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>({});
   const [animes, setAnimes] = useState<AnitabiBangumi[]>([]);
-  const [animeFilter, setAnimeFilter] = useState<string>('all');
+  const [animeFilter, setAnimeFilter] = useState<string>(animeIdParam ?? 'all');
 
   useEffect(() => {
     let cancelled = false;

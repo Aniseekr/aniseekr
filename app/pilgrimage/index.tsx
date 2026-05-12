@@ -190,14 +190,28 @@ export default function PilgrimageHubScreen() {
           <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
             聖地巡禮
           </ThemedText>
-          <Pressable
-            onPress={handleSearch}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Search"
-            style={({ pressed }) => [styles.headerIcon, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="search" size={20} color={theme.text.primary} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={handleOpenAlbum}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Pilgrimage album"
+              style={({ pressed }) => [
+                styles.headerIcon,
+                { borderColor: `${theme.accent}55` },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Ionicons name="camera-outline" size={20} color={theme.accent} />
+            </Pressable>
+            <Pressable
+              onPress={handleSearch}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Search"
+              style={({ pressed }) => [styles.headerIcon, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="search" size={20} color={theme.text.primary} />
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView
@@ -585,13 +599,18 @@ function makeStyles(theme: ThemePalette) {
       paddingVertical: 12,
     },
     headerTitle: { letterSpacing: 1 },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
     headerIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.background.secondary,
+      backgroundColor: `${theme.background.secondary}CC`,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
