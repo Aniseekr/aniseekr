@@ -273,6 +273,20 @@ mock.module('@expo/vector-icons', () => {
   };
 });
 
+// @shopify/react-native-skia: scene analysis imports Skia for native decode.
+// Tests cover the pure inference functions only, so a stub that satisfies the
+// import shape is sufficient — analyzeImage() itself isn't exercised here.
+mock.module('@shopify/react-native-skia', () => ({
+  AlphaType: { Unknown: 0, Opaque: 1, Premul: 2, Unpremul: 3 },
+  ColorType: { RGBA_8888: 4 },
+  Skia: {
+    Data: { fromURI: async () => null },
+    Image: { MakeImageFromEncoded: () => null },
+    Surface: { Make: () => null },
+    Paint: () => ({}),
+  },
+}));
+
 mock.module('expo-linear-gradient', () => {
   const React = require('react');
   return {

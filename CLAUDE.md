@@ -136,6 +136,33 @@ Minimum `44 × 44` (iOS HIG / WCAG 2.5.5). `ThemedButton size="md"` already meet
 
 Use `hapticsBridge` (`selection` for choices, `tap` for navigation, `success` for finalizing, `warning` for risky). `ThemedButton` calls the right one by default — only override `haptic="…"` when you have a specific reason.
 
+### 8. No fake data — ever
+
+Anything that looks like real, computed, scene-specific, user-specific, or source-of-truth data **must come from a real source**. If the real source isn't available, the UI shows a real loading or error state — never a plausible-looking placeholder.
+
+This rule exists because we shipped (and then ripped out) `fallbackAnalysisFromUrl()` — a function that hashed an image URL into "plausible" RGB averages so the tiles always rendered something. The tiles looked correct and were completely meaningless. We also hardcoded `K-On! S2 EP{ep}` and `修学院駅の夕暮れ — 唯と憂が電車を待つ印象的なシーン` into a generic pilgrimage tips screen, so every spot in every anime claimed to be K-On Episode 2. Both are the same bug: **content that pretends to know something it doesn't**.
+
+Specifically forbidden:
+
+- ❌ **Hash/seed/random → plausible-looking numbers** (`fallbackAnalysisFromUrl` style). If analysis fails, return `null` and render an error tile (`'無法分析'` / `'Image unavailable'`).
+- ❌ **Hardcoded scene-specific strings** in screens that render for any scene (e.g. anime title, episode caption, station name, character dialogue) unless they come from the route params or a real data source. If you only have a fallback, make it generic ("原作場景", not "K-On! EP2").
+- ❌ **Mock arrays committed to production code paths** (`const SAMPLE_SPOTS = [...]`). Mocks live in `__tests__/` or behind a dev flag, never on the render path.
+- ❌ **Lorem ipsum / placeholder copy** shipped in production screens. Either pass the real string via props or render an empty state.
+- ❌ **Fake counters, stats, ratings, distances, dates** computed from anything other than the actual data (`Math.random()`, `Date.now() % 5`, "popular" rankings with no source).
+- ❌ **Screen-specific "data" hidden in JSX** (e.g. `Avoid weekends 14:00–16:00` written inline as if we know peak hours for this spot — we don't). Either drive it from real data or make it generic guidance.
+
+The three real states for any data-driven component:
+
+| State | What to render |
+|-------|----------------|
+| `loading` | Skeleton / "分析中…" / spinner — clearly transient |
+| `ready` | The real computed value |
+| `error` / `null` | "無法分析" / "Unavailable" — clearly *no data*, not a guess |
+
+When in doubt, ask: "would a screenshot of this screen mislead the user about what we actually know?" If yes, it's fake data.
+
+Generic guidance is fine (rule of thirds, "use eye-level for portraits", "avoid flash indoors") — that's photography knowledge, not pretending to be scene-specific data. The line is: **does it claim to know something specific about this scene/user/spot?** If yes, it must be real.
+
 ## Anti-patterns I've seen — don't repeat these
 
 - **`color: '#FFFFFF'` on `backgroundColor: theme.accent`** → invisible on light accents. Use `ThemedButton` or `readableTextOn()`.
@@ -144,6 +171,8 @@ Use `hapticsBridge` (`selection` for choices, `tap` for navigation, `success` fo
 - **Reinventing `PrimaryButton` / `SecondaryButton` per file** → drifting padding/radius/contrast. Use `ThemedButton`.
 - **Inline `<Text style={{ fontSize: 17, fontWeight: '600' }}>`** → off our Typography scale. Use `<ThemedText variant="titleLarge">` or spread `Typography.titleLarge`.
 - **`shadowColor: '#000'` written in 14 places** → use `Shadow.subtle / .medium / .heavy` from `DesignSystem`, or `Shadow.glow(theme.accent)` for branded glow.
+- **Hash-seeded "plausible" placeholders** (`fallbackAnalysisFromUrl` style) → returns numbers that look computed but aren't. See Rule 8. Return `null` and render an error state.
+- **Hardcoded scene/anime captions in generic screens** (`K-On! S2 EP{ep}` in `compare/tips.tsx`) → every spot ends up labelled with the same anime. See Rule 8.
 
 ## Workflow
 

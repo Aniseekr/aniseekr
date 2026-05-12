@@ -4,10 +4,8 @@
 // { analysis: null, error: 'reason' } and the UI must show a real error state.
 
 import { useEffect, useState } from 'react';
-import {
-  analyzeImage,
-  type SceneAnalysis,
-} from '../../libs/services/pilgrimage/scene-analysis';
+import { type SceneAnalysis } from '../../libs/services/pilgrimage/scene-analysis';
+import { analyzeImage } from '../../libs/services/pilgrimage/scene-analysis-skia';
 
 export type SceneAnalysisStatus = 'idle' | 'loading' | 'ready' | 'error';
 

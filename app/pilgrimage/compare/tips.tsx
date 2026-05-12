@@ -5,7 +5,7 @@
 // Composition Tips card (numbered tips with 56×56 rule-of-thirds illustration)
 // → Things to Avoid red warn box → Bottom CTA (orange 開啟相機對齊).
 
-import { useCallback, useMemo } from 'react';
+import { Fragment, useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,36 +16,62 @@ import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../components/themed';
 import { useSceneAnalysis } from '../../../components/pilgrimage/SceneAnalyzer';
 import {
+  inferAspectRatio,
   inferBestTime,
   inferCameraAngle,
+  inferContrast,
   inferDistance,
+  inferExposureCompensation,
+  inferFocalCell,
+  inferMood,
+  inferWarnings,
   inferWeather,
+  type WarningItem,
 } from '../../../libs/services/pilgrimage/scene-analysis';
+import { getStringParam } from '../../../libs/utils/route-params';
 
-type SearchParams = {
-  spotId: string;
-  imageUrl: string;
-  name: string;
-  ep: string;
-  animeId: string;
-  themeColor: string;
-  spotLat: string;
-  spotLng: string;
+const WARN_ICONS: Record<WarningItem['icon'], React.ComponentProps<typeof Ionicons>['name']> = {
+  sunny: 'sunny',
+  moon: 'moon',
+  'eye-off': 'eye-off',
+  'flash-off': 'flash-off',
+  walk: 'walk',
+  people: 'people',
+  'alert-circle': 'alert-circle',
+  contrast: 'contrast',
 };
+
+// Shown only when scene analysis is unavailable (offline, decode error). Once
+// analysis succeeds we hand control to inferWarnings() which is driven by the
+// actual image signals.
+const FALLBACK_WARNINGS: WarningItem[] = [
+  {
+    icon: 'people',
+    title: '避開人潮高峰',
+    body: 'Crowds peak on weekend afternoons — try early morning or weekdays.',
+  },
+  {
+    icon: 'flash-off',
+    title: '勿用閃光燈',
+    body: 'Flash washes out the cinematic depth — keep it off.',
+  },
+];
 
 export default function PhotoTipsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const params = useLocalSearchParams<SearchParams>();
+  const params = useLocalSearchParams();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  const accent = params.themeColor || theme.accent;
+  const accent = getStringParam(params, 'themeColor') || theme.accent;
   const accentFg = readableTextOn(accent);
-  const sceneName = params.name || 'Scene';
-  const epLabel = params.ep ? `EP ${params.ep}` : null;
+  const sceneName = getStringParam(params, 'name') || 'Scene';
+  const ep = getStringParam(params, 'ep');
+  const epLabel = ep ? `EP ${ep}` : null;
+  const imageUrl = getStringParam(params, 'imageUrl');
 
-  const { status, analysis } = useSceneAnalysis(params.imageUrl);
+  const { status, analysis } = useSceneAnalysis(imageUrl ?? undefined);
   const loading = status === 'loading' || status === 'idle';
   const errored = status === 'error';
 
@@ -53,6 +79,13 @@ export default function PhotoTipsScreen() {
   const weather = analysis ? inferWeather(analysis) : null;
   const cameraAngle = analysis ? inferCameraAngle(analysis) : null;
   const distance = analysis ? inferDistance(analysis) : null;
+  const focal = analysis ? inferFocalCell(analysis) : null;
+  const aspect = analysis ? inferAspectRatio(analysis) : null;
+  const contrast = analysis ? inferContrast(analysis) : null;
+  const mood = analysis ? inferMood(analysis) : null;
+  const exposure = analysis ? inferExposureCompensation(analysis) : null;
+  const warnings = analysis ? inferWarnings(analysis) : null;
+  const palette = analysis?.palette ?? [];
 
   const handleStart = useCallback(() => {
     hapticsBridge.success();
@@ -116,12 +149,14 @@ export default function PhotoTipsScreen() {
           {/* Hero card */}
           <View style={styles.heroCard}>
             <View style={styles.heroImageWrap}>
-              <Image
-                source={{ uri: params.imageUrl }}
-                style={styles.heroImage}
-                contentFit="cover"
-                transition={180}
-              />
+              {imageUrl ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.heroImage}
+                  contentFit="cover"
+                  transition={180}
+                />
+              ) : null}
               <View style={styles.referenceChip}>
                 <Ionicons name="film" size={12} color={theme.status.warning} />
                 <ThemedText
@@ -151,6 +186,43 @@ export default function PhotoTipsScreen() {
                 }}>
                 {sceneName}
               </ThemedText>
+              {palette.length > 0 ? (
+                <View style={styles.paletteRow}>
+                  <ThemedText
+                    weight="600"
+                    style={{
+                      color: theme.text.tertiary,
+                      fontSize: 9,
+                      letterSpacing: 1,
+                    }}>
+                    PALETTE
+                  </ThemedText>
+                  <View style={styles.paletteDots}>
+                    {palette.map((hex) => (
+                      <View
+                        key={hex}
+                        style={[
+                          styles.paletteDot,
+                          {
+                            backgroundColor: hex,
+                            borderColor: theme.glassBorder,
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  {mood ? (
+                    <ThemedText
+                      weight="500"
+                      style={{
+                        color: theme.text.secondary,
+                        fontSize: 10,
+                      }}>
+                      · {mood.jp}
+                    </ThemedText>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -219,9 +291,15 @@ export default function PhotoTipsScreen() {
               accent={accent}
               accentFg={accentFg}
               theme={theme}
-              title="使用三分構圖法"
-              body="Align the main subject with a third-line intersection for cinematic balance."
+              title={focal ? `主體放在${focal.jp}` : '使用三分構圖法'}
+              body={
+                focal
+                  ? `Anchor the subject at the ${focal.en} third-line intersection.`
+                  : 'Align the main subject with a third-line intersection for cinematic balance.'
+              }
               variant="thirds"
+              focalLeftPct={focal?.leftPct}
+              focalTopPct={focal?.topPct}
             />
             <View style={styles.tipDivider} />
             <CompoTipRow
@@ -243,8 +321,14 @@ export default function PhotoTipsScreen() {
               accent={accent}
               accentFg={accentFg}
               theme={theme}
-              title="包含主體標誌"
-              body="Keep the recognisable landmark and its surrounding edges inside the frame."
+              title={
+                aspect ? `建議比例 ${aspect.ratio}` : '包含主體標誌'
+              }
+              body={
+                aspect && contrast
+                  ? `${aspect.en} · ${contrast.en.toLowerCase()}${exposure && exposure.ev !== '0' ? ` · suggest ${exposure.ev} EV` : ''}.`
+                  : 'Keep the recognisable landmark and its surrounding edges inside the frame.'
+              }
               variant="frame"
             />
           </View>
@@ -258,19 +342,18 @@ export default function PhotoTipsScreen() {
             theme={theme}
           />
           <View style={styles.warnBox}>
-            <WarnRow
-              icon="people"
-              theme={theme}
-              title="避開人潮高峰"
-              body="Crowds peak on weekend afternoons — try early morning or weekdays."
-            />
-            <View style={styles.warnDivider} />
-            <WarnRow
-              icon="flash-off"
-              theme={theme}
-              title="勿用閃光燈"
-              body="Flash washes out the cinematic depth — keep it off."
-            />
+            {(warnings ?? FALLBACK_WARNINGS).map((w, i, arr) => (
+              <Fragment key={`${w.icon}-${i}`}>
+                {i > 0 ? <View style={styles.warnDivider} /> : null}
+                <WarnRow
+                  icon={WARN_ICONS[w.icon]}
+                  theme={theme}
+                  title={w.title}
+                  body={w.body}
+                />
+                {i === arr.length - 1 ? null : null}
+              </Fragment>
+            ))}
           </View>
         </ScrollView>
 
@@ -438,6 +521,8 @@ function CompoTipRow({
   title,
   body,
   variant,
+  focalLeftPct,
+  focalTopPct,
 }: {
   number: number;
   accent: string;
@@ -446,12 +531,20 @@ function CompoTipRow({
   title: string;
   body: string;
   variant: 'thirds' | 'angle' | 'frame';
+  focalLeftPct?: number;
+  focalTopPct?: number;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.tipRow}>
       <View style={styles.tipDiag}>
-        <DiagIllustration variant={variant} accent={accent} theme={theme} />
+        <DiagIllustration
+          variant={variant}
+          accent={accent}
+          theme={theme}
+          focalLeftPct={focalLeftPct}
+          focalTopPct={focalTopPct}
+        />
       </View>
       <View style={styles.tipBody}>
         <View style={styles.tipTitleRow}>
@@ -480,13 +573,20 @@ function DiagIllustration({
   variant,
   accent,
   theme,
+  focalLeftPct,
+  focalTopPct,
 }: {
   variant: 'thirds' | 'angle' | 'frame';
   accent: string;
   theme: ThemePalette;
+  focalLeftPct?: number;
+  focalTopPct?: number;
 }) {
   const grid = theme.text.tertiary;
   if (variant === 'thirds') {
+    // Default to bottom-right intersection if no focal cell supplied.
+    const dotLeft = `${focalLeftPct ?? 66.66}%` as `${number}%`;
+    const dotTop = `${focalTopPct ?? 66.66}%` as `${number}%`;
     return (
       <View style={diagStyles.box}>
         {/* horizontal lines */}
@@ -495,16 +595,19 @@ function DiagIllustration({
         {/* vertical lines */}
         <View style={[diagStyles.vLine, { left: '33.33%', backgroundColor: accent, opacity: 0.7 }]} />
         <View style={[diagStyles.vLine, { left: '66.66%', backgroundColor: accent, opacity: 0.7 }]} />
-        {/* hot dot at right-third intersection */}
+        {/* hot dot — placed at the inferred focal intersection */}
         <View
           style={[
             diagStyles.dot,
             {
-              left: '66.66%',
-              top: '66.66%',
+              left: dotLeft,
+              top: dotTop,
               backgroundColor: accent,
-              marginLeft: -4,
-              marginTop: -4,
+              marginLeft: -5,
+              marginTop: -5,
+              width: 10,
+              height: 10,
+              borderRadius: 5,
             },
           ]}
         />
@@ -705,6 +808,22 @@ function makeStyles(theme: ThemePalette) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+    },
+    paletteRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 6,
+    },
+    paletteDots: {
+      flexDirection: 'row',
+      gap: 4,
+    },
+    paletteDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      borderWidth: 1,
     },
     grid2: {
       flexDirection: 'row',
