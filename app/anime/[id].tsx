@@ -20,6 +20,7 @@ import type {
 } from '../../libs/services/data-sources/anime-data-source';
 import type { PlatformType } from '../../libs/services/auth/types';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
+import { Skeleton } from '../../components/themed';
 import { AnimePilgrimageCard } from '../../components/pilgrimage/AnimePilgrimageCard';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 import { AddToCollectionSheet } from '../../components/collection/AddToCollectionSheet';
@@ -257,9 +258,11 @@ export default function AnimeDetailScreen() {
 
   if (loading || !anime) {
     return (
-      <View className="flex-1 items-center justify-center bg-black">
+      <View className="flex-1 bg-black">
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator color="white" />
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
+          <Skeleton.HeroDetail showEpisodes={true} />
+        </ScrollView>
       </View>
     );
   }

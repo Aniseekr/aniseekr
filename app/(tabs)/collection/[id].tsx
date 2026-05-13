@@ -3,7 +3,6 @@ import {
   View,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,7 +19,7 @@ import {
   AnimeProgressView,
   type AnimeProgress,
 } from '../../../components/collection/AnimeProgressView';
-import { ThemedText } from '../../../components/themed';
+import { Skeleton, ThemedText } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
@@ -373,9 +372,7 @@ export default function FolderDetailScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.accent} />
-        </View>
+        <Skeleton.PosterGrid count={9} columns={3} aspectRatio={1.4} gap={12} style={{ padding: 16 }} />
       ) : (
         <FlatList
           data={items}

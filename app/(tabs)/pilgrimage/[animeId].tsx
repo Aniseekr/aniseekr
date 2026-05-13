@@ -10,7 +10,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Linking,
   Modal,
   Platform,
@@ -40,7 +39,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { ThemedText, readableTextOn } from '../../../components/themed';
+import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { anitabiService } from '../../../libs/services/pilgrimage/anitabi-service';
 import {
@@ -1179,8 +1178,11 @@ export default function PilgrimageDetailScreen() {
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.accent} />
+          <View>
+            <Skeleton.HeroDetail showEpisodes={false} />
+            <View style={{ paddingHorizontal: 16 }}>
+              <Skeleton.AnimeCardList count={5} />
+            </View>
           </View>
         ) : error ? (
           <SafeAreaView style={styles.errorContainer}>
