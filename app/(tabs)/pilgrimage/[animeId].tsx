@@ -128,6 +128,10 @@ function buildSpotMapHtml(initial: {
   center: { lat: number; lng: number; zoom: number };
   user: { lat: number; lng: number } | null;
   ringColor: string;
+  /** True when `center` is the anime's real geo, false when it's a Tokyo
+   * Station fallback. Drives whether we snap to the first marker if the
+   * initial framing turns out to be in the wrong place. */
+  hasCenter: boolean;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
   return `<!DOCTYPE html>
@@ -234,11 +238,29 @@ ${MAP_BASE_BODY}
     if (bounds.length > 0) {
       try { lastBounds = L.latLngBounds(bounds); } catch (e) { lastBounds = null; }
     }
-    if (!didFit && bounds.length > 1) {
-      try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: false }); didFit = true; } catch (e) {}
-    } else if (!didFit && bounds.length === 1) {
-      try { map.setView(bounds[0], 14, { animate: false }); didFit = true; } catch (e) {}
+    // Intentionally NO map.fitBounds(bounds) here. Anime spots routinely
+    // span an entire city (or several prefectures for road-trip anime), and
+    // fit-to-all would zoom out so far the user just sees a country map.
+    // We keep the initial setView (anime.geo + walking-scale zoom from the
+    // builder) so the user lands on a focused "around-the-spot" framing.
+    // The recenter button (window.__bindMap above) still uses lastBounds
+    // for users who deliberately want the wider view.
+    //
+    // For the edge case where we had no anime center at all (initial view
+    // was Tokyo Station) AND the actual spots are elsewhere, jump to the
+    // first spot so the screen isn't pointed at the wrong city.
+    if (!didFit && bounds.length > 0 && !initial.hasCenter) {
+      try { map.setView(bounds[0], 13, { animate: false }); didFit = true; } catch (e) {}
     }
+  };
+
+  // Native pushes a target lat/lng when the user picks a spot from the
+  // chip strip above the map. We pan tight (~3-block walking framing) so
+  // the user immediately sees what's around the chosen scene instead of
+  // a wide overview.
+  window.__focusSpot = function(target) {
+    if (!target || typeof target.lat !== 'number' || typeof target.lng !== 'number') return;
+    try { map.flyTo([target.lat, target.lng], 16, { duration: 0.45 }); } catch (e) {}
   };
 
   window.__post({ type: 'ready' });
@@ -255,6 +277,12 @@ interface SpotMapViewProps {
   userLocation: LatLng | null;
   centerGeo: readonly [number, number] | null;
   centerZoom: number;
+  /**
+   * Id of the spot currently selected in the chip strip above the map. When
+   * this changes, the WebView pans/zooms to that spot so the chip strip
+   * doubles as a quick spot picker without forcing the modal sheet open.
+   */
+  focusSpotId?: string | null;
   onSpotPress: (spot: AnitabiPoint) => void;
   onClusterPick: (spots: readonly AnitabiPoint[]) => void;
   theme: ThemePalette;
@@ -268,6 +296,7 @@ function SpotMapView({
   userLocation,
   centerGeo,
   centerZoom,
+  focusSpotId,
   onSpotPress,
   onClusterPick,
   theme,
@@ -282,12 +311,18 @@ function SpotMapView({
     // Prefer the anime's own center when known; otherwise fall back to Tokyo
     // Station rather than the dead-middle-of-Honshu/zoom-5 view, so the spot
     // map never opens on an empty patch of ocean while data loads.
-    const fallback =
-      centerGeo && hasValidGeo(centerGeo)
-        ? { lat: centerGeo[0], lng: centerGeo[1], zoom: centerZoom || 12 }
-        : { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
+    //
+    // Cap zoom to [12, 15] so we always land at a walking-scale framing
+    // (~3–10 km wide) instead of zoom-5 country views. Pilgrimage is a
+    // location-specific activity — the user wants to see "what's around this
+    // spot", never "all of Japan".
+    const desiredZoom = Math.max(12, Math.min(15, centerZoom || 13));
+    const hasCenter = !!(centerGeo && hasValidGeo(centerGeo));
+    const fallback = hasCenter
+      ? { lat: centerGeo![0], lng: centerGeo![1], zoom: desiredZoom }
+      : { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: 13 };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildSpotMapHtml({ center: fallback, user, ringColor });
+    return buildSpotMapHtml({ center: fallback, user, ringColor, hasCenter });
     // Captured once on mount intentionally — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -320,6 +355,17 @@ function SpotMapView({
       true;
     `);
   }, [markers, ready]);
+
+  useEffect(() => {
+    if (!ready || !webviewRef.current || !focusSpotId) return;
+    const spot = spotsById.current.get(focusSpotId);
+    if (!spot || !hasValidGeo(spot.geo)) return;
+    const payload = JSON.stringify({ lat: spot.geo[0], lng: spot.geo[1] });
+    webviewRef.current.injectJavaScript(`
+      try { window.__focusSpot && window.__focusSpot(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [focusSpotId, ready, markers]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -740,6 +786,10 @@ export default function PilgrimageDetailScreen() {
   const [activeSpot, setActiveSpot] = useState<AnitabiPoint | null>(null);
   const [clusterSpots, setClusterSpots] = useState<readonly AnitabiPoint[] | null>(null);
   const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>({});
+  // The currently-highlighted spot in the map's chip strip. We pre-pick the
+  // first valid spot when the user first switches to map view so they always
+  // land on a concrete pin instead of an unfocused overview.
+  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
 
   const themeColor = anime?.color || theme.accent;
   const themeColorFg = readableTextOn(themeColor);
@@ -890,6 +940,31 @@ export default function PilgrimageDetailScreen() {
         return points;
     }
   }, [points, spotFilter, visited, captures]);
+
+  // When the visible spot list changes (filter switch, data load) keep the
+  // selection valid: if the current pick was filtered out, fall back to the
+  // first spot that still has a real coordinate so the chip strip is never
+  // empty while the map has markers.
+  useEffect(() => {
+    if (viewMode !== 'map' || filteredPoints.length === 0) {
+      if (selectedSpotId !== null) setSelectedSpotId(null);
+      return;
+    }
+    const stillVisible = selectedSpotId
+      ? filteredPoints.some((p) => p.id === selectedSpotId)
+      : false;
+    if (stillVisible) return;
+    const firstValid = filteredPoints.find((p) => hasValidGeo(p.geo));
+    setSelectedSpotId(firstValid ? firstValid.id : null);
+  }, [viewMode, filteredPoints, selectedSpotId]);
+
+  const handleSpotChipPress = useCallback(
+    (spot: AnitabiPoint) => {
+      Haptics.selectionAsync().catch(() => undefined);
+      setSelectedSpotId(spot.id);
+    },
+    []
+  );
 
   const distanceFor = useCallback(
     (spot: AnitabiPoint): number | null => {
@@ -1367,26 +1442,50 @@ export default function PilgrimageDetailScreen() {
                 )}
               </View>
             ) : (
-              <View style={[styles.mapWrap, { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary }]}>
-                <SpotMapView
-                  spots={filteredPoints}
-                  visited={visited}
-                  ringColor={themeColor}
-                  userLocation={userLocation}
-                  centerGeo={anime?.geo ?? null}
-                  centerZoom={anime?.zoom ?? 12}
-                  theme={theme}
-                  onSpotPress={(spot) => {
-                    Haptics.selectionAsync().catch(() => undefined);
-                    setActiveSpot(spot);
-                  }}
-                  onClusterPick={(picked) => {
-                    Haptics.selectionAsync().catch(() => undefined);
-                    setClusterSpots(picked);
-                  }}
-                  style={styles.mapInner}
-                />
-              </View>
+              <>
+                {filteredPoints.length > 0 ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.spotChipRow}>
+                    {filteredPoints.map((spot) => (
+                      <SpotChip
+                        key={spot.id}
+                        spot={spot}
+                        active={spot.id === selectedSpotId}
+                        themeColor={themeColor}
+                        themeColorFg={themeColorFg}
+                        visited={visited[spot.id] === true}
+                        hasCapture={!!captures[spot.id]}
+                        theme={theme}
+                        onPress={handleSpotChipPress}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : null}
+                <View style={[styles.mapWrap, { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary }]}>
+                  <SpotMapView
+                    spots={filteredPoints}
+                    visited={visited}
+                    ringColor={themeColor}
+                    userLocation={userLocation}
+                    centerGeo={anime?.geo ?? null}
+                    centerZoom={anime?.zoom ?? 12}
+                    focusSpotId={selectedSpotId}
+                    theme={theme}
+                    onSpotPress={(spot) => {
+                      Haptics.selectionAsync().catch(() => undefined);
+                      setSelectedSpotId(spot.id);
+                      setActiveSpot(spot);
+                    }}
+                    onClusterPick={(picked) => {
+                      Haptics.selectionAsync().catch(() => undefined);
+                      setClusterSpots(picked);
+                    }}
+                    style={styles.mapInner}
+                  />
+                </View>
+              </>
             )}
           </Animated.ScrollView>
         )}
@@ -1466,6 +1565,73 @@ function FilterPill({ label, active, badge, themeColor, themeColorFg, theme, ico
           {badge}
         </ThemedText>
       </View>
+    </Pressable>
+  );
+}
+
+interface SpotChipProps {
+  spot: AnitabiPoint;
+  active: boolean;
+  themeColor: string;
+  themeColorFg: string;
+  visited: boolean;
+  hasCapture: boolean;
+  theme: ThemePalette;
+  onPress: (spot: AnitabiPoint) => void;
+}
+
+function SpotChip({
+  spot,
+  active,
+  themeColor,
+  themeColorFg,
+  visited,
+  hasCapture,
+  theme,
+  onPress,
+}: SpotChipProps) {
+  const styles = useMemo(() => makeSpotChipStyles(theme), [theme]);
+  const label = spot.cn || spot.name || `EP ${spot.ep}`;
+  return (
+    <Pressable
+      onPress={() => onPress(spot)}
+      style={({ pressed }) => [
+        styles.chip,
+        active
+          ? { borderColor: themeColor, backgroundColor: `${themeColor}1F` }
+          : { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary },
+        pressed && { opacity: 0.85 },
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`Focus map on ${label}`}>
+      <View
+        style={[
+          styles.epBadge,
+          active
+            ? { backgroundColor: themeColor }
+            : { backgroundColor: theme.background.tertiary },
+        ]}>
+        <ThemedText
+          variant="captionSmall"
+          weight="800"
+          style={{ color: active ? themeColorFg : theme.text.secondary }}>
+          EP {spot.ep}
+        </ThemedText>
+      </View>
+      <ThemedText
+        variant="bodySmall"
+        weight="600"
+        numberOfLines={1}
+        style={[styles.chipLabel, active ? { color: theme.text.primary } : null]}>
+        {label}
+      </ThemedText>
+      {visited ? (
+        <Ionicons name="checkmark-circle" size={14} color={theme.status.success} />
+      ) : null}
+      {hasCapture ? (
+        <Ionicons name="camera" size={12} color={active ? themeColor : theme.text.tertiary} />
+      ) : null}
     </Pressable>
   );
 }
@@ -1781,6 +1947,12 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       paddingHorizontal: Spacing.screenPadding,
       paddingVertical: 4,
     },
+    spotChipRow: {
+      gap: 8,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingTop: Spacing.xs,
+      paddingBottom: Spacing.xs,
+    },
     sectionHeader: {
       paddingHorizontal: Spacing.screenPadding,
       marginTop: Spacing.sm,
@@ -1895,6 +2067,35 @@ function makePillStyles(theme: ThemePalette) {
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+  });
+}
+
+function makeSpotChipStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingLeft: 6,
+      paddingRight: 12,
+      paddingVertical: 6,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      maxWidth: 220,
+      minHeight: 36,
+    },
+    epBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: Radius.full,
+      minWidth: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chipLabel: {
+      flexShrink: 1,
+      color: theme.text.secondary,
     },
   });
 }
