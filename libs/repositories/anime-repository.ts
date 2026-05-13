@@ -46,6 +46,7 @@ import { filterSFWContent, hasAdultContentSignal } from '../services/sfw-content
 import { queryClient, type QueryKeyObject } from '../services/query-client';
 import { idMappingService } from '../services/sync/id-mapping-service';
 import { AnnictClient } from '../clients/annict-client';
+import { expandSearchVariants } from '../utils/chinese-converter';
 import { Logger } from '../utils/logger';
 import { achievementService } from '../services/achievements/achievement-service';
 
@@ -195,16 +196,43 @@ export class AnimeRepository {
   ): Promise<UnifiedAnimeItem[]> {
     const source = this.resolveSource(preferredSource);
     const pageNum = page ?? 1;
+
+    // For Chinese queries, expand to both Simplified and Traditional variants
+    // so platforms with Simplified-only indexes (Bangumi) and Traditional-only
+    // ones still surface matches. Cache key uses the canonical variant pair
+    // so both forms of the same query share a result entry.
+    const variants = expandSearchVariants(query);
+    const cacheQuery = variants.length > 1 ? [...variants].sort().join('|') : query;
     const key = makeKey('searchAnime', {
       source: source.type,
-      q: query,
+      q: cacheQuery,
       page: pageNum,
       r18: this.config.allowR18Content ? '1' : '0',
     });
 
-    const items = await this.queryClientImpl.fetch(key, async () =>
-      source.searchAnime(query, pageNum)
-    );
+    const items = await this.queryClientImpl.fetch(key, async () => {
+      if (variants.length === 1) {
+        return source.searchAnime(query, pageNum);
+      }
+      const lists = await Promise.all(
+        variants.map((v) =>
+          source.searchAnime(v, pageNum).catch((err) => {
+            Logger.warn(`[AnimeRepository] searchAnime variant '${v}' failed`, err);
+            return [] as UnifiedAnimeItem[];
+          })
+        )
+      );
+      const seen = new Set<string>();
+      const merged: UnifiedAnimeItem[] = [];
+      for (const list of lists) {
+        for (const item of list) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          merged.push(item);
+        }
+      }
+      return merged;
+    });
     return this.applyAdultFilter(items);
   }
 
@@ -653,13 +681,41 @@ export class AnimeRepository {
   }
 
   static async searchAnime(query: string, page = 1): Promise<Anime[]> {
-    const cacheKey = `search_${query}_${page}_r${r18CacheFlag()}`;
+    // Expand S↔T variants so Chinese queries match AniList records whose
+    // synonyms array is stored in either script. Cache uses the canonical
+    // variant pair so 「工作細胞」 and 「工作细胞」 share results.
+    const variants = expandSearchVariants(query);
+    const cacheQuery = variants.length > 1 ? [...variants].sort().join('|') : query;
+    const cacheKey = `search_${cacheQuery}_${page}_r${r18CacheFlag()}`;
     const cached = await CacheService.get<AniListAnime[]>(cacheKey);
     if (cached) return cached.map(mapAniListToAnime);
 
-    const data = filterAniListAnime(
-      await AniListClient.searchAnime(query, page, 20, legacyAniListOptions())
-    );
+    let data: AniListAnime[];
+    if (variants.length === 1) {
+      data = filterAniListAnime(
+        await AniListClient.searchAnime(query, page, 20, legacyAniListOptions())
+      );
+    } else {
+      const lists = await Promise.all(
+        variants.map((v) =>
+          AniListClient.searchAnime(v, page, 20, legacyAniListOptions())
+            .then(filterAniListAnime)
+            .catch((err) => {
+              Logger.warn(`[AnimeRepository] legacy search variant '${v}' failed`, err);
+              return [] as AniListAnime[];
+            })
+        )
+      );
+      const seen = new Set<number>();
+      data = [];
+      for (const list of lists) {
+        for (const item of list) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          data.push(item);
+        }
+      }
+    }
     await CacheService.set(cacheKey, data, LEGACY_SEARCH_CACHE_TTL_MS);
     return data.map(mapAniListToAnime);
   }
