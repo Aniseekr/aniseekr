@@ -1,11 +1,16 @@
 name: Build ID Mapping Source
 
 # Builds the merged anime ID mapping JSON (Fribb + manami-project) and
-# uploads it to the `mapping-data` GitHub Release as a release asset.
+# publishes it via two parallel GitHub Releases:
 #
-# The upload step is idempotent: the first run creates the `mapping-data`
-# release if it doesn't exist, every subsequent run just overwrites the asset
-# with --clobber.
+#   1. `mapping-data-YYYY-WW`  — weekly snapshot, kept for rollback / history.
+#                                Latest 8 are retained; older ones are pruned.
+#   2. `mapping-data`          — fixed alias tag, --clobber'd every run so the
+#                                client URL stays stable across weeks.
+#
+# Mirrors manami-project's weekly tagging cadence so an upstream regression in
+# one week can be rolled back by re-uploading a previous week's asset to the
+# `mapping-data` alias.
 
 on:
   schedule:
@@ -40,14 +45,50 @@ jobs:
           test -s anime-id-mappings-merged.json
           ls -lh anime-id-mappings-merged.json
 
-      - name: Upload to GitHub Release (mapping-data tag)
+      - name: Upload to GitHub Releases (weekly + alias)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ! gh release view mapping-data >/dev/null 2>&1; then
-            gh release create mapping-data \
-              --title "Anime ID Mapping Data" \
-              --notes "Auto-generated merged ID mapping JSON (Fribb + manami-project). Rebuilt nightly by the build-id-mapping workflow; clients fetch the latest asset via expo-file-system." \
+          set -euo pipefail
+
+          # ISO year + week (e.g. "2026-20"). Matches manami-project's tag style.
+          DATED_TAG="mapping-data-$(date -u +%Y-%V)"
+          ALIAS_TAG="mapping-data"
+
+          # 1. Weekly snapshot — created once per ISO week.
+          if ! gh release view "$DATED_TAG" >/dev/null 2>&1; then
+            gh release create "$DATED_TAG" \
+              --title "Anime ID Mapping Data ($DATED_TAG)" \
+              --notes "Weekly merged ID mapping JSON (Fribb + manami-project). Auto-published by build-id-mapping." \
               --target main
           fi
-          gh release upload mapping-data anime-id-mappings-merged.json --clobber
+          gh release upload "$DATED_TAG" anime-id-mappings-merged.json --clobber
+
+          # 2. Fixed alias tag — overwritten every run so the client URL never
+          #    changes. To roll back, re-upload an older weekly asset here.
+          if ! gh release view "$ALIAS_TAG" >/dev/null 2>&1; then
+            gh release create "$ALIAS_TAG" \
+              --title "Anime ID Mapping Data (latest)" \
+              --notes "Always points to the most recent weekly build. Client URL is stable; see mapping-data-YYYY-WW for the dated snapshot." \
+              --target main
+          fi
+          gh release upload "$ALIAS_TAG" anime-id-mappings-merged.json --clobber
+
+      - name: Prune old weekly releases (keep last 8)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Keep the 8 most recent mapping-data-YYYY-WW snapshots, delete the rest
+          # along with their git tags. Lexicographic sort works because the tag
+          # format is fixed-width ISO year+week.
+          mapfile -t OLD < <(
+            gh release list --limit 100 --json tagName --jq '.[].tagName' \
+              | grep -E '^mapping-data-[0-9]{4}-[0-9]{2}$' \
+              | sort -r \
+              | tail -n +9
+          )
+          for TAG in "${OLD[@]}"; do
+            echo "Pruning $TAG"
+            gh release delete "$TAG" --yes --cleanup-tag
+          done

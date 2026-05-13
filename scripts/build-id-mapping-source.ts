@@ -18,8 +18,11 @@ import { resolve } from 'path';
 
 const FRIBB_URL =
   'https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-mini.json';
+// manami-project switched from in-repo JSON to weekly tagged GitHub Releases
+// (e.g. tag "2026-14"). `releases/latest/download/*` is a stable redirect to
+// whatever the most recent weekly release is — Bun's fetch follows 302s.
 const MANAMI_URL =
-  'https://raw.githubusercontent.com/manami-project/anime-offline-database/master/anime-offline-database-minified.json';
+  'https://github.com/manami-project/anime-offline-database/releases/latest/download/anime-offline-database-minified.json';
 
 const OUTPUT = 'anime-id-mappings-merged.json';
 
