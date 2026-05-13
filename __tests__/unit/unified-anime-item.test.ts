@@ -57,7 +57,7 @@ describe('UnifiedAnimeItem — construction & identity', () => {
 });
 
 describe('UnifiedAnimeItem — search keywords', () => {
-  it('UAI-010 buildSearchKeywords returns lowercased concatenation of titles + synonyms', () => {
+  it('UAI-010 buildSearchKeywords concatenates titles + synonyms and adds S/T variants', () => {
     const result = UnifiedAnimeItem.buildSearchKeywords({
       titleDefault: 'Cowboy Bebop',
       titleEn: 'COWBOY',
@@ -65,7 +65,16 @@ describe('UnifiedAnimeItem — search keywords', () => {
       titleCn: '星际牛仔',
       synonyms: ['CB', 'Bebop'],
     });
-    expect(result).toBe('cowboy bebop cowboy カウボーイビバップ 星际牛仔 cb bebop');
+    // Both Simplified and Traditional forms of the Chinese title are included
+    // so a query in either script finds the record via local filtering.
+    expect(result).toContain('星际牛仔');
+    expect(result).toContain('星際牛仔');
+    expect(result).toContain('cowboy bebop');
+    expect(result).toContain('カウボーイビバップ');
+    expect(result).toContain('cb');
+    expect(result).toContain('bebop');
+    // The result is lowercased and space-separated.
+    expect(result).toBe(result.toLowerCase());
   });
 
   it('UAI-011 buildSearchKeywords filters null titles before joining', () => {

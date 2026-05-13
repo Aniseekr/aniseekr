@@ -1,6 +1,11 @@
 import type { PlatformType } from '../services/auth/types';
 import { hasAdultContentSignal } from '../services/sfw-content-filter';
-import { convertSimplifiedToTraditional } from '../utils/chinese-converter';
+import {
+  containsChinese,
+  convertSimplifiedToTraditional,
+  toSimplified,
+  toTraditional,
+} from '../utils/chinese-converter';
 import type { PlatformImageData } from './platform-image-data';
 import type { WatchStatus } from './watch-status';
 
@@ -194,6 +199,7 @@ export class UnifiedAnimeItem {
         titleEn: init.titleEnglish ?? null,
         titleJp: init.titleJapanese ?? null,
         titleCn: init.titleChinese ?? null,
+        titleCnTraditional: this.titleChineseTraditional,
         synonyms: this.synonyms,
       });
     this.synopsis = init.synopsis ?? null;
@@ -302,17 +308,44 @@ export class UnifiedAnimeItem {
   /**
    * Concatenate all titles + synonyms into a single lowercased keyword string
    * for fast in-memory search.
+   *
+   * For Chinese titles we add both Simplified and Traditional variants so
+   * `searchKeywords` matches user queries in either script — Bangumi gives us
+   * Simplified, but the default user locale shows Traditional, so a search
+   * typed in either form must still hit the cached record.
    */
   static buildSearchKeywords(params: {
     titleDefault: string;
     titleEn?: string | null;
     titleJp?: string | null;
     titleCn?: string | null;
+    titleCnTraditional?: string | null;
     synonyms?: string[];
   }): string {
-    const titles = [params.titleDefault, params.titleEn, params.titleJp, params.titleCn].filter(
-      (t): t is string => t != null
-    );
+    const titles: string[] = [];
+    if (params.titleDefault) titles.push(params.titleDefault);
+    if (params.titleEn) titles.push(params.titleEn);
+    if (params.titleJp) titles.push(params.titleJp);
+
+    if (params.titleCn) {
+      titles.push(params.titleCn);
+      // Add traditional variant if conversion changes the string.
+      if (containsChinese(params.titleCn)) {
+        const trad = toTraditional(params.titleCn);
+        if (trad !== params.titleCn) titles.push(trad);
+      }
+    }
+    if (params.titleCnTraditional && params.titleCnTraditional !== params.titleCn) {
+      titles.push(params.titleCnTraditional);
+      // And add the simplified form derived from traditional, if different.
+      if (containsChinese(params.titleCnTraditional)) {
+        const simp = toSimplified(params.titleCnTraditional);
+        if (simp !== params.titleCnTraditional && simp !== params.titleCn) {
+          titles.push(simp);
+        }
+      }
+    }
+
     const synonyms = params.synonyms ?? [];
     return [...titles, ...synonyms].join(' ').toLowerCase();
   }
