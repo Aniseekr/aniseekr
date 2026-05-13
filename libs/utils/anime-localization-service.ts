@@ -1,15 +1,23 @@
 import type { UnifiedAnimeItem } from '../models/unified-anime-item';
+import { toSimplified, toTraditional } from './chinese-converter';
 
 /**
  * Resolve the best display title for the user's preferred language.
  *
  * Fallback chain:
  *   zh-Hans / zh-CN / zh                → titleChinese
- *   zh-Hant / zh-TW / zh-HK             → titleChineseTraditional → titleChinese
+ *                                       → toSimplified(titleChineseTraditional)
+ *   zh-Hant / zh-TW / zh-HK             → titleChineseTraditional
+ *                                       → toTraditional(titleChinese)
  *   ja / ja-JP                          → titleJapanese
  *   ru / ru-RU                          → titleRussian
  *   en / en-US / en-GB                  → titleEnglish
  *   *                                   → titleEnglish → titleRomaji → title
+ *
+ * When only one Chinese variant exists on the item, we OpenCC-convert it on
+ * the fly so users always see their preferred script — Bangumi gives us
+ * Simplified, but a `zh-Hant` user expects Traditional. Mirror behavior on
+ * the rare reverse path.
  *
  * The function NEVER returns an empty string. As a last resort it returns
  * `item.title`, which is guaranteed by the constructor to be non-null.
@@ -21,10 +29,18 @@ export function getDisplayTitle(item: UnifiedAnimeItem, lang: string): string {
 
   if (normalized.startsWith('zh-hans') || normalized === 'zh-cn' || normalized === 'zh') {
     candidates.push(item.titleChinese);
-    candidates.push(item.titleChineseTraditional);
+    if (item.titleChineseTraditional && !item.titleChinese) {
+      candidates.push(toSimplified(item.titleChineseTraditional));
+    } else {
+      candidates.push(item.titleChineseTraditional);
+    }
   } else if (normalized.startsWith('zh-hant') || normalized === 'zh-tw' || normalized === 'zh-hk') {
     candidates.push(item.titleChineseTraditional);
-    candidates.push(item.titleChinese);
+    if (item.titleChinese && !item.titleChineseTraditional) {
+      candidates.push(toTraditional(item.titleChinese));
+    } else {
+      candidates.push(item.titleChinese);
+    }
   } else if (normalized.startsWith('ja')) {
     candidates.push(item.titleJapanese);
   } else if (normalized.startsWith('ru')) {
