@@ -2,8 +2,12 @@ import * as FileSystem from 'expo-file-system';
 import { LocalDB } from '../../db';
 import type { PlatformType } from '../auth/types';
 
+// Hosted in the public Aniseekr-source companion repo. This expo repo is
+// private; private-repo release assets reject unauthenticated downloads, so
+// the build pipeline lives there. Stable alias tag — weekly snapshots are
+// at mapping-data-YYYY-WW in the same repo for rollback.
 const MAPPING_URL =
-  'https://github.com/Aniseekr/aniseekr-expo/releases/download/mapping-data/anime-id-mappings-merged.json';
+  'https://github.com/Aniseekr/Aniseekr-source/releases/download/mapping-data/anime-id-mappings-merged.json';
 
 /**
  * How long an on-device mapping is considered fresh. Mappings are rebuilt by
