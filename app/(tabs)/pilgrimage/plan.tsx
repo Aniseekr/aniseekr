@@ -8,7 +8,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,7 +22,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { ThemedText, readableTextOn } from '../../../components/themed';
+import { ThemedText, readableTextOn, Skeleton } from '../../../components/themed';
 import { cityToColor } from '../../../components/pilgrimage/PilgrimageMapView';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
@@ -176,12 +175,7 @@ export default function PilgrimagePlanScreen() {
         ]}
         showsVerticalScrollIndicator={false}>
         {loading && !featured ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={theme.accent} />
-            <ThemedText variant="bodyMedium" tone="secondary">
-              Building your trip ideas…
-            </ThemedText>
-          </View>
+          <Skeleton.Timeline count={5} showHeader={true} style={{ paddingHorizontal: 16 }} />
         ) : null}
 
         {featured ? (
@@ -597,11 +591,6 @@ function makeStyles(theme: ThemePalette) {
     scrollContent: {
       paddingTop: Spacing.sm,
       gap: Spacing.md,
-    },
-    loadingState: {
-      paddingVertical: Spacing.xxl,
-      alignItems: 'center',
-      gap: Spacing.sm,
     },
     featuredCard: {
       marginHorizontal: Spacing.screenPadding,

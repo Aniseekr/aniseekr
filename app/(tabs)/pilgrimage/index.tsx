@@ -15,7 +15,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -52,7 +51,7 @@ import {
   TILE_URL,
   TOKYO_STATION,
 } from '../../../libs/services/pilgrimage/leaflet-map';
-import { ThemedText, readableTextOn } from '../../../components/themed';
+import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 
 interface FeaturedSpot {
@@ -770,9 +769,7 @@ export default function PilgrimageHubScreen() {
         {mode === 'map' ? (
           <View style={styles.mapWrap}>
             {loading ? (
-              <View style={styles.loadingBox}>
-                <ActivityIndicator color={theme.accent} />
-              </View>
+              <Skeleton.MapList mapHeight={420} listCount={0} />
             ) : mapMarkers.length === 0 ? (
               <View style={styles.emptyMap}>
                 <Ionicons name="map-outline" size={32} color={theme.text.tertiary} />
@@ -841,9 +838,7 @@ export default function PilgrimageHubScreen() {
             />
 
             {loading ? (
-              <View style={styles.loadingBox}>
-                <ActivityIndicator color={theme.accent} />
-              </View>
+              <Skeleton.AnimeCardList count={6} paddingHorizontal={0} />
             ) : null}
 
             {error ? (

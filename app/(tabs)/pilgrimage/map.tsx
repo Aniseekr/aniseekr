@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,7 +18,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { ThemedText } from '../../../components/themed';
+import { ThemedText, Skeleton } from '../../../components/themed';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
@@ -380,7 +379,7 @@ export default function PilgrimageMapScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={theme.accent} />
+          <Skeleton.MapList mapHeight={400} listCount={4} />
         </View>
       ) : markers.length === 0 ? (
         <View style={styles.emptyBox}>
