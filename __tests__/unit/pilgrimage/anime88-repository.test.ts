@@ -71,6 +71,21 @@ mock.module('../../../libs/services/pilgrimage/anime-tourism-88.data.json', () =
   },
 }));
 
+mock.module('../../../libs/services/pilgrimage/jp-city-centroids.data.json', () => ({
+  default: {
+    generatedAt: '2026-05-13',
+    source: 'fixture',
+    count: 4,
+    entries: [
+      { prefecture: '山梨県', city: '山梨市', lat: 35.6926, lng: 138.6845, queryUsed: '', source: 'nominatim' },
+      { prefecture: '東京都', city: '昭島市', lat: 35.7058, lng: 139.3536, queryUsed: '', source: 'nominatim' },
+      { prefecture: '東京都', city: '世田谷区', lat: 35.6469, lng: 139.6525, queryUsed: '', source: 'nominatim' },
+      { prefecture: '埼玉県', city: '秩父市', lat: 36.0078, lng: 139.0843, queryUsed: '', source: 'nominatim' },
+    ],
+    failures: [],
+  },
+}));
+
 const repo = await import('../../../libs/services/pilgrimage/anime88-repository');
 
 describe('anime88-repository', () => {
@@ -119,7 +134,16 @@ describe('anime88-repository', () => {
     expect(unique.find((u) => u.titleJa === 'Mystery Show')).toBeUndefined();
   });
 
-  it('A88-REPO-007 ANIME_TOURISM_88_REGIONS lists all 7 groups', () => {
+  it('A88-REPO-007 get88EntriesWithCoords joins entries to city centroids', () => {
+    const withCoords = repo.get88EntriesWithCoords();
+    // Mystery Show (id=5, 京都市) has no centroid in the fixture — should drop.
+    expect(withCoords.map((e) => e.id)).toEqual([1, 2, 3, 4]);
+    const tokyo = withCoords.find((e) => e.id === 2);
+    expect(tokyo?.lat).toBeCloseTo(35.7058, 3);
+    expect(tokyo?.lng).toBeCloseTo(139.3536, 3);
+  });
+
+  it('A88-REPO-008 ANIME_TOURISM_88_REGIONS lists all 7 groups', () => {
     expect(repo.ANIME_TOURISM_88_REGIONS).toEqual([
       'hokkaido_tohoku',
       'kanto',

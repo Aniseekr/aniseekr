@@ -1,0 +1,898 @@
+{
+  "generatedAt": "2026-05-13",
+  "source": "https://nominatim.openstreetmap.org/search",
+  "count": 99,
+  "entries": [
+    {
+      "prefecture": "三重県",
+      "city": "熊野市",
+      "lat": 33.8885409,
+      "lng": 136.100411,
+      "queryUsed": "熊野市, 三重県, 日本",
+      "source": "nominatim",
+      "displayName": "熊野市, 三重県, 日本"
+    },
+    {
+      "prefecture": "京都府",
+      "city": "京田辺市",
+      "lat": 34.8143918,
+      "lng": 135.7677347,
+      "queryUsed": "京田辺市, 京都府, 日本",
+      "source": "nominatim",
+      "displayName": "京田辺市, 京都府, 日本"
+    },
+    {
+      "prefecture": "京都府",
+      "city": "京都市",
+      "lat": 35.0115754,
+      "lng": 135.7681441,
+      "queryUsed": "京都市, 京都府, 日本",
+      "source": "nominatim",
+      "displayName": "京都市, 京都府, 日本"
+    },
+    {
+      "prefecture": "京都府",
+      "city": "舞鶴市",
+      "lat": 35.4747274,
+      "lng": 135.3860338,
+      "queryUsed": "舞鶴市, 京都府, 日本",
+      "source": "nominatim",
+      "displayName": "舞鶴市, 京都府, 日本"
+    },
+    {
+      "prefecture": "兵庫県",
+      "city": "西宮市",
+      "lat": 34.7377745,
+      "lng": 135.3413128,
+      "queryUsed": "西宮市, 兵庫県, 日本",
+      "source": "nominatim",
+      "displayName": "西宮市, 兵庫県, 662-8567, 日本"
+    },
+    {
+      "prefecture": "北海道",
+      "city": "函館市",
+      "lat": 41.768793,
+      "lng": 140.729008,
+      "queryUsed": "函館市, 北海道, 日本",
+      "source": "nominatim",
+      "displayName": "函館市, 渡島総合振興局, 北海道, 北海道地方, 日本"
+    },
+    {
+      "prefecture": "千葉県",
+      "city": "千葉市",
+      "lat": 35.6070629,
+      "lng": 140.1062653,
+      "queryUsed": "千葉市, 千葉県, 日本",
+      "source": "nominatim",
+      "displayName": "千葉市, 千葉県, 日本"
+    },
+    {
+      "prefecture": "千葉県",
+      "city": "銚子市",
+      "lat": 35.7345338,
+      "lng": 140.8272667,
+      "queryUsed": "銚子市, 千葉県, 日本",
+      "source": "nominatim",
+      "displayName": "銚子市, 千葉県, 日本"
+    },
+    {
+      "prefecture": "千葉県",
+      "city": "館山市",
+      "lat": 34.9965304,
+      "lng": 139.8699838,
+      "queryUsed": "館山市, 千葉県, 日本",
+      "source": "nominatim",
+      "displayName": "館山市, 千葉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "さいたま市（岩槻）",
+      "lat": 35.8616141,
+      "lng": 139.6455666,
+      "queryUsed": "さいたま市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "さいたま市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "久喜市",
+      "lat": 36.0617964,
+      "lng": 139.6671445,
+      "queryUsed": "久喜市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "久喜市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "和光市",
+      "lat": 35.7817053,
+      "lng": 139.6058692,
+      "queryUsed": "和光市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "和光市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "川越市",
+      "lat": 35.9251145,
+      "lng": 139.4856927,
+      "queryUsed": "川越市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "川越市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "所沢市",
+      "lat": 35.7987179,
+      "lng": 139.4696758,
+      "queryUsed": "所沢市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "所沢市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "横瀬町",
+      "lat": 35.9873227,
+      "lng": 139.0999999,
+      "queryUsed": "横瀬町, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "横瀬町, 秩父郡, 埼玉県, 368-0072, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "秩父市",
+      "lat": 35.9914509,
+      "lng": 139.0857612,
+      "queryUsed": "秩父市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "秩父市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "蕨市",
+      "lat": 35.8263705,
+      "lng": 139.6791302,
+      "queryUsed": "蕨市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "蕨市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "長瀞町",
+      "lat": 36.1146759,
+      "lng": 139.1096479,
+      "queryUsed": "長瀞町, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "長瀞町, 秩父郡, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "埼玉県",
+      "city": "飯能市",
+      "lat": 35.8556902,
+      "lng": 139.3276436,
+      "queryUsed": "飯能市, 埼玉県, 日本",
+      "source": "nominatim",
+      "displayName": "飯能市, 埼玉県, 日本"
+    },
+    {
+      "prefecture": "宮城県",
+      "city": "岩沼市",
+      "lat": 38.1042874,
+      "lng": 140.8701494,
+      "queryUsed": "岩沼市, 宮城県, 日本",
+      "source": "nominatim",
+      "displayName": "岩沼市, 宮城県, 日本"
+    },
+    {
+      "prefecture": "富山県",
+      "city": "上市町",
+      "lat": 36.7474574,
+      "lng": 137.0099947,
+      "queryUsed": "上市町, 富山県, 日本",
+      "source": "nominatim",
+      "displayName": "NTT西日本 高岡ビル, 高岡氷見線, 木舟町, 定塚町, 高岡市, 富山県, 933-8799, 日本"
+    },
+    {
+      "prefecture": "山口県",
+      "city": "宇部市",
+      "lat": 33.9518498,
+      "lng": 131.2472243,
+      "queryUsed": "宇部市, 山口県, 日本",
+      "source": "nominatim",
+      "displayName": "宇部市, 山口県, 日本"
+    },
+    {
+      "prefecture": "山形県",
+      "city": "米沢市",
+      "lat": 37.9218342,
+      "lng": 140.1161931,
+      "queryUsed": "米沢市, 山形県, 日本",
+      "source": "nominatim",
+      "displayName": "米沢市, 山形県, 日本"
+    },
+    {
+      "prefecture": "山梨県",
+      "city": "北杜市",
+      "lat": 35.7764838,
+      "lng": 138.4235673,
+      "queryUsed": "北杜市, 山梨県, 日本",
+      "source": "nominatim",
+      "displayName": "北杜市, 山梨県, 日本"
+    },
+    {
+      "prefecture": "山梨県",
+      "city": "山梨市",
+      "lat": 35.6928452,
+      "lng": 138.6871263,
+      "queryUsed": "山梨市, 山梨県, 日本",
+      "source": "nominatim",
+      "displayName": "山梨市, 山梨県, 日本"
+    },
+    {
+      "prefecture": "山梨県",
+      "city": "身延町",
+      "lat": 35.4680507,
+      "lng": 138.4425665,
+      "queryUsed": "身延町, 山梨県, 日本",
+      "source": "nominatim",
+      "displayName": "身延町, 南巨摩郡, 山梨県, 日本"
+    },
+    {
+      "prefecture": "岐阜県",
+      "city": "多治見市",
+      "lat": 35.3329961,
+      "lng": 137.1319459,
+      "queryUsed": "多治見市, 岐阜県, 日本",
+      "source": "nominatim",
+      "displayName": "多治見市, 岐阜県, 日本"
+    },
+    {
+      "prefecture": "岐阜県",
+      "city": "岐阜市",
+      "lat": 35.4230949,
+      "lng": 136.7627526,
+      "queryUsed": "岐阜市, 岐阜県, 日本",
+      "source": "nominatim",
+      "displayName": "岐阜市, 岐阜県, 日本"
+    },
+    {
+      "prefecture": "岐阜県",
+      "city": "白川村",
+      "lat": 36.2710215,
+      "lng": 136.8986129,
+      "queryUsed": "白川村, 岐阜県, 日本",
+      "source": "nominatim",
+      "displayName": "白川村, 大野郡, 岐阜県, 日本"
+    },
+    {
+      "prefecture": "岐阜県",
+      "city": "高山市",
+      "lat": 36.1396246,
+      "lng": 137.2510322,
+      "queryUsed": "高山市, 岐阜県, 日本",
+      "source": "nominatim",
+      "displayName": "高山市, 岐阜県, 日本"
+    },
+    {
+      "prefecture": "岡山県",
+      "city": "岡山市",
+      "lat": 34.6553944,
+      "lng": 133.9194595,
+      "queryUsed": "岡山市, 岡山県, 日本",
+      "source": "nominatim",
+      "displayName": "岡山市, 岡山県, 日本"
+    },
+    {
+      "prefecture": "広島県",
+      "city": "三次市",
+      "lat": 34.81024,
+      "lng": 132.851691,
+      "queryUsed": "三次市, 広島県, 日本",
+      "source": "nominatim",
+      "displayName": "三次市, 広島県, 日本"
+    },
+    {
+      "prefecture": "広島県",
+      "city": "呉市",
+      "lat": 34.2484488,
+      "lng": 132.5652498,
+      "queryUsed": "呉市, 広島県, 日本",
+      "source": "nominatim",
+      "displayName": "呉市, 広島県, 日本"
+    },
+    {
+      "prefecture": "広島県",
+      "city": "竹原市",
+      "lat": 34.3418377,
+      "lng": 132.9070476,
+      "queryUsed": "竹原市, 広島県, 日本",
+      "source": "nominatim",
+      "displayName": "竹原市, 広島県, 日本"
+    },
+    {
+      "prefecture": "愛媛県",
+      "city": "松山市",
+      "lat": 33.8395188,
+      "lng": 132.7653521,
+      "queryUsed": "松山市, 愛媛県, 日本",
+      "source": "nominatim",
+      "displayName": "松山市, 愛媛県, 日本"
+    },
+    {
+      "prefecture": "愛知県",
+      "city": "名古屋市",
+      "lat": 35.1851045,
+      "lng": 136.8998438,
+      "queryUsed": "名古屋市, 愛知県, 日本",
+      "source": "nominatim",
+      "displayName": "名古屋市, 愛知県, 日本"
+    },
+    {
+      "prefecture": "愛知県",
+      "city": "豊橋市",
+      "lat": 34.769123,
+      "lng": 137.391461,
+      "queryUsed": "豊橋市, 愛知県, 日本",
+      "source": "nominatim",
+      "displayName": "豊橋市, 愛知県, 日本"
+    },
+    {
+      "prefecture": "愛知県",
+      "city": "豊田市",
+      "lat": 35.0834524,
+      "lng": 137.156737,
+      "queryUsed": "豊田市, 愛知県, 日本",
+      "source": "nominatim",
+      "displayName": "豊田市, 愛知県, 471-8501, 日本"
+    },
+    {
+      "prefecture": "新潟県",
+      "city": "三条市",
+      "lat": 37.6361174,
+      "lng": 138.9613971,
+      "queryUsed": "三条市, 新潟県, 日本",
+      "source": "nominatim",
+      "displayName": "三条市, 新潟県, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "世田谷区",
+      "lat": 35.6469025,
+      "lng": 139.652531,
+      "queryUsed": "世田谷区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "世田谷区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "中央区",
+      "lat": 35.6706436,
+      "lng": 139.7719923,
+      "queryUsed": "中央区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "中央区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "千代田区",
+      "lat": 35.6938097,
+      "lng": 139.7532163,
+      "queryUsed": "千代田区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "千代田区, 東京都, 102-0000, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "墨田区",
+      "lat": 35.7104196,
+      "lng": 139.8017421,
+      "queryUsed": "墨田区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "墨田区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "小金井市",
+      "lat": 35.7041083,
+      "lng": 139.5106759,
+      "queryUsed": "小金井市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "小金井市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "日野市",
+      "lat": 35.6713394,
+      "lng": 139.3949801,
+      "queryUsed": "日野市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "日野市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "昭島市",
+      "lat": 35.7058081,
+      "lng": 139.3536109,
+      "queryUsed": "昭島市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "昭島市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "東村山市",
+      "lat": 35.768929,
+      "lng": 139.484539,
+      "queryUsed": "東村山市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "東村山市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "武蔵野市",
+      "lat": 35.7177239,
+      "lng": 139.5659802,
+      "queryUsed": "武蔵野市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "武蔵野市, 東京都, 180-0000, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "江東区",
+      "lat": 35.6727747,
+      "lng": 139.8169621,
+      "queryUsed": "江東区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "江東区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "江東区（豊洲）",
+      "lat": 35.6727747,
+      "lng": 139.8169621,
+      "queryUsed": "江東区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "江東区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "渋谷区",
+      "lat": 35.6633709,
+      "lng": 139.6964952,
+      "queryUsed": "渋谷区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "渋谷区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "港区",
+      "lat": 35.6580089,
+      "lng": 139.7515137,
+      "queryUsed": "港区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "港区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "港区（お台場）",
+      "lat": 35.6580089,
+      "lng": 139.7515137,
+      "queryUsed": "港区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "港区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "神津島村",
+      "lat": 34.2060924,
+      "lng": 139.1348719,
+      "queryUsed": "神津島村, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "神津島村, 大島支庁, 東京都, 100-0601, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "福生市",
+      "lat": 35.7386772,
+      "lng": 139.3267856,
+      "queryUsed": "福生市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "福生市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "立川市",
+      "lat": 35.7139057,
+      "lng": 139.4077701,
+      "queryUsed": "立川市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "立川市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "練馬区（光が丘）",
+      "lat": 35.7506445,
+      "lng": 139.6162651,
+      "queryUsed": "練馬区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "練馬区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "調布市",
+      "lat": 35.6506036,
+      "lng": 139.5407066,
+      "queryUsed": "調布市, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "調布市, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "豊島区",
+      "lat": 35.725913,
+      "lng": 139.7166365,
+      "queryUsed": "豊島区, 東京都, 日本",
+      "source": "nominatim",
+      "displayName": "豊島区, 東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "（都電荒川線早稲田駅近辺）",
+      "lat": 35.6768601,
+      "lng": 139.7638947,
+      "queryUsed": "東京都, 日本",
+      "source": "nominatim",
+      "displayName": "東京都, 日本"
+    },
+    {
+      "prefecture": "東京都",
+      "city": "（高田馬場）",
+      "lat": 35.6768601,
+      "lng": 139.7638947,
+      "queryUsed": "東京都, 日本",
+      "source": "nominatim",
+      "displayName": "東京都, 日本"
+    },
+    {
+      "prefecture": "栃木県",
+      "city": "栃木市",
+      "lat": 36.3818177,
+      "lng": 139.733591,
+      "queryUsed": "栃木市, 栃木県, 日本",
+      "source": "nominatim",
+      "displayName": "栃木市, 栃木県, 日本"
+    },
+    {
+      "prefecture": "沖縄県",
+      "city": "南城市",
+      "lat": 26.1632092,
+      "lng": 127.7705563,
+      "queryUsed": "南城市, 沖縄県, 日本",
+      "source": "nominatim",
+      "displayName": "南城市, 沖縄県, 日本"
+    },
+    {
+      "prefecture": "沖縄県",
+      "city": "南風原町",
+      "lat": 26.1911514,
+      "lng": 127.7285751,
+      "queryUsed": "南風原町, 沖縄県, 日本",
+      "source": "nominatim",
+      "displayName": "南風原町, 島尻郡, 沖縄県, 日本"
+    },
+    {
+      "prefecture": "熊本県",
+      "city": "人吉・球磨地域ほか",
+      "lat": 32.2056644,
+      "lng": 130.7601392,
+      "queryUsed": "manual: 人吉市 centroid (geocoded by Nominatim)",
+      "source": "manual"
+    },
+    {
+      "prefecture": "熊本県",
+      "city": "芦北町",
+      "lat": 32.2963945,
+      "lng": 130.5465555,
+      "queryUsed": "芦北町, 熊本県, 日本",
+      "source": "nominatim",
+      "displayName": "芦北町, 葦北郡, 熊本県, 869-5546, 日本"
+    },
+    {
+      "prefecture": "石川県",
+      "city": "羽咋市",
+      "lat": 36.8948225,
+      "lng": 136.7782938,
+      "queryUsed": "羽咋市, 石川県, 日本",
+      "source": "nominatim",
+      "displayName": "羽咋市, 石川県, 日本"
+    },
+    {
+      "prefecture": "石川県",
+      "city": "金沢市",
+      "lat": 36.561627,
+      "lng": 136.6568822,
+      "queryUsed": "金沢市, 石川県, 日本",
+      "source": "nominatim",
+      "displayName": "金沢市, 石川県, 日本"
+    },
+    {
+      "prefecture": "石川県",
+      "city": "金沢市（湯涌温泉）",
+      "lat": 36.561627,
+      "lng": 136.6568822,
+      "queryUsed": "金沢市, 石川県, 日本",
+      "source": "nominatim",
+      "displayName": "金沢市, 石川県, 日本"
+    },
+    {
+      "prefecture": "神奈川県",
+      "city": "川崎市",
+      "lat": 35.5306639,
+      "lng": 139.7037668,
+      "queryUsed": "川崎市, 神奈川県, 日本",
+      "source": "nominatim",
+      "displayName": "川崎市, 神奈川県, 日本"
+    },
+    {
+      "prefecture": "神奈川県",
+      "city": "横浜市",
+      "lat": 35.4503381,
+      "lng": 139.6343802,
+      "queryUsed": "横浜市, 神奈川県, 日本",
+      "source": "nominatim",
+      "displayName": "横浜市, 神奈川県, 231-0017, 日本"
+    },
+    {
+      "prefecture": "神奈川県",
+      "city": "横須賀市",
+      "lat": 35.2814779,
+      "lng": 139.6719597,
+      "queryUsed": "横須賀市, 神奈川県, 日本",
+      "source": "nominatim",
+      "displayName": "横須賀市, 神奈川県, 238-8550, 日本"
+    },
+    {
+      "prefecture": "神奈川県",
+      "city": "箱根町",
+      "lat": 35.2323662,
+      "lng": 139.1068849,
+      "queryUsed": "箱根町, 神奈川県, 日本",
+      "source": "nominatim",
+      "displayName": "箱根町, 足柄下郡, 神奈川県, 250-0398, 日本"
+    },
+    {
+      "prefecture": "神奈川県",
+      "city": "藤沢市",
+      "lat": 35.3388615,
+      "lng": 139.4909335,
+      "queryUsed": "藤沢市, 神奈川県, 日本",
+      "source": "nominatim",
+      "displayName": "藤沢市, 神奈川県, 日本"
+    },
+    {
+      "prefecture": "福岡県",
+      "city": "北九州市",
+      "lat": 33.8829996,
+      "lng": 130.8749015,
+      "queryUsed": "北九州市, 福岡県, 日本",
+      "source": "nominatim",
+      "displayName": "北九州市, 福岡県, 日本"
+    },
+    {
+      "prefecture": "福島県",
+      "city": "会津若松市",
+      "lat": 37.4947487,
+      "lng": 139.9297446,
+      "queryUsed": "会津若松市, 福島県, 日本",
+      "source": "nominatim",
+      "displayName": "会津若松市, 福島県, 965-8601, 日本"
+    },
+    {
+      "prefecture": "福島県",
+      "city": "須賀川市",
+      "lat": 37.2867857,
+      "lng": 140.37293,
+      "queryUsed": "須賀川市, 福島県, 日本",
+      "source": "nominatim",
+      "displayName": "須賀川市, 福島県, 日本"
+    },
+    {
+      "prefecture": "秋田県",
+      "city": "横手市",
+      "lat": 39.3137847,
+      "lng": 140.5667433,
+      "queryUsed": "横手市, 秋田県, 日本",
+      "source": "nominatim",
+      "displayName": "横手市, 秋田県, 日本"
+    },
+    {
+      "prefecture": "群馬県",
+      "city": "沼田市",
+      "lat": 36.6440697,
+      "lng": 139.0428829,
+      "queryUsed": "沼田市, 群馬県, 日本",
+      "source": "nominatim",
+      "displayName": "沼田市, 群馬県, 日本"
+    },
+    {
+      "prefecture": "群馬県",
+      "city": "館林市",
+      "lat": 36.2454338,
+      "lng": 139.5421576,
+      "queryUsed": "館林市, 群馬県, 日本",
+      "source": "nominatim",
+      "displayName": "館林市, 群馬県, 日本"
+    },
+    {
+      "prefecture": "群馬県",
+      "city": "高崎市",
+      "lat": 36.3220984,
+      "lng": 139.0032758,
+      "queryUsed": "高崎市, 群馬県, 日本",
+      "source": "nominatim",
+      "displayName": "高崎市, 群馬県, 日本"
+    },
+    {
+      "prefecture": "茨城県",
+      "city": "大洗町",
+      "lat": 36.3133375,
+      "lng": 140.5747222,
+      "queryUsed": "大洗町, 茨城県, 日本",
+      "source": "nominatim",
+      "displayName": "大洗町, 東茨城郡, 茨城県, 日本"
+    },
+    {
+      "prefecture": "長崎県",
+      "city": "五島市",
+      "lat": 32.6951424,
+      "lng": 128.8408104,
+      "queryUsed": "五島市, 長崎県, 日本",
+      "source": "nominatim",
+      "displayName": "五島市, 長崎県, 日本"
+    },
+    {
+      "prefecture": "長崎県",
+      "city": "佐世保市",
+      "lat": 33.1799965,
+      "lng": 129.7152872,
+      "queryUsed": "佐世保市, 長崎県, 日本",
+      "source": "nominatim",
+      "displayName": "佐世保市, 長崎県, 日本"
+    },
+    {
+      "prefecture": "長崎県",
+      "city": "対馬市",
+      "lat": 34.2053717,
+      "lng": 129.2946547,
+      "queryUsed": "対馬市, 長崎県, 日本",
+      "source": "nominatim",
+      "displayName": "対馬市, 長崎県, 日本"
+    },
+    {
+      "prefecture": "長崎県",
+      "city": "新上五島町",
+      "lat": 32.984431,
+      "lng": 129.0732539,
+      "queryUsed": "新上五島町, 長崎県, 日本",
+      "source": "nominatim",
+      "displayName": "新上五島町, 南松浦郡, 長崎県, 日本"
+    },
+    {
+      "prefecture": "長崎県",
+      "city": "長崎市",
+      "lat": 32.7501611,
+      "lng": 129.8781002,
+      "queryUsed": "長崎市, 長崎県, 日本",
+      "source": "nominatim",
+      "displayName": "長崎市, 長崎県, 850-8685, 日本"
+    },
+    {
+      "prefecture": "長野県",
+      "city": "上田市",
+      "lat": 36.4021192,
+      "lng": 138.2490506,
+      "queryUsed": "上田市, 長野県, 日本",
+      "source": "nominatim",
+      "displayName": "上田市, 長野県, 日本"
+    },
+    {
+      "prefecture": "青森県",
+      "city": "むつ市（大湊）",
+      "lat": 41.2928444,
+      "lng": 141.1831247,
+      "queryUsed": "むつ市, 青森県, 日本",
+      "source": "nominatim",
+      "displayName": "むつ市, 青森県, 日本"
+    },
+    {
+      "prefecture": "静岡県",
+      "city": "伊豆",
+      "lat": 34.9764551,
+      "lng": 138.9467078,
+      "queryUsed": "伊豆, 静岡県, 日本",
+      "source": "nominatim",
+      "displayName": "伊豆市, 静岡県, 日本"
+    },
+    {
+      "prefecture": "静岡県",
+      "city": "川根本町",
+      "lat": 35.0468744,
+      "lng": 138.0817607,
+      "queryUsed": "川根本町, 静岡県, 日本",
+      "source": "nominatim",
+      "displayName": "川根本町, 榛原郡, 静岡県, 日本"
+    },
+    {
+      "prefecture": "静岡県",
+      "city": "沼津市",
+      "lat": 35.0957963,
+      "lng": 138.8633946,
+      "queryUsed": "沼津市, 静岡県, 日本",
+      "source": "nominatim",
+      "displayName": "沼津市, 静岡県, 410-8601, 日本"
+    },
+    {
+      "prefecture": "静岡県",
+      "city": "浜松市",
+      "lat": 34.7109786,
+      "lng": 137.7259431,
+      "queryUsed": "浜松市, 静岡県, 日本",
+      "source": "nominatim",
+      "displayName": "浜松市, 静岡県, 日本"
+    },
+    {
+      "prefecture": "香川県",
+      "city": "土庄町",
+      "lat": 34.4862397,
+      "lng": 134.1859682,
+      "queryUsed": "土庄町, 香川県, 日本",
+      "source": "nominatim",
+      "displayName": "土庄町, 小豆郡, 香川県, 日本"
+    },
+    {
+      "prefecture": "香川県",
+      "city": "観音寺市",
+      "lat": 34.1284693,
+      "lng": 133.6628679,
+      "queryUsed": "観音寺市, 香川県, 日本",
+      "source": "nominatim",
+      "displayName": "観音寺市, 香川県, 日本"
+    },
+    {
+      "prefecture": "高知県",
+      "city": "越知町",
+      "lat": 33.5317521,
+      "lng": 133.2513578,
+      "queryUsed": "越知町, 高知県, 日本",
+      "source": "nominatim",
+      "displayName": "越知町, 高岡郡, 高知県, 日本"
+    },
+    {
+      "prefecture": "鳥取県",
+      "city": "倉吉市",
+      "lat": 35.430166,
+      "lng": 133.825525,
+      "queryUsed": "倉吉市, 鳥取県, 日本",
+      "source": "nominatim",
+      "displayName": "倉吉市, 鳥取県, 日本"
+    },
+    {
+      "prefecture": "鳥取県",
+      "city": "境港市",
+      "lat": 35.5391751,
+      "lng": 133.2318575,
+      "queryUsed": "境港市, 鳥取県, 日本",
+      "source": "nominatim",
+      "displayName": "境港市, 鳥取県, 日本"
+    },
+    {
+      "prefecture": "鹿児島県",
+      "city": "種子島",
+      "lat": 30.591848,
+      "lng": 130.9958948,
+      "queryUsed": "種子島, 鹿児島県, 日本",
+      "source": "nominatim",
+      "displayName": "種子島, 熊毛郡, 鹿児島県, 日本"
+    }
+  ],
+  "failures": []
+}

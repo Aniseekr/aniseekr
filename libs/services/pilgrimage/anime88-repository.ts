@@ -9,6 +9,7 @@
 // Regenerate with: `bun run scripts/build-anime-tourism-88.ts`.
 
 import dataJson from './anime-tourism-88.data.json';
+import { getCityCentroid } from './jp-city-centroids';
 
 export const ANIME_TOURISM_88_REGIONS = [
   'hokkaido_tohoku',
@@ -110,6 +111,27 @@ export function get88EntriesByRegion(
 export function is88(bangumiId: number | null | undefined): boolean {
   if (typeof bangumiId !== 'number' || !Number.isFinite(bangumiId)) return false;
   return DATA.entries.some((e) => e.externalIds.bangumi === bangumiId);
+}
+
+export interface AnimeTourism88EntryWithCoords extends AnimeTourism88Entry {
+  /** City centroid in WGS84, from jp-city-centroids.data.json. */
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Every 88 row joined to its (prefecture, city) centroid. Rows whose city has
+ * no geocoded centroid are dropped — caller can still get the un-joined row
+ * via `getAll88Entries()` if they need to render an unmapped fallback.
+ */
+export function get88EntriesWithCoords(): AnimeTourism88EntryWithCoords[] {
+  const out: AnimeTourism88EntryWithCoords[] = [];
+  for (const entry of DATA.entries) {
+    const centroid = getCityCentroid(entry.prefecture, entry.city);
+    if (!centroid) continue;
+    out.push({ ...entry, lat: centroid.lat, lng: centroid.lng });
+  }
+  return out;
 }
 
 /**

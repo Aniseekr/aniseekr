@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
@@ -18,11 +19,18 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
+import { Spacing, Typography } from '../../../constants/DesignSystem';
 import { ThemedText, Skeleton } from '../../../components/themed';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
 import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
+import {
+  ANIME_TOURISM_88_REGIONS,
+  get88EntriesWithCoords,
+  type AnimeTourism88Region,
+  type AnimeTourism88EntryWithCoords,
+} from '../../../libs/services/pilgrimage/anime88-repository';
 import {
   LEAFLET_CSS,
   LEAFLET_JS,
@@ -49,6 +57,8 @@ import {
 } from '../../../libs/services/pilgrimage/anitabi-index';
 
 interface HubMapMarker {
+  /** Unique within a marker set: "bgm:<id>" for Anitabi-centroid markers, "88:<entryId>" for Tourism 88 city pins. */
+  markerId: string;
   bangumiId: number;
   lat: number;
   lng: number;
@@ -57,6 +67,49 @@ interface HubMapMarker {
   city: string;
   pointsLength: number;
   ringColor: string;
+  /** Set when this marker is a Tourism 88 city pin; renders gold with a star overlay. */
+  is88?: boolean;
+  /** Sequential 88 list id (1..N). Surfaced in the popup. */
+  eightyEightId?: number;
+}
+
+// 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
+const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
+  hokkaido_tohoku: '北海道・東北',
+  kanto: '関東',
+  tokyo: '東京',
+  chubu: '中部',
+  kinki: '近畿',
+  chugoku_shikoku: '中国・四国',
+  kyushu_okinawa: '九州・沖縄',
+};
+
+// Eighty-eight selection mark colour — picked for "official certification"
+// connotation (vs. theme.accent which can drift between user themes).
+const OFFICIAL_88_GOLD = '#D4AF37';
+
+function build88Markers(
+  entries: readonly AnimeTourism88EntryWithCoords[]
+): HubMapMarker[] {
+  const out: HubMapMarker[] = [];
+  for (const e of entries) {
+    const bangumi = e.externalIds.bangumi;
+    if (typeof bangumi !== 'number') continue;
+    out.push({
+      markerId: `88:${e.id}`,
+      bangumiId: bangumi,
+      lat: e.lat,
+      lng: e.lng,
+      cover: '',
+      title: e.titleEn || e.titleJa,
+      city: `${e.prefecture ?? ''}${e.city}`,
+      pointsLength: 0,
+      ringColor: OFFICIAL_88_GOLD,
+      is88: true,
+      eightyEightId: e.id,
+    });
+  }
+  return out;
 }
 
 function isValidGeo(geo: readonly [number, number] | null | undefined): boolean {
@@ -95,6 +148,24 @@ function buildHubMapHtml(initial: {
     background: #1c1c1e; color: #fff;
     border: 2px solid var(--ring, #FF9F0A);
     border-radius: 8px; padding: 1px 5px;
+    font: 700 9px -apple-system, system-ui, sans-serif;
+    line-height: 1.2;
+  }
+  /* Tourism 88 official-selection pins: smaller, gold, with a star plate. */
+  .anime-marker.eighty-eight {
+    width: 32px; height: 32px; border-radius: 16px;
+    border-width: 3px;
+    background: ${OFFICIAL_88_GOLD};
+    color: #1c1c1e;
+    font: 800 16px -apple-system, system-ui, sans-serif;
+  }
+  .anime-marker.eighty-eight .star { line-height: 1; }
+  .anime-marker.eighty-eight .pts { display: none; }
+  .anime-marker.eighty-eight .eighty-id {
+    position: absolute; bottom: -7px; right: -10px;
+    background: #1c1c1e; color: ${OFFICIAL_88_GOLD};
+    border: 1.5px solid ${OFFICIAL_88_GOLD};
+    border-radius: 7px; padding: 1px 4px;
     font: 700 9px -apple-system, system-ui, sans-serif;
     line-height: 1.2;
   }
@@ -164,29 +235,51 @@ ${MAP_BASE_BODY}
   // re-rendering existing markers. The map-bounds lazy loader appends new
   // entries to the same state and re-injects the full union every change;
   // additive handling here avoids flicker and unnecessary DOM churn.
+  //
+  // markerId is "bgm:<bangumi>" for Anitabi-centroid pins and "88:<entryId>"
+  // for Tourism 88 city pins — that lets one anime carry multiple 88 markers
+  // (e.g. ゆるキャン△ has 6 cities) without collapsing.
   var loadedIds = new Set();
   var allBounds = [];
 
-  window.__updateMarkers = function(markers) {
+  // When the React side toggles a filter (Official 88 / region) it injects
+  // with replace=true so we wipe and rebuild instead of accumulating stale
+  // markers from the previous filter set.
+  window.__updateMarkers = function(markers, replace) {
+    if (replace) {
+      try { clusterLayer.clearLayers(); } catch (e) {}
+      loadedIds = new Set();
+      allBounds = [];
+    }
     var batch = [];
     for (var i = 0; i < markers.length; i++) {
       var m = markers[i];
-      if (loadedIds.has(m.bangumiId)) continue;
-      loadedIds.add(m.bangumiId);
-      (function(m){
-        var html = '<div class="anime-marker" style="--ring:' + m.ringColor + '">' +
-          (m.cover ? '<img src="' + m.cover + '" loading="lazy" />' : '') +
-          '<span class="pts">' + m.pointsLength + '</span>' +
-        '</div>';
-        var icon = L.divIcon({ className: '', html: html, iconSize: [44,44], iconAnchor: [22,22] });
+      var mid = m.markerId || ('bgm:' + m.bangumiId);
+      if (loadedIds.has(mid)) continue;
+      loadedIds.add(mid);
+      (function(m, mid){
+        var cls = 'anime-marker' + (m.is88 ? ' eighty-eight' : '');
+        var inner;
+        if (m.is88) {
+          inner = '<span class="star">★</span>' +
+            '<span class="eighty-id">#' + (m.eightyEightId || '?') + '</span>';
+        } else {
+          inner = (m.cover ? '<img src="' + m.cover + '" loading="lazy" />' : '') +
+            '<span class="pts">' + m.pointsLength + '</span>';
+        }
+        var size = m.is88 ? 32 : 44;
+        var html = '<div class="' + cls + '" style="--ring:' + m.ringColor + '">' + inner + '</div>';
+        var icon = L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2] });
         var marker = L.marker([m.lat, m.lng], { icon: icon, regionColor: m.ringColor });
         marker.__appId = m.bangumiId;
-        marker.on('click', function() { window.__post({ type: 'animePress', id: m.bangumiId }); });
+        marker.on('click', function() {
+          window.__post({ type: 'animePress', id: m.bangumiId, is88: !!m.is88, eightyEightId: m.eightyEightId || null });
+        });
         batch.push(marker);
         allBounds.push([m.lat, m.lng]);
-      })(m);
+      })(m, mid);
     }
-    if (batch.length === 0) return;
+    if (batch.length === 0 && !replace) return;
     if (typeof clusterLayer.addLayers === 'function') clusterLayer.addLayers(batch);
     else for (var k = 0; k < batch.length; k++) clusterLayer.addLayer(batch[k]);
 
@@ -328,13 +421,20 @@ export default function PilgrimageMapScreen() {
     [animes, extraIndexed]
   );
 
-  const markers = useMemo<HubMapMarker[]>(() => {
+  // Filter state for the chip row above the map. `null` region == all 7 groups.
+  const [official88Mode, setOfficial88Mode] = useState(false);
+  const [region88Filter, setRegion88Filter] = useState<AnimeTourism88Region | null>(null);
+
+  const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
+
+  const baseAnitabiMarkers = useMemo<HubMapMarker[]>(() => {
     const out: HubMapMarker[] = [];
     const seen = new Set<number>();
     for (const anime of animes) {
       if (!isValidGeo(anime.geo)) continue;
       seen.add(anime.id);
       out.push({
+        markerId: `bgm:${anime.id}`,
         bangumiId: anime.id,
         lat: anime.geo[0],
         lng: anime.geo[1],
@@ -348,6 +448,7 @@ export default function PilgrimageMapScreen() {
     for (const entry of extraIndexed.values()) {
       if (seen.has(entry.id)) continue;
       out.push({
+        markerId: `bgm:${entry.id}`,
         bangumiId: entry.id,
         lat: entry.lat,
         lng: entry.lng,
@@ -360,6 +461,21 @@ export default function PilgrimageMapScreen() {
     }
     return out;
   }, [animes, extraIndexed, theme.accent]);
+
+  const markers = useMemo<HubMapMarker[]>(() => {
+    if (!official88Mode) return baseAnitabiMarkers;
+    const filtered = region88Filter
+      ? all88WithCoords.filter((e) => e.region === region88Filter)
+      : all88WithCoords;
+    return build88Markers(filtered);
+  }, [official88Mode, region88Filter, all88WithCoords, baseAnitabiMarkers]);
+
+  // Bumped whenever the filter set fundamentally changes so the WebView can
+  // clear stale markers (we re-render gold city pins ↔ anitabi anime centroids).
+  const refitNonce = useMemo(
+    () => `${official88Mode ? '88' : 'all'}:${region88Filter ?? 'any'}`,
+    [official88Mode, region88Filter]
+  );
 
   const handleAnimePress = useCallback(
     (bangumiId: number) => {
@@ -389,15 +505,36 @@ export default function PilgrimageMapScreen() {
           </ThemedText>
         </View>
       ) : (
-        <FullscreenMapView
-          markers={markers}
-          userLocation={userLocation}
-          ringColor={theme.accent}
-          theme={theme}
-          focusBangumiId={focusBangumiId}
-          onAnimePress={handleAnimePress}
-          onBoundsChange={handleBoundsChange}
-        />
+        <>
+          <FullscreenMapView
+            markers={markers}
+            replaceKey={refitNonce}
+            userLocation={userLocation}
+            ringColor={theme.accent}
+            theme={theme}
+            focusBangumiId={focusBangumiId}
+            onAnimePress={handleAnimePress}
+            onBoundsChange={handleBoundsChange}
+          />
+          <FilterChipRow
+            theme={theme}
+            insetTop={insets.top}
+            official88Mode={official88Mode}
+            regionFilter={region88Filter}
+            onToggleOfficial88={() => {
+              Haptics.selectionAsync().catch(() => undefined);
+              setOfficial88Mode((v) => {
+                if (v) setRegion88Filter(null);
+                return !v;
+              });
+            }}
+            onPickRegion={(r) => {
+              Haptics.selectionAsync().catch(() => undefined);
+              setRegion88Filter((cur) => (cur === r ? null : r));
+              if (!official88Mode) setOfficial88Mode(true);
+            }}
+          />
+        </>
       )}
 
       <Pressable
@@ -418,6 +555,8 @@ export default function PilgrimageMapScreen() {
 
 interface FullscreenMapViewProps {
   markers: readonly HubMapMarker[];
+  /** Bump when the marker set transitions to a different filter view; triggers a clear+rebuild. */
+  replaceKey: string;
   userLocation: LatLng | null;
   ringColor: string;
   theme: ThemePalette;
@@ -428,6 +567,7 @@ interface FullscreenMapViewProps {
 
 function FullscreenMapView({
   markers,
+  replaceKey,
   userLocation,
   ringColor,
   theme,
@@ -437,6 +577,7 @@ function FullscreenMapView({
 }: FullscreenMapViewProps) {
   const webviewRef = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
+  const lastReplaceKey = useRef(replaceKey);
 
   const html = useMemo(() => {
     // Default to Tokyo Station so users who haven't granted location (or are
@@ -454,12 +595,14 @@ function FullscreenMapView({
 
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
+    const replace = lastReplaceKey.current !== replaceKey;
+    lastReplaceKey.current = replaceKey;
     const json = JSON.stringify(markers).replace(/</g, '\\u003c');
     webviewRef.current.injectJavaScript(`
-      try { window.__updateMarkers && window.__updateMarkers(${json}); } catch(e) {}
+      try { window.__updateMarkers && window.__updateMarkers(${json}, ${replace ? 'true' : 'false'}); } catch(e) {}
       true;
     `);
-  }, [markers, ready]);
+  }, [markers, replaceKey, ready]);
 
   // Push user-location updates so the locate-me bounds-fit works for users
   // who only grant permission after mount.
@@ -541,6 +684,111 @@ function FullscreenMapView({
       startInLoadingState
     />
   );
+}
+
+interface FilterChipRowProps {
+  theme: ThemePalette;
+  insetTop: number;
+  official88Mode: boolean;
+  regionFilter: AnimeTourism88Region | null;
+  onToggleOfficial88: () => void;
+  onPickRegion: (region: AnimeTourism88Region) => void;
+}
+
+function FilterChipRow({
+  theme,
+  insetTop,
+  official88Mode,
+  regionFilter,
+  onToggleOfficial88,
+  onPickRegion,
+}: FilterChipRowProps) {
+  const chipStyles = useMemo(() => makeChipStyles(theme), [theme]);
+  return (
+    <View
+      pointerEvents="box-none"
+      style={[chipStyles.bar, { top: insetTop + 12 }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={chipStyles.scroll}>
+        <Pressable
+          onPress={onToggleOfficial88}
+          accessibilityRole="button"
+          accessibilityState={{ selected: official88Mode }}
+          style={({ pressed }) => [
+            chipStyles.chip,
+            official88Mode
+              ? { backgroundColor: OFFICIAL_88_GOLD, borderColor: OFFICIAL_88_GOLD }
+              : null,
+            pressed && { opacity: 0.85 },
+          ]}>
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={[
+              chipStyles.chipLabel,
+              official88Mode ? { color: '#1c1c1e' } : null,
+            ]}>
+            ★ 公認 88
+          </ThemedText>
+        </Pressable>
+        {ANIME_TOURISM_88_REGIONS.map((r) => {
+          const active = official88Mode && regionFilter === r;
+          return (
+            <Pressable
+              key={r}
+              onPress={() => onPickRegion(r)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={({ pressed }) => [
+                chipStyles.chip,
+                active ? { backgroundColor: theme.accent, borderColor: theme.accent } : null,
+                pressed && { opacity: 0.85 },
+              ]}>
+              <ThemedText
+                variant="captionSmall"
+                weight="600"
+                style={[
+                  chipStyles.chipLabel,
+                  active ? { color: theme.background.primary } : null,
+                ]}>
+                {REGION_88_LABELS[r]}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+function makeChipStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    bar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      paddingLeft: 64,
+      paddingRight: Spacing.screenPadding,
+    },
+    scroll: {
+      gap: 8,
+      paddingVertical: 4,
+    },
+    chip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: `${theme.background.primary}E6`,
+    },
+    chipLabel: {
+      ...Typography.captionSmall,
+      color: theme.text.primary,
+    },
+  });
 }
 
 // Module-scoped styles for the fallback inside FullscreenMapView so the
