@@ -624,4 +624,27 @@ describe('AnimeRepository', () => {
       'Comedy',
     ]);
   });
+
+  it('REPO-042 legacy getGenres filters adult genre cards read from stale cache', async () => {
+    await CacheService.set(
+      'genres_list_v2_r0',
+      [
+        { id: 'Action', displayName: 'Action', image: 'action.jpg' },
+        { id: 'Ecchi', displayName: 'Ecchi', image: 'ecchi.jpg' },
+        { id: 'Hentai', displayName: 'Hentai', image: 'hentai.jpg' },
+        { id: 'Comedy', displayName: 'Comedy', image: 'comedy.jpg' },
+      ],
+      60_000
+    );
+
+    const fetchImpl = mock(async () => fakeJson({ data: { GenreCollection: [] } }));
+    AniListClient.__setDefaultForTests(
+      new AniListClient({ fetchImpl: fetchImpl as unknown as typeof fetch })
+    );
+
+    const genres = await AnimeRepository.getGenres();
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(genres.map((genre) => genre.displayName)).toEqual(['Action', 'Comedy']);
+  });
 });

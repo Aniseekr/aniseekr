@@ -679,7 +679,7 @@ export class AnimeRepository {
   static async getGenres(): Promise<Genre[]> {
     const cacheKey = `genres_list_v2_r${r18CacheFlag()}`;
     const cached = await CacheService.get<Genre[]>(cacheKey);
-    if (cached) return cached;
+    if (cached) return filterGenreCards(cached);
 
     const genres = filterGenreNames(await AniListClient.getGenres());
 
@@ -837,6 +837,13 @@ function filterAniListAnime(items: AniListAnime[]): AniListAnime[] {
 function filterGenreNames(genres: string[]): string[] {
   if (dataSourceConfig.allowR18Content) return genres;
   return genres.filter((genre) => !hasAdultContentSignal({ genres: [genre] }));
+}
+
+function filterGenreCards(genres: Genre[]): Genre[] {
+  if (dataSourceConfig.allowR18Content) return genres;
+  return genres.filter(
+    (genre) => !hasAdultContentSignal({ genres: [genre.displayName, genre.id] })
+  );
 }
 
 function isAniListAnimeSFW(item: AniListAnime): boolean {
