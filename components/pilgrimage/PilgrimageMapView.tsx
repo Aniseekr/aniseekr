@@ -48,6 +48,9 @@ import {
   TOKYO_STATION,
 } from '../../libs/services/pilgrimage/leaflet-map';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
+import { cityToColor } from '../../libs/services/pilgrimage/region-color';
+
+export { cityToColor };
 
 export interface PilgrimageMapAnime {
   anime: AnitabiBangumi;
@@ -82,35 +85,6 @@ const isValidGeo = (geo: readonly [number, number] | null | undefined): geo is [
   const [lat, lng] = geo;
   return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
 };
-
-/**
- * Stable per-city color palette. Used to tint markers and cluster bubbles so
- * regions visually separate at low zoom levels (e.g. Tokyo cluster vs Kyoto
- * cluster). Hash-based so the mapping is consistent across mounts without
- * needing to maintain an explicit city → color table. Colors are brand-style
- * pure hues — not theme-dependent — because the user mental model is "Tokyo is
- * orange, Kyoto is cyan" regardless of which app theme they've picked.
- */
-const CITY_PALETTE: readonly string[] = [
-  '#FF9F0A', // primary orange
-  '#22D3EE', // cyan
-  '#BF5AF2', // purple
-  '#34D399', // emerald
-  '#F472B6', // pink
-  '#FBBF24', // amber
-  '#60A5FA', // blue
-  '#A3E635', // lime
-];
-
-export function cityToColor(city: string | null | undefined, fallback: string): string {
-  const trimmed = (city ?? '').trim();
-  if (!trimmed) return fallback;
-  let hash = 0;
-  for (let i = 0; i < trimmed.length; i++) {
-    hash = ((hash << 5) - hash + trimmed.charCodeAt(i)) | 0;
-  }
-  return CITY_PALETTE[Math.abs(hash) % CITY_PALETTE.length];
-}
 
 interface MarkerPayload {
   id: string;

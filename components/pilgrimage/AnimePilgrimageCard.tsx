@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { readableTextOn } from '../themed/contrast';
+import { cityToColor } from '../../libs/services/pilgrimage/region-color';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 
 export interface AnimePilgrimageCardProps {
@@ -38,6 +40,9 @@ export function AnimePilgrimageCard({
   };
 
   const themeColor = anime.color || '#8DC5D8';
+  const regionColor = anime.city ? cityToColor(anime.city, themeColor) : themeColor;
+  const regionFg = readableTextOn(regionColor);
+  const distanceFg = readableTextOn(themeColor);
 
   return (
     <Pressable
@@ -60,11 +65,29 @@ export function AnimePilgrimageCard({
           style={styles.imageGradient}
         />
 
-        {distance !== undefined && (
-          <View style={[styles.distanceBadge, { backgroundColor: `${themeColor}E0` }]}>
-            <Text style={styles.distanceText}>{formatDistance(distance)}</Text>
-          </View>
-        )}
+        <View style={styles.topLeftStack} pointerEvents="none">
+          {anime.city ? (
+            <View
+              style={[
+                styles.regionBadge,
+                { backgroundColor: regionColor, borderColor: `${regionFg}33` },
+              ]}>
+              <Ionicons name="location-sharp" size={11} color={regionFg} />
+              <Text
+                style={[styles.regionText, { color: regionFg }]}
+                numberOfLines={1}>
+                {anime.city}
+              </Text>
+            </View>
+          ) : null}
+          {distance !== undefined ? (
+            <View style={[styles.distanceBadge, { backgroundColor: `${themeColor}E0` }]}>
+              <Text style={[styles.distanceText, { color: distanceFg }]}>
+                {formatDistance(distance)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
         <View style={styles.spotCountBadge}>
           <Text style={styles.spotCountText}>{anime.pointsLength} spots</Text>
@@ -88,15 +111,6 @@ export function AnimePilgrimageCard({
             {anime.cn}
           </Text>
         ) : null}
-
-        <View style={styles.metaRow}>
-          {anime.city ? (
-            <View style={styles.locationTag}>
-              <Ionicons name="location" size={12} color="#A3A3A3" />
-              <Text style={styles.locationText}>{anime.city}</Text>
-            </View>
-          ) : null}
-        </View>
 
         {anime.litePoints && anime.litePoints.length > 0 ? (
           <View style={styles.previewRow}>
@@ -173,16 +187,41 @@ const styles = StyleSheet.create({
     right: 0,
     height: 60,
   },
-  distanceBadge: {
+  topLeftStack: {
     position: 'absolute',
     top: 10,
     left: 10,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 6,
+    maxWidth: '70%',
+  },
+  regionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  regionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    maxWidth: 140,
+  },
+  distanceBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   distanceText: {
-    color: '#1B1B1D',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -214,25 +253,7 @@ const styles = StyleSheet.create({
   titleCN: {
     fontSize: 12,
     color: '#A3A3A3',
-    marginBottom: 8,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  locationTag: {
-    backgroundColor: 'rgba(56, 56, 58, 0.8)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  locationText: {
-    fontSize: 11,
-    color: '#A3A3A3',
+    marginBottom: 12,
   },
   previewRow: {
     flexDirection: 'row',
