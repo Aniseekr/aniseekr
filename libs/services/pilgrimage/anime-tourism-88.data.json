@@ -1,0 +1,2157 @@
+{
+  "generatedAt": "2026-05-13",
+  "resolvedAt": "2026-05-13T08:55:01Z",
+  "source": "https://animetourism88.com/animespot88/2025edition/",
+  "year": 2025,
+  "count": 124,
+  "entries": [
+    {
+      "id": 1,
+      "year": 2025,
+      "titleJa": "薄桜鬼 真改",
+      "titleEn": "HAKUOKI SHINKAI",
+      "region": "hokkaido_tohoku",
+      "prefecture": "北海道",
+      "city": "函館市",
+      "regionEn": "Hokkaido / Hakodate City",
+      "externalIds": {
+        "bangumi": 4315,
+        "anilist": 115879,
+        "mal": 31785
+      },
+      "anilistPopularity": 1092,
+      "anilistMeanScore": 60,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}"
+    },
+    {
+      "id": 2,
+      "year": 2025,
+      "titleJa": "ラブライブ！サンシャイン!!",
+      "titleEn": "Love Live! Sunshine!!",
+      "region": "hokkaido_tohoku",
+      "prefecture": "北海道",
+      "city": "函館市",
+      "regionEn": "Hokkaido / Hakodate City",
+      "externalIds": {
+        "bangumi": 165553,
+        "anilist": 21584,
+        "mal": 32526
+      },
+      "anilistPopularity": 58725,
+      "anilistMeanScore": 72
+    },
+    {
+      "id": 3,
+      "year": 2025,
+      "titleJa": "艦隊これくしょん – 艦これ –",
+      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "region": "hokkaido_tohoku",
+      "prefecture": "青森県",
+      "city": "むつ市（大湊）",
+      "regionEn": "Aomori Pref. / Mutsu City(Ominato)",
+      "externalIds": {
+        "bangumi": 84386,
+        "anilist": 20553,
+        "mal": 21511
+      },
+      "anilistPopularity": 52398,
+      "anilistMeanScore": 64
+    },
+    {
+      "id": 4,
+      "year": 2025,
+      "titleJa": "バクテン!!",
+      "titleEn": "Backflip!!",
+      "region": "hokkaido_tohoku",
+      "prefecture": "宮城県",
+      "city": "岩沼市",
+      "regionEn": "Miyagi Pref. / Iwanuma City",
+      "externalIds": {
+        "bangumi": 318541,
+        "anilist": 125839,
+        "mal": 43756
+      },
+      "anilistPopularity": 40243,
+      "anilistMeanScore": 74
+    },
+    {
+      "id": 5,
+      "year": 2025,
+      "titleJa": "釣りキチ三平",
+      "titleEn": "Fisherman Sanpei",
+      "region": "hokkaido_tohoku",
+      "prefecture": "秋田県",
+      "city": "横手市",
+      "regionEn": "Akita Pref. / Yokote City",
+      "externalIds": {
+        "bangumi": 208612,
+        "anilist": 3137,
+        "mal": 3137
+      },
+      "anilistPopularity": 2047,
+      "anilistMeanScore": 69
+    },
+    {
+      "id": 6,
+      "year": 2025,
+      "titleJa": "好きでも嫌いなあまのじゃく",
+      "titleEn": "My Oni Girl",
+      "region": "hokkaido_tohoku",
+      "prefecture": "山形県",
+      "city": "米沢市",
+      "regionEn": "Yamagata Pref. / Yonezawa City",
+      "externalIds": {
+        "bangumi": 485154,
+        "anilist": 148080,
+        "mal": 58449
+      },
+      "anilistPopularity": 17375,
+      "anilistMeanScore": 68
+    },
+    {
+      "id": 7,
+      "year": 2025,
+      "titleJa": "薄桜鬼 真改",
+      "titleEn": "HAKUOKI SHINKAI",
+      "region": "hokkaido_tohoku",
+      "prefecture": "福島県",
+      "city": "会津若松市",
+      "regionEn": "Fukushima Pref. / Aizuwakamatsu City",
+      "externalIds": {
+        "bangumi": 4315,
+        "anilist": 115879,
+        "mal": 31785
+      },
+      "anilistPopularity": 1092,
+      "anilistMeanScore": 60,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}"
+    },
+    {
+      "id": 8,
+      "year": 2025,
+      "titleJa": "ウルトラマンシリーズ（円谷英二氏生誕の地）",
+      "titleEn": "ULTRAMAN SERIES (Birthplace of Eiji Tsuburaya)",
+      "region": "hokkaido_tohoku",
+      "prefecture": "福島県",
+      "city": "須賀川市",
+      "regionEn": "Fukushima Pref. / Sukagawa City",
+      "externalIds": {
+        "bangumi": 38650,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results"
+    },
+    {
+      "id": 9,
+      "year": 2025,
+      "titleJa": "ガールズ＆パンツァー 最終章",
+      "titleEn": "GIRLS und PANZER das FINALE",
+      "region": "kanto",
+      "prefecture": "茨城県",
+      "city": "大洗町",
+      "regionEn": "Ibaraki Pref. / Oarai Town",
+      "externalIds": {
+        "bangumi": 191302,
+        "anilist": 132420,
+        "mal": 39167
+      },
+      "anilistPopularity": 9293,
+      "anilistMeanScore": 83,
+      "anilistReviewNote": "match=substring_native; anilist={\"romaji\":\"Girls und Panzer: Saishuushou 4\",\"english\":\"Girls und Panzer das Finale - Part 4\",\"native\":\"ガールズ＆パンツァー 最終章 第4話\"}"
+    },
+    {
+      "id": 10,
+      "year": 2025,
+      "titleJa": "秒速5センチメートル",
+      "titleEn": "5 Centimeters per Second",
+      "region": "kanto",
+      "prefecture": "栃木県",
+      "city": "栃木市",
+      "regionEn": "Tochigi Pref. / Tochigi City",
+      "externalIds": {
+        "bangumi": 927,
+        "anilist": 1689,
+        "mal": 1689
+      },
+      "anilistPopularity": 238665,
+      "anilistMeanScore": 72,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Byousoku 5 Centimeter\",\"english\":\"5 Centimeters per Second\",\"native\":\"秒速５センチメートル\"}"
+    },
+    {
+      "id": 11,
+      "year": 2025,
+      "titleJa": "菜なれ花なれ",
+      "titleEn": "Narenare -Cheer for you!-",
+      "region": "kanto",
+      "prefecture": "群馬県",
+      "city": "高崎市",
+      "regionEn": "Gunma Pref. / Takasaki City",
+      "externalIds": {
+        "bangumi": 464561,
+        "anilist": 170891,
+        "mal": 57099
+      },
+      "anilistPopularity": 16511,
+      "anilistMeanScore": 61
+    },
+    {
+      "id": 12,
+      "year": 2025,
+      "titleJa": "菜なれ花なれ",
+      "titleEn": "Narenare -Cheer for you!-",
+      "region": "kanto",
+      "prefecture": "群馬県",
+      "city": "沼田市",
+      "regionEn": "Gunma Pref / Numata City",
+      "externalIds": {
+        "bangumi": 464561,
+        "anilist": 170891,
+        "mal": 57099
+      },
+      "anilistPopularity": 16511,
+      "anilistMeanScore": 61
+    },
+    {
+      "id": 13,
+      "year": 2025,
+      "titleJa": "宇宙よりも遠い場所",
+      "titleEn": "A Place Further than the Universe",
+      "region": "kanto",
+      "prefecture": "群馬県",
+      "city": "館林市",
+      "regionEn": "Gunma Pref. / Tatebayashi City",
+      "externalIds": {
+        "bangumi": 218708,
+        "anilist": 99426,
+        "mal": 35839
+      },
+      "anilistPopularity": 161010,
+      "anilistMeanScore": 84
+    },
+    {
+      "id": 14,
+      "year": 2025,
+      "titleJa": "その着せ替え人形は恋をする",
+      "titleEn": "My Dress-up Darling",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "さいたま市（岩槻）",
+      "regionEn": "Saitama Pref.",
+      "externalIds": {
+        "bangumi": 333158,
+        "anilist": 132405,
+        "mal": 48736
+      },
+      "anilistPopularity": 389152,
+      "anilistMeanScore": 80
+    },
+    {
+      "id": 15,
+      "year": 2025,
+      "titleJa": "神様はじめました",
+      "titleEn": "Kamisama Hajime Mashita",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "川越市",
+      "regionEn": "Saitama Pref. / Kawagoe City",
+      "externalIds": {
+        "bangumi": 43525,
+        "anilist": 18661,
+        "mal": 18661
+      },
+      "anilistPopularity": 24198,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 16,
+      "year": 2025,
+      "titleJa": "月がきれい",
+      "titleEn": "Tsukigakirei",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "川越市",
+      "regionEn": "Saitama Pref. / Kawagoe City",
+      "externalIds": {
+        "bangumi": 207573,
+        "anilist": 98202,
+        "mal": 34822
+      },
+      "anilistPopularity": 151773,
+      "anilistMeanScore": 79
+    },
+    {
+      "id": 17,
+      "year": 2025,
+      "titleJa": "あの日見た花の名前を僕達はまだ知らない。",
+      "titleEn": "Anohana:The Flower We Saw That Day",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "秩父市",
+      "regionEn": "Saitama Pref. / Chichibu City",
+      "externalIds": {
+        "bangumi": 10440,
+        "anilist": 9989,
+        "mal": 9989
+      },
+      "anilistPopularity": 379852,
+      "anilistMeanScore": 80
+    },
+    {
+      "id": 18,
+      "year": 2025,
+      "titleJa": "心が叫びたがってるんだ。",
+      "titleEn": "The Anthem of the Heart",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "秩父市",
+      "regionEn": "Saitama Pref. / Chichibu City",
+      "externalIds": {
+        "bangumi": 119344,
+        "anilist": 20968,
+        "mal": 28725
+      },
+      "anilistPopularity": 94788,
+      "anilistMeanScore": 76
+    },
+    {
+      "id": 19,
+      "year": 2025,
+      "titleJa": "空の青さを知る人よ",
+      "titleEn": "Her Blue Sky",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "秩父市",
+      "regionEn": "Saitama Pref. / Chichibu City",
+      "externalIds": {
+        "bangumi": 278557,
+        "anilist": 108577,
+        "mal": 39569
+      },
+      "anilistPopularity": 46414,
+      "anilistMeanScore": 73
+    },
+    {
+      "id": 20,
+      "year": 2025,
+      "titleJa": "女子高生の無駄づかい",
+      "titleEn": "Wasteful Days of High School Girl",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "所沢市",
+      "regionEn": "Saitama Pref. / Tokorozawa City",
+      "externalIds": {
+        "bangumi": 265708,
+        "anilist": 105081,
+        "mal": 38619
+      },
+      "anilistPopularity": 42750,
+      "anilistMeanScore": 75
+    },
+    {
+      "id": 21,
+      "year": 2025,
+      "titleJa": "ヤマノススメNext Summit",
+      "titleEn": "Yama no susume Next Summit",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "飯能市",
+      "regionEn": "Saitama Pref. / Hanno City",
+      "externalIds": {
+        "bangumi": 290980,
+        "anilist": 131182,
+        "mal": 48491
+      },
+      "anilistPopularity": 10165,
+      "anilistMeanScore": 77
+    },
+    {
+      "id": 22,
+      "year": 2025,
+      "titleJa": "さよなら私のクラマー",
+      "titleEn": "Sayonara, Football: Farewell, My Dear Cramer",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "蕨市",
+      "regionEn": "Saitama Pref. / Warabi City",
+      "externalIds": {
+        "bangumi": 314163,
+        "anilist": 123494,
+        "mal": 42774
+      },
+      "anilistPopularity": 16677,
+      "anilistMeanScore": 56
+    },
+    {
+      "id": 23,
+      "year": 2025,
+      "titleJa": "『冴えない彼女の育てかた』シリーズ",
+      "titleEn": "Saekano : How to Raise a Boring Girlfriend　series",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "和光市",
+      "regionEn": "Saitama Pref. / Wako City",
+      "externalIds": {
+        "bangumi": 100403,
+        "anilist": 20657,
+        "mal": 23277
+      },
+      "anilistPopularity": 170883,
+      "anilistMeanScore": 73,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Saenai Heroine no Sodatekata\",\"english\":\"Saekano: How to Raise a Boring Girlfriend\",\"native\":\"冴えない彼女の育てかた\"}"
+    },
+    {
+      "id": 24,
+      "year": 2025,
+      "titleJa": "らき☆すた",
+      "titleEn": "Lucky Star",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "久喜市",
+      "regionEn": "Saitama Pref. / Kuki City",
+      "externalIds": {
+        "bangumi": 276,
+        "anilist": 1887,
+        "mal": 1887
+      },
+      "anilistPopularity": 138506,
+      "anilistMeanScore": 75
+    },
+    {
+      "id": 25,
+      "year": 2025,
+      "titleJa": "心が叫びたがってるんだ。",
+      "titleEn": "The Anthem of the Heart",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "横瀬町",
+      "regionEn": "Saitama Pref. / Yokoze Town",
+      "externalIds": {
+        "bangumi": 119344,
+        "anilist": 20968,
+        "mal": 28725
+      },
+      "anilistPopularity": 94788,
+      "anilistMeanScore": 76
+    },
+    {
+      "id": 26,
+      "year": 2025,
+      "titleJa": "私に天使が舞い降りた! プレシャス・フレンズ",
+      "titleEn": "Wataten!: An Angel Flew Down to Me: Precious Friends",
+      "region": "kanto",
+      "prefecture": "埼玉県",
+      "city": "長瀞町",
+      "regionEn": "Saitama Pref.",
+      "externalIds": {
+        "bangumi": 320493,
+        "anilist": 126425,
+        "mal": 44141
+      },
+      "anilistPopularity": 10525,
+      "anilistMeanScore": 75
+    },
+    {
+      "id": 27,
+      "year": 2025,
+      "titleJa": "青のオーケストラ",
+      "titleEn": "Blue Orchestra",
+      "region": "kanto",
+      "prefecture": "千葉県",
+      "city": "千葉市",
+      "regionEn": "Chiba Pref. / Chiba City",
+      "externalIds": {
+        "bangumi": 377769,
+        "anilist": 147369,
+        "mal": 51614
+      },
+      "anilistPopularity": 25278,
+      "anilistMeanScore": 70
+    },
+    {
+      "id": 28,
+      "year": 2025,
+      "titleJa": "『やはり俺の青春ラブコメはまちがっている。』シリーズ",
+      "titleEn": "『My Teen Romantic Comedy SNAFU』Series",
+      "region": "kanto",
+      "prefecture": "千葉県",
+      "city": "千葉市",
+      "regionEn": "Chiba Pref. / Chiba City",
+      "externalIds": {
+        "bangumi": 54433,
+        "anilist": 14813,
+        "mal": 14813
+      },
+      "anilistPopularity": 358049,
+      "anilistMeanScore": 78,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yahari Ore no Seishun Love Come wa Machigatteiru.\",\"english\":\"My Teen Romantic Comedy SNAFU\",\"native\":\"やはり俺の青春ラブコメはまちがっている。\"}"
+    },
+    {
+      "id": 29,
+      "year": 2025,
+      "titleJa": "『アマガミSS』シリーズ",
+      "titleEn": "『Amagami SS』Series",
+      "region": "kanto",
+      "prefecture": "千葉県",
+      "city": "銚子市",
+      "regionEn": "Chiba Pref. / Choshi City",
+      "externalIds": {
+        "bangumi": 5656,
+        "anilist": 8676,
+        "mal": 8676
+      },
+      "anilistPopularity": 85314,
+      "anilistMeanScore": 69,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Amagami SS\",\"english\":\"Amagami SS\",\"native\":\"アマガミSS\"}"
+    },
+    {
+      "id": 30,
+      "year": 2025,
+      "titleJa": "映画『トラペジウム』",
+      "titleEn": "Trapezium",
+      "region": "kanto",
+      "prefecture": "千葉県",
+      "city": "館山市",
+      "regionEn": "Chiba Pref / Tateyama City",
+      "externalIds": {
+        "bangumi": 469877,
+        "anilist": 171291,
+        "mal": 57508
+      },
+      "anilistPopularity": 10914,
+      "anilistMeanScore": 69
+    },
+    {
+      "id": 31,
+      "year": 2025,
+      "titleJa": "劇場版 ソードアート・オンライン -オーディナル・スケール-",
+      "titleEn": "SWORD ART ONLINE THE MOVIE -Ordinal Scale-",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "",
+      "regionEn": "Tokyo",
+      "externalIds": {
+        "bangumi": 23686,
+        "anilist": 21403,
+        "mal": 31765
+      },
+      "anilistPopularity": 186467,
+      "anilistMeanScore": 74,
+      "anilistReviewNote": "match=substring_native; anilist={\"romaji\":\"Sword Art Online: Ordinal Scale\",\"english\":\"Sword Art Online the Movie: Ordinal Scale\",\"native\":\"ソードアート・オンライン -オーディナル・スケール-\"}"
+    },
+    {
+      "id": 32,
+      "year": 2025,
+      "titleJa": "『BanG Dream!』シリーズ",
+      "titleEn": "『BanG Dream!』Series",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "（都電荒川線早稲田駅近辺）",
+      "regionEn": "Tokyo / Around Waseda station of Toden Arakawa Line",
+      "externalIds": {
+        "bangumi": 186515,
+        "anilist": 87435,
+        "mal": 33573
+      },
+      "anilistPopularity": 38396,
+      "anilistMeanScore": 68,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"BanG Dream!\",\"english\":\"BanG Dream!\",\"native\":\"BanG Dream!（バンドリ！）\"}"
+    },
+    {
+      "id": 33,
+      "year": 2025,
+      "titleJa": "ふれる。",
+      "titleEn": "FURERU",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "（高田馬場）",
+      "regionEn": "Tokyo / Takadanobaba",
+      "externalIds": {
+        "bangumi": 469033,
+        "anilist": 171109,
+        "mal": 57448
+      },
+      "anilistPopularity": 6885,
+      "anilistMeanScore": 66
+    },
+    {
+      "id": 34,
+      "year": 2025,
+      "titleJa": "STEINS;GATE（シュタインズ・ゲート）",
+      "titleEn": "STEINS;GATE",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "千代田区",
+      "regionEn": "Tokyo / Chiyoda-ku",
+      "externalIds": {
+        "bangumi": 10380,
+        "anilist": 9253,
+        "mal": 9253
+      },
+      "anilistPopularity": 562558,
+      "anilistMeanScore": 89
+    },
+    {
+      "id": 35,
+      "year": 2025,
+      "titleJa": "ラブライブ！",
+      "titleEn": "Love Live!",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "千代田区",
+      "regionEn": "Tokyo / Chiyoda-ku",
+      "externalIds": {
+        "bangumi": 49294,
+        "anilist": 21584,
+        "mal": 32526
+      },
+      "anilistPopularity": 58725,
+      "anilistMeanScore": 72,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Love Live! Sunshine!!\",\"english\":\"Love Live! Sunshine!!\",\"native\":\"ラブライブ！サンシャイン!!\"}"
+    },
+    {
+      "id": 36,
+      "year": 2025,
+      "titleJa": "江戸前エルフ",
+      "titleEn": "Otaku Elf",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "中央区",
+      "regionEn": "Tokyo / Chuo-ku",
+      "externalIds": {
+        "bangumi": 387803,
+        "anilist": 150957,
+        "mal": 52081
+      },
+      "anilistPopularity": 25943,
+      "anilistMeanScore": 71
+    },
+    {
+      "id": 37,
+      "year": 2025,
+      "titleJa": "デジモンアドベンチャー（1999年）",
+      "titleEn": "DIGIMON ADVENTURE (1999)",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "港区（お台場）",
+      "regionEn": "Tokyo / Minato-ku　Odaiba",
+      "externalIds": {
+        "bangumi": 3128,
+        "anilist": 552,
+        "mal": 552
+      },
+      "anilistPopularity": 68935,
+      "anilistMeanScore": 75,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Digimon Adventure\",\"english\":\"Digimon: Digital Monsters\",\"native\":\"デジモンアドベンチャー\"}"
+    },
+    {
+      "id": 38,
+      "year": 2025,
+      "titleJa": "ラブライブ！ 虹ヶ咲学園スクールアイド同好会",
+      "titleEn": "Love Live! Nijigasaki High School Idol Club",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "港区",
+      "regionEn": "Tokyo / Minato-ku",
+      "externalIds": {
+        "bangumi": 296659,
+        "anilist": 113970,
+        "mal": 40879
+      },
+      "anilistPopularity": 31944,
+      "anilistMeanScore": 74,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Love Live! Nijigasaki Gakuen School Idol Doukoukai\",\"english\":\"Love Live! Nijigasaki High School Idol Club\",\"native\":\"ラブライブ！虹ヶ咲学園スクールアイドル同好会\"}"
+    },
+    {
+      "id": 39,
+      "year": 2025,
+      "titleJa": "リコリス・リコイル",
+      "titleEn": "Lycoris Recoil",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "墨田区",
+      "regionEn": "Tokyo / Sumida-ku",
+      "externalIds": {
+        "bangumi": 364450,
+        "anilist": 143270,
+        "mal": 50709
+      },
+      "anilistPopularity": 198501,
+      "anilistMeanScore": 81
+    },
+    {
+      "id": 40,
+      "year": 2025,
+      "titleJa": "アイドルマスター ミリオンライブ！",
+      "titleEn": "THE IDOLM@STER MILLION LIVE!",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "江東区（豊洲）",
+      "regionEn": "Tokyo / Koto-ku",
+      "externalIds": {
+        "bangumi": 309807,
+        "anilist": 120755,
+        "mal": 42385
+      },
+      "anilistPopularity": 5618,
+      "anilistMeanScore": 69
+    },
+    {
+      "id": 41,
+      "year": 2025,
+      "titleJa": "ラブライブ！ 虹ヶ咲学園スクールアイド同好会",
+      "titleEn": "Love Live! Nijigasaki High School Idol Club",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "江東区",
+      "regionEn": "Tokyo / Koto-ku",
+      "externalIds": {
+        "bangumi": 296659,
+        "anilist": 113970,
+        "mal": 40879
+      },
+      "anilistPopularity": 31944,
+      "anilistMeanScore": 74,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Love Live! Nijigasaki Gakuen School Idol Doukoukai\",\"english\":\"Love Live! Nijigasaki High School Idol Club\",\"native\":\"ラブライブ！虹ヶ咲学園スクールアイドル同好会\"}"
+    },
+    {
+      "id": 42,
+      "year": 2025,
+      "titleJa": "ウルトラマンシリーズ（ウルトラマン商店街）",
+      "titleEn": "“ULTRAMAN SERIES (Ultraman shopping Street)”",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "世田谷区",
+      "regionEn": "Tokyo / Setagaya-ku",
+      "externalIds": {
+        "bangumi": 38650,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results"
+    },
+    {
+      "id": 43,
+      "year": 2025,
+      "titleJa": "秒速5センチメートル",
+      "titleEn": "5 Centimeters per Second",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "世田谷区",
+      "regionEn": "Tokyo / Setagaya-ku",
+      "externalIds": {
+        "bangumi": 927,
+        "anilist": 1689,
+        "mal": 1689
+      },
+      "anilistPopularity": 238665,
+      "anilistMeanScore": 72,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Byousoku 5 Centimeter\",\"english\":\"5 Centimeters per Second\",\"native\":\"秒速５センチメートル\"}"
+    },
+    {
+      "id": 44,
+      "year": 2025,
+      "titleJa": "ぼっち・ざ・ろっく！",
+      "titleEn": "BOCCHI THE ROCK!",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "世田谷区",
+      "regionEn": "Tokyo / Setagaya-ku",
+      "externalIds": {
+        "bangumi": 328609,
+        "anilist": 130003,
+        "mal": 47917
+      },
+      "anilistPopularity": 244113,
+      "anilistMeanScore": 87
+    },
+    {
+      "id": 45,
+      "year": 2025,
+      "titleJa": "夜のクラゲは泳げない",
+      "titleEn": "Jellyfish Can’t Swim in the Night",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "渋谷区",
+      "regionEn": "Tokyo / Shibuya-ku",
+      "externalIds": {
+        "bangumi": 425909,
+        "anilist": 163078,
+        "mal": 54839
+      },
+      "anilistPopularity": 58845,
+      "anilistMeanScore": 76
+    },
+    {
+      "id": 46,
+      "year": 2025,
+      "titleJa": "ラブライブ！ スーパースター‼",
+      "titleEn": "Love Live! Superstar!!",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "渋谷区",
+      "regionEn": "Tokyo / Shibuya-ku",
+      "externalIds": {
+        "bangumi": 306742,
+        "anilist": 114979,
+        "mal": 41169
+      },
+      "anilistPopularity": 29106,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 47,
+      "year": 2025,
+      "titleJa": "『冴えない彼女の育てかた』シリーズ",
+      "titleEn": "Saekano : How to Raise a Boring Girlfriend　series",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "豊島区",
+      "regionEn": "Tokyo / Toshima-ku",
+      "externalIds": {
+        "bangumi": 100403,
+        "anilist": 20657,
+        "mal": 23277
+      },
+      "anilistPopularity": 170883,
+      "anilistMeanScore": 73,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Saenai Heroine no Sodatekata\",\"english\":\"Saekano: How to Raise a Boring Girlfriend\",\"native\":\"冴えない彼女の育てかた\"}"
+    },
+    {
+      "id": 48,
+      "year": 2025,
+      "titleJa": "その着せ替え人形は恋をする",
+      "titleEn": "My Dress-Up Darling",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "豊島区",
+      "regionEn": "Tokyo / Toshima-ku",
+      "externalIds": {
+        "bangumi": 333158,
+        "anilist": 132405,
+        "mal": 48736
+      },
+      "anilistPopularity": 389152,
+      "anilistMeanScore": 80
+    },
+    {
+      "id": 49,
+      "year": 2025,
+      "titleJa": "デュラララ!!",
+      "titleEn": "Durarara!!",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "豊島区",
+      "regionEn": "Tokyo / Toshima-ku",
+      "externalIds": {
+        "bangumi": 2463,
+        "anilist": 6746,
+        "mal": 6746
+      },
+      "anilistPopularity": 281853,
+      "anilistMeanScore": 79
+    },
+    {
+      "id": 50,
+      "year": 2025,
+      "titleJa": "『BanG Dream!』シリーズ",
+      "titleEn": "『BanG Dream!』series",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "豊島区",
+      "regionEn": "Tokyo / Toshima-ku",
+      "externalIds": {
+        "bangumi": 186515,
+        "anilist": 87435,
+        "mal": 33573
+      },
+      "anilistPopularity": 38396,
+      "anilistMeanScore": 68,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"BanG Dream!\",\"english\":\"BanG Dream!\",\"native\":\"BanG Dream!（バンドリ！）\"}"
+    },
+    {
+      "id": 51,
+      "year": 2025,
+      "titleJa": "デジモンアドベンチャー（1999年）",
+      "titleEn": "DIGIMON ADVENTURE (1999)",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "練馬区（光が丘）",
+      "regionEn": "Tokyo / Nerima-ku　Hikarigaoka",
+      "externalIds": {
+        "bangumi": 3128,
+        "anilist": 552,
+        "mal": 552
+      },
+      "anilistPopularity": 68935,
+      "anilistMeanScore": 75,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Digimon Adventure\",\"english\":\"Digimon: Digital Monsters\",\"native\":\"デジモンアドベンチャー\"}"
+    },
+    {
+      "id": 52,
+      "year": 2025,
+      "titleJa": "とある科学の超電磁砲",
+      "titleEn": "A Certain Scientific Railgun T",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "立川市",
+      "regionEn": "Tokyo / Tachikawa City",
+      "externalIds": {
+        "bangumi": 2585,
+        "anilist": 6213,
+        "mal": 6213
+      },
+      "anilistPopularity": 148762,
+      "anilistMeanScore": 75
+    },
+    {
+      "id": 53,
+      "year": 2025,
+      "titleJa": "とある魔術の禁書目録",
+      "titleEn": "A Certain Magical Index Ⅲ",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "立川市",
+      "regionEn": "Tokyo / Tachikawa City",
+      "externalIds": {
+        "bangumi": 1014,
+        "anilist": 4654,
+        "mal": 4654
+      },
+      "anilistPopularity": 182795,
+      "anilistMeanScore": 70
+    },
+    {
+      "id": 54,
+      "year": 2025,
+      "titleJa": "劇場版「SHIROBAKO」",
+      "titleEn": "SHIROBAKO THE MOVIE",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "武蔵野市",
+      "regionEn": "Tokyo / Musashino City",
+      "externalIds": {
+        "bangumi": 244761,
+        "anilist": 101574,
+        "mal": 37804
+      },
+      "anilistPopularity": 19938,
+      "anilistMeanScore": 76
+    },
+    {
+      "id": 55,
+      "year": 2025,
+      "titleJa": "『ゆるキャン△』シリーズ",
+      "titleEn": "LAID-BACK CAMP series",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "昭島市",
+      "regionEn": "Tokyo / Akishima City",
+      "externalIds": {
+        "bangumi": 207195,
+        "anilist": 98444,
+        "mal": 34798
+      },
+      "anilistPopularity": 160391,
+      "anilistMeanScore": 81,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}"
+    },
+    {
+      "id": 56,
+      "year": 2025,
+      "titleJa": "ゲゲゲの鬼太郎",
+      "titleEn": "GeGeGe no Kitaro",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "調布市",
+      "regionEn": "Tokyo / Chofu City",
+      "externalIds": {
+        "bangumi": 18176,
+        "anilist": 5688,
+        "mal": 5688
+      },
+      "anilistPopularity": 1800,
+      "anilistMeanScore": 67
+    },
+    {
+      "id": 57,
+      "year": 2025,
+      "titleJa": "おちこぼれフルーツタルト",
+      "titleEn": "Dropout Idol Fruit Tart",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "小金井市",
+      "regionEn": "Tokyo / Koganei City",
+      "externalIds": {
+        "bangumi": 279059,
+        "anilist": 108713,
+        "mal": 39609
+      },
+      "anilistPopularity": 17308,
+      "anilistMeanScore": 65
+    },
+    {
+      "id": 58,
+      "year": 2025,
+      "titleJa": "しかのこのこのここしたんたん",
+      "titleEn": "My Deer Friend Nokotan",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "日野市",
+      "regionEn": "Tokyo / Hino City",
+      "externalIds": {
+        "bangumi": 484761,
+        "anilist": 175977,
+        "mal": 58426
+      },
+      "anilistPopularity": 100595,
+      "anilistMeanScore": 67
+    },
+    {
+      "id": 59,
+      "year": 2025,
+      "titleJa": "薄桜鬼 真改",
+      "titleEn": "HAKUOKI SHINKAI",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "日野市",
+      "regionEn": "Tokyo / Hino City",
+      "externalIds": {
+        "bangumi": 4315,
+        "anilist": 115879,
+        "mal": 31785
+      },
+      "anilistPopularity": 1092,
+      "anilistMeanScore": 60,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}"
+    },
+    {
+      "id": 60,
+      "year": 2025,
+      "titleJa": "女子高生の無駄づかい",
+      "titleEn": "Wasteful Days of High School Girl",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "東村山市",
+      "regionEn": "Tokyo / Higashimurayama City",
+      "externalIds": {
+        "bangumi": 265708,
+        "anilist": 105081,
+        "mal": 38619
+      },
+      "anilistPopularity": 42750,
+      "anilistMeanScore": 75
+    },
+    {
+      "id": 61,
+      "year": 2025,
+      "titleJa": "GAMERA -Rebirth-",
+      "titleEn": "GAMERA -Rebirth-",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "福生市",
+      "regionEn": "Tokyo",
+      "externalIds": {
+        "bangumi": 418289,
+        "anilist": 160831,
+        "mal": 53627
+      },
+      "anilistPopularity": 2052,
+      "anilistMeanScore": 62
+    },
+    {
+      "id": 62,
+      "year": 2025,
+      "titleJa": "ラブライブ！スーパースター!!",
+      "titleEn": "Love Live! Superstar!!",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "神津島村",
+      "regionEn": "Tokyo / Kouzushima Village",
+      "externalIds": {
+        "bangumi": 306742,
+        "anilist": 114979,
+        "mal": 41169
+      },
+      "anilistPopularity": 29106,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 63,
+      "year": 2025,
+      "titleJa": "文豪ストレイドッグス",
+      "titleEn": "Bungo Stray Dogs",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "横浜市",
+      "regionEn": "Kanagawa Pref. / Yokohama City",
+      "externalIds": {
+        "bangumi": 144357,
+        "anilist": 21311,
+        "mal": 31478
+      },
+      "anilistPopularity": 401001,
+      "anilistMeanScore": 77
+    },
+    {
+      "id": 64,
+      "year": 2025,
+      "titleJa": "ガールズバンドクライ",
+      "titleEn": "GIRLS BAND CRY",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "川崎市",
+      "regionEn": "Kanagawa Pref / Kawasaki City",
+      "externalIds": {
+        "bangumi": 431767,
+        "anilist": 164212,
+        "mal": 55102
+      },
+      "anilistPopularity": 61894,
+      "anilistMeanScore": 83
+    },
+    {
+      "id": 65,
+      "year": 2025,
+      "titleJa": "艦隊これくしょん – 艦これ –",
+      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "横須賀市",
+      "regionEn": "Kanagawa Pref. / Yokosuka City",
+      "externalIds": {
+        "bangumi": 84386,
+        "anilist": 20553,
+        "mal": 21511
+      },
+      "anilistPopularity": 52398,
+      "anilistMeanScore": 64
+    },
+    {
+      "id": 66,
+      "year": 2025,
+      "titleJa": "スローループ",
+      "titleEn": "SLOW LOOP",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "横須賀市",
+      "regionEn": "Kanagawa Pref. / Yokosuka City",
+      "externalIds": {
+        "bangumi": 323626,
+        "anilist": 127549,
+        "mal": 45425
+      },
+      "anilistPopularity": 27891,
+      "anilistMeanScore": 71
+    },
+    {
+      "id": 67,
+      "year": 2025,
+      "titleJa": "ハイスクール・フリート",
+      "titleEn": "HIGH SCHOOL FLEET",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "横須賀市",
+      "regionEn": "Kanagawa Pref. / Yokosuka City",
+      "externalIds": {
+        "bangumi": 144843,
+        "anilist": 21316,
+        "mal": 31500
+      },
+      "anilistPopularity": 30998,
+      "anilistMeanScore": 70
+    },
+    {
+      "id": 68,
+      "year": 2025,
+      "titleJa": "青春ブタ野郎はバニーガール先輩の夢を見ない",
+      "titleEn": "Rascal Does Not Dream of Bunny Girl Senpai",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "藤沢市",
+      "regionEn": "Kanagawa Pref. / Fujisawa City",
+      "externalIds": {
+        "bangumi": 240038,
+        "anilist": 101291,
+        "mal": 37450
+      },
+      "anilistPopularity": 544386,
+      "anilistMeanScore": 81
+    },
+    {
+      "id": 69,
+      "year": 2025,
+      "titleJa": "『エヴァンゲリオン』シリーズ",
+      "titleEn": "EVANGELION",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "箱根町",
+      "regionEn": "Kanagawa Pref. / Hakone Town",
+      "externalIds": {
+        "bangumi": 235701,
+        "anilist": 30,
+        "mal": 30
+      },
+      "anilistPopularity": 464837,
+      "anilistMeanScore": 83,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Shin Seiki Evangelion\",\"english\":\"Neon Genesis Evangelion\",\"native\":\"新世紀エヴァンゲリオン\"}"
+    },
+    {
+      "id": 70,
+      "year": 2025,
+      "titleJa": "弱虫ペダル",
+      "titleEn": "Yowamushi Pedal",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "箱根町",
+      "regionEn": "Kanagawa Pref. / Hakone Town",
+      "externalIds": {
+        "bangumi": 59583,
+        "anilist": 18179,
+        "mal": 18179
+      },
+      "anilistPopularity": 50520,
+      "anilistMeanScore": 77
+    },
+    {
+      "id": 71,
+      "year": 2025,
+      "titleJa": "Do It Yourself!! -どぅー・いっと・ゆあせるふ-",
+      "titleEn": "Do It Yourself!!",
+      "region": "chubu",
+      "prefecture": "新潟県",
+      "city": "三条市",
+      "regionEn": "Niigata Pref. / Sanjo City",
+      "externalIds": {
+        "bangumi": 331445,
+        "anilist": 131516,
+        "mal": 48542
+      },
+      "anilistPopularity": 46848,
+      "anilistMeanScore": 74
+    },
+    {
+      "id": 72,
+      "year": 2025,
+      "titleJa": "おおかみこどもの雨と雪",
+      "titleEn": "Wolf Children",
+      "region": "chubu",
+      "prefecture": "富山県",
+      "city": "上市町",
+      "regionEn": "Toyama Pref. / Kamiichi Town",
+      "externalIds": {
+        "bangumi": 28440,
+        "anilist": 12355,
+        "mal": 12355
+      },
+      "anilistPopularity": 186830,
+      "anilistMeanScore": 83
+    },
+    {
+      "id": 73,
+      "year": 2025,
+      "titleJa": "数分間のエールを",
+      "titleEn": "A Few Moments of Cheers",
+      "region": "chubu",
+      "prefecture": "石川県",
+      "city": "金沢市",
+      "regionEn": "Ishikawa Pref. / Kanazawa City",
+      "externalIds": {
+        "bangumi": 476808,
+        "anilist": 173935,
+        "mal": 57915
+      },
+      "anilistPopularity": 6086,
+      "anilistMeanScore": 74
+    },
+    {
+      "id": 74,
+      "year": 2025,
+      "titleJa": "花咲くいろは",
+      "titleEn": "Hanasaku Iroha: Blossoms for Tomorrow",
+      "region": "chubu",
+      "prefecture": "石川県",
+      "city": "金沢市（湯涌温泉）",
+      "regionEn": "Ishikawa Pref. / Kanazawa City（Yuwaku Onsen）",
+      "externalIds": {
+        "bangumi": 22759,
+        "anilist": 9289,
+        "mal": 9289
+      },
+      "anilistPopularity": 77227,
+      "anilistMeanScore": 77
+    },
+    {
+      "id": 75,
+      "year": 2025,
+      "titleJa": "数分間のエールを",
+      "titleEn": "A Few Moments of Cheers",
+      "region": "chubu",
+      "prefecture": "石川県",
+      "city": "羽咋市",
+      "regionEn": "Ishikawa Pref. / Hakui City",
+      "externalIds": {
+        "bangumi": 476808,
+        "anilist": 173935,
+        "mal": 57915
+      },
+      "anilistPopularity": 6086,
+      "anilistMeanScore": 74
+    },
+    {
+      "id": 76,
+      "year": 2025,
+      "titleJa": "『ゆるキャン△』シリーズ",
+      "titleEn": "LAID-BACK CAMP series",
+      "region": "chubu",
+      "prefecture": "山梨県",
+      "city": "山梨市",
+      "regionEn": "Yamanashi Pref. / Yamanashi City",
+      "externalIds": {
+        "bangumi": 207195,
+        "anilist": 98444,
+        "mal": 34798
+      },
+      "anilistPopularity": 160391,
+      "anilistMeanScore": 81,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}"
+    },
+    {
+      "id": 77,
+      "year": 2025,
+      "titleJa": "スーパーカブ",
+      "titleEn": "Super Cub",
+      "region": "chubu",
+      "prefecture": "山梨県",
+      "city": "北杜市",
+      "regionEn": "Yamanashi Pref. / Hokuto City",
+      "externalIds": {
+        "bangumi": 294337,
+        "anilist": 113418,
+        "mal": 40685
+      },
+      "anilistPopularity": 46441,
+      "anilistMeanScore": 72
+    },
+    {
+      "id": 78,
+      "year": 2025,
+      "titleJa": "『ゆるキャン△』シリーズ",
+      "titleEn": "LAID-BACK CAMP series",
+      "region": "chubu",
+      "prefecture": "山梨県",
+      "city": "身延町",
+      "regionEn": "Yamanashi Pref. / Minobu Town",
+      "externalIds": {
+        "bangumi": 207195,
+        "anilist": 98444,
+        "mal": 34798
+      },
+      "anilistPopularity": 160391,
+      "anilistMeanScore": 81,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}"
+    },
+    {
+      "id": 79,
+      "year": 2025,
+      "titleJa": "サマーウォーズ",
+      "titleEn": "SUMMER WARS",
+      "region": "chubu",
+      "prefecture": "長野県",
+      "city": "上田市",
+      "regionEn": "Nagano Pref. / Ueda City",
+      "externalIds": {
+        "bangumi": 1905,
+        "anilist": 5681,
+        "mal": 5681
+      },
+      "anilistPopularity": 110868,
+      "anilistMeanScore": 77
+    },
+    {
+      "id": 80,
+      "year": 2025,
+      "titleJa": "小市民シリーズ",
+      "titleEn": "SHOSHIMIN: How to become Ordinary",
+      "region": "chubu",
+      "prefecture": "岐阜県",
+      "city": "岐阜市",
+      "regionEn": "Gifu Pref. / Gifu City",
+      "externalIds": {
+        "bangumi": 474906,
+        "anilist": 173295,
+        "mal": 57810
+      },
+      "anilistPopularity": 58070,
+      "anilistMeanScore": 74
+    },
+    {
+      "id": 81,
+      "year": 2025,
+      "titleJa": "氷菓",
+      "titleEn": "Hyouka",
+      "region": "chubu",
+      "prefecture": "岐阜県",
+      "city": "高山市",
+      "regionEn": "Gifu Pref. / Takayama City",
+      "externalIds": {
+        "bangumi": 27364,
+        "anilist": 12189,
+        "mal": 12189
+      },
+      "anilistPopularity": 336063,
+      "anilistMeanScore": 79
+    },
+    {
+      "id": 82,
+      "year": 2025,
+      "titleJa": "『やくならマグカップも』シリーズ",
+      "titleEn": "『Let’s Make a Mug Too』Series",
+      "region": "chubu",
+      "prefecture": "岐阜県",
+      "city": "多治見市",
+      "regionEn": "Gifu Pref. / Tajimi City",
+      "externalIds": {
+        "bangumi": 311615,
+        "anilist": 122148,
+        "mal": 42568
+      },
+      "anilistPopularity": 19192,
+      "anilistMeanScore": 64,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yakunara Mug Cup Mo\",\"english\":\"Let's Make a Mug Too\",\"native\":\"やくならマグカップも\"}"
+    },
+    {
+      "id": 83,
+      "year": 2025,
+      "titleJa": "ひぐらしのなく頃に業・卒",
+      "titleEn": "“Higurashi: When They Cry – GOU Higurashi: When They Cry – SOTSU”",
+      "region": "chubu",
+      "prefecture": "岐阜県",
+      "city": "白川村",
+      "regionEn": "Gifu Pref. / Shirakawa Village",
+      "externalIds": {
+        "bangumi": 297969,
+        "anilist": 114446,
+        "mal": 41006
+      },
+      "anilistPopularity": 80034,
+      "anilistMeanScore": 69,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Higurashi no Naku Koro ni Gou\",\"english\":\"Higurashi: When They Cry - GOU\",\"native\":\"ひぐらしのなく頃に業\"}"
+    },
+    {
+      "id": 84,
+      "year": 2025,
+      "titleJa": "化け猫あんずちゃん",
+      "titleEn": "Ghost Cat Anzu",
+      "region": "chubu",
+      "prefecture": "静岡県",
+      "city": "伊豆",
+      "regionEn": "Shizuoka Pref. / Izu",
+      "externalIds": {
+        "bangumi": 441447,
+        "anilist": 158641,
+        "mal": 54603
+      },
+      "anilistPopularity": 4488,
+      "anilistMeanScore": 72
+    },
+    {
+      "id": 85,
+      "year": 2025,
+      "titleJa": "『エヴァンゲリオン』シリーズ",
+      "titleEn": "EVANGELION",
+      "region": "chubu",
+      "prefecture": "静岡県",
+      "city": "浜松市",
+      "regionEn": "Shizuoka Pref. / Hamamatsu City",
+      "externalIds": {
+        "bangumi": 235701,
+        "anilist": 30,
+        "mal": 30
+      },
+      "anilistPopularity": 464837,
+      "anilistMeanScore": 83,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Shin Seiki Evangelion\",\"english\":\"Neon Genesis Evangelion\",\"native\":\"新世紀エヴァンゲリオン\"}"
+    },
+    {
+      "id": 86,
+      "year": 2025,
+      "titleJa": "『ゆるキャン△』シリーズ",
+      "titleEn": "LAID-BACK CAMP series",
+      "region": "chubu",
+      "prefecture": "静岡県",
+      "city": "浜松市",
+      "regionEn": "Shizuoka Pref. / Hamamatsu City",
+      "externalIds": {
+        "bangumi": 207195,
+        "anilist": 98444,
+        "mal": 34798
+      },
+      "anilistPopularity": 160391,
+      "anilistMeanScore": 81,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}"
+    },
+    {
+      "id": 87,
+      "year": 2025,
+      "titleJa": "ラブライブ！サンシャイン!!",
+      "titleEn": "Love Live! Sunshine!!",
+      "region": "chubu",
+      "prefecture": "静岡県",
+      "city": "沼津市",
+      "regionEn": "Shizuoka Pref. / Numazu City",
+      "externalIds": {
+        "bangumi": 165553,
+        "anilist": 21584,
+        "mal": 32526
+      },
+      "anilistPopularity": 58725,
+      "anilistMeanScore": 72
+    },
+    {
+      "id": 88,
+      "year": 2025,
+      "titleJa": "『ゆるキャン△』シリーズ",
+      "titleEn": "LAID-BACK CAMP series",
+      "region": "chubu",
+      "prefecture": "静岡県",
+      "city": "川根本町",
+      "regionEn": "Shizuoka Pref. / Kawane-honcho Town",
+      "externalIds": {
+        "bangumi": 207195,
+        "anilist": 98444,
+        "mal": 34798
+      },
+      "anilistPopularity": 160391,
+      "anilistMeanScore": 81,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}"
+    },
+    {
+      "id": 89,
+      "year": 2025,
+      "titleJa": "シキザクラ",
+      "titleEn": "SHIKIZAKURA",
+      "region": "chubu",
+      "prefecture": "愛知県",
+      "city": "名古屋市",
+      "regionEn": "Aichi Pref. / Nagoya City",
+      "externalIds": {
+        "bangumi": 262547,
+        "anilist": 105119,
+        "mal": 38440
+      },
+      "anilistPopularity": 6010,
+      "anilistMeanScore": 54
+    },
+    {
+      "id": 90,
+      "year": 2025,
+      "titleJa": "『ゆるキャン△』シリーズ",
+      "titleEn": "LAID-BACK CAMP series",
+      "region": "chubu",
+      "prefecture": "愛知県",
+      "city": "名古屋市",
+      "regionEn": "Aichi Pref. / Nagoya City",
+      "externalIds": {
+        "bangumi": 207195,
+        "anilist": 98444,
+        "mal": 34798
+      },
+      "anilistPopularity": 160391,
+      "anilistMeanScore": 81,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}"
+    },
+    {
+      "id": 91,
+      "year": 2025,
+      "titleJa": "負けヒロインが多すぎる！",
+      "titleEn": "TOO MANY LOSING HEROINES!",
+      "region": "chubu",
+      "prefecture": "愛知県",
+      "city": "豊橋市",
+      "regionEn": "Aichi Pref. / Toyohashi City",
+      "externalIds": {
+        "bangumi": 464376,
+        "anilist": 171457,
+        "mal": 57524
+      },
+      "anilistPopularity": 118011,
+      "anilistMeanScore": 81
+    },
+    {
+      "id": 92,
+      "year": 2025,
+      "titleJa": "シキザクラ",
+      "titleEn": "SHIKIZAKURA",
+      "region": "chubu",
+      "prefecture": "愛知県",
+      "city": "豊田市",
+      "regionEn": "Aichi Pref. / Toyota City",
+      "externalIds": {
+        "bangumi": 262547,
+        "anilist": 105119,
+        "mal": 38440
+      },
+      "anilistPopularity": 6010,
+      "anilistMeanScore": 54
+    },
+    {
+      "id": 93,
+      "year": 2025,
+      "titleJa": "凪のあすから",
+      "titleEn": "Nagi no Asu kara",
+      "region": "kinki",
+      "prefecture": "三重県",
+      "city": "熊野市",
+      "regionEn": "Mie Pref. / Kumano City",
+      "externalIds": {
+        "bangumi": 47889,
+        "anilist": 16067,
+        "mal": 16067
+      },
+      "anilistPopularity": 133413,
+      "anilistMeanScore": 77
+    },
+    {
+      "id": 94,
+      "year": 2025,
+      "titleJa": "薄桜鬼 真改",
+      "titleEn": "HAKUOKI SHINKAI",
+      "region": "kinki",
+      "prefecture": "京都府",
+      "city": "京都市",
+      "regionEn": "Kyoto / Kyoto City",
+      "externalIds": {
+        "bangumi": 4315,
+        "anilist": 115879,
+        "mal": 31785
+      },
+      "anilistPopularity": 1092,
+      "anilistMeanScore": 60,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}"
+    },
+    {
+      "id": 95,
+      "year": 2025,
+      "titleJa": "艦隊これくしょん – 艦これ –",
+      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "region": "kinki",
+      "prefecture": "京都府",
+      "city": "舞鶴市",
+      "regionEn": "Kyoto / Maizuru City",
+      "externalIds": {
+        "bangumi": 84386,
+        "anilist": 20553,
+        "mal": 21511
+      },
+      "anilistPopularity": 52398,
+      "anilistMeanScore": 64
+    },
+    {
+      "id": 96,
+      "year": 2025,
+      "titleJa": "一休さん（酬恩庵一休寺）",
+      "titleEn": "IKKYU-SAN",
+      "region": "kinki",
+      "prefecture": "京都府",
+      "city": "京田辺市",
+      "regionEn": "Kyoto / Kyotanabe City",
+      "externalIds": {
+        "bangumi": 9540,
+        "anilist": 4935,
+        "mal": 4935
+      },
+      "anilistPopularity": 881,
+      "anilistMeanScore": 71,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Ikkyuu-san\",\"english\":\"Ikkyu the Little Monk\",\"native\":\"一休さん\"}"
+    },
+    {
+      "id": 97,
+      "year": 2025,
+      "titleJa": "『涼宮ハルヒの憂鬱』シリーズ",
+      "titleEn": "『The Melancholy of Haruhi Suzumiya』Series",
+      "region": "kinki",
+      "prefecture": "兵庫県",
+      "city": "西宮市",
+      "regionEn": "Hyogo Pref. / Nishinomiya City",
+      "externalIds": {
+        "bangumi": 485,
+        "anilist": 4382,
+        "mal": 4382
+      },
+      "anilistPopularity": 115249,
+      "anilistMeanScore": 71,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Suzumiya Haruhi no Yuuutsu (2009)\",\"english\":\"The Melancholy of Haruhi Suzumiya (2009)\",\"native\":\"涼宮ハルヒの憂鬱\"}"
+    },
+    {
+      "id": 98,
+      "year": 2025,
+      "titleJa": "ひなビタ♪",
+      "titleEn": "Hinabita♪",
+      "region": "chugoku_shikoku",
+      "prefecture": "鳥取県",
+      "city": "倉吉市",
+      "regionEn": "Tottori Pref. / Kurayoshi City",
+      "externalIds": {
+        "bangumi": 496369,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results"
+    },
+    {
+      "id": 99,
+      "year": 2025,
+      "titleJa": "ゲゲゲの鬼太郎",
+      "titleEn": "GeGeGe no Kitaro",
+      "region": "chugoku_shikoku",
+      "prefecture": "鳥取県",
+      "city": "境港市",
+      "regionEn": "Tottori Pref. / Sakaiminato City",
+      "externalIds": {
+        "bangumi": 18176,
+        "anilist": 5688,
+        "mal": 5688
+      },
+      "anilistPopularity": 1800,
+      "anilistMeanScore": 67
+    },
+    {
+      "id": 100,
+      "year": 2025,
+      "titleJa": "推しが武道館いってくれたら死ぬ",
+      "titleEn": "If My Favorite Pop Idol Made it to the Budokan, I Would Die",
+      "region": "chugoku_shikoku",
+      "prefecture": "岡山県",
+      "city": "岡山市",
+      "regionEn": "Okayama Pref. / Okayama City",
+      "externalIds": {
+        "bangumi": 246915,
+        "anilist": 104391,
+        "mal": 37890
+      },
+      "anilistPopularity": 18880,
+      "anilistMeanScore": 72
+    },
+    {
+      "id": 101,
+      "year": 2025,
+      "titleJa": "艦隊これくしょん – 艦これ –",
+      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "region": "chugoku_shikoku",
+      "prefecture": "広島県",
+      "city": "呉市",
+      "regionEn": "Hiroshima Pref. / Kure City",
+      "externalIds": {
+        "bangumi": 84386,
+        "anilist": 20553,
+        "mal": 21511
+      },
+      "anilistPopularity": 52398,
+      "anilistMeanScore": 64
+    },
+    {
+      "id": 102,
+      "year": 2025,
+      "titleJa": "たまゆら",
+      "titleEn": "TAMAYURA",
+      "region": "chugoku_shikoku",
+      "prefecture": "広島県",
+      "city": "竹原市",
+      "regionEn": "Hiroshima Pref. / Takehara City",
+      "externalIds": {
+        "bangumi": 8452,
+        "anilist": 9055,
+        "mal": 9055
+      },
+      "anilistPopularity": 16542,
+      "anilistMeanScore": 70
+    },
+    {
+      "id": 103,
+      "year": 2025,
+      "titleJa": "朝霧の巫女",
+      "titleEn": "Asagiri no Miko",
+      "region": "chugoku_shikoku",
+      "prefecture": "広島県",
+      "city": "三次市",
+      "regionEn": "Hiroshima Pref. / Miyoshi City",
+      "externalIds": {
+        "bangumi": 12786,
+        "anilist": 231,
+        "mal": 231
+      },
+      "anilistPopularity": 1900,
+      "anilistMeanScore": 57
+    },
+    {
+      "id": 104,
+      "year": 2025,
+      "titleJa": "『エヴァンゲリオン』シリーズ",
+      "titleEn": "EVANGELION",
+      "region": "chugoku_shikoku",
+      "prefecture": "山口県",
+      "city": "宇部市",
+      "regionEn": "Yamaguchi Pref. / Ube City",
+      "externalIds": {
+        "bangumi": 235701,
+        "anilist": 30,
+        "mal": 30
+      },
+      "anilistPopularity": 464837,
+      "anilistMeanScore": 83,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Shin Seiki Evangelion\",\"english\":\"Neon Genesis Evangelion\",\"native\":\"新世紀エヴァンゲリオン\"}"
+    },
+    {
+      "id": 105,
+      "year": 2025,
+      "titleJa": "『結城友奈は勇者である』シリーズ",
+      "titleEn": "『YukiYuna is a Hero』Series",
+      "region": "chugoku_shikoku",
+      "prefecture": "香川県",
+      "city": "観音寺市",
+      "regionEn": "Kagawa Pref. / Kan-onji City",
+      "externalIds": {
+        "bangumi": 109328,
+        "anilist": 20800,
+        "mal": 25519
+      },
+      "anilistPopularity": 48079,
+      "anilistMeanScore": 72,
+      "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuuki Yuuna wa Yuusha de Aru\",\"english\":\"Yuki Yuna is a Hero\",\"native\":\"結城友奈は勇者である\"}"
+    },
+    {
+      "id": 106,
+      "year": 2025,
+      "titleJa": "からかい上手の高木さん",
+      "titleEn": "Teasing Master Takagi-san",
+      "region": "chugoku_shikoku",
+      "prefecture": "香川県",
+      "city": "土庄町",
+      "regionEn": "Kagawa Pref. / Tonosho Town",
+      "externalIds": {
+        "bangumi": 219200,
+        "anilist": 99468,
+        "mal": 35860
+      },
+      "anilistPopularity": 163205,
+      "anilistMeanScore": 74
+    },
+    {
+      "id": 107,
+      "year": 2025,
+      "titleJa": "がんばっていきまっしょい",
+      "titleEn": "Give It All",
+      "region": "chugoku_shikoku",
+      "prefecture": "愛媛県",
+      "city": "松山市",
+      "regionEn": "Ehime Pref. / Matsuyama City",
+      "externalIds": {
+        "bangumi": 485868,
+        "anilist": 176245,
+        "mal": 58491
+      },
+      "anilistPopularity": 3136,
+      "anilistMeanScore": 63
+    },
+    {
+      "id": 108,
+      "year": 2025,
+      "titleJa": "竜とそばかすの姫",
+      "titleEn": "BELLE",
+      "region": "chugoku_shikoku",
+      "prefecture": "高知県",
+      "city": "越知町",
+      "regionEn": "Kochi Pref. / Ochi Town",
+      "externalIds": {
+        "bangumi": 322535,
+        "anilist": 127271,
+        "mal": 44807
+      },
+      "anilistPopularity": 66743,
+      "anilistMeanScore": 73
+    },
+    {
+      "id": 109,
+      "year": 2025,
+      "titleJa": "ブルバスター",
+      "titleEn": "BULLBUSTER",
+      "region": "kyushu_okinawa",
+      "prefecture": "福岡県",
+      "city": "北九州市",
+      "regionEn": "Fukuoka Pref. / Kitakyushu City",
+      "externalIds": {
+        "bangumi": 408361,
+        "anilist": 157399,
+        "mal": 53633
+      },
+      "anilistPopularity": 5218,
+      "anilistMeanScore": 58
+    },
+    {
+      "id": 110,
+      "year": 2025,
+      "titleJa": "色づく世界の明日から",
+      "titleEn": "IRODUKU：The World in Colors",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "長崎市",
+      "regionEn": "Nagasaki Pref. / Nagasaki City",
+      "externalIds": {
+        "bangumi": 240562,
+        "anilist": 101316,
+        "mal": 37497
+      },
+      "anilistPopularity": 95310,
+      "anilistMeanScore": 73
+    },
+    {
+      "id": 111,
+      "year": 2025,
+      "titleJa": "きみの色",
+      "titleEn": "THE COLORS WITHIN",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "長崎市",
+      "regionEn": "Nagasaki Pref. / Nagasaki City",
+      "externalIds": {
+        "bangumi": 409576,
+        "anilist": 158166,
+        "mal": 53747
+      },
+      "anilistPopularity": 25707,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 112,
+      "year": 2025,
+      "titleJa": "艦隊これくしょん – 艦これ –",
+      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "佐世保市",
+      "regionEn": "Nagasaki Pref. / Sasebo City",
+      "externalIds": {
+        "bangumi": 84386,
+        "anilist": 20553,
+        "mal": 21511
+      },
+      "anilistPopularity": 52398,
+      "anilistMeanScore": 64
+    },
+    {
+      "id": 113,
+      "year": 2025,
+      "titleJa": "きみの色",
+      "titleEn": "THE COLORS WITHIN",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "佐世保市",
+      "regionEn": "Nagasaki Pref. / Sasebo City",
+      "externalIds": {
+        "bangumi": 409576,
+        "anilist": 158166,
+        "mal": 53747
+      },
+      "anilistPopularity": 25707,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 114,
+      "year": 2025,
+      "titleJa": "アンゴルモア 元寇合戦記",
+      "titleEn": "Angolmois: Record of Mongol Invasion",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "対馬市",
+      "regionEn": "Nagasaki Pref. / Tsushima City",
+      "externalIds": {
+        "bangumi": 218572,
+        "anilist": 99412,
+        "mal": 35834
+      },
+      "anilistPopularity": 16077,
+      "anilistMeanScore": 68
+    },
+    {
+      "id": 115,
+      "year": 2025,
+      "titleJa": "GAMERA -Rebirth-",
+      "titleEn": "GAMERA -Rebirth-",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "対馬市",
+      "regionEn": "Nagasaki Pref. / Tsushima City",
+      "externalIds": {
+        "bangumi": 418289,
+        "anilist": 160831,
+        "mal": 53627
+      },
+      "anilistPopularity": 2052,
+      "anilistMeanScore": 62
+    },
+    {
+      "id": 116,
+      "year": 2025,
+      "titleJa": "蒼の彼方のフォーリズム",
+      "titleEn": "AOKANA -Four Rhythm Across the Blue-",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "五島市",
+      "regionEn": "Nagasaki Pref. / Goto City",
+      "externalIds": {
+        "bangumi": 117601,
+        "anilist": 21319,
+        "mal": 28391
+      },
+      "anilistPopularity": 34447,
+      "anilistMeanScore": 63
+    },
+    {
+      "id": 117,
+      "year": 2025,
+      "titleJa": "きみの色",
+      "titleEn": "THE COLORS WITHIN",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "五島市",
+      "regionEn": "Nagasaki Pref. / Goto City",
+      "externalIds": {
+        "bangumi": 409576,
+        "anilist": 158166,
+        "mal": 53747
+      },
+      "anilistPopularity": 25707,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 118,
+      "year": 2025,
+      "titleJa": "蒼の彼方のフォーリズム",
+      "titleEn": "AOKANA -Four Rhythm Across the Blue-",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "新上五島町",
+      "regionEn": "Nagasaki Pref. / Shinkamigoto Town",
+      "externalIds": {
+        "bangumi": 117601,
+        "anilist": 21319,
+        "mal": 28391
+      },
+      "anilistPopularity": 34447,
+      "anilistMeanScore": 63
+    },
+    {
+      "id": 119,
+      "year": 2025,
+      "titleJa": "きみの色",
+      "titleEn": "THE COLORS WITHIN",
+      "region": "kyushu_okinawa",
+      "prefecture": "長崎県",
+      "city": "新上五島町",
+      "regionEn": "Nagasaki Pref. / Shinkamigoto Town",
+      "externalIds": {
+        "bangumi": 409576,
+        "anilist": 158166,
+        "mal": 53747
+      },
+      "anilistPopularity": 25707,
+      "anilistMeanScore": 78
+    },
+    {
+      "id": 120,
+      "year": 2025,
+      "titleJa": "夏目友人帳",
+      "titleEn": "Natsume’s Book of Friends",
+      "region": "kyushu_okinawa",
+      "prefecture": "熊本県",
+      "city": "人吉・球磨地域ほか",
+      "regionEn": "Kumamoto Pref. / Hitoyoshi,Kuma Area,others",
+      "externalIds": {
+        "bangumi": 259,
+        "anilist": 4081,
+        "mal": 4081
+      },
+      "anilistPopularity": 122971,
+      "anilistMeanScore": 80
+    },
+    {
+      "id": 121,
+      "year": 2025,
+      "titleJa": "放課後ていぼう日誌",
+      "titleEn": "Diary of Our Days at the Breakwater",
+      "region": "kyushu_okinawa",
+      "prefecture": "熊本県",
+      "city": "芦北町",
+      "regionEn": "Kumamoto Pref. / Ashikita Town",
+      "externalIds": {
+        "bangumi": 280678,
+        "anilist": 109019,
+        "mal": 39730
+      },
+      "anilistPopularity": 25338,
+      "anilistMeanScore": 72
+    },
+    {
+      "id": 122,
+      "year": 2025,
+      "titleJa": "秒速5センチメートル",
+      "titleEn": "5 Centimeters per Second",
+      "region": "kyushu_okinawa",
+      "prefecture": "鹿児島県",
+      "city": "種子島",
+      "regionEn": "Kagoshima Pref. / Tanegashima",
+      "externalIds": {
+        "bangumi": 927,
+        "anilist": 1689,
+        "mal": 1689
+      },
+      "anilistPopularity": 238665,
+      "anilistMeanScore": 72,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Byousoku 5 Centimeter\",\"english\":\"5 Centimeters per Second\",\"native\":\"秒速５センチメートル\"}"
+    },
+    {
+      "id": 123,
+      "year": 2025,
+      "titleJa": "白い砂のアクアトープ",
+      "titleEn": "The aquatope on white sand",
+      "region": "kyushu_okinawa",
+      "prefecture": "沖縄県",
+      "city": "南城市",
+      "regionEn": "Okinawa Pref. / Nanjo City",
+      "externalIds": {
+        "bangumi": 325281,
+        "anilist": 128545,
+        "mal": 46093
+      },
+      "anilistPopularity": 62142,
+      "anilistMeanScore": 73,
+      "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Shiroi Suna no Aquatope\",\"english\":\"The aquatope on white sand\",\"native\":\"白い砂のアクアトープ\"}"
+    },
+    {
+      "id": 124,
+      "year": 2025,
+      "titleJa": "ウルトラマンシリーズ（金城哲夫資料館）",
+      "titleEn": "ULTRAMAN SERIES (Syofuen/Archive of Tetsuo Kinjo)",
+      "region": "kyushu_okinawa",
+      "prefecture": "沖縄県",
+      "city": "南風原町",
+      "regionEn": "Okinawa Pref. / Haebaru Town",
+      "externalIds": {
+        "bangumi": 38650,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results"
+    }
+  ],
+  "anilistResolvedAt": "2026-05-13T12:09:34.791Z"
+}

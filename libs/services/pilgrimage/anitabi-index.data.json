@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1778656791109,
+  "generatedAt": 1778673557594,
   "source": "https://api.anitabi.cn/bangumi/{id}/lite",
   "entries": [
     {
@@ -13,7 +13,20 @@
       "lng": 138.444214,
       "zoom": 9,
       "pointsLength": 684,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 431767,
+      "title": "ガールズバンドクライ",
+      "cn": "哭泣少女乐队",
+      "city": "川崎市",
+      "cover": "https://image.anitabi.cn/bangumi/431767.jpg?plan=h160",
+      "color": "#ee2288",
+      "lat": 35.530444,
+      "lng": 139.698235,
+      "zoom": 16,
+      "pointsLength": 646,
+      "builtAt": 1778673557594
     },
     {
       "id": 115908,
@@ -26,7 +39,20 @@
       "lng": 135.806032,
       "zoom": 12.4,
       "pointsLength": 577,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 464376,
+      "title": "負けヒロインが多すぎる！",
+      "cn": "败犬女主太多了！",
+      "city": "丰桥市",
+      "cover": "https://image.anitabi.cn/bangumi/464376.jpg?plan=h160",
+      "color": "#2a5580",
+      "lat": 34.761607,
+      "lng": 137.385433,
+      "zoom": 16,
+      "pointsLength": 460,
+      "builtAt": 1778673557594
     },
     {
       "id": 152091,
@@ -39,7 +65,7 @@
       "lng": 135.823881,
       "zoom": 13.1,
       "pointsLength": 433,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 328609,
@@ -52,7 +78,7 @@
       "lng": 139.589247,
       "zoom": 9.7,
       "pointsLength": 414,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 262897,
@@ -65,7 +91,20 @@
       "lng": 138.285342,
       "zoom": 7.6,
       "pointsLength": 334,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 474906,
+      "title": "小市民シリーズ",
+      "cn": "小市民系列",
+      "city": "岐阜市",
+      "cover": "https://image.anitabi.cn/bangumi/474906.jpg?plan=h160",
+      "color": "#000000",
+      "lat": 35.429873,
+      "lng": 136.750907,
+      "zoom": 16.3,
+      "pointsLength": 267,
+      "builtAt": 1778673557594
     },
     {
       "id": 927,
@@ -78,7 +117,7 @@
       "lng": 138.977051,
       "zoom": 5,
       "pointsLength": 264,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 296659,
@@ -91,7 +130,33 @@
       "lng": 139.784164,
       "zoom": 13.4,
       "pointsLength": 247,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 240038,
+      "title": "青春ブタ野郎はバニーガール先輩の夢を見ない",
+      "cn": "青春笨蛋少年不做兔女郎学姐的梦",
+      "city": "镰仓市",
+      "cover": "https://image.anitabi.cn/bangumi/240038.jpg?plan=h160",
+      "color": "#1c398e",
+      "lat": 35.311623,
+      "lng": 139.492951,
+      "zoom": 12.7,
+      "pointsLength": 224,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 387803,
+      "title": "江戸前エルフ",
+      "cn": "江户前精灵",
+      "city": "中央区",
+      "cover": "https://image.anitabi.cn/bangumi/387803.jpg?plan=h160",
+      "color": "#393971",
+      "lat": 35.65854,
+      "lng": 139.778796,
+      "zoom": 11.8,
+      "pointsLength": 222,
+      "builtAt": 1778673557594
     },
     {
       "id": 1424,
@@ -104,7 +169,7 @@
       "lng": 135.734367,
       "zoom": 11,
       "pointsLength": 214,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 3774,
@@ -117,7 +182,7 @@
       "lng": 135.808832,
       "zoom": 11.9,
       "pointsLength": 201,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 100403,
@@ -130,7 +195,98 @@
       "lng": 139.712303,
       "zoom": 10.3,
       "pointsLength": 174,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 469877,
+      "title": "トラペジウム",
+      "cn": "四重星",
+      "city": "馆山市",
+      "cover": "https://image.anitabi.cn/bangumi/469877.jpg?plan=h160",
+      "color": "#4175ab",
+      "lat": 34.969699,
+      "lng": 139.862544,
+      "zoom": 10.4,
+      "pointsLength": 164,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 219200,
+      "title": "からかい上手の高木さん",
+      "cn": "擅长捉弄的高木同学",
+      "city": "香川县",
+      "cover": "https://image.anitabi.cn/bangumi/219200.jpg?plan=h160",
+      "color": "#5ad5f7",
+      "lat": 34.51018,
+      "lng": 134.203351,
+      "zoom": 10.1,
+      "pointsLength": 145,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 240562,
+      "title": "色づく世界の明日から",
+      "cn": "来自多彩世界的明天",
+      "city": "长崎市",
+      "cover": "https://image.anitabi.cn/bangumi/240562.jpg?plan=h160",
+      "color": "#8666b9",
+      "lat": 32.739254,
+      "lng": 129.87935,
+      "zoom": 13.4,
+      "pointsLength": 141,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 22759,
+      "title": "花咲くいろは",
+      "cn": "花开伊吕波",
+      "city": "金泽市",
+      "cover": "https://image.anitabi.cn/bangumi/22759.jpg?plan=h160",
+      "color": "#634e47",
+      "lat": 36.486807,
+      "lng": 136.756504,
+      "zoom": 0,
+      "pointsLength": 139,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 290980,
+      "title": "ヤマノススメ Next Summit",
+      "cn": "向山进发 Next Summit",
+      "city": "饭能市",
+      "cover": "https://image.anitabi.cn/bangumi/290980.jpg?plan=h160",
+      "color": "#d5c6e3",
+      "lat": 35.855103,
+      "lng": 139.328608,
+      "zoom": 0,
+      "pointsLength": 130,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 165553,
+      "title": "ラブライブ! サンシャイン!!",
+      "cn": "LoveLive! Sunshine!!",
+      "city": "沼津市",
+      "cover": "https://image.anitabi.cn/bangumi/165553.jpg?plan=h160",
+      "color": "#00a2e8",
+      "lat": 35.097636,
+      "lng": 138.915996,
+      "zoom": 9.2,
+      "pointsLength": 127,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 294337,
+      "title": "スーパーカブ",
+      "cn": "本田小狼与我",
+      "city": "山梨县",
+      "cover": "https://image.anitabi.cn/bangumi/294337.jpg?plan=h160",
+      "color": "#407fbf",
+      "lat": 35.722778,
+      "lng": 138.460241,
+      "zoom": 10.6,
+      "pointsLength": 124,
+      "builtAt": 1778673557594
     },
     {
       "id": 58949,
@@ -143,7 +299,7 @@
       "lng": 139.710646,
       "zoom": 16,
       "pointsLength": 119,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 160209,
@@ -156,7 +312,7 @@
       "lng": 136.213768,
       "zoom": 5.6,
       "pointsLength": 113,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 430699,
@@ -169,7 +325,20 @@
       "lng": 136.902784,
       "zoom": 12.1,
       "pointsLength": 109,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 10380,
+      "title": "STEINS;GATE",
+      "cn": "命运石之门",
+      "city": "千代田区",
+      "cover": "https://image.anitabi.cn/bangumi/10380.jpg?plan=h160",
+      "color": "#8e8ec6",
+      "lat": 35.69878,
+      "lng": 139.771392,
+      "zoom": 15,
+      "pointsLength": 108,
+      "builtAt": 1778673557594
     },
     {
       "id": 402656,
@@ -182,7 +351,7 @@
       "lng": 139.495618,
       "zoom": 12.6,
       "pointsLength": 102,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 10440,
@@ -195,7 +364,33 @@
       "lng": 139.087573,
       "zoom": 13.5,
       "pointsLength": 94,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 306742,
+      "title": "ラブライブ！スーパースター!!",
+      "cn": "LoveLive! Superstar!!",
+      "city": "涩谷区",
+      "cover": "https://image.anitabi.cn/bangumi/306742.jpg?plan=h160",
+      "color": "#f8c14d",
+      "lat": 35.668037,
+      "lng": 139.706603,
+      "zoom": 12.8,
+      "pointsLength": 91,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 2463,
+      "title": "デュラララ!!",
+      "cn": "无头骑士异闻录",
+      "city": "丰岛区",
+      "cover": "https://image.anitabi.cn/bangumi/2463.jpg?plan=h160",
+      "color": "#585750",
+      "lat": 35.578474,
+      "lng": 139.645252,
+      "zoom": 9,
+      "pointsLength": 88,
+      "builtAt": 1778673557594
     },
     {
       "id": 221127,
@@ -208,7 +403,7 @@
       "lng": 143.187777,
       "zoom": 7,
       "pointsLength": 83,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 252655,
@@ -221,7 +416,59 @@
       "lng": 130.116255,
       "zoom": 8.8,
       "pointsLength": 83,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 8452,
+      "title": "たまゆら",
+      "cn": "玉响",
+      "city": "竹原市",
+      "cover": "https://image.anitabi.cn/bangumi/8452.jpg?plan=h160",
+      "color": "#ef734e",
+      "lat": 34.332657,
+      "lng": 132.951945,
+      "zoom": 12.2,
+      "pointsLength": 82,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 333158,
+      "title": "その着せ替え人形は恋をする",
+      "cn": "更衣人偶坠入爱河",
+      "city": "埼玉市",
+      "cover": "https://image.anitabi.cn/bangumi/333158.jpg?plan=h160",
+      "color": "#e38e71",
+      "lat": 35.955002,
+      "lng": 139.695944,
+      "zoom": 9,
+      "pointsLength": 82,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 485,
+      "title": "涼宮ハルヒの憂鬱",
+      "cn": "凉宫春日的忧郁",
+      "city": "西宫市",
+      "cover": "https://image.anitabi.cn/bangumi/485.jpg?plan=h160",
+      "color": "#e7170c",
+      "lat": 34.757551,
+      "lng": 135.334826,
+      "zoom": 13,
+      "pointsLength": 76,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 325281,
+      "title": "白い砂のアクアトープ",
+      "cn": "白沙的水族馆",
+      "city": "南城市",
+      "cover": "https://image.anitabi.cn/bangumi/325281.jpg?plan=h160",
+      "color": "#34a5d5",
+      "lat": 26.145244,
+      "lng": 127.794326,
+      "zoom": 11.8,
+      "pointsLength": 75,
+      "builtAt": 1778673557594
     },
     {
       "id": 27364,
@@ -234,7 +481,46 @@
       "lng": 137.259797,
       "zoom": 12.9,
       "pointsLength": 72,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 109328,
+      "title": "結城友奈は勇者である",
+      "cn": "结城友奈是勇者",
+      "city": "观音寺市",
+      "cover": "https://image.anitabi.cn/bangumi/109328.jpg?plan=h160",
+      "color": "#f8b1b1",
+      "lat": 34.235652,
+      "lng": 133.832774,
+      "zoom": 9.3,
+      "pointsLength": 68,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 265708,
+      "title": "女子高生の無駄づかい",
+      "cn": "女高中生的无所事事",
+      "city": "东村山市",
+      "cover": "https://image.anitabi.cn/bangumi/265708.jpg?plan=h160",
+      "color": "#ffff00",
+      "lat": 35.805688,
+      "lng": 139.780592,
+      "zoom": 8,
+      "pointsLength": 65,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 5656,
+      "title": "アマガミSS",
+      "cn": "圣诞之吻SS",
+      "city": "铫子市",
+      "cover": "https://image.anitabi.cn/bangumi/5656.jpg?plan=h160",
+      "color": "#343631",
+      "lat": 35.717933,
+      "lng": 140.840848,
+      "zoom": 12,
+      "pointsLength": 64,
+      "builtAt": 1778673557594
     },
     {
       "id": 248175,
@@ -247,7 +533,33 @@
       "lng": 139.745587,
       "zoom": 12.1,
       "pointsLength": 64,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 186515,
+      "title": "BanG Dream!",
+      "cn": "",
+      "city": "东京都",
+      "cover": "https://image.anitabi.cn/bangumi/186515.jpg?plan=h160",
+      "color": "#ed145b",
+      "lat": 35.431386,
+      "lng": 139.97493,
+      "zoom": 8.6,
+      "pointsLength": 62,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 276,
+      "title": "らき☆すた",
+      "cn": "幸运星",
+      "city": "埼玉县",
+      "cover": "https://image.anitabi.cn/bangumi/276.jpg?plan=h160",
+      "color": "#4075c9",
+      "lat": 35.466891,
+      "lng": 138.071223,
+      "zoom": 6.5,
+      "pointsLength": 61,
+      "builtAt": 1778673557594
     },
     {
       "id": 259,
@@ -260,7 +572,33 @@
       "lng": 130.88122,
       "zoom": 8.7,
       "pointsLength": 60,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 278557,
+      "title": "空の青さを知る人よ",
+      "cn": "知晓天空之蓝的人啊",
+      "city": "秩父市",
+      "cover": "https://image.anitabi.cn/bangumi/278557.jpg?plan=h160",
+      "color": "#5dc2d9",
+      "lat": 35.991619,
+      "lng": 139.064426,
+      "zoom": 12,
+      "pointsLength": 59,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 49294,
+      "title": "ラブライブ!",
+      "cn": "LoveLive!",
+      "city": "千代田区",
+      "cover": "https://image.anitabi.cn/bangumi/49294.jpg?plan=h160",
+      "color": "#e4007f",
+      "lat": 35.676192,
+      "lng": 139.650311,
+      "zoom": 0,
+      "pointsLength": 57,
+      "builtAt": 1778673557594
     },
     {
       "id": 218708,
@@ -273,7 +611,7 @@
       "lng": 103.906172,
       "zoom": 10.2,
       "pointsLength": 56,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 143205,
@@ -286,7 +624,33 @@
       "lng": 139.522434,
       "zoom": 12.4,
       "pointsLength": 53,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 279059,
+      "title": "おちこぼれフルーツタルト",
+      "cn": "满溢的水果挞",
+      "city": "小金井市",
+      "cover": "http://lain.bgm.tv/pic/cover/l/0d/2e/279059_NNOnk.jpg?plan=h160",
+      "color": "#fc5696",
+      "lat": 35.765538,
+      "lng": 139.692699,
+      "zoom": 9.3,
+      "pointsLength": 53,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 207573,
+      "title": "月がきれい",
+      "cn": "月色真美",
+      "city": "川越市",
+      "cover": "https://image.anitabi.cn/bangumi/207573.jpg?plan=h160",
+      "color": "#a9a084",
+      "lat": 35.920851,
+      "lng": 139.482663,
+      "zoom": 13.5,
+      "pointsLength": 51,
+      "builtAt": 1778673557594
     },
     {
       "id": 364450,
@@ -299,7 +663,46 @@
       "lng": 139.816949,
       "zoom": 14.1,
       "pointsLength": 51,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 425909,
+      "title": "夜のクラゲは泳げない",
+      "cn": "夜晚的水母不会游泳",
+      "city": "涩谷区",
+      "cover": "https://image.anitabi.cn/bangumi/425909.jpg?plan=h160",
+      "color": "#d15ba2",
+      "lat": 35.659941,
+      "lng": 139.702123,
+      "zoom": 12.6,
+      "pointsLength": 51,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 484761,
+      "title": "しかのこのこのここしたんたん",
+      "cn": "鹿乃子乃子虎视眈眈",
+      "city": "日野市",
+      "cover": "https://image.anitabi.cn/bangumi/484761.jpg?plan=h160",
+      "color": "#895444",
+      "lat": 35.665864,
+      "lng": 139.397842,
+      "zoom": 12.9,
+      "pointsLength": 47,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 3128,
+      "title": "デジモンアドベンチャー",
+      "cn": "数码宝贝大冒险",
+      "city": "东京都",
+      "cover": "https://image.anitabi.cn/bangumi/3128.jpg?plan=h160",
+      "color": "#157fea",
+      "lat": 35.664893,
+      "lng": 139.720913,
+      "zoom": 10,
+      "pointsLength": 46,
+      "builtAt": 1778673557594
     },
     {
       "id": 9912,
@@ -312,7 +715,7 @@
       "lng": 139.190941,
       "zoom": 13,
       "pointsLength": 46,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
     },
     {
       "id": 376703,
@@ -325,7 +728,33 @@
       "lng": 139.665654,
       "zoom": 8.7,
       "pointsLength": 46,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 485868,
+      "title": "がんばっていきまっしょい",
+      "cn": "一起加油吧",
+      "city": "松山市",
+      "cover": "https://image.anitabi.cn/bangumi/485868.jpg?plan=h160",
+      "color": "#0668a6",
+      "lat": 33.874361,
+      "lng": 132.707804,
+      "zoom": 14.7,
+      "pointsLength": 45,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 43525,
+      "title": "神様はじめました",
+      "cn": "元气少女缘结神",
+      "city": "川越市",
+      "cover": "https://image.anitabi.cn/bangumi/43525.jpg?plan=h160",
+      "color": "#755800",
+      "lat": 35.920266,
+      "lng": 139.489374,
+      "zoom": 14,
+      "pointsLength": 44,
+      "builtAt": 1778673557594
     },
     {
       "id": 287488,
@@ -338,7 +767,46 @@
       "lng": 130.185367,
       "zoom": 9.9,
       "pointsLength": 44,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 54433,
+      "title": "やはり俺の青春ラブコメはまちがっている。",
+      "cn": "我的青春恋爱物语果然有问题",
+      "city": "千叶市",
+      "cover": "https://image.anitabi.cn/bangumi/54433.jpg?plan=h160",
+      "color": "#3d4761",
+      "lat": 35.621456,
+      "lng": 140.069686,
+      "zoom": 15.8,
+      "pointsLength": 41,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 280678,
+      "title": "放課後ていぼう日誌",
+      "cn": "放学后海堤日记",
+      "city": "人吉市",
+      "cover": "https://image.anitabi.cn/bangumi/280678.jpg?plan=h160",
+      "color": "#63aaf1",
+      "lat": 32.305379,
+      "lng": 130.489447,
+      "zoom": 12.6,
+      "pointsLength": 41,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 59583,
+      "title": "弱虫ペダル",
+      "cn": "飙速宅男",
+      "city": "",
+      "cover": "https://image.anitabi.cn/bangumi/59583.jpg?plan=h160",
+      "color": "#e7ce46",
+      "lat": 35.265403,
+      "lng": 139.115382,
+      "zoom": 8.2,
+      "pointsLength": 39,
+      "builtAt": 1778673557594
     },
     {
       "id": 269235,
@@ -351,7 +819,98 @@
       "lng": 139.733394,
       "zoom": 12.3,
       "pointsLength": 36,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 331445,
+      "title": "Do It Yourself!!",
+      "cn": "少女手工",
+      "city": "三条市",
+      "cover": "https://image.anitabi.cn/bangumi/331445.jpg?plan=h160",
+      "color": "#fe8263",
+      "lat": 37.778279,
+      "lng": 139.068086,
+      "zoom": 9.5,
+      "pointsLength": 33,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 464561,
+      "title": "菜なれ花なれ",
+      "cn": "变成菜变成花",
+      "city": "沼田市",
+      "cover": "https://image.anitabi.cn/bangumi/464561.jpg?plan=h160",
+      "color": "#e66300",
+      "lat": 36.64252,
+      "lng": 139.040034,
+      "zoom": 13.4,
+      "pointsLength": 33,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 47889,
+      "title": "凪のあすから",
+      "cn": "来自风平浪静的明天",
+      "city": "熊野市",
+      "cover": "https://image.anitabi.cn/bangumi/47889.jpg?plan=h160",
+      "color": "#11d1d4",
+      "lat": 33.90359,
+      "lng": 136.137577,
+      "zoom": 12,
+      "pointsLength": 30,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 119344,
+      "title": "心が叫びたがってるんだ。",
+      "cn": "心灵想要大声呼喊。",
+      "city": "秩父市",
+      "cover": "https://image.anitabi.cn/bangumi/119344.jpg?plan=h160",
+      "color": "#4db837",
+      "lat": 35.992442,
+      "lng": 139.090483,
+      "zoom": 13.5,
+      "pointsLength": 28,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 409576,
+      "title": "きみの色",
+      "cn": "你的颜色",
+      "city": "长崎市",
+      "cover": "https://image.anitabi.cn/bangumi/409576.jpg?plan=h160",
+      "color": "#407fbf",
+      "lat": 33.37665,
+      "lng": 132.619545,
+      "zoom": 5.6,
+      "pointsLength": 26,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 144357,
+      "title": "文豪ストレイドッグス",
+      "cn": "文豪野犬",
+      "city": "横滨市",
+      "cover": "https://image.anitabi.cn/bangumi/144357.jpg?plan=h160",
+      "color": "#d4bf80",
+      "lat": 35.449729,
+      "lng": 139.64535,
+      "zoom": 15.1,
+      "pointsLength": 25,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 28440,
+      "title": "おおかみこどもの雨と雪",
+      "cn": "狼的孩子雨和雪",
+      "city": "富山市",
+      "cover": "https://image.anitabi.cn/bangumi/28440.jpg?plan=h160",
+      "color": "#435b2b",
+      "lat": 36.697844,
+      "lng": 137.385355,
+      "zoom": 9,
+      "pointsLength": 24,
+      "builtAt": 1778673557594
     },
     {
       "id": 805,
@@ -364,7 +923,20 @@
       "lng": 134.884644,
       "zoom": 7,
       "pointsLength": 22,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 144843,
+      "title": "ハイスクール・フリート",
+      "cn": "高校舰队",
+      "city": "横须贺市",
+      "cover": "https://image.anitabi.cn/bangumi/144843.jpg?plan=h160",
+      "color": "#808080",
+      "lat": 35.255051,
+      "lng": 139.663743,
+      "zoom": 11.3,
+      "pointsLength": 22,
+      "builtAt": 1778673557594
     },
     {
       "id": 500,
@@ -377,7 +949,124 @@
       "lng": 139.442265,
       "zoom": 13.2,
       "pointsLength": 21,
-      "builtAt": 1778656791109
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 1014,
+      "title": "とある魔術の禁書目録",
+      "cn": "魔法禁书目录",
+      "city": "立川市",
+      "cover": "https://image.anitabi.cn/bangumi/1014.jpg?plan=h160",
+      "color": "#9edaff",
+      "lat": 35.543697,
+      "lng": 139.681828,
+      "zoom": 10.5,
+      "pointsLength": 13,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 2585,
+      "title": "とある科学の超電磁砲",
+      "cn": "某科学的超电磁炮",
+      "city": "立川市",
+      "cover": "https://image.anitabi.cn/bangumi/2585.jpg?plan=h160",
+      "color": "#f58300",
+      "lat": 35.596154,
+      "lng": 139.521368,
+      "zoom": 10,
+      "pointsLength": 12,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 322535,
+      "title": "竜とそばかすの姫",
+      "cn": "龙与雀斑公主",
+      "city": "高知县",
+      "cover": "https://image.anitabi.cn/bangumi/322535.jpg?plan=h160",
+      "color": "#0080aa",
+      "lat": 33.567741,
+      "lng": 133.256183,
+      "zoom": 16.7,
+      "pointsLength": 12,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 12786,
+      "title": "朝霧の巫女",
+      "cn": "朝雾的巫女",
+      "city": "三次市",
+      "cover": "https://image.anitabi.cn/bangumi/12786.jpg?plan=h160",
+      "color": "#5555aa",
+      "lat": 34.807214,
+      "lng": 132.848482,
+      "zoom": 0,
+      "pointsLength": 11,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 117601,
+      "title": "蒼の彼方のフォーリズム",
+      "cn": "苍之彼方的四重奏",
+      "city": "五岛市",
+      "cover": "https://image.anitabi.cn/bangumi/117601.jpg?plan=h160",
+      "color": "#1a3177",
+      "lat": 32.701759,
+      "lng": 129.248249,
+      "zoom": 7.8,
+      "pointsLength": 11,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 1905,
+      "title": "サマーウォーズ",
+      "cn": "夏日大作战",
+      "city": "上田市",
+      "cover": "https://image.anitabi.cn/bangumi/1905.jpg?plan=h160",
+      "color": "#d4bf80",
+      "lat": 36.397486,
+      "lng": 138.281447,
+      "zoom": 10.8,
+      "pointsLength": 9,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 84386,
+      "title": "艦隊これくしょん -艦これ-",
+      "cn": "舰队Collection",
+      "city": "吴市",
+      "cover": "https://image.anitabi.cn/bangumi/84386.jpg?plan=h160",
+      "color": "#475563",
+      "lat": 34.208871,
+      "lng": 132.525803,
+      "zoom": 11,
+      "pointsLength": 6,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 485154,
+      "title": "好きでも嫌いなあまのじゃく",
+      "cn": "我的鬼女孩",
+      "city": "米泽市",
+      "cover": "https://image.anitabi.cn/bangumi/485154.jpg?plan=h160",
+      "color": "#407fbf",
+      "lat": 37.909529,
+      "lng": 140.127998,
+      "zoom": 19.6,
+      "pointsLength": 6,
+      "builtAt": 1778673557594
+    },
+    {
+      "id": 191302,
+      "title": "ガールズ&パンツァー 最終章 第1話",
+      "cn": "少女与战车 最终章 第1话",
+      "city": "",
+      "cover": "https://image.anitabi.cn/bangumi/191302.jpg?plan=h160",
+      "color": "#737a43",
+      "lat": 39.155232,
+      "lng": 117.808329,
+      "zoom": 14.4,
+      "pointsLength": 2,
+      "builtAt": 1778673557594
     }
   ]
 }
