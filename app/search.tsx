@@ -25,8 +25,11 @@ import { Colors, IconSize, Radius, Spacing, Typography } from '../constants/Desi
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { isStringArray, safeJsonParse } from '../libs/utils/safe-json';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
-import { dataSourceConfig } from '../libs/services/data-source-config';
 import { lookupBangumiByPlatformId } from '../libs/services/pilgrimage/anitabi-cross-index';
+import {
+  pilgrimageSearchService,
+  type PilgrimageSearchResult,
+} from '../libs/services/pilgrimage/pilgrimage-search-service';
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -54,6 +57,12 @@ const DEBOUNCE_MS = 320;
 type SortKey = 'relevance' | 'score' | 'year';
 type FilterKey = 'all' | 'tv' | 'movie' | 'recent';
 
+type SearchAnime = Anime & {
+  bangumiId?: number;
+  hasPilgrimage?: boolean;
+  pilgrimageSource?: PilgrimageSearchResult['source'];
+};
+
 const FILTERS: readonly { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'tv', label: 'TV' },
@@ -76,7 +85,7 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{ context?: string }>();
   const isPilgrimageMode = params.context === 'pilgrimage';
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Anime[]>([]);
+  const [results, setResults] = useState<SearchAnime[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<string[]>([]);
@@ -104,26 +113,36 @@ export default function SearchScreen() {
     }
   }, []);
 
-  const runSearch = useCallback(async (q: string) => {
-    const trimmed = q.trim();
-    if (!trimmed) {
-      setResults([]);
+  const runSearch = useCallback(
+    async (q: string) => {
+      const trimmed = q.trim();
+      if (!trimmed) {
+        setResults([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       setError(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await AnimeRepository.searchAnime(trimmed, 1);
-      setResults(data ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Search failed');
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setResolveError(null);
+      try {
+        if (isPilgrimageMode) {
+          const data = await pilgrimageSearchService.search(trimmed, { limit: 30 });
+          setResults(data.map(mapPilgrimageResultToAnime));
+          return;
+        }
+
+        const data = await AnimeRepository.searchAnime(trimmed, 1);
+        setResults((data ?? []) as SearchAnime[]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Search failed');
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isPilgrimageMode]
+  );
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -136,7 +155,7 @@ export default function SearchScreen() {
   }, [query, runSearch]);
 
   const handleSelect = useCallback(
-    async (anime: Anime) => {
+    async (anime: SearchAnime) => {
       hapticsBridge.tap();
       const next = [anime.title, ...recent.filter((r) => r !== anime.title)].slice(0, MAX_RECENT);
       setRecent(next);
@@ -144,6 +163,11 @@ export default function SearchScreen() {
       Keyboard.dismiss();
 
       if (isPilgrimageMode) {
+        if (typeof anime.bangumiId === 'number') {
+          router.push(`/pilgrimage/${anime.bangumiId}`);
+          return;
+        }
+
         // Translate the browse-source id (usually AniList) → Bangumi subject
         // id before routing to the pilgrimage detail. If we can't resolve a
         // bangumi id at all there is no pilgrimage page to land on, so warn
@@ -152,7 +176,7 @@ export default function SearchScreen() {
         setResolvingId(anime.id);
         try {
           const bangumiId = await pilgrimageRepository.resolveBangumiId({
-            sourcePlatform: dataSourceConfig.browseSource,
+            sourcePlatform: 'anilist',
             id: anime.id,
           });
           if (bangumiId === null) {
@@ -212,13 +236,9 @@ export default function SearchScreen() {
   const filteredResults = (() => {
     let list = results;
     if (filter === 'tv') {
-      list = list.filter(
-        (a) => (a.type ?? a.format ?? '').toUpperCase().includes('TV')
-      );
+      list = list.filter((a) => (a.type ?? a.format ?? '').toUpperCase().includes('TV'));
     } else if (filter === 'movie') {
-      list = list.filter(
-        (a) => (a.type ?? a.format ?? '').toUpperCase().includes('MOVIE')
-      );
+      list = list.filter((a) => (a.type ?? a.format ?? '').toUpperCase().includes('MOVIE'));
     } else if (filter === 'recent') {
       const currentYear = new Date().getFullYear();
       list = list.filter((a) => (a.startDate?.year ?? 0) >= currentYear - 1);
@@ -241,7 +261,8 @@ export default function SearchScreen() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={[styles.searchHeader, { paddingTop: insets.top > 0 ? Spacing.xs : Spacing.sm }]}>
+        <View
+          style={[styles.searchHeader, { paddingTop: insets.top > 0 ? Spacing.xs : Spacing.sm }]}>
           <Pressable
             onPress={handleClose}
             hitSlop={8}
@@ -355,17 +376,10 @@ export default function SearchScreen() {
                     <Pressable
                       key={term}
                       onPress={() => handleRecentTap(term)}
-                      style={({ pressed }) => [
-                        styles.recentChip,
-                        pressed && { opacity: 0.8 },
-                      ]}
+                      style={({ pressed }) => [styles.recentChip, pressed && { opacity: 0.8 }]}
                       accessibilityRole="button"
                       accessibilityLabel={`Search ${term}`}>
-                      <MaterialIcons
-                        name="history"
-                        size={14}
-                        color={Colors.text.secondary}
-                      />
+                      <MaterialIcons name="history" size={14} color={Colors.text.secondary} />
                       <Text style={styles.recentText} numberOfLines={1}>
                         {term}
                       </Text>
@@ -427,10 +441,7 @@ export default function SearchScreen() {
                 </Text>
                 <Pressable
                   onPress={handleSortTap}
-                  style={({ pressed }) => [
-                    styles.sortBtn,
-                    pressed && { opacity: 0.8 },
-                  ]}
+                  style={({ pressed }) => [styles.sortBtn, pressed && { opacity: 0.8 }]}
                   accessibilityRole="button"
                   accessibilityLabel="Sort by">
                   <Ionicons name="swap-vertical" size={12} color={Colors.text.secondary} />
@@ -473,7 +484,8 @@ export default function SearchScreen() {
                 anime={item}
                 pending={resolvingId === item.id}
                 hasPilgrimage={
-                  lookupBangumiByPlatformId(dataSourceConfig.browseSource, item.id) !== null
+                  item.hasPilgrimage === true ||
+                  lookupBangumiByPlatformId('anilist', item.id) !== null
                 }
                 onPress={() => handleSelect(item)}
               />
@@ -493,7 +505,7 @@ export default function SearchScreen() {
 }
 
 interface ResultCardProps {
-  anime: Anime;
+  anime: SearchAnime;
   pending?: boolean;
   /**
    * Whether the L2 Anitabi cross-index resolved a pilgrimage entry for this
@@ -505,6 +517,32 @@ interface ResultCardProps {
   onPress: () => void;
 }
 
+function mapPilgrimageResultToAnime(result: PilgrimageSearchResult): SearchAnime {
+  const tags = [
+    result.city,
+    result.pointsLength > 0
+      ? `${result.pointsLength} ${result.pointsLength === 1 ? 'spot' : 'spots'}`
+      : null,
+  ].filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
+
+  return {
+    id: String(result.bangumiId),
+    bangumiId: result.bangumiId,
+    hasPilgrimage: true,
+    pilgrimageSource: result.source,
+    title: result.titleCn || result.title || 'Unknown Title',
+    titleEnglish:
+      result.titleCn && result.title && result.titleCn !== result.title ? result.title : undefined,
+    image: result.cover,
+    rank: 0,
+    type: 'Pilgrimage',
+    format: 'Pilgrimage',
+    tags,
+    mood: '',
+    durationMinutes: 0,
+  };
+}
+
 function ResultCard({ anime, pending, hasPilgrimage, onPress }: ResultCardProps) {
   const score = typeof anime.score === 'number' ? formatScore(anime.score) : null;
   const tags = anime.tags?.slice(0, 3) ?? [];
@@ -513,15 +551,18 @@ function ResultCard({ anime, pending, hasPilgrimage, onPress }: ResultCardProps)
       onPress={onPress}
       disabled={pending}
       accessibilityRole="button"
-      accessibilityLabel={
-        hasPilgrimage ? `${anime.title}, pilgrimage available` : anime.title
-      }
+      accessibilityLabel={hasPilgrimage ? `${anime.title}, pilgrimage available` : anime.title}
       style={({ pressed }) => [
         styles.resultCard,
         pressed && { opacity: 0.85 },
         pending && { opacity: 0.6 },
       ]}>
-      <Image source={{ uri: anime.image }} style={styles.thumb} contentFit="cover" transition={150} />
+      <Image
+        source={{ uri: anime.image }}
+        style={styles.thumb}
+        contentFit="cover"
+        transition={150}
+      />
       <View style={styles.resultBody}>
         <View style={styles.resultTitleRow}>
           <Text style={styles.resultTitle} numberOfLines={2}>
@@ -546,9 +587,7 @@ function ResultCard({ anime, pending, hasPilgrimage, onPress }: ResultCardProps)
           {anime.startDate?.year ? (
             <Text style={styles.resultMeta}>{anime.startDate.year}</Text>
           ) : null}
-          {anime.status ? (
-            <Text style={styles.resultMetaSubtle}>· {anime.status}</Text>
-          ) : null}
+          {anime.status ? <Text style={styles.resultMetaSubtle}>· {anime.status}</Text> : null}
           {score ? (
             <View style={styles.resultScore}>
               <Ionicons name="star" size={11} color={Colors.primary} />

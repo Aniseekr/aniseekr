@@ -59,14 +59,14 @@ describe('PilgrimageRepository', () => {
 
     const result = await repo.getSpotsForAnime({
       sourcePlatform: 'anilist',
-      id: 12189, // Hyouka's AniList id
+      id: 987654321, // Deliberately absent from the L2 cross-index so L1 mapping is exercised.
       bangumiId: null,
       platformData: { bangumi: null },
     });
 
     expect(result).not.toBeNull();
     expect(result?.id).toBe(SUBJECT_ID);
-    expect(mapSpy).toHaveBeenCalledWith('anilist', 12189, 'bangumi');
+    expect(mapSpy).toHaveBeenCalledWith('anilist', 987654321, 'bangumi');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     mapSpy.mockRestore();

@@ -32,6 +32,7 @@ import {
   type AlignmentSensors,
 } from '../../../../libs/services/pilgrimage/alignment-scoring';
 import { useEdgeImage, useSketchImage } from '../../../../libs/services/pilgrimage/edge-image-skia';
+import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 
 type SearchParams = {
   spotId: string;
@@ -72,6 +73,11 @@ export default function CompareCaptureScreen() {
   const params = useLocalSearchParams<SearchParams>();
   const spotId = params.spotId ?? '';
   const imageUrl = params.imageUrl ?? '';
+  // Anitabi's `?plan=h160` is a 284×160 thumbnail — fine for tiny thumbs but
+  // visibly pixelated when overlaid full-screen on the camera preview.
+  // Strip it here so the overlay (and Skia edge/sketch source) uses the
+  // original 1920×1080 frame. See libs/services/pilgrimage/anitabi-image.ts.
+  const hiResImageUrl = useMemo(() => toFullResImageUrl(imageUrl), [imageUrl]);
   const sceneName = params.name ?? 'Scene';
   const ep = params.ep;
   const animeId = params.animeId;
@@ -252,11 +258,11 @@ export default function CompareCaptureScreen() {
   }, [lockedAt, perfectFiredAt, perfectOpacity]);
 
   const { edgeImage, loading: edgeLoading } = useEdgeImage(
-    overlayMode === 'edge' ? imageUrl : null,
+    overlayMode === 'edge' ? hiResImageUrl : null,
     { inkColor: themeColor, inkOpacity: 1 }
   );
   const { sketchImage, loading: sketchLoading } = useSketchImage(
-    overlayMode === 'sketch' ? imageUrl : null,
+    overlayMode === 'sketch' ? hiResImageUrl : null,
     { inkColor: '#1A1A1A', inkOpacity: 1 }
   );
 
@@ -404,13 +410,14 @@ export default function CompareCaptureScreen() {
         pathname: '/pilgrimage/compare/preview',
         params: {
           spotId,
-          imageUrl,
+          imageUrl: hiResImageUrl,
           shotUri: photo.uri,
           shotWidth: String(photo.width ?? 0),
           shotHeight: String(photo.height ?? 0),
           name: sceneName,
           ep: ep ?? '',
           animeId: animeId ?? '',
+          animeTitle: animeTitle ?? '',
           themeColor,
           heading: headingValue,
           spotLat: spotLatParam ?? '',
@@ -427,10 +434,11 @@ export default function CompareCaptureScreen() {
   }, [
     capturing,
     heading,
-    imageUrl,
+    hiResImageUrl,
     sceneName,
     ep,
     animeId,
+    animeTitle,
     router,
     spotId,
     themeColor,
@@ -556,7 +564,7 @@ export default function CompareCaptureScreen() {
           <Animated.View style={[styles.overlayWrap, overlayStyle]} pointerEvents="auto">
             {overlayMode === 'anime' ? (
               <Image
-                source={{ uri: imageUrl }}
+                source={{ uri: hiResImageUrl }}
                 style={[styles.overlayImage, { opacity }]}
                 contentFit="contain"
                 transition={120}
@@ -597,7 +605,7 @@ export default function CompareCaptureScreen() {
           </Animated.View>
         </GestureDetector>
 
-        <CornerBrackets color={themeColor} insets={insets} />
+        <CornerBrackets color={themeColor} insets={insets} isLandscape={isLandscape} />
 
         <LinearGradient
           colors={['rgba(0,0,0,0.78)', 'rgba(0,0,0,0)']}
@@ -651,7 +659,15 @@ export default function CompareCaptureScreen() {
         </View>
 
         {showRotationBadge ? (
-          <View style={[styles.rotationBadge, { top: insets.top + 64, borderColor: themeColor }]}
+          <View
+            style={[
+              styles.rotationBadge,
+              {
+                top: insets.top + 64,
+                right: isLandscape ? 90 : 14,
+                borderColor: themeColor,
+              },
+            ]}
             pointerEvents="none">
             <Ionicons name="sync" size={12} color={themeColor} />
             <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
@@ -687,9 +703,10 @@ export default function CompareCaptureScreen() {
           onSelectMode={selectMode}
           flipped={flipped}
           onToggleFlip={toggleFlip}
+          isLandscape={isLandscape}
         />
 
-        <InfoPill
+        <InfoStack
           distanceMeters={score.distanceMeters}
           headingDir={headingDir}
           headingDeg={headingDeg}
@@ -697,12 +714,18 @@ export default function CompareCaptureScreen() {
           tilt={tilt}
           theme={theme}
           themeColor={themeColor}
-          bottom={insets.bottom + 196}
+          insets={insets}
+          isLandscape={isLandscape}
         />
 
         {totalPct !== null ? (
           <View
-            style={[styles.alignmentChipWrap, { bottom: insets.bottom + 156 }]}
+            style={[
+              isLandscape ? styles.alignmentChipWrapLandscape : styles.alignmentChipWrap,
+              isLandscape
+                ? { top: insets.top + 208 }
+                : { bottom: insets.bottom + 156 },
+            ]}
             pointerEvents="none">
             <View
               style={[
@@ -734,25 +757,90 @@ export default function CompareCaptureScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View
+          style={[
+            styles.bottomBar,
+            isLandscape ? styles.bottomBarLandscape : null,
+            { paddingBottom: insets.bottom + (isLandscape ? 8 : 12) },
+          ]}>
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.78)']}
             style={StyleSheet.absoluteFill}
           />
-          <View style={styles.bottomRow}>
-            <ThumbnailBtn
-              kind="map"
-              themeColor={themeColor}
-              onPress={() => {
-                hapticsBridge.tap();
-                router.push({
-                  pathname: '/pilgrimage/compare/align',
-                  params: { ...params },
-                });
-              }}
-            />
+          {isLandscape ? (
+            <View style={styles.bottomRowLandscape}>
+              <View style={styles.bottomClusterLeft}>
+                <ThumbnailBtn
+                  kind="map"
+                  themeColor={themeColor}
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    router.push({
+                      pathname: '/pilgrimage/compare/align',
+                      params: { ...params },
+                    });
+                  }}
+                />
+                <Pressable
+                  onPress={toggleGrid}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle rule-of-thirds grid"
+                  style={({ pressed }) => [
+                    styles.miniBtn,
+                    {
+                      backgroundColor: grid ? themeColor + '33' : 'rgba(255,255,255,0.12)',
+                      borderColor: grid ? themeColor : 'rgba(255,255,255,0.22)',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Ionicons
+                    name={grid ? 'grid' : 'grid-outline'}
+                    size={16}
+                    color={grid ? themeColor : '#fff'}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={toggleFacing}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Switch front/back camera"
+                  style={({ pressed }) => [
+                    styles.miniBtn,
+                    {
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      borderColor: 'rgba(255,255,255,0.22)',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
+                </Pressable>
+                <Pressable
+                  onPress={togglePortraitLock}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: portraitLocked }}
+                  accessibilityLabel={
+                    portraitLocked ? 'Allow rotation' : 'Lock portrait orientation'
+                  }
+                  style={({ pressed }) => [
+                    styles.miniBtn,
+                    {
+                      backgroundColor: portraitLocked
+                        ? themeColor + '33'
+                        : 'rgba(255,255,255,0.12)',
+                      borderColor: portraitLocked ? themeColor : 'rgba(255,255,255,0.22)',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Ionicons
+                    name={portraitLocked ? 'lock-closed' : 'lock-open-outline'}
+                    size={16}
+                    color={portraitLocked ? themeColor : '#fff'}
+                  />
+                </Pressable>
+              </View>
 
-            <View style={styles.shutterColumn}>
               <Pressable
                 onPress={handleShutter}
                 disabled={capturing}
@@ -760,92 +848,141 @@ export default function CompareCaptureScreen() {
                 accessibilityLabel="Take comparison photo"
                 style={({ pressed }) => [
                   styles.shutterOuter,
+                  styles.shutterOuterLandscape,
                   { borderColor: themeColor },
                   pressed && { opacity: 0.85 },
                   capturing && { opacity: 0.6 },
                 ]}>
-                <View style={[styles.shutterInner, { backgroundColor: themeColor }]} />
+                <View
+                  style={[
+                    styles.shutterInner,
+                    styles.shutterInnerLandscape,
+                    { backgroundColor: themeColor },
+                  ]}
+                />
               </Pressable>
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                align="center"
-                style={{ color: 'rgba(255,255,255,0.6)', marginTop: 6, letterSpacing: 1 }}>
-                PHOTO
-              </ThemedText>
+
+              <ThumbnailBtn
+                kind="reference"
+                themeColor={themeColor}
+                imageUrl={imageUrl}
+                onPress={() => {
+                  hapticsBridge.tap();
+                  selectMode('anime');
+                }}
+              />
             </View>
+          ) : (
+            <>
+              <View style={styles.bottomRow}>
+                <ThumbnailBtn
+                  kind="map"
+                  themeColor={themeColor}
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    router.push({
+                      pathname: '/pilgrimage/compare/align',
+                      params: { ...params },
+                    });
+                  }}
+                />
 
-            <ThumbnailBtn
-              kind="reference"
-              themeColor={themeColor}
-              imageUrl={imageUrl}
-              onPress={() => {
-                hapticsBridge.tap();
-                selectMode('anime');
-              }}
-            />
-          </View>
+                <View style={styles.shutterColumn}>
+                  <Pressable
+                    onPress={handleShutter}
+                    disabled={capturing}
+                    accessibilityRole="button"
+                    accessibilityLabel="Take comparison photo"
+                    style={({ pressed }) => [
+                      styles.shutterOuter,
+                      { borderColor: themeColor },
+                      pressed && { opacity: 0.85 },
+                      capturing && { opacity: 0.6 },
+                    ]}>
+                    <View style={[styles.shutterInner, { backgroundColor: themeColor }]} />
+                  </Pressable>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="700"
+                    align="center"
+                    style={{ color: 'rgba(255,255,255,0.6)', marginTop: 6, letterSpacing: 1 }}>
+                    PHOTO
+                  </ThemedText>
+                </View>
 
-          <View style={styles.bottomActionRow}>
-            <Pressable
-              onPress={toggleGrid}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Toggle rule-of-thirds grid"
-              style={({ pressed }) => [
-                styles.miniBtn,
-                {
-                  backgroundColor: grid ? themeColor + '33' : 'rgba(255,255,255,0.12)',
-                  borderColor: grid ? themeColor : 'rgba(255,255,255,0.22)',
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}>
-              <Ionicons
-                name={grid ? 'grid' : 'grid-outline'}
-                size={16}
-                color={grid ? themeColor : '#fff'}
-              />
-            </Pressable>
-            <Pressable
-              onPress={toggleFacing}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Switch front/back camera"
-              style={({ pressed }) => [
-                styles.miniBtn,
-                {
-                  backgroundColor: 'rgba(255,255,255,0.12)',
-                  borderColor: 'rgba(255,255,255,0.22)',
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}>
-              <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
-            </Pressable>
-            <Pressable
-              onPress={togglePortraitLock}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityState={{ selected: portraitLocked }}
-              accessibilityLabel={
-                portraitLocked ? 'Allow rotation' : 'Lock portrait orientation'
-              }
-              style={({ pressed }) => [
-                styles.miniBtn,
-                {
-                  backgroundColor: portraitLocked
-                    ? themeColor + '33'
-                    : 'rgba(255,255,255,0.12)',
-                  borderColor: portraitLocked ? themeColor : 'rgba(255,255,255,0.22)',
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}>
-              <Ionicons
-                name={portraitLocked ? 'lock-closed' : 'lock-open-outline'}
-                size={16}
-                color={portraitLocked ? themeColor : '#fff'}
-              />
-            </Pressable>
-          </View>
+                <ThumbnailBtn
+                  kind="reference"
+                  themeColor={themeColor}
+                  imageUrl={imageUrl}
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    selectMode('anime');
+                  }}
+                />
+              </View>
+
+              <View style={styles.bottomActionRow}>
+                <Pressable
+                  onPress={toggleGrid}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle rule-of-thirds grid"
+                  style={({ pressed }) => [
+                    styles.miniBtn,
+                    {
+                      backgroundColor: grid ? themeColor + '33' : 'rgba(255,255,255,0.12)',
+                      borderColor: grid ? themeColor : 'rgba(255,255,255,0.22)',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Ionicons
+                    name={grid ? 'grid' : 'grid-outline'}
+                    size={16}
+                    color={grid ? themeColor : '#fff'}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={toggleFacing}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Switch front/back camera"
+                  style={({ pressed }) => [
+                    styles.miniBtn,
+                    {
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      borderColor: 'rgba(255,255,255,0.22)',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
+                </Pressable>
+                <Pressable
+                  onPress={togglePortraitLock}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: portraitLocked }}
+                  accessibilityLabel={
+                    portraitLocked ? 'Allow rotation' : 'Lock portrait orientation'
+                  }
+                  style={({ pressed }) => [
+                    styles.miniBtn,
+                    {
+                      backgroundColor: portraitLocked
+                        ? themeColor + '33'
+                        : 'rgba(255,255,255,0.12)',
+                      borderColor: portraitLocked ? themeColor : 'rgba(255,255,255,0.22)',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Ionicons
+                    name={portraitLocked ? 'lock-closed' : 'lock-open-outline'}
+                    size={16}
+                    color={portraitLocked ? themeColor : '#fff'}
+                  />
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
 
         {showPerfectBanner ? (
@@ -853,8 +990,10 @@ export default function CompareCaptureScreen() {
             pointerEvents="none"
             style={[
               styles.perfectBanner,
+              isLandscape
+                ? { top: insets.top + 64 }
+                : { bottom: insets.bottom + 232 },
               {
-                bottom: insets.bottom + 232,
                 backgroundColor: theme.status.success,
                 opacity: perfectOpacity,
               },
@@ -894,15 +1033,17 @@ export default function CompareCaptureScreen() {
 function CornerBrackets({
   color,
   insets,
+  isLandscape,
 }: {
   color: string;
   insets: { top: number; bottom: number; left: number; right: number };
+  isLandscape: boolean;
 }) {
-  // Inset matches the visible camera framing the user is meant to align to.
-  const T = insets.top + 100;
-  const B = insets.bottom + 240;
-  const L = 18;
-  const R = 18 + 76; // leave room for the right panel
+  // Brackets mark the clear framing area that isn't occupied by overlays.
+  const T = isLandscape ? insets.top + 56 : insets.top + 100;
+  const B = isLandscape ? insets.bottom + 96 : insets.bottom + 240;
+  const L = isLandscape ? 152 : 18;
+  const R = isLandscape ? 86 : 18 + 76;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <View style={[styles.bracket, styles.bracketTL, { top: T, left: L, borderColor: color }]} />
@@ -927,6 +1068,7 @@ function RightControlPanel({
   onSelectMode,
   flipped,
   onToggleFlip,
+  isLandscape,
 }: {
   insets: { top: number; bottom: number; left: number; right: number };
   theme: ThemePalette;
@@ -937,32 +1079,36 @@ function RightControlPanel({
   onSelectMode: (mode: OverlayMode) => void;
   flipped: boolean;
   onToggleFlip: () => void;
+  isLandscape: boolean;
 }) {
-  const sliderHeight = 110;
+  const sliderHeight = isLandscape ? 76 : 110;
   return (
     <View
       style={[
         styles.rightPanel,
+        isLandscape ? styles.rightPanelLandscape : null,
         {
-          top: insets.top + 100,
+          top: isLandscape ? insets.top + 64 : insets.top + 100,
           right: 14,
           borderColor: theme.glassBorder,
         },
       ]}
       pointerEvents="box-none">
       <View style={styles.panelInner} pointerEvents="auto">
+        {isLandscape ? null : (
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            align="center"
+            style={{ color: 'rgba(255,255,255,0.75)' }}>
+            透明度
+          </ThemedText>
+        )}
         <ThemedText
-          variant="captionSmall"
+          variant={isLandscape ? 'captionSmall' : 'titleSmall'}
           weight="700"
           align="center"
-          style={{ color: 'rgba(255,255,255,0.75)' }}>
-          透明度
-        </ThemedText>
-        <ThemedText
-          variant="titleSmall"
-          weight="700"
-          align="center"
-          style={{ color: themeColor, marginTop: 2, marginBottom: 6 }}>
+          style={{ color: themeColor, marginTop: 2, marginBottom: isLandscape ? 2 : 6 }}>
           {Math.round(opacity * 100)}%
         </ThemedText>
         <View style={{ height: sliderHeight, justifyContent: 'center', alignItems: 'center' }}>
@@ -981,24 +1127,27 @@ function RightControlPanel({
           />
         </View>
 
-        <View style={styles.modeStack}>
+        <View style={[styles.modeStack, isLandscape ? styles.modeStackLandscape : null]}>
           <ModePill
             label="anime"
             active={overlayMode === 'anime'}
             themeColor={themeColor}
             onPress={() => onSelectMode('anime')}
+            compact={isLandscape}
           />
           <ModePill
             label="sketch"
             active={overlayMode === 'sketch'}
             themeColor={themeColor}
             onPress={() => onSelectMode('sketch')}
+            compact={isLandscape}
           />
           <ModePill
             label="edge"
             active={overlayMode === 'edge'}
             themeColor={themeColor}
             onPress={() => onSelectMode('edge')}
+            compact={isLandscape}
           />
         </View>
 
@@ -1008,6 +1157,7 @@ function RightControlPanel({
           accessibilityLabel={flipped ? 'Unflip overlay' : 'Flip overlay horizontally'}
           style={({ pressed }) => [
             styles.flipBtn,
+            isLandscape ? styles.flipBtnLandscape : null,
             {
               backgroundColor: flipped ? themeColor + '33' : 'rgba(255,255,255,0.10)',
               borderColor: flipped ? themeColor : 'rgba(255,255,255,0.22)',
@@ -1016,7 +1166,7 @@ function RightControlPanel({
           ]}>
           <Ionicons
             name="swap-horizontal"
-            size={16}
+            size={isLandscape ? 14 : 16}
             color={flipped ? themeColor : '#fff'}
           />
         </Pressable>
@@ -1030,11 +1180,13 @@ function ModePill({
   active,
   themeColor,
   onPress,
+  compact,
 }: {
   label: string;
   active: boolean;
   themeColor: string;
   onPress: () => void;
+  compact?: boolean;
 }) {
   const fg = active ? readableTextOn(themeColor) : 'rgba(255,255,255,0.65)';
   return (
@@ -1045,6 +1197,7 @@ function ModePill({
       hitSlop={6}
       style={({ pressed }) => [
         styles.modePill,
+        compact ? styles.modePillCompact : null,
         {
           backgroundColor: active ? themeColor : 'rgba(255,255,255,0.08)',
           opacity: pressed ? 0.75 : 1,
@@ -1057,7 +1210,7 @@ function ModePill({
   );
 }
 
-function InfoPill({
+function InfoStack({
   distanceMeters,
   headingDir,
   headingDeg,
@@ -1065,7 +1218,8 @@ function InfoPill({
   tilt,
   theme,
   themeColor,
-  bottom,
+  insets,
+  isLandscape,
 }: {
   distanceMeters: number | null;
   headingDir: string | null;
@@ -1074,7 +1228,8 @@ function InfoPill({
   tilt: number | null;
   theme: ThemePalette;
   themeColor: string;
-  bottom: number;
+  insets: { top: number; bottom: number; left: number; right: number };
+  isLandscape: boolean;
 }) {
   const hasAny =
     distanceMeters !== null || headingDir !== null || tilt !== null;
@@ -1091,8 +1246,72 @@ function InfoPill({
   const tiltText =
     tilt === null ? '—' : `${tilt >= 0 ? '+' : '−'}${Math.abs(tilt).toFixed(1)}°`;
 
+  if (isLandscape) {
+    return (
+      <View
+        style={[styles.infoStackLandscape, { top: insets.top + 96, left: 14 }]}
+        pointerEvents="none">
+        <View style={styles.infoStackRow}>
+          <Ionicons name="location" size={12} color={themeColor} />
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={styles.infoStackLabel}>
+            距離
+          </ThemedText>
+          <ThemedText
+            variant="bodySmall"
+            weight="700"
+            style={styles.infoStackValue}
+            numberOfLines={1}>
+            {distanceText}
+          </ThemedText>
+        </View>
+        <View style={styles.infoStackRowDivider} />
+        <View style={styles.infoStackRow}>
+          <Ionicons name="compass" size={12} color={themeColor} />
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={styles.infoStackLabel}>
+            方位
+          </ThemedText>
+          <ThemedText
+            variant="bodySmall"
+            weight="700"
+            style={styles.infoStackValue}
+            numberOfLines={1}>
+            {headingText}
+          </ThemedText>
+          {headingAligned ? (
+            <Ionicons name="checkmark-circle" size={11} color={theme.status.success} />
+          ) : null}
+        </View>
+        <View style={styles.infoStackRowDivider} />
+        <View style={styles.infoStackRow}>
+          <Ionicons name="reorder-three" size={12} color={themeColor} />
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={styles.infoStackLabel}>
+            傾斜
+          </ThemedText>
+          <ThemedText
+            variant="bodySmall"
+            weight="700"
+            style={styles.infoStackValue}
+            numberOfLines={1}>
+            {tiltText}
+          </ThemedText>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.infoPill, { bottom }]} pointerEvents="none">
+    <View
+      style={[styles.infoPill, { bottom: insets.bottom + 196 }]}
+      pointerEvents="none">
       <View style={styles.infoCell}>
         <ThemedText
           variant="captionSmall"
@@ -1259,11 +1478,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 24,
   },
+  bottomBarLandscape: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+  },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
+  },
+  bottomRowLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    gap: 12,
+  },
+  bottomClusterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   shutterColumn: {
     alignItems: 'center',
@@ -1277,10 +1512,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  shutterOuterLandscape: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 3,
+  },
   shutterInner: {
     width: 56,
     height: 56,
     borderRadius: 28,
+  },
+  shutterInnerLandscape: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
   },
   thumbBtn: {
     width: 56,
@@ -1401,6 +1647,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 6,
   },
+  rightPanelLandscape: {
+    width: 64,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+  },
   panelInner: {
     alignItems: 'stretch',
     gap: 8,
@@ -1410,11 +1662,19 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     marginTop: 4,
   },
+  modeStackLandscape: {
+    gap: 3,
+    marginTop: 2,
+  },
   modePill: {
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 999,
     alignItems: 'center',
+  },
+  modePillCompact: {
+    paddingVertical: 3,
+    paddingHorizontal: 4,
   },
   flipBtn: {
     alignSelf: 'center',
@@ -1425,6 +1685,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     marginTop: 6,
+  },
+  flipBtnLandscape: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginTop: 2,
   },
   infoPill: {
     position: 'absolute',
@@ -1439,6 +1705,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     gap: 10,
+  },
+  infoStackLandscape: {
+    position: 'absolute',
+    width: 132,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  infoStackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 22,
+  },
+  infoStackLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    width: 30,
+  },
+  infoStackValue: {
+    color: '#fff',
+    flex: 1,
+  },
+  infoStackRowDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    marginVertical: 4,
   },
   infoCell: {
     flex: 1,
@@ -1469,6 +1764,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  alignmentChipWrapLandscape: {
+    position: 'absolute',
+    left: 14,
+    flexDirection: 'row',
   },
   alignmentChip: {
     flexDirection: 'row',

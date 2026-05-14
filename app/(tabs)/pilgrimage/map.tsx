@@ -54,6 +54,10 @@ import {
   type AnitabiIndexEntry,
   type BoundingBox,
 } from '../../../libs/services/pilgrimage/anitabi-index';
+import {
+  getNearbyMapEntries,
+  MAP_LOCATE_ZOOM,
+} from '../../../libs/services/pilgrimage/map-nearby';
 
 interface HubMapMarker {
   /** Unique within a marker set: "bgm:<id>" for Anitabi-centroid markers, "88:<entryId>" for Tourism 88 city pins. */
@@ -228,14 +232,14 @@ ${MAP_BASE_BODY}
     if (user && typeof user.lat === 'number' && typeof user.lng === 'number') {
       var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
       userMarker = L.marker([user.lat, user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
-      // First time we get a real location fix, snap the camera to a tight
-      // ~10 km-wide framing around the user. Permission usually resolves
+      // First time we get a real location fix, snap the camera to a local
+      // ~10-30 km framing around the user. Permission usually resolves
       // after the WebView is up, so we can't just rely on the initial
       // setView. We don't repeat this on subsequent updates — the user is
       // already framed; rough GPS noise shouldn't yank the map around.
       if (!didSnapToUser) {
         didSnapToUser = true;
-        try { map.flyTo([user.lat, user.lng], 13, { duration: 0.4 }); } catch (e) {}
+        try { map.flyTo([user.lat, user.lng], ${MAP_LOCATE_ZOOM}, { duration: 0.4 }); } catch (e) {}
       }
     }
     initial.user = user;
@@ -243,21 +247,15 @@ ${MAP_BASE_BODY}
   applyUser(initial.user);
   window.__updateUser = applyUser;
 
-  var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
-  var initialZoom = initial.center.zoom;
-  var lastBounds = null;
   window.__bindMap(map, function recenter() {
+    window.__post({ type: 'locatePress' });
     if (initial.user) {
       var did = window.__fitNearby(map, initial.user, null, {
-        zoom: 14,
+        zoom: ${MAP_LOCATE_ZOOM},
         home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
       });
       if (did) return;
     }
-    if (lastBounds) {
-      try { map.flyToBounds(lastBounds, { padding: [40, 40], maxZoom: 11, duration: 0.4 }); return; } catch (e) {}
-    }
-    map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
   });
 
   var clusterLayer = window.__makeClusterGroup({ ringColor: initial.ringColor, disableAt: 12 });
@@ -272,7 +270,6 @@ ${MAP_BASE_BODY}
   // for Tourism 88 city pins — that lets one anime carry multiple 88 markers
   // (e.g. ゆるキャン△ has 6 cities) without collapsing.
   var loadedIds = new Set();
-  var allBounds = [];
 
   // When the React side toggles a filter (Official 88 / region) it injects
   // with replace=true so we wipe and rebuild instead of accumulating stale
@@ -281,7 +278,6 @@ ${MAP_BASE_BODY}
     if (replace) {
       try { clusterLayer.clearLayers(); } catch (e) {}
       loadedIds = new Set();
-      allBounds = [];
     }
     var batch = [];
     for (var i = 0; i < markers.length; i++) {
@@ -308,23 +304,18 @@ ${MAP_BASE_BODY}
           window.__post({ type: 'animePress', id: m.bangumiId, is88: !!m.is88, eightyEightId: m.eightyEightId || null });
         });
         batch.push(marker);
-        allBounds.push([m.lat, m.lng]);
       })(m, mid);
     }
     if (batch.length === 0 && !replace) return;
     if (typeof clusterLayer.addLayers === 'function') clusterLayer.addLayers(batch);
     else for (var k = 0; k < batch.length; k++) clusterLayer.addLayer(batch[k]);
 
-    if (allBounds.length > 0) {
-      try { lastBounds = L.latLngBounds(allBounds); } catch (e) { /* noop */ }
-    }
     // Do NOT auto fit-to-all-markers. Pilgrimage points span the whole
     // archipelago — fitting them all dropped the camera to ~zoom 6 (a
     // country map), which made the screen feel like an atlas instead of
-    // "what's around me". We keep the initial setView (user → zoom 13 via
-    // applyUser, otherwise Tokyo Station) and let the user pan / hit the
-    // recenter button (which uses lastBounds) when they actually want the
-    // wider view.
+    // "what's around me". We keep the initial setView and let the locate
+    // button ask native for a real GPS fix instead of treating all loaded
+    // markers as a fallback.
   };
 
   window.__focusAnime = function(target) {
@@ -384,6 +375,7 @@ export default function PilgrimageMapScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const [animes, setAnimes] = useState<AnitabiBangumi[]>([]);
+  const animesRef = useRef<AnitabiBangumi[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -431,17 +423,8 @@ export default function PilgrimageMapScreen() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    locationService
-      .getCurrentLocation()
-      .then((loc) => {
-        if (!cancelled && loc) setUserLocation(loc);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    animesRef.current = animes;
+  }, [animes]);
 
   // Lazy-loaded entries from the offline index, keyed by bangumi id and
   // additive only (we never remove — the WebView dedups by id so duplicates
@@ -449,6 +432,41 @@ export default function PilgrimageMapScreen() {
   const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(
     () => new Map()
   );
+
+  const mergeNearbyIndexed = useCallback((loc: LatLng) => {
+    setExtraIndexed((prev) => {
+      const seen = new Set<number>();
+      for (const anime of animesRef.current) seen.add(anime.id);
+      for (const id of prev.keys()) seen.add(id);
+      const nearby = getNearbyMapEntries(loc, { exclude: seen });
+      if (nearby.length === 0) return prev;
+
+      const merged = new Map(prev);
+      let changed = false;
+      for (const entry of nearby) {
+        if (merged.has(entry.id)) continue;
+        merged.set(entry.id, entry);
+        changed = true;
+      }
+      return changed ? merged : prev;
+    });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    locationService
+      .getCurrentLocation()
+      .then((loc) => {
+        if (!cancelled && loc) {
+          setUserLocation(loc);
+          mergeNearbyIndexed(loc);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [mergeNearbyIndexed]);
 
   const handleBoundsChange = useCallback(
     (bounds: BoundingBox) => {
@@ -554,6 +572,18 @@ export default function PilgrimageMapScreen() {
     setOfficial88Mode((v) => !v);
   }, []);
 
+  const handleLocatePress = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    locationService
+      .getCurrentLocation()
+      .then((loc) => {
+        if (!loc) return;
+        setUserLocation(loc);
+        mergeNearbyIndexed(loc);
+      })
+      .catch(() => undefined);
+  }, [mergeNearbyIndexed]);
+
   const handleAnimePress = useCallback(
     (bangumiId: number) => {
       Haptics.selectionAsync().catch(() => undefined);
@@ -593,6 +623,7 @@ export default function PilgrimageMapScreen() {
             flyBoundsRequest={flyBoundsRequest}
             onAnimePress={handleAnimePress}
             onBoundsChange={handleBoundsChange}
+            onLocatePress={handleLocatePress}
           />
           <FilterChipRow
             theme={theme}
@@ -634,6 +665,7 @@ interface FullscreenMapViewProps {
   flyBoundsRequest: { key: string; bounds: RegionBounds } | null;
   onAnimePress: (bangumiId: number) => void;
   onBoundsChange: (bounds: BoundingBox) => void;
+  onLocatePress: () => void;
 }
 
 function FullscreenMapView({
@@ -646,6 +678,7 @@ function FullscreenMapView({
   flyBoundsRequest,
   onAnimePress,
   onBoundsChange,
+  onLocatePress,
 }: FullscreenMapViewProps) {
   const webviewRef = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
@@ -654,8 +687,8 @@ function FullscreenMapView({
   const html = useMemo(() => {
     // Default to a whole-Japan framing so the user can pick a region before
     // drilling into a city. applyUser() still snaps to the user's location
-    // at zoom 13 the first time GPS resolves — so locals don't have to pan
-    // back. The region chips fly the camera into specific regions on demand.
+    // at a local zoom the first time GPS resolves — so locals don't have to
+    // pan back. The region chips fly the camera into specific regions on demand.
     const center = { lat: JAPAN_OVERVIEW.lat, lng: JAPAN_OVERVIEW.lng, zoom: JAPAN_OVERVIEW.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
     return buildHubMapHtml({ center, user, ringColor });
@@ -724,6 +757,10 @@ function FullscreenMapView({
       }
       if (data.type === 'animePress' && typeof data.id === 'number') {
         onAnimePress(data.id);
+        return;
+      }
+      if (data.type === 'locatePress') {
+        onLocatePress();
         return;
       }
       if (

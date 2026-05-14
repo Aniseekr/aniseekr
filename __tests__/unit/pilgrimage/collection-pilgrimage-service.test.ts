@@ -55,13 +55,13 @@ describe('CollectionPilgrimageService', () => {
 
   it('returns Anitabi entries for collected anime resolved via ID mapping', async () => {
     const db = buildFakeDb([
-      { anime_id: '12189', status: 'watching', is_favorite: 0 },
+      { anime_id: '987654321', status: 'watching', is_favorite: 0 },
       { anime_id: '99999', status: 'completed', is_favorite: 1 },
     ]);
 
     const mapSpy = spyOn(mapping, 'mapID').mockImplementation(
       async (_from: string, fromId: number | string) => {
-        if (String(fromId) === '12189') return 7157; // Hyouka
+        if (String(fromId) === '987654321') return 7157; // Hyouka fixture
         if (String(fromId) === '99999') return null; // unmapped
         return null;
       }

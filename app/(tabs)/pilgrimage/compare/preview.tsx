@@ -13,6 +13,7 @@ import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText } from '../../../../components/themed';
 import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
+import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
 
 // Real-data alignment helpers — inline so this screen has no dependency on
@@ -61,11 +62,16 @@ export default function ComparePreviewScreen() {
   const params = useLocalSearchParams();
 
   const spotId = getStringParam(params, 'spotId') ?? '';
-  const imageUrl = getStringParam(params, 'imageUrl') ?? '';
+  // Strip Anitabi's `?plan=h160` thumbnail token so the side-by-side / overlay
+  // / slider stage renders the original 1920×1080 frame instead of pixelating
+  // the 284×160 thumb. Defensive — [spotId].tsx already upgrades it, but the
+  // album screen still hands in the raw thumbnail URL.
+  const imageUrl = toFullResImageUrl(getStringParam(params, 'imageUrl') ?? '');
   const shotUri = getStringParam(params, 'shotUri') ?? '';
   const sceneName = getStringParam(params, 'name') ?? 'Scene';
   const ep = getStringParam(params, 'ep');
   const animeId = getStringParam(params, 'animeId');
+  const animeTitle = getStringParam(params, 'animeTitle');
   const themeColor = getStringParam(params, 'themeColor') || theme.accent;
   const heading = getNumberParam(params, 'heading');
   const spotLat = getStringParam(params, 'spotLat');
@@ -210,6 +216,7 @@ export default function ComparePreviewScreen() {
       name: sceneName,
       ep: ep ?? '',
       animeId: animeId ?? '',
+      animeTitle: animeTitle ?? '',
       themeColor,
       spotLat: spotLat ?? '',
       spotLng: spotLng ?? '',
@@ -229,6 +236,7 @@ export default function ComparePreviewScreen() {
     sceneName,
     ep,
     animeId,
+    animeTitle,
     themeColor,
     spotLat,
     spotLng,

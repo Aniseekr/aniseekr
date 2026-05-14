@@ -83,6 +83,7 @@ mock.module('../../../libs/services/pilgrimage/anitabi-index.data.json', () => (
 }));
 
 const indexModule = await import('../../../libs/services/pilgrimage/anitabi-index');
+const nearbyMapModule = await import('../../../libs/services/pilgrimage/map-nearby');
 
 describe('anitabi-index', () => {
   it('PILG-IDX-001 returns all entries via getAllIndexed', () => {
@@ -148,6 +149,24 @@ describe('anitabi-index', () => {
       radiusKm: 100,
     });
     expect(got.map((e) => e.id)).toEqual([1]);
+  });
+
+  it('PILG-MAP-LOC-001 picks map recenter candidates within 30km and excludes loaded ids', () => {
+    expect(nearbyMapModule.MAP_LOCATE_RADIUS_KM).toBe(30);
+    expect(nearbyMapModule.MAP_LOCATE_ZOOM).toBe(12);
+
+    const got = nearbyMapModule.getNearbyMapEntries(
+      { latitude: 35.6895, longitude: 139.6917 },
+      { exclude: [1] }
+    );
+    expect(got).toEqual([]);
+
+    const withoutExclude = nearbyMapModule.getNearbyMapEntries({
+      latitude: 35.6895,
+      longitude: 139.6917,
+    });
+    expect(withoutExclude.map((e) => e.id)).toEqual([1]);
+    expect(withoutExclude[0].distanceKm).toBeLessThan(0.1);
   });
 
   it('PILG-IDX-008 ignores non-finite inputs', () => {

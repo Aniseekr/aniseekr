@@ -1,19 +1,17 @@
-// Mirrors japanwalker.pen Screen 13 (Share Comparison Card).
 // Builds a branded share image with both the anime reference and the user's
-// shot, plus optional badges (match score, location, date). User picks a
-// template and we use react-native-view-shot to capture it into a PNG that
-// the native share sheet can send.
+// shot. The user picks a template (visual style) and ratio (target platform);
+// react-native-view-shot captures the rendered card into a PNG that the
+// platform-specific share intent (or the OS share sheet) delivers.
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Radius, Spacing } from '../../../../constants/DesignSystem';
+import { Radius } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
@@ -24,37 +22,48 @@ import {
   getShareSceneName,
 } from '../../../../libs/services/pilgrimage/share-card';
 import { getStringParam } from '../../../../libs/utils/route-params';
-
-type Template = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
-
-const TEMPLATES: { id: Template; label: string }[] = [
-  { id: 'polaroid', label: 'Polaroid' },
-  { id: 'classic', label: 'Classic' },
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'comic', label: 'Comic' },
-  { id: 'manga', label: 'Manga' },
-];
+import {
+  ShareCard,
+  SHARE_TEMPLATES,
+  SHARE_RATIOS,
+  ratioToAspect,
+  type ShareRatio,
+  type ShareTemplate,
+} from '../../../../components/pilgrimage/ShareCard';
+import {
+  buildShareCaption,
+  shareToInstagram,
+  shareToLine,
+  shareToSystem,
+  shareToTwitter,
+  type ShareIntentResult,
+  type SharePlatform,
+} from '../../../../libs/services/pilgrimage/share-intents';
 
 export default function ShareComparisonScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const params = useLocalSearchParams();
+  const { width: winW } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const accent = getStringParam(params, 'themeColor') || theme.accent;
   const accentFg = readableTextOn(accent);
   const sceneName = getShareSceneName(params);
+  const animeTitle = getStringParam(params, 'animeTitle');
   const ep = getShareEpisode(params);
   const matchScore = getShareMatchScore(params);
   const locationText = formatShareLocation(params);
   const imageUrl = getStringParam(params, 'imageUrl') ?? '';
   const shotUri = getStringParam(params, 'shotUri') ?? '';
 
-  const [template, setTemplate] = useState<Template>('polaroid');
+  const [template, setTemplate] = useState<ShareTemplate>('polaroid');
+  const [ratio, setRatio] = useState<ShareRatio>('1:1');
   const [showScore, setShowScore] = useState(true);
   const [showLocation, setShowLocation] = useState(true);
   const [showDate, setShowDate] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
 
   const cardRef = useRef<View>(null);
   const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions();
@@ -63,6 +72,10 @@ export default function ShareComparisonScreen() {
     const d = new Date();
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   }, []);
+
+  const cardWidth = Math.min(winW - 32, 420);
+  const cardAspect = ratioToAspect(ratio);
+  const cardHeight = cardWidth / cardAspect;
 
   const ensureMediaPerm = useCallback(async () => {
     if (mediaPerm?.granted) return true;
@@ -84,35 +97,80 @@ export default function ShareComparisonScreen() {
     }
   }, []);
 
+  const flashToast = useCallback((text: string) => {
+    setToast(text);
+    setTimeout(() => setToast(null), 1800);
+  }, []);
+
   const handleSave = useCallback(async () => {
     hapticsBridge.success();
     const ok = await ensureMediaPerm();
-    if (!ok) return;
+    if (!ok) {
+      flashToast('需要相簿權限 · Media access denied');
+      return;
+    }
     const uri = await captureCard();
-    if (uri) {
+    if (!uri) {
+      flashToast('擷取失敗 · Capture failed');
+      return;
+    }
+    try {
+      await MediaLibrary.saveToLibraryAsync(uri);
+      flashToast('已存到相簿 · Saved to camera roll');
+    } catch (err) {
+      console.warn('save share card failed', err);
+      flashToast('儲存失敗 · Save failed');
+    }
+  }, [ensureMediaPerm, captureCard, flashToast]);
+
+  const performShare = useCallback(
+    async (platform: SharePlatform) => {
+      hapticsBridge.tap();
+      const ok = await ensureMediaPerm();
+      if (!ok) {
+        flashToast('需要相簿權限 · Media access denied');
+        return;
+      }
+      const uri = await captureCard();
+      if (!uri) {
+        flashToast('擷取失敗 · Capture failed');
+        return;
+      }
       try {
         await MediaLibrary.saveToLibraryAsync(uri);
       } catch (err) {
-        console.warn('save share card failed', err);
+        console.warn('save before share failed', err);
       }
-    }
-  }, [ensureMediaPerm, captureCard]);
-
-  const handleSocialShare = useCallback(
-    async (platform?: string) => {
-      hapticsBridge.tap();
-      const uri = await captureCard();
-      if (!uri) return;
-      try {
-        await Share.share({
-          url: uri,
-          message: `${sceneName}${ep ? ` · EP ${ep}` : ''} #aniseekr${platform ? ` via ${platform}` : ''}`,
-        });
-      } catch (err) {
-        console.warn('share failed', err);
+      const caption = buildShareCaption({
+        sceneName,
+        animeTitle,
+        episode: ep,
+        matchScore,
+        locationText,
+      });
+      let result: ShareIntentResult;
+      if (platform === 'instagram') {
+        result = await shareToInstagram({ imageUri: uri, caption });
+      } else if (platform === 'twitter') {
+        result = await shareToTwitter({ imageUri: uri, caption });
+      } else if (platform === 'line') {
+        result = await shareToLine({ imageUri: uri, caption });
+      } else {
+        result = await shareToSystem({ imageUri: uri, caption });
       }
+      const toastText = describeShareResult(result);
+      if (toastText) flashToast(toastText);
     },
-    [captureCard, sceneName, ep]
+    [
+      ensureMediaPerm,
+      captureCard,
+      sceneName,
+      animeTitle,
+      ep,
+      matchScore,
+      locationText,
+      flashToast,
+    ]
   );
 
   return (
@@ -133,7 +191,7 @@ export default function ShareComparisonScreen() {
               分享你的朝聖
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary">
-              Share
+              Share to social
             </ThemedText>
           </View>
           <Pressable
@@ -148,130 +206,78 @@ export default function ShareComparisonScreen() {
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 120 }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 140 }]}
           showsVerticalScrollIndicator={false}>
           <View style={styles.cardWrap}>
-            <View
-              ref={cardRef}
-              collapsable={false}
-              style={[
-                styles.card,
-                {
-                  backgroundColor:
-                    template === 'minimal' ? theme.background.primary : theme.background.secondary,
-                  borderColor: theme.glassBorder,
-                },
-              ]}>
-              <View style={styles.cardHeader}>
-                <View>
-                  <ThemedText variant="titleMedium" weight="700">
-                    {sceneName}
-                  </ThemedText>
-                  <ThemedText variant="captionSmall" tone="secondary">
-                    {ep ? `EP ${ep} · 聖地巡禮` : '聖地巡禮 · Pilgrimage'}
-                  </ThemedText>
-                </View>
-                {showScore && matchScore !== null ? (
-                  <View
-                    style={[
-                      styles.scoreBadge,
-                      {
-                        backgroundColor: `${theme.status.success}22`,
-                        borderColor: theme.status.success,
-                      },
-                    ]}>
-                    <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
-                    <ThemedText
-                      variant="captionSmall"
-                      weight="700"
-                      style={{ color: theme.status.success }}>
-                      Match {matchScore}%
-                    </ThemedText>
-                  </View>
-                ) : null}
-              </View>
+            <View style={[styles.cardShadow, { width: cardWidth, height: cardHeight }]}>
+              <ShareCard
+                ref={cardRef}
+                template={template}
+                ratio={ratio}
+                width={cardWidth}
+                imageUrl={imageUrl}
+                shotUri={shotUri}
+                sceneName={sceneName}
+                animeTitle={animeTitle}
+                episode={ep}
+                matchScore={showScore ? matchScore : null}
+                locationText={showLocation ? locationText : null}
+                date={today}
+                accent={accent}
+                theme={theme}
+                showScore={showScore}
+                showLocation={showLocation}
+                showDate={showDate}
+              />
+            </View>
+          </View>
 
-              <View style={styles.cardImages}>
-                <View style={styles.cardHalf}>
-                  <Image source={{ uri: imageUrl }} style={styles.cardImage} contentFit="cover" />
-                  <View style={[styles.cardImageBadge, { borderColor: accent }]}>
-                    <View style={[styles.cardBadgeDot, { backgroundColor: accent }]} />
-                    <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                      ANIME
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.cardHalf}>
-                  <Image source={{ uri: shotUri }} style={styles.cardImage} contentFit="cover" />
-                  <View style={[styles.cardImageBadge, { borderColor: theme.status.success }]}>
-                    <View
-                      style={[styles.cardBadgeDot, { backgroundColor: theme.status.success }]}
-                    />
-                    <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                      REAL
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.cardMetaRow}>
-                {showDate ? (
-                  <View style={styles.metaCell}>
-                    <Ionicons name="calendar-outline" size={12} color={theme.text.secondary} />
-                    <ThemedText variant="captionSmall" tone="secondary" weight="600">
-                      {today}
-                    </ThemedText>
-                  </View>
-                ) : null}
-                {showLocation ? (
-                  <View style={styles.metaCell}>
-                    <Ionicons
-                      name="location"
-                      size={12}
-                      color={locationText ? theme.accent : theme.text.secondary}
-                    />
-                    <ThemedText
-                      variant="captionSmall"
-                      tone={locationText ? undefined : 'secondary'}
-                      weight="600"
-                      style={locationText ? { color: theme.accent } : undefined}>
-                      {locationText ?? 'GPS unavailable'}
-                    </ThemedText>
-                  </View>
-                ) : null}
-              </View>
-
-              <View style={[styles.cardFooter, { borderTopColor: theme.glassBorder }]}>
-                <View style={[styles.brandDot, { backgroundColor: accent }]}>
-                  <Ionicons name="navigate" size={10} color={accentFg} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText variant="bodySmall" weight="700">
-                    Japan Walker
-                  </ThemedText>
-                  <ThemedText variant="captionSmall" tone="secondary">
-                    聖地巡禮 · Pilgrimage
-                  </ThemedText>
-                </View>
-                <View
-                  style={[
-                    styles.qrBox,
+          <View style={styles.ratioRow}>
+            {SHARE_RATIOS.map((r) => {
+              const active = r.id === ratio;
+              return (
+                <Pressable
+                  key={r.id}
+                  onPress={() => {
+                    hapticsBridge.selection();
+                    setRatio(r.id);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Aspect ratio ${r.label} (${r.hint})`}
+                  accessibilityState={{ selected: active }}
+                  style={({ pressed }) => [
+                    styles.ratioChip,
                     {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
+                      backgroundColor: active ? accent : theme.background.secondary,
+                      borderColor: active ? accent : theme.glassBorder,
+                      opacity: pressed ? 0.85 : 1,
                     },
                   ]}>
-                  <Ionicons name="qr-code" size={28} color={theme.text.secondary} />
-                </View>
-              </View>
-            </View>
+                  <ThemedText
+                    variant="bodySmall"
+                    weight="700"
+                    style={{ color: active ? accentFg : theme.text.primary }}>
+                    {r.label}
+                  </ThemedText>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="600"
+                    style={{
+                      color: active ? accentFg : theme.text.secondary,
+                      opacity: 0.85,
+                    }}>
+                    {r.hint}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
           </View>
 
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.templateRow}>
-            {TEMPLATES.map((t) => {
+            {SHARE_TEMPLATES.map((t) => {
               const active = t.id === template;
               return (
                 <Pressable
@@ -280,6 +286,9 @@ export default function ShareComparisonScreen() {
                     hapticsBridge.selection();
                     setTemplate(t.id);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Template ${t.label}`}
+                  accessibilityState={{ selected: active }}
                   style={({ pressed }) => [
                     styles.templateChip,
                     {
@@ -290,9 +299,9 @@ export default function ShareComparisonScreen() {
                   ]}>
                   <ThemedText
                     variant="bodySmall"
-                    weight={active ? '700' : '600'}
+                    weight="700"
                     style={{ color: active ? accentFg : theme.text.primary }}>
-                    {t.label}
+                    {t.emoji} {t.label}
                   </ThemedText>
                 </Pressable>
               );
@@ -334,27 +343,31 @@ export default function ShareComparisonScreen() {
           <View style={styles.socialRow}>
             <SocialBtn
               icon="logo-instagram"
+              label="IG"
               gradient={['#FFB86A', '#FF4F8F', '#9B3BFF']}
-              onPress={() => handleSocialShare('Instagram')}
+              onPress={() => performShare('instagram')}
               accessibilityLabel="Share to Instagram"
             />
             <SocialBtn
               icon="logo-twitter"
-              gradient={['#1DA1F2', '#1DA1F2']}
-              onPress={() => handleSocialShare('Twitter')}
-              accessibilityLabel="Share to Twitter"
+              label="X"
+              gradient={['#1DA1F2', '#0E72B5']}
+              onPress={() => performShare('twitter')}
+              accessibilityLabel="Share to X/Twitter"
             />
             <SocialBtn
               icon="chatbubble-ellipses"
+              label="LINE"
               gradient={['#10D966', '#0BBC55']}
-              onPress={() => handleSocialShare('LINE')}
+              onPress={() => performShare('line')}
               accessibilityLabel="Share via LINE"
             />
             <SocialBtn
               icon="ellipsis-horizontal"
+              label="More"
               gradient={[theme.background.tertiary, theme.background.tertiary]}
-              onPress={() => handleSocialShare()}
-              accessibilityLabel="More"
+              onPress={() => performShare('system')}
+              accessibilityLabel="More share options"
             />
           </View>
           <Pressable
@@ -367,13 +380,39 @@ export default function ShareComparisonScreen() {
             ]}>
             <Ionicons name="download" size={18} color={accentFg} />
             <ThemedText variant="titleSmall" weight="700" style={{ color: accentFg }}>
-              Save 保存
+              Save · 存到相簿
             </ThemedText>
           </Pressable>
         </View>
+
+        {toast ? (
+          <View pointerEvents="none" style={[styles.toastWrap, { bottom: insets.bottom + 168 }]}>
+            <View style={[styles.toast, { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder }]}>
+              <ThemedText variant="bodySmall" weight="700">
+                {toast}
+              </ThemedText>
+            </View>
+          </View>
+        ) : null}
       </SafeAreaView>
     </View>
   );
+}
+
+function describeShareResult(result: ShareIntentResult): string | null {
+  if (result.delivered === 'failed') return '分享取消 · Share cancelled';
+  if (result.platform === 'instagram') {
+    return result.captionCopied
+      ? 'IG 已開啟，文案已複製 · Caption copied'
+      : 'IG 已開啟 · Instagram opened';
+  }
+  if (result.platform === 'twitter') {
+    return 'X / Twitter 已開啟';
+  }
+  if (result.platform === 'line') {
+    return 'LINE 分享已開啟';
+  }
+  return null;
 }
 
 function ToggleRow({
@@ -422,11 +461,13 @@ function ToggleRow({
 
 function SocialBtn({
   icon,
+  label,
   gradient,
   onPress,
   accessibilityLabel,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
   gradient: [string, string, ...string[]];
   onPress: () => void;
   accessibilityLabel: string;
@@ -443,16 +484,22 @@ function SocialBtn({
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <Ionicons name={icon} size={22} color="#fff" />
+      <Ionicons name={icon} size={20} color="#fff" />
+      <ThemedText
+        variant="captionSmall"
+        weight="700"
+        style={{ color: '#fff', marginTop: 2, letterSpacing: 0.5 }}>
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
 
 const shareBtnStyles = StyleSheet.create({
   btn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    flex: 1,
+    height: 56,
+    borderRadius: 16,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -480,91 +527,34 @@ function makeStyles(theme: ThemePalette) {
     },
     headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
     scroll: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       gap: 18,
     },
     cardWrap: {
       alignItems: 'center',
     },
-    card: {
-      width: '100%',
-      borderRadius: 20,
-      borderWidth: 1,
-      padding: Spacing.md,
-      gap: 10,
+    cardShadow: {
+      borderRadius: 4,
+      shadowColor: '#000',
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 8,
     },
-    cardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 8,
-    },
-    scoreBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 999,
-      borderWidth: 1,
-    },
-    cardImages: {
+    ratioRow: {
       flexDirection: 'row',
       gap: 8,
+      justifyContent: 'center',
     },
-    cardHalf: {
+    ratioChip: {
       flex: 1,
-      aspectRatio: 1,
+      maxWidth: 110,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
       borderRadius: 14,
-      overflow: 'hidden',
-      position: 'relative',
-    },
-    cardImage: { width: '100%', height: '100%' },
-    cardImageBadge: {
-      position: 'absolute',
-      top: 8,
-      left: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: 999,
-      backgroundColor: 'rgba(0,0,0,0.55)',
       borderWidth: 1,
-    },
-    cardBadgeDot: { width: 5, height: 5, borderRadius: 2.5 },
-    cardMetaRow: {
-      flexDirection: 'row',
       alignItems: 'center',
-      gap: 14,
-    },
-    metaCell: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    cardFooter: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingTop: 10,
-      borderTopWidth: 1,
-    },
-    brandDot: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    qrBox: {
-      width: 44,
-      height: 44,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
+      gap: 1,
     },
     templateRow: {
       gap: 8,
@@ -572,7 +562,7 @@ function makeStyles(theme: ThemePalette) {
     },
     templateChip: {
       paddingHorizontal: 14,
-      paddingVertical: 8,
+      paddingVertical: 9,
       borderRadius: 999,
       borderWidth: 1,
     },
@@ -600,14 +590,14 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
     },
     footer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingTop: 12,
       gap: 12,
       backgroundColor: theme.background.primary,
     },
     socialRow: {
       flexDirection: 'row',
-      gap: 12,
+      gap: 8,
     },
     saveBtn: {
       flexDirection: 'row',
@@ -616,6 +606,18 @@ function makeStyles(theme: ThemePalette) {
       gap: 8,
       paddingVertical: 14,
       borderRadius: 999,
+    },
+    toastWrap: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+    toast: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      borderWidth: 1,
     },
   });
 }
