@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -32,16 +33,29 @@ import { shareSchedule } from '../../components/bangumi/shareSchedule';
 import { ShareScheduleCard } from '../../components/bangumi/ShareScheduleCard';
 import { AddTrackingSheet } from '../../components/bangumi/AddTrackingSheet';
 import { BangumiActionSnackbar } from '../../components/bangumi/BangumiActionSnackbar';
-import { AnimeRepository } from '../../libs/repositories/anime-repository';
+import { AnimeRepository, unifiedToLegacyAnime } from '../../libs/repositories/anime-repository';
 import { dataSourceConfig } from '../../libs/services/data-source-config';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
 import { loadBangumiPrefs, saveBangumiPrefs } from '../../libs/services/bangumi-prefs';
 import { loadUserPrefs, patchUserPrefs } from '../../libs/services/user-prefs';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
-import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
-import { useTheme } from '../../context/ThemeContext';
-import { Skeleton } from '../../components/themed';
+import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { readableTextOn } from '../../components/themed';
+import { ShimmerEffect } from '../../components/common/ShimmerEffect';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+
+// Module-level snapshot of the most-recent successful fetch per season key.
+// Survives screen unmount/remount (tab switch), so re-entering the page (or
+// switching back to a previously-viewed season) skips the skeleton entirely
+// and only triggers a silent SWR refresh underneath.
+type SeasonSnapshot = {
+  rawAnime: Anime[];
+  sourcePlatform: string;
+};
+const seasonSnapshots = new Map<string, SeasonSnapshot>();
+const snapshotKey = (season: string, year: number, source: string) =>
+  `${season}_${year}_${source}`;
 
 type FilterMode = 'all' | 'tracking';
 type Season = 'winter' | 'spring' | 'summer' | 'fall';
@@ -108,13 +122,23 @@ function matchesTypeFilter(anime: Anime, filter: BangumiTypeFilter): boolean {
 export default function BangumiScreen() {
   const { top } = useSafeAreaInsets();
   const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const retryFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { season: currentSeason, year: currentYear } = getCurrentSeason();
   const [selectedSeason, setSelectedSeason] = useState<Season>(currentSeason);
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [rawAnime, setRawAnime] = useState<Anime[]>([]);
-  const [sourcePlatform, setSourcePlatform] = useState<string>(() => dataSourceConfig.browseSource);
+  // Lazy initial state — pull the most-recent snapshot for the current season so
+  // re-entering the screen rehydrates instantly, no skeleton flash.
+  const [rawAnime, setRawAnime] = useState<Anime[]>(() => {
+    const key = snapshotKey(currentSeason, currentYear, dataSourceConfig.browseSource);
+    return seasonSnapshots.get(key)?.rawAnime ?? [];
+  });
+  const [sourcePlatform, setSourcePlatform] = useState<string>(() => {
+    const key = snapshotKey(currentSeason, currentYear, dataSourceConfig.browseSource);
+    return seasonSnapshots.get(key)?.sourcePlatform ?? dataSourceConfig.browseSource;
+  });
   const [prefs, setPrefsState] = useState<BangumiPreferences>(DEFAULT_BANGUMI_PREFS);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,24 +273,75 @@ export default function BangumiScreen() {
     [setPrefs]
   );
 
+  const fetchVersionRef = useRef(0);
   const fetchSeason = useCallback(
     async (forceRefresh: boolean) => {
-      setIsLoading(true);
+      const myVersion = ++fetchVersionRef.current;
+      const key = snapshotKey(selectedSeason, selectedYear, dataSourceConfig.browseSource);
+      const snapshot = seasonSnapshots.get(key);
+
+      if (!forceRefresh) {
+        // Re-hydrate instantly from snapshot if we have one for this season.
+        // Otherwise blank out so the skeleton shows during the cold fetch.
+        if (snapshot) {
+          setRawAnime(snapshot.rawAnime);
+          setSourcePlatform(snapshot.sourcePlatform);
+          setIsLoading(false);
+        } else {
+          setRawAnime([]);
+          setIsLoading(true);
+        }
+      } else {
+        // Pull-to-refresh keeps the visible list; the RefreshControl spinner
+        // is the affordance, not the skeleton.
+        setIsLoading(true);
+      }
+
+      // Local accumulator so each onPageReceived call replaces with the
+      // accumulated list — overwrites any stale snapshot data on the first
+      // fresh page rather than appending on top of it.
+      let acc: Anime[] = [];
       try {
-        const fetched = await AnimeRepository.getSeasonalAnime(
+        const fetched = await AnimeRepository.defaultInstance().fetchSeasonalAnimeBatched(
           selectedSeason.toUpperCase(),
           selectedYear,
-          1,
-          { perPage: 50, maxItems: 200, forceRefresh }
+          {
+            perPage: 50,
+            maxItems: 200,
+            forceRefresh,
+            onPageReceived: forceRefresh
+              ? undefined
+              : (pageItems) => {
+                  if (myVersion !== fetchVersionRef.current) return;
+                  const mapped = pageItems.map(unifiedToLegacyAnime);
+                  acc = [...acc, ...mapped];
+                  setRawAnime(acc);
+                  setIsLoading(false);
+                },
+          }
         );
-        setRawAnime(fetched);
-        setSourcePlatform(dataSourceConfig.browseSource);
+        if (myVersion !== fetchVersionRef.current) return;
+        const finalSource = dataSourceConfig.browseSource;
+        const finalList =
+          forceRefresh || acc.length === 0 ? fetched.map(unifiedToLegacyAnime) : acc;
+        if (forceRefresh) {
+          setRawAnime(finalList);
+        }
+        setSourcePlatform(finalSource);
+        // Write the freshest list back so future re-mounts skip the skeleton.
+        seasonSnapshots.set(snapshotKey(selectedSeason, selectedYear, finalSource), {
+          rawAnime: finalList,
+          sourcePlatform: finalSource,
+        });
         setError(null);
       } catch (e) {
+        if (myVersion !== fetchVersionRef.current) return;
         console.error('Failed to fetch bangumi', e);
         setError("Couldn't load this season. Pull to retry.");
       } finally {
-        setIsLoading(false);
+        if (myVersion === fetchVersionRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [selectedSeason, selectedYear]
@@ -408,26 +483,13 @@ export default function BangumiScreen() {
     animeNotificationService.requestPermissions();
   }, []);
 
-  if (isLoading && !refreshing && groupedAnime.length === 0) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={Colors.gradients.background as [string, string, ...string[]]}
-          style={StyleSheet.absoluteFill}
-        />
-        <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
-          <Skeleton.AnimeCardList count={6} />
-        </SafeAreaView>
-      </View>
-    );
-  }
+  // Cold-load placeholder: header stays interactive, calendar area shimmers
+  // in the actual focus-day shape so the swap to data has no layout jump.
+  const showSkeleton = isLoading && !refreshing && rawAnime.length === 0;
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={Colors.gradients.background as [string, string, ...string[]]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
         <View style={styles.headerWrap}>
           <SeasonHeader
@@ -470,7 +532,7 @@ export default function BangumiScreen() {
                 },
               ]}
               hitSlop={8}>
-              <Text style={styles.retryText}>Retry</Text>
+              <Text style={[styles.retryText, { color: retryFg }]}>Retry</Text>
             </Pressable>
           </View>
         ) : null}
@@ -518,40 +580,47 @@ export default function BangumiScreen() {
             contentContainerStyle={{ paddingBottom: 140 }}
             refreshControl={
               <RefreshControl
-                tintColor={Colors.text.primary}
+                tintColor={theme.text.primary}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={[Colors.primary]}
-                progressBackgroundColor={Colors.background.secondary}
+                colors={[theme.accent]}
+                progressBackgroundColor={theme.background.secondary}
               />
             }>
-            <TodayUpdatesSection
-              todayAnime={todayAnime}
-              onLongPressAnime={setTrackingTarget}
-              trackedIds={trackedIds}
-            />
-            <View style={styles.calendarContainer}>
-              <FocusDayCarousel
-                weekDays={weekDays}
-                groupedAnime={groupedAnime}
-                showUnknownDays={showUnknownDays}
-                isCurrentDay={(day) => day === todayDay}
-                initialDay={todayDay}
-                scrollToTodayKey={scrollToTodayKey}
-                sourcePlatform={sourcePlatform}
-                onLongPressAnime={setTrackingTarget}
-                onQuickAdd={handleQuickAddWishlist}
-                trackedIds={trackedIds}
-              />
-            </View>
-            {specialAnime.length > 0 ? (
-              <SpecialContentSection
-                title="Movies & specials"
-                subtitle={`${specialAnime.length} releases this season`}
-                icon="movie-creation"
-                anime={specialAnime}
-              />
-            ) : null}
+            {showSkeleton ? (
+              <BangumiCalendarSkeleton theme={theme} />
+            ) : (
+              <>
+                <TodayUpdatesSection
+                  todayAnime={todayAnime}
+                  onLongPressAnime={setTrackingTarget}
+                  trackedIds={trackedIds}
+                />
+                <View style={styles.calendarContainer}>
+                  <FocusDayCarousel
+                    weekDays={weekDays}
+                    groupedAnime={groupedAnime}
+                    showUnknownDays={showUnknownDays}
+                    isCurrentDay={(day) => day === todayDay}
+                    initialDay={todayDay}
+                    scrollToTodayKey={scrollToTodayKey}
+                    sourcePlatform={sourcePlatform}
+                    onLongPressAnime={setTrackingTarget}
+                    onQuickAdd={handleQuickAddWishlist}
+                    onToggleReminder={handleToggleReminder}
+                    trackedIds={trackedIds}
+                  />
+                </View>
+                {specialAnime.length > 0 ? (
+                  <SpecialContentSection
+                    title="Movies & specials"
+                    subtitle={`${specialAnime.length} releases this season`}
+                    icon="movie-creation"
+                    anime={specialAnime}
+                  />
+                ) : null}
+              </>
+            )}
           </ScrollView>
         ) : (
           <ScrollView
@@ -559,43 +628,49 @@ export default function BangumiScreen() {
             contentContainerStyle={{ paddingBottom: 140 }}
             refreshControl={
               <RefreshControl
-                tintColor={Colors.text.primary}
+                tintColor={theme.text.primary}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={[Colors.primary]}
-                progressBackgroundColor={Colors.background.secondary}
+                colors={[theme.accent]}
+                progressBackgroundColor={theme.background.secondary}
               />
             }>
-            {/* Show a compact weekly calendar above the list as a navigator */}
-            {todayAnime.length > 0 ? (
-              <TodayUpdatesSection
-                todayAnime={todayAnime}
-                onLongPressAnime={setTrackingTarget}
-                trackedIds={trackedIds}
-              />
-            ) : null}
-            <AnimeList
-              listViewData={listViewData}
-              renderAnimeCard={(anime) => (
-                <AnimeRowCard
-                  key={anime.id}
-                  anime={anime}
-                  sourcePlatform={sourcePlatform}
-                  isTracked={trackedIds.has(anime.id)}
-                  onAddTracking={setTrackingTarget}
-                  onQuickWishlist={handleQuickAddWishlist}
-                  onToggleReminder={handleToggleReminder}
+            {showSkeleton ? (
+              <BangumiListSkeleton theme={theme} />
+            ) : (
+              <>
+                {/* Show a compact weekly calendar above the list as a navigator */}
+                {todayAnime.length > 0 ? (
+                  <TodayUpdatesSection
+                    todayAnime={todayAnime}
+                    onLongPressAnime={setTrackingTarget}
+                    trackedIds={trackedIds}
+                  />
+                ) : null}
+                <AnimeList
+                  listViewData={listViewData}
+                  renderAnimeCard={(anime) => (
+                    <AnimeRowCard
+                      key={anime.id}
+                      anime={anime}
+                      sourcePlatform={sourcePlatform}
+                      isTracked={trackedIds.has(anime.id)}
+                      onAddTracking={setTrackingTarget}
+                      onQuickWishlist={handleQuickAddWishlist}
+                      onToggleReminder={handleToggleReminder}
+                    />
+                  )}
                 />
-              )}
-            />
-            {specialAnime.length > 0 ? (
-              <SpecialContentSection
-                title="Movies & specials"
-                subtitle={`${specialAnime.length} releases this season`}
-                icon="movie-creation"
-                anime={specialAnime}
-              />
-            ) : null}
+                {specialAnime.length > 0 ? (
+                  <SpecialContentSection
+                    title="Movies & specials"
+                    subtitle={`${specialAnime.length} releases this season`}
+                    icon="movie-creation"
+                    anime={specialAnime}
+                  />
+                ) : null}
+              </>
+            )}
           </ScrollView>
         )}
       </SafeAreaView>
@@ -622,65 +697,208 @@ export default function BangumiScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background.primary,
-  },
-  safe: {
-    flex: 1,
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    ...Typography.bodyLarge,
-    color: Colors.text.primary,
-    fontFamily: FontFamily.text,
-  },
-  calendarContainer: {
-    flex: 1,
-    minHeight: 400,
-    paddingTop: Spacing.xs,
-  },
-  headerWrap: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-    ...Platform.select({
-      android: { elevation: 0 },
-    }),
-    borderRadius: Radius.card,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-  },
-  errorText: {
-    ...Typography.bodySmall,
-    flex: 1,
-  },
-  retryButton: {
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: Spacing.xxs + 2,
-    borderRadius: Radius.chip,
-  },
-  retryText: {
-    ...Typography.captionSmall,
-    fontWeight: '700',
-    color: '#0E0A06',
-  },
-  shareCardWrapper: {
-    position: 'absolute',
-    top: -10000,
-    left: -10000,
-  },
-});
+// Calendar-shaped skeleton — mirrors the actual TodayUpdates strip + the
+// focus-day card so the swap to real data has zero layout jump. All shimmers
+// share the global driver in ShimmerEffect, so cost is flat regardless of
+// instance count.
+function BangumiCalendarSkeleton({ theme }: { theme: ThemePalette }) {
+  const { width } = useWindowDimensions();
+  const cardWidth = width * 0.88;
+  const sidePadding = (width - cardWidth) / 2;
+  return (
+    <View>
+      {/* Today strip skeleton */}
+      <View
+        style={{
+          marginHorizontal: Spacing.md,
+          marginBottom: Spacing.sm,
+          borderRadius: Radius.card,
+          padding: Spacing.md,
+          backgroundColor: theme.background.secondary,
+          borderWidth: 1,
+          borderColor: theme.glassBorder,
+        }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <ShimmerEffect width={16} height={16} borderRadius={4} />
+          <ShimmerEffect width={64} height={14} />
+          <ShimmerEffect width={28} height={11} style={{ marginLeft: 4 }} />
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: Spacing.xs,
+            marginTop: Spacing.sm,
+          }}>
+          {[0, 1, 2, 3].map((i) => (
+            <View
+              key={i}
+              style={{
+                width: 168,
+                padding: 6,
+                gap: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.background.tertiary,
+                borderRadius: Radius.md,
+                borderWidth: 1,
+                borderColor: theme.glassBorder,
+              }}>
+              <ShimmerEffect width={40} height={56} borderRadius={Radius.sm} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <ShimmerEffect width="80%" height={11} />
+                <ShimmerEffect width="40%" height={10} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Focus-day card skeleton */}
+      <View
+        style={{
+          paddingHorizontal: sidePadding,
+          paddingVertical: Spacing.md,
+          minHeight: 460,
+        }}>
+        <View
+          style={{
+            width: cardWidth,
+            height: 440,
+            borderRadius: Radius.xxl,
+            overflow: 'hidden',
+            borderWidth: 1.5,
+            borderColor: theme.glassBorder,
+            backgroundColor: theme.background.secondary,
+          }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: Spacing.lg,
+              paddingTop: Spacing.lg,
+              paddingBottom: Spacing.md,
+            }}>
+            <ShimmerEffect width={140} height={28} />
+            <ShimmerEffect width={64} height={20} borderRadius={Radius.chip} />
+          </View>
+          <View
+            style={{
+              paddingHorizontal: Spacing.md,
+              gap: Spacing.xs,
+            }}>
+            {[0, 1, 2, 3].map((i) => (
+              <View
+                key={i}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: Spacing.sm,
+                  paddingHorizontal: Spacing.xs,
+                  paddingVertical: Spacing.xs,
+                }}>
+                <ShimmerEffect width={52} height={74} borderRadius={Radius.sm} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <ShimmerEffect width="78%" height={16} />
+                  <ShimmerEffect width="38%" height={11} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// List-mode skeleton — mirrors AnimeRowCard layout (poster + 2 lines + meta).
+function BangumiListSkeleton({ theme }: { theme: ThemePalette }) {
+  return (
+    <View style={{ paddingHorizontal: Spacing.md, gap: Spacing.md, paddingTop: Spacing.sm }}>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Spacing.md,
+            padding: Spacing.sm,
+            borderRadius: Radius.md,
+            backgroundColor: theme.background.secondary,
+            borderWidth: 1,
+            borderColor: theme.glassBorder,
+          }}>
+          <ShimmerEffect width={64} height={88} borderRadius={Radius.md} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <ShimmerEffect width="78%" height={16} />
+            <ShimmerEffect width="48%" height={12} />
+            <ShimmerEffect width="32%" height={12} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background.primary,
+    },
+    safe: {
+      flex: 1,
+    },
+    center: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    loadingText: {
+      ...Typography.bodyLarge,
+      color: theme.text.primary,
+      fontFamily: FontFamily.text,
+    },
+    calendarContainer: {
+      flex: 1,
+      minHeight: 400,
+      paddingTop: Spacing.xs,
+    },
+    headerWrap: {
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.md,
+      ...Platform.select({
+        android: { elevation: 0 },
+      }),
+      borderRadius: Radius.card,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+    },
+    errorText: {
+      ...Typography.bodySmall,
+      flex: 1,
+    },
+    retryButton: {
+      paddingHorizontal: Spacing.sm + 2,
+      paddingVertical: Spacing.xxs + 2,
+      borderRadius: Radius.chip,
+    },
+    retryText: {
+      ...Typography.captionSmall,
+      fontWeight: '700',
+    },
+    shareCardWrapper: {
+      position: 'absolute',
+      top: -10000,
+      left: -10000,
+    },
+  });
