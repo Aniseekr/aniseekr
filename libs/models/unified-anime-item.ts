@@ -99,6 +99,7 @@ export interface UnifiedAnimeItemInit {
   season?: string | null;
   startDate?: Date | null;
   broadcastDay?: string | null;
+  nextAiringEpisode?: { airingAt: number; episode: number } | null;
   status?: WatchStatus;
   genres?: string[];
   tags?: string[];
@@ -150,6 +151,7 @@ export class UnifiedAnimeItem {
   readonly season: string | null;
   readonly startDate: Date | null;
   readonly broadcastDay: string | null;
+  readonly nextAiringEpisode: { airingAt: number; episode: number } | null;
 
   readonly status: WatchStatus;
 
@@ -223,6 +225,7 @@ export class UnifiedAnimeItem {
     this.season = init.season ?? null;
     this.startDate = init.startDate ?? null;
     this.broadcastDay = init.broadcastDay ?? null;
+    this.nextAiringEpisode = init.nextAiringEpisode ?? null;
 
     this.status = init.status ?? 'unknown';
 
@@ -456,6 +459,11 @@ export class UnifiedAnimeItem {
         mal?.broadcastDay ??
         bangumi?.broadcastDay ??
         fallback.broadcastDay,
+      nextAiringEpisode:
+        anilist?.nextAiringEpisode ??
+        mal?.nextAiringEpisode ??
+        bangumi?.nextAiringEpisode ??
+        fallback.nextAiringEpisode,
       status,
       genres,
       tags,

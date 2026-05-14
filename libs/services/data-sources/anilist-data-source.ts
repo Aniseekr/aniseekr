@@ -527,6 +527,15 @@ export class AniListDataSource implements AnimeDataSource {
       season: media.season ? media.season.toUpperCase() : null,
       startDate: parseFuzzyDate(media.startDate),
       broadcastDay: nextAiringDay(media.nextAiringEpisode?.airingAt ?? null),
+      nextAiringEpisode:
+        media.nextAiringEpisode &&
+        media.nextAiringEpisode.airingAt != null &&
+        media.nextAiringEpisode.episode != null
+          ? {
+              airingAt: media.nextAiringEpisode.airingAt,
+              episode: media.nextAiringEpisode.episode,
+            }
+          : null,
       genres: media.genres ?? [],
       tags,
       studios,
