@@ -1,9 +1,17 @@
 // Theme-aware skeleton screens. Compose preset variants — one per page archetype —
 // out of ShimmerEffect blocks. Layouts (paddings, sizes, gaps) intentionally mirror
 // the real rendered content so the swap from skeleton -> data avoids layout shift.
+//
+// Perf notes:
+// - Skeletons are transient (mount → swap to data within ~ms-to-seconds). We
+//   deliberately render them as plain Views, not ScrollViews — the user never
+//   has time to scroll them and a ScrollView's native setup cost is non-trivial.
+// - All shimmer animation cost is shared globally (see ShimmerEffect.tsx), so
+//   raising the visible count here is cheap. The bigger cost is the View tree
+//   depth, which is why each preset stays flat.
 
 import { memo } from 'react';
-import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { ShimmerEffect } from '../common/ShimmerEffect';
@@ -31,13 +39,15 @@ function AnimeCardListBase({
   paddingHorizontal,
   style,
 }: SkeletonAnimeCardListProps) {
-  const items = Array.from({ length: count });
+  // Cap mounted nodes — anything past what fits on a phone screen is wasted
+  // shimmer cost on a placeholder the user can't reach (skeletons are
+  // non-scrollable; see file header).
+  const visibleCount = Math.min(count, horizontal ? 3 : 6);
+  const items = Array.from({ length: visibleCount });
   if (horizontal) {
     return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[
+      <View
+        style={[
           styles.hRow,
           paddingHorizontal != null ? { paddingHorizontal } : null,
           style,
@@ -49,7 +59,7 @@ function AnimeCardListBase({
             <ShimmerEffect width={80} height={11} style={{ marginTop: 6 }} />
           </Col>
         ))}
-      </ScrollView>
+      </View>
     );
   }
   return (
@@ -131,17 +141,14 @@ function HeroDetailBase({ showEpisodes = true, style }: SkeletonHeroDetailProps)
         {showEpisodes ? (
           <View style={{ marginTop: Spacing.xl }}>
             <ShimmerEffect width={120} height={14} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: Spacing.sm, marginTop: Spacing.sm }}>
-              {Array.from({ length: 6 }).map((_, i) => (
+            <Row style={{ gap: Spacing.sm, marginTop: Spacing.sm }}>
+              {Array.from({ length: 3 }).map((_, i) => (
                 <View key={i}>
                   <ShimmerEffect width={140} height={84} borderRadius={Radius.md} />
                   <ShimmerEffect width={100} height={11} style={{ marginTop: 6 }} />
                 </View>
               ))}
-            </ScrollView>
+            </Row>
           </View>
         ) : null}
       </View>
@@ -358,7 +365,7 @@ const styles = StyleSheet.create({
   list: { gap: Spacing.md },
   cardRow: { gap: Spacing.md, paddingVertical: Spacing.xs },
   cardBody: { flex: 1, justifyContent: 'center' },
-  hRow: { gap: Spacing.md, paddingVertical: Spacing.xs },
+  hRow: { flexDirection: 'row', gap: Spacing.md, paddingVertical: Spacing.xs, overflow: 'hidden' },
   hCard: { width: 140 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   hero: {},
