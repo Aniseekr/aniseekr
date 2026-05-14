@@ -18,7 +18,7 @@ import type { Anime } from '../../../components/rate/types';
 import { LocalDB } from '../../db';
 import { AnimeRepository } from '../../repositories/anime-repository';
 
-export interface PersonalizedPickResult {
+export interface PersonalizedPickPayload {
   anime: Anime;
   reason: string;
   /** Titles from the user's library that drove this pick (0–2). */
@@ -26,6 +26,18 @@ export interface PersonalizedPickResult {
   /** Genre tags shared between the pick and the user's positive signals. */
   matchedTags: string[];
 }
+
+/**
+ * Discriminated outcome so the caller can show the right state.
+ * - `ok`: real pick to render
+ * - `cold-start`: user has no positive signals yet → onboarding state
+ * - `no-match`: user has signals, but candidate pool / scoring produced
+ *   nothing safely recommendable → "try again" state, NOT cold start
+ */
+export type PersonalizedPickOutcome =
+  | { kind: 'ok'; payload: PersonalizedPickPayload }
+  | { kind: 'cold-start' }
+  | { kind: 'no-match' };
 
 interface RatingRow {
   id: string;
@@ -36,13 +48,15 @@ interface RatingRow {
 const FAVORITE_WEIGHT = 1.5;
 const LIKE_WEIGHT = 1.0;
 const PASS_WEIGHT = -0.5;
-const DECAY_HALF_LIFE_DAYS = 90;
+// exp(-days/90) — at 90 days a signal still carries ~37% weight; at 180d ~14%.
+// Not a "half-life" (that would be ~62 days for this curve).
+const DECAY_TIME_CONSTANT_DAYS = 90;
 const MAX_SAMPLES_PER_SIDE = 20;
 const TOP_K_POOL = 5;
 
 function decay(ageMs: number): number {
   const days = ageMs / (1000 * 60 * 60 * 24);
-  return Math.exp(-days / DECAY_HALF_LIFE_DAYS);
+  return Math.exp(-days / DECAY_TIME_CONSTANT_DAYS);
 }
 
 async function loadRatings(): Promise<RatingRow[]> {
@@ -53,7 +67,7 @@ async function loadRatings(): Promise<RatingRow[]> {
   return rows ?? [];
 }
 
-export async function pickPersonalized(): Promise<PersonalizedPickResult | null> {
+export async function pickPersonalized(): Promise<PersonalizedPickOutcome> {
   const [favorites, ratings, seenIds] = await Promise.all([
     LocalDB.getFavorites(),
     loadRatings(),
@@ -94,7 +108,8 @@ export async function pickPersonalized(): Promise<PersonalizedPickResult | null>
 
   const signals = [...byId.values()];
   const hasPositive = signals.some((s) => s.isPositive);
-  if (!hasPositive) return null;
+  // True cold start: user hasn't expressed any positive preference yet.
+  if (!hasPositive) return { kind: 'cold-start' };
 
   const positives = signals
     .filter((s) => s.isPositive)
@@ -138,7 +153,10 @@ export async function pickPersonalized(): Promise<PersonalizedPickResult | null>
     }
   }
 
-  if (tagScore.size === 0) return null;
+  // Positives exist but their details produced no tags (cache miss + network fail,
+  // or sources returning untagged items). Not cold start — show "no-match" so the
+  // user can retry without being told to rate things they've already rated.
+  if (tagScore.size === 0) return { kind: 'no-match' };
 
   const [seasonal, top] = await Promise.all([
     AnimeRepository.getSeasonalAnime().catch(() => [] as Anime[]),
@@ -153,7 +171,7 @@ export async function pickPersonalized(): Promise<PersonalizedPickResult | null>
   for (const a of seasonal) if (!seenSet.has(a.id)) candidates.set(a.id, a);
   for (const a of top) if (!seenSet.has(a.id) && !candidates.has(a.id)) candidates.set(a.id, a);
 
-  if (candidates.size === 0) return null;
+  if (candidates.size === 0) return { kind: 'no-match' };
 
   type Scored = { anime: Anime; score: number; matched: string[] };
   const scored: Scored[] = [];
@@ -172,6 +190,12 @@ export async function pickPersonalized(): Promise<PersonalizedPickResult | null>
         s += v * 0.5;
       }
     }
+    // Hard floor: no taste overlap → don't recommend. Quality boost below is
+    // only a tie-breaker among already-relevant candidates; without this gate,
+    // a high-AniList-score show with zero matched tags would surface and be
+    // labeled "A fresh pick for you" — that's the fake-personalization trap
+    // CLAUDE.md Rule 8 forbids.
+    if (matched.length === 0) continue;
     s = s / Math.sqrt(tags.length);
     if (anime.score && anime.score > 0) {
       s += Math.log10(Math.max(1, anime.score)) * 0.1;
@@ -179,7 +203,7 @@ export async function pickPersonalized(): Promise<PersonalizedPickResult | null>
     if (s > 0) scored.push({ anime, score: s, matched });
   }
 
-  if (scored.length === 0) return null;
+  if (scored.length === 0) return { kind: 'no-match' };
 
   scored.sort((a, b) => b.score - a.score);
   const pool = scored.slice(0, TOP_K_POOL);
@@ -198,10 +222,13 @@ export async function pickPersonalized(): Promise<PersonalizedPickResult | null>
     .map(([title]) => title);
 
   return {
-    anime: picked.anime,
-    reason: buildReason(sourceTitles, picked.matched),
-    sourceTitles,
-    matchedTags: picked.matched.slice(0, 3),
+    kind: 'ok',
+    payload: {
+      anime: picked.anime,
+      reason: buildReason(sourceTitles, picked.matched),
+      sourceTitles,
+      matchedTags: picked.matched.slice(0, 3),
+    },
   };
 }
 

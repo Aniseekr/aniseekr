@@ -14,12 +14,11 @@ export function useRateData() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [seasonalAnime, setSeasonalAnime] = useState<Anime[]>([]); // [NEW]
   const [personalizedPick, setPersonalizedPick] = useState<PersonalizedPickState>({
+    status: 'idle',
     anime: null,
-    loading: false,
     reason: null,
     sourceTitles: [],
     matchedTags: [],
-    coldStart: false,
   });
 
   // These were for direct API rate limiting visibility,
@@ -85,37 +84,44 @@ export function useRateData() {
   }, [seasonalAnime.length]);
 
   const loadPersonalizedPick = useCallback(async () => {
-    setPersonalizedPick((prev) => ({ ...prev, loading: true }));
+    setPersonalizedPick((prev) => ({ ...prev, status: 'loading' }));
     try {
-      const result = await pickPersonalized();
-      if (!result) {
+      const outcome = await pickPersonalized();
+      if (outcome.kind === 'cold-start') {
         setPersonalizedPick({
+          status: 'cold-start',
           anime: null,
-          loading: false,
           reason: null,
           sourceTitles: [],
           matchedTags: [],
-          coldStart: true,
+        });
+        return;
+      }
+      if (outcome.kind === 'no-match') {
+        setPersonalizedPick({
+          status: 'no-match',
+          anime: null,
+          reason: null,
+          sourceTitles: [],
+          matchedTags: [],
         });
         return;
       }
       setPersonalizedPick({
-        anime: result.anime,
-        loading: false,
-        reason: result.reason,
-        sourceTitles: result.sourceTitles,
-        matchedTags: result.matchedTags,
-        coldStart: false,
+        status: 'ready',
+        anime: outcome.payload.anime,
+        reason: outcome.payload.reason,
+        sourceTitles: outcome.payload.sourceTitles,
+        matchedTags: outcome.payload.matchedTags,
       });
     } catch (error) {
       console.error('Failed to load personalized pick:', error);
       setPersonalizedPick({
+        status: 'error',
         anime: null,
-        loading: false,
         reason: null,
         sourceTitles: [],
         matchedTags: [],
-        coldStart: false,
       });
     }
   }, []);
