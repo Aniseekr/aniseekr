@@ -668,6 +668,15 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/album');
   }, [router]);
 
+  // "See all" next to the Popular Animes rail — opens the fullscreen map at
+  // a whole-Japan framing so the user can pick a region first, instead of
+  // landing at a city zoom. The fullscreen map has the region picker chips.
+  // It does NOT open the photo album: that's a separate header action.
+  const handleSeeAllAnimes = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/pilgrimage/map');
+  }, [router]);
+
   const handleToggleMode = useCallback(
     (next: 'map' | 'list') => {
       Haptics.selectionAsync().catch(() => undefined);
@@ -786,6 +795,14 @@ export default function PilgrimageHubScreen() {
               </Pressable>
             </View>
             <Pressable
+              onPress={handleOpenAlbum}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="My pilgrimage album"
+              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="albums-outline" size={18} color={theme.text.primary} />
+            </Pressable>
+            <Pressable
               onPress={handleSearch}
               hitSlop={10}
               accessibilityRole="button"
@@ -895,7 +912,7 @@ export default function PilgrimageHubScreen() {
                     collectionAnimes.length > 0 ? 'Your Animes & More' : 'Popular Animes'
                   }
                   cta="See all"
-                  onCta={handleOpenAlbum}
+                  onCta={handleSeeAllAnimes}
                   theme={theme}
                 />
                 <ScrollView
