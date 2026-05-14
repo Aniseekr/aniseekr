@@ -17,7 +17,7 @@ import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DeviceMotion, Magnetometer } from 'expo-sensors';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
@@ -275,7 +275,7 @@ export default function CompareCaptureScreen() {
           scale.value = Math.max(0.25, Math.min(4, next));
         })
         .onEnd(() => {
-          if (Math.abs(scale.value - 1) > 0.01) markTransformed();
+          if (Math.abs(scale.value - 1) > 0.01) runOnJS(markTransformed)();
         }),
     [scale, baseScale, markTransformed]
   );
@@ -294,7 +294,7 @@ export default function CompareCaptureScreen() {
         })
         .onEnd(() => {
           if (Math.abs(translateX.value) > 1 || Math.abs(translateY.value) > 1) {
-            markTransformed();
+            runOnJS(markTransformed)();
           }
         }),
     [translateX, translateY, baseTranslateX, baseTranslateY, markTransformed]
@@ -310,7 +310,7 @@ export default function CompareCaptureScreen() {
           rotation.value = baseRotation.value + e.rotation;
         })
         .onEnd(() => {
-          if (Math.abs(rotation.value) > 0.005) markTransformed();
+          if (Math.abs(rotation.value) > 0.005) runOnJS(markTransformed)();
         }),
     [rotation, baseRotation, markTransformed]
   );
