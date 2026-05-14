@@ -55,6 +55,44 @@ const GENRES_STALE_TIME_MS = 60 * 60 * 1000; // 1 hour
 const LEGACY_LIST_CACHE_TTL_MS = 60 * 60 * 1000;
 const LEGACY_DETAIL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const LEGACY_SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+// Total per-page survival = TTL (1h) + grace (23h) so a stale-but-recent page
+// can render instantly while a background refresh runs.
+const SEASONAL_PAGE_GRACE_MS = 23 * 60 * 60 * 1000;
+
+interface SeasonalPageCacheEntry {
+  media: AniListAnime[];
+  hasNextPage: boolean;
+}
+
+interface SeasonalBatchedPageEntry {
+  items: UnifiedAnimeItem[];
+  hasNextPage: boolean;
+}
+
+export interface SeasonalPageInfo {
+  /** AniList page number this batch came from (1-indexed). */
+  page: number;
+  /** Position within this fetch (0 for the first page returned). */
+  pageIndex: number;
+  /** Best-effort total page count based on perPage / maxItems. */
+  totalPagesEstimate: number;
+}
+
+export interface SeasonalFetchOptions {
+  perPage?: number;
+  maxItems?: number;
+  forceRefresh?: boolean;
+  /**
+   * Fired once per page as it becomes available — from cache OR network.
+   * Lets the UI render the first 50 anime in ~600ms instead of waiting the
+   * full ~2.5s for all 4 pages.
+   */
+  onPageReceived?: (pageItems: Anime[], info: SeasonalPageInfo) => void;
+}
+
+// Module-level dedup so two simultaneous SWR refreshes for the same page
+// don't both go to the network.
+const inFlightSeasonalRevalidations = new Set<string>();
 
 /**
  * Thrown when an in-flight `fetchSeasonalAnime` discovers the user has
@@ -102,6 +140,9 @@ export function unifiedToLegacyAnime(item: UnifiedAnimeItem): Anime {
     startDate,
     status: item.displayStatus ?? undefined,
     format: item.format ?? undefined,
+    episodes: item.totalEpisodes ?? undefined,
+    titleEnglish: item.titleEnglish ?? undefined,
+    nextAiringEpisode: item.nextAiringEpisode ?? undefined,
   };
 }
 
@@ -305,6 +346,154 @@ export class AnimeRepository {
     }
 
     return result;
+  }
+
+  /**
+   * Multi-page seasonal fetch with per-page disk cache, stale-while-revalidate
+   * and an optional `onPageReceived` callback so the UI can render each page
+   * as it arrives instead of waiting for the full payload.
+   *
+   * Cache lives at `seasonalpage_${platform}_${season}_${year}_p${page}_pp${perPage}_r${flag}`
+   * (one row per page). Within ttl the page is fresh; within ttl + 23h grace
+   * the page is returned immediately while a background refresh runs.
+   */
+  async fetchSeasonalAnimeBatched(
+    season: string,
+    year: number,
+    options: {
+      perPage?: number;
+      maxItems?: number;
+      forceRefresh?: boolean;
+      preferredSource?: PlatformType;
+      onPageReceived?: (pageItems: UnifiedAnimeItem[], info: SeasonalPageInfo) => void;
+    } = {}
+  ): Promise<UnifiedAnimeItem[]> {
+    const source = this.resolveSource(options.preferredSource);
+    const requestPlatform = source.type;
+    const perPage = Math.max(1, Math.min(options.perPage ?? 50, 50));
+    const maxItems = Math.max(perPage, options.maxItems ?? perPage);
+    const forceRefresh = options.forceRefresh === true;
+    const onPageReceived = options.onPageReceived;
+    const r18Flag = this.config.allowR18Content ? '1' : '0';
+    const totalPagesEstimate = Math.ceil(maxItems / perPage);
+
+    const collected: UnifiedAnimeItem[] = [];
+    let currentPage = 1;
+    let pageIndex = 0;
+
+    while (collected.length < maxItems) {
+      // Detect mid-flight source change between pages (no `preferredSource`
+      // means the caller is following the global browseSource).
+      if (
+        options.preferredSource === undefined &&
+        this.config.browseSource !== requestPlatform
+      ) {
+        throw new CancellationError(
+          `Browse source changed mid-flight: ${requestPlatform} → ${this.config.browseSource}`
+        );
+      }
+
+      const cacheKey = `seasonalpage_${requestPlatform}_${season}_${year}_p${currentPage}_pp${perPage}_r${r18Flag}`;
+      const queryKey = makeKey('seasonalAnimeBatched', {
+        source: requestPlatform,
+        page: currentPage,
+        season,
+        year,
+        perPage,
+        r18: r18Flag,
+      });
+
+      let pageItems: UnifiedAnimeItem[] | null = null;
+      let hasNextPage = true;
+
+      if (!forceRefresh) {
+        const cached = await this.cacheServiceImpl.getWithMeta<SeasonalBatchedPageEntry>(
+          cacheKey,
+          SEASONAL_PAGE_GRACE_MS
+        );
+        if (cached) {
+          pageItems = cached.value.items;
+          hasNextPage = cached.value.hasNextPage;
+          if (cached.isStale) {
+            void this.revalidateSeasonalBatchedPage(
+              source,
+              season,
+              year,
+              currentPage,
+              perPage,
+              cacheKey,
+              queryKey
+            );
+          }
+        }
+      }
+
+      if (!pageItems) {
+        const items = await this.queryClientImpl.fetch(queryKey, async () =>
+          source.fetchSeasonalAnime(currentPage, season, year)
+        );
+        pageItems = items;
+        // AniList returns up to perPage items on a full page; a short page
+        // means we're at or past the end.
+        hasNextPage = items.length >= perPage;
+        if (pageItems.length > 0) {
+          await this.cacheServiceImpl.set(
+            cacheKey,
+            { items: pageItems, hasNextPage } satisfies SeasonalBatchedPageEntry,
+            SEASONAL_CACHE_TTL_MS
+          );
+        }
+      }
+
+      const filteredPage = this.applyAdultFilter(pageItems);
+      const remaining = maxItems - collected.length;
+      const sliceCount = Math.min(remaining, filteredPage.length);
+      const pageSlice = filteredPage.slice(0, sliceCount);
+      collected.push(...pageSlice);
+
+      if (onPageReceived && pageSlice.length > 0) {
+        onPageReceived(pageSlice, {
+          page: currentPage,
+          pageIndex,
+          totalPagesEstimate,
+        });
+      }
+
+      pageIndex += 1;
+      if (!hasNextPage || pageItems.length === 0) break;
+      currentPage += 1;
+    }
+
+    return collected.slice(0, maxItems);
+  }
+
+  private async revalidateSeasonalBatchedPage(
+    source: AnimeDataSource,
+    season: string,
+    year: number,
+    page: number,
+    perPage: number,
+    cacheKey: string,
+    queryKey: QueryKeyObject
+  ): Promise<void> {
+    if (inFlightSeasonalRevalidations.has(cacheKey)) return;
+    inFlightSeasonalRevalidations.add(cacheKey);
+    try {
+      const items = await this.queryClientImpl.fetch(queryKey, async () =>
+        source.fetchSeasonalAnime(page, season, year)
+      );
+      if (items.length > 0) {
+        await this.cacheServiceImpl.set(
+          cacheKey,
+          { items, hasNextPage: items.length >= perPage } satisfies SeasonalBatchedPageEntry,
+          SEASONAL_CACHE_TTL_MS
+        );
+      }
+    } catch (err) {
+      Logger.warn('[AnimeRepository] background revalidate (batched) failed', err);
+    } finally {
+      inFlightSeasonalRevalidations.delete(cacheKey);
+    }
   }
 
   async fetchAnime(
@@ -634,7 +823,7 @@ export class AnimeRepository {
     season?: string,
     year?: number,
     page = 1,
-    options: { perPage?: number; maxItems?: number; forceRefresh?: boolean } = {}
+    options: SeasonalFetchOptions = {}
   ): Promise<Anime[]> {
     const date = new Date();
     const currentMonth = date.getMonth();
@@ -652,32 +841,76 @@ export class AnimeRepository {
     const perPage = Math.max(1, Math.min(options.perPage ?? 50, 50));
     const maxItems = Math.max(perPage, options.maxItems ?? perPage);
     const forceRefresh = options.forceRefresh === true;
-    // perPage + maxItems are part of the cache key so different callers
-    // (bangumi screen vs. rating hook) don't trample each other's payloads.
-    const cacheKey = `seasonal_${targetSeason}_${targetYear}_${page}_p${perPage}_m${maxItems}_r${r18CacheFlag()}`;
-
-    if (!forceRefresh) {
-      const cached = await CacheService.get<AniListAnime[]>(cacheKey);
-      if (cached) return cached.map(mapAniListDetailToAnime);
-    }
+    const onPageReceived = options.onPageReceived;
+    const r18Flag = r18CacheFlag();
+    const totalPagesEstimate = Math.ceil(maxItems / perPage);
 
     const collected: AniListAnime[] = [];
     let currentPage = page;
+    let pageIndex = 0;
+
     while (collected.length < maxItems) {
-      const { media, hasNextPage } = await AniListClient.getSeasonalAnimePage(
-        targetSeason,
-        targetYear,
-        currentPage,
-        perPage,
-        legacyAniListOptions()
-      );
-      collected.push(...filterAniListAnime(media));
-      if (!hasNextPage || media.length === 0) break;
+      // One cache row per page, independent of perPage / maxItems chosen by
+      // the caller so two callers asking for different cap can still share
+      // the underlying page data.
+      const cacheKey = `seasonal_${targetSeason}_${targetYear}_p${currentPage}_pp${perPage}_r${r18Flag}`;
+
+      let pageMedia: AniListAnime[] | null = null;
+      let hasNextPage = true;
+
+      if (!forceRefresh) {
+        const cached = await CacheService.getWithMeta<SeasonalPageCacheEntry>(
+          cacheKey,
+          SEASONAL_PAGE_GRACE_MS
+        );
+        if (cached) {
+          pageMedia = cached.value.media;
+          hasNextPage = cached.value.hasNextPage;
+          if (cached.isStale) {
+            void revalidateSeasonalPage(targetSeason, targetYear, currentPage, perPage, cacheKey);
+          }
+        }
+      }
+
+      if (!pageMedia) {
+        const result = await AniListClient.getSeasonalAnimePage(
+          targetSeason,
+          targetYear,
+          currentPage,
+          perPage,
+          legacyAniListOptions()
+        );
+        pageMedia = result.media;
+        hasNextPage = result.hasNextPage;
+        if (pageMedia.length > 0) {
+          await CacheService.set(
+            cacheKey,
+            { media: pageMedia, hasNextPage },
+            LEGACY_LIST_CACHE_TTL_MS
+          );
+        }
+      }
+
+      const filteredPage = filterAniListAnime(pageMedia);
+      const remaining = maxItems - collected.length;
+      const sliceCount = Math.min(remaining, filteredPage.length);
+      const pageSlice = filteredPage.slice(0, sliceCount);
+      collected.push(...pageSlice);
+
+      if (onPageReceived && pageSlice.length > 0) {
+        onPageReceived(pageSlice.map(mapAniListDetailToAnime), {
+          page: currentPage,
+          pageIndex,
+          totalPagesEstimate,
+        });
+      }
+
+      pageIndex += 1;
+      if (!hasNextPage || pageMedia.length === 0) break;
       currentPage += 1;
     }
-    const data = collected.slice(0, maxItems);
-    await CacheService.set(cacheKey, data, LEGACY_LIST_CACHE_TTL_MS);
-    return data.map(mapAniListDetailToAnime);
+
+    return collected.slice(0, maxItems).map(mapAniListDetailToAnime);
   }
 
   static async searchAnime(query: string, page = 1): Promise<Anime[]> {
@@ -876,6 +1109,37 @@ function mapAniListDetailToAnime(item: AniListAnime): Anime {
 }
 
 // MARK: - Helpers
+
+async function revalidateSeasonalPage(
+  season: string,
+  year: number,
+  page: number,
+  perPage: number,
+  cacheKey: string
+): Promise<void> {
+  if (inFlightSeasonalRevalidations.has(cacheKey)) return;
+  inFlightSeasonalRevalidations.add(cacheKey);
+  try {
+    const result = await AniListClient.getSeasonalAnimePage(
+      season,
+      year,
+      page,
+      perPage,
+      legacyAniListOptions()
+    );
+    if (result.media.length > 0) {
+      await CacheService.set(
+        cacheKey,
+        { media: result.media, hasNextPage: result.hasNextPage },
+        LEGACY_LIST_CACHE_TTL_MS
+      );
+    }
+  } catch (err) {
+    Logger.warn('[AnimeRepository] background revalidate failed', err);
+  } finally {
+    inFlightSeasonalRevalidations.delete(cacheKey);
+  }
+}
 
 function r18CacheFlag(): '0' | '1' {
   return dataSourceConfig.allowR18Content ? '1' : '0';
