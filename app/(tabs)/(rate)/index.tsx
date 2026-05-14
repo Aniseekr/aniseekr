@@ -402,7 +402,9 @@ function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
         source={{ uri: anime.bannerImage ?? anime.image }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
-        transition={250}
+        transition={120}
+        cachePolicy="memory-disk"
+        recyclingKey={anime.id}
       />
       <LinearGradient
         colors={['rgba(8,8,8,0)', 'rgba(8,8,8,0.78)', 'rgba(8,8,8,0.96)']}
@@ -478,7 +480,9 @@ function CompactRankRow({ anime, rank, onPress }: CompactRankRowProps) {
         source={{ uri: anime.image }}
         style={trendStyles.rankThumb}
         contentFit="cover"
-        transition={150}
+        transition={80}
+        cachePolicy="memory-disk"
+        recyclingKey={anime.id}
       />
       <View style={trendStyles.rankBody}>
         <Text style={trendStyles.rankTitle} numberOfLines={2}>
@@ -522,7 +526,9 @@ function TrendingPilgrimageCard({ pilgrim, rank, onPress }: TrendingPilgrimageCa
           source={{ uri: pilgrim.cover.replace('?plan=h160', '?plan=h720') }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
-          transition={200}
+          transition={100}
+          cachePolicy="memory-disk"
+          recyclingKey={String(pilgrim.id)}
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background.secondary }]} />
