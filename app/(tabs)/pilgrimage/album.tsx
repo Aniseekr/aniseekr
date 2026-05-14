@@ -1,22 +1,38 @@
-// Mirrors japanwalker.pen Screen 12 (COuG3 — My Pilgrimage Album).
-// Header (back + 我的聖地相冊 / My Pilgrimage + filter) → 3 stat cards
-// (Visited / Photos / Avg Match with semantic colors) → anime filter chips
-// (first cyan, others outlined) → 2-column masonry of comparison cards
-// (anime image stacked over real photo with white divider + match pill) →
-// floating FAB "+ 新增聖地 / Add Pilgrimage".
+// Pilgrimage Album — two-view screen:
+//   • Folders view (default): each anime becomes a folder with its captures.
+//     Filter chips along the top group folders by Japanese region (北海道・東北 /
+//     関東 / 東京 / 中部 / 近畿 / 中国・四国 / 九州・沖縄). Tapping a folder dives into
+//     that anime's detail view without leaving the screen.
+//   • Detail view: when entered with an `animeId` param (or via folder tap) we
+//     render the existing two-column comparison cards for that anime's spots.
+//
+// Match scores are derived deterministically from `capture.spotId + capturedAt`
+// (see deriveMatch) — that keeps numbers stable across renders without
+// requiring an extra persisted field. When real alignment scoring lands, this
+// helper is the single replacement point.
+//
+// Layout obeys the project rules: ThemedText / theme tokens only (no hex
+// surfaces), 44pt touch targets, hapticsBridge on every interactive element,
+// and no fake spot-specific data (placeholders fall back to generic copy).
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../components/themed';
+import { Shadow, Spacing } from '../../../constants/DesignSystem';
 import { listCaptures, type PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
+import {
+  get88EntriesByBangumiId,
+  type AnimeTourism88Region,
+} from '../../../libs/services/pilgrimage/anime88-repository';
 import {
   getPilgrimageAnimeTitles,
   getPilgrimageSpotTitles,
@@ -30,14 +46,68 @@ interface AlbumEntry {
   match: number;
 }
 
+interface FolderGroup {
+  anime: AnitabiBangumi;
+  entries: AlbumEntry[];
+  /** Most recent capture timestamp; used for sort + "last visited" line. */
+  lastCapturedAt: number;
+  /** Average match score across the folder's captures (rounded). */
+  avgMatch: number;
+  /** Distinct spot ids visited (folder progress). */
+  visitedSpots: number;
+  /** Total spots known to the anime (from Anitabi.pointsLength). */
+  totalSpots: number;
+  /** Best cover image — explicit anime cover when available, else first capture. */
+  cover: string | undefined;
+  /** Region group used for tag filtering. `null` when not in the 88 list. */
+  region: AnimeTourism88Region | null;
+}
+
+type RegionFilter = AnimeTourism88Region | 'all' | 'other';
+
+// Localized region labels. Long names render at small font sizes — keep the
+// kanji compact so they fit a single-line chip on 375pt-wide phones.
+const REGION_LABELS: Record<AnimeTourism88Region, string> = {
+  hokkaido_tohoku: '北海道・東北',
+  kanto: '関東',
+  tokyo: '東京',
+  chubu: '中部',
+  kinki: '近畿',
+  chugoku_shikoku: '中国・四国',
+  kyushu_okinawa: '九州・沖縄',
+};
+
+const REGION_ORDER: AnimeTourism88Region[] = [
+  'hokkaido_tohoku',
+  'kanto',
+  'tokyo',
+  'chubu',
+  'kinki',
+  'chugoku_shikoku',
+  'kyushu_okinawa',
+];
+
 // Deterministic match score from capture id — keeps numbers stable across
-// renders without persisting another field.
+// renders without persisting another field. Replace with real alignment data
+// once captures.ts stores it.
 function deriveMatch(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) | 0;
   }
-  return 78 + (Math.abs(hash) % 20); // 78–97
+  return 78 + (Math.abs(hash) % 20);
+}
+
+function formatRelative(timestamp: number, now: number): string {
+  const delta = Math.max(0, now - timestamp);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (delta < hour) return 'Just now';
+  if (delta < day) return `${Math.floor(delta / hour)}h ago`;
+  if (delta < 7 * day) return `${Math.floor(delta / day)}d ago`;
+  if (delta < 30 * day) return `${Math.floor(delta / (7 * day))}w ago`;
+  return new Date(timestamp).toLocaleDateString();
 }
 
 export default function PilgrimageAlbumScreen() {
@@ -48,9 +118,18 @@ export default function PilgrimageAlbumScreen() {
   const accentFg = readableTextOn(theme.accent);
   const { animeId: animeIdParam } = useLocalSearchParams<{ animeId?: string }>();
 
+  // `cameFromUrlRef` is true when the user landed here with an animeId in the
+  // URL (e.g. from a per-anime detail page). It changes how the back button
+  // behaves in detail view: deep-linked users go back out of the screen,
+  // folder-tap users go back to the folder grid.
+  const cameFromUrlRef = useRef<boolean>(!!animeIdParam);
+
   const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>({});
   const [animes, setAnimes] = useState<AnitabiBangumi[]>([]);
-  const [animeFilter, setAnimeFilter] = useState<string>(animeIdParam ?? 'all');
+  const [regionFilter, setRegionFilter] = useState<RegionFilter>('all');
+  const [selectedAnimeId, setSelectedAnimeId] = useState<string | null>(
+    animeIdParam ?? null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +160,8 @@ export default function PilgrimageAlbumScreen() {
     };
   }, []);
 
+  // Flatten captures × spots × anime — one row per capture that matches a
+  // known spot. Captures with no matching spot are dropped.
   const entries = useMemo<AlbumEntry[]>(() => {
     const list: AlbumEntry[] = [];
     const captureList = Object.values(captures);
@@ -101,37 +182,77 @@ export default function PilgrimageAlbumScreen() {
     return list.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt);
   }, [captures, animes]);
 
-  const animeChips = useMemo(() => {
-    const seen = new Map<number, AnitabiBangumi>();
-    for (const entry of entries) seen.set(entry.anime.id, entry.anime);
-    return Array.from(seen.values());
+  // Group entries by anime to form folders.
+  const folders = useMemo<FolderGroup[]>(() => {
+    const map = new Map<number, FolderGroup>();
+    for (const entry of entries) {
+      const id = entry.anime.id;
+      const existing = map.get(id);
+      if (existing) {
+        existing.entries.push(entry);
+        existing.lastCapturedAt = Math.max(existing.lastCapturedAt, entry.capture.capturedAt);
+      } else {
+        const eighty8 = get88EntriesByBangumiId(id);
+        map.set(id, {
+          anime: entry.anime,
+          entries: [entry],
+          lastCapturedAt: entry.capture.capturedAt,
+          avgMatch: 0,
+          visitedSpots: 0,
+          totalSpots: entry.anime.pointsLength ?? entry.anime.litePoints?.length ?? 0,
+          cover: entry.anime.cover || entry.spot.image || entry.capture.uri,
+          region: eighty8[0]?.region ?? null,
+        });
+      }
+    }
+    // Compute folder aggregates after grouping.
+    for (const folder of map.values()) {
+      const distinct = new Set(folder.entries.map((e) => e.spot.id));
+      folder.visitedSpots = distinct.size;
+      folder.avgMatch =
+        folder.entries.length > 0
+          ? Math.round(
+              folder.entries.reduce((s, e) => s + e.match, 0) / folder.entries.length
+            )
+          : 0;
+    }
+    return Array.from(map.values()).sort((a, b) => b.lastCapturedAt - a.lastCapturedAt);
   }, [entries]);
 
-  const filteredEntries = useMemo(() => {
-    if (animeFilter === 'all') return entries;
-    return entries.filter((e) => String(e.anime.id) === animeFilter);
-  }, [entries, animeFilter]);
+  // Filter chips: only show regions that actually appear in the user's
+  // folders, so the rail doesn't list empty buckets. `other` collects anime
+  // not in the Anime Tourism 88 list.
+  const availableRegions = useMemo(() => {
+    const inRegions = new Set<AnimeTourism88Region>();
+    let hasOther = false;
+    for (const folder of folders) {
+      if (folder.region) inRegions.add(folder.region);
+      else hasOther = true;
+    }
+    const ordered = REGION_ORDER.filter((r) => inRegions.has(r));
+    return { regions: ordered, hasOther };
+  }, [folders]);
 
+  const filteredFolders = useMemo(() => {
+    if (regionFilter === 'all') return folders;
+    if (regionFilter === 'other') return folders.filter((f) => f.region === null);
+    return folders.filter((f) => f.region === regionFilter);
+  }, [folders, regionFilter]);
+
+  // Stats reflect the active filter so the user can scope "how am I doing in
+  // Kanto" without recomputing in their head.
   const stats = useMemo(() => {
-    const photos = entries.length;
-    const visited = new Set(entries.map((e) => e.spot.id)).size;
-    const avgMatch =
-      entries.length > 0
-        ? Math.round(entries.reduce((s, e) => s + e.match, 0) / entries.length)
-        : 0;
-    return { photos, visited, avgMatch };
-  }, [entries]);
-
-  // Split filtered entries into 2 columns for masonry layout.
-  const columns = useMemo(() => {
-    const left: AlbumEntry[] = [];
-    const right: AlbumEntry[] = [];
-    filteredEntries.forEach((entry, i) => {
-      if (i % 2 === 0) left.push(entry);
-      else right.push(entry);
-    });
-    return { left, right };
-  }, [filteredEntries]);
+    const source =
+      regionFilter === 'all' ? folders : filteredFolders;
+    const visited = source.reduce((s, f) => s + f.visitedSpots, 0);
+    const photos = source.reduce((s, f) => s + f.entries.length, 0);
+    const totalMatch = source.reduce(
+      (s, f) => s + f.avgMatch * f.entries.length,
+      0
+    );
+    const avgMatch = photos > 0 ? Math.round(totalMatch / photos) : 0;
+    return { visited, photos, avgMatch, folders: source.length };
+  }, [folders, filteredFolders, regionFilter]);
 
   const handleEntryPress = useCallback(
     (entry: AlbumEntry) => {
@@ -160,13 +281,59 @@ export default function PilgrimageAlbumScreen() {
     router.push('/pilgrimage');
   }, [router]);
 
+  const handleOpenFolder = useCallback((folder: FolderGroup) => {
+    hapticsBridge.tap();
+    cameFromUrlRef.current = false;
+    setSelectedAnimeId(String(folder.anime.id));
+  }, []);
+
+  const handleBack = useCallback(() => {
+    // Detail view that was entered from the folder grid: pop back to grid in-screen.
+    if (selectedAnimeId && !cameFromUrlRef.current) {
+      hapticsBridge.tap();
+      setSelectedAnimeId(null);
+      return;
+    }
+    router.back();
+  }, [router, selectedAnimeId]);
+
+  const selectedFolder = useMemo(
+    () => folders.find((f) => String(f.anime.id) === selectedAnimeId) ?? null,
+    [folders, selectedAnimeId]
+  );
+
+  // Detail-view masonry — split the selected folder's entries into two columns
+  // with a small height variation so the grid still feels organic.
+  const detailColumns = useMemo(() => {
+    const left: AlbumEntry[] = [];
+    const right: AlbumEntry[] = [];
+    (selectedFolder?.entries ?? []).forEach((entry, i) => {
+      if (i % 2 === 0) left.push(entry);
+      else right.push(entry);
+    });
+    return { left, right };
+  }, [selectedFolder]);
+
+  const isDetail = !!selectedAnimeId;
+  const headerSubtitle = isDetail
+    ? selectedFolder
+      ? `${selectedFolder.entries.length} captures · ${selectedFolder.visitedSpots} spots`
+      : 'Loading folder…'
+    : 'Folders by anime';
+
+  const headerTitle = isDetail
+    ? selectedFolder
+      ? getPilgrimageAnimeTitles(selectedFolder.anime).primary
+      : 'Album'
+    : 'Pilgrimage Album';
+
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             hitSlop={14}
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -174,14 +341,19 @@ export default function PilgrimageAlbumScreen() {
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
-            <ThemedText variant="titleSmall" weight="700" style={{ fontSize: 16 }}>
-              Pilgrimage Album
+            <ThemedText
+              variant="titleSmall"
+              weight="700"
+              numberOfLines={1}
+              style={styles.headerTitle}>
+              {headerTitle}
             </ThemedText>
             <ThemedText
               variant="captionSmall"
               tone="secondary"
-              style={{ letterSpacing: 0.5, fontSize: 11 }}>
-              Scene comparisons
+              numberOfLines={1}
+              style={styles.headerSubtitle}>
+              {headerSubtitle}
             </ThemedText>
           </View>
           <Pressable
@@ -226,80 +398,142 @@ export default function PilgrimageAlbumScreen() {
             />
           </View>
 
-          {animeChips.length > 0 ? (
+          {!isDetail && (availableRegions.regions.length > 0 || availableRegions.hasOther) ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsRow}>
               <Chip
                 label="All"
-                active={animeFilter === 'all'}
+                count={folders.length}
+                active={regionFilter === 'all'}
                 onPress={() => {
                   hapticsBridge.selection();
-                  setAnimeFilter('all');
+                  setRegionFilter('all');
                 }}
                 accent={theme.accent}
                 accentFg={accentFg}
                 theme={theme}
               />
-              {animeChips.map((anime) => (
+              {availableRegions.regions.map((region) => {
+                const count = folders.filter((f) => f.region === region).length;
+                return (
+                  <Chip
+                    key={region}
+                    label={REGION_LABELS[region]}
+                    count={count}
+                    active={regionFilter === region}
+                    onPress={() => {
+                      hapticsBridge.selection();
+                      setRegionFilter(region);
+                    }}
+                    accent={theme.accent}
+                    accentFg={accentFg}
+                    theme={theme}
+                  />
+                );
+              })}
+              {availableRegions.hasOther ? (
                 <Chip
-                  key={anime.id}
-                  label={getPilgrimageAnimeTitles(anime).primary}
-                  active={animeFilter === String(anime.id)}
+                  label="その他"
+                  count={folders.filter((f) => f.region === null).length}
+                  active={regionFilter === 'other'}
                   onPress={() => {
                     hapticsBridge.selection();
-                    setAnimeFilter(String(anime.id));
+                    setRegionFilter('other');
                   }}
                   accent={theme.accent}
                   accentFg={accentFg}
                   theme={theme}
                 />
-              ))}
+              ) : null}
             </ScrollView>
           ) : null}
 
-          {filteredEntries.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: theme.background.tertiary }]}>
-                <Ionicons name="camera-outline" size={28} color={theme.text.secondary} />
+          {isDetail ? (
+            selectedFolder && selectedFolder.entries.length > 0 ? (
+              <View>
+                <View style={styles.detailHeader}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
+                      {getPilgrimageAnimeTitles(selectedFolder.anime).primary}
+                    </ThemedText>
+                    {selectedFolder.region ? (
+                      <ThemedText
+                        variant="captionSmall"
+                        tone="secondary"
+                        style={{ marginTop: 2 }}>
+                        {REGION_LABELS[selectedFolder.region]} · {selectedFolder.entries.length}{' '}
+                        captures
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                  <View
+                    style={[
+                      styles.matchBadge,
+                      { backgroundColor: `${theme.status.success}1F`, borderColor: theme.status.success },
+                    ]}>
+                    <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
+                    <ThemedText
+                      weight="700"
+                      style={{ color: theme.status.success, fontSize: 12 }}>
+                      {selectedFolder.avgMatch}%
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.grid}>
+                  <View style={styles.col}>
+                    {detailColumns.left.map((entry, i) => (
+                      <CompareCard
+                        key={entry.capture.spotId}
+                        entry={entry}
+                        theme={theme}
+                        heightVariant={i % 3}
+                        onPress={() => handleEntryPress(entry)}
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.col}>
+                    {detailColumns.right.map((entry, i) => (
+                      <CompareCard
+                        key={entry.capture.spotId}
+                        entry={entry}
+                        theme={theme}
+                        heightVariant={(i + 1) % 3}
+                        onPress={() => handleEntryPress(entry)}
+                      />
+                    ))}
+                  </View>
+                </View>
               </View>
-              <ThemedText variant="titleMedium" weight="600" align="center">
-                No comparison photos yet
-              </ThemedText>
-              <ThemedText
-                variant="bodySmall"
-                tone="secondary"
-                align="center"
-                style={{ paddingHorizontal: 24 }}>
-                Frame an anime scene at its real-world location to start your album.
-              </ThemedText>
-            </View>
+            ) : (
+              <EmptyState
+                theme={theme}
+                title="No captures in this folder"
+                body="Take a comparison photo on a spot in this anime to fill the folder."
+              />
+            )
+          ) : filteredFolders.length === 0 ? (
+            <EmptyState
+              theme={theme}
+              title={
+                folders.length === 0
+                  ? 'No pilgrimage folders yet'
+                  : `No folders in this region`
+              }
+              body={
+                folders.length === 0
+                  ? 'Frame an anime scene at its real-world location to start your first folder.'
+                  : 'Try another region tag — or tap All to see every anime you’ve visited.'
+              }
+            />
           ) : (
-            <View style={styles.grid}>
-              <View style={styles.col}>
-                {columns.left.map((entry, i) => (
-                  <AlbumCard
-                    key={entry.capture.spotId}
-                    entry={entry}
-                    theme={theme}
-                    heightVariant={i % 3}
-                    onPress={() => handleEntryPress(entry)}
-                  />
-                ))}
-              </View>
-              <View style={styles.col}>
-                {columns.right.map((entry, i) => (
-                  <AlbumCard
-                    key={entry.capture.spotId}
-                    entry={entry}
-                    theme={theme}
-                    heightVariant={(i + 1) % 3}
-                    onPress={() => handleEntryPress(entry)}
-                  />
-                ))}
-              </View>
-            </View>
+            <FolderGridView
+              folders={filteredFolders}
+              theme={theme}
+              now={Date.now()}
+              onPress={handleOpenFolder}
+            />
           )}
         </ScrollView>
 
@@ -312,11 +546,11 @@ export default function PilgrimageAlbumScreen() {
               styles.fabBtn,
               {
                 backgroundColor: theme.accent,
-                shadowColor: theme.accent,
-                opacity: pressed ? 0.9 : 1,
+                opacity: pressed ? 0.92 : 1,
               },
+              Shadow.glow(theme.accent),
             ]}>
-            <View style={[styles.fabIconWrap, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <View style={[styles.fabIconWrap, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
               <Ionicons name="camera" size={14} color={accentFg} />
             </View>
             <View>
@@ -399,6 +633,7 @@ function StatCard({
 
 function Chip({
   label,
+  count,
   active,
   onPress,
   accent,
@@ -406,6 +641,7 @@ function Chip({
   theme,
 }: {
   label: string;
+  count?: number;
   active: boolean;
   onPress: () => void;
   accent: string;
@@ -436,11 +672,169 @@ function Chip({
         numberOfLines={1}>
         {label}
       </ThemedText>
+      {count !== undefined && count > 0 ? (
+        <View
+          style={[
+            styles.chipCount,
+            {
+              backgroundColor: active
+                ? 'rgba(255,255,255,0.22)'
+                : theme.background.tertiary,
+            },
+          ]}>
+          <ThemedText
+            weight="700"
+            style={{
+              color: active ? accentFg : theme.text.tertiary,
+              fontSize: 10,
+            }}>
+            {count}
+          </ThemedText>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
 
-function AlbumCard({
+function FolderGridView({
+  folders,
+  theme,
+  now,
+  onPress,
+}: {
+  folders: FolderGroup[];
+  theme: ThemePalette;
+  now: number;
+  onPress: (folder: FolderGroup) => void;
+}) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const rows: FolderGroup[][] = [];
+  for (let i = 0; i < folders.length; i += 2) {
+    rows.push(folders.slice(i, i + 2));
+  }
+  return (
+    <View style={styles.folderGrid}>
+      {rows.map((row, idx) => (
+        <View key={idx} style={styles.folderRow}>
+          {row.map((folder) => (
+            <View key={folder.anime.id} style={styles.folderCell}>
+              <FolderCard folder={folder} theme={theme} now={now} onPress={() => onPress(folder)} />
+            </View>
+          ))}
+          {row.length === 1 ? <View style={styles.folderCell} /> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function FolderCard({
+  folder,
+  theme,
+  now,
+  onPress,
+}: {
+  folder: FolderGroup;
+  theme: ThemePalette;
+  now: number;
+  onPress: () => void;
+}) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const titles = getPilgrimageAnimeTitles(folder.anime);
+  const regionLabel = folder.region ? REGION_LABELS[folder.region] : null;
+  const subtitle = `${folder.visitedSpots}${
+    folder.totalSpots > 0 ? `/${folder.totalSpots}` : ''
+  } spots · ${folder.entries.length} ${folder.entries.length === 1 ? 'photo' : 'photos'}`;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Open folder ${titles.primary}`}
+      style={({ pressed }) => [
+        styles.folderCard,
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: theme.glassBorder,
+          opacity: pressed ? 0.9 : 1,
+        },
+      ]}>
+      <View style={styles.folderCoverWrap}>
+        {folder.cover ? (
+          <Image
+            source={{ uri: folder.cover }}
+            style={styles.folderCoverImage}
+            contentFit="cover"
+            transition={160}
+          />
+        ) : (
+          <LinearGradient
+            colors={[`${theme.accent}26`, 'transparent']}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
+          style={styles.folderCoverGradient}
+          pointerEvents="none"
+        />
+        {regionLabel ? (
+          <View style={styles.regionPill}>
+            <Ionicons name="location-outline" size={10} color="#FFFFFF" />
+            <ThemedText
+              weight="700"
+              style={{ color: '#FFFFFF', fontSize: 10 }}
+              numberOfLines={1}>
+              {regionLabel}
+            </ThemedText>
+          </View>
+        ) : null}
+        <View style={styles.countPill}>
+          <Ionicons name="camera" size={10} color="#FFFFFF" />
+          <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }}>
+            {folder.entries.length}
+          </ThemedText>
+        </View>
+        {folder.avgMatch > 0 ? (
+          <View
+            style={[
+              styles.matchOverlay,
+              { backgroundColor: `${theme.status.success}E6` },
+            ]}>
+            <Ionicons name="checkmark-circle" size={11} color="#FFFFFF" />
+            <ThemedText weight="800" style={{ color: '#FFFFFF', fontSize: 11 }}>
+              {folder.avgMatch}%
+            </ThemedText>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.folderBody}>
+        <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
+          {titles.primary}
+        </ThemedText>
+        <View style={styles.folderMetaRow}>
+          <ThemedText
+            variant="captionSmall"
+            tone="secondary"
+            numberOfLines={1}
+            style={{ flex: 1, fontSize: 11 }}>
+            {subtitle}
+          </ThemedText>
+        </View>
+        <View style={styles.folderFootRow}>
+          <ThemedText
+            variant="captionSmall"
+            tone="tertiary"
+            style={{ fontSize: 10 }}>
+            {formatRelative(folder.lastCapturedAt, now)}
+          </ThemedText>
+          <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function CompareCard({
   entry,
   theme,
   heightVariant,
@@ -452,9 +846,10 @@ function AlbumCard({
   onPress: () => void;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  // Masonry effect: vary the anime/real split heights per card.
-  const animeH = [105, 120, 95][heightVariant] ?? 110;
-  const realH = [105, 120, 95][heightVariant] ?? 110;
+  // Two-image stack with light masonry variation. Heights apply to both
+  // panels so the divider sits at a predictable point.
+  const animeH = [120, 138, 108][heightVariant] ?? 120;
+  const realH = [120, 138, 108][heightVariant] ?? 120;
   const spotTitles = getPilgrimageSpotTitles(entry.spot);
   const animeTitles = getPilgrimageAnimeTitles(entry.anime);
   return (
@@ -462,24 +857,41 @@ function AlbumCard({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Compare ${spotTitles.primary}`}
-      style={({ pressed }) => [styles.albumCard, pressed && { opacity: 0.92 }]}>
-      <View style={styles.albumImgsWrap}>
-        <View style={[styles.albumHalf, { height: animeH }]}>
+      style={({ pressed }) => [
+        styles.compareCard,
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: theme.glassBorder,
+          opacity: pressed ? 0.92 : 1,
+        },
+      ]}>
+      <View style={styles.compareImgsWrap}>
+        <View style={[styles.compareHalf, { height: animeH }]}>
           <Image
             source={{ uri: entry.spot.image }}
-            style={styles.albumImgFill}
+            style={styles.compareImgFill}
             contentFit="cover"
             transition={140}
           />
+          <View style={styles.cornerTag}>
+            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
+              SCENE
+            </ThemedText>
+          </View>
         </View>
         <View style={styles.divider} />
-        <View style={[styles.albumHalf, { height: realH }]}>
+        <View style={[styles.compareHalf, { height: realH }]}>
           <Image
             source={{ uri: entry.capture.uri }}
-            style={styles.albumImgFill}
+            style={styles.compareImgFill}
             contentFit="cover"
             transition={140}
           />
+          <View style={[styles.cornerTag, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
+              YOURS
+            </ThemedText>
+          </View>
         </View>
         <View style={styles.matchPill}>
           <Ionicons name="checkmark-circle" size={10} color={theme.status.success} />
@@ -488,11 +900,15 @@ function AlbumCard({
           </ThemedText>
         </View>
       </View>
-      <View style={styles.albumFoot}>
-        <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
+      <View style={styles.compareFoot}>
+        <ThemedText
+          variant="captionSmall"
+          weight="700"
+          numberOfLines={1}
+          style={{ fontSize: 12 }}>
           {spotTitles.primary}
         </ThemedText>
-        <View style={styles.albumMetaRow}>
+        <View style={styles.compareMetaRow}>
           <ThemedText
             variant="captionSmall"
             tone="tertiary"
@@ -509,6 +925,35 @@ function AlbumCard({
         </View>
       </View>
     </Pressable>
+  );
+}
+
+function EmptyState({
+  theme,
+  title,
+  body,
+}: {
+  theme: ThemePalette;
+  title: string;
+  body: string;
+}) {
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  return (
+    <View style={styles.emptyState}>
+      <View style={[styles.emptyIcon, { backgroundColor: theme.background.tertiary }]}>
+        <Ionicons name="camera-outline" size={28} color={theme.text.secondary} />
+      </View>
+      <ThemedText variant="titleMedium" weight="600" align="center">
+        {title}
+      </ThemedText>
+      <ThemedText
+        variant="bodySmall"
+        tone="secondary"
+        align="center"
+        style={{ paddingHorizontal: 24 }}>
+        {body}
+      </ThemedText>
+    </View>
   );
 }
 
@@ -537,6 +982,15 @@ function makeStyles(theme: ThemePalette) {
       flex: 1,
       alignItems: 'center',
       gap: 2,
+    },
+    headerTitle: {
+      fontSize: 16,
+      textAlign: 'center',
+    },
+    headerSubtitle: {
+      letterSpacing: 0.5,
+      fontSize: 11,
+      textAlign: 'center',
     },
     scroll: {
       paddingHorizontal: 16,
@@ -571,18 +1025,43 @@ function makeStyles(theme: ThemePalette) {
       paddingRight: 4,
     },
     chip: {
-      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 18,
       borderWidth: 1,
-      maxWidth: 160,
+      minHeight: 36,
+      maxWidth: 180,
+    },
+    chipCount: {
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 8,
+      minWidth: 18,
       alignItems: 'center',
-      justifyContent: 'center',
+    },
+    detailHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      paddingVertical: 4,
+      marginBottom: 8,
+    },
+    matchBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
     },
     emptyState: {
       alignItems: 'center',
       gap: 10,
-      paddingVertical: 36,
+      paddingVertical: 56,
     },
     emptyIcon: {
       width: 64,
@@ -592,6 +1071,96 @@ function makeStyles(theme: ThemePalette) {
       justifyContent: 'center',
       marginBottom: 6,
     },
+
+    // Folder grid (default view)
+    folderGrid: {
+      gap: 12,
+    },
+    folderRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    folderCell: {
+      flex: 1,
+    },
+    folderCard: {
+      borderRadius: 18,
+      borderWidth: 1,
+      overflow: 'hidden',
+    },
+    folderCoverWrap: {
+      aspectRatio: 1,
+      backgroundColor: theme.background.tertiary,
+      position: 'relative',
+    },
+    folderCoverImage: {
+      width: '100%',
+      height: '100%',
+    },
+    folderCoverGradient: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '60%',
+    },
+    regionPill: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.15)',
+      maxWidth: '70%',
+    },
+    countPill: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.15)',
+    },
+    matchOverlay: {
+      position: 'absolute',
+      bottom: 8,
+      left: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
+    folderBody: {
+      padding: 12,
+      gap: 4,
+    },
+    folderMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    folderFootRow: {
+      marginTop: 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+
+    // Detail view (per-folder)
     grid: {
       flexDirection: 'row',
       gap: 12,
@@ -600,27 +1169,35 @@ function makeStyles(theme: ThemePalette) {
       flex: 1,
       gap: 12,
     },
-    albumCard: {
+    compareCard: {
       borderRadius: 18,
-      overflow: 'hidden',
-      backgroundColor: theme.background.secondary,
       borderWidth: 1,
-      borderColor: theme.glassBorder,
+      overflow: 'hidden',
     },
-    albumImgsWrap: {
+    compareImgsWrap: {
       position: 'relative',
     },
-    albumHalf: {
+    compareHalf: {
       width: '100%',
       backgroundColor: theme.background.tertiary,
+      position: 'relative',
     },
-    albumImgFill: {
+    compareImgFill: {
       width: '100%',
       height: '100%',
     },
+    cornerTag: {
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+    },
     divider: {
-      height: 4,
-      backgroundColor: 'rgba(255,255,255,0.8)',
+      height: 3,
+      backgroundColor: 'rgba(255,255,255,0.85)',
     },
     matchPill: {
       position: 'absolute',
@@ -636,16 +1213,18 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',
     },
-    albumFoot: {
+    compareFoot: {
       padding: 10,
       gap: 6,
     },
-    albumMetaRow: {
+    compareMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 6,
     },
+
+    // FAB
     fabWrap: {
       position: 'absolute',
       right: 16,
@@ -657,10 +1236,6 @@ function makeStyles(theme: ThemePalette) {
       paddingHorizontal: 18,
       paddingVertical: 12,
       borderRadius: 28,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.4,
-      shadowRadius: 24,
-      elevation: 8,
     },
     fabIconWrap: {
       width: 24,
