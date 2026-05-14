@@ -3,13 +3,20 @@
 
 import { LocalDB, type PilgrimageRow, type PilgrimageSaveInput } from '../../db';
 import { AnitabiClient, DataSourceError } from '../../clients/anitabi-client';
+import { CacheService } from '../cache-service';
 import type { AnitabiBangumi, AnitabiPoint, AnitabiPointDetail } from './types';
 
 /** Default lite-cache TTL (7 days) in milliseconds. */
 export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Cache key prefix used by getDetailedPoints (SQLite-backed). */
+const DETAIL_CACHE_KEY_PREFIX = 'anitabi_detail_';
+
 /** Sentinel rows for in-memory cache so we can also remember "no data" results. */
 type CacheValue = { kind: 'hit'; value: AnitabiBangumi } | { kind: 'miss' };
+type DetailCacheValue =
+  | { kind: 'hit'; value: AnitabiPointDetail[] }
+  | { kind: 'miss' };
 
 interface ServiceOptions {
   /** Override now() (used by tests for TTL boundaries). */
@@ -18,6 +25,8 @@ interface ServiceOptions {
   client?: typeof AnitabiClient;
   /** Override LocalDB (used by tests that don't touch SQLite). */
   db?: typeof LocalDB;
+  /** Override the generic key/value cache (used by tests). */
+  cache?: typeof CacheService;
   /** Override the lite cache TTL. Defaults to 7 days. */
   ttlMs?: number;
 }
@@ -26,15 +35,20 @@ export class AnitabiService {
   private static _instance: AnitabiService | null = null;
 
   private memCache = new Map<number, CacheValue>();
+  private detailMemCache = new Map<number, DetailCacheValue>();
+  /** In-flight detail requests deduped by bangumiId. */
+  private pendingDetail = new Map<number, Promise<AnitabiPointDetail[]>>();
   private now: () => number;
   private client: typeof AnitabiClient;
   private db: typeof LocalDB;
+  private cache: typeof CacheService;
   private ttlMs: number;
 
   constructor(opts: ServiceOptions = {}) {
     this.now = opts.now ?? (() => Date.now());
     this.client = opts.client ?? AnitabiClient;
     this.db = opts.db ?? LocalDB;
+    this.cache = opts.cache ?? CacheService;
     this.ttlMs = opts.ttlMs ?? PILGRIMAGE_TTL_MS;
   }
 
@@ -130,22 +144,85 @@ export class AnitabiService {
   }
 
   /**
-   * Fetch the full /points/detail payload (large; not cached).
+   * Fetch the full /points/detail payload.
    * Returns [] when the anime has no pilgrimage data (HTTP 404).
+   *
+   * Lookup order matches getAnimePilgrimage: in-memory → SQLite (via
+   * CacheService) → network. The detailed payload is large (~50–300 KB) but
+   * effectively immutable for our purposes, so we cache it with the same
+   * 7-day TTL as the lite payload.
    */
   async getDetailedPoints(bangumiId: number): Promise<AnitabiPointDetail[]> {
-    const points = await this.client.getPointsDetail(bangumiId);
-    return points ?? [];
+    // 1. In-memory cache (hot path on repeat visits within the session).
+    const memHit = this.detailMemCache.get(bangumiId);
+    if (memHit) {
+      return memHit.kind === 'hit' ? memHit.value : [];
+    }
+
+    // 2. Dedup concurrent in-flight requests for the same anime.
+    const pending = this.pendingDetail.get(bangumiId);
+    if (pending) return pending;
+
+    const promise = (async (): Promise<AnitabiPointDetail[]> => {
+      // 3. SQLite cache.
+      try {
+        const cached = await this.cache.get<AnitabiPointDetail[]>(
+          DETAIL_CACHE_KEY_PREFIX + bangumiId
+        );
+        if (cached) {
+          this.detailMemCache.set(bangumiId, { kind: 'hit', value: cached });
+          return cached;
+        }
+      } catch (err) {
+        console.warn('[AnitabiService] detail cache read failed:', err);
+      }
+
+      // 4. Network.
+      let fresh: AnitabiPointDetail[] | null;
+      try {
+        fresh = await this.client.getPointsDetail(bangumiId);
+      } catch (err) {
+        if (err instanceof DataSourceError && err.code === 'NOT_FOUND') {
+          this.detailMemCache.set(bangumiId, { kind: 'miss' });
+          return [];
+        }
+        throw err;
+      }
+
+      if (fresh === null) {
+        this.detailMemCache.set(bangumiId, { kind: 'miss' });
+        return [];
+      }
+
+      this.detailMemCache.set(bangumiId, { kind: 'hit', value: fresh });
+      // Persist (best effort).
+      try {
+        await this.cache.set(DETAIL_CACHE_KEY_PREFIX + bangumiId, fresh, this.ttlMs);
+      } catch (err) {
+        console.warn('[AnitabiService] detail cache write failed:', err);
+      }
+      return fresh;
+    })();
+
+    this.pendingDetail.set(bangumiId, promise);
+    try {
+      return await promise;
+    } finally {
+      this.pendingDetail.delete(bangumiId);
+    }
   }
 
   /** Drop the cache entry for one anime. */
   invalidate(bangumiId: number): void {
     this.memCache.delete(bangumiId);
+    this.detailMemCache.delete(bangumiId);
+    void this.cache.delete(DETAIL_CACHE_KEY_PREFIX + bangumiId).catch(() => undefined);
   }
 
   /** Drop every in-memory entry. */
   invalidateAll(): void {
     this.memCache.clear();
+    this.detailMemCache.clear();
   }
 
   /**
