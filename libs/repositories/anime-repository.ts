@@ -21,7 +21,11 @@
 import type { Anime, Genre, Photo } from '../../components/rate/types';
 import { AniListClient, type AniListAnime } from '../clients/anilist-client';
 import { LocalDB } from '../db';
-import type { UnifiedAnimeItem } from '../models/unified-anime-item';
+import {
+  IMAGE_PRIORITY,
+  type ImageType,
+  type UnifiedAnimeItem,
+} from '../models/unified-anime-item';
 import type { PlatformImageData } from '../models/platform-image-data';
 import type { PlatformType } from '../services/auth/types';
 import { CacheService } from '../services/cache-service';
@@ -112,25 +116,84 @@ export class CancellationError extends Error {
 
 export type SourceMap = Partial<Record<PlatformType, AnimeDataSource>>;
 
+type LegacyStartDate = NonNullable<Anime['startDate']>;
+
+function numberPart(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function toLegacyStartDate(value: unknown): LegacyStartDate | undefined {
+  if (!value) return undefined;
+
+  if (value instanceof Date) {
+    return {
+      year: value.getUTCFullYear(),
+      month: value.getUTCMonth() + 1,
+      day: value.getUTCDate(),
+    };
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return undefined;
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+    };
+  }
+
+  if (typeof value === 'object') {
+    const parts = value as { year?: unknown; month?: unknown; day?: unknown };
+    const year = numberPart(parts.year);
+    if (year == null) return undefined;
+    return {
+      year,
+      month: numberPart(parts.month),
+      day: numberPart(parts.day),
+    };
+  }
+
+  return undefined;
+}
+
+function bestImageForLegacy(item: UnifiedAnimeItem, type: ImageType): string | null {
+  const bestImage = (item as { bestImage?: unknown }).bestImage;
+  if (typeof bestImage === 'function') {
+    return (bestImage.call(item, type) as string | null | undefined) ?? null;
+  }
+
+  const platformImages =
+    (item as { platformImages?: Partial<Record<PlatformType, PlatformImageData>> }).platformImages ??
+    {};
+  for (const platform of IMAGE_PRIORITY) {
+    const candidate = platformImages[platform]?.[type];
+    if (candidate) return candidate;
+  }
+
+  switch (type) {
+    case 'large':
+      return item.coverImageURL;
+    case 'extraLarge':
+      return item.extraLargeImageURL;
+    case 'banner':
+      return item.bannerImageURL;
+  }
+}
+
 /**
  * Convert a UnifiedAnimeItem to the legacy `Anime` shape used by existing UI
  * (the photo deck, anime detail screen, etc).
  */
 export function unifiedToLegacyAnime(item: UnifiedAnimeItem): Anime {
-  const startDate = item.startDate
-    ? {
-        year: item.startDate.getUTCFullYear(),
-        month: item.startDate.getUTCMonth() + 1,
-        day: item.startDate.getUTCDate(),
-      }
-    : undefined;
+  const startDate = toLegacyStartDate(item.startDate);
 
   return {
     id: item.id,
     title:
       item.titleEnglish || item.title || item.titleRomaji || item.titleJapanese || 'Unknown Title',
-    image: item.bestImage('extraLarge') ?? item.bestImage('large') ?? item.coverImageURL ?? '',
-    bannerImage: item.bestImage('banner') ?? item.bannerImageURL ?? undefined,
+    image: bestImageForLegacy(item, 'extraLarge') ?? bestImageForLegacy(item, 'large') ?? '',
+    bannerImage: bestImageForLegacy(item, 'banner') ?? undefined,
     rank: item.anilistScore ?? Math.round((item.normalizedScore ?? 0) * 10),
     score: item.normalizedScore ?? undefined,
     type: item.format ?? 'TV',

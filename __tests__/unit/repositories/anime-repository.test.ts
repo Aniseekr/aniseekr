@@ -11,7 +11,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn, type Mock } from 'bun:test';
-import { AnimeRepository, CancellationError } from '../../../libs/repositories/anime-repository';
+import {
+  AnimeRepository,
+  CancellationError,
+  unifiedToLegacyAnime,
+} from '../../../libs/repositories/anime-repository';
 import { AniListClient, type AniListAnime } from '../../../libs/clients/anilist-client';
 import {
   type AnimeDataSource,
@@ -316,6 +320,33 @@ describe('AnimeRepository', () => {
     // The cached value is rehydrated from JSON so it won't be the same
     // instance — assert via id.
     expect(result[0].id).toBe('cached');
+  });
+
+  it('REPO-014 maps disk-cache-shaped unified items with serialized dates', () => {
+    const cachedItem = JSON.parse(
+      JSON.stringify(
+        new UnifiedAnimeItem({
+          title: 'Cached Show',
+          titleEnglish: 'Cached Show EN',
+          format: 'TV',
+          coverImageURL: 'https://img.example/large.jpg',
+          extraLargeImageURL: 'https://img.example/xl.jpg',
+          bannerImageURL: 'https://img.example/banner.jpg',
+          startDate: new Date(Date.UTC(2026, 3, 5)),
+          platformData: {
+            bangumi: { id: '110277', progress: 0 },
+          },
+        })
+      )
+    ) as UnifiedAnimeItem;
+
+    const legacy = unifiedToLegacyAnime(cachedItem);
+
+    expect(legacy.id).toBe('110277');
+    expect(legacy.title).toBe('Cached Show EN');
+    expect(legacy.image).toBe('https://img.example/xl.jpg');
+    expect(legacy.bannerImage).toBe('https://img.example/banner.jpg');
+    expect(legacy.startDate).toEqual({ year: 2026, month: 4, day: 5 });
   });
 
   it('REPO-050 batched seasonal fetch continues when a source returns smaller fixed-size pages', async () => {
