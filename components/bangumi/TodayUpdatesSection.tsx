@@ -2,13 +2,14 @@
 // Mirrors the iOS TodayUpdatesSection: collapsible header with sparkle icon,
 // horizontal scroller of compact today-cards underneath.
 
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Anime } from '../rate/types';
-import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 interface TodayUpdatesSectionProps {
@@ -33,6 +34,10 @@ function TodayUpdatesSectionComponent({
   trackedIds,
 }: TodayUpdatesSectionProps) {
   const router = useRouter();
+  const { theme, effectiveMode } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const blurTint =
+    effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   if (!todayAnime || todayAnime.length === 0) return null;
@@ -41,20 +46,20 @@ function TodayUpdatesSectionComponent({
   return (
     <View style={styles.container}>
       {Platform.OS === 'ios' ? (
-        <BlurView intensity={20} tint="systemThickMaterialDark" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={20} tint={blurTint} style={StyleSheet.absoluteFill} />
       ) : null}
       <View pointerEvents="none" style={styles.surface} />
       <View pointerEvents="none" style={styles.surfaceBorder} />
 
       <Pressable onPress={() => setCollapsed((p) => !p)} style={styles.header}>
-        <Ionicons name="sparkles" size={16} color={Colors.primary} />
+        <Ionicons name="sparkles" size={16} color={theme.accent} />
         <Text style={styles.title}>Today</Text>
         <Text style={styles.count}>({todayAnime.length})</Text>
         <View style={{ flex: 1 }} />
         <Ionicons
           name={collapsed ? 'chevron-down' : 'chevron-up'}
           size={16}
-          color={Colors.text.tertiary}
+          color={theme.text.tertiary}
         />
       </Pressable>
 
@@ -92,7 +97,7 @@ function TodayUpdatesSectionComponent({
                 </View>
                 {isTracked ? (
                   <View style={styles.trackedBadge}>
-                    <Ionicons name="checkmark" size={10} color={Colors.primary} />
+                    <Ionicons name="checkmark" size={10} color={theme.accent} />
                   </View>
                 ) : null}
               </Pressable>
@@ -104,90 +109,91 @@ function TodayUpdatesSectionComponent({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    overflow: 'hidden',
-    marginHorizontal: Spacing.md,
-    borderRadius: Radius.card,
-    marginBottom: Spacing.sm,
-  },
-  surface: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.glass.dark,
-  },
-  surfaceBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
-  },
-  title: {
-    ...Typography.titleSmall,
-    color: Colors.text.primary,
-    fontFamily: FontFamily.rounded,
-  },
-  count: {
-    ...Typography.bodySmall,
-    color: Colors.text.tertiary,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  card: {
-    width: 168,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 6,
-    marginRight: Spacing.xs,
-    backgroundColor: Colors.glass.light,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  poster: {
-    width: 40,
-    height: 56,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.background.tertiary,
-  },
-  cardText: {
-    flex: 1,
-    gap: 2,
-  },
-  cardTitle: {
-    ...Typography.captionSmall,
-    color: Colors.text.primary,
-    fontWeight: '600',
-  },
-  cardTime: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-    fontFamily: FontFamily.rounded,
-  },
-  trackedBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 159, 10, 0.18)',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-});
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    container: {
+      overflow: 'hidden',
+      marginHorizontal: Spacing.md,
+      borderRadius: Radius.card,
+      marginBottom: Spacing.sm,
+    },
+    surface: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.background.secondary,
+    },
+    surfaceBorder: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: Radius.card,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs + 2,
+    },
+    title: {
+      ...Typography.titleSmall,
+      color: theme.text.primary,
+      fontFamily: FontFamily.rounded,
+    },
+    count: {
+      ...Typography.bodySmall,
+      color: theme.text.tertiary,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.md,
+      paddingBottom: Spacing.sm,
+      gap: Spacing.xs,
+    },
+    card: {
+      width: 168,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      padding: 6,
+      marginRight: Spacing.xs,
+      backgroundColor: theme.background.tertiary,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    poster: {
+      width: 40,
+      height: 56,
+      borderRadius: Radius.sm,
+      backgroundColor: theme.background.tertiary,
+    },
+    cardText: {
+      flex: 1,
+      gap: 2,
+    },
+    cardTitle: {
+      ...Typography.captionSmall,
+      color: theme.text.primary,
+      fontWeight: '600',
+    },
+    cardTime: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.accent,
+      fontFamily: FontFamily.rounded,
+    },
+    trackedBadge: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: `${theme.accent}2E`,
+      borderWidth: 1,
+      borderColor: theme.accent,
+    },
+  });
 
 export const TodayUpdatesSection = memo(TodayUpdatesSectionComponent);

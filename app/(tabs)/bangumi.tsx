@@ -33,6 +33,8 @@ import { shareSchedule } from '../../components/bangumi/shareSchedule';
 import { ShareScheduleCard } from '../../components/bangumi/ShareScheduleCard';
 import { AddTrackingSheet } from '../../components/bangumi/AddTrackingSheet';
 import { BangumiActionSnackbar } from '../../components/bangumi/BangumiActionSnackbar';
+import { SwipeHintChip } from '../../components/bangumi/SwipeHintChip';
+import { BangumiCardDeck } from '../../components/bangumi/BangumiCardDeck';
 import { AnimeRepository, unifiedToLegacyAnime } from '../../libs/repositories/anime-repository';
 import { dataSourceConfig } from '../../libs/services/data-source-config';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
@@ -249,7 +251,7 @@ export default function BangumiScreen() {
             key: Date.now(),
             message: id
               ? `Reminder set for "${anime.title}"`
-              : `Reminders unavailable in Expo Go`,
+              : `No upcoming episode scheduled for "${anime.title}"`,
             icon: id ? 'notifications-active' : 'info',
           });
         }
@@ -268,8 +270,13 @@ export default function BangumiScreen() {
   const filterMode = prefs.filterMode;
   const showUnknownDays = prefs.showUnknownDays;
   const typeFilter = prefs.typeFilter;
+  const hideSwipeHint = prefs.hideSwipeHint ?? false;
   const setFilterMode = useCallback(
     (mode: FilterMode) => setPrefs((p) => ({ ...p, filterMode: mode })),
+    [setPrefs]
+  );
+  const dismissSwipeHint = useCallback(
+    () => setPrefs((p) => ({ ...p, hideSwipeHint: true })),
     [setPrefs]
   );
 
@@ -301,7 +308,16 @@ export default function BangumiScreen() {
       // accumulated list — overwrites any stale snapshot data on the first
       // fresh page rather than appending on top of it.
       let acc: Anime[] = [];
+      // With a snapshot already visible (or during pull-to-refresh), partial
+      // SWR pages would shrink the list and grow it back — a visible jitter.
+      // Only render pages progressively on a true cold load.
+      const renderPagesProgressively = !forceRefresh && !snapshot;
       try {
+        // Dynamic loading contract:
+        // - This screen must use the batched repository API, not a single-page
+        //   seasonal fetch, so later pages keep loading past the first 20 items.
+        // - `perPage` must be forwarded through Bangumi -> AniList. If that
+        //   chain breaks, the list can shrink to the first filtered page only.
         const fetched = await AnimeRepository.defaultInstance().fetchSeasonalAnimeBatched(
           selectedSeason.toUpperCase(),
           selectedYear,
@@ -309,26 +325,31 @@ export default function BangumiScreen() {
             perPage: 50,
             maxItems: 200,
             forceRefresh,
-            onPageReceived: forceRefresh
-              ? undefined
-              : (pageItems) => {
+            onPageReceived: renderPagesProgressively
+              ? (pageItems) => {
                   if (myVersion !== fetchVersionRef.current) return;
                   const mapped = pageItems.map(unifiedToLegacyAnime);
                   acc = [...acc, ...mapped];
                   setRawAnime(acc);
                   setIsLoading(false);
-                },
+                }
+              : undefined,
           }
         );
         if (myVersion !== fetchVersionRef.current) return;
         const finalSource = dataSourceConfig.browseSource;
-        const finalList =
-          forceRefresh || acc.length === 0 ? fetched.map(unifiedToLegacyAnime) : acc;
-        if (forceRefresh) {
+        const finalList = fetched.map(unifiedToLegacyAnime);
+        const visible = snapshot?.rawAnime ?? acc;
+        const unchanged =
+          visible.length === finalList.length &&
+          visible.every((a, i) => a.id === finalList[i]?.id);
+        // Swap to fresh data silently — but skip the state update when the
+        // server result is identical to what we already have on screen, so
+        // useMemo deps (and downstream list renders) don't churn.
+        if (!unchanged) {
           setRawAnime(finalList);
         }
         setSourcePlatform(finalSource);
-        // Write the freshest list back so future re-mounts skip the skeleton.
         seasonSnapshots.set(snapshotKey(selectedSeason, selectedYear, finalSource), {
           rawAnime: finalList,
           sourcePlatform: finalSource,
@@ -401,9 +422,13 @@ export default function BangumiScreen() {
     ];
   }, [filteredAnime]);
 
-  const toggleViewMode = useCallback(() => {
-    setPrefs((p) => ({ ...p, viewMode: p.viewMode === 'calendar' ? 'list' : 'calendar' }));
-  }, [setPrefs]);
+  const setViewMode = useCallback(
+    (mode: 'calendar' | 'list' | 'cards') => {
+      hapticsBridge.selection();
+      setPrefs((p) => (p.viewMode === mode ? p : { ...p, viewMode: mode }));
+    },
+    [setPrefs]
+  );
 
   const switchToPreviousSeason = useCallback(() => {
     const seasonOrder: Season[] = ['winter', 'spring', 'summer', 'fall'];
@@ -499,7 +524,7 @@ export default function BangumiScreen() {
             filterMode={filterMode}
             onFilterChange={setFilterMode}
             viewMode={viewMode}
-            onViewModeToggle={toggleViewMode}
+            onSetViewMode={setViewMode}
             totalCount={totalCount}
             onLabelTap={() => setShowYearPicker(true)}
             onOpenSettings={() => setShowSettings(true)}
@@ -555,7 +580,9 @@ export default function BangumiScreen() {
           onChange={setPrefs}
           onOpenNotifications={() => {
             setShowSettings(false);
-            setShowNotifManager(true);
+            // Wait for the settings Modal to fully dismiss before presenting the
+            // notification manager — iOS only allows one Modal on-screen at a time.
+            setTimeout(() => setShowNotifManager(true), 280);
           }}
           onShare={() => {
             setShowSettings(false);
@@ -622,6 +649,21 @@ export default function BangumiScreen() {
               </>
             )}
           </ScrollView>
+        ) : viewMode === 'cards' ? (
+          <View style={styles.cardsContainer}>
+            {showSkeleton ? (
+              <BangumiCardDeckSkeleton />
+            ) : (
+              <BangumiCardDeck
+                anime={filteredAnime}
+                resetKey={`${selectedSeason}-${selectedYear}-${filterMode}-${typeFilter}`}
+                onSwipeRemind={(a) =>
+                  handleToggleReminder(a, animeNotificationService.isAnimeScheduled(a.id))
+                }
+                onSwipePlan={handleQuickAddWishlist}
+              />
+            )}
+          </View>
         ) : (
           <ScrollView
             style={{ flex: 1 }}
@@ -639,6 +681,7 @@ export default function BangumiScreen() {
               <BangumiListSkeleton theme={theme} />
             ) : (
               <>
+                {!hideSwipeHint ? <SwipeHintChip onDismiss={dismissSwipeHint} /> : null}
                 {/* Show a compact weekly calendar above the list as a navigator */}
                 {todayAnime.length > 0 ? (
                   <TodayUpdatesSection
@@ -811,6 +854,35 @@ function BangumiCalendarSkeleton({ theme }: { theme: ThemePalette }) {
   );
 }
 
+// Card-deck skeleton — single centered card-shaped shimmer that matches the
+// real deck dimensions so the swap to data has no layout shift.
+function BangumiCardDeckSkeleton() {
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(width - Spacing.lg * 2, 360);
+  const cardHeight = Math.round(cardWidth * 1.4);
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingBottom: Spacing.xl,
+        gap: Spacing.lg,
+      }}>
+      <ShimmerEffect width={64} height={14} />
+      <ShimmerEffect width={cardWidth} height={cardHeight} borderRadius={Radius.xxl} />
+      <View style={{ flexDirection: 'row', gap: Spacing.md, width: cardWidth }}>
+        <View style={{ flex: 1 }}>
+          <ShimmerEffect width="100%" height={44} borderRadius={Radius.full} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <ShimmerEffect width="100%" height={44} borderRadius={Radius.full} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // List-mode skeleton — mirrors AnimeRowCard layout (poster + 2 lines + meta).
 function BangumiListSkeleton({ theme }: { theme: ThemePalette }) {
   return (
@@ -862,6 +934,10 @@ const makeStyles = (theme: ThemePalette) =>
       flex: 1,
       minHeight: 400,
       paddingTop: Spacing.xs,
+    },
+    cardsContainer: {
+      flex: 1,
+      paddingBottom: 120,
     },
     headerWrap: {
       paddingHorizontal: Spacing.md,

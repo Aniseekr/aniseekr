@@ -37,7 +37,9 @@ function BangumiActionSnackbarComponent({
   durationMs = 3500,
   bottomOffset = 96,
 }: BangumiActionSnackbarProps) {
-  const { theme } = useTheme();
+  const { theme, effectiveMode } = useTheme();
+  const blurTint =
+    effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ function BangumiActionSnackbarComponent({
           },
         ]}>
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={28} tint="systemThickMaterialDark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={28} tint={blurTint} style={StyleSheet.absoluteFill} />
         ) : null}
         <MaterialIcons name={icon} size={20} color={actionColor} />
         <Text style={[styles.message, { color: theme.text.primary }]} numberOfLines={2}>

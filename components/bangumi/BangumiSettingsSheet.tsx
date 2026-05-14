@@ -9,7 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
 
-export type BangumiViewMode = 'calendar' | 'list';
+export type BangumiViewMode = 'calendar' | 'list' | 'cards';
 export type BangumiFilterMode = 'all' | 'tracking';
 export type BangumiTypeFilter = 'all' | 'tv' | 'movie' | 'ova' | 'special';
 
@@ -19,6 +19,7 @@ export interface BangumiPreferences {
   typeFilter: BangumiTypeFilter;
   showUnknownDays: boolean;
   notificationsEnabled: boolean;
+  hideSwipeHint?: boolean;
 }
 
 interface BangumiSettingsSheetProps {
@@ -62,7 +63,7 @@ function BangumiSettingsSheetComponent({
         style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View
-          entering={FadeInUp.springify().damping(18)}
+          entering={FadeInUp.duration(220)}
           style={[
             styles.sheet,
             {
@@ -315,6 +316,7 @@ export const DEFAULT_BANGUMI_PREFS: BangumiPreferences = {
   typeFilter: 'all',
   showUnknownDays: true,
   notificationsEnabled: true,
+  hideSwipeHint: false,
 };
 
 const styles = StyleSheet.create({
