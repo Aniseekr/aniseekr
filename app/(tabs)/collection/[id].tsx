@@ -19,6 +19,7 @@ import {
   AnimeProgressView,
   type AnimeProgress,
 } from '../../../components/collection/AnimeProgressView';
+import { FolderSwipeDeck } from '../../../components/collection/FolderSwipeDeck';
 import { Skeleton, ThemedText } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
@@ -68,6 +69,7 @@ export default function FolderDetailScreen() {
   const [items, setItems] = useState<FolderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -206,11 +208,71 @@ export default function FolderDetailScreen() {
         now
       );
       trackingService.invalidateTrackingCache();
-      await loadItems();
+      // In swipe mode keep the deck frozen — reloading items would shuffle
+      // indices and could yank a card out from under the user. Items refresh
+      // when they leave swipe mode.
+      if (viewMode === 'list') {
+        await loadItems();
+      } else {
+        setItems((prev) =>
+          prev.map((it) =>
+            it.id === animeId
+              ? {
+                  ...it,
+                  status: progress.status,
+                  score: Math.round(progress.score * 10),
+                  progress: progress.episodesWatched,
+                  total_episodes: progress.totalEpisodes ?? it.total_episodes,
+                }
+              : it
+          )
+        );
+      }
     } catch (error) {
       console.error('Failed to save progress:', error);
     }
   };
+
+  const handleHaventWatched = useCallback(
+    async (item: FolderItem) => {
+      try {
+        await trackingService.updateStatus(item.id, 'planned', {
+          title: item.title,
+          imageUrl: item.image_url,
+        });
+        hapticsBridge.selection();
+      } catch (error) {
+        console.error('Failed to mark as planning:', error);
+      }
+    },
+    []
+  );
+
+  const handleLike = useCallback(async (item: FolderItem) => {
+    try {
+      await LocalDB.addFavorite({
+        id: item.id,
+        title: item.title,
+        image: item.image_url,
+      });
+      hapticsBridge.success();
+    } catch (error) {
+      console.error('Failed to like:', error);
+    }
+  }, []);
+
+  const toggleViewMode = useCallback(() => {
+    hapticsBridge.selection();
+    setViewMode((m) => {
+      const next = m === 'list' ? 'swipe' : 'list';
+      // Returning to the list view refreshes counts/status after the user
+      // triaged a stack — captures the swipe-side updates that we deferred.
+      if (next === 'list') {
+        void loadItems();
+      }
+      return next;
+    });
+  }, [loadItems]);
 
   const renderItem = ({ item }: { item: FolderItem }) => (
     <Pressable
@@ -365,14 +427,52 @@ export default function FolderDetailScreen() {
             {name || 'Folder'}
           </ThemedText>
           <ThemedText variant="captionSmall" tone="tertiary" weight="500">
-            {loading ? 'Loading…' : `${items.length} ${items.length === 1 ? 'anime' : 'anime'}`}
+            {loading
+              ? 'Loading…'
+              : viewMode === 'swipe'
+                ? `Swipe to triage · ${items.length}`
+                : `${items.length} ${items.length === 1 ? 'anime' : 'anime'}`}
           </ThemedText>
         </View>
-        <View style={styles.headerBtnSpacer} />
+        <Pressable
+          onPress={toggleViewMode}
+          hitSlop={10}
+          disabled={items.length === 0 && viewMode === 'list'}
+          accessibilityRole="button"
+          accessibilityLabel={
+            viewMode === 'swipe' ? 'Back to list view' : 'Swipe to like'
+          }
+          style={({ pressed }) => [
+            styles.headerBtn,
+            {
+              backgroundColor:
+                viewMode === 'swipe' ? theme.accent : theme.background.secondary,
+              borderColor:
+                viewMode === 'swipe' ? theme.accent : theme.glassBorder,
+              opacity: items.length === 0 && viewMode === 'list' ? 0.45 : 1,
+            },
+            pressed && { opacity: 0.78 },
+          ]}>
+          <MaterialIcons
+            name={viewMode === 'swipe' ? 'view-list' : 'swipe'}
+            size={20}
+            color={viewMode === 'swipe' ? theme.background.primary : theme.text.primary}
+          />
+        </Pressable>
       </View>
 
       {loading ? (
         <Skeleton.PosterGrid count={9} columns={3} aspectRatio={1.4} gap={12} style={{ padding: 16 }} />
+      ) : viewMode === 'swipe' ? (
+        <View style={[styles.swipeWrap, { paddingBottom: insets.bottom + 140 }]}>
+          <FolderSwipeDeck
+            items={items}
+            resetKey={id}
+            onHaventWatched={handleHaventWatched}
+            onLike={handleLike}
+            onOpenDetail={(item) => setEditingItem(item as FolderItem)}
+          />
+        </View>
       ) : (
         <FlatList
           data={items}
@@ -468,6 +568,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
     gap: Spacing.sm,
+  },
+  swipeWrap: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
   },
   itemContainer: {
     flexDirection: 'row',

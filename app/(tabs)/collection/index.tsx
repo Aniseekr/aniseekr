@@ -9,7 +9,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { trackingService } from '../../../libs/services/tracking/tracking-service';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { captureRef } from 'react-native-view-shot';
 import { CollectionHeader } from '../../../components/collection/CollectionHeader';
@@ -177,6 +178,34 @@ export default function CollectionScreen() {
   useEffect(() => {
     loadAnimeCards(selectedCategory);
   }, [loadAnimeCards, selectedCategory]);
+
+  // Refresh counts + recents + cards whenever the tab regains focus, so adds
+  // from other tabs (e.g. Bangumi wishlist) propagate without a manual pull.
+  // The skipFirst ref avoids double-loading on initial mount (the effects
+  // above already kicked off the first load).
+  const focusInitRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusInitRef.current) {
+        focusInitRef.current = true;
+        return;
+      }
+      loadCollection();
+      loadRecents();
+      loadAnimeCards(selectedCategory);
+    }, [loadAnimeCards, loadRecents, selectedCategory])
+  );
+
+  // Subscribe to tracking-set changes — adds/removes that happen from any
+  // screen invalidate the cache and fire here, so counts update in real time
+  // (no need to switch tabs or pull-to-refresh).
+  useEffect(() => {
+    return trackingService.onTrackedIdsChange(() => {
+      loadCollection();
+      loadRecents();
+      loadAnimeCards(selectedCategory);
+    });
+  }, [loadAnimeCards, loadRecents, selectedCategory]);
 
   useEffect(() => {
     let cancelled = false;
