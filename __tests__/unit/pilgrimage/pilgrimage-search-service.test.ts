@@ -76,6 +76,40 @@ describe('PilgrimageSearchService', () => {
     expect(results[0].pointsLength).toBe(58);
   });
 
+  it('matches English cross-index titles without changing the Bangumi identity', async () => {
+    const service = new PilgrimageSearchService({
+      getIndexed: () => [MONO, HYOUKA],
+      lookupCrossIndex: (bangumiId) =>
+        bangumiId === 485936
+          ? {
+              bangumiId: 485936,
+              anilistId: 176246,
+              malId: 58492,
+              anilistPopularity: 12715,
+              anilistEpisodes: null,
+              anilistStartYear: 2025,
+              titleJa: 'mono',
+              titleCn: 'mono女孩',
+              titleRomaji: 'mono',
+              titleEnglish: 'Mono',
+              matchType: 'exact_native',
+              matchNote: null,
+              resolvedAt: 0,
+            }
+          : null,
+    });
+
+    const results = await service.search('Mono', { includeBangumiFallback: false });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      bangumiId: 485936,
+      titleEnglish: 'Mono',
+      titleRomaji: 'mono',
+      titleCn: 'mono女孩',
+    });
+  });
+
   it('falls back to Bangumi search and verifies Anitabi data before returning a result', async () => {
     const bangumiClient = {
       searchSubjects: mock(async () => ({

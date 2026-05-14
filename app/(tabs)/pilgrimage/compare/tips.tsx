@@ -48,12 +48,12 @@ const WARN_ICONS: Record<WarningItem['icon'], React.ComponentProps<typeof Ionico
 const FALLBACK_WARNINGS: WarningItem[] = [
   {
     icon: 'people',
-    title: '避開人潮高峰',
+    title: 'Avoid peak crowds',
     body: 'Crowds peak on weekend afternoons — try early morning or weekdays.',
   },
   {
     icon: 'flash-off',
-    title: '勿用閃光燈',
+    title: 'Keep flash off',
     body: 'Flash washes out the cinematic depth — keep it off.',
   },
 ];
@@ -121,12 +121,12 @@ export default function PhotoTipsScreen() {
       // instead of navigating into a broken camera screen.
       hapticsBridge.warning();
       Alert.alert(
-        '需要相機權限',
-        '請到設定 → AniSeekr → 相機開啟存取，才能拍攝聖地對比照。',
+        'Camera access needed',
+        'Open Settings → AniSeekr → Camera to capture pilgrimage comparison photos.',
         [
-          { text: '取消', style: 'cancel' },
+          { text: 'Cancel', style: 'cancel' },
           {
-            text: '前往設定',
+            text: 'Open Settings',
             onPress: () => {
               Linking.openSettings().catch(() => undefined);
             },
@@ -170,13 +170,11 @@ export default function PhotoTipsScreen() {
               variant="titleSmall"
               weight="700"
               style={{ fontSize: 15, textDecorationLine: 'underline' }}>
-              拍照建議 · Photo Tips
+              Photo Tips
             </ThemedText>
             <View style={styles.locChip}>
               <Ionicons name="location" size={10} color={accent} />
-              <ThemedText
-                weight="500"
-                style={{ color: theme.text.tertiary, fontSize: 10 }}>
+              <ThemedText weight="500" style={{ color: theme.text.tertiary, fontSize: 10 }}>
                 {sceneName}
               </ThemedText>
             </View>
@@ -222,7 +220,7 @@ export default function PhotoTipsScreen() {
               <View style={styles.captionRow}>
                 <Ionicons name="sparkles" size={14} color={accent} />
                 <ThemedText variant="bodySmall" weight="600">
-                  {epLabel ? `原作場景 · ${epLabel}` : '原作場景'}
+                  {epLabel ? `Anime scene · ${epLabel}` : 'Anime scene'}
                 </ThemedText>
               </View>
               <ThemedText
@@ -266,7 +264,7 @@ export default function PhotoTipsScreen() {
                         color: theme.text.secondary,
                         fontSize: 10,
                       }}>
-                      · {mood.jp}
+                      · {mood.en}
                     </ThemedText>
                   ) : null}
                 </View>
@@ -279,7 +277,7 @@ export default function PhotoTipsScreen() {
             iconName="locate"
             iconColor={theme.status.warning}
             title="Best Shot Settings"
-            subtitle="最佳拍攝條件"
+            subtitle="Reference-based guidance"
             theme={theme}
           />
           <View style={styles.grid2}>
@@ -289,7 +287,7 @@ export default function PhotoTipsScreen() {
               theme={theme}
               label="Best Time"
               {...tileState(loading, errored, bestTime, (d) => ({
-                value: d.jp,
+                value: d.en,
                 subtitle: d.range,
               }))}
             />
@@ -299,8 +297,7 @@ export default function PhotoTipsScreen() {
               theme={theme}
               label="Weather"
               {...tileState(loading, errored, weather, (d) => ({
-                value: d.jp,
-                subtitle: d.en,
+                value: d.en,
               }))}
             />
             <TipTile
@@ -309,7 +306,7 @@ export default function PhotoTipsScreen() {
               theme={theme}
               label="Camera Angle"
               {...tileState(loading, errored, cameraAngle, (d) => ({
-                value: d.jp,
+                value: d.en,
                 subtitle: `${d.en} · ${d.light}`,
               }))}
             />
@@ -319,7 +316,7 @@ export default function PhotoTipsScreen() {
               theme={theme}
               label="Distance"
               {...tileState(loading, errored, distance, (d) => ({
-                value: d.jp,
+                value: d.en,
                 subtitle: d.en,
               }))}
             />
@@ -330,7 +327,7 @@ export default function PhotoTipsScreen() {
             iconName="camera"
             iconColor={theme.status.warning}
             title="Composition Tips"
-            subtitle="構圖建議"
+            subtitle="Framing guidance"
             theme={theme}
           />
           <View style={styles.tipsList}>
@@ -339,7 +336,7 @@ export default function PhotoTipsScreen() {
               accent={accent}
               accentFg={accentFg}
               theme={theme}
-              title={focal ? `主體放在${focal.jp}` : '使用三分構圖法'}
+              title={focal ? `Place the subject ${focal.en}` : 'Use the rule of thirds'}
               body={
                 focal
                   ? `Anchor the subject at the ${focal.en} third-line intersection.`
@@ -355,7 +352,7 @@ export default function PhotoTipsScreen() {
               accent={accent}
               accentFg={accentFg}
               theme={theme}
-              title="保持原作視角"
+              title="Keep the anime camera angle"
               body={
                 cameraAngle
                   ? `Match the anime — ${cameraAngle.en.toLowerCase()} shot, ${cameraAngle.light.toLowerCase()}.`
@@ -369,9 +366,7 @@ export default function PhotoTipsScreen() {
               accent={accent}
               accentFg={accentFg}
               theme={theme}
-              title={
-                aspect ? `建議比例 ${aspect.ratio}` : '包含主體標誌'
-              }
+              title={aspect ? `Suggested ratio ${aspect.ratio}` : 'Include the landmark'}
               body={
                 aspect && contrast
                   ? `${aspect.en} · ${contrast.en.toLowerCase()}${exposure && exposure.ev !== '0' ? ` · suggest ${exposure.ev} EV` : ''}.`
@@ -386,19 +381,14 @@ export default function PhotoTipsScreen() {
             iconName="warning"
             iconColor={theme.status.error}
             title="Things to Avoid"
-            subtitle="注意事項"
+            subtitle="Accuracy and safety checks"
             theme={theme}
           />
           <View style={styles.warnBox}>
             {(warnings ?? FALLBACK_WARNINGS).map((w, i, arr) => (
               <Fragment key={`${w.icon}-${i}`}>
                 {i > 0 ? <View style={styles.warnDivider} /> : null}
-                <WarnRow
-                  icon={WARN_ICONS[w.icon]}
-                  theme={theme}
-                  title={w.title}
-                  body={w.body}
-                />
+                <WarnRow icon={WARN_ICONS[w.icon]} theme={theme} title={w.title} body={w.body} />
                 {i === arr.length - 1 ? null : null}
               </Fragment>
             ))}
@@ -424,10 +414,8 @@ export default function PhotoTipsScreen() {
             ]}>
             <Ionicons name="camera" size={20} color={accentFg} />
             <View style={{ alignItems: 'center', gap: 1 }}>
-              <ThemedText
-                weight="700"
-                style={{ color: accentFg, fontSize: 14 }}>
-                開啟相機對齊
+              <ThemedText weight="700" style={{ color: accentFg, fontSize: 14 }}>
+                Start AR Camera
               </ThemedText>
               <ThemedText
                 weight="600"
@@ -436,7 +424,7 @@ export default function PhotoTipsScreen() {
                   fontSize: 10,
                   letterSpacing: 0.6,
                 }}>
-                Start AR Camera
+                Align with scene
               </ThemedText>
             </View>
           </Pressable>
@@ -450,11 +438,11 @@ function tileState<T>(
   loading: boolean,
   errored: boolean,
   data: T | null,
-  ready: (d: T) => { value: string; subtitle: string }
+  ready: (d: T) => { value: string; subtitle?: string }
 ): { value: string; subtitle: string; loading: boolean; muted: boolean } {
   if (loading) {
     return {
-      value: '分析中…',
+      value: 'Analyzing…',
       subtitle: 'Analyzing scene…',
       loading: true,
       muted: false,
@@ -462,13 +450,14 @@ function tileState<T>(
   }
   if (errored || !data) {
     return {
-      value: '無法分析',
+      value: 'Unavailable',
       subtitle: 'Image unavailable',
       loading: false,
       muted: true,
     };
   }
-  return { ...ready(data), loading: false, muted: false };
+  const next = ready(data);
+  return { value: next.value, subtitle: next.subtitle ?? '', loading: false, muted: false };
 }
 
 function SectionHeader({
@@ -493,9 +482,7 @@ function SectionHeader({
         </ThemedText>
       </View>
       {subtitle ? (
-        <ThemedText
-          weight="500"
-          style={{ color: theme.text.tertiary, fontSize: 11 }}>
+        <ThemedText weight="500" style={{ color: theme.text.tertiary, fontSize: 11 }}>
           {subtitle}
         </ThemedText>
       ) : null}
@@ -545,9 +532,7 @@ function TipTile({
         <View style={[styles.tileIcon, { backgroundColor: `${tone}26` }]}>
           <Ionicons name={icon} size={14} color={tone} />
         </View>
-        <ThemedText
-          weight="600"
-          style={{ color: theme.text.secondary, fontSize: 12 }}>
+        <ThemedText weight="600" style={{ color: theme.text.secondary, fontSize: 12 }}>
           {label}
         </ThemedText>
       </View>
@@ -597,9 +582,7 @@ function CompoTipRow({
       <View style={styles.tipBody}>
         <View style={styles.tipTitleRow}>
           <View style={[styles.numberBadge, { backgroundColor: accent }]}>
-            <ThemedText
-              weight="700"
-              style={{ color: accentFg, fontSize: 11 }}>
+            <ThemedText weight="700" style={{ color: accentFg, fontSize: 11 }}>
               {number}
             </ThemedText>
           </View>
@@ -607,9 +590,7 @@ function CompoTipRow({
             {title}
           </ThemedText>
         </View>
-        <ThemedText
-          variant="captionSmall"
-          style={{ color: theme.text.tertiary, lineHeight: 16 }}>
+        <ThemedText variant="captionSmall" style={{ color: theme.text.tertiary, lineHeight: 16 }}>
           {body}
         </ThemedText>
       </View>
@@ -638,11 +619,19 @@ function DiagIllustration({
     return (
       <View style={diagStyles.box}>
         {/* horizontal lines */}
-        <View style={[diagStyles.hLine, { top: '33.33%', backgroundColor: accent, opacity: 0.7 }]} />
-        <View style={[diagStyles.hLine, { top: '66.66%', backgroundColor: accent, opacity: 0.7 }]} />
+        <View
+          style={[diagStyles.hLine, { top: '33.33%', backgroundColor: accent, opacity: 0.7 }]}
+        />
+        <View
+          style={[diagStyles.hLine, { top: '66.66%', backgroundColor: accent, opacity: 0.7 }]}
+        />
         {/* vertical lines */}
-        <View style={[diagStyles.vLine, { left: '33.33%', backgroundColor: accent, opacity: 0.7 }]} />
-        <View style={[diagStyles.vLine, { left: '66.66%', backgroundColor: accent, opacity: 0.7 }]} />
+        <View
+          style={[diagStyles.vLine, { left: '33.33%', backgroundColor: accent, opacity: 0.7 }]}
+        />
+        <View
+          style={[diagStyles.vLine, { left: '66.66%', backgroundColor: accent, opacity: 0.7 }]}
+        />
         {/* hot dot — placed at the inferred focal intersection */}
         <View
           style={[
@@ -666,12 +655,7 @@ function DiagIllustration({
     return (
       <View style={diagStyles.box}>
         <View style={[diagStyles.vLine, { left: '50%', backgroundColor: grid, opacity: 0.5 }]} />
-        <View
-          style={[
-            diagStyles.angleLine,
-            { backgroundColor: accent },
-          ]}
-        />
+        <View style={[diagStyles.angleLine, { backgroundColor: accent }]} />
         <View
           style={[
             diagStyles.dot,
@@ -767,9 +751,7 @@ function WarnRow({
         <ThemedText variant="bodySmall" weight="700">
           {title}
         </ThemedText>
-        <ThemedText
-          variant="captionSmall"
-          style={{ color: theme.text.tertiary, lineHeight: 16 }}>
+        <ThemedText variant="captionSmall" style={{ color: theme.text.tertiary, lineHeight: 16 }}>
           {body}
         </ThemedText>
       </View>

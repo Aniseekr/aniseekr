@@ -18,7 +18,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { DeviceMotion, Magnetometer } from 'expo-sensors';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
@@ -525,7 +530,7 @@ export default function CompareCaptureScreen() {
                 variant="titleSmall"
                 weight="700"
                 style={{ color: readableTextOn(themeColor) }}>
-                {permission.canAskAgain ? 'Grant access' : '前往設定 · Open Settings'}
+                {permission.canAskAgain ? 'Grant access' : 'Open Settings'}
               </ThemedText>
             </Pressable>
             <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -544,7 +549,7 @@ export default function CompareCaptureScreen() {
   const headingDeg = heading !== null ? Math.round(heading) : null;
   const headingDelta = score.headingDeltaDeg;
   const headingAligned = headingDelta !== null && Math.abs(headingDelta) <= 8;
-  const subtitleText = animeTitle ? `${animeTitle} 場景` : ep ? `EP ${ep} · 場景` : '場景';
+  const subtitleText = animeTitle ? `${animeTitle} scene` : ep ? `EP ${ep} · scene` : 'Scene';
   const showRotationBadge = Math.abs(rotationDisplay) >= 2;
 
   return (
@@ -688,7 +693,7 @@ export default function CompareCaptureScreen() {
             ]}>
             <Ionicons name="refresh" size={14} color="#fff" />
             <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-              復原
+              Reset
             </ThemedText>
           </Pressable>
         ) : null}
@@ -722,9 +727,7 @@ export default function CompareCaptureScreen() {
           <View
             style={[
               isLandscape ? styles.alignmentChipWrapLandscape : styles.alignmentChipWrap,
-              isLandscape
-                ? { top: insets.top + 208 }
-                : { bottom: insets.bottom + 156 },
+              isLandscape ? { top: insets.top + 208 } : { bottom: insets.bottom + 156 },
             ]}
             pointerEvents="none">
             <View
@@ -740,7 +743,7 @@ export default function CompareCaptureScreen() {
                 variant="captionSmall"
                 weight="700"
                 style={{ color: themeColor, letterSpacing: 0.5 }}>
-                對齊度 {totalPct}%
+                Alignment {totalPct}%
               </ThemedText>
               {totalPct >= 90 ? (
                 <>
@@ -749,7 +752,7 @@ export default function CompareCaptureScreen() {
                     variant="captionSmall"
                     weight="700"
                     style={{ color: theme.status.success }}>
-                    完美時刻
+                    Perfect
                   </ThemedText>
                 </>
               ) : null}
@@ -990,9 +993,7 @@ export default function CompareCaptureScreen() {
             pointerEvents="none"
             style={[
               styles.perfectBanner,
-              isLandscape
-                ? { top: insets.top + 64 }
-                : { bottom: insets.bottom + 232 },
+              isLandscape ? { top: insets.top + 64 } : { bottom: insets.bottom + 232 },
               {
                 backgroundColor: theme.status.success,
                 opacity: perfectOpacity,
@@ -1000,7 +1001,7 @@ export default function CompareCaptureScreen() {
             ]}>
             <Ionicons name="checkmark-circle" size={18} color="#fff" />
             <ThemedText variant="bodySmall" weight="700" style={{ color: '#fff' }}>
-              完美時刻 · Perfect alignment
+              Perfect alignment
             </ThemedText>
           </RNAnimated.View>
         ) : null}
@@ -1020,7 +1021,7 @@ export default function CompareCaptureScreen() {
                 color="#fff"
               />
               <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                請旋轉手機 · Rotate for 16:9 framing
+                Rotate for 16:9 framing
               </ThemedText>
             </Pressable>
           </RNAnimated.View>
@@ -1101,7 +1102,7 @@ function RightControlPanel({
             weight="700"
             align="center"
             style={{ color: 'rgba(255,255,255,0.75)' }}>
-            透明度
+            Opacity
           </ThemedText>
         )}
         <ThemedText
@@ -1231,8 +1232,7 @@ function InfoStack({
   insets: { top: number; bottom: number; left: number; right: number };
   isLandscape: boolean;
 }) {
-  const hasAny =
-    distanceMeters !== null || headingDir !== null || tilt !== null;
+  const hasAny = distanceMeters !== null || headingDir !== null || tilt !== null;
   if (!hasAny) return null;
 
   const distanceText =
@@ -1243,8 +1243,7 @@ function InfoStack({
         : `${Math.round(distanceMeters)}m`;
   const headingText =
     headingDir !== null && headingDeg !== null ? `${headingDir} ${headingDeg}°` : '—';
-  const tiltText =
-    tilt === null ? '—' : `${tilt >= 0 ? '+' : '−'}${Math.abs(tilt).toFixed(1)}°`;
+  const tiltText = tilt === null ? '—' : `${tilt >= 0 ? '+' : '−'}${Math.abs(tilt).toFixed(1)}°`;
 
   if (isLandscape) {
     return (
@@ -1253,11 +1252,8 @@ function InfoStack({
         pointerEvents="none">
         <View style={styles.infoStackRow}>
           <Ionicons name="location" size={12} color={themeColor} />
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            style={styles.infoStackLabel}>
-            距離
+          <ThemedText variant="captionSmall" weight="700" style={styles.infoStackLabel}>
+            Distance
           </ThemedText>
           <ThemedText
             variant="bodySmall"
@@ -1270,11 +1266,8 @@ function InfoStack({
         <View style={styles.infoStackRowDivider} />
         <View style={styles.infoStackRow}>
           <Ionicons name="compass" size={12} color={themeColor} />
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            style={styles.infoStackLabel}>
-            方位
+          <ThemedText variant="captionSmall" weight="700" style={styles.infoStackLabel}>
+            Heading
           </ThemedText>
           <ThemedText
             variant="bodySmall"
@@ -1290,11 +1283,8 @@ function InfoStack({
         <View style={styles.infoStackRowDivider} />
         <View style={styles.infoStackRow}>
           <Ionicons name="reorder-three" size={12} color={themeColor} />
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            style={styles.infoStackLabel}>
-            傾斜
+          <ThemedText variant="captionSmall" weight="700" style={styles.infoStackLabel}>
+            Tilt
           </ThemedText>
           <ThemedText
             variant="bodySmall"
@@ -1309,15 +1299,10 @@ function InfoStack({
   }
 
   return (
-    <View
-      style={[styles.infoPill, { bottom: insets.bottom + 196 }]}
-      pointerEvents="none">
+    <View style={[styles.infoPill, { bottom: insets.bottom + 196 }]} pointerEvents="none">
       <View style={styles.infoCell}>
-        <ThemedText
-          variant="captionSmall"
-          weight="700"
-          style={{ color: 'rgba(255,255,255,0.55)' }}>
-          距離
+        <ThemedText variant="captionSmall" weight="700" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          Distance
         </ThemedText>
         <View style={styles.infoRow}>
           <Ionicons name="location" size={12} color={themeColor} />
@@ -1330,11 +1315,8 @@ function InfoStack({
       <View style={styles.infoDivider} />
 
       <View style={[styles.infoCell, { flex: 1.3 }]}>
-        <ThemedText
-          variant="captionSmall"
-          weight="700"
-          style={{ color: 'rgba(255,255,255,0.55)' }}>
-          方位
+        <ThemedText variant="captionSmall" weight="700" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          Heading
         </ThemedText>
         <View style={styles.infoRow}>
           <Ionicons name="compass" size={12} color={themeColor} />
@@ -1358,11 +1340,8 @@ function InfoStack({
       <View style={styles.infoDivider} />
 
       <View style={styles.infoCell}>
-        <ThemedText
-          variant="captionSmall"
-          weight="700"
-          style={{ color: 'rgba(255,255,255,0.55)' }}>
-          傾斜
+        <ThemedText variant="captionSmall" weight="700" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          Tilt
         </ThemedText>
         <View style={styles.infoRow}>
           <Ionicons name="reorder-three" size={12} color={themeColor} />

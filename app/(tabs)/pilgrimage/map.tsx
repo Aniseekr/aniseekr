@@ -6,13 +6,7 @@
 // to the previously-selected tab.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -54,10 +48,9 @@ import {
   type AnitabiIndexEntry,
   type BoundingBox,
 } from '../../../libs/services/pilgrimage/anitabi-index';
-import {
-  getNearbyMapEntries,
-  MAP_LOCATE_ZOOM,
-} from '../../../libs/services/pilgrimage/map-nearby';
+import { getNearbyMapEntries, MAP_LOCATE_ZOOM } from '../../../libs/services/pilgrimage/map-nearby';
+import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 interface HubMapMarker {
   /** Unique within a marker set: "bgm:<id>" for Anitabi-centroid markers, "88:<entryId>" for Tourism 88 city pins. */
@@ -78,13 +71,13 @@ interface HubMapMarker {
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
 const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
-  hokkaido_tohoku: '北海道・東北',
-  kanto: '関東',
-  tokyo: '東京',
-  chubu: '中部',
-  kinki: '近畿',
-  chugoku_shikoku: '中国・四国',
-  kyushu_okinawa: '九州・沖縄',
+  hokkaido_tohoku: 'Hokkaido / Tohoku',
+  kanto: 'Kanto',
+  tokyo: 'Tokyo',
+  chubu: 'Chubu',
+  kinki: 'Kinki',
+  chugoku_shikoku: 'Chugoku / Shikoku',
+  kyushu_okinawa: 'Kyushu / Okinawa',
 };
 
 // Geographic bounding boxes for each region. Hand-tuned to feel like a
@@ -124,9 +117,7 @@ const JAPAN_BOUNDS: RegionBounds = {
 // connotation (vs. theme.accent which can drift between user themes).
 const OFFICIAL_88_GOLD = '#D4AF37';
 
-function build88Markers(
-  entries: readonly AnimeTourism88EntryWithCoords[]
-): HubMapMarker[] {
+function build88Markers(entries: readonly AnimeTourism88EntryWithCoords[]): HubMapMarker[] {
   const out: HubMapMarker[] = [];
   for (const e of entries) {
     const bangumi = e.externalIds.bangumi;
@@ -429,9 +420,7 @@ export default function PilgrimageMapScreen() {
   // Lazy-loaded entries from the offline index, keyed by bangumi id and
   // additive only (we never remove — the WebView dedups by id so duplicates
   // are cheap, and pan-back-and-forth wants the markers to stay put).
-  const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(
-    () => new Map()
-  );
+  const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(() => new Map());
 
   const mergeNearbyIndexed = useCallback((loc: LatLng) => {
     setExtraIndexed((prev) => {
@@ -501,6 +490,7 @@ export default function PilgrimageMapScreen() {
     const seen = new Set<number>();
     for (const anime of animes) {
       if (!isValidGeo(anime.geo)) continue;
+      const titles = getPilgrimageAnimeTitles(anime);
       seen.add(anime.id);
       out.push({
         markerId: `bgm:${anime.id}`,
@@ -508,7 +498,7 @@ export default function PilgrimageMapScreen() {
         lat: anime.geo[0],
         lng: anime.geo[1],
         cover: anime.cover ?? '',
-        title: anime.cn || anime.title,
+        title: titles.primary,
         city: anime.city ?? '',
         pointsLength: anime.pointsLength ?? 0,
         ringColor: anime.color || theme.accent,
@@ -516,13 +506,18 @@ export default function PilgrimageMapScreen() {
     }
     for (const entry of extraIndexed.values()) {
       if (seen.has(entry.id)) continue;
+      const titles = getPilgrimageAnimeTitles({
+        id: entry.id,
+        title: entry.title,
+        cn: entry.cn,
+      });
       out.push({
         markerId: `bgm:${entry.id}`,
         bangumiId: entry.id,
         lat: entry.lat,
         lng: entry.lng,
         cover: entry.cover,
-        title: entry.cn || entry.title,
+        title: titles.primary,
         city: entry.city,
         pointsLength: entry.pointsLength,
         ringColor: entry.color || theme.accent,
@@ -587,7 +582,7 @@ export default function PilgrimageMapScreen() {
   const handleAnimePress = useCallback(
     (bangumiId: number) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(`/pilgrimage/${bangumiId}`);
+      router.push(buildPilgrimageDetailRoute(bangumiId, { returnTo: 'map' }));
     },
     [router]
   );
@@ -827,9 +822,7 @@ function FilterChipRow({
   const chipStyles = useMemo(() => makeChipStyles(theme), [theme]);
   const wholeJapanActive = focusedRegion === null;
   return (
-    <View
-      pointerEvents="box-none"
-      style={[chipStyles.bar, { top: insetTop + 12 }]}>
+    <View pointerEvents="box-none" style={[chipStyles.bar, { top: insetTop + 12 }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -841,9 +834,7 @@ function FilterChipRow({
           accessibilityState={{ selected: wholeJapanActive }}
           style={({ pressed }) => [
             chipStyles.chip,
-            wholeJapanActive
-              ? { backgroundColor: theme.accent, borderColor: theme.accent }
-              : null,
+            wholeJapanActive ? { backgroundColor: theme.accent, borderColor: theme.accent } : null,
             pressed && { opacity: 0.85 },
           ]}>
           <ThemedText
@@ -853,7 +844,7 @@ function FilterChipRow({
               chipStyles.chipLabel,
               wholeJapanActive ? { color: theme.background.primary } : null,
             ]}>
-            全日本
+            All Japan
           </ThemedText>
         </Pressable>
         <Pressable
@@ -870,11 +861,8 @@ function FilterChipRow({
           <ThemedText
             variant="captionSmall"
             weight="700"
-            style={[
-              chipStyles.chipLabel,
-              official88Mode ? { color: '#1c1c1e' } : null,
-            ]}>
-            ★ 公認 88
+            style={[chipStyles.chipLabel, official88Mode ? { color: '#1c1c1e' } : null]}>
+            ★ Official 88
           </ThemedText>
         </Pressable>
         {ANIME_TOURISM_88_REGIONS.map((r) => {
@@ -893,10 +881,7 @@ function FilterChipRow({
               <ThemedText
                 variant="captionSmall"
                 weight="600"
-                style={[
-                  chipStyles.chipLabel,
-                  active ? { color: theme.background.primary } : null,
-                ]}>
+                style={[chipStyles.chipLabel, active ? { color: theme.background.primary } : null]}>
                 {REGION_88_LABELS[r]}
               </ThemedText>
             </Pressable>

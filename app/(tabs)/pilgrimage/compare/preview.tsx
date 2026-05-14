@@ -32,16 +32,16 @@ function getRetakeTip(s: SensorSnapshot | null): string | null {
   if (!s) return null;
   if (s.headingDeltaDeg != null && Math.abs(s.headingDeltaDeg) > 15) {
     return s.headingDeltaDeg > 0
-      ? '下次站位時可以再向右轉一點，方位會更貼近原圖。'
-      : '下次站位時可以再向左轉一點，方位會更貼近原圖。';
+      ? 'Turn a little more to the right next time to match the reference heading.'
+      : 'Turn a little more to the left next time to match the reference heading.';
   }
   if (s.distanceMeters != null && s.distanceMeters > 20) {
-    return '下次可以走近一點再拍，距離越近構圖越接近原圖。';
+    return 'Move closer next time; distance has a large effect on matching the frame.';
   }
   if (s.tilt != null && Math.abs(s.tilt) > 10) {
     return s.tilt > 0
-      ? '下次手機可以再放平一點，避免地面比例失衡。'
-      : '下次手機稍微往下一點，避免天空佔太多畫面。';
+      ? 'Level the phone a little more next time to avoid skewing the ground plane.'
+      : 'Tilt the phone slightly downward next time to reduce excess sky in the frame.';
   }
   return null;
 }
@@ -269,7 +269,7 @@ export default function ComparePreviewScreen() {
           </Pressable>
           <View style={styles.headerMid}>
             <ThemedText variant="titleLarge" weight="700" align="center" numberOfLines={1}>
-              對比結果
+              Comparison Result
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary" align="center" numberOfLines={1}>
               {ep ? `EP ${ep} · ` : ''}
@@ -301,7 +301,7 @@ export default function ComparePreviewScreen() {
               ]}>
               <View style={{ flex: 1, gap: 10 }}>
                 <ThemedText variant="captionSmall" tone="secondary" weight="600">
-                  Alignment · 對位回放
+                  Alignment Replay
                 </ThemedText>
                 <View style={styles.pillRow}>
                   {sensorSnapshot.distanceMeters != null ? (
@@ -317,7 +317,7 @@ export default function ComparePreviewScreen() {
                         {`${sensorSnapshot.distanceMeters.toFixed(1)} m`}
                       </ThemedText>
                       <ThemedText variant="captionSmall" tone="secondary">
-                        距離 spot
+                        Distance to spot
                       </ThemedText>
                     </View>
                   ) : null}
@@ -334,7 +334,7 @@ export default function ComparePreviewScreen() {
                         {formatSignedDeg(sensorSnapshot.headingDeltaDeg)}
                       </ThemedText>
                       <ThemedText variant="captionSmall" tone="secondary">
-                        方位偏移
+                        Heading offset
                       </ThemedText>
                     </View>
                   ) : null}
@@ -351,7 +351,7 @@ export default function ComparePreviewScreen() {
                         {formatSignedDeg(sensorSnapshot.tilt)}
                       </ThemedText>
                       <ThemedText variant="captionSmall" tone="secondary">
-                        水平偏角
+                        Tilt offset
                       </ThemedText>
                     </View>
                   ) : null}
@@ -378,12 +378,12 @@ export default function ComparePreviewScreen() {
               const active = m === mode;
               const label =
                 m === 'stacked'
-                  ? '上下'
+                  ? 'Stacked'
                   : m === 'sideBySide'
-                    ? '左右'
+                    ? 'Side by side'
                     : m === 'overlay'
-                      ? '疊圖'
-                      : '滑動';
+                      ? 'Overlay'
+                      : 'Slider';
               return (
                 <Pressable
                   key={m}
@@ -418,16 +418,16 @@ export default function ComparePreviewScreen() {
               style={[styles.stage, { backgroundColor: theme.background.secondary }]}>
               {mode === 'stacked' ? (
                 <View style={styles.stackedFlow}>
-                  <LabeledImage uri={imageUrl} label="原圖 Anime" accent={themeColor} />
-                  <LabeledImage uri={shotUri} label="你的拍 Yours" accent={themeColor} />
+                  <LabeledImage uri={imageUrl} label="Anime" accent={themeColor} />
+                  <LabeledImage uri={shotUri} label="Your shot" accent={themeColor} />
                 </View>
               ) : mode === 'sideBySide' ? (
                 <View style={styles.sideFlow}>
                   <View style={styles.sideHalf}>
-                    <LabeledImage uri={imageUrl} label="原圖" accent={themeColor} compact />
+                    <LabeledImage uri={imageUrl} label="Anime" accent={themeColor} compact />
                   </View>
                   <View style={styles.sideHalf}>
-                    <LabeledImage uri={shotUri} label="你的拍" accent={themeColor} compact />
+                    <LabeledImage uri={shotUri} label="Your shot" accent={themeColor} compact />
                   </View>
                 </View>
               ) : mode === 'overlay' ? (
@@ -473,12 +473,12 @@ export default function ComparePreviewScreen() {
                     </Animated.View>
                     <View style={[styles.sliderHint, styles.sliderHintLeft]}>
                       <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                        原圖
+                        Anime
                       </ThemedText>
                     </View>
                     <View style={[styles.sliderHint, styles.sliderHintRight]}>
                       <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                        你的拍
+                        Yours
                       </ThemedText>
                     </View>
                   </View>
@@ -498,13 +498,13 @@ export default function ComparePreviewScreen() {
               ]}>
               <View style={styles.analysisHeader}>
                 <ThemedText variant="titleMedium" weight="700">
-                  Analysis · 對位細項
+                  Alignment Analysis
                 </ThemedText>
                 <Ionicons name="sparkles" size={14} color={theme.accent} />
               </View>
               {sensorSnapshot.distanceMeters != null ? (
                 <AnalysisBar
-                  label="位置 Position"
+                  label="Position"
                   value={Math.max(0, 1 - sensorSnapshot.distanceMeters / 30) * 100}
                   rightLabel={`${sensorSnapshot.distanceMeters.toFixed(1)} m`}
                   theme={theme}
@@ -513,7 +513,7 @@ export default function ComparePreviewScreen() {
               ) : null}
               {sensorSnapshot.headingDeltaDeg != null ? (
                 <AnalysisBar
-                  label="方位 Heading"
+                  label="Heading"
                   value={(1 - Math.abs(sensorSnapshot.headingDeltaDeg) / 180) * 100}
                   rightLabel={`±${Math.round(Math.abs(sensorSnapshot.headingDeltaDeg))}°`}
                   theme={theme}
@@ -522,7 +522,7 @@ export default function ComparePreviewScreen() {
               ) : null}
               {sensorSnapshot.tilt != null ? (
                 <AnalysisBar
-                  label="水平 Tilt"
+                  label="Tilt"
                   value={Math.max(0, 1 - Math.abs(sensorSnapshot.tilt) / 45) * 100}
                   rightLabel={formatSignedDeg(sensorSnapshot.tilt)}
                   theme={theme}
@@ -541,7 +541,7 @@ export default function ComparePreviewScreen() {
               <Ionicons name="bulb-outline" size={16} color={theme.accent} />
               <View style={{ flex: 1 }}>
                 <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
-                  Tips to improve · 還能更好
+                  Tips to improve
                 </ThemedText>
                 <ThemedText variant="bodySmall" tone="secondary" style={{ marginTop: 2 }}>
                   {retakeTip}
@@ -566,7 +566,7 @@ export default function ComparePreviewScreen() {
             accessibilityLabel="Retake">
             <Ionicons name="refresh" size={18} color={theme.text.primary} />
             <ThemedText variant="bodyMedium" weight="600">
-              重拍
+              Retake
             </ThemedText>
           </Pressable>
           <Pressable
@@ -587,7 +587,7 @@ export default function ComparePreviewScreen() {
               <Ionicons name={saved ? 'checkmark' : 'download'} size={18} color="#000" />
             )}
             <ThemedText variant="bodyMedium" weight="700" style={{ color: '#000' }}>
-              {saved ? '已存到相簿' : '存到相簿'}
+              {saved ? 'Saved' : 'Save'}
             </ThemedText>
           </Pressable>
         </View>

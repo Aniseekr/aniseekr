@@ -27,13 +27,13 @@ import type {
 export const OFFICIAL_88_GOLD = '#D4AF37';
 
 const REGION_LABELS: Record<AnimeTourism88Region, string> = {
-  hokkaido_tohoku: '北海道・東北',
-  kanto: '関東',
-  tokyo: '東京',
-  chubu: '中部',
-  kinki: '近畿',
-  chugoku_shikoku: '中国・四国',
-  kyushu_okinawa: '九州・沖縄',
+  hokkaido_tohoku: 'Hokkaido / Tohoku',
+  kanto: 'Kanto',
+  tokyo: 'Tokyo',
+  chubu: 'Chubu',
+  kinki: 'Kinki',
+  chugoku_shikoku: 'Chugoku / Shikoku',
+  kyushu_okinawa: 'Kyushu / Okinawa',
 };
 
 export interface Tourism88RailProps {
@@ -63,15 +63,12 @@ export function Tourism88Rail({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.officialBadge}>
-            <ThemedText
-              variant="captionSmall"
-              weight="800"
-              style={styles.officialBadgeLabel}>
-              ★ 公認
+            <ThemedText variant="captionSmall" weight="800" style={styles.officialBadgeLabel}>
+              ★ Official
             </ThemedText>
           </View>
           <ThemedText variant="titleMedium" weight="700">
-            日本のアニメ聖地 88
+            Anime Tourism 88
           </ThemedText>
         </View>
         {onSeeAll ? (
@@ -113,13 +110,7 @@ interface Tourism88RailCardProps {
   theme: ThemePalette;
 }
 
-function Tourism88RailCard({
-  entry,
-  inCollection,
-  cover,
-  onPress,
-  theme,
-}: Tourism88RailCardProps) {
+function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Tourism88RailCardProps) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const primaryEntry = entry.locations[0];
   const cityCount = entry.locations.length;
@@ -169,11 +160,7 @@ function Tourism88RailCard({
         ) : null}
       </View>
       <View style={styles.meta}>
-        <ThemedText
-          variant="captionSmall"
-          weight="700"
-          numberOfLines={2}
-          style={styles.title}>
+        <ThemedText variant="captionSmall" weight="700" numberOfLines={2} style={styles.title}>
           {title}
         </ThemedText>
         <ThemedText

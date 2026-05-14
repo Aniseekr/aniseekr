@@ -5,6 +5,7 @@ import {
   type BangumiV0Subject,
 } from '../../clients/bangumi-client';
 import { getAllIndexed, type AnitabiIndexEntry } from './anitabi-index';
+import { lookupByBangumiId, type AnitabiCrossIndexEntry } from './anitabi-cross-index';
 import { pilgrimageRepository } from './pilgrimage-repository';
 import type { AnitabiBangumi } from './types';
 
@@ -14,6 +15,8 @@ export interface PilgrimageSearchResult {
   bangumiId: number;
   title: string;
   titleCn: string;
+  titleEnglish?: string;
+  titleRomaji?: string;
   city: string;
   cover: string;
   color: string;
@@ -36,6 +39,7 @@ interface RepositoryLike {
 
 interface ServiceOptions {
   getIndexed?: () => readonly AnitabiIndexEntry[];
+  lookupCrossIndex?: (bangumiId: number) => AnitabiCrossIndexEntry | null;
   bangumiClient?: BangumiSearchClient;
   repository?: RepositoryLike;
 }
@@ -51,11 +55,13 @@ const FALLBACK_CANDIDATE_LIMIT = 10;
 
 export class PilgrimageSearchService {
   private readonly getIndexed: () => readonly AnitabiIndexEntry[];
+  private readonly lookupCrossIndex: (bangumiId: number) => AnitabiCrossIndexEntry | null;
   private readonly bangumiClient: BangumiSearchClient;
   private readonly repository: RepositoryLike;
 
   constructor(options: ServiceOptions = {}) {
     this.getIndexed = options.getIndexed ?? getAllIndexed;
+    this.lookupCrossIndex = options.lookupCrossIndex ?? lookupByBangumiId;
     this.bangumiClient = options.bangumiClient ?? BangumiClient;
     this.repository = options.repository ?? pilgrimageRepository;
   }
@@ -65,7 +71,12 @@ export class PilgrimageSearchService {
     if (!trimmed) return [];
 
     const limit = normalizeLimit(options.limit);
-    const local = searchLocalPilgrimageIndex(trimmed, this.getIndexed(), limit);
+    const local = searchLocalPilgrimageIndex(
+      trimmed,
+      this.getIndexed(),
+      limit,
+      this.lookupCrossIndex
+    );
     if (local.length > 0 || options.includeBangumiFallback === false) {
       return local;
     }
@@ -104,7 +115,9 @@ export class PilgrimageSearchService {
       }
       if (!anime) continue;
 
-      results.push(resultFromAnitabi(anime, 'bangumi-fallback', candidate));
+      results.push(
+        resultFromAnitabi(anime, 'bangumi-fallback', candidate, this.lookupCrossIndex(anime.id))
+      );
       if (results.length >= limit) break;
     }
 
@@ -115,14 +128,16 @@ export class PilgrimageSearchService {
 export function searchLocalPilgrimageIndex(
   query: string,
   entries: readonly AnitabiIndexEntry[],
-  limit: number = DEFAULT_LIMIT
+  limit: number = DEFAULT_LIMIT,
+  lookupCrossIndex: (bangumiId: number) => AnitabiCrossIndexEntry | null = lookupByBangumiId
 ): PilgrimageSearchResult[] {
   const normalizedQuery = normalizeSearchKey(query);
   if (!normalizedQuery) return [];
 
   const scored: ScoredEntry[] = [];
   for (const entry of entries) {
-    const score = scoreEntry(entry, normalizedQuery);
+    const cross = lookupCrossIndex(entry.id);
+    const score = scoreEntry(entry, normalizedQuery, cross);
     if (score === null) continue;
     scored.push({ entry, score });
   }
@@ -134,11 +149,21 @@ export function searchLocalPilgrimageIndex(
       a.entry.title.localeCompare(b.entry.title)
   );
 
-  return scored.slice(0, normalizeLimit(limit)).map(({ entry }) => resultFromIndex(entry));
+  return scored
+    .slice(0, normalizeLimit(limit))
+    .map(({ entry }) => resultFromIndex(entry, lookupCrossIndex(entry.id)));
 }
 
-function scoreEntry(entry: AnitabiIndexEntry, query: string): number | null {
+function scoreEntry(
+  entry: AnitabiIndexEntry,
+  query: string,
+  cross: AnitabiCrossIndexEntry | null
+): number | null {
   const fields: Array<{ value: string | number | null | undefined; base: number }> = [
+    { value: cross?.titleEnglish, base: 0 },
+    { value: cross?.titleRomaji, base: 0 },
+    { value: cross?.titleJa, base: 0 },
+    { value: cross?.titleCn, base: 0 },
     { value: entry.title, base: 0 },
     { value: entry.cn, base: 0 },
     { value: entry.city, base: 30 },
@@ -161,11 +186,16 @@ function scoreEntry(entry: AnitabiIndexEntry, query: string): number | null {
   return best;
 }
 
-function resultFromIndex(entry: AnitabiIndexEntry): PilgrimageSearchResult {
+function resultFromIndex(
+  entry: AnitabiIndexEntry,
+  cross: AnitabiCrossIndexEntry | null
+): PilgrimageSearchResult {
   return {
     bangumiId: entry.id,
-    title: entry.title,
-    titleCn: entry.cn,
+    title: cross?.titleJa || entry.title,
+    titleCn: entry.cn || cross?.titleCn || '',
+    titleEnglish: cross?.titleEnglish || undefined,
+    titleRomaji: cross?.titleRomaji || undefined,
     city: entry.city,
     cover: normalizeAnitabiImageUrl(entry.cover, entry.id),
     color: entry.color,
@@ -177,12 +207,15 @@ function resultFromIndex(entry: AnitabiIndexEntry): PilgrimageSearchResult {
 function resultFromAnitabi(
   anime: AnitabiBangumi,
   source: PilgrimageSearchSource,
-  fallbackSubject?: BangumiV0Subject
+  fallbackSubject?: BangumiV0Subject,
+  cross?: AnitabiCrossIndexEntry | null
 ): PilgrimageSearchResult {
   return {
     bangumiId: anime.id,
-    title: anime.title || fallbackSubject?.name || '',
-    titleCn: anime.cn || fallbackSubject?.name_cn || '',
+    title: cross?.titleJa || anime.title || fallbackSubject?.name || '',
+    titleCn: anime.cn || cross?.titleCn || fallbackSubject?.name_cn || '',
+    titleEnglish: cross?.titleEnglish || undefined,
+    titleRomaji: cross?.titleRomaji || undefined,
     city: anime.city ?? '',
     cover: normalizeAnitabiImageUrl(anime.cover, anime.id),
     color: anime.color ?? '',

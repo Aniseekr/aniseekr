@@ -42,10 +42,7 @@ import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { anitabiService } from '../../../libs/services/pilgrimage/anitabi-service';
-import {
-  listCaptures,
-  type PilgrimageCapture,
-} from '../../../libs/services/pilgrimage/captures';
+import { listCaptures, type PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
 import {
   LEAFLET_CSS,
@@ -69,9 +66,18 @@ import {
   saveVisitedSpots,
   type VisitedMap,
 } from '../../../libs/services/pilgrimage/visited-prefs';
-import { dataSourceConfig, isSupportedBrowseSource } from '../../../libs/services/data-source-config';
+import {
+  dataSourceConfig,
+  isSupportedBrowseSource,
+} from '../../../libs/services/data-source-config';
 import { PLATFORM_CONFIGS, type PlatformType } from '../../../libs/services/auth/types';
 import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
+import {
+  formatPilgrimageSubtitle,
+  getPilgrimageAnimeTitles,
+  getPilgrimageSpotTitles,
+} from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { getPilgrimageDetailBackRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type {
   AnitabiBangumi,
   AnitabiPoint,
@@ -331,12 +337,13 @@ function SpotMapView({
     spotsById.current.clear();
     for (const spot of spots) {
       if (!hasValidGeo(spot.geo)) continue;
+      const titles = getPilgrimageSpotTitles(spot);
       spotsById.current.set(spot.id, spot);
       out.push({
         id: spot.id,
         lat: spot.geo[0],
         lng: spot.geo[1],
-        title: spot.name,
+        title: titles.primary,
         image: spot.image ?? '',
         ep: spot.ep,
         ringColor,
@@ -453,6 +460,7 @@ function SpotRow({
 }: SpotRowProps) {
   const styles = useMemo(() => makeRowStyles(theme), [theme]);
   const hasGeo = hasValidGeo(spot.geo);
+  const titles = getPilgrimageSpotTitles(spot);
   return (
     <Pressable
       onPress={() => onPress(spot)}
@@ -465,7 +473,7 @@ function SpotRow({
         pressed && { opacity: 0.94 },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${spot.name}`}>
+      accessibilityLabel={`Open ${titles.primary}`}>
       <View style={styles.imageRow}>
         <View style={styles.imageHalf}>
           <Image
@@ -505,20 +513,17 @@ function SpotRow({
       <View style={styles.infoRow}>
         <View style={styles.infoCol}>
           <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
-            {spot.cn || spot.name}
+            {titles.primary}
           </ThemedText>
           <View style={styles.epRow}>
             <Ionicons name="film-outline" size={11} color={theme.text.tertiary} />
             <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-              EP {spot.ep} {spot.name && spot.cn ? `· ${spot.name}` : ''}
+              EP {spot.ep} {titles.secondary ? `· ${titles.secondary}` : ''}
             </ThemedText>
             {distanceKm != null ? (
               <>
                 <View style={[styles.dot, { backgroundColor: theme.text.tertiary }]} />
-                <ThemedText
-                  variant="captionSmall"
-                  weight="600"
-                  style={{ color: themeColor }}>
+                <ThemedText variant="captionSmall" weight="600" style={{ color: themeColor }}>
                   {formatDistanceKm(distanceKm)}
                 </ThemedText>
               </>
@@ -531,12 +536,8 @@ function SpotRow({
             style={({ pressed }) => [
               styles.visitPill,
               {
-                backgroundColor: visited
-                  ? theme.background.tertiary
-                  : theme.background.secondary,
-                borderColor: visited
-                  ? `${theme.status.success}66`
-                  : theme.glassBorder,
+                backgroundColor: visited ? theme.background.tertiary : theme.background.secondary,
+                borderColor: visited ? `${theme.status.success}66` : theme.glassBorder,
               },
               pressed && { opacity: 0.75 },
             ]}
@@ -568,7 +569,7 @@ function SpotRow({
               pressed && hasGeo && { opacity: 0.75 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Directions to ${spot.name}`}
+            accessibilityLabel={`Directions to ${titles.primary}`}
             hitSlop={4}>
             <MaterialIcons
               name="directions"
@@ -614,6 +615,7 @@ function SpotSheet({
   const styles = useMemo(() => makeSheetStyles(theme), [theme]);
   if (!spot) return null;
   const hasGeo = hasValidGeo(spot.geo);
+  const titles = getPilgrimageSpotTitles(spot);
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -634,12 +636,20 @@ function SpotSheet({
                     EP {spot.ep}
                   </ThemedText>
                 </View>
-                <ThemedText variant="titleLarge" weight="700" numberOfLines={2} style={{ marginBottom: 2 }}>
-                  {spot.name}
+                <ThemedText
+                  variant="titleLarge"
+                  weight="700"
+                  numberOfLines={2}
+                  style={{ marginBottom: 2 }}>
+                  {titles.primary}
                 </ThemedText>
-                {spot.cn ? (
-                  <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginBottom: 4 }}>
-                    {spot.cn}
+                {titles.secondary ? (
+                  <ThemedText
+                    variant="bodySmall"
+                    tone="secondary"
+                    numberOfLines={1}
+                    style={{ marginBottom: 4 }}>
+                    {titles.secondary}
                   </ThemedText>
                 ) : null}
                 {distanceKm != null ? (
@@ -675,7 +685,9 @@ function SpotSheet({
                 <ThemedText
                   variant="bodyMedium"
                   weight="700"
-                  style={{ color: visited ? readableTextOn(theme.status.success) : theme.text.primary }}>
+                  style={{
+                    color: visited ? readableTextOn(theme.status.success) : theme.text.primary,
+                  }}>
                   {visited ? 'Visited' : 'Mark visited'}
                 </ThemedText>
               </Pressable>
@@ -726,7 +738,7 @@ function SpotSheet({
                 variant="bodyMedium"
                 weight="600"
                 style={{ color: hasCapture ? themeColor : theme.text.primary }}>
-                {hasCapture ? 'Reframe shot · 重新拍對比' : 'Frame shot · 拍對比照'}
+                {hasCapture ? 'Reframe shot' : 'Frame shot'}
               </ThemedText>
               {hasCapture ? (
                 <View style={[styles.frameShotDot, { backgroundColor: themeColor }]} />
@@ -747,7 +759,13 @@ interface RoundHeaderButtonProps {
   theme: ThemePalette;
 }
 
-function RoundHeaderButton({ icon, onPress, accessibilityLabel, tint, theme }: RoundHeaderButtonProps) {
+function RoundHeaderButton({
+  icon,
+  onPress,
+  accessibilityLabel,
+  tint,
+  theme,
+}: RoundHeaderButtonProps) {
   const styles = useMemo(() => makeHeaderStyles(theme), [theme]);
   return (
     <Pressable
@@ -793,6 +811,8 @@ export default function PilgrimageDetailScreen() {
   const themeColor = anime?.color || theme.accent;
   const themeColorFg = readableTextOn(themeColor);
   const styles = useMemo(() => makeStyles(theme, insets.top), [theme, insets.top]);
+  const animeTitles = useMemo(() => (anime ? getPilgrimageAnimeTitles(anime) : null), [anime]);
+  const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
 
   const refreshCaptures = useCallback(() => {
     listCaptures()
@@ -840,7 +860,8 @@ export default function PilgrimageDetailScreen() {
         // background and upgrades the points when it lands.
         setLoading(false);
         try {
-          const detailed: AnitabiPointDetail[] = await anitabiService.getDetailedPoints(validBangumiId);
+          const detailed: AnitabiPointDetail[] =
+            await anitabiService.getDetailedPoints(validBangumiId);
           if (!cancelled && detailed.length > 0) {
             setPoints(detailed);
           }
@@ -960,13 +981,10 @@ export default function PilgrimageDetailScreen() {
     setSelectedSpotId(firstValid ? firstValid.id : null);
   }, [viewMode, filteredPoints, selectedSpotId]);
 
-  const handleSpotChipPress = useCallback(
-    (spot: AnitabiPoint) => {
-      Haptics.selectionAsync().catch(() => undefined);
-      setSelectedSpotId(spot.id);
-    },
-    []
-  );
+  const handleSpotChipPress = useCallback((spot: AnitabiPoint) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setSelectedSpotId(spot.id);
+  }, []);
 
   const distanceFor = useCallback(
     (spot: AnitabiPoint): number | null => {
@@ -1014,8 +1032,17 @@ export default function PilgrimageDetailScreen() {
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    router.back();
-  }, [router]);
+    const explicitBackRoute = getPilgrimageDetailBackRoute(params);
+    if (explicitBackRoute) {
+      router.replace(explicitBackRoute);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/pilgrimage');
+    }
+  }, [params, router]);
 
   const handleOpenAlbum = useCallback(() => {
     if (bangumiId === null) return;
@@ -1028,9 +1055,9 @@ export default function PilgrimageDetailScreen() {
     Haptics.selectionAsync().catch(() => undefined);
     const url = buildBrowseUrl(browseSource, anime.id) ?? '';
     Share.share({
-      message: `${anime.title || anime.cn || 'Pilgrimage'} · ${stats.spotCount} spots${url ? `\n${url}` : ''}`,
+      message: `${animeTitles?.primary ?? 'Pilgrimage'} · ${stats.spotCount} spots${url ? `\n${url}` : ''}`,
     }).catch(() => undefined);
-  }, [anime, browseSource, stats.spotCount]);
+  }, [anime, animeTitles?.primary, browseSource, stats.spotCount]);
 
   const heroAnimatedStyle = useAnimatedStyle(() => {
     const translateY = interpolate(
@@ -1098,13 +1125,14 @@ export default function PilgrimageDetailScreen() {
       setActiveSpot(null);
       const lat = hasValidGeo(spot.geo) ? String(spot.geo[0]) : undefined;
       const lng = hasValidGeo(spot.geo) ? String(spot.geo[1]) : undefined;
-      const animeTitle = anime?.cn || anime?.title || '';
+      const animeTitle = animeTitles?.primary ?? '';
+      const spotTitles = getPilgrimageSpotTitles(spot);
       router.push({
         pathname: '/pilgrimage/compare/tips',
         params: {
           spotId: spot.id,
           imageUrl: spot.image,
-          name: spot.cn || spot.name,
+          name: spotTitles.primary,
           ep: String(spot.ep),
           animeId: bangumiId !== null ? String(bangumiId) : '',
           animeTitle,
@@ -1114,7 +1142,7 @@ export default function PilgrimageDetailScreen() {
         },
       });
     },
-    [router, bangumiId, themeColor]
+    [router, bangumiId, animeTitles?.primary, themeColor]
   );
 
   const isEmpty = !loading && !error && (!anime || points.length === 0);
@@ -1124,10 +1152,7 @@ export default function PilgrimageDetailScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
-        <LinearGradient
-          colors={theme.gradient}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
 
         {/* Sticky animated header (always rendered, backdrop fades in). */}
         <View style={styles.headerWrap} pointerEvents="box-none">
@@ -1139,17 +1164,12 @@ export default function PilgrimageDetailScreen() {
                 { backgroundColor: `${theme.background.primary}D9` },
               ]}
             />
-            <View
-              style={[
-                styles.headerBackdropBorder,
-                { backgroundColor: theme.glassBorder },
-              ]}
-            />
+            <View style={[styles.headerBackdropBorder, { backgroundColor: theme.glassBorder }]} />
           </Animated.View>
 
           <Animated.View style={[styles.headerStickyTitle, stickyTitleStyle]} pointerEvents="none">
             <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
-              {anime?.title ?? 'Pilgrimage'}
+              {animeTitles?.primary ?? 'Pilgrimage'}
             </ThemedText>
           </Animated.View>
 
@@ -1198,7 +1218,10 @@ export default function PilgrimageDetailScreen() {
             <Pressable
               style={[styles.backBtn, { backgroundColor: theme.accent }]}
               onPress={handleBack}>
-              <ThemedText variant="bodyMedium" weight="700" style={{ color: readableTextOn(theme.accent) }}>
+              <ThemedText
+                variant="bodyMedium"
+                weight="700"
+                style={{ color: readableTextOn(theme.accent) }}>
                 Go back
               </ThemedText>
             </Pressable>
@@ -1230,20 +1253,25 @@ export default function PilgrimageDetailScreen() {
               />
               <Animated.View style={[styles.heroOverlay, heroContentStyle]}>
                 {anime ? (
-                  <View style={[styles.heroSpotBadge, { borderColor: `${themeColor}66`, backgroundColor: `${themeColor}1A` }]}>
+                  <View
+                    style={[
+                      styles.heroSpotBadge,
+                      { borderColor: `${themeColor}66`, backgroundColor: `${themeColor}1A` },
+                    ]}>
                     <Ionicons name="location" size={11} color={themeColor} />
                     <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
-                      {stats.spotCount} {stats.spotCount === 1 ? 'pilgrimage spot' : 'pilgrimage spots'}
+                      {stats.spotCount}{' '}
+                      {stats.spotCount === 1 ? 'pilgrimage spot' : 'pilgrimage spots'}
                     </ThemedText>
                   </View>
                 ) : null}
                 <ThemedText variant="headlineLarge" weight="800" numberOfLines={2}>
-                  {anime?.title ?? ''}
+                  {animeTitles?.primary ?? ''}
                 </ThemedText>
-                {anime?.cn ? (
+                {animeSubtitle ? (
                   <ThemedText variant="bodyMedium" tone="secondary" numberOfLines={1}>
-                    {anime.cn}
-                    {anime.city ? ` · ${anime.city}` : ''}
+                    {animeSubtitle}
+                    {anime?.city ? ` · ${anime.city}` : ''}
                   </ThemedText>
                 ) : anime?.city ? (
                   <ThemedText variant="bodyMedium" tone="secondary" numberOfLines={1}>
@@ -1256,7 +1284,10 @@ export default function PilgrimageDetailScreen() {
                     onPress={handleOpenBrowse}
                     style={({ pressed }) => [
                       styles.browseBtn,
-                      { borderColor: `${themeColor}99`, backgroundColor: `${theme.background.primary}80` },
+                      {
+                        borderColor: `${themeColor}99`,
+                        backgroundColor: `${theme.background.primary}80`,
+                      },
                       pressed && { opacity: 0.85 },
                     ]}
                     accessibilityRole="button">
@@ -1406,13 +1437,21 @@ export default function PilgrimageDetailScreen() {
                   No pilgrimage data yet for this anime
                 </ThemedText>
                 <ThemedText variant="bodySmall" tone="secondary" align="center">
-                  Anitabi crowd-sources scene locations. Help fill the map by contributing on anitabi.cn.
+                  Anitabi crowd-sources scene locations. Help fill the map by contributing on
+                  anitabi.cn.
                 </ThemedText>
                 <Pressable
                   onPress={() => Linking.openURL('https://anitabi.cn').catch(() => undefined)}
-                  style={({ pressed }) => [styles.emptyBtn, { backgroundColor: theme.accent }, pressed && { opacity: 0.85 }]}>
+                  style={({ pressed }) => [
+                    styles.emptyBtn,
+                    { backgroundColor: theme.accent },
+                    pressed && { opacity: 0.85 },
+                  ]}>
                   <Ionicons name="open-outline" size={14} color={readableTextOn(theme.accent)} />
-                  <ThemedText variant="bodySmall" weight="700" style={{ color: readableTextOn(theme.accent) }}>
+                  <ThemedText
+                    variant="bodySmall"
+                    weight="700"
+                    style={{ color: readableTextOn(theme.accent) }}>
                     Open Anitabi
                   </ThemedText>
                 </Pressable>
@@ -1468,7 +1507,11 @@ export default function PilgrimageDetailScreen() {
                     ))}
                   </ScrollView>
                 ) : null}
-                <View style={[styles.mapWrap, { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary }]}>
+                <View
+                  style={[
+                    styles.mapWrap,
+                    { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary },
+                  ]}>
                   <SpotMapView
                     spots={filteredPoints}
                     visited={visited}
@@ -1540,7 +1583,16 @@ interface FilterPillProps {
   onPress: () => void;
 }
 
-function FilterPill({ label, active, badge, themeColor, themeColorFg, theme, icon, onPress }: FilterPillProps) {
+function FilterPill({
+  label,
+  active,
+  badge,
+  themeColor,
+  themeColorFg,
+  theme,
+  icon,
+  onPress,
+}: FilterPillProps) {
   const styles = useMemo(() => makePillStyles(theme), [theme]);
   const fg = active ? themeColorFg : theme.text.secondary;
   return (
@@ -1596,7 +1648,7 @@ function SpotChip({
   onPress,
 }: SpotChipProps) {
   const styles = useMemo(() => makeSpotChipStyles(theme), [theme]);
-  const label = spot.cn || spot.name || `EP ${spot.ep}`;
+  const label = getPilgrimageSpotTitles(spot).primary;
   return (
     <Pressable
       onPress={() => onPress(spot)}
@@ -1613,9 +1665,7 @@ function SpotChip({
       <View
         style={[
           styles.epBadge,
-          active
-            ? { backgroundColor: themeColor }
-            : { backgroundColor: theme.background.tertiary },
+          active ? { backgroundColor: themeColor } : { backgroundColor: theme.background.tertiary },
         ]}>
         <ThemedText
           variant="captionSmall"
@@ -1631,9 +1681,7 @@ function SpotChip({
         style={[styles.chipLabel, active ? { color: theme.text.primary } : null]}>
         {label}
       </ThemedText>
-      {visited ? (
-        <Ionicons name="checkmark-circle" size={14} color={theme.status.success} />
-      ) : null}
+      {visited ? <Ionicons name="checkmark-circle" size={14} color={theme.status.success} /> : null}
       {hasCapture ? (
         <Ionicons name="camera" size={12} color={active ? themeColor : theme.text.tertiary} />
       ) : null}
@@ -1686,6 +1734,7 @@ function SpotClusterPicker({
               {spots.map((spot) => {
                 const isVisited = visited[spot.id] === true;
                 const km = distanceFor(spot);
+                const titles = getPilgrimageSpotTitles(spot);
                 return (
                   <Pressable
                     key={spot.id}
@@ -1696,7 +1745,7 @@ function SpotClusterPicker({
                       pressed && { opacity: 0.78 },
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Open ${spot.name}`}>
+                    accessibilityLabel={`Open ${titles.primary}`}>
                     <View style={[styles.thumbWrap, { borderColor: themeColor }]}>
                       <Image
                         source={{ uri: spot.image }}
@@ -1705,22 +1754,33 @@ function SpotClusterPicker({
                         transition={120}
                       />
                       <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
-                        <ThemedText variant="captionSmall" weight="800" style={{ color: themeColorFg }}>
+                        <ThemedText
+                          variant="captionSmall"
+                          weight="800"
+                          style={{ color: themeColorFg }}>
                           EP {spot.ep}
                         </ThemedText>
                       </View>
                     </View>
                     <View style={styles.rowBody}>
                       <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
-                        {spot.name}
+                        {titles.primary}
                       </ThemedText>
-                      {spot.cn ? (
-                        <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginTop: 1 }}>
-                          {spot.cn}
+                      {titles.secondary ? (
+                        <ThemedText
+                          variant="bodySmall"
+                          tone="secondary"
+                          numberOfLines={1}
+                          style={{ marginTop: 1 }}>
+                          {titles.secondary}
                         </ThemedText>
                       ) : null}
                       {km != null ? (
-                        <ThemedText variant="captionSmall" tone="tertiary" weight="500" style={{ marginTop: 3 }}>
+                        <ThemedText
+                          variant="captionSmall"
+                          tone="tertiary"
+                          weight="500"
+                          style={{ marginTop: 3 }}>
                           {formatDistanceKm(km)} away
                         </ThemedText>
                       ) : null}
@@ -1775,7 +1835,16 @@ interface ViewModeTabProps {
   onPress: () => void;
 }
 
-function ViewModeTab({ active, label, icon, themeColor, themeColorFg, count, theme, onPress }: ViewModeTabProps) {
+function ViewModeTab({
+  active,
+  label,
+  icon,
+  themeColor,
+  themeColorFg,
+  count,
+  theme,
+  onPress,
+}: ViewModeTabProps) {
   const styles = useMemo(() => makeTabStyles(theme), [theme]);
   const fg = active ? themeColor : theme.text.secondary;
   return (
@@ -1789,7 +1858,11 @@ function ViewModeTab({ active, label, icon, themeColor, themeColorFg, count, the
               borderColor: themeColor,
               borderWidth: 1.5,
             }
-          : { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder, borderWidth: 1 },
+          : {
+              backgroundColor: theme.background.secondary,
+              borderColor: theme.glassBorder,
+              borderWidth: 1,
+            },
         pressed && { opacity: 0.85 },
       ]}
       accessibilityRole="button"

@@ -170,10 +170,7 @@ function ImageCell({
             borderBottomWidth: 2,
             borderColor: color,
           }}>
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            style={{ color, letterSpacing: 1 }}>
+          <ThemedText variant="captionSmall" weight="700" style={{ color, letterSpacing: 1 }}>
             {badge}
           </ThemedText>
         </View>
@@ -206,7 +203,21 @@ function ImageCell({
 // ----- POLAROID -----
 
 function PolaroidTemplate(props: TemplateProps) {
-  const { ratio, imageUrl, shotUri, sceneName, episode, date, accent, theme, showScore, showDate, showLocation, locationText, matchScore } = props;
+  const {
+    ratio,
+    imageUrl,
+    shotUri,
+    sceneName,
+    episode,
+    date,
+    accent,
+    theme,
+    showScore,
+    showDate,
+    showLocation,
+    locationText,
+    matchScore,
+  } = props;
   const successColor = theme.status.success;
   const captionHeight = ratio === '9:16' ? 110 : 80;
   return (
@@ -275,10 +286,7 @@ function PolaroidTemplate(props: TemplateProps) {
         </ThemedText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
           {episode ? (
-            <ThemedText
-              variant="captionSmall"
-              weight="600"
-              style={{ color: '#6A655A' }}>
+            <ThemedText variant="captionSmall" weight="600" style={{ color: '#6A655A' }}>
               EP {episode}
             </ThemedText>
           ) : null}
@@ -381,7 +389,11 @@ function ClassicTemplate(props: TemplateProps) {
             {sceneName}
           </ThemedText>
           <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-            {animeTitle ? `${animeTitle}${episode ? ` · EP ${episode}` : ''}` : episode ? `EP ${episode} · 聖地巡禮` : '聖地巡禮'}
+            {animeTitle
+              ? `${animeTitle}${episode ? ` · EP ${episode}` : ''}`
+              : episode
+                ? `EP ${episode} · Pilgrimage`
+                : 'Pilgrimage'}
           </ThemedText>
         </View>
         {showScore && matchScore !== null && matchScore !== undefined ? (
@@ -398,10 +410,7 @@ function ClassicTemplate(props: TemplateProps) {
               borderColor: successColor,
             }}>
             <Ionicons name="checkmark-circle" size={12} color={successColor} />
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: successColor }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: successColor }}>
               Match {matchScore}%
             </ThemedText>
           </View>
@@ -465,7 +474,7 @@ function ClassicTemplate(props: TemplateProps) {
           <Ionicons name="navigate" size={10} color={accentFg} />
         </View>
         <ThemedText variant="bodySmall" weight="700" style={{ flex: 1 }}>
-          aniseekr · 聖地巡禮
+          aniseekr · Pilgrimage
         </ThemedText>
       </View>
     </View>
@@ -650,7 +659,13 @@ function ComicTemplate(props: TemplateProps) {
         />
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+        }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           {episode ? (
             <ThemedText
@@ -661,10 +676,7 @@ function ComicTemplate(props: TemplateProps) {
             </ThemedText>
           ) : null}
           {showDate ? (
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: '#000' }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: '#000' }}>
               ✦ {date}
             </ThemedText>
           ) : null}
@@ -695,10 +707,7 @@ function SpeechBubble({ children, color }: { children: string; color: string }) 
         borderRadius: 16,
         transform: [{ rotate: '4deg' }],
       }}>
-      <ThemedText
-        variant="titleSmall"
-        weight="700"
-        style={{ color, letterSpacing: 0.5 }}>
+      <ThemedText variant="titleSmall" weight="700" style={{ color, letterSpacing: 0.5 }}>
         {children}
       </ThemedText>
     </View>
@@ -794,7 +803,7 @@ function MangaTemplate(props: TemplateProps) {
               variant="captionSmall"
               weight="700"
               style={{ color: '#000', letterSpacing: 2 }}>
-              第 {episode} 話
+              EP {episode}
             </ThemedText>
           ) : null}
         </View>
@@ -811,7 +820,7 @@ function MangaTemplate(props: TemplateProps) {
               variant="captionSmall"
               weight="700"
               style={{ color: '#000', letterSpacing: 1 }}>
-              一致 {matchScore}%
+              Match {matchScore}%
             </ThemedText>
           </View>
         ) : null}
@@ -826,7 +835,11 @@ function MangaTemplate(props: TemplateProps) {
           gap: 0,
         }}>
         <View style={{ flex: 1, position: 'relative' }}>
-          <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+          <Image
+            source={{ uri: imageUrl }}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="cover"
+          />
           <SpeedLines side={ratio === '9:16' ? 'top' : 'left'} />
           <View
             style={{
@@ -843,7 +856,7 @@ function MangaTemplate(props: TemplateProps) {
               variant="captionSmall"
               weight="700"
               style={{ color: '#000', letterSpacing: 1 }}>
-              原作
+              Anime
             </ThemedText>
           </View>
         </View>
@@ -854,7 +867,11 @@ function MangaTemplate(props: TemplateProps) {
           }}
         />
         <View style={{ flex: 1, position: 'relative' }}>
-          <Image source={{ uri: shotUri }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+          <Image
+            source={{ uri: shotUri }}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="cover"
+          />
           <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
           <View
             style={{
@@ -871,7 +888,7 @@ function MangaTemplate(props: TemplateProps) {
               variant="captionSmall"
               weight="700"
               style={{ color: readableTextOn(successColor), letterSpacing: 1 }}>
-              実景
+              Real
             </ThemedText>
           </View>
         </View>
@@ -891,7 +908,9 @@ function MangaTemplate(props: TemplateProps) {
             style={{ color: '#000', letterSpacing: 1, fontVariant: ['tabular-nums'] }}>
             {date.replace(/\./g, '/')}
           </ThemedText>
-        ) : <View />}
+        ) : (
+          <View />
+        )}
         {showLocation && locationText ? (
           <ThemedText
             variant="captionSmall"

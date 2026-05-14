@@ -24,11 +24,11 @@ export function getWalkDirections(s: AlignmentSensors): WalkDirection {
     if (Number.isFinite(km)) {
       const dist = km * 1000;
       if (dist > 100) {
-        distanceText = `再走 ${Math.round(dist)} m`;
+        distanceText = `Walk ${Math.round(dist)} m`;
       } else if (dist > 5) {
-        distanceText = `向前走 ${Math.round(dist)} m`;
+        distanceText = `Move forward ${Math.round(dist)} m`;
       } else if (dist > 1) {
-        distanceText = '再前進一兩步';
+        distanceText = 'Move forward one or two steps';
       }
     }
   }
@@ -38,14 +38,14 @@ export function getWalkDirections(s: AlignmentSensors): WalkDirection {
     const delta = shortestArcDelta(s.heading, s.targetBearing);
     if (Math.abs(delta) >= 5) {
       const mag = Math.round(Math.abs(delta));
-      headingText = delta > 0 ? `向右轉 ${mag}°` : `向左轉 ${mag}°`;
+      headingText = delta > 0 ? `Turn right ${mag}°` : `Turn left ${mag}°`;
     }
   }
 
   let tiltText: string | null = null;
   if (s.tilt !== null) {
     if (Math.abs(s.tilt) >= 5) {
-      tiltText = s.tilt > 0 ? '稍微抬高手機' : '手機放平一些';
+      tiltText = s.tilt > 0 ? 'Raise the phone slightly' : 'Level the phone slightly';
     }
   }
 

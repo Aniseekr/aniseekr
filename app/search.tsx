@@ -30,6 +30,12 @@ import {
   pilgrimageSearchService,
   type PilgrimageSearchResult,
 } from '../libs/services/pilgrimage/pilgrimage-search-service';
+import {
+  formatPilgrimageSubtitle,
+  getPilgrimageAnimeTitles,
+} from '../libs/services/pilgrimage/pilgrimage-localization';
+import { buildPilgrimageDetailRoute } from '../libs/services/pilgrimage/pilgrimage-navigation';
+import { getStringParam } from '../libs/utils/route-params';
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -61,6 +67,7 @@ type SearchAnime = Anime & {
   bangumiId?: number;
   hasPilgrimage?: boolean;
   pilgrimageSource?: PilgrimageSearchResult['source'];
+  secondaryTitle?: string;
 };
 
 const FILTERS: readonly { key: FilterKey; label: string }[] = [
@@ -82,9 +89,10 @@ export default function SearchScreen() {
   // `context=pilgrimage` is set by the pilgrimage hub so we route picks to
   // /pilgrimage/[bangumiId] instead of /anime/[id]. Any other value falls
   // through to the default global-search behaviour.
-  const params = useLocalSearchParams<{ context?: string }>();
+  const params = useLocalSearchParams<{ context?: string; q?: string }>();
   const isPilgrimageMode = params.context === 'pilgrimage';
-  const [query, setQuery] = useState('');
+  const initialQuery = getStringParam(params, 'q') ?? '';
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchAnime[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +103,14 @@ export default function SearchScreen() {
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const routeQueryRef = useRef(initialQuery);
+
+  useEffect(() => {
+    const next = getStringParam(params, 'q') ?? '';
+    if (next === routeQueryRef.current) return;
+    routeQueryRef.current = next;
+    setQuery(next);
+  }, [params]);
 
   useEffect(() => {
     AsyncStorage.getItem(RECENT_KEY)
@@ -164,7 +180,12 @@ export default function SearchScreen() {
 
       if (isPilgrimageMode) {
         if (typeof anime.bangumiId === 'number') {
-          router.push(`/pilgrimage/${anime.bangumiId}`);
+          router.push(
+            buildPilgrimageDetailRoute(anime.bangumiId, {
+              returnTo: 'search',
+              returnQuery: query,
+            })
+          );
           return;
         }
 
@@ -184,7 +205,12 @@ export default function SearchScreen() {
             setResolveError(`No pilgrimage mapping for "${anime.title}".`);
             return;
           }
-          router.push(`/pilgrimage/${bangumiId}`);
+          router.push(
+            buildPilgrimageDetailRoute(bangumiId, {
+              returnTo: 'search',
+              returnQuery: query,
+            })
+          );
         } catch (e) {
           hapticsBridge.warning();
           setResolveError(e instanceof Error ? e.message : 'Could not resolve this title.');
@@ -196,7 +222,7 @@ export default function SearchScreen() {
 
       router.push(`/anime/${anime.id}`);
     },
-    [recent, persistRecent, router, isPilgrimageMode]
+    [recent, persistRecent, router, isPilgrimageMode, query]
   );
 
   const handleRecentTap = useCallback((term: string) => {
@@ -212,6 +238,10 @@ export default function SearchScreen() {
 
   const handleClose = () => {
     hapticsBridge.tap();
+    if (isPilgrimageMode && !router.canGoBack()) {
+      router.replace('/pilgrimage');
+      return;
+    }
     router.back();
   };
 
@@ -518,6 +548,13 @@ interface ResultCardProps {
 }
 
 function mapPilgrimageResultToAnime(result: PilgrimageSearchResult): SearchAnime {
+  const titles = getPilgrimageAnimeTitles({
+    id: result.bangumiId,
+    title: result.title,
+    titleCn: result.titleCn,
+    titleEnglish: result.titleEnglish,
+    titleRomaji: result.titleRomaji,
+  });
   const tags = [
     result.city,
     result.pointsLength > 0
@@ -530,9 +567,9 @@ function mapPilgrimageResultToAnime(result: PilgrimageSearchResult): SearchAnime
     bangumiId: result.bangumiId,
     hasPilgrimage: true,
     pilgrimageSource: result.source,
-    title: result.titleCn || result.title || 'Unknown Title',
-    titleEnglish:
-      result.titleCn && result.title && result.titleCn !== result.title ? result.title : undefined,
+    title: titles.primary,
+    secondaryTitle: formatPilgrimageSubtitle(titles),
+    titleEnglish: titles.english,
     image: result.cover,
     rank: 0,
     type: 'Pilgrimage',
@@ -578,6 +615,11 @@ function ResultCard({ anime, pending, hasPilgrimage, onPress }: ResultCardProps)
             />
           ) : null}
         </View>
+        {anime.secondaryTitle ? (
+          <Text style={styles.resultSubtitle} numberOfLines={1}>
+            {anime.secondaryTitle}
+          </Text>
+        ) : null}
         <View style={styles.resultMetaRow}>
           {anime.format || anime.type ? (
             <View style={styles.typeChip}>
@@ -855,6 +897,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 18,
+  },
+  resultSubtitle: {
+    color: Colors.text.tertiary,
+    fontSize: 12,
+    fontWeight: '600',
   },
   pilgrimagePin: {
     padding: Spacing.xs,

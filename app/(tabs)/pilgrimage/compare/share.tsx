@@ -106,20 +106,20 @@ export default function ShareComparisonScreen() {
     hapticsBridge.success();
     const ok = await ensureMediaPerm();
     if (!ok) {
-      flashToast('需要相簿權限 · Media access denied');
+      flashToast('Media access denied');
       return;
     }
     const uri = await captureCard();
     if (!uri) {
-      flashToast('擷取失敗 · Capture failed');
+      flashToast('Capture failed');
       return;
     }
     try {
       await MediaLibrary.saveToLibraryAsync(uri);
-      flashToast('已存到相簿 · Saved to camera roll');
+      flashToast('Saved to camera roll');
     } catch (err) {
       console.warn('save share card failed', err);
-      flashToast('儲存失敗 · Save failed');
+      flashToast('Save failed');
     }
   }, [ensureMediaPerm, captureCard, flashToast]);
 
@@ -128,12 +128,12 @@ export default function ShareComparisonScreen() {
       hapticsBridge.tap();
       const ok = await ensureMediaPerm();
       if (!ok) {
-        flashToast('需要相簿權限 · Media access denied');
+        flashToast('Media access denied');
         return;
       }
       const uri = await captureCard();
       if (!uri) {
-        flashToast('擷取失敗 · Capture failed');
+        flashToast('Capture failed');
         return;
       }
       try {
@@ -161,16 +161,7 @@ export default function ShareComparisonScreen() {
       const toastText = describeShareResult(result);
       if (toastText) flashToast(toastText);
     },
-    [
-      ensureMediaPerm,
-      captureCard,
-      sceneName,
-      animeTitle,
-      ep,
-      matchScore,
-      locationText,
-      flashToast,
-    ]
+    [ensureMediaPerm, captureCard, sceneName, animeTitle, ep, matchScore, locationText, flashToast]
   );
 
   return (
@@ -188,7 +179,7 @@ export default function ShareComparisonScreen() {
           </Pressable>
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
-              分享你的朝聖
+              Share Your Pilgrimage
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary">
               Share to social
@@ -313,7 +304,7 @@ export default function ShareComparisonScreen() {
               icon="trophy-outline"
               tone={theme.status.success}
               label="Show Match Score"
-              subtitle="顯示對比分數"
+              subtitle="Include comparison score"
               value={showScore}
               onChange={setShowScore}
               theme={theme}
@@ -322,7 +313,7 @@ export default function ShareComparisonScreen() {
               icon="location-outline"
               tone={theme.accent}
               label="Show Location"
-              subtitle="顯示拍攝座標"
+              subtitle="Include capture coordinates"
               value={showLocation}
               onChange={setShowLocation}
               theme={theme}
@@ -331,7 +322,7 @@ export default function ShareComparisonScreen() {
               icon="calendar-outline"
               tone={theme.secondary}
               label="Show Date"
-              subtitle="顯示日期"
+              subtitle="Include date"
               value={showDate}
               onChange={setShowDate}
               theme={theme}
@@ -380,14 +371,18 @@ export default function ShareComparisonScreen() {
             ]}>
             <Ionicons name="download" size={18} color={accentFg} />
             <ThemedText variant="titleSmall" weight="700" style={{ color: accentFg }}>
-              Save · 存到相簿
+              Save to Camera Roll
             </ThemedText>
           </Pressable>
         </View>
 
         {toast ? (
           <View pointerEvents="none" style={[styles.toastWrap, { bottom: insets.bottom + 168 }]}>
-            <View style={[styles.toast, { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder }]}>
+            <View
+              style={[
+                styles.toast,
+                { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
+              ]}>
               <ThemedText variant="bodySmall" weight="700">
                 {toast}
               </ThemedText>
@@ -400,17 +395,15 @@ export default function ShareComparisonScreen() {
 }
 
 function describeShareResult(result: ShareIntentResult): string | null {
-  if (result.delivered === 'failed') return '分享取消 · Share cancelled';
+  if (result.delivered === 'failed') return 'Share cancelled';
   if (result.platform === 'instagram') {
-    return result.captionCopied
-      ? 'IG 已開啟，文案已複製 · Caption copied'
-      : 'IG 已開啟 · Instagram opened';
+    return result.captionCopied ? 'Instagram opened · Caption copied' : 'Instagram opened';
   }
   if (result.platform === 'twitter') {
-    return 'X / Twitter 已開啟';
+    return 'X / Twitter opened';
   }
   if (result.platform === 'line') {
-    return 'LINE 分享已開啟';
+    return 'LINE share opened';
   }
   return null;
 }

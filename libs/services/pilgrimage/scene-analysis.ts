@@ -158,9 +158,7 @@ export function reducePixels(p: Uint8Array, W: number, H: number): SceneAnalysis
   let maxDelta = -1;
   let horizonRow = H / 2;
   for (let y = 2; y < H; y++) {
-    const d = Math.abs(
-      rowLum[y] - rowLum[y - 1] + (rowLum[y - 1] - rowLum[y - 2]) * 0.5
-    );
+    const d = Math.abs(rowLum[y] - rowLum[y - 1] + (rowLum[y - 1] - rowLum[y - 2]) * 0.5);
     if (d > maxDelta) {
       maxDelta = d;
       horizonRow = y;
@@ -217,10 +215,7 @@ export function reducePixels(p: Uint8Array, W: number, H: number): SceneAnalysis
   const varR = Math.max(0, rSq / N - avgR * avgR);
   const varG = Math.max(0, gSq / N - avgG * avgG);
   const varB = Math.max(0, bSq / N - avgB * avgB);
-  const colorVariance = Math.min(
-    1,
-    Math.sqrt((varR + varG + varB) / 3) / 96
-  );
+  const colorVariance = Math.min(1, Math.sqrt((varR + varG + varB) / 3) / 96);
 
   const cellLum = cellLumSum.map((s, i) => s / Math.max(1, cellLumN[i]) / 255);
   const centerLum = cellLum[4];
@@ -418,8 +413,7 @@ export interface DistanceInference {
 
 export function inferDistance(a: SceneAnalysis): DistanceInference {
   const skyLum = (a.topSkyR + a.topSkyG + a.topSkyB) / (3 * 255);
-  const groundLum =
-    (a.bottomGroundR + a.bottomGroundG + a.bottomGroundB) / (3 * 255);
+  const groundLum = (a.bottomGroundR + a.bottomGroundG + a.bottomGroundB) / (3 * 255);
   const outdoorScore = Math.max(0, skyLum - groundLum * 0.7);
   const centerEdges = a.edgeCells[4];
   const edgesSum = a.edgeCells.reduce((s, v) => s + v, 0);
@@ -526,14 +520,10 @@ export function inferExposureCompensation(a: SceneAnalysis): ExposureInference {
     weightedSum += i * a.luminanceHistogram[i];
   }
   const offset = weightedSum - 7.5;
-  if (offset < -2.5)
-    return { ev: '+0.7', jp: '提亮 +0.7 EV', en: 'Brighten +0.7 EV' };
-  if (offset < -1)
-    return { ev: '+0.3', jp: '微提亮 +0.3 EV', en: 'Slight brighten +0.3 EV' };
-  if (offset > 2.5)
-    return { ev: '-0.7', jp: '壓暗 −0.7 EV', en: 'Darken −0.7 EV' };
-  if (offset > 1)
-    return { ev: '-0.3', jp: '微壓暗 −0.3 EV', en: 'Slight darken −0.3 EV' };
+  if (offset < -2.5) return { ev: '+0.7', jp: '提亮 +0.7 EV', en: 'Brighten +0.7 EV' };
+  if (offset < -1) return { ev: '+0.3', jp: '微提亮 +0.3 EV', en: 'Slight brighten +0.3 EV' };
+  if (offset > 2.5) return { ev: '-0.7', jp: '壓暗 −0.7 EV', en: 'Darken −0.7 EV' };
+  if (offset > 1) return { ev: '-0.3', jp: '微壓暗 −0.3 EV', en: 'Slight darken −0.3 EV' };
   return { ev: '0', jp: '無需補償', en: 'Balanced exposure' };
 }
 
@@ -622,7 +612,7 @@ export type WarningIcon =
 
 export interface WarningItem {
   icon: WarningIcon;
-  title: string; // jp
+  title: string;
   body: string; // en hint
 }
 
@@ -632,35 +622,35 @@ export function inferWarnings(a: SceneAnalysis): WarningItem[] {
   if (a.highlightRatio > 0.08) {
     list.push({
       icon: 'sunny',
-      title: '高光易爆',
+      title: 'Highlights may clip',
       body: 'Bright highlights may clip — bracket exposure or use HDR.',
     });
   }
   if (a.shadowRatio > 0.12) {
     list.push({
       icon: 'moon',
-      title: '暗部破壞',
+      title: 'Shadows may crush',
       body: 'Deep shadows lose detail — try +0.3 EV or fill light.',
     });
   }
   if (a.contrast > 0.95 && (a.highlightRatio > 0.04 || a.shadowRatio > 0.06)) {
     list.push({
       icon: 'contrast',
-      title: '對比過強',
+      title: 'Contrast is very high',
       body: 'Extreme dynamic range — bracket or use a graduated filter.',
     });
   }
   if (a.brightness < 0.22) {
     list.push({
       icon: 'walk',
-      title: '弱光需穩定',
+      title: 'Stabilize in low light',
       body: 'Low light — brace your phone or use a tripod, skip the flash.',
     });
   }
   if (a.edgeMagnitude > 0.65) {
     list.push({
       icon: 'alert-circle',
-      title: '畫面繁雜',
+      title: 'Scene is busy',
       body: 'Busy scene — zoom in or simplify to keep the subject readable.',
     });
   }
@@ -670,14 +660,14 @@ export function inferWarnings(a: SceneAnalysis): WarningItem[] {
   if (list.length < 2) {
     list.push({
       icon: 'people',
-      title: '避開人潮高峰',
+      title: 'Avoid peak crowds',
       body: 'Crowds peak on weekend afternoons — try early morning or weekdays.',
     });
   }
   if (!list.some((w) => w.icon === 'flash-off')) {
     list.push({
       icon: 'flash-off',
-      title: '勿用閃光燈',
+      title: 'Keep flash off',
       body: 'Flash washes out the cinematic depth — keep it off.',
     });
   }

@@ -7,7 +7,7 @@ import {
 
 describe('share card metadata', () => {
   it('uses a generic scene fallback instead of a hardcoded anime title', () => {
-    expect(getShareSceneName({})).toBe('原作場景');
+    expect(getShareSceneName({})).toBe('Anime scene');
     expect(getShareSceneName({ name: '駅前の坂道' })).toBe('駅前の坂道');
   });
 

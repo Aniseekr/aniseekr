@@ -1,7 +1,7 @@
 import { getNumberParam, getStringParam, type RouterParams } from '../../utils/route-params';
 
 export function getShareSceneName(params: RouterParams): string {
-  return getStringParam(params, 'name') ?? '原作場景';
+  return getStringParam(params, 'name') ?? 'Anime scene';
 }
 
 export function getShareEpisode(params: RouterParams): string | null {

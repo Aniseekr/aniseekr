@@ -14,7 +14,10 @@ import { Radius, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
-import { locationService, type LatLng } from '../../../../libs/services/pilgrimage/location-service';
+import {
+  locationService,
+  type LatLng,
+} from '../../../../libs/services/pilgrimage/location-service';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
 
 function bearingBetween(from: LatLng, to: LatLng): number {
@@ -24,8 +27,7 @@ function bearingBetween(from: LatLng, to: LatLng): number {
   const φ2 = toRad(to.latitude);
   const Δλ = toRad(to.longitude - from.longitude);
   const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x =
-    Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
   const θ = Math.atan2(y, x);
   return (toDeg(θ) + 360) % 360;
 }
@@ -141,7 +143,7 @@ export default function GpsAlignScreen() {
           </Pressable>
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
-              精準對位
+              Precision Alignment
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary">
               GPS Alignment
@@ -166,10 +168,7 @@ export default function GpsAlignScreen() {
             )}
             <View style={styles.targetBody}>
               <View style={[styles.targetPill, { backgroundColor: `${accent}33` }]}>
-                <ThemedText
-                  variant="captionSmall"
-                  weight="700"
-                  style={{ color: accent }}>
+                <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
                   {ep ? `EP ${ep}` : 'TARGET'}
                 </ThemedText>
               </View>
@@ -187,16 +186,10 @@ export default function GpsAlignScreen() {
                 styles.distanceBadge,
                 { backgroundColor: `${theme.accent}22`, borderColor: theme.accent },
               ]}>
-              <ThemedText
-                variant="titleMedium"
-                weight="700"
-                style={{ color: theme.accent }}>
+              <ThemedText variant="titleMedium" weight="700" style={{ color: theme.accent }}>
                 {distance != null ? `${(distance * 1000).toFixed(0)}m` : '—'}
               </ThemedText>
-              <ThemedText
-                variant="captionSmall"
-                weight="600"
-                style={{ color: theme.accent }}>
+              <ThemedText variant="captionSmall" weight="600" style={{ color: theme.accent }}>
                 away
               </ThemedText>
             </View>
@@ -204,9 +197,25 @@ export default function GpsAlignScreen() {
 
           <View style={styles.radarCard}>
             <View style={[styles.radarRing, { borderColor: theme.glassBorder }]}>
-              <View style={[styles.radarRing, styles.radarRingInner, { borderColor: theme.glassBorder }]} />
-              <View style={[styles.radarRing, styles.radarRingInnermost, { borderColor: theme.glassBorder }]} />
-              <View style={[styles.radarYou, { backgroundColor: accent, borderColor: theme.background.primary }]}>
+              <View
+                style={[
+                  styles.radarRing,
+                  styles.radarRingInner,
+                  { borderColor: theme.glassBorder },
+                ]}
+              />
+              <View
+                style={[
+                  styles.radarRing,
+                  styles.radarRingInnermost,
+                  { borderColor: theme.glassBorder },
+                ]}
+              />
+              <View
+                style={[
+                  styles.radarYou,
+                  { backgroundColor: accent, borderColor: theme.background.primary },
+                ]}>
                 <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
                   YOU
                 </ThemedText>
@@ -217,16 +226,10 @@ export default function GpsAlignScreen() {
                     styles.radarTarget,
                     {
                       backgroundColor: theme.status.warning,
-                      transform: [
-                        { rotate: `${headingDelta}deg` },
-                        { translateY: -86 },
-                      ],
+                      transform: [{ rotate: `${headingDelta}deg` }, { translateY: -86 }],
                     },
                   ]}>
-                  <ThemedText
-                    variant="captionSmall"
-                    weight="700"
-                    style={{ color: '#000' }}>
+                  <ThemedText variant="captionSmall" weight="700" style={{ color: '#000' }}>
                     SPOT
                   </ThemedText>
                 </View>
@@ -235,7 +238,9 @@ export default function GpsAlignScreen() {
             <View style={styles.bearingPill}>
               <Ionicons name="compass" size={12} color={theme.accent} />
               <ThemedText variant="captionSmall" weight="700">
-                {heading != null ? `${Math.round(heading)}° ${cardinal(heading)}` : 'Calibrating compass…'}
+                {heading != null
+                  ? `${Math.round(heading)}° ${cardinal(heading)}`
+                  : 'Calibrating compass…'}
               </ThemedText>
             </View>
           </View>
@@ -266,7 +271,11 @@ export default function GpsAlignScreen() {
             />
           </View>
 
-          <SectionHeader title="Calibration Steps" subtitle="對位步驟" theme={theme} />
+          <SectionHeader
+            title="Calibration Steps"
+            subtitle="GPS and compass checks"
+            theme={theme}
+          />
           <View style={styles.stepList}>
             <StepRow
               done={!!userLocation}
@@ -317,7 +326,7 @@ export default function GpsAlignScreen() {
             ]}>
             <Ionicons name="camera" size={20} color={accentFg} />
             <ThemedText variant="titleMedium" weight="700" style={{ color: accentFg }}>
-              開啟 AR 相機對位
+              Open AR Camera
             </ThemedText>
           </Pressable>
         </View>

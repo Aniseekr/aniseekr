@@ -9,6 +9,10 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { readableTextOn } from '../themed/contrast';
 import { cityToColor } from '../../libs/services/pilgrimage/region-color';
+import {
+  formatPilgrimageSubtitle,
+  getPilgrimageAnimeTitles,
+} from '../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 
 export interface AnimePilgrimageCardProps {
@@ -43,6 +47,8 @@ export function AnimePilgrimageCard({
   const regionColor = anime.city ? cityToColor(anime.city, themeColor) : themeColor;
   const regionFg = readableTextOn(regionColor);
   const distanceFg = readableTextOn(themeColor);
+  const titles = getPilgrimageAnimeTitles(anime);
+  const subtitle = formatPilgrimageSubtitle(titles);
 
   return (
     <Pressable
@@ -73,9 +79,7 @@ export function AnimePilgrimageCard({
                 { backgroundColor: regionColor, borderColor: `${regionFg}33` },
               ]}>
               <Ionicons name="location-sharp" size={11} color={regionFg} />
-              <Text
-                style={[styles.regionText, { color: regionFg }]}
-                numberOfLines={1}>
+              <Text style={[styles.regionText, { color: regionFg }]} numberOfLines={1}>
                 {anime.city}
               </Text>
             </View>
@@ -103,12 +107,12 @@ export function AnimePilgrimageCard({
 
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>
-          {anime.title}
+          {titles.primary}
         </Text>
 
-        {anime.cn ? (
+        {subtitle ? (
           <Text style={styles.titleCN} numberOfLines={1}>
-            {anime.cn}
+            {subtitle}
           </Text>
         ) : null}
 

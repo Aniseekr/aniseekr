@@ -7,12 +7,7 @@
 // page; cityToColor is still used per-trip but falls back to theme.accent.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -28,6 +23,7 @@ import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrima
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
 import { loadVisitedSpots, type VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
+import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 
 type TripCandidate = {
@@ -36,7 +32,12 @@ type TripCandidate = {
   walkingHours: number;
 };
 
-const PLAN_PRESETS: readonly { id: string; label: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+const PLAN_PRESETS: readonly {
+  id: string;
+  label: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
   { id: 'quick', label: 'Quick Walk', subtitle: '~3 spots · half-day', icon: 'walk' },
   { id: 'full', label: 'Full Day', subtitle: '5–7 spots · 8 hrs', icon: 'sunny' },
   { id: 'weekend', label: 'Weekend', subtitle: '2 days · multi-city', icon: 'calendar' },
@@ -65,7 +66,7 @@ export default function PilgrimagePlanScreen() {
         )
       ),
       collectionPilgrimageService.getStats().catch(() => ({ total: 0 })),
-      loadVisitedSpots().catch(() => ({} as VisitedMap)),
+      loadVisitedSpots().catch(() => ({}) as VisitedMap),
     ])
       .then(([fetched, stats, visitedMap]) => {
         if (cancelled) return;
@@ -112,7 +113,7 @@ export default function PilgrimagePlanScreen() {
   const handleAnimePress = useCallback(
     (anime: AnitabiBangumi) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(`/pilgrimage/${anime.id}`);
+      router.push(buildPilgrimageDetailRoute(anime.id, { returnTo: 'plan' }));
     },
     [router]
   );
@@ -133,12 +134,15 @@ export default function PilgrimagePlanScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <LinearGradient
-        colors={theme.gradient}
-        style={StyleSheet.absoluteFill}
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
+      <View
+        style={[styles.bgGlowPrimary, { backgroundColor: `${theme.accent}1A` }]}
+        pointerEvents="none"
       />
-      <View style={[styles.bgGlowPrimary, { backgroundColor: `${theme.accent}1A` }]} pointerEvents="none" />
-      <View style={[styles.bgGlowSecondary, { backgroundColor: `${theme.secondary}1A` }]} pointerEvents="none" />
+      <View
+        style={[styles.bgGlowSecondary, { backgroundColor: `${theme.secondary}1A` }]}
+        pointerEvents="none"
+      />
 
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable
@@ -169,10 +173,7 @@ export default function PilgrimagePlanScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 140 },
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 140 }]}
         showsVerticalScrollIndicator={false}>
         {loading && !featured ? (
           <Skeleton.Timeline count={5} showHeader={true} style={{ paddingHorizontal: 16 }} />
@@ -249,7 +250,14 @@ export default function PilgrimagePlanScreen() {
                   Suggested Trips
                 </ThemedText>
                 {suggested.length > 0 ? (
-                  <View style={[styles.countBadge, { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder }]}>
+                  <View
+                    style={[
+                      styles.countBadge,
+                      {
+                        backgroundColor: theme.background.secondary,
+                        borderColor: theme.glassBorder,
+                      },
+                    ]}>
                     <ThemedText variant="captionSmall" weight="700" tone="secondary">
                       {suggested.length}
                     </ThemedText>
@@ -260,9 +268,7 @@ export default function PilgrimagePlanScreen() {
                 Curated 1-day plans inspired by featured anime
               </ThemedText>
             </View>
-            <Pressable
-              onPress={() => router.push('/pilgrimage')}
-              hitSlop={6}>
+            <Pressable onPress={() => router.push('/pilgrimage')} hitSlop={6}>
               <ThemedText variant="bodySmall" weight="700" style={{ color: theme.accent }}>
                 See all
               </ThemedText>
@@ -325,18 +331,21 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
         <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.secondary }]} />
       )}
       <LinearGradient
-        colors={[
-          'rgba(8,8,8,0)',
-          `${theme.background.primary}C4`,
-          `${theme.background.primary}F2`,
-        ]}
+        colors={['rgba(8,8,8,0)', `${theme.background.primary}C4`, `${theme.background.primary}F2`]}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.featuredContent}>
-        <View style={[styles.featuredBadge, { backgroundColor: `${theme.accent}28`, borderColor: `${theme.accent}A6` }]}>
+        <View
+          style={[
+            styles.featuredBadge,
+            { backgroundColor: `${theme.accent}28`, borderColor: `${theme.accent}A6` },
+          ]}>
           <Ionicons name="star" size={10} color={theme.accent} />
-          <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent, letterSpacing: 0.6 }}>
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={{ color: theme.accent, letterSpacing: 0.6 }}>
             FEATURED TRIP
           </ThemedText>
         </View>
@@ -344,7 +353,11 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
           {anime.city || 'Featured destination'}
           {anime.cn ? ` · ${anime.cn}` : ''}
         </ThemedText>
-        <ThemedText variant="headlineMedium" weight="800" numberOfLines={2} style={{ marginTop: 2 }}>
+        <ThemedText
+          variant="headlineMedium"
+          weight="800"
+          numberOfLines={2}
+          style={{ marginTop: 2 }}>
           {anime.title || 'Untitled'} · {estimatedDays}-Day
         </ThemedText>
         <View style={styles.featuredMetaRow}>
@@ -427,14 +440,23 @@ function PresetTile({ label, subtitle, icon, theme, onPress }: PresetTileProps) 
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => [styles.presetTile, pressed && { opacity: 0.85 }]}>
-      <View style={[styles.presetIcon, { backgroundColor: `${theme.accent}22`, borderColor: `${theme.accent}66` }]}>
+      <View
+        style={[
+          styles.presetIcon,
+          { backgroundColor: `${theme.accent}22`, borderColor: `${theme.accent}66` },
+        ]}>
         <Ionicons name={icon} size={18} color={theme.accent} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <ThemedText variant="bodySmall" weight="700">
           {label}
         </ThemedText>
-        <ThemedText variant="captionSmall" tone="tertiary" weight="500" numberOfLines={1} style={{ marginTop: 1 }}>
+        <ThemedText
+          variant="captionSmall"
+          tone="tertiary"
+          weight="500"
+          numberOfLines={1}
+          style={{ marginTop: 1 }}>
           {subtitle}
         </ThemedText>
       </View>
@@ -466,7 +488,10 @@ function BuildOwnBanner({ theme, onPress }: { theme: ThemePalette; onPress: () =
         <ThemedText variant="bodyMedium" weight="800" style={{ color: '#FFF' }}>
           Build Your Own 1-Day Plan
         </ThemedText>
-        <ThemedText variant="captionSmall" numberOfLines={2} style={{ color: 'rgba(255,255,255,0.78)', marginTop: 3 }}>
+        <ThemedText
+          variant="captionSmall"
+          numberOfLines={2}
+          style={{ color: 'rgba(255,255,255,0.78)', marginTop: 3 }}>
           Pick a neighborhood, anime, and route — we&apos;ll optimize the order.
         </ThemedText>
       </View>

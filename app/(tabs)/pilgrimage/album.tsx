@@ -14,16 +14,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../components/themed';
-import {
-  listCaptures,
-  type PilgrimageCapture,
-} from '../../../libs/services/pilgrimage/captures';
+import { listCaptures, type PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
-import type {
-  AnitabiBangumi,
-  AnitabiPoint,
-} from '../../../libs/services/pilgrimage/types';
+import {
+  getPilgrimageAnimeTitles,
+  getPilgrimageSpotTitles,
+} from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 
 interface AlbumEntry {
   capture: PilgrimageCapture;
@@ -73,9 +71,7 @@ export default function PilgrimageAlbumScreen() {
     ).then((results) => {
       if (cancelled) return;
       const list = results
-        .filter(
-          (r): r is PromiseFulfilledResult<AnitabiBangumi | null> => r.status === 'fulfilled'
-        )
+        .filter((r): r is PromiseFulfilledResult<AnitabiBangumi | null> => r.status === 'fulfilled')
         .map((r) => r.value)
         .filter((v): v is AnitabiBangumi => v !== null);
       setAnimes(list);
@@ -148,7 +144,7 @@ export default function PilgrimageAlbumScreen() {
           shotUri: entry.capture.uri,
           shotWidth: '0',
           shotHeight: '0',
-          name: entry.spot.cn || entry.spot.name,
+          name: getPilgrimageSpotTitles(entry.spot).primary,
           ep: String(entry.spot.ep),
           animeId: String(entry.anime.id),
           themeColor: theme.accent,
@@ -179,13 +175,13 @@ export default function PilgrimageAlbumScreen() {
           </Pressable>
           <View style={styles.headerCenter}>
             <ThemedText variant="titleSmall" weight="700" style={{ fontSize: 16 }}>
-              我的聖地相冊
+              Pilgrimage Album
             </ThemedText>
             <ThemedText
               variant="captionSmall"
               tone="secondary"
               style={{ letterSpacing: 0.5, fontSize: 11 }}>
-              My Pilgrimage
+              Scene comparisons
             </ThemedText>
           </View>
           <Pressable
@@ -207,7 +203,7 @@ export default function PilgrimageAlbumScreen() {
               iconColor={theme.status.info}
               label="Visited"
               value={String(stats.visited)}
-              subtitle="朝聖地"
+              subtitle="spots"
               theme={theme}
             />
             <StatCard
@@ -215,7 +211,7 @@ export default function PilgrimageAlbumScreen() {
               iconColor={theme.secondary}
               label="Photos"
               value={String(stats.photos)}
-              subtitle="對比照"
+              subtitle="captures"
               theme={theme}
             />
             <StatCard
@@ -224,7 +220,7 @@ export default function PilgrimageAlbumScreen() {
               label="Avg Match"
               value={stats.avgMatch > 0 ? `${stats.avgMatch}` : '—'}
               valueSuffix={stats.avgMatch > 0 ? '%' : undefined}
-              subtitle="平均匹配"
+              subtitle="average"
               valueColor={theme.status.success}
               theme={theme}
             />
@@ -236,7 +232,7 @@ export default function PilgrimageAlbumScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsRow}>
               <Chip
-                label="全部 All"
+                label="All"
                 active={animeFilter === 'all'}
                 onPress={() => {
                   hapticsBridge.selection();
@@ -249,7 +245,7 @@ export default function PilgrimageAlbumScreen() {
               {animeChips.map((anime) => (
                 <Chip
                   key={anime.id}
-                  label={anime.cn || anime.title}
+                  label={getPilgrimageAnimeTitles(anime).primary}
                   active={animeFilter === String(anime.id)}
                   onPress={() => {
                     hapticsBridge.selection();
@@ -328,7 +324,7 @@ export default function PilgrimageAlbumScreen() {
                 variant="captionSmall"
                 weight="700"
                 style={{ color: accentFg, fontSize: 13 }}>
-                + 新增聖地
+                Add Pilgrimage
               </ThemedText>
               <ThemedText
                 variant="captionSmall"
@@ -338,7 +334,7 @@ export default function PilgrimageAlbumScreen() {
                   fontSize: 9,
                   letterSpacing: 0.3,
                 }}>
-                Add Pilgrimage
+                Start capture
               </ThemedText>
             </View>
           </Pressable>
@@ -381,9 +377,7 @@ function StatCard({
         </ThemedText>
       </View>
       <View style={styles.statValueRow}>
-        <ThemedText
-          weight="700"
-          style={{ fontSize: 22, color: valueColor ?? theme.text.primary }}>
+        <ThemedText weight="700" style={{ fontSize: 22, color: valueColor ?? theme.text.primary }}>
           {value}
         </ThemedText>
         {valueSuffix ? (
@@ -398,9 +392,7 @@ function StatCard({
           </ThemedText>
         ) : null}
       </View>
-      <ThemedText style={{ fontSize: 10, color: theme.text.tertiary }}>
-        {subtitle}
-      </ThemedText>
+      <ThemedText style={{ fontSize: 10, color: theme.text.tertiary }}>{subtitle}</ThemedText>
     </View>
   );
 }
@@ -463,11 +455,13 @@ function AlbumCard({
   // Masonry effect: vary the anime/real split heights per card.
   const animeH = [105, 120, 95][heightVariant] ?? 110;
   const realH = [105, 120, 95][heightVariant] ?? 110;
+  const spotTitles = getPilgrimageSpotTitles(entry.spot);
+  const animeTitles = getPilgrimageAnimeTitles(entry.anime);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Compare ${entry.spot.cn || entry.spot.name}`}
+      accessibilityLabel={`Compare ${spotTitles.primary}`}
       style={({ pressed }) => [styles.albumCard, pressed && { opacity: 0.92 }]}>
       <View style={styles.albumImgsWrap}>
         <View style={[styles.albumHalf, { height: animeH }]}>
@@ -488,25 +482,23 @@ function AlbumCard({
           />
         </View>
         <View style={styles.matchPill}>
-          <Ionicons
-            name="checkmark-circle"
-            size={10}
-            color={theme.status.success}
-          />
-          <ThemedText
-            weight="700"
-            style={{ color: '#FFFFFF', fontSize: 10 }}>
+          <Ionicons name="checkmark-circle" size={10} color={theme.status.success} />
+          <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }}>
             {entry.match}%
           </ThemedText>
         </View>
       </View>
       <View style={styles.albumFoot}>
         <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
-          {entry.spot.cn || entry.spot.name}
+          {spotTitles.primary}
         </ThemedText>
         <View style={styles.albumMetaRow}>
-          <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1} style={{ fontSize: 9, flex: 1 }}>
-            {entry.anime.cn || entry.anime.title}
+          <ThemedText
+            variant="captionSmall"
+            tone="tertiary"
+            numberOfLines={1}
+            style={{ fontSize: 9, flex: 1 }}>
+            {animeTitles.primary}
           </ThemedText>
           <ThemedText
             variant="captionSmall"

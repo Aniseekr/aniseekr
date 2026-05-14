@@ -14,13 +14,7 @@
 // the list rotates between launches instead of always anchoring on Tokyo.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -55,6 +49,12 @@ import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
 import { getAllIndexed } from '../../../libs/services/pilgrimage/anitabi-index';
+import {
+  formatPilgrimageSubtitle,
+  getPilgrimageAnimeTitles,
+  getPilgrimageSpotTitles,
+} from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 
 interface FeaturedSpot {
@@ -111,7 +111,11 @@ function mulberry32(seed: number) {
   };
 }
 
-function pickCityRepresentatives(pool: FeaturedSpot[], limit: number, seed: number): FeaturedSpot[] {
+function pickCityRepresentatives(
+  pool: FeaturedSpot[],
+  limit: number,
+  seed: number
+): FeaturedSpot[] {
   if (pool.length === 0) return [];
   const buckets = new Map<string, FeaturedSpot[]>();
   for (const item of pool) {
@@ -500,8 +504,7 @@ export default function PilgrimageHubScreen() {
         if (cancelled) return;
         const fulfilled = results
           .filter(
-            (r): r is PromiseFulfilledResult<AnitabiBangumi | null> =>
-              r.status === 'fulfilled'
+            (r): r is PromiseFulfilledResult<AnitabiBangumi | null> => r.status === 'fulfilled'
           )
           .map((r) => r.value)
           .filter((v): v is AnitabiBangumi => v !== null)
@@ -625,12 +628,13 @@ export default function PilgrimageHubScreen() {
       if (seen.has(card.anime.id)) continue;
       if (!isValidGeo(card.anime.geo)) continue;
       seen.add(card.anime.id);
+      const titles = getPilgrimageAnimeTitles(card.anime);
       out.push({
         bangumiId: card.anime.id,
         lat: card.anime.geo[0],
         lng: card.anime.geo[1],
         cover: card.anime.cover ?? '',
-        title: card.anime.cn || card.anime.title,
+        title: titles.primary,
         city: card.anime.city ?? '',
         pointsLength: card.anime.pointsLength ?? 0,
         ringColor: card.anime.color || theme.accent,
@@ -642,7 +646,7 @@ export default function PilgrimageHubScreen() {
   const handleAnimePress = useCallback(
     (anime: AnitabiBangumi) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(`/pilgrimage/${anime.id}`);
+      router.push(buildPilgrimageDetailRoute(anime.id, { returnTo: 'hub' }));
     },
     [router]
   );
@@ -650,7 +654,7 @@ export default function PilgrimageHubScreen() {
   const handleAnimeIdPress = useCallback(
     (bangumiId: number) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(`/pilgrimage/${bangumiId}`);
+      router.push(buildPilgrimageDetailRoute(bangumiId, { returnTo: 'hub' }));
     },
     [router]
   );
@@ -677,13 +681,10 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/map');
   }, [router]);
 
-  const handleToggleMode = useCallback(
-    (next: 'map' | 'list') => {
-      Haptics.selectionAsync().catch(() => undefined);
-      setMode(next);
-    },
-    []
-  );
+  const handleToggleMode = useCallback((next: 'map' | 'list') => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setMode(next);
+  }, []);
 
   // True fullscreen has to leave the Tabs container — pushing to a sibling
   // route registered with `tabBarStyle: { display: 'none' }` is the only way
@@ -729,7 +730,7 @@ export default function PilgrimageHubScreen() {
   const handle88EntryPress = useCallback(
     (entry: (typeof tourism88Entries)[number]) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(`/pilgrimage/${entry.bangumiId}`);
+      router.push(buildPilgrimageDetailRoute(entry.bangumiId, { returnTo: 'hub' }));
     },
     [router]
   );
@@ -743,7 +744,7 @@ export default function PilgrimageHubScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.headerBar}>
           <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
-            聖地巡禮
+            Pilgrimage
           </ThemedText>
           <View style={styles.headerRight}>
             <View style={styles.segment}>
@@ -856,10 +857,7 @@ export default function PilgrimageHubScreen() {
         ) : (
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: insets.bottom + 120 },
-            ]}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
             showsVerticalScrollIndicator={false}>
             <View style={styles.intro}>
               <ThemedText
@@ -884,9 +882,7 @@ export default function PilgrimageHubScreen() {
               onPress={handleHeroPress}
             />
 
-            {loading ? (
-              <Skeleton.AnimeCardList count={6} paddingHorizontal={0} />
-            ) : null}
+            {loading ? <Skeleton.AnimeCardList count={6} paddingHorizontal={0} /> : null}
 
             {error ? (
               <View style={styles.errorBox}>
@@ -908,9 +904,7 @@ export default function PilgrimageHubScreen() {
             {popularList.length > 0 ? (
               <View style={styles.section}>
                 <SectionHeader
-                  title={
-                    collectionAnimes.length > 0 ? 'Your Animes & More' : 'Popular Animes'
-                  }
+                  title={collectionAnimes.length > 0 ? 'Your Animes & More' : 'Popular Animes'}
                   cta="See all"
                   onCta={handleSeeAllAnimes}
                   theme={theme}
@@ -983,6 +977,7 @@ function NearbyHero({
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const fgPin = readableTextOn(theme.accent);
+  const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
 
   return (
     <Pressable
@@ -1003,12 +998,7 @@ function NearbyHero({
             style={[styles.gridLineH, { top: y, backgroundColor: theme.glassBorder }]}
           />
         ))}
-        <View
-          style={[
-            styles.roadPath,
-            { backgroundColor: theme.glassBorder, opacity: 0.55 },
-          ]}
-        />
+        <View style={[styles.roadPath, { backgroundColor: theme.glassBorder, opacity: 0.55 }]} />
       </View>
 
       {nearestAnime?.anime.cover ? (
@@ -1069,8 +1059,7 @@ function NearbyHero({
       />
       <View style={styles.heroBody}>
         <View style={styles.heroLabelRow}>
-          <View
-            style={[styles.heroPinBadge, { backgroundColor: theme.background.tertiary }]}>
+          <View style={[styles.heroPinBadge, { backgroundColor: theme.background.tertiary }]}>
             <Ionicons name="location" size={11} color={theme.text.primary} />
           </View>
           <ThemedText variant="bodySmall" weight="700">
@@ -1082,7 +1071,7 @@ function NearbyHero({
         <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
           {hasLocation
             ? nearestAnime
-              ? `Closest: ${nearestAnime.anime.cn || nearestAnime.anime.title}${
+              ? `Closest: ${nearestTitles?.primary ?? 'Unknown Title'}${
                   nearestAnime.distanceKm !== undefined
                     ? ` · ${formatKm(nearestAnime.distanceKm)} away`
                     : ''
@@ -1149,11 +1138,13 @@ function PopularCard({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const total = anime.pointsLength ?? 0;
   const visitedCount = (anime.litePoints ?? []).filter((p) => visited[p.id]).length;
+  const titles = getPilgrimageAnimeTitles(anime);
+  const subtitle = formatPilgrimageSubtitle(titles);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${anime.cn || anime.title} pilgrimage`}
+      accessibilityLabel={`${titles.primary} pilgrimage`}
       style={({ pressed }) => [styles.popularCard, pressed && { opacity: 0.9 }]}>
       <View style={styles.popularPosterWrap}>
         <Image
@@ -1168,11 +1159,7 @@ function PopularCard({
           </ThemedText>
         </View>
         {fromCollection ? (
-          <View
-            style={[
-              styles.collectionBadge,
-              { backgroundColor: `${theme.status.info}D9` },
-            ]}>
+          <View style={[styles.collectionBadge, { backgroundColor: `${theme.status.info}D9` }]}>
             <Ionicons name="bookmark" size={9} color={readableTextOn(theme.status.info)} />
           </View>
         ) : null}
@@ -1189,13 +1176,18 @@ function PopularCard({
         ) : null}
       </View>
       <View style={styles.popularMeta}>
-        <ThemedText
-          variant="captionSmall"
-          weight="700"
-          numberOfLines={1}
-          style={{ fontSize: 12 }}>
-          {anime.cn || anime.title}
+        <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
+          {titles.primary}
         </ThemedText>
+        {subtitle ? (
+          <ThemedText
+            variant="captionSmall"
+            tone="secondary"
+            numberOfLines={1}
+            style={{ fontSize: 10 }}>
+            {subtitle}
+          </ThemedText>
+        ) : null}
         <ThemedText
           variant="captionSmall"
           tone="tertiary"
@@ -1226,11 +1218,13 @@ function FeaturedSpotRow({
   onPress: () => void;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const spotTitles = getPilgrimageSpotTitles(spot);
+  const animeTitles = getPilgrimageAnimeTitles(anime);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${spot.cn || spot.name} from ${anime.cn || anime.title}`}
+      accessibilityLabel={`${spotTitles.primary} from ${animeTitles.primary}`}
       style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.92 }]}>
       <Image
         source={{ uri: spot.image }}
@@ -1241,13 +1235,16 @@ function FeaturedSpotRow({
       <View style={styles.spotBody}>
         <View style={styles.spotTitleRow}>
           <ThemedText variant="bodySmall" weight="700" numberOfLines={1} style={{ flex: 1 }}>
-            {spot.cn || spot.name}
+            {spotTitles.primary}
           </ThemedText>
           {fromCollection ? (
             <View
               style={[
                 styles.collectionPill,
-                { backgroundColor: `${theme.status.info}1A`, borderColor: `${theme.status.info}66` },
+                {
+                  backgroundColor: `${theme.status.info}1A`,
+                  borderColor: `${theme.status.info}66`,
+                },
               ]}>
               <Ionicons name="bookmark" size={9} color={theme.status.info} />
             </View>
@@ -1256,7 +1253,7 @@ function FeaturedSpotRow({
         <View style={styles.spotMetaRow}>
           <Ionicons name="film-outline" size={10} color={theme.text.tertiary} />
           <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-            {anime.cn || anime.title}
+            {animeTitles.primary}
             {anime.city ? ` · ${anime.city}` : ''}
           </ThemedText>
         </View>

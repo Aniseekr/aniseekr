@@ -124,15 +124,13 @@ export function buildShareCaption(parts: {
   locationText?: string | null;
 }): string {
   const lines: string[] = [];
-  const heading = parts.animeTitle
-    ? `${parts.animeTitle} · ${parts.sceneName}`
-    : parts.sceneName;
+  const heading = parts.animeTitle ? `${parts.animeTitle} · ${parts.sceneName}` : parts.sceneName;
   lines.push(heading);
   if (parts.episode) lines.push(`EP ${parts.episode}`);
   if (parts.matchScore != null) lines.push(`Match ${parts.matchScore}%`);
   if (parts.locationText) lines.push(`📍 ${parts.locationText}`);
   lines.push('');
-  const tags = ['#聖地巡禮', '#anipilgrimage', '#aniseekr'];
+  const tags = ['#animepilgrimage', '#anipilgrimage', '#aniseekr'];
   if (parts.animeTitle) {
     const slug = parts.animeTitle.replace(/[^A-Za-z0-9]+/g, '');
     if (slug.length > 0) tags.unshift(`#${slug}`);
