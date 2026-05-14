@@ -76,11 +76,11 @@ export interface PilgrimageSaveInput {
 // both call openDatabaseAsync, and one of the handles gets orphaned mid-execAsync —
 // later runAsync on the orphan throws `NativeDatabase.prepareAsync … NullPointerException`
 // on Android.
-let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let rawDbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-function openDb(): Promise<SQLite.SQLiteDatabase> {
-  if (!dbPromise) {
-    dbPromise = (async () => {
+function openRawDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!rawDbPromise) {
+    rawDbPromise = (async () => {
       try {
         const opened = await SQLite.openDatabaseAsync(DB_NAME);
         // WAL must be set on its own statement (some Android builds choke on it
@@ -90,12 +90,87 @@ function openDb(): Promise<SQLite.SQLiteDatabase> {
         console.log('[LocalDB] Initialized');
         return opened;
       } catch (err) {
-        dbPromise = null;
+        rawDbPromise = null;
         throw err;
       }
     })();
   }
-  return dbPromise;
+  return rawDbPromise;
+}
+
+// expo-sqlite on Android can leave the JS wrapper pointing at a torn-down
+// native handle after Activity recreation, fast refresh, or the OS reclaiming
+// the native module. The next query throws
+// `NativeDatabase.prepareAsync … NullPointerException`. Detect that here and
+// reopen once before failing.
+const SELF_HEALING_METHODS = new Set([
+  'runAsync',
+  'getAllAsync',
+  'getFirstAsync',
+  'getEachAsync',
+  'execAsync',
+  'prepareAsync',
+  'withTransactionAsync',
+  'withExclusiveTransactionAsync',
+]);
+
+function isStaleHandleError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /NativeDatabase\.\w+|NullPointerException/i.test(msg);
+}
+
+function wrapDb(db: SQLite.SQLiteDatabase): SQLite.SQLiteDatabase {
+  // Plain forwarding object — avoid Proxy because `spyOn(db, 'methodAsync')`
+  // in bun:test does not interact cleanly with proxy traps. Each method is an
+  // own property, so `spyOn` can replace it directly and our production code
+  // still sees the spy on subsequent calls.
+  const wrapped = {} as Record<string, unknown>;
+  const seen = new Set<string>();
+  let proto: object | null = db as unknown as object;
+  while (proto && proto !== Object.prototype) {
+    for (const name of Object.getOwnPropertyNames(proto)) {
+      if (name === 'constructor' || seen.has(name)) continue;
+      seen.add(name);
+      const value = (db as unknown as Record<string, unknown>)[name];
+      if (typeof value !== 'function') continue;
+      if (SELF_HEALING_METHODS.has(name)) {
+        wrapped[name] = async (...args: unknown[]) => {
+          try {
+            return await (value as (...a: unknown[]) => Promise<unknown>).apply(db, args);
+          } catch (err) {
+            if (!isStaleHandleError(err)) throw err;
+            console.warn('[LocalDB] stale native handle, reopening:', err);
+            rawDbPromise = null;
+            cachedWrappedDb = null;
+            cachedWrappedRawTarget = null;
+            const fresh = await openRawDb();
+            return await (
+              (fresh as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>)[name]
+            ).apply(fresh, args);
+          }
+        };
+      } else {
+        wrapped[name] = (value as (...a: unknown[]) => unknown).bind(db);
+      }
+    }
+    proto = Object.getPrototypeOf(proto);
+  }
+  return wrapped as unknown as SQLite.SQLiteDatabase;
+}
+
+// Cache the wrapper so identity is stable across `getDatabase()` calls: tests
+// pin spies on the object returned from the first call and expect later calls
+// from production code to hit the same wrapper.
+let cachedWrappedDb: SQLite.SQLiteDatabase | null = null;
+let cachedWrappedRawTarget: SQLite.SQLiteDatabase | null = null;
+
+async function openDb(): Promise<SQLite.SQLiteDatabase> {
+  const raw = await openRawDb();
+  if (cachedWrappedDb === null || cachedWrappedRawTarget !== raw) {
+    cachedWrappedDb = wrapDb(raw);
+    cachedWrappedRawTarget = raw;
+  }
+  return cachedWrappedDb;
 }
 
 const DDL = `
@@ -368,6 +443,14 @@ export const LocalDB = {
   async clearSwipeSeen(): Promise<void> {
     const db = await openDb();
     await db.runAsync('DELETE FROM swipe_seen');
+  },
+
+  async clearSwipeSeenIds(animeIds: string[]): Promise<void> {
+    const uniqueIds = [...new Set(animeIds.filter(Boolean))];
+    if (uniqueIds.length === 0) return;
+    const db = await openDb();
+    const placeholders = uniqueIds.map(() => '?').join(', ');
+    await db.runAsync(`DELETE FROM swipe_seen WHERE id IN (${placeholders})`, ...uniqueIds);
   },
 
   async getDeckState(genreId: string): Promise<DeckStateRow | null> {
