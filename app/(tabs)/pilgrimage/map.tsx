@@ -46,7 +46,6 @@ import {
   TILE_MAX_ZOOM,
   TILE_SUBDOMAINS,
   TILE_URL,
-  TOKYO_STATION,
 } from '../../../libs/services/pilgrimage/leaflet-map';
 import { getNumberParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
@@ -82,6 +81,39 @@ const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
   kinki: '近畿',
   chugoku_shikoku: '中国・四国',
   kyushu_okinawa: '九州・沖縄',
+};
+
+// Geographic bounding boxes for each region. Hand-tuned to feel like a
+// regional view (not a city zoom): a region tap should let the user see "the
+// whole Kanto / whole Kyushu" before they drill into a specific anime.
+// Tokyo Metro is the 23-ward area so it stays distinct from the wider Kanto.
+interface RegionBounds {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+}
+const REGION_BOUNDS: Record<AnimeTourism88Region, RegionBounds> = {
+  hokkaido_tohoku: { south: 37.0, west: 139.4, north: 45.6, east: 146.0 },
+  kanto: { south: 35.0, west: 138.7, north: 37.0, east: 141.0 },
+  tokyo: { south: 35.5, west: 139.3, north: 35.9, east: 140.0 },
+  chubu: { south: 34.6, west: 136.0, north: 38.0, east: 139.5 },
+  kinki: { south: 33.5, west: 134.2, north: 35.8, east: 136.5 },
+  chugoku_shikoku: { south: 32.5, west: 130.7, north: 35.7, east: 134.5 },
+  kyushu_okinawa: { south: 24.0, west: 122.9, north: 34.5, east: 132.0 },
+};
+
+// Whole-archipelago framing: centre on the Sea of Japan side of central
+// Honshu so Hokkaido and Okinawa both stay on-screen at zoom 5.
+const JAPAN_OVERVIEW = { lat: 36.5, lng: 138.0, zoom: 5 } as const;
+
+// Whole-Japan bounding box — south of Yonaguni to north of Hokkaido.
+// Used when the user taps the "全日本" reset chip.
+const JAPAN_BOUNDS: RegionBounds = {
+  south: 24.0,
+  west: 122.9,
+  north: 45.6,
+  east: 146.0,
 };
 
 // Eighty-eight selection mark colour — picked for "official certification"
@@ -300,6 +332,19 @@ ${MAP_BASE_BODY}
     try { map.flyTo([target.lat, target.lng], 11, { duration: 0.6 }); } catch (e) {}
   };
 
+  // Fly the camera to a region (or whole Japan). Pure navigation — does NOT
+  // change which markers are visible. The bounds-based lazy loader picks up
+  // the markers that fall into the new viewport on its own.
+  window.__flyToBounds = function(b) {
+    if (!b || typeof b.south !== 'number') return;
+    try {
+      map.flyToBounds(
+        [[b.south, b.west], [b.north, b.east]],
+        { padding: [40, 40], maxZoom: 10, duration: 0.6 }
+      );
+    } catch (e) {}
+  };
+
   // Emit current bounds to RN so it can lazy-load more anime from the
   // offline index. Debounced inside the WebView (300 ms) — Leaflet's
   // moveend fires once per gesture, but pinch-zoom on iOS can chain a
@@ -422,8 +467,14 @@ export default function PilgrimageMapScreen() {
   );
 
   // Filter state for the chip row above the map. `null` region == all 7 groups.
+  // - `official88Mode`: filter markers to the Anime Tourism 88 selection.
+  // - `focusedRegion`: which region's camera framing is active. Tapping a region
+  //   ALWAYS flies the camera; if 88 mode is on, it also narrows the filter.
+  // - `flyTick`: increments on every region tap so the camera re-flies even
+  //   when the user re-taps the chip they're already focused on.
   const [official88Mode, setOfficial88Mode] = useState(false);
-  const [region88Filter, setRegion88Filter] = useState<AnimeTourism88Region | null>(null);
+  const [focusedRegion, setFocusedRegion] = useState<AnimeTourism88Region | null>(null);
+  const [flyTick, setFlyTick] = useState(0);
 
   const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
 
@@ -464,18 +515,44 @@ export default function PilgrimageMapScreen() {
 
   const markers = useMemo<HubMapMarker[]>(() => {
     if (!official88Mode) return baseAnitabiMarkers;
-    const filtered = region88Filter
-      ? all88WithCoords.filter((e) => e.region === region88Filter)
+    const filtered = focusedRegion
+      ? all88WithCoords.filter((e) => e.region === focusedRegion)
       : all88WithCoords;
     return build88Markers(filtered);
-  }, [official88Mode, region88Filter, all88WithCoords, baseAnitabiMarkers]);
+  }, [official88Mode, focusedRegion, all88WithCoords, baseAnitabiMarkers]);
 
   // Bumped whenever the filter set fundamentally changes so the WebView can
   // clear stale markers (we re-render gold city pins ↔ anitabi anime centroids).
   const refitNonce = useMemo(
-    () => `${official88Mode ? '88' : 'all'}:${region88Filter ?? 'any'}`,
-    [official88Mode, region88Filter]
+    () => `${official88Mode ? '88' : 'all'}:${focusedRegion ?? 'any'}`,
+    [official88Mode, focusedRegion]
   );
+
+  // Camera-fly request derived from focusedRegion + flyTick. Whole-Japan when
+  // no region is focused; the region's bounds otherwise. flyTick guarantees a
+  // new identity per tap so the FullscreenMapView effect re-runs.
+  const flyBoundsRequest = useMemo(() => {
+    if (flyTick === 0) return null; // skip initial render — the map already opens at Japan overview
+    const bounds = focusedRegion ? REGION_BOUNDS[focusedRegion] : JAPAN_BOUNDS;
+    return { key: `${focusedRegion ?? 'jp'}#${flyTick}`, bounds };
+  }, [focusedRegion, flyTick]);
+
+  const handlePickRegion = useCallback((region: AnimeTourism88Region) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setFocusedRegion((cur) => (cur === region ? null : region));
+    setFlyTick((t) => t + 1);
+  }, []);
+
+  const handleResetToJapan = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setFocusedRegion(null);
+    setFlyTick((t) => t + 1);
+  }, []);
+
+  const handleToggleOfficial88 = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setOfficial88Mode((v) => !v);
+  }, []);
 
   const handleAnimePress = useCallback(
     (bangumiId: number) => {
@@ -513,6 +590,7 @@ export default function PilgrimageMapScreen() {
             ringColor={theme.accent}
             theme={theme}
             focusBangumiId={focusBangumiId}
+            flyBoundsRequest={flyBoundsRequest}
             onAnimePress={handleAnimePress}
             onBoundsChange={handleBoundsChange}
           />
@@ -520,19 +598,10 @@ export default function PilgrimageMapScreen() {
             theme={theme}
             insetTop={insets.top}
             official88Mode={official88Mode}
-            regionFilter={region88Filter}
-            onToggleOfficial88={() => {
-              Haptics.selectionAsync().catch(() => undefined);
-              setOfficial88Mode((v) => {
-                if (v) setRegion88Filter(null);
-                return !v;
-              });
-            }}
-            onPickRegion={(r) => {
-              Haptics.selectionAsync().catch(() => undefined);
-              setRegion88Filter((cur) => (cur === r ? null : r));
-              if (!official88Mode) setOfficial88Mode(true);
-            }}
+            focusedRegion={focusedRegion}
+            onToggleOfficial88={handleToggleOfficial88}
+            onPickRegion={handlePickRegion}
+            onResetToJapan={handleResetToJapan}
           />
         </>
       )}
@@ -561,6 +630,8 @@ interface FullscreenMapViewProps {
   ringColor: string;
   theme: ThemePalette;
   focusBangumiId: number | null;
+  /** When set, fly the camera to this bounding box. The key changes each time so re-tapping the same region re-flies. */
+  flyBoundsRequest: { key: string; bounds: RegionBounds } | null;
   onAnimePress: (bangumiId: number) => void;
   onBoundsChange: (bounds: BoundingBox) => void;
 }
@@ -572,6 +643,7 @@ function FullscreenMapView({
   ringColor,
   theme,
   focusBangumiId,
+  flyBoundsRequest,
   onAnimePress,
   onBoundsChange,
 }: FullscreenMapViewProps) {
@@ -580,14 +652,11 @@ function FullscreenMapView({
   const lastReplaceKey = useRef(replaceKey);
 
   const html = useMemo(() => {
-    // Default to Tokyo Station so users who haven't granted location (or are
-    // outside Japan) still land in the densest pilgrimage region. The user
-    // pin still renders if granted, and applyUser() snaps to it on the first
-    // location fix.
-    //
-    // Zoom 12 (≈15 km wide) gives a "central Tokyo" framing instead of
-    // TOKYO_STATION.zoom (11, ≈30 km wide) which felt like an overview.
-    const center = { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: 12 };
+    // Default to a whole-Japan framing so the user can pick a region before
+    // drilling into a city. applyUser() still snaps to the user's location
+    // at zoom 13 the first time GPS resolves — so locals don't have to pan
+    // back. The region chips fly the camera into specific regions on demand.
+    const center = { lat: JAPAN_OVERVIEW.lat, lng: JAPAN_OVERVIEW.lng, zoom: JAPAN_OVERVIEW.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
     return buildHubMapHtml({ center, user, ringColor });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -627,6 +696,17 @@ function FullscreenMapView({
       true;
     `);
   }, [focusBangumiId, ready, markers]);
+
+  // Region/Japan camera fly. Re-running on `key` lets the user re-tap the
+  // same region chip and have the camera re-frame (useful after pan/zoom).
+  useEffect(() => {
+    if (!ready || !webviewRef.current || !flyBoundsRequest) return;
+    const payload = JSON.stringify(flyBoundsRequest.bounds);
+    webviewRef.current.injectJavaScript(`
+      try { window.__flyToBounds && window.__flyToBounds(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [flyBoundsRequest, ready]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -689,21 +769,26 @@ function FullscreenMapView({
 interface FilterChipRowProps {
   theme: ThemePalette;
   insetTop: number;
+  /** Whether the Anime Tourism 88 marker filter is enabled. */
   official88Mode: boolean;
-  regionFilter: AnimeTourism88Region | null;
+  /** Region the camera is focused on (null = whole Japan). */
+  focusedRegion: AnimeTourism88Region | null;
   onToggleOfficial88: () => void;
   onPickRegion: (region: AnimeTourism88Region) => void;
+  onResetToJapan: () => void;
 }
 
 function FilterChipRow({
   theme,
   insetTop,
   official88Mode,
-  regionFilter,
+  focusedRegion,
   onToggleOfficial88,
   onPickRegion,
+  onResetToJapan,
 }: FilterChipRowProps) {
   const chipStyles = useMemo(() => makeChipStyles(theme), [theme]);
+  const wholeJapanActive = focusedRegion === null;
   return (
     <View
       pointerEvents="box-none"
@@ -712,6 +797,28 @@ function FilterChipRow({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={chipStyles.scroll}>
+        <Pressable
+          onPress={onResetToJapan}
+          accessibilityRole="button"
+          accessibilityLabel="View whole Japan"
+          accessibilityState={{ selected: wholeJapanActive }}
+          style={({ pressed }) => [
+            chipStyles.chip,
+            wholeJapanActive
+              ? { backgroundColor: theme.accent, borderColor: theme.accent }
+              : null,
+            pressed && { opacity: 0.85 },
+          ]}>
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={[
+              chipStyles.chipLabel,
+              wholeJapanActive ? { color: theme.background.primary } : null,
+            ]}>
+            全日本
+          </ThemedText>
+        </Pressable>
         <Pressable
           onPress={onToggleOfficial88}
           accessibilityRole="button"
@@ -734,7 +841,7 @@ function FilterChipRow({
           </ThemedText>
         </Pressable>
         {ANIME_TOURISM_88_REGIONS.map((r) => {
-          const active = official88Mode && regionFilter === r;
+          const active = focusedRegion === r;
           return (
             <Pressable
               key={r}
