@@ -2,9 +2,9 @@
 // The active day takes ~88% of screen width; neighbor cards peek at the edges.
 // Off-center cards scale to 0.94 + fade and shift slightly downward.
 
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Image,
+  GestureResponderEvent,
   Platform,
   Pressable,
   StyleSheet,
@@ -22,11 +22,14 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Anime } from '../rate/types';
 import { NearbyPilgrimageBadge } from '../pilgrimage/NearbyPilgrimageBadge';
-import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
+import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 export interface DailyAnime {
@@ -52,6 +55,8 @@ interface FocusDayCarouselProps {
   onLongPressAnime?: (anime: Anime) => void;
   /** Quick-add wishlist action — fired from the inline + chip on each row. */
   onQuickAdd?: (anime: Anime) => void;
+  /** Toggle the per-episode reminder. Only shown when anime.nextAiringEpisode is set. */
+  onToggleReminder?: (anime: Anime, currentlyScheduled: boolean) => void;
   /** Set of anime ids the user already tracks — used to hide the inline +. */
   trackedIds?: Set<string>;
 }
@@ -75,6 +80,7 @@ function FocusDayCarouselComponent({
   sourcePlatform,
   onLongPressAnime,
   onQuickAdd,
+  onToggleReminder,
   trackedIds,
 }: FocusDayCarouselProps) {
   const { width: screenWidth } = useWindowDimensions();
@@ -166,6 +172,7 @@ function FocusDayCarouselComponent({
             sourcePlatform={sourcePlatform}
             onLongPressAnime={onLongPressAnime}
             onQuickAdd={onQuickAdd}
+            onToggleReminder={onToggleReminder}
             trackedIds={trackedIds}
           />
         );
@@ -186,6 +193,7 @@ interface FocusDayItemProps {
   sourcePlatform?: string;
   onLongPressAnime?: (anime: Anime) => void;
   onQuickAdd?: (anime: Anime) => void;
+  onToggleReminder?: (anime: Anime, currentlyScheduled: boolean) => void;
   trackedIds?: Set<string>;
 }
 
@@ -201,9 +209,13 @@ const FocusDayItem = memo(function FocusDayItem({
   sourcePlatform,
   onLongPressAnime,
   onQuickAdd,
+  onToggleReminder,
   trackedIds,
 }: FocusDayItemProps) {
-  const router = useRouter();
+  const { theme, effectiveMode } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const blurTint =
+    effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
   const inputRange = [
     (index - 1) * itemFullWidth,
     index * itemFullWidth,
@@ -227,13 +239,17 @@ const FocusDayItem = memo(function FocusDayItem({
       style={[styles.cardWrapper, { width: cardWidth, marginRight: spacing }, cardStyle]}>
       <View style={[styles.card, isToday ? styles.cardToday : styles.cardDefault]}>
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={28} tint="systemThickMaterialDark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={28} tint={blurTint} style={StyleSheet.absoluteFill} />
         ) : null}
         <View
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: isToday ? Colors.glass.heavy : Colors.glass.medium },
+            {
+              backgroundColor: isToday
+                ? `${theme.background.tertiary}CC`
+                : `${theme.background.secondary}CC`,
+            },
           ]}
         />
 
@@ -252,69 +268,22 @@ const FocusDayItem = memo(function FocusDayItem({
         <View style={styles.body}>
           {dayData.anime.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="tv-outline" size={36} color={Colors.text.tertiary} />
+              <Ionicons name="tv-outline" size={36} color={theme.text.tertiary} />
               <Text style={styles.emptyText}>No anime scheduled</Text>
             </View>
           ) : (
-            previewAnime.map((anime) => {
-              const isTracked = trackedIds?.has(anime.id) ?? false;
-              return (
-                <Pressable
-                  key={anime.id}
-                  onPress={() => router.push(`/anime/${anime.id}`)}
-                  onLongPress={
-                    onLongPressAnime
-                      ? () => {
-                          hapticsBridge.longPress();
-                          onLongPressAnime(anime);
-                        }
-                      : undefined
-                  }
-                  delayLongPress={280}
-                  style={styles.row}>
-                  {isToday ? <View style={styles.trackedBar} /> : null}
-                  <Image source={{ uri: anime.image }} style={styles.poster} resizeMode="cover" />
-                  <View style={styles.rowText}>
-                    <Text style={styles.rowTitle} numberOfLines={1}>
-                      {anime.title}
-                    </Text>
-                    <View style={styles.metaRow}>
-                      {anime.score ? (
-                        <View style={styles.scorePill}>
-                          <Ionicons name="star" size={10} color={Colors.warning} />
-                          <Text style={styles.scoreText}>{anime.score}</Text>
-                        </View>
-                      ) : null}
-                      {anime.format || anime.type ? (
-                        <Text style={styles.metaText}>{anime.format ?? anime.type}</Text>
-                      ) : null}
-                      {sourcePlatform ? (
-                        <NearbyPilgrimageBadge
-                          sourcePlatform={sourcePlatform}
-                          id={anime.id}
-                          variant="icon"
-                        />
-                      ) : null}
-                    </View>
-                  </View>
-                  {onQuickAdd && !isTracked ? (
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        onQuickAdd(anime);
-                      }}
-                      hitSlop={8}
-                      style={styles.quickAddBtn}>
-                      <Ionicons name="add" size={16} color={Colors.text.primary} />
-                    </Pressable>
-                  ) : isTracked ? (
-                    <Ionicons name="checkmark-circle" size={16} color={Colors.primary} />
-                  ) : (
-                    <Ionicons name="chevron-forward" size={14} color={Colors.text.tertiary} />
-                  )}
-                </Pressable>
-              );
-            })
+            previewAnime.map((anime) => (
+              <FocusDayRow
+                key={anime.id}
+                anime={anime}
+                isToday={isToday}
+                isTracked={trackedIds?.has(anime.id) ?? false}
+                sourcePlatform={sourcePlatform}
+                onLongPressAnime={onLongPressAnime}
+                onQuickAdd={onQuickAdd}
+                onToggleReminder={onToggleReminder}
+              />
+            ))
           )}
           {dayData.anime.length > previewAnime.length ? (
             <View style={styles.moreFooter}>
@@ -336,162 +305,287 @@ const FocusDayItem = memo(function FocusDayItem({
   );
 });
 
-const styles = StyleSheet.create({
-  cardWrapper: {
-    height: '100%',
-  },
-  card: {
-    flex: 1,
-    borderRadius: Radius.xxl,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-  },
-  cardDefault: {
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.background.secondary,
-  },
-  cardToday: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.background.secondary,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.18,
-        shadowRadius: 18,
-      },
-      android: { elevation: 6 },
-    }),
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  dayTitle: {
-    ...Typography.headlineLarge,
-    color: Colors.text.primary,
-    fontFamily: FontFamily.rounded,
-  },
-  todayDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-    marginTop: 4,
-  },
-  countBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.chip,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  countText: {
-    ...Typography.captionSmall,
-    color: Colors.text.secondary,
-    fontFamily: FontFamily.text,
-  },
-  body: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-  },
-  emptyText: {
-    ...Typography.bodySmall,
-    color: Colors.text.tertiary,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.md,
-    gap: Spacing.sm,
-  },
-  trackedBar: {
-    width: 3,
-    height: 56,
-    borderRadius: 2,
-    backgroundColor: Colors.primary,
-  },
-  poster: {
-    width: 52,
-    height: 74,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.background.tertiary,
-  },
-  rowText: {
-    flex: 1,
-    gap: 4,
-  },
-  rowTitle: {
-    ...Typography.titleMedium,
-    color: Colors.text.primary,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  scorePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: Colors.glass.light,
-  },
-  scoreText: {
-    ...Typography.captionSmall,
-    color: Colors.warning,
-  },
-  metaText: {
-    ...Typography.captionSmall,
-    color: Colors.text.secondary,
-  },
-  moreFooter: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  moreText: {
-    ...Typography.captionSmall,
-    color: Colors.text.tertiary,
-  },
-  bottomFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 40,
-  },
-  quickAddBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
+interface FocusDayRowProps {
+  anime: Anime;
+  isToday: boolean;
+  isTracked: boolean;
+  sourcePlatform?: string;
+  onLongPressAnime?: (anime: Anime) => void;
+  onQuickAdd?: (anime: Anime) => void;
+  onToggleReminder?: (anime: Anime, currentlyScheduled: boolean) => void;
+}
+
+const FocusDayRow = memo(function FocusDayRow({
+  anime,
+  isToday,
+  isTracked,
+  sourcePlatform,
+  onLongPressAnime,
+  onQuickAdd,
+  onToggleReminder,
+}: FocusDayRowProps) {
+  const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const [isScheduled, setIsScheduled] = useState(() =>
+    animeNotificationService.isAnimeScheduled(anime.id)
+  );
+
+  const canRemind = !!anime.nextAiringEpisode && !!onToggleReminder;
+
+  const handleRemind = useCallback(
+    (e: GestureResponderEvent) => {
+      e.stopPropagation();
+      if (!canRemind) return;
+      hapticsBridge.selection();
+      const wasScheduled = isScheduled;
+      setIsScheduled((p) => !p);
+      onToggleReminder!(anime, wasScheduled);
+    },
+    [anime, canRemind, isScheduled, onToggleReminder]
+  );
+
+  return (
+    <Pressable
+      onPress={() => router.push(`/anime/${anime.id}`)}
+      onLongPress={
+        onLongPressAnime
+          ? () => {
+              hapticsBridge.longPress();
+              onLongPressAnime(anime);
+            }
+          : undefined
+      }
+      delayLongPress={280}
+      style={styles.row}>
+      {isToday ? <View style={styles.trackedBar} /> : null}
+      <Image
+        source={{ uri: anime.image }}
+        style={styles.poster}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={anime.id}
+        transition={150}
+      />
+      <View style={styles.rowText}>
+        <Text style={styles.rowTitle} numberOfLines={1}>
+          {anime.title}
+        </Text>
+        <View style={styles.metaRow}>
+          {anime.score ? (
+            <View style={styles.scorePill}>
+              <Ionicons name="star" size={10} color={theme.status.warning} />
+              <Text style={styles.scoreText}>{anime.score}</Text>
+            </View>
+          ) : null}
+          {anime.format || anime.type ? (
+            <Text style={styles.metaText}>{anime.format ?? anime.type}</Text>
+          ) : null}
+          {sourcePlatform ? (
+            <NearbyPilgrimageBadge
+              sourcePlatform={sourcePlatform}
+              id={anime.id}
+              variant="icon"
+            />
+          ) : null}
+        </View>
+      </View>
+      <View style={styles.rowActions}>
+        {canRemind ? (
+          <Pressable
+            onPress={handleRemind}
+            hitSlop={8}
+            accessibilityLabel={isScheduled ? 'Cancel reminder' : 'Set episode reminder'}
+            style={[styles.iconBtn, isScheduled && { borderColor: theme.accent }]}>
+            <Ionicons
+              name={isScheduled ? 'notifications' : 'notifications-outline'}
+              size={14}
+              color={isScheduled ? theme.accent : theme.text.primary}
+            />
+          </Pressable>
+        ) : null}
+        {onQuickAdd && !isTracked ? (
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onQuickAdd(anime);
+            }}
+            hitSlop={8}
+            style={styles.iconBtn}>
+            <Ionicons name="add" size={16} color={theme.text.primary} />
+          </Pressable>
+        ) : isTracked ? (
+          <Ionicons name="checkmark-circle" size={16} color={theme.accent} />
+        ) : !canRemind ? (
+          <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
+        ) : null}
+      </View>
+    </Pressable>
+  );
 });
+
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    cardWrapper: {
+      height: '100%',
+    },
+    card: {
+      flex: 1,
+      borderRadius: Radius.xxl,
+      overflow: 'hidden',
+      borderWidth: 1.5,
+    },
+    cardDefault: {
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+    },
+    cardToday: {
+      borderColor: theme.accent,
+      backgroundColor: theme.background.secondary,
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.accent,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.18,
+          shadowRadius: 18,
+        },
+        android: { elevation: 6 },
+      }),
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.lg,
+      paddingBottom: Spacing.md,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    dayTitle: {
+      ...Typography.headlineLarge,
+      color: theme.text.primary,
+      fontFamily: FontFamily.rounded,
+    },
+    todayDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: theme.accent,
+      marginTop: 4,
+    },
+    countBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: Radius.chip,
+      backgroundColor: theme.background.tertiary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    countText: {
+      ...Typography.captionSmall,
+      color: theme.text.secondary,
+      fontFamily: FontFamily.text,
+    },
+    body: {
+      flex: 1,
+      paddingHorizontal: Spacing.md,
+      paddingBottom: Spacing.lg,
+      gap: Spacing.xs,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+    },
+    emptyText: {
+      ...Typography.bodySmall,
+      color: theme.text.tertiary,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.xs,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.md,
+      gap: Spacing.sm,
+    },
+    trackedBar: {
+      width: 3,
+      height: 56,
+      borderRadius: 2,
+      backgroundColor: theme.accent,
+    },
+    poster: {
+      width: 52,
+      height: 74,
+      borderRadius: Radius.sm,
+      backgroundColor: theme.background.tertiary,
+    },
+    rowText: {
+      flex: 1,
+      gap: 4,
+    },
+    rowTitle: {
+      ...Typography.titleMedium,
+      color: theme.text.primary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    scorePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      backgroundColor: `${theme.background.tertiary}80`,
+    },
+    scoreText: {
+      ...Typography.captionSmall,
+      color: theme.status.warning,
+    },
+    metaText: {
+      ...Typography.captionSmall,
+      color: theme.text.secondary,
+    },
+    moreFooter: {
+      alignItems: 'center',
+      paddingVertical: Spacing.xs,
+    },
+    moreText: {
+      ...Typography.captionSmall,
+      color: theme.text.tertiary,
+    },
+    bottomFade: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 40,
+    },
+    rowActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    iconBtn: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.background.tertiary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+  });
 
 export const FocusDayCarousel = memo(FocusDayCarouselComponent);
