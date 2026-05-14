@@ -3,7 +3,7 @@
 // hero card with season label, title, meta, and a Continue Watching CTA,
 // flanked by dimmed neighbouring cards, with a pill-style page indicator.
 
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -26,7 +26,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Anime } from './types';
 import {
-  Colors,
   FontFamily,
   Radius,
   Shadow,
@@ -34,7 +33,7 @@ import {
   Typography,
 } from '../../constants/DesignSystem';
 import { readableTextOn } from '../themed/contrast';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 const CARD_W = 283;
@@ -93,6 +92,7 @@ function buildMeta(anime: Anime): string {
 function SeasonalCarouselComponent({ data, onSelect }: Props) {
   const { width: screenW } = useWindowDimensions();
   const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const sidePadding = Math.max(0, (screenW - CARD_W) / 2);
   const scrollX = useSharedValue(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -180,6 +180,8 @@ const SeasonalCardItem = memo(function SeasonalCardItem({
   accentText,
   onPress,
 }: CardItemProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const inputRange = [
     (index - 1) * ITEM_FULL,
     index * ITEM_FULL,
@@ -252,6 +254,8 @@ interface DotsProps {
 }
 
 const Dots = memo(function Dots({ length, activeIndex, accent }: DotsProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   if (length <= 1) return null;
   return (
     <View style={styles.dots}>
@@ -272,108 +276,111 @@ const Dots = memo(function Dots({ length, activeIndex, accent }: DotsProps) {
   );
 });
 
-const styles = StyleSheet.create({
-  root: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 18,
-    paddingVertical: Spacing.md,
-  },
-  scroller: {
-    flexGrow: 0,
-  },
-  item: {
-    width: CARD_W,
-    marginRight: CARD_GAP,
-  },
-  card: {
-    width: CARD_W,
-    height: CARD_H,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    ...Shadow.medium,
-  },
-  cardContent: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    bottom: 24,
-    gap: 10,
-  },
-  seasonLabel: {
-    color: Colors.text.primary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 2,
-    fontFamily: FontFamily.text,
-  },
-  cardTitle: {
-    color: Colors.text.primary,
-    fontSize: 26,
-    fontWeight: '700',
-    lineHeight: 30,
-    fontFamily: FontFamily.rounded,
-  },
-  cardMeta: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: FontFamily.text,
-  },
-  ctaRow: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
-    minHeight: 44,
-    borderRadius: 22,
-  },
-  ctaText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  dots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.text.tertiary,
-  },
-  dotActive: {
-    width: 20,
-    height: 6,
-    borderRadius: 3,
-  },
-  empty: {
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyCard: {
-    width: CARD_W,
-    height: CARD_H,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.background.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: Colors.text.secondary,
-    ...Typography.bodyMedium,
-  },
-});
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    root: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 18,
+      paddingVertical: Spacing.md,
+    },
+    scroller: {
+      flexGrow: 0,
+    },
+    item: {
+      width: CARD_W,
+      marginRight: CARD_GAP,
+    },
+    card: {
+      width: CARD_W,
+      height: CARD_H,
+      borderRadius: Radius.xl,
+      overflow: 'hidden',
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      ...Shadow.medium,
+    },
+    cardContent: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      bottom: 24,
+      gap: 10,
+    },
+    // Card text overlays a dark gradient on top of the cover image, so white is
+    // universally legible regardless of theme.
+    seasonLabel: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 2,
+      fontFamily: FontFamily.text,
+    },
+    cardTitle: {
+      color: '#FFFFFF',
+      fontSize: 26,
+      fontWeight: '700',
+      lineHeight: 30,
+      fontFamily: FontFamily.rounded,
+    },
+    cardMeta: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 12,
+      fontWeight: '500',
+      fontFamily: FontFamily.text,
+    },
+    ctaRow: {
+      flexDirection: 'row',
+      marginTop: 4,
+    },
+    cta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 18,
+      minHeight: 44,
+      borderRadius: 22,
+    },
+    ctaText: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    dots: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.text.tertiary,
+    },
+    dotActive: {
+      width: 20,
+      height: 6,
+      borderRadius: 3,
+    },
+    empty: {
+      paddingVertical: Spacing.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyCard: {
+      width: CARD_W,
+      height: CARD_H,
+      borderRadius: Radius.xl,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      color: theme.text.secondary,
+      ...Typography.bodyMedium,
+    },
+  });
 
 export const SeasonalCarousel = memo(SeasonalCarouselComponent);

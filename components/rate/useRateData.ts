@@ -9,6 +9,7 @@ export function useRateData() {
   const [discoveryMode, setDiscoveryMode] = useState<DiscoveryMode>('genres');
   const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
   const [trendAnime, setTrendAnime] = useState<Anime[]>([]);
+  const [weeklyTrendAnime, setWeeklyTrendAnime] = useState<Anime[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [seasonalAnime, setSeasonalAnime] = useState<Anime[]>([]); // [NEW]
   const [aiRecommendation, setAIRecommendation] = useState<AIRecommendation>({
@@ -41,6 +42,16 @@ export function useRateData() {
       console.error('Failed to load trending anime:', error);
     }
   }, [trendAnime.length]);
+
+  const loadWeeklyTrend = useCallback(async () => {
+    if (weeklyTrendAnime.length > 0) return;
+    try {
+      const anime = await AnimeRepository.getTrendingAnime();
+      setWeeklyTrendAnime(anime);
+    } catch (error) {
+      console.error('Failed to load weekly trending anime:', error);
+    }
+  }, [weeklyTrendAnime.length]);
 
   const loadRecommendations = useCallback(async () => {
     if (recommendations.length > 0) return;
@@ -90,13 +101,14 @@ export function useRateData() {
   useEffect(() => {
     if (viewMode === 'trend') {
       loadTrend();
+      loadWeeklyTrend();
     }
     if (viewMode === 'tracking') {
       loadRecommendations();
     }
     // Always load seasonal for dashboard
     loadSeasonal();
-  }, [loadTrend, loadRecommendations, loadSeasonal, viewMode]);
+  }, [loadTrend, loadWeeklyTrend, loadRecommendations, loadSeasonal, viewMode]);
 
   const state = useMemo(
     () => ({
@@ -104,6 +116,7 @@ export function useRateData() {
       discoveryMode,
       availableGenres,
       trendAnime,
+      weeklyTrendAnime,
       recommendations,
       seasonalAnime,
       aiRecommendation,
@@ -119,6 +132,7 @@ export function useRateData() {
       recommendations,
       seasonalAnime,
       trendAnime,
+      weeklyTrendAnime,
       viewMode,
     ]
   );
@@ -129,11 +143,19 @@ export function useRateData() {
       setDiscoveryMode,
       loadGenres,
       loadTrend,
+      loadWeeklyTrend,
       loadRecommendations,
       loadSeasonal,
       loadAIRecommendation,
     }),
-    [loadAIRecommendation, loadGenres, loadRecommendations, loadSeasonal, loadTrend]
+    [
+      loadAIRecommendation,
+      loadGenres,
+      loadRecommendations,
+      loadSeasonal,
+      loadTrend,
+      loadWeeklyTrend,
+    ]
   );
 
   return { state, actions };

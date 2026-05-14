@@ -3,7 +3,7 @@
 // SeasonalCarousel for Seasonal (matches "03 — Home Carousel (Seasonal)"
 // in japanwalker.pen), and a hero + ranked-list layout for Trend.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Skeleton } from '../../../components/themed';
+import { Skeleton, readableTextOn } from '../../../components/themed';
 import { GenreCarousel } from '../../../components/rate/GenreCarousel';
 import { SeasonalView } from '../../../components/rate/seasonal/SeasonalView';
 import { AIRecommendationSheet } from '../../../components/rate/AIRecommendationSheet';
@@ -27,8 +27,10 @@ import { ImageDisplaySettingsSheet } from '../../../components/rate/ImageDisplay
 import { useRateData } from '../../../components/rate/useRateData';
 import { Anime, Genre, ViewMode } from '../../../components/rate/types';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { Colors, FontFamily, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
+import { FontFamily, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
+import { clearAllDecks } from '../../../libs/services/rate/deck-cache';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import {
@@ -47,10 +49,18 @@ const MODE_OPTIONS: readonly { value: ViewMode; label: string }[] = [
   { value: 'trend', label: 'Trend' },
 ];
 
+type TrendRange = 'week' | 'all';
+
+const TREND_RANGE_OPTIONS: readonly { value: TrendRange; label: string }[] = [
+  { value: 'week', label: 'This Week' },
+  { value: 'all', label: 'All Time' },
+];
+
 const TREND_PILGRIMAGE_LIMIT = 6;
 
 export default function HomeRateScreen() {
   const { top } = useSafeAreaInsets();
+  const { theme } = useTheme();
   const { state, actions } = useRateData();
   const router = useRouter();
   const [showAI, setShowAI] = useState(false);
@@ -61,6 +71,9 @@ export default function HomeRateScreen() {
   );
   const [trendPilgrimages, setTrendPilgrimages] = useState<AnitabiBangumi[]>([]);
   const [loadingTrendPilgrimages, setLoadingTrendPilgrimages] = useState(false);
+  const [trendRange, setTrendRange] = useState<TrendRange>('week');
+
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // Hydrate swipe prefs once; the settings sheet writes back via patchSwipePrefs.
   useEffect(() => {
@@ -151,10 +164,32 @@ export default function HomeRateScreen() {
   }, [actions]);
 
   const onRefresh = useCallback(() => {
-    if (state.viewMode === 'discovery') actions.loadGenres();
+    if (state.viewMode === 'discovery') {
+      void clearAllDecks();
+      actions.loadGenres();
+    }
     if (state.viewMode === 'tracking') actions.loadSeasonal();
-    if (state.viewMode === 'trend') actions.loadTrend();
+    if (state.viewMode === 'trend') {
+      actions.loadTrend();
+      actions.loadWeeklyTrend();
+    }
   }, [actions, state.viewMode]);
+
+  const handleSeeAllAnime = useCallback(() => {
+    hapticsBridge.tap();
+    router.push({ pathname: '/trending', params: { range: trendRange } });
+  }, [router, trendRange]);
+
+  const handleSeeAllPilgrimages = useCallback(() => {
+    hapticsBridge.tap();
+    router.push('/(tabs)/pilgrimage');
+  }, [router]);
+
+  const handleTrendRangeChange = useCallback((next: TrendRange) => {
+    if (next === trendRange) return;
+    hapticsBridge.selection();
+    setTrendRange(next);
+  }, [trendRange]);
 
   const subtitle =
     state.viewMode === 'discovery'
@@ -178,10 +213,10 @@ export default function HomeRateScreen() {
             }}
             style={styles.iconButton}
             hitSlop={8}>
-            <Ionicons name="search" size={20} color={Colors.text.secondary} />
+            <Ionicons name="search" size={20} color={theme.text.secondary} />
           </Pressable>
           <Pressable onPress={handlePullAI} style={styles.iconButton} hitSlop={8}>
-            <MaterialIcons name="auto-awesome" size={22} color={Colors.primary} />
+            <MaterialIcons name="auto-awesome" size={22} color={theme.accent} />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -190,7 +225,7 @@ export default function HomeRateScreen() {
             }}
             style={styles.iconButton}
             hitSlop={8}>
-            <Ionicons name="settings-outline" size={20} color={Colors.text.secondary} />
+            <Ionicons name="settings-outline" size={20} color={theme.text.secondary} />
           </Pressable>
         </View>
       </View>
@@ -200,6 +235,7 @@ export default function HomeRateScreen() {
           options={MODE_OPTIONS}
           value={state.viewMode}
           onChange={actions.setViewMode}
+          accentColor={theme.accent}
         />
       </View>
     </View>
@@ -207,10 +243,7 @@ export default function HomeRateScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={Colors.gradients.background as [string, string, ...string[]]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
 
       <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
         <ImageDisplaySettingsSheet
@@ -229,12 +262,17 @@ export default function HomeRateScreen() {
 
         {state.viewMode === 'trend' ? (
           <TrendView
-            anime={state.trendAnime}
+            weeklyAnime={state.weeklyTrendAnime}
+            allTimeAnime={state.trendAnime}
+            range={trendRange}
+            onRangeChange={handleTrendRangeChange}
             pilgrimages={trendPilgrimages}
             loadingPilgrimages={loadingTrendPilgrimages}
             headerBlock={headerBlock}
             onAnimePress={handleAnimeSelect}
             onPilgrimagePress={handlePilgrimageSelect}
+            onSeeAllAnime={handleSeeAllAnime}
+            onSeeAllPilgrimages={handleSeeAllPilgrimages}
             onRefresh={onRefresh}
           />
         ) : (
@@ -246,7 +284,7 @@ export default function HomeRateScreen() {
             }}
             refreshControl={
               <RefreshControl
-                tintColor={Colors.text.primary}
+                tintColor={theme.text.primary}
                 refreshing={false}
                 onRefresh={onRefresh}
               />
@@ -277,26 +315,50 @@ export default function HomeRateScreen() {
 }
 
 interface TrendViewProps {
-  anime: Anime[];
+  weeklyAnime: Anime[];
+  allTimeAnime: Anime[];
+  range: TrendRange;
+  onRangeChange: (next: TrendRange) => void;
   pilgrimages: AnitabiBangumi[];
   loadingPilgrimages: boolean;
   headerBlock: React.ReactNode;
   onAnimePress: (anime: Anime) => void;
   onPilgrimagePress: (pilgrim: AnitabiBangumi) => void;
+  onSeeAllAnime: () => void;
+  onSeeAllPilgrimages: () => void;
   onRefresh: () => void;
 }
 
 function TrendView({
-  anime,
+  weeklyAnime,
+  allTimeAnime,
+  range,
+  onRangeChange,
   pilgrimages,
   loadingPilgrimages,
   headerBlock,
   onAnimePress,
   onPilgrimagePress,
+  onSeeAllAnime,
+  onSeeAllPilgrimages,
   onRefresh,
 }: TrendViewProps) {
-  const hero = anime[0];
-  const rest = anime.slice(1, 10);
+  const { theme } = useTheme();
+  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
+
+  const anime = range === 'week' ? weeklyAnime : allTimeAnime;
+  // Hero anchors to "This Week #1" so the headline stays current even when the
+  // user is browsing the all-time list below.
+  const hero = weeklyAnime[0] ?? allTimeAnime[0];
+  const rest = anime.slice(0, 10);
+  const sectionTitle =
+    range === 'week'
+      ? `Top ${Math.min(10, rest.length)} This Week`
+      : `Top ${Math.min(10, rest.length)} All Time`;
+  const sectionSubtitle =
+    range === 'week'
+      ? 'What everyone is watching right now'
+      : 'Highest popularity across all seasons';
 
   return (
     <ScrollView
@@ -305,7 +367,7 @@ function TrendView({
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
-          tintColor={Colors.text.primary}
+          tintColor={theme.text.primary}
           refreshing={false}
           onRefresh={onRefresh}
         />
@@ -325,18 +387,33 @@ function TrendView({
       {rest.length > 0 ? (
         <View style={trendStyles.section}>
           <View style={trendStyles.sectionHead}>
-            <View>
-              <Text style={trendStyles.sectionTitle}>Top {Math.min(10, anime.length)} This Week</Text>
-              <Text style={trendStyles.sectionSubtitle}>Most viewed across the community</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={trendStyles.sectionTitle}>{sectionTitle}</Text>
+              <Text style={trendStyles.sectionSubtitle}>{sectionSubtitle}</Text>
             </View>
-            <Text style={trendStyles.sectionLink}>See all</Text>
+            <Pressable
+              onPress={onSeeAllAnime}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="See all trending anime"
+              style={({ pressed }) => [trendStyles.seeAllBtn, pressed && { opacity: 0.6 }]}>
+              <Text style={trendStyles.sectionLink}>See all</Text>
+              <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+            </Pressable>
+          </View>
+          <View style={trendStyles.rangePillRow}>
+            <TrendRangePill
+              options={TREND_RANGE_OPTIONS}
+              value={range}
+              onChange={onRangeChange}
+            />
           </View>
           <View style={trendStyles.list}>
             {rest.map((item, idx) => (
               <CompactRankRow
-                key={`compact-${item.id}`}
+                key={`compact-${range}-${item.id}`}
                 anime={item}
-                rank={idx + 2}
+                rank={idx + 1}
                 onPress={() => onAnimePress(item)}
               />
             ))}
@@ -350,13 +427,21 @@ function TrendView({
             <View style={trendStyles.titleRow}>
               <Text style={trendStyles.sectionTitle}>Trending Pilgrimages</Text>
               <View style={trendStyles.trendBadge}>
-                <Ionicons name="trending-up" size={10} color={Colors.primary} />
+                <Ionicons name="trending-up" size={10} color={theme.accent} />
                 <Text style={trendStyles.trendBadgeText}>HOT</Text>
               </View>
             </View>
             <Text style={trendStyles.sectionSubtitle}>Real-world anime locations to visit</Text>
           </View>
-          <Text style={trendStyles.sectionLink}>See all</Text>
+          <Pressable
+            onPress={onSeeAllPilgrimages}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="See all pilgrimages"
+            style={({ pressed }) => [trendStyles.seeAllBtn, pressed && { opacity: 0.6 }]}>
+            <Text style={trendStyles.sectionLink}>See all</Text>
+            <Ionicons name="chevron-forward" size={14} color={theme.accent} />
+          </Pressable>
         </View>
         {loadingPilgrimages && pilgrimages.length === 0 ? (
           <Skeleton.AnimeCardList horizontal count={4} paddingHorizontal={16} />
@@ -384,12 +469,58 @@ function TrendView({
   );
 }
 
+interface TrendRangePillProps {
+  options: readonly { value: TrendRange; label: string }[];
+  value: TrendRange;
+  onChange: (next: TrendRange) => void;
+}
+
+function TrendRangePill({ options, value, onChange }: TrendRangePillProps) {
+  const { theme } = useTheme();
+  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
+  const activeFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
+  return (
+    <View style={trendStyles.rangePill}>
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <Pressable
+            key={opt.value}
+            onPress={() => onChange(opt.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={opt.label}
+            hitSlop={6}
+            style={({ pressed }) => [
+              trendStyles.rangePillItem,
+              active && { backgroundColor: theme.accent },
+              pressed && !active && { opacity: 0.7 },
+            ]}>
+            <Text
+              style={[
+                trendStyles.rangePillText,
+                active
+                  ? { color: activeFg, fontWeight: '700' }
+                  : { color: theme.text.secondary },
+              ]}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 interface TrendingHeroCardProps {
   anime: Anime;
   onPress: () => void;
 }
 
 function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
+  const { theme } = useTheme();
+  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
+  const accentFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
   const score = anime.score != null ? formatScore(anime.score) : null;
   const description = anime.description?.replace(/<[^>]+>/g, '').trim();
   return (
@@ -414,7 +545,7 @@ function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
       <View style={trendStyles.heroContent}>
         <View style={trendStyles.heroBadgeRow}>
           <View style={trendStyles.trendBadge}>
-            <Ionicons name="trending-up" size={11} color={Colors.primary} />
+            <Ionicons name="trending-up" size={11} color={theme.accent} />
             <Text style={trendStyles.trendBadgeText}>TRENDING #1</Text>
           </View>
           {anime.episodes ? (
@@ -423,7 +554,7 @@ function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
           {anime.status ? <Text style={trendStyles.heroMeta}>· {anime.status}</Text> : null}
           {score ? (
             <View style={trendStyles.heroScore}>
-              <Ionicons name="star" size={11} color={Colors.primary} />
+              <Ionicons name="star" size={11} color={theme.accent} />
               <Text style={trendStyles.heroScoreText}>{score}</Text>
             </View>
           ) : null}
@@ -442,8 +573,8 @@ function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
             style={({ pressed }) => [trendStyles.heroPrimaryBtn, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
             accessibilityLabel="Open detail">
-            <Ionicons name="play" size={14} color="#000" />
-            <Text style={trendStyles.heroPrimaryText}>Open</Text>
+            <Ionicons name="play" size={14} color={accentFg} />
+            <Text style={[trendStyles.heroPrimaryText, { color: accentFg }]}>Open</Text>
           </Pressable>
           <Pressable
             onPress={(e) => {
@@ -453,7 +584,7 @@ function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
             style={({ pressed }) => [trendStyles.heroIconBtn, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
             accessibilityLabel="Bookmark">
-            <Ionicons name="bookmark-outline" size={18} color={Colors.text.primary} />
+            <Ionicons name="bookmark-outline" size={18} color={theme.text.primary} />
           </Pressable>
         </View>
       </View>
@@ -468,6 +599,8 @@ interface CompactRankRowProps {
 }
 
 function CompactRankRow({ anime, rank, onPress }: CompactRankRowProps) {
+  const { theme } = useTheme();
+  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
   const score = anime.score != null ? formatScore(anime.score) : null;
   return (
     <Pressable
@@ -496,13 +629,13 @@ function CompactRankRow({ anime, rank, onPress }: CompactRankRowProps) {
           ) : null}
           {score ? (
             <View style={trendStyles.rankScore}>
-              <Ionicons name="star" size={10} color={Colors.primary} />
+              <Ionicons name="star" size={10} color={theme.accent} />
               <Text style={trendStyles.rankScoreText}>{score}</Text>
             </View>
           ) : null}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.text.tertiary} />
+      <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
     </Pressable>
   );
 }
@@ -514,7 +647,10 @@ interface TrendingPilgrimageCardProps {
 }
 
 function TrendingPilgrimageCard({ pilgrim, rank, onPress }: TrendingPilgrimageCardProps) {
-  const themeColor = pilgrim.color || Colors.primary;
+  const { theme } = useTheme();
+  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
+  const themeColor = pilgrim.color || theme.accent;
+  const spotPillFg = useMemo(() => readableTextOn(themeColor), [themeColor]);
   return (
     <Pressable
       onPress={onPress}
@@ -531,7 +667,7 @@ function TrendingPilgrimageCard({ pilgrim, rank, onPress }: TrendingPilgrimageCa
           recyclingKey={String(pilgrim.id)}
         />
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background.secondary }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.secondary }]} />
       )}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.92)']}
@@ -542,8 +678,10 @@ function TrendingPilgrimageCard({ pilgrim, rank, onPress }: TrendingPilgrimageCa
         <Text style={[trendStyles.pilgrimageRankText, { color: themeColor }]}>#{rank}</Text>
       </View>
       <View style={[trendStyles.pilgrimageSpotPill, { backgroundColor: `${themeColor}E6` }]}>
-        <Ionicons name="location" size={10} color="#000" />
-        <Text style={trendStyles.pilgrimageSpotText}>{pilgrim.pointsLength} spots</Text>
+        <Ionicons name="location" size={10} color={spotPillFg} />
+        <Text style={[trendStyles.pilgrimageSpotText, { color: spotPillFg }]}>
+          {pilgrim.pointsLength} spots
+        </Text>
       </View>
       <View style={trendStyles.pilgrimageInfo}>
         <Text style={trendStyles.pilgrimageTitle} numberOfLines={1}>
@@ -551,7 +689,7 @@ function TrendingPilgrimageCard({ pilgrim, rank, onPress }: TrendingPilgrimageCa
         </Text>
         {pilgrim.city ? (
           <View style={trendStyles.pilgrimageCityRow}>
-            <Ionicons name="map" size={10} color={Colors.text.secondary} />
+            <Ionicons name="map" size={10} color={theme.text.secondary} />
             <Text style={trendStyles.pilgrimageCity} numberOfLines={1}>
               {pilgrim.city}
             </Text>
@@ -567,338 +705,370 @@ function formatScore(score: number): string {
   return score.toFixed(1);
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background.primary,
-  },
-  safe: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  appTitle: {
-    ...Typography.headlineLarge,
-    fontFamily: FontFamily.rounded,
-    color: Colors.text.primary,
-  },
-  appSubtitle: {
-    ...Typography.bodySmall,
-    color: Colors.text.secondary,
-    marginTop: 2,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modeSelectorRow: {
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  discoveryWrap: {
-    paddingTop: 0,
-  },
-  trackingWrap: {
-    paddingTop: Spacing.xs,
-    minHeight: 500,
-  },
-});
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: theme.background.primary,
+    },
+    safe: {
+      flex: 1,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    appTitle: {
+      ...Typography.headlineLarge,
+      fontFamily: FontFamily.rounded,
+      color: theme.text.primary,
+    },
+    appSubtitle: {
+      ...Typography.bodySmall,
+      color: theme.text.secondary,
+      marginTop: 2,
+    },
+    headerIcons: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    iconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modeSelectorRow: {
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    discoveryWrap: {
+      paddingTop: 0,
+    },
+    trackingWrap: {
+      paddingTop: Spacing.xs,
+      minHeight: 500,
+    },
+  });
 
-const trendStyles = StyleSheet.create({
-  heroWrap: {
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  heroPlaceholder: {
-    height: 220,
-    borderRadius: Radius.cardLg,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.medium,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholderText: {
-    color: Colors.text.secondary,
-    ...Typography.bodyMedium,
-  },
-  heroCard: {
-    height: 380,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.background.secondary,
-    justifyContent: 'flex-end',
-  },
-  heroContent: {
-    padding: 18,
-    gap: 10,
-  },
-  heroBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  trendBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 159, 10, 0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.65)',
-  },
-  trendBadgeText: {
-    color: Colors.primary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  heroMeta: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  heroScore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  heroScoreText: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  heroTitle: {
-    color: Colors.text.primary,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 32,
-    letterSpacing: 0.2,
-  },
-  heroDescription: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  heroActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
-  },
-  heroPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-  },
-  heroPrimaryText: {
-    color: '#000',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  heroIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(40, 40, 44, 0.78)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  section: {
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.lg,
-  },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  sectionTitle: {
-    color: Colors.text.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  sectionSubtitle: {
-    color: Colors.text.tertiary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  sectionLink: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-    paddingTop: 2,
-  },
-  list: {
-    paddingHorizontal: Spacing.md,
-    gap: 10,
-  },
+const makeTrendStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    heroWrap: {
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    heroPlaceholder: {
+      height: 220,
+      borderRadius: Radius.cardLg,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    placeholderText: {
+      color: theme.text.secondary,
+      ...Typography.bodyMedium,
+    },
+    heroCard: {
+      height: 380,
+      borderRadius: Radius.xl,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+      justifyContent: 'flex-end',
+    },
+    heroContent: {
+      padding: 18,
+      gap: 10,
+    },
+    heroBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    trendBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: `${theme.accent}29`,
+      borderWidth: 1,
+      borderColor: `${theme.accent}A6`,
+    },
+    trendBadgeText: {
+      color: theme.accent,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+    },
+    heroMeta: {
+      color: theme.text.secondary,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    heroScore: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    heroScoreText: {
+      color: theme.accent,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    heroTitle: {
+      color: theme.text.primary,
+      fontSize: 28,
+      fontWeight: '800',
+      lineHeight: 32,
+      letterSpacing: 0.2,
+    },
+    heroDescription: {
+      color: theme.text.secondary,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    heroActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 6,
+    },
+    heroPrimaryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 22,
+      backgroundColor: theme.accent,
+    },
+    heroPrimaryText: {
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    heroIconBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.background.tertiary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    section: {
+      marginTop: Spacing.xs,
+      marginBottom: Spacing.lg,
+    },
+    sectionHead: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    sectionTitle: {
+      color: theme.text.primary,
+      fontSize: 18,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    sectionSubtitle: {
+      color: theme.text.tertiary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    sectionLink: {
+      color: theme.accent,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    seeAllBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      paddingVertical: 4,
+      paddingLeft: 8,
+    },
+    rangePillRow: {
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+    },
+    rangePill: {
+      flexDirection: 'row',
+      alignSelf: 'flex-start',
+      padding: 3,
+      borderRadius: 999,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      gap: 2,
+    },
+    rangePillItem: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rangePillText: {
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 0.1,
+    },
+    list: {
+      paddingHorizontal: Spacing.md,
+      gap: 10,
+    },
 
-  // Compact rank row
-  rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  rankNumber: {
-    color: Colors.text.tertiary,
-    fontSize: 22,
-    fontWeight: '800',
-    fontFamily: FontFamily.rounded,
-    minWidth: 28,
-  },
-  rankThumb: {
-    width: 48,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: Colors.background.tertiary,
-  },
-  rankBody: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  rankTitle: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  rankMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  rankTag: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  rankScore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  rankScoreText: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
+    // Compact rank row
+    rankRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: Radius.lg,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    rankNumber: {
+      color: theme.text.tertiary,
+      fontSize: 22,
+      fontWeight: '800',
+      fontFamily: FontFamily.rounded,
+      minWidth: 28,
+    },
+    rankThumb: {
+      width: 48,
+      height: 64,
+      borderRadius: 8,
+      backgroundColor: theme.background.tertiary,
+    },
+    rankBody: {
+      flex: 1,
+      minWidth: 0,
+      gap: 4,
+    },
+    rankTitle: {
+      color: theme.text.primary,
+      fontSize: 14,
+      fontWeight: '700',
+      lineHeight: 18,
+    },
+    rankMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    rankTag: {
+      color: theme.text.secondary,
+      fontSize: 11,
+      fontWeight: '500',
+    },
+    rankScore: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    rankScoreText: {
+      color: theme.accent,
+      fontSize: 11,
+      fontWeight: '700',
+    },
 
-  // Pilgrimage card
-  pilgrimageList: {
-    paddingHorizontal: Spacing.md,
-    gap: 12,
-  },
-  pilgrimageEmpty: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-  },
-  pilgrimageCard: {
-    width: 230,
-    height: 200,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    justifyContent: 'flex-end',
-  },
-  pilgrimageRankPill: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderWidth: 1,
-  },
-  pilgrimageRankText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  pilgrimageSpotPill: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  pilgrimageSpotText: {
-    color: '#000',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  pilgrimageInfo: {
-    padding: 12,
-    gap: 4,
-  },
-  pilgrimageTitle: {
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  pilgrimageCityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  pilgrimageCity: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-});
+    // Pilgrimage card
+    pilgrimageList: {
+      paddingHorizontal: Spacing.md,
+      gap: 12,
+    },
+    pilgrimageEmpty: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.lg,
+      alignItems: 'center',
+    },
+    pilgrimageCard: {
+      width: 230,
+      height: 200,
+      borderRadius: Radius.lg,
+      overflow: 'hidden',
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      justifyContent: 'flex-end',
+    },
+    pilgrimageRankPill: {
+      position: 'absolute',
+      top: 10,
+      left: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      borderWidth: 1,
+    },
+    pilgrimageRankText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.5,
+    },
+    pilgrimageSpotPill: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    pilgrimageSpotText: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    pilgrimageInfo: {
+      padding: 12,
+      gap: 4,
+    },
+    pilgrimageTitle: {
+      color: theme.text.primary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    pilgrimageCityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    pilgrimageCity: {
+      color: theme.text.secondary,
+      fontSize: 11,
+      fontWeight: '500',
+    },
+  });

@@ -2,12 +2,13 @@
 // Image fills the card, gradient fades the bottom, big title + "Tap to Explore" hint.
 
 import { Image } from 'expo-image';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
+import { FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 
 type Props = {
   title: string;
@@ -29,6 +30,8 @@ function GenreCardComponent({
   height,
 }: Props) {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handlePress = () => {
     if (onPress) {
@@ -60,7 +63,7 @@ function GenreCardComponent({
           />
         ) : (
           <View style={styles.placeholder}>
-            <MaterialIcons name="image" size={48} color={Colors.text.tertiary} />
+            <MaterialIcons name="image" size={48} color={theme.text.tertiary} />
           </View>
         )}
 
@@ -83,68 +86,71 @@ function GenreCardComponent({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    width: 280,
-    aspectRatio: 3 / 5,
-    borderRadius: Radius.xxl,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-    ...Shadow.medium,
-  },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.glass.dark,
-  },
-  gradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '55%',
-  },
-  content: {
-    position: 'absolute',
-    bottom: 28,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  title: {
-    color: Colors.text.primary,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-    fontFamily: FontFamily.rounded,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  hint: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 10,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
-    letterSpacing: 0.4,
-  },
-});
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    card: {
+      width: 280,
+      aspectRatio: 3 / 5,
+      borderRadius: Radius.xxl,
+      overflow: 'hidden',
+      backgroundColor: theme.background.secondary,
+      ...Shadow.medium,
+    },
+    imageContainer: {
+      width: '100%',
+      height: '100%',
+      position: 'relative',
+    },
+    image: {
+      width: '100%',
+      height: '100%',
+    },
+    placeholder: {
+      width: '100%',
+      height: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.background.tertiary,
+    },
+    gradient: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: '55%',
+    },
+    content: {
+      position: 'absolute',
+      bottom: 28,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 20,
+      alignItems: 'center',
+    },
+    // Card text sits on a dark gradient overlay above the poster image — white
+    // is universally legible there, no theme override needed.
+    title: {
+      color: '#FFFFFF',
+      fontSize: 28,
+      fontWeight: '800',
+      letterSpacing: 1.5,
+      textAlign: 'center',
+      fontFamily: FontFamily.rounded,
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 8,
+    },
+    hint: {
+      color: 'rgba(255,255,255,0.75)',
+      fontSize: 13,
+      fontWeight: '500',
+      marginTop: 10,
+      fontFamily: Platform.select({
+        ios: 'System',
+        android: 'Roboto',
+      }),
+      letterSpacing: 0.4,
+    },
+  });
 
 export const GenreCard = memo(GenreCardComponent);

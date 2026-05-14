@@ -1,4 +1,4 @@
-import { ReactElement, forwardRef, useImperativeHandle, useMemo, useState } from 'react';
+import { ReactElement, forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,6 +11,10 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { getAdUnitId } from '../../libs/services/ads/ad-config';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import {
+  getStackRevealTranslation,
+  SWIPE_HANDOFF_DELAY_MS,
+} from '../../libs/services/rate/swipe-animation';
 
 type BannerProps = {
   unitId: string;
@@ -61,6 +65,12 @@ export const NativeAdCard = forwardRef<NativeAdCardRef, Props>(
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
     const rotate = useSharedValue(0);
+    const handOffSwipe = useCallback(
+      (direction: 'left' | 'right') => {
+        setTimeout(() => onSwipe(direction), SWIPE_HANDOFF_DELAY_MS);
+      },
+      [onSwipe]
+    );
 
     const flingOut = (direction: 'left' | 'right', velocityX: number) => {
       const targetX = direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
@@ -71,13 +81,12 @@ export const NativeAdCard = forwardRef<NativeAdCardRef, Props>(
           damping: 20,
           stiffness: 120,
           overshootClamping: true,
-        },
-        () => scheduleOnRN(onSwipe, direction)
+        }
       );
       if (activeTranslation) {
-        activeTranslation.value = withSpring(0, {
-          damping: 12,
-          stiffness: 280,
+        activeTranslation.value = withSpring(getStackRevealTranslation(direction), {
+          damping: 20,
+          stiffness: 120,
           overshootClamping: true,
         });
       }
@@ -87,6 +96,7 @@ export const NativeAdCard = forwardRef<NativeAdCardRef, Props>(
         stiffness: 120,
       });
       translateY.value = withSpring(-50, { damping: 20, stiffness: 120 });
+      handOffSwipe(direction);
     };
 
     useImperativeHandle(ref, () => ({
@@ -127,7 +137,7 @@ export const NativeAdCard = forwardRef<NativeAdCardRef, Props>(
               scheduleOnRN(resetPosition);
             }
           }),
-      [isTop, activeTranslation] // eslint-disable-line react-hooks/exhaustive-deps
+      [isTop, activeTranslation, handOffSwipe]
     );
 
     const animatedStyle = useAnimatedStyle(() => ({

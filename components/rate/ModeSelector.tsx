@@ -3,7 +3,7 @@
 // readable text on top of `accentColor` so light accents (gold, pastel cyan)
 // stay legible.
 
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { View, Text, Pressable, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -15,7 +15,8 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Colors, FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
+import { FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -50,8 +51,12 @@ function ModeSelectorComponent<T extends string = string>({
   value,
   onChange,
   horizontalMargin = 16,
-  accentColor = Colors.primary,
+  accentColor,
 }: ModeSelectorProps<T>) {
+  const { theme, effectiveMode } = useTheme();
+  const resolvedAccent = accentColor ?? theme.accent;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const blurTint = effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
   const { width: screenWidth } = useWindowDimensions();
   const innerWidth = Math.max(0, screenWidth - horizontalMargin * 2 - PILL_INNER_PADDING * 2);
   const segmentWidth = options.length > 0 ? innerWidth / options.length : 0;
@@ -60,7 +65,7 @@ function ModeSelectorComponent<T extends string = string>({
     options.findIndex((o) => o.value === value)
   );
 
-  const activeFg = readableTextOn(accentColor);
+  const activeFg = readableTextOn(resolvedAccent);
 
   const translateX = useSharedValue(activeIndex * segmentWidth);
   const pressScale = useSharedValue(1);
@@ -84,7 +89,7 @@ function ModeSelectorComponent<T extends string = string>({
   return (
     <View style={[styles.pill, { borderRadius: Radius.tabBar }]}>
       {Platform.OS === 'ios' ? (
-        <BlurView intensity={40} tint="systemThickMaterialDark" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={40} tint={blurTint} style={StyleSheet.absoluteFill} />
       ) : null}
       <View style={styles.pillBackground} pointerEvents="none" />
       <View style={[styles.pillBorder, { borderRadius: Radius.tabBar }]} pointerEvents="none" />
@@ -94,7 +99,7 @@ function ModeSelectorComponent<T extends string = string>({
           pointerEvents="none"
           style={[
             styles.indicator,
-            { backgroundColor: accentColor, ...Shadow.glow(accentColor) },
+            { backgroundColor: resolvedAccent, ...Shadow.glow(resolvedAccent) },
             indicatorStyle,
           ]}
         />
@@ -104,6 +109,8 @@ function ModeSelectorComponent<T extends string = string>({
             option={option}
             isActive={option.value === value}
             activeFg={activeFg}
+            inactiveColor={theme.text.secondary}
+            inactiveIconColor={theme.text.tertiary}
             index={index}
             translateX={translateX}
             segmentWidth={segmentWidth}
@@ -121,6 +128,8 @@ interface SegmentProps {
   option: ModeSelectorOption;
   isActive: boolean;
   activeFg: string;
+  inactiveColor: string;
+  inactiveIconColor: string;
   index: number;
   translateX: SharedValue<number>;
   segmentWidth: number;
@@ -133,6 +142,8 @@ function Segment({
   option,
   isActive,
   activeFg,
+  inactiveColor,
+  inactiveIconColor,
   index,
   translateX,
   segmentWidth,
@@ -140,6 +151,8 @@ function Segment({
   onPressIn,
   onPressOut,
 }: SegmentProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   // Derive a 0→1 progress from the indicator's distance to this segment so the
   // label/icon colour and opacity blend smoothly as the indicator slides across,
   // rather than snapping when activeIndex changes.
@@ -156,11 +169,7 @@ function Segment({
   }));
 
   const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(
-      progress.value,
-      [0, 1],
-      [Colors.text.secondary, activeFg]
-    ),
+    color: interpolateColor(progress.value, [0, 1], [inactiveColor, activeFg]),
   }));
 
   const arrowStyle = useAnimatedStyle(() => ({
@@ -189,7 +198,7 @@ function Segment({
       {option.icon ? (
         <View style={styles.iconWrap}>
           <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, inactiveIconWrap]}>
-            <Ionicons name={option.icon} size={16} color={Colors.text.tertiary} />
+            <Ionicons name={option.icon} size={16} color={inactiveIconColor} />
           </Animated.View>
           <Animated.View style={[styles.iconCenter, iconStyle, activeIconWrap]}>
             <Ionicons name={option.icon} size={16} color={activeFg} />
@@ -206,62 +215,65 @@ function Segment({
   );
 }
 
-const styles = StyleSheet.create({
-  pill: {
-    height: PILL_HEIGHT,
-    paddingHorizontal: PILL_INNER_PADDING,
-    overflow: 'hidden',
-    ...Shadow.subtle,
-  },
-  pillBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20,20,22,0.72)',
-  },
-  pillBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  row: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    justifyContent: 'space-between',
-  },
-  indicator: {
-    position: 'absolute',
-    top: INDICATOR_INSET,
-    bottom: INDICATOR_INSET,
-    left: INDICATOR_INSET,
-    borderRadius: Radius.tabActive,
-  },
-  segment: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-  },
-  iconWrap: {
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.2,
-  },
-  arrow: {
-    marginLeft: 2,
-  },
-});
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    pill: {
+      height: PILL_HEIGHT,
+      paddingHorizontal: PILL_INNER_PADDING,
+      overflow: 'hidden',
+      ...Shadow.subtle,
+    },
+    pillBackground: {
+      ...StyleSheet.absoluteFillObject,
+      // 72% alpha overlay tinted by the theme's secondary surface so the pill
+      // visibly belongs to the active palette (orange-warm vs. blue-cool, etc.)
+      backgroundColor: `${theme.background.secondary}B8`,
+    },
+    pillBorder: {
+      ...StyleSheet.absoluteFillObject,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    row: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      justifyContent: 'space-between',
+    },
+    indicator: {
+      position: 'absolute',
+      top: INDICATOR_INSET,
+      bottom: INDICATOR_INSET,
+      left: INDICATOR_INSET,
+      borderRadius: Radius.tabActive,
+    },
+    segment: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: 8,
+    },
+    iconWrap: {
+      width: 18,
+      height: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconCenter: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '700',
+      fontFamily: FontFamily.rounded,
+      letterSpacing: 0.2,
+    },
+    arrow: {
+      marginLeft: 2,
+    },
+  });
 
 export const ModeSelector = memo(ModeSelectorComponent) as typeof ModeSelectorComponent;

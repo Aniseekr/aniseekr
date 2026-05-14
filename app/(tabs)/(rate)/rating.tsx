@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { PhotoCard, PhotoCardRef } from '../../../components/rate/PhotoCard';
-import { Photo } from '../../../components/rate/types';
+import { Photo, DeckItem } from '../../../components/rate/types';
 import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { NativeAdCard, NativeAdCardRef } from '../../../components/ads/NativeAdCard';
 import { isAdSlotEnabled } from '../../../libs/services/ads/ad-config';
@@ -26,8 +26,18 @@ import {
   type SwipePrefs,
 } from '../../../libs/services/user-prefs';
 import { useTheme } from '../../../context/ThemeContext';
-import { readableTextOn } from '../../../components/themed';
+import { readableTextOn, Skeleton } from '../../../components/themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { getDeck, putDeck, clearDeck } from '../../../libs/services/rate/deck-cache';
+import { setOverride as setGenreCoverOverride } from '../../../libs/services/rate/genre-cover-override';
+import {
+  hasPotentialNextSwipePage,
+  isExhaustedSwipeDeck,
+} from '../../../libs/services/rate/swipe-pagination';
+import {
+  STACK_REVEAL_DISTANCE,
+  SWIPE_PERSISTENCE_DELAY_MS,
+} from '../../../libs/services/rate/swipe-animation';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -44,9 +54,6 @@ const CARD_STACK_SPACING = 10;
 const CARD_SCALE_RATIO = 0.05;
 const AD_INTERVAL = 12;
 const PREFETCH_THRESHOLD = 5;
-const GENRE_PER_PAGE = 20;
-const SEASONAL_PER_PAGE = 50;
-
 // Card sizing — baseline 1:7:1 horizontal ratio, scaled up 1.15x in width so
 // the deck reads as the primary surface. Vertical paddings stay at baseline
 // (bottom padding fully restored) so the card never overlaps the bottom
@@ -59,8 +66,6 @@ const BASE_CARD_WIDTH = (SCREEN_WIDTH * 7) / 9;
 const CARD_HORIZONTAL_PADDING = (SCREEN_WIDTH - BASE_CARD_WIDTH * CARD_SCALE) / 2;
 const CARD_PADDING_TOP = 92;
 const CARD_PADDING_BOTTOM = BASE_CARD_PADDING_BOTTOM;
-
-type DeckItem = { kind: 'photo'; photo: Photo } | { kind: 'ad'; id: string };
 
 function buildDeck(photos: Photo[], includeAds: boolean): DeckItem[] {
   if (!includeAds) return photos.map((photo) => ({ kind: 'photo', photo }));
@@ -120,6 +125,25 @@ async function applyOutcome(photo: Photo, rating: RatingType): Promise<void> {
   } catch (err) {
     console.warn('[Rating] applyOutcome failed', err);
   }
+}
+
+const swipePersistenceQueue: Array<{ photo: Photo; rating: RatingType }> = [];
+let swipePersistenceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleSwipePersistence(photo: Photo, rating: RatingType): void {
+  swipePersistenceQueue.push({ photo, rating });
+  if (swipePersistenceTimer) clearTimeout(swipePersistenceTimer);
+
+  swipePersistenceTimer = setTimeout(() => {
+    swipePersistenceTimer = null;
+    const jobs = swipePersistenceQueue.splice(0);
+    InteractionManager.runAfterInteractions(() => {
+      for (const job of jobs) {
+        void applyOutcome(job.photo, job.rating);
+        void LocalDB.markSwipeSeen(job.photo.id);
+      }
+    });
+  }, SWIPE_PERSISTENCE_DELAY_MS);
 }
 
 type ModeOption = {
@@ -204,9 +228,42 @@ export default function RatingScreen() {
         seenIdsRef.current = seen;
       } catch (err) {
         console.warn('[Rating] failed to hydrate seen ids', err);
-      } finally {
-        if (!cancelled) await loadPhotos();
       }
+
+      // Try the per-genre deck cache first so the user resumes where they left
+      // off without flashing the skeleton and without re-hitting AniList.
+      // Skips for the single-anime path (no deck to persist) and for the
+      // seasonal path (genreId undefined).
+      if (params.genreId && !params.animeId) {
+        try {
+          const snapshot = await getDeck(params.genreId);
+          if (cancelled) return;
+          if (snapshot && snapshot.deck.length > 0) {
+            if (
+              isExhaustedSwipeDeck({
+                deckLength: snapshot.deck.length,
+                currentIndex: snapshot.currentIndex,
+                hasMore: snapshot.hasMore,
+              })
+            ) {
+              await clearDeck(params.genreId);
+            } else {
+              setPhotos(snapshot.photos);
+              setDeck(snapshot.deck);
+              setCurrentIndex(snapshot.currentIndex);
+              setCurrentPage(snapshot.currentPage);
+              setHasMore(snapshot.hasMore);
+              activeTranslationX.value = 0;
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('[Rating] cache hydrate failed', err);
+        }
+      }
+
+      if (!cancelled) await loadPhotos();
     })();
     return () => {
       cancelled = true;
@@ -218,6 +275,8 @@ export default function RatingScreen() {
     try {
       let animeList;
       let nextHasMore = true;
+      // Dynamic loading guard: deck filters run after the API fetch, so a
+      // short non-empty source page is not an end-of-list signal.
       if (params.animeId) {
         // Direct rating of a single anime — bypass the seen filter so the user
         // can still re-rate an item they explicitly opened.
@@ -226,10 +285,10 @@ export default function RatingScreen() {
         nextHasMore = false;
       } else if (params.genreId) {
         animeList = await AnimeRepository.getAnimeByGenre(params.genreId, 1);
-        nextHasMore = animeList.length >= GENRE_PER_PAGE;
+        nextHasMore = hasPotentialNextSwipePage(animeList.length);
       } else {
         animeList = await AnimeRepository.getSeasonalAnime(undefined, undefined, 1);
-        nextHasMore = animeList.length >= SEASONAL_PER_PAGE;
+        nextHasMore = hasPotentialNextSwipePage(animeList.length);
       }
       const seen = seenIdsRef.current;
       const isAnimeIdPath = !!params.animeId;
@@ -247,6 +306,14 @@ export default function RatingScreen() {
       setCurrentPage(1);
       setHasMore(nextHasMore);
       activeTranslationX.value = 0;
+
+      // Q3: backfill the Discovery carousel's cover for this genre. The merge
+      // step in getGenres only honors the override when the AniList cover came
+      // back '', so writing every time is harmless and keeps the override
+      // fresh as content rotates.
+      if (params.genreId && validPhotos[0]?.url) {
+        void setGenreCoverOverride(params.genreId, validPhotos[0].url);
+      }
     } catch (error) {
       console.error('Failed to load photos:', error);
     } finally {
@@ -263,12 +330,14 @@ export default function RatingScreen() {
     try {
       let animeList;
       let nextHasMore = true;
+      // Same guard as the initial load: only an empty source page should stop
+      // category/seasonal swipe pagination.
       if (params.genreId) {
         animeList = await AnimeRepository.getAnimeByGenre(params.genreId, nextPage);
-        nextHasMore = animeList.length >= GENRE_PER_PAGE;
+        nextHasMore = hasPotentialNextSwipePage(animeList.length);
       } else {
         animeList = await AnimeRepository.getSeasonalAnime(undefined, undefined, nextPage);
-        nextHasMore = animeList.length >= SEASONAL_PER_PAGE;
+        nextHasMore = hasPotentialNextSwipePage(animeList.length);
       }
 
       const existingIds = new Set(photos.map((p) => p.id));
@@ -309,12 +378,15 @@ export default function RatingScreen() {
 
   useEffect(() => {
     if (loading || loadingMore || !hasMore) return;
-    if (deck.length === 0) return;
     const remaining = deck.length - currentIndex;
     if (remaining <= PREFETCH_THRESHOLD) {
       void loadMorePhotos();
     }
   }, [currentIndex, deck.length, hasMore, loading, loadingMore, loadMorePhotos]);
+
+  useEffect(() => {
+    activeTranslationX.value = 0;
+  }, [activeTranslationX, currentIndex]);
 
   const visibleCardIndices = useMemo(() => {
     const maxIndex = Math.min(currentIndex + MAX_VISIBLE_CARDS, deck.length);
@@ -333,6 +405,55 @@ export default function RatingScreen() {
     }
   }, [currentIndex, deck]);
 
+  // Persist the current deck snapshot any time the user moves through it. The
+  // service debounces SQLite writes by 500ms, but the in-memory layer is
+  // updated synchronously so an immediate re-entry into this genre hydrates
+  // with no flash. Disabled for the single-anime path — nothing to resume.
+  useEffect(() => {
+    if (loading) return;
+    if (!params.genreId || params.animeId) return;
+    if (deck.length === 0) return;
+    putDeck(params.genreId, {
+      photos,
+      deck,
+      currentIndex,
+      currentPage,
+      hasMore,
+      mode: swipePrefs.mode,
+      updatedAt: Date.now(),
+    });
+  }, [
+    deck,
+    photos,
+    currentIndex,
+    currentPage,
+    hasMore,
+    loading,
+    params.animeId,
+    params.genreId,
+    swipePrefs.mode,
+  ]);
+
+  // Clear the cached deck the moment the user runs out of unseen content for
+  // this genre. Without this, returning later would hydrate straight into the
+  // "all caught up" screen instead of fetching the next batch.
+  useEffect(() => {
+    if (loading || loadingMore) return;
+    if (!params.genreId || params.animeId) return;
+    if (deck.length === 0) return;
+    if (currentIndex < deck.length) return;
+    if (hasMore) return;
+    void clearDeck(params.genreId);
+  }, [
+    currentIndex,
+    deck.length,
+    hasMore,
+    loading,
+    loadingMore,
+    params.animeId,
+    params.genreId,
+  ]);
+
   const handleSwipe = useCallback(
     (direction: 'left' | 'right') => {
       const item = deck[currentIndex];
@@ -340,12 +461,11 @@ export default function RatingScreen() {
         const pending = pendingRatingRef.current;
         const rating: RatingType =
           pending ?? deriveRatingFromDirection(direction, swipePrefs.mode);
-        void applyOutcome(item.photo, rating);
         // Persist that we've shown this card, regardless of action. The next
         // session's deck filters by this set so the user resumes where they
         // left off instead of re-seeing the same items.
         seenIdsRef.current.add(item.photo.id);
-        void LocalDB.markSwipeSeen(item.photo.id);
+        scheduleSwipePersistence(item.photo, rating);
       }
       pendingRatingRef.current = null;
 
@@ -380,6 +500,30 @@ export default function RatingScreen() {
   const handleClose = useCallback(() => {
     router.back();
   }, [router]);
+
+  // Restart the current deck: clears the per-genre cache, wipes the global
+  // "seen" set so AniList items that were previously filtered out come back,
+  // and refetches from page 1. Single-anime path doesn't need this (there's
+  // only ever one card).
+  const handleRestart = useCallback(async () => {
+    hapticsBridge.tap();
+    try {
+      if (params.genreId) {
+        await clearDeck(params.genreId);
+      }
+      await LocalDB.clearSwipeSeen();
+      seenIdsRef.current = new Set();
+      setCurrentIndex(0);
+      setCurrentPage(1);
+      setHasMore(true);
+      activeTranslationX.value = 0;
+      await loadPhotos();
+    } catch (err) {
+      console.warn('[Rating] restart failed', err);
+    }
+    // loadPhotos is defined above with stable refs; intentionally not in deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.genreId]);
 
   const currentItem = deck[currentIndex];
   const currentPhoto = currentItem?.kind === 'photo' ? currentItem.photo : undefined;
@@ -431,18 +575,24 @@ export default function RatingScreen() {
       {/* Card Stack (Full Screen) */}
       <View style={styles.cardStackContainer}>
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <Ionicons name="planet" size={48} color="#666" />
-            <Text style={styles.loadingText}>Loading Anime...</Text>
+          <View style={styles.skeletonCardWrapper}>
+            <Skeleton.RatingCard />
           </View>
         ) : deck.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="images-outline" size={64} color="#666" />
-            <Text style={styles.emptyText}>No photos available</Text>
-            <Pressable onPress={handleClose} style={styles.goBackButton}>
-              <Text style={styles.goBackButtonText}>Go Back</Text>
-            </Pressable>
-          </View>
+          hasMore || loadingMore ? (
+            <View style={styles.loadingContainer}>
+              <Ionicons name="planet" size={48} color="#666" />
+              <Text style={styles.loadingText}>Loading more…</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="images-outline" size={64} color="#666" />
+              <Text style={styles.emptyText}>No photos available</Text>
+              <Pressable onPress={handleClose} style={styles.goBackButton}>
+                <Text style={styles.goBackButtonText}>Go Back</Text>
+              </Pressable>
+            </View>
+          )
         ) : currentIndex >= deck.length ? (
           hasMore || loadingMore ? (
             <View style={styles.loadingContainer}>
@@ -453,9 +603,30 @@ export default function RatingScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons name="checkmark-done-circle-outline" size={64} color="#666" />
               <Text style={styles.emptyText}>You're all caught up</Text>
-              <Pressable onPress={handleClose} style={styles.goBackButton}>
-                <Text style={styles.goBackButtonText}>Go Back</Text>
-              </Pressable>
+              <View style={styles.emptyActions}>
+                {!params.animeId ? (
+                  <Pressable
+                    onPress={handleRestart}
+                    style={[styles.restartButton, { backgroundColor: theme.accent }]}
+                    accessibilityLabel="Restart deck"
+                  >
+                    <Ionicons
+                      name="refresh"
+                      size={16}
+                      color={readableTextOn(theme.accent)}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={[styles.restartButtonText, { color: readableTextOn(theme.accent) }]}
+                    >
+                      Restart
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable onPress={handleClose} style={styles.goBackButton}>
+                  <Text style={styles.goBackButtonText}>Go Back</Text>
+                </Pressable>
+              </View>
             </View>
           )
         ) : (
@@ -555,7 +726,7 @@ function CardWrapper({
 }) {
   // Derive progress from active card translation
   const progress = useDerivedValue(() => {
-    return Math.min(Math.abs(activeTranslationX.value) / 300, 1);
+    return Math.min(Math.abs(activeTranslationX.value) / STACK_REVEAL_DISTANCE, 1);
   });
 
   // Non-linear progress for "pop" effect
@@ -709,17 +880,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
   },
+  emptyActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+  },
   goBackButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderRadius: 24,
-    marginTop: 8,
   },
   goBackButtonText: {
     color: '#000',
     fontWeight: '600',
     fontSize: 16,
+  },
+  restartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  restartButtonText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
   cardStack: {
     flex: 1,
@@ -735,6 +922,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: CARD_HORIZONTAL_PADDING,
     paddingTop: CARD_PADDING_TOP, // Space for header + mode selector
     paddingBottom: CARD_PADDING_BOTTOM, // Space for bottom overlay + action buttons
+  },
+  skeletonCardWrapper: {
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: CARD_HORIZONTAL_PADDING,
+    paddingTop: CARD_PADDING_TOP,
+    paddingBottom: CARD_PADDING_BOTTOM,
   },
   overlayContainer: {
     position: 'absolute',

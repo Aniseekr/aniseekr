@@ -214,6 +214,22 @@ function StatsDashboardBase({ style }: SkeletonStatsDashboardProps) {
 }
 export const SkeletonStatsDashboard = memo(StatsDashboardBase);
 
+// ---------- Rating card (single swipe card placeholder) — (rate)/rating ----------
+
+function SkeletonRatingCardBase({ style }: { style?: ViewStyle }) {
+  return (
+    <View style={[styles.ratingCard, style]}>
+      <ShimmerEffect width="100%" height="100%" borderRadius={Radius.xl} intensity="low" style={styles.ratingPoster} />
+      <View style={styles.ratingMeta}>
+        <ShimmerEffect width="70%" height={20} />
+        <ShimmerEffect width="45%" height={13} style={{ marginTop: 8 }} />
+        <ShimmerEffect width="55%" height={11} style={{ marginTop: 6 }} />
+      </View>
+    </View>
+  );
+}
+export const SkeletonRatingCard = memo(SkeletonRatingCardBase);
+
 // ---------- List row (avatar/rank + two lines) — hall-of-fame, persona, profile platforms ----------
 
 export interface SkeletonListRowProps extends CountProps {
@@ -353,6 +369,7 @@ export const Skeleton = {
   PosterGrid: SkeletonPosterGrid,
   HeroDetail: SkeletonHeroDetail,
   StatsDashboard: SkeletonStatsDashboard,
+  RatingCard: SkeletonRatingCard,
   ListRow: SkeletonListRow,
   MapList: SkeletonMapList,
   Timeline: SkeletonTimeline,
@@ -400,5 +417,20 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: Radius.lg,
     borderWidth: 1,
+  },
+  ratingCard: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'flex-end',
+  },
+  ratingPoster: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  ratingMeta: {
+    padding: Spacing.lg,
   },
 });

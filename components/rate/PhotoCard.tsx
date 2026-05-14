@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, Text, View, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -15,6 +15,10 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { Photo } from './types';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  getStackRevealTranslation,
+  SWIPE_HANDOFF_DELAY_MS,
+} from '../../libs/services/rate/swipe-animation';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -32,9 +36,11 @@ const LIVE_SPRING_CONFIG = {
 };
 
 // Tighter snap for cancel-back / programmatic resets — minimal bounce.
+// Stiffness ~2x baseline so the stack-card "expand into top slot" settles
+// ~30% faster (≈330ms → ≈230ms), keeping the same ζ≈0.65 damping ratio.
 const RESET_SPRING_CONFIG = {
-  damping: 22,
-  stiffness: 320,
+  damping: 30,
+  stiffness: 600,
   mass: 0.9,
   overshootClamping: false,
 };
@@ -86,6 +92,12 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
     const rotate = useSharedValue(0);
     const touchY = useSharedValue(0); // Track touch Y for smart rotation anchor
     const hasThresholdHaptic = useSharedValue(false);
+    const handOffSwipe = useCallback(
+      (direction: 'left' | 'right') => {
+        setTimeout(() => onSwipe(direction), SWIPE_HANDOFF_DELAY_MS);
+      },
+      [onSwipe]
+    );
 
     // Expose swipe method
     useImperativeHandle(ref, () => ({
@@ -121,15 +133,16 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
       const targetX = direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
 
       // Move only "self" (translateX) to fling the card out
-      translateX.value = withSpring(targetX, { ...EXIT_SPRING_CONFIG, velocity: velocityX }, () =>
-        scheduleOnRN(onSwipe, direction)
-      );
+      translateX.value = withSpring(targetX, { ...EXIT_SPRING_CONFIG, velocity: velocityX });
 
-      // 🔥 FIX 3: Reset parent value at the same time (smoothly restore background card as top card flies out)
-      // This is smoother than waiting for the next card to mount and prevents flickering
       if (activeTranslation) {
-        // 🟢 Faster reset for "snappier" background effect
-        activeTranslation.value = withSpring(0, RESET_SPRING_CONFIG);
+        // Keep the next card promoted while the current one exits. Resetting to
+        // zero here makes the stack shrink, then expand again after currentIndex
+        // advances, which feels like a blocked swipe.
+        activeTranslation.value = withSpring(
+          getStackRevealTranslation(direction),
+          EXIT_SPRING_CONFIG
+        );
       }
 
       // Rotation should also follow physics
@@ -139,6 +152,7 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
       });
 
       translateY.value = withSpring(-50, EXIT_SPRING_CONFIG);
+      handOffSwipe(direction);
     };
 
     const pan = useMemo(
@@ -147,7 +161,7 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
           .enabled(isTop)
           .onBegin((event) => {
             touchY.value = event.y;
-            pressScale.value = withSpring(0.96, { damping: 10, stiffness: 300 }); // Quick response
+            pressScale.value = withSpring(0.96, { damping: 14, stiffness: 600 }); // ~30% snappier
             scheduleOnRN(hapticsBridge.selectionSoft); // Soft "snapping" feel
             hasThresholdHaptic.value = false;
           })
@@ -215,9 +229,9 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
             hasThresholdHaptic.value = false;
           })
           .onFinalize(() => {
-            pressScale.value = withSpring(1, { damping: 14 });
+            pressScale.value = withSpring(1, { damping: 20, stiffness: 200 });
           }),
-      [isTop, activeTranslation] // Add activeTranslation dependency
+      [isTop, activeTranslation, handOffSwipe] // Add activeTranslation dependency
     );
 
     // Combine gestures
@@ -235,12 +249,12 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
       .enabled(isTop)
       .minDuration(450)
       .onStart(() => {
-        pressScale.value = withSpring(0.95, { damping: 12 });
+        pressScale.value = withSpring(0.95, { damping: 17, stiffness: 200 });
         scheduleOnRN(hapticsBridge.pressIn);
         if (onLongPress) scheduleOnRN(onLongPress);
       })
       .onEnd(() => {
-        pressScale.value = withSpring(1, { damping: 12 });
+        pressScale.value = withSpring(1, { damping: 17, stiffness: 200 });
         scheduleOnRN(hapticsBridge.pressOut);
       });
 

@@ -53,6 +53,8 @@ export type Photo = {
   enTitle?: string;
 };
 
+export type DeckItem = { kind: 'photo'; photo: Photo } | { kind: 'ad'; id: string };
+
 export type AIRecommendation = {
   anime: Anime | null;
   loading: boolean;
