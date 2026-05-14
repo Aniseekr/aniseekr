@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -10,7 +10,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius, TabBar as TabBarTokens } from '../constants/DesignSystem';
+import { Radius, TabBar as TabBarTokens } from '../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../context/ThemeContext';
 
 const PILL_HORIZONTAL_MARGIN = 16;
 const PILL_INNER_PADDING = 8;
@@ -25,13 +26,12 @@ const FOCUS_SPRING = { damping: 20, stiffness: 220, mass: 0.6 } as const;
 const PRESS_IN_SPRING = { damping: 14, stiffness: 320 } as const;
 const PRESS_OUT_SPRING = { damping: 12, stiffness: 280 } as const;
 
-const ACTIVE_FG = Colors.primary;
-const INACTIVE_FG = Colors.text.tertiary;
-const ACTIVE_BG = 'rgba(255, 159, 10, 0.16)';
-const ACTIVE_BORDER = 'rgba(255, 159, 10, 0.45)';
-
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { theme, effectiveMode } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const blurTint =
+    effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
 
   const bottomMargin = Platform.select({
     ios: insets.bottom > 0 ? insets.bottom : 16,
@@ -73,7 +73,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
       <View style={styles.pill}>
         <BlurView
           intensity={80}
-          tint={Platform.OS === 'ios' ? 'systemThickMaterialDark' : 'dark'}
+          tint={Platform.OS === 'ios' ? blurTint : effectiveMode === 'light' ? 'light' : 'dark'}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.pillBackground} pointerEvents="none" />
@@ -137,6 +137,13 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   const [labelWidth, setLabelWidth] = useState(0);
   const pressScale = useSharedValue(1);
   const focusProgress = useSharedValue(isFocused ? 1 : 0);
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const activeFg = theme.accent;
+  const inactiveFg = theme.text.tertiary;
+  // Active pill fill = accent at ~18% alpha (0x2E), border = accent at ~45% (0x73).
+  const activeBg = `${theme.accent}2E`;
+  const activeBorder = `${theme.accent}73`;
 
   useEffect(() => {
     focusProgress.value = withSpring(isFocused ? 1 : 0, FOCUS_SPRING);
@@ -147,11 +154,11 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
 
   const pillStyle = useAnimatedStyle(() => ({
     width: COLLAPSED_WIDTH + focusProgress.value * (expandedWidth - COLLAPSED_WIDTH),
-    backgroundColor: interpolateColor(focusProgress.value, [0, 1], ['rgba(0,0,0,0)', ACTIVE_BG]),
+    backgroundColor: interpolateColor(focusProgress.value, [0, 1], ['rgba(0,0,0,0)', activeBg]),
     borderColor: interpolateColor(
       focusProgress.value,
       [0, 1],
-      ['rgba(0,0,0,0)', ACTIVE_BORDER]
+      ['rgba(0,0,0,0)', activeBorder]
     ),
     transform: [{ scale: pressScale.value }],
   }));
@@ -189,14 +196,14 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
               <Animated.View style={inactiveIconStyle}>
                 {renderIcon({
                   focused: false,
-                  color: INACTIVE_FG,
+                  color: inactiveFg,
                   size: INACTIVE_ICON_SIZE,
                 })}
               </Animated.View>
               <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, activeIconStyle]}>
                 {renderIcon({
                   focused: true,
-                  color: ACTIVE_FG,
+                  color: activeFg,
                   size: ACTIVE_ICON_SIZE,
                 })}
               </Animated.View>
@@ -204,7 +211,7 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
           ) : null}
         </View>
         <Animated.Text
-          style={[styles.label, labelStyle]}
+          style={[styles.label, { color: activeFg }, labelStyle]}
           numberOfLines={1}
           allowFontScaling={false}>
           {label}
@@ -224,77 +231,79 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: PILL_HORIZONTAL_MARGIN,
-    right: PILL_HORIZONTAL_MARGIN,
-    alignItems: 'center',
-  },
-  pill: {
-    width: '100%',
-    borderRadius: Radius.tabBar,
-    overflow: 'hidden',
-    paddingHorizontal: PILL_INNER_PADDING,
-    height: TabBarTokens.height,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.32,
-        shadowRadius: 24,
-      },
-      android: { elevation: 14 },
-    }),
-  },
-  pillBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20,20,22,0.78)',
-  },
-  pillBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: Radius.tabBar,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  tabRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  tabPill: {
-    height: TAB_HEIGHT,
-    borderRadius: TAB_HEIGHT / 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
-  iconBox: {
-    width: COLLAPSED_WIDTH,
-    height: TAB_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: ACTIVE_FG,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginRight: LABEL_TRAILING_PAD,
-  },
-  labelMeasure: {
-    position: 'absolute',
-    opacity: 0,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-});
+const makeStyles = (theme: ThemePalette) =>
+  StyleSheet.create({
+    container: {
+      position: 'absolute',
+      left: PILL_HORIZONTAL_MARGIN,
+      right: PILL_HORIZONTAL_MARGIN,
+      alignItems: 'center',
+    },
+    pill: {
+      width: '100%',
+      borderRadius: Radius.tabBar,
+      overflow: 'hidden',
+      paddingHorizontal: PILL_INNER_PADDING,
+      height: TabBarTokens.height,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.32,
+          shadowRadius: 24,
+        },
+        android: { elevation: 14 },
+      }),
+    },
+    pillBackground: {
+      ...StyleSheet.absoluteFillObject,
+      // 78% alpha overlay on the theme's secondary surface so the bar visibly
+      // belongs to the active palette without losing the glass-blur effect.
+      backgroundColor: `${theme.background.secondary}C7`,
+    },
+    pillBorder: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: Radius.tabBar,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    tabRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    tabPill: {
+      height: TAB_HEIGHT,
+      borderRadius: TAB_HEIGHT / 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      overflow: 'hidden',
+      borderWidth: 1,
+    },
+    iconBox: {
+      width: COLLAPSED_WIDTH,
+      height: TAB_HEIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconCenter: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      marginRight: LABEL_TRAILING_PAD,
+    },
+    labelMeasure: {
+      position: 'absolute',
+      opacity: 0,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+  });

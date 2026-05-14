@@ -55,7 +55,7 @@ export function EditDisplayNameSheet({
         style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View
-          entering={FadeInUp.springify().damping(18)}
+          entering={FadeInUp.duration(220)}
           style={[
             styles.sheet,
             {

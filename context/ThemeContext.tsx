@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -316,6 +316,77 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
 
 export const THEME_LIST: ThemePalette[] = Object.values(THEMES);
 
+// Light-mode surfaces per theme — accent / accentLight / accentDark / secondary
+// / status stay shared with the dark palette, so the theme still has a single
+// identity. Only background / text / glassBorder / gradient swap.
+interface SurfacePalette {
+  background: ThemePalette['background'];
+  text: ThemePalette['text'];
+  glassBorder: string;
+  gradient: ThemePalette['gradient'];
+}
+
+const LIGHT_TEXT_NEUTRAL = {
+  primary: '#0E0E12',
+  secondary: 'rgba(15,15,22,0.62)',
+  tertiary: 'rgba(15,15,22,0.40)',
+};
+
+const THEME_LIGHT_SURFACES: Record<ThemeId, SurfacePalette> = {
+  aniseeker: {
+    background: { primary: '#FFFBF3', secondary: '#FFF3DF', tertiary: '#FFE9C7' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(15,15,22,0.10)',
+    gradient: ['#FFFEFA', '#FFF5E4', '#FFFEFA'],
+  },
+  cyberpunk: {
+    background: { primary: '#FFF5F8', secondary: '#FCE5EE', tertiary: '#F9D2DF' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(255, 42, 109, 0.20)',
+    gradient: ['#FFF9FB', '#FCE7EF', '#FFF9FB'],
+  },
+  midnight: {
+    background: { primary: '#F5F5FE', secondary: '#E7E7FB', tertiary: '#D8D8F6' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(94, 92, 230, 0.20)',
+    gradient: ['#F9F9FF', '#E8E8FB', '#F9F9FF'],
+  },
+  forest: {
+    background: { primary: '#F1FAF6', secondary: '#DFF4EA', tertiary: '#C8ECD9' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(16, 185, 129, 0.20)',
+    gradient: ['#F6FBF8', '#E1F5EC', '#F6FBF8'],
+  },
+  ocean: {
+    background: { primary: '#F0FAFD', secondary: '#DBF3FA', tertiary: '#BFE9F4' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(6, 182, 212, 0.20)',
+    gradient: ['#F4FBFE', '#DEF4FA', '#F4FBFE'],
+  },
+  attackOnTitan: {
+    background: { primary: '#FBF5EC', secondary: '#F2E6CF', tertiary: '#E8D5B0' },
+    text: {
+      primary: '#26190A',
+      secondary: 'rgba(38,25,10,0.62)',
+      tertiary: 'rgba(38,25,10,0.40)',
+    },
+    glassBorder: 'rgba(139, 69, 19, 0.22)',
+    gradient: ['#FDFAF3', '#F1E5CD', '#FDFAF3'],
+  },
+  sunset: {
+    background: { primary: '#FFF6EE', secondary: '#FFE7D2', tertiary: '#FFD4B0' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(251, 146, 60, 0.22)',
+    gradient: ['#FFFAF4', '#FFE9D3', '#FFFAF4'],
+  },
+  candy: {
+    background: { primary: '#FFF3F9', secondary: '#FDE2F0', tertiary: '#FACEE2' },
+    text: LIGHT_TEXT_NEUTRAL,
+    glassBorder: 'rgba(244, 114, 182, 0.22)',
+    gradient: ['#FFF8FB', '#FEE5F2', '#FFF8FB'],
+  },
+};
+
 interface ThemeContextValue {
   theme: ThemePalette;
   themeId: ThemeId;
@@ -327,6 +398,11 @@ interface ThemeContextValue {
   recentAccents: string[];
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
+  /**
+   * Resolved mode after auto → OS scheme. Consumers that need to pick e.g. a
+   * BlurView tint should read this, not {@link themeMode}.
+   */
+  effectiveMode: 'light' | 'dark';
   tintIntensity: TintIntensity;
   setTintIntensity: (t: TintIntensity) => Promise<void>;
   increaseContrast: boolean;
@@ -343,6 +419,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [tintIntensity, setTintIntensityState] = useState<TintIntensity>('balanced');
   const [increaseContrast, setIncreaseContrastState] = useState<boolean>(false);
   const [hydrated, setHydrated] = useState(false);
+  const systemScheme = useColorScheme();
 
   useEffect(() => {
     let mounted = true;
@@ -469,10 +546,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const effectiveMode: 'light' | 'dark' =
+    themeMode === 'auto' ? (systemScheme === 'light' ? 'light' : 'dark') : themeMode;
+
   const resolvedTheme = useMemo<ThemePalette>(() => {
     const base = THEMES[themeId];
     const tint = TINT_INTENSITY_VALUES[tintIntensity];
-    const next: ThemePalette = customAccent
+    // Start from the dark palette, then swap surfaces for light mode.
+    let next: ThemePalette = customAccent
       ? {
           ...base,
           accent: customAccent,
@@ -480,13 +561,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           accentDark: adjustHex(customAccent, -25),
         }
       : base;
+    if (effectiveMode === 'light') {
+      const lightSurfaces = THEME_LIGHT_SURFACES[themeId];
+      next = {
+        ...next,
+        background: lightSurfaces.background,
+        text: lightSurfaces.text,
+        glassBorder: lightSurfaces.glassBorder,
+        gradient: lightSurfaces.gradient,
+      };
+    }
     if (!increaseContrast && tintIntensity === 'balanced') return next;
+    // High-contrast border has to flip with mode — bright white doesn't read
+    // against a pale background, and near-black doesn't read against a dark one.
+    const highContrastBorder =
+      effectiveMode === 'light' ? 'rgba(15,15,22,0.32)' : 'rgba(255,255,255,0.22)';
     return {
       ...next,
-      // tintIntensity adjusts how strong accentLight reads vs the base accent
       accentLight: adjustHex(next.accent, 10 + tint * 30),
-      // contrast brightens primary text borders
-      glassBorder: increaseContrast ? 'rgba(255,255,255,0.22)' : next.glassBorder,
+      glassBorder: increaseContrast ? highContrastBorder : next.glassBorder,
       text: increaseContrast
         ? {
             ...next.text,
@@ -494,7 +587,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           }
         : next.text,
     };
-  }, [themeId, customAccent, tintIntensity, increaseContrast]);
+  }, [themeId, customAccent, tintIntensity, increaseContrast, effectiveMode]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
@@ -508,6 +601,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       recentAccents,
       themeMode,
       setThemeMode,
+      effectiveMode,
       tintIntensity,
       setTintIntensity,
       increaseContrast,
@@ -523,6 +617,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       recentAccents,
       themeMode,
       setThemeMode,
+      effectiveMode,
       tintIntensity,
       setTintIntensity,
       increaseContrast,
@@ -548,6 +643,7 @@ export function useTheme(): ThemeContextValue {
       recentAccents: [],
       themeMode: 'dark',
       setThemeMode: async () => {},
+      effectiveMode: 'dark',
       tintIntensity: 'balanced',
       setTintIntensity: async () => {},
       increaseContrast: false,
