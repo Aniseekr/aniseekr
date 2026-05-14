@@ -302,8 +302,20 @@ export default function AnimeDetailScreen() {
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="Back"
-          style={{ top: insets.top + 10, left: 20 }}
-          className="absolute z-10 h-10 w-10 items-center justify-center rounded-full bg-black/40">
+          style={{
+            top: insets.top + 10,
+            left: 20,
+            position: 'absolute',
+            zIndex: 50,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.2)',
+          }}>
           <Ionicons name="chevron-back" size={24} color="white" />
         </Pressable>
       </View>
@@ -333,8 +345,20 @@ export default function AnimeDetailScreen() {
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Back"
-            style={{ top: insets.top + 10, left: 20 }}
-            className="absolute z-10 h-10 w-10 items-center justify-center rounded-full bg-black/40">
+            style={{
+              top: insets.top + 10,
+              left: 20,
+              position: 'absolute',
+              zIndex: 50,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.2)',
+            }}>
             <Ionicons name="chevron-back" size={24} color="white" />
           </Pressable>
         </View>
