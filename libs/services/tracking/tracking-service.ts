@@ -1,6 +1,7 @@
 import { LocalDB } from '../../db';
 import { AnimeStatus, UniversalAnimeItem } from '../auth/types';
 import { multiPlatformSyncService } from '../sync/multi-platform-sync-service';
+import { refreshTrackedIdsSafely } from './tracking-refresh';
 
 export interface UserAnimeStatus {
   animeId: string;
@@ -43,7 +44,7 @@ export class TrackingService {
    */
   invalidateTrackingCache(): void {
     this.invalidateTrackedIds();
-    void this.getTrackedIdSet();
+    refreshTrackedIdsSafely(() => this.getTrackedIdSet());
   }
 
   private notifyTrackedIdsChanged(ids: Set<string>): void {
@@ -134,7 +135,7 @@ export class TrackingService {
 
     await db.runAsync(query, ...args);
     this.invalidateTrackedIds();
-    void this.getTrackedIdSet();
+    refreshTrackedIdsSafely(() => this.getTrackedIdSet());
 
     if (animeDetails?.source) {
       const item: UniversalAnimeItem = {
@@ -191,7 +192,7 @@ export class TrackingService {
 
     await db.runAsync(query, ...args);
     this.invalidateTrackedIds();
-    void this.getTrackedIdSet();
+    refreshTrackedIdsSafely(() => this.getTrackedIdSet());
 
     if (animeDetails?.source) {
       const item: UniversalAnimeItem = {
@@ -256,7 +257,7 @@ export class TrackingService {
     }
 
     this.invalidateTrackedIds();
-    void this.getTrackedIdSet();
+    refreshTrackedIdsSafely(() => this.getTrackedIdSet());
   }
 
   async removeTracking(animeId: string): Promise<void> {
@@ -264,7 +265,7 @@ export class TrackingService {
     await db.runAsync('DELETE FROM user_anime WHERE anime_id = ?', animeId);
     await db.runAsync('DELETE FROM collection_folder_items WHERE anime_id = ?', animeId);
     this.invalidateTrackedIds();
-    void this.getTrackedIdSet();
+    refreshTrackedIdsSafely(() => this.getTrackedIdSet());
   }
 
   async getStatus(animeId: string): Promise<UserAnimeStatus | null> {
