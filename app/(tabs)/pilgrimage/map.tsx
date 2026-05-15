@@ -44,10 +44,11 @@ import {
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
-  TILE_ATTRIBUTION,
-  TILE_MAX_ZOOM,
-  TILE_SUBDOMAINS,
-  TILE_URL,
+  TILE_STYLES,
+  buildMapThemeVars,
+  resolveTileStyle,
+  type MapThemeVars,
+  type TileStyleId,
 } from '../../../libs/services/pilgrimage/leaflet-map';
 import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
@@ -160,8 +161,14 @@ function buildHubMapHtml(initial: {
   center: { lat: number; lng: number; zoom: number };
   user: { lat: number; lng: number } | null;
   ringColor: string;
+  tileStyle: TileStyleId;
+  themeVars: MapThemeVars;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
+  const tile = TILE_STYLES[initial.tileStyle];
+  const themeVarsCss = Object.entries(initial.themeVars)
+    .map(([k, v]) => `${k}: ${v};`)
+    .join(' ');
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -171,41 +178,69 @@ function buildHubMapHtml(initial: {
 <style>${LEAFLET_MARKERCLUSTER_CSS}</style>
 <style>${MAP_BASE_CSS}</style>
 <style>
+  :root { ${themeVarsCss} }
+  /* Google-Maps-style balloon marker. See PilgrimageMapView for the
+     full design rationale — same shape language across all 3 maps. */
   .anime-marker {
-    width: 44px; height: 44px; border-radius: 12px;
-    border: 2px solid var(--ring, #FF9F0A);
-    background: #1c1c1e; overflow: hidden; position: relative;
+    position: relative;
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 3px solid #ffffff;
+    background: var(--map-chrome);
+    overflow: visible;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.30),
+                0 4px 8px 3px rgba(0,0,0,0.15);
+  }
+  .anime-marker .photo {
+    width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.45);
-    transition: transform .15s ease;
   }
-  .anime-marker:active { transform: scale(0.92); }
-  .anime-marker img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .anime-marker .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .anime-marker::after {
+    content: ''; position: absolute;
+    bottom: -8px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 9px solid #ffffff;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,0.18));
+  }
+  .anime-marker .region-dot {
+    position: absolute; right: -2px; bottom: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ring, #4285F4);
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
   .anime-marker .pts {
-    position: absolute; bottom: -6px; right: -8px;
-    background: #1c1c1e; color: #fff;
-    border: 2px solid var(--ring, #FF9F0A);
-    border-radius: 8px; padding: 1px 5px;
-    font: 700 9px -apple-system, system-ui, sans-serif;
-    line-height: 1.2;
+    position: absolute; left: -4px; top: -4px;
+    min-width: 18px; height: 18px; padding: 0 4px;
+    background: #ffffff; color: #1F1F1F;
+    border-radius: 9px;
+    font: 700 10px 'Google Sans Text', Roboto, system-ui, sans-serif;
+    line-height: 18px; text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
   }
-  /* Tourism 88 official-selection pins: smaller, gold, with a star plate. */
+  /* Tourism 88 official-selection pins: gold disc + star, slightly smaller
+     to read as "stamps of approval" against the regular photo balloons. */
   .anime-marker.eighty-eight {
-    width: 32px; height: 32px; border-radius: 16px;
-    border-width: 3px;
+    width: 36px; height: 36px;
     background: ${OFFICIAL_88_GOLD};
-    color: #1c1c1e;
-    font: 800 16px -apple-system, system-ui, sans-serif;
+    color: #1F1F1F;
+    font: 800 18px 'Google Sans Text', Roboto, system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
   }
+  .anime-marker.eighty-eight::after { border-top-color: #ffffff; }
   .anime-marker.eighty-eight .star { line-height: 1; }
   .anime-marker.eighty-eight .pts { display: none; }
+  .anime-marker.eighty-eight .region-dot { display: none; }
   .anime-marker.eighty-eight .eighty-id {
-    position: absolute; bottom: -7px; right: -10px;
-    background: #1c1c1e; color: ${OFFICIAL_88_GOLD};
-    border: 1.5px solid ${OFFICIAL_88_GOLD};
-    border-radius: 7px; padding: 1px 4px;
-    font: 700 9px -apple-system, system-ui, sans-serif;
-    line-height: 1.2;
+    position: absolute; right: -6px; bottom: 0;
+    min-width: 18px; height: 16px; padding: 0 4px;
+    background: #ffffff; color: ${OFFICIAL_88_GOLD};
+    border-radius: 8px;
+    font: 800 9px 'Google Sans Text', Roboto, system-ui, sans-serif;
+    line-height: 16px; text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
 </style>
 </head>
@@ -219,10 +254,10 @@ ${MAP_BASE_BODY}
   var initial = ${initialJson};
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
-  new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: ${TILE_MAX_ZOOM}, minZoom: 3,
-    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
-    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
+  new window.CachedTileLayer(${JSON.stringify(tile.url)}, {
+    maxZoom: ${tile.maxZoom}, minZoom: 3,
+    subdomains: ${JSON.stringify(tile.subdomains)},
+    attribution: ${JSON.stringify(tile.attribution)},
     keepBuffer: 4, updateWhenIdle: false
   }).addTo(map);
 
@@ -294,12 +329,19 @@ ${MAP_BASE_BODY}
           inner = '<span class="star">★</span>' +
             '<span class="eighty-id">#' + (m.eightyEightId || '?') + '</span>';
         } else {
-          inner = (m.cover ? '<img src="' + m.cover + '" loading="lazy" />' : '') +
+          var photoInner = m.cover
+            ? '<img src="' + m.cover + '" loading="lazy" />'
+            : '';
+          inner = '<div class="photo">' + photoInner + '</div>' +
+            '<span class="region-dot" style="background:' + m.ringColor + '"></span>' +
             '<span class="pts">' + m.pointsLength + '</span>';
         }
-        var size = m.is88 ? 32 : 44;
-        var html = '<div class="' + cls + '" style="--ring:' + m.ringColor + '">' + inner + '</div>';
-        var icon = L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2] });
+        // Bounding box: bubble + 9px tail. Anchor at tail tip so the geo
+        // coordinate sits *under* the marker (Google Maps convention).
+        var w = m.is88 ? 36 : 48;
+        var h = w + 9;
+        var html = '<div class="' + cls + '">' + inner + '</div>';
+        var icon = L.divIcon({ className: '', html: html, iconSize: [w, h], iconAnchor: [w/2, h] });
         var marker = L.marker([m.lat, m.lng], { icon: icon, regionColor: m.ringColor });
         marker.__appId = m.bangumiId;
         marker.on('click', function() {
@@ -1045,6 +1087,7 @@ function FullscreenMapView({
   onBoundsChange,
   onLocatePress,
 }: FullscreenMapViewProps) {
+  const { effectiveMode } = useTheme();
   const webviewRef = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
   const lastReplaceKey = useRef(replaceKey);
@@ -1056,7 +1099,15 @@ function FullscreenMapView({
     // pan back. The region chips fly the camera into specific regions on demand.
     const center = { lat: JAPAN_OVERVIEW.lat, lng: JAPAN_OVERVIEW.lng, zoom: JAPAN_OVERVIEW.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildHubMapHtml({ center, user, ringColor });
+    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const themeVars: MapThemeVars = buildMapThemeVars({
+      effectiveMode,
+      accent: theme.accent,
+      tileStyle,
+    });
+    return buildHubMapHtml({ center, user, ringColor, tileStyle, themeVars });
+    // First-paint values captured once. Live theme updates pushed via the
+    // bridge effect below — re-rendering would wipe tile cache + camera state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1070,6 +1121,29 @@ function FullscreenMapView({
       true;
     `);
   }, [markers, replaceKey, ready]);
+
+  // Live tile + chrome theme push so toggling light/dark or changing accent
+  // repaints in place — no WebView remount, no tile cache loss.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tile = TILE_STYLES[tileStyle];
+    const themeVars = buildMapThemeVars({
+      effectiveMode,
+      accent: theme.accent,
+      tileStyle,
+    });
+    webviewRef.current.injectJavaScript(`
+      try { window.__setMapTheme && window.__setMapTheme(${JSON.stringify(themeVars)}); } catch(e) {}
+      try { window.__setTileStyle && window.__setTileStyle(${JSON.stringify({
+        url: tile.url,
+        subdomains: tile.subdomains,
+        attribution: tile.attribution,
+        maxZoom: tile.maxZoom,
+      })}); } catch(e) {}
+      true;
+    `);
+  }, [effectiveMode, theme.accent, ready]);
 
   // Push user-location updates so the locate-me bounds-fit works for users
   // who only grant permission after mount.

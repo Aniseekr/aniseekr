@@ -55,11 +55,12 @@ import {
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
-  TILE_ATTRIBUTION,
-  TILE_MAX_ZOOM,
-  TILE_SUBDOMAINS,
-  TILE_URL,
+  TILE_STYLES,
   TOKYO_STATION,
+  buildMapThemeVars,
+  resolveTileStyle,
+  type MapThemeVars,
+  type TileStyleId,
 } from '../../../libs/services/pilgrimage/leaflet-map';
 import {
   loadVisitedSpots,
@@ -137,8 +138,14 @@ function buildSpotMapHtml(initial: {
    * Station fallback. Drives whether we snap to the first marker if the
    * initial framing turns out to be in the wrong place. */
   hasCenter: boolean;
+  tileStyle: TileStyleId;
+  themeVars: MapThemeVars;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
+  const tile = TILE_STYLES[initial.tileStyle];
+  const themeVarsCss = Object.entries(initial.themeVars)
+    .map(([k, v]) => `${k}: ${v};`)
+    .join(' ');
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -148,25 +155,52 @@ function buildSpotMapHtml(initial: {
 <style>${LEAFLET_MARKERCLUSTER_CSS}</style>
 <style>${MAP_BASE_CSS}</style>
 <style>
+  :root { ${themeVarsCss} }
+  /* Same balloon language as the other two maps. The EP chip is a small
+     white pill in the top-left so the photo dominates. Visited state is
+     a green ring (Google Maps "saved" green #34A853), not a thicker border. */
   .spot-marker {
-    width: 40px; height: 40px; border-radius: 12px;
-    border: 2px solid var(--ring, #FF9F0A);
-    background: #1c1c1e; overflow: hidden; position: relative;
+    position: relative;
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 3px solid #ffffff;
+    background: var(--map-chrome);
+    overflow: visible;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.30),
+                0 4px 8px 3px rgba(0,0,0,0.15);
+  }
+  .spot-marker .photo {
+    width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-    transition: transform .15s ease;
   }
-  .spot-marker:active { transform: scale(0.94); }
-  .spot-marker img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .spot-marker.visited { border-color: #30D158; border-width: 3px; }
+  .spot-marker .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .spot-marker::after {
+    content: ''; position: absolute;
+    bottom: -8px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 9px solid #ffffff;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,0.18));
+  }
+  .spot-marker .region-dot {
+    position: absolute; right: -2px; bottom: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ring, #4285F4);
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .spot-marker.visited { border-color: #34A853; }
+  .spot-marker.visited::after { border-top-color: #34A853; }
   .spot-marker .ep {
-    position: absolute; bottom: -6px; right: -6px;
-    background: #1c1c1e; color: #fff;
-    border: 2px solid var(--ring, #FF9F0A);
-    border-radius: 8px; padding: 1px 5px;
-    font: 700 9px -apple-system, system-ui, sans-serif;
+    position: absolute; left: -4px; top: -4px;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    background: #ffffff; color: #1F1F1F;
+    border-radius: 9px;
+    font: 700 9px 'Google Sans Text', Roboto, system-ui, sans-serif;
+    line-height: 18px; text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
   }
-  .spot-marker.visited .ep { border-color: #30D158; color: #30D158; }
+  .spot-marker.visited .ep { background: #34A853; color: #ffffff; }
 </style>
 </head>
 <body>
@@ -179,11 +213,11 @@ ${MAP_BASE_BODY}
   var initial = ${initialJson};
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
-  new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: ${TILE_MAX_ZOOM},
+  new window.CachedTileLayer(${JSON.stringify(tile.url)}, {
+    maxZoom: ${tile.maxZoom},
     minZoom: 3,
-    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
-    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
+    subdomains: ${JSON.stringify(tile.subdomains)},
+    attribution: ${JSON.stringify(tile.attribution)},
     keepBuffer: 4,
     updateWhenIdle: false
   }).addTo(map);
@@ -225,11 +259,15 @@ ${MAP_BASE_BODY}
     for (var i = 0; i < markers.length; i++) {
       (function(m){
         var cls = 'spot-marker' + (m.visited ? ' visited' : '');
-        var html = '<div class="' + cls + '" style="--ring:' + m.ringColor + '">' +
-          (m.image ? '<img src="' + m.image + '" loading="lazy" />' : '') +
+        var photoInner = m.image ? '<img src="' + m.image + '" loading="lazy" />' : '';
+        var html = '<div class="' + cls + '">' +
+          '<div class="photo">' + photoInner + '</div>' +
+          '<span class="region-dot" style="background:' + m.ringColor + '"></span>' +
           '<span class="ep">EP ' + m.ep + '</span>' +
         '</div>';
-        var icon = L.divIcon({ className: '', html: html, iconSize: [40,40], iconAnchor: [20,20] });
+        // Same balloon dimensions as the other maps: 48 wide × 57 tall
+        // (48 + 9 tail). Anchor at the tail tip (24, 57).
+        var icon = L.divIcon({ className: '', html: html, iconSize: [48, 57], iconAnchor: [24, 57] });
         var marker = L.marker([m.lat, m.lng], { icon: icon });
         marker.__appId = m.id;
         marker.on('click', function() { window.__post({ type: 'spotPress', id: m.id }); });
@@ -307,6 +345,7 @@ function SpotMapView({
   theme,
   style,
 }: SpotMapViewProps) {
+  const { effectiveMode } = useTheme();
   const webviewRef = useRef<WebView>(null);
   const spotsById = useRef(new Map<string, AnitabiPoint>());
   const [ready, setReady] = useState(false);
@@ -327,10 +366,39 @@ function SpotMapView({
       ? { lat: centerGeo![0], lng: centerGeo![1], zoom: desiredZoom }
       : { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: 13 };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    return buildSpotMapHtml({ center: fallback, user, ringColor, hasCenter });
-    // Captured once on mount intentionally — see comment above.
+    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const themeVars: MapThemeVars = buildMapThemeVars({
+      effectiveMode,
+      accent: theme.accent,
+      tileStyle,
+    });
+    return buildSpotMapHtml({ center: fallback, user, ringColor, hasCenter, tileStyle, themeVars });
+    // First-paint values captured once. Live theme updates pushed via the
+    // bridge effect below — re-rendering would wipe tile cache + camera state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Live tile + chrome theme push.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tile = TILE_STYLES[tileStyle];
+    const themeVars = buildMapThemeVars({
+      effectiveMode,
+      accent: theme.accent,
+      tileStyle,
+    });
+    webviewRef.current.injectJavaScript(`
+      try { window.__setMapTheme && window.__setMapTheme(${JSON.stringify(themeVars)}); } catch(e) {}
+      try { window.__setTileStyle && window.__setTileStyle(${JSON.stringify({
+        url: tile.url,
+        subdomains: tile.subdomains,
+        attribution: tile.attribution,
+        maxZoom: tile.maxZoom,
+      })}); } catch(e) {}
+      true;
+    `);
+  }, [effectiveMode, theme.accent, ready]);
 
   const markers = useMemo(() => {
     const out: MapMarkerPayload[] = [];

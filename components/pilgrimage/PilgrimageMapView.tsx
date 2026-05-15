@@ -41,11 +41,12 @@ import {
   MAP_BASE_CSS,
   MAP_BASE_JS,
   MAP_BASE_URL,
-  TILE_ATTRIBUTION,
-  TILE_MAX_ZOOM,
-  TILE_SUBDOMAINS,
-  TILE_URL,
+  TILE_STYLES,
   TOKYO_STATION,
+  buildMapThemeVars,
+  resolveTileStyle,
+  type MapThemeVars,
+  type TileStyleId,
 } from '../../libs/services/pilgrimage/leaflet-map';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 import { cityToColor } from '../../libs/services/pilgrimage/region-color';
@@ -140,8 +141,16 @@ function buildHtml(initial: {
   themeAccent: string;
   /** Pixels to lift the map controls off the WebView bottom. */
   controlsBottom: number;
+  /** Tile style to load on first paint — keeps the loading shell in sync
+   * with the tile that's about to render. */
+  tileStyle: TileStyleId;
+  themeVars: MapThemeVars;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
+  const tile = TILE_STYLES[initial.tileStyle];
+  const themeVarsCss = Object.entries(initial.themeVars)
+    .map(([k, v]) => `${k}: ${v};`)
+    .join(' ');
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -154,40 +163,75 @@ function buildHtml(initial: {
   :root {
     --mc-bottom: ${initial.controlsBottom}px;
     --attr-bottom: ${Math.max(0, initial.controlsBottom - 32)}px;
+    ${themeVarsCss}
   }
+  /* Google-Maps-style balloon marker:
+       circular photo + white ring + small downward tail anchoring it to
+       the geo coordinate. iconAnchor on the leaflet side points at the
+       tail tip (bottom-center), so a marker sits *above* its lat/lng
+       like every modern map app.
+     The ring color (region/city) used to be the entire 2px border —
+     visually noisy on a colourful tile. It's now a small dot in the
+     bottom-right corner so the photo reads first. */
   .ani-marker {
-    width: 44px; height: 44px; border-radius: 12px;
-    border: 2px solid var(--ring, ${initial.themeAccent});
-    background: #1c1c1e;
-    overflow: hidden; position: relative;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    position: relative;
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 3px solid #ffffff;
+    background: var(--map-chrome);
+    overflow: visible;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.30),
+                0 4px 8px 3px rgba(0,0,0,0.15);
   }
-  .ani-marker img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .ani-marker .pin { color: #fff; font-size: 18px; }
+  .ani-marker .photo {
+    width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ani-marker .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ani-marker .pin { color: var(--map-on-chrome); font-size: 20px; }
+  .ani-marker::after {
+    content: '';
+    position: absolute;
+    bottom: -8px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 9px solid #ffffff;
+    /* Subtle drop on the tail so it floats with the bubble. */
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,0.18));
+  }
+  .ani-marker .region-dot {
+    position: absolute; right: -2px; bottom: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ring, ${initial.themeAccent});
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
   .ani-marker .check {
-    position: absolute; right: -4px; bottom: -4px;
-    width: 18px; height: 18px; border-radius: 9px;
-    background: #30D158; color: #000;
-    font: 700 12px -apple-system, system-ui, sans-serif;
+    position: absolute; right: -4px; top: -4px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #34A853; color: #ffffff;
+    font: 700 12px 'Google Sans Text', Roboto, system-ui, sans-serif;
     display: flex; align-items: center; justify-content: center;
-    border: 2px solid #1c1c1e;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
-  .ani-marker.in-collection { border-width: 3px; }
+  .ani-marker.in-collection { border-color: #34A853; }
   .leaflet-popup-content-wrapper {
-    background: #1c1c1e; color: #fff;
-    border: 1px solid rgba(255,255,255,0.12);
+    background: var(--map-chrome); color: var(--map-on-chrome);
+    border: none;
     border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.30), 0 4px 8px 3px rgba(0,0,0,0.15);
   }
-  .leaflet-popup-tip { background: #1c1c1e; border: 1px solid rgba(255,255,255,0.12); }
+  .leaflet-popup-tip { background: var(--map-chrome); border: none; }
   .leaflet-popup-content { margin: 10px 12px; min-width: 180px; }
-  .pop-title { font: 600 14px -apple-system, system-ui, sans-serif; color: #fff; margin: 0 0 2px; }
-  .pop-meta { font: 500 11px -apple-system, system-ui, sans-serif; color: rgba(235,235,245,0.6); margin: 0 0 8px; }
+  .pop-title { font: 600 14px 'Google Sans Text', Roboto, system-ui, sans-serif; color: var(--map-on-chrome); margin: 0 0 2px; }
+  .pop-meta { font: 500 11px 'Google Sans Text', Roboto, system-ui, sans-serif; color: var(--map-attr-fg); margin: 0 0 8px; }
   .pop-btn {
-    display: block; width: 100%; padding: 7px 10px; border: 0;
-    border-radius: 8px; color: #000; font: 600 13px -apple-system, system-ui, sans-serif;
+    display: block; width: 100%; padding: 8px 10px; border: 0;
+    border-radius: 20px; color: #fff;
+    font: 600 13px 'Google Sans Text', Roboto, system-ui, sans-serif;
     text-align: center; cursor: pointer;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.30), 0 1px 3px 1px rgba(0,0,0,0.15);
   }
 </style>
 </head>
@@ -201,11 +245,11 @@ ${MAP_BASE_BODY}
   var initial = ${initialJson};
   var map = L.map('map', { zoomControl: false, attributionControl: true, fadeAnimation: true })
     .setView([initial.center.lat, initial.center.lng], initial.center.zoom);
-  new window.CachedTileLayer(${JSON.stringify(TILE_URL)}, {
-    maxZoom: ${TILE_MAX_ZOOM},
+  new window.CachedTileLayer(${JSON.stringify(tile.url)}, {
+    maxZoom: ${tile.maxZoom},
     minZoom: 3,
-    subdomains: ${JSON.stringify(TILE_SUBDOMAINS)},
-    attribution: ${JSON.stringify(TILE_ATTRIBUTION)},
+    subdomains: ${JSON.stringify(tile.subdomains)},
+    attribution: ${JSON.stringify(tile.attribution)},
     keepBuffer: 4,
     updateWhenIdle: false
   }).addTo(map);
@@ -238,14 +282,19 @@ ${MAP_BASE_BODY}
     var bounds = [];
     for (var i = 0; i < markers.length; i++) {
       var m = markers[i];
-      var ring = m.inCollection ? '#30D158' : m.ringColor;
       var cls = 'ani-marker' + (m.inCollection ? ' in-collection' : '');
-      var html = '<div class="' + cls + '" style="--ring:' + ring + '">' +
-        (m.cover ? '<img src="' + m.cover + '" loading="lazy" />' : '<span class="pin">📍</span>') +
+      var inner = m.cover
+        ? '<img src="' + m.cover + '" loading="lazy" />'
+        : '<span class="pin">📍</span>';
+      var html = '<div class="' + cls + '">' +
+        '<div class="photo">' + inner + '</div>' +
+        '<span class="region-dot" style="background:' + m.ringColor + '"></span>' +
         (m.inCollection ? '<span class="check">✓</span>' : '') +
       '</div>';
-      var icon = L.divIcon({ className: '', html: html, iconSize: [44,44], iconAnchor: [22,22] });
-      var marker = L.marker([m.lat, m.lng], { icon: icon, regionColor: ring });
+      // Bounding box: 48 (bubble) wide × 57 tall (48 + 9 tail). Anchor at
+      // the tail tip (24, 57) so the lat/lng sits *under* the marker.
+      var icon = L.divIcon({ className: '', html: html, iconSize: [48, 57], iconAnchor: [24, 57] });
+      var marker = L.marker([m.lat, m.lng], { icon: icon, regionColor: m.ringColor });
       marker.__appId = m.id;
       var meta = m.pointsLength + ' spot' + (m.pointsLength === 1 ? '' : 's') +
         (m.city ? ' · ' + m.city : '') +
@@ -253,9 +302,11 @@ ${MAP_BASE_BODY}
       var popup = '<div>' +
         '<div class="pop-title">' + (m.title || 'Untitled') + '</div>' +
         '<div class="pop-meta">' + meta + '</div>' +
-        '<button class="pop-btn" style="background:' + ring + '" onclick="window.__open(\\'' + m.id + '\\')">Open</button>' +
+        '<button class="pop-btn" style="background:' + m.ringColor + '" onclick="window.__open(\\'' + m.id + '\\')">Open</button>' +
       '</div>';
-      marker.bindPopup(popup, { closeButton: false, offset: [0, -18] });
+      // Popup offset accounts for the new tail anchor — pop appears above the
+      // bubble, not above where the centre used to be.
+      marker.bindPopup(popup, { closeButton: false, offset: [0, -54] });
       batch.push(marker);
       bounds.push([m.lat, m.lng]);
     }
@@ -287,7 +338,7 @@ export function PilgrimageMapView({
   refitNonce,
   controlsBottomOffset = 12,
 }: PilgrimageMapViewProps) {
-  const { theme } = useTheme();
+  const { theme, effectiveMode } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webviewRef = useRef<WebView>(null);
   const animeById = useRef(new Map<string, AnitabiBangumi>());
@@ -301,17 +352,49 @@ export function PilgrimageMapView({
     // initial view.
     const center = { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
+    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const themeVars: MapThemeVars = buildMapThemeVars({
+      effectiveMode,
+      accent: theme.accent,
+      tileStyle,
+    });
     return buildHtml({
       center,
       user,
       themeAccent: theme.accent,
       controlsBottom: controlsBottomOffset,
+      tileStyle,
+      themeVars,
     });
-    // userLocation/theme/controlsBottomOffset intentionally captured once —
-    // live location updates or theme switches would re-warm the tile cache on
-    // every change.
+    // userLocation/theme/effectiveMode intentionally captured once for the
+    // first paint. Live updates (theme switch, accent change) are pushed via
+    // __setTileStyle / __setMapTheme below — re-rendering the WebView would
+    // wipe the tile cache and the user's pan/zoom state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Live tile + chrome theme push. Fires when the user toggles light/dark or
+  // picks a new accent — bridge functions repaint in place.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tile = TILE_STYLES[tileStyle];
+    const themeVars = buildMapThemeVars({
+      effectiveMode,
+      accent: theme.accent,
+      tileStyle,
+    });
+    webviewRef.current.injectJavaScript(`
+      try { window.__setMapTheme && window.__setMapTheme(${JSON.stringify(themeVars)}); } catch(e) {}
+      try { window.__setTileStyle && window.__setTileStyle(${JSON.stringify({
+        url: tile.url,
+        subdomains: tile.subdomains,
+        attribution: tile.attribution,
+        maxZoom: tile.maxZoom,
+      })}); } catch(e) {}
+      true;
+    `);
+  }, [effectiveMode, theme.accent, ready]);
 
   const markers = useMemo(
     () => buildMarkers(animeList, animeById.current, theme.accent),
