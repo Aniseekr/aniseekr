@@ -14,7 +14,11 @@
 import { useSyncExternalStore } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Anime } from '../../components/rate/types';
-import { notificationService } from '../../libs/services/notifications/notification-service';
+import {
+  getCachedNotificationPrefs,
+  loadNotificationPrefs,
+  notificationService,
+} from '../../libs/services/notifications/notification-service';
 
 const DEFAULT_LEAD_TIME_MINUTES = 15;
 
@@ -64,6 +68,7 @@ class AnimeNotificationService {
     this.hydrating = (async () => {
       try {
         await notificationService.initialize();
+        await loadNotificationPrefs();
         await this.rehydrate();
       } finally {
         this.hydrated = true;
@@ -107,6 +112,13 @@ class AnimeNotificationService {
   async scheduleAnimeNotification(anime: Anime): Promise<string | null> {
     await this.init();
 
+    const prefs = getCachedNotificationPrefs();
+    if (!prefs.episodeReminders) return null;
+    const leadTimeMinutes =
+      Number.isFinite(prefs.leadTimeMinutes) && prefs.leadTimeMinutes > 0
+        ? prefs.leadTimeMinutes
+        : DEFAULT_LEAD_TIME_MINUTES;
+
     const airingAt = anime.nextAiringEpisode?.airingAt;
     if (!airingAt) {
       console.warn(`[AnimeNotificationService] no airing time for ${anime.id} (${anime.title})`);
@@ -114,7 +126,7 @@ class AnimeNotificationService {
     }
     // AniList exposes seconds; multiply to ms.
     const airDate = new Date(airingAt * 1000);
-    if (airDate.getTime() - DEFAULT_LEAD_TIME_MINUTES * 60_000 <= Date.now() + 1_000) {
+    if (airDate.getTime() - leadTimeMinutes * 60_000 <= Date.now() + 1_000) {
       console.warn(`[AnimeNotificationService] air time too close/past for ${anime.id}`);
       return null;
     }
@@ -123,7 +135,7 @@ class AnimeNotificationService {
       anime.id,
       anime.title,
       airDate,
-      DEFAULT_LEAD_TIME_MINUTES
+      leadTimeMinutes
     );
     if (id) {
       this.notifications.set(anime.id, id);

@@ -148,7 +148,11 @@ export class AchievementService {
 
   private async dispatchUnlockNotification(def: AchievementDefinition): Promise<void> {
     try {
-      const { notificationService } = await import('../notifications/notification-service');
+      const { notificationService, loadNotificationPrefs } = await import(
+        '../notifications/notification-service'
+      );
+      const prefs = await loadNotificationPrefs();
+      if (!prefs.achievementAlerts) return;
       const reward = `+${def.reward.amount} ${def.reward.currency}`;
       await notificationService.sendAchievementUnlock(
         def.id,

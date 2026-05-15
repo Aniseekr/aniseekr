@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { LocalDB } from '../../db';
+import { isObject, safeJsonParse } from '../../utils/safe-json';
 
 export type NotificationKind =
   | 'episode_reminder'
@@ -11,19 +12,83 @@ export type NotificationKind =
 
 export interface NotificationPreferences {
   episodeReminders: boolean;
-  weeklyDigest: boolean;
-  movieDrops: boolean;
+  dailyDigest: boolean;
   achievementAlerts: boolean;
   leadTimeMinutes: number;
 }
 
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
   episodeReminders: true,
-  weeklyDigest: false,
-  movieDrops: true,
+  dailyDigest: false,
   achievementAlerts: true,
   leadTimeMinutes: 15,
 };
+
+export const NOTIFICATION_PREFS_KEY = '@aniseekr/notifications/prefs';
+
+interface AsyncStorageLike {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+}
+let prefsStorage: AsyncStorageLike;
+try {
+  prefsStorage = require('@react-native-async-storage/async-storage').default;
+} catch {
+  const memory = new Map<string, string>();
+  prefsStorage = {
+    async getItem(k) {
+      return memory.get(k) ?? null;
+    },
+    async setItem(k, v) {
+      memory.set(k, v);
+    },
+  };
+}
+
+// Cached in memory so hot paths (scheduling per anime, achievement send) stay sync.
+let cachedPrefs: NotificationPreferences = DEFAULT_PREFERENCES;
+let prefsLoadPromise: Promise<NotificationPreferences> | null = null;
+
+function pickValidPreferences(value: unknown): Partial<NotificationPreferences> | null {
+  if (!isObject(value)) return null;
+  const out: Partial<NotificationPreferences> = {};
+  if (typeof value.episodeReminders === 'boolean') out.episodeReminders = value.episodeReminders;
+  if (typeof value.dailyDigest === 'boolean') {
+    out.dailyDigest = value.dailyDigest;
+  } else if (typeof value.weeklyDigest === 'boolean') {
+    out.dailyDigest = value.weeklyDigest;
+  }
+  if (typeof value.achievementAlerts === 'boolean') out.achievementAlerts = value.achievementAlerts;
+  if (typeof value.leadTimeMinutes === 'number' && Number.isFinite(value.leadTimeMinutes)) {
+    out.leadTimeMinutes = value.leadTimeMinutes;
+  }
+  return out;
+}
+
+export async function loadNotificationPrefs(): Promise<NotificationPreferences> {
+  if (prefsLoadPromise) return prefsLoadPromise;
+  prefsLoadPromise = (async () => {
+    try {
+      const raw = await prefsStorage.getItem(NOTIFICATION_PREFS_KEY);
+      const parsed = safeJsonParse(raw, isObject);
+      const valid = parsed ? pickValidPreferences(parsed) : null;
+      cachedPrefs = valid ? { ...DEFAULT_PREFERENCES, ...valid } : DEFAULT_PREFERENCES;
+    } catch {
+      cachedPrefs = DEFAULT_PREFERENCES;
+    }
+    return cachedPrefs;
+  })();
+  return prefsLoadPromise;
+}
+
+export function getCachedNotificationPrefs(): NotificationPreferences {
+  return cachedPrefs;
+}
+
+export async function refreshNotificationPrefs(): Promise<NotificationPreferences> {
+  prefsLoadPromise = null;
+  return loadNotificationPrefs();
+}
 
 export interface ScheduledNotificationRow {
   id: string;
@@ -38,6 +103,9 @@ export interface ScheduledNotificationRow {
 export interface PermissionStatus {
   granted: boolean;
   canAskAgain: boolean;
+  // Android keeps `canAskAgain` true after a denial, so it isn't enough to tell
+  // "never asked" from "user denied". Mirror the raw status so the UI can be precise.
+  status: 'granted' | 'denied' | 'undetermined';
 }
 
 export type PushTokenInfo = {
@@ -46,6 +114,20 @@ export type PushTokenInfo = {
 };
 
 let handlerConfigured = false;
+
+function normalizePermission(raw: Notifications.NotificationPermissionsStatus): PermissionStatus {
+  const granted = raw.granted === true;
+  const canAskAgain = raw.canAskAgain !== false;
+  let status: PermissionStatus['status'];
+  if (granted) {
+    status = 'granted';
+  } else if (raw.status === 'undetermined' && canAskAgain) {
+    status = 'undetermined';
+  } else {
+    status = 'denied';
+  }
+  return { granted, canAskAgain, status };
+}
 
 function ensureHandler(): void {
   if (handlerConfigured) return;
@@ -93,18 +175,12 @@ export class NotificationService {
 
   async getPermission(): Promise<PermissionStatus> {
     const status = await Notifications.getPermissionsAsync();
-    return {
-      granted: status.granted === true,
-      canAskAgain: status.canAskAgain !== false,
-    };
+    return normalizePermission(status);
   }
 
   async requestPermission(): Promise<PermissionStatus> {
     const status = await Notifications.requestPermissionsAsync();
-    return {
-      granted: status.granted === true,
-      canAskAgain: status.canAskAgain !== false,
-    };
+    return normalizePermission(status);
   }
 
   async getPushToken(): Promise<PushTokenInfo | null> {

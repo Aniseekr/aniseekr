@@ -20,6 +20,7 @@ export interface UseNotificationsResult {
 const INITIAL_PERMISSION: PermissionStatus = {
   granted: false,
   canAskAgain: true,
+  status: 'undetermined',
 };
 
 export function useNotifications(): UseNotificationsResult {

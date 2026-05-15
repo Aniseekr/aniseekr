@@ -26,23 +26,10 @@ import {
   notificationService,
   DEFAULT_PREFERENCES,
   NotificationPreferences,
+  NOTIFICATION_PREFS_KEY,
+  loadNotificationPrefs,
+  refreshNotificationPrefs,
 } from '../../libs/services/notifications/notification-service';
-import { isObject, safeJsonParse } from '../../libs/utils/safe-json';
-
-function pickValidPreferences(value: unknown): Partial<NotificationPreferences> | null {
-  if (!isObject(value)) return null;
-  const out: Partial<NotificationPreferences> = {};
-  if (typeof value.episodeReminders === 'boolean') out.episodeReminders = value.episodeReminders;
-  if (typeof value.weeklyDigest === 'boolean') out.weeklyDigest = value.weeklyDigest;
-  if (typeof value.movieDrops === 'boolean') out.movieDrops = value.movieDrops;
-  if (typeof value.achievementAlerts === 'boolean') out.achievementAlerts = value.achievementAlerts;
-  if (typeof value.leadTimeMinutes === 'number' && Number.isFinite(value.leadTimeMinutes)) {
-    out.leadTimeMinutes = value.leadTimeMinutes;
-  }
-  return out;
-}
-
-const isObjectGuard = (value: unknown): value is Record<string, unknown> => isObject(value);
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -62,8 +49,6 @@ try {
     },
   };
 }
-
-const PREFS_KEY = '@aniseekr/notifications/prefs';
 
 const LEAD_OPTIONS = [5, 15, 30, 60];
 
@@ -171,11 +156,7 @@ export default function NotificationsScreen() {
   }, []);
 
   useEffect(() => {
-    AsyncStorage.getItem(PREFS_KEY).then((raw) => {
-      const parsed = safeJsonParse(raw, isObjectGuard);
-      const valid = parsed ? pickValidPreferences(parsed) : null;
-      if (valid) setPrefs({ ...DEFAULT_PREFERENCES, ...valid });
-    });
+    loadNotificationPrefs().then((loaded) => setPrefs(loaded));
   }, []);
 
   useEffect(() => {
@@ -230,13 +211,17 @@ export default function NotificationsScreen() {
 
   const update = async (next: NotificationPreferences) => {
     hapticsBridge.selection();
+    const prev = prefs;
     setPrefs(next);
     try {
-      await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(next));
+      await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(next));
     } catch {
       // best-effort persistence
     }
-    if (!next.weeklyDigest) {
+    await refreshNotificationPrefs();
+    if (next.dailyDigest && !prev.dailyDigest) {
+      await notificationService.scheduleDailyDigest();
+    } else if (!next.dailyDigest && prev.dailyDigest) {
       await notificationService.cancelByKind('daily_digest');
     }
     await refreshSchedule();
@@ -282,11 +267,7 @@ export default function NotificationsScreen() {
     );
   };
 
-  const permissionLabel = permission.granted
-    ? 'granted'
-    : permission.canAskAgain
-      ? 'undetermined'
-      : 'denied';
+  const permissionLabel = permission.status;
 
   return (
     <SettingsScreenLayout
@@ -337,19 +318,11 @@ export default function NotificationsScreen() {
         />
         <Divider />
         <ToggleSwitchRow
-          label="Weekly digest"
-          description="Sunday recap of upcoming episodes"
-          value={prefs.weeklyDigest}
-          onChange={(v) => update({ ...prefs, weeklyDigest: v })}
+          label="Daily digest"
+          description="Morning recap of upcoming episodes"
+          value={prefs.dailyDigest}
+          onChange={(v) => update({ ...prefs, dailyDigest: v })}
           icon="event-note"
-        />
-        <Divider />
-        <ToggleSwitchRow
-          label="Movie & special drops"
-          description="Alerts for new theatrical releases"
-          value={prefs.movieDrops}
-          onChange={(v) => update({ ...prefs, movieDrops: v })}
-          icon="movie-creation"
         />
         <Divider />
         <ToggleSwitchRow
