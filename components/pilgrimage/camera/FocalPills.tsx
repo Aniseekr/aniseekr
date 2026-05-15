@@ -61,8 +61,7 @@ export default function FocalPills({
   virtualActive = false,
 }: FocalPillsProps) {
   const { theme } = useTheme();
-  const stops =
-    availableStops ?? (isFrontFacing ? FRONT_FACING_STOPS : DEFAULT_STOPS);
+  const stops = availableStops ?? (isFrontFacing ? FRONT_FACING_STOPS : DEFAULT_STOPS);
   const activeFg = readableTextOn(themeColor);
   const showAutoPill = (virtualLenses?.length ?? 0) > 0 && typeof onPickVirtual === 'function';
 
@@ -139,11 +138,7 @@ export default function FocalPills({
               },
               pressed && { opacity: 0.7 },
             ]}>
-            <Ionicons
-              name="aperture-outline"
-              size={16}
-              color={virtualActive ? activeFg : '#fff'}
-            />
+            <Ionicons name="aperture-outline" size={16} color={virtualActive ? activeFg : '#fff'} />
           </Pressable>
         ) : null}
       </View>
