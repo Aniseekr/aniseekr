@@ -34,6 +34,7 @@
         "leaflet.markercluster": "1.5.3",
         "nativewind": "preview",
         "opencc-js": "1.3.1",
+        "piexif-ts": "^2.1.0",
         "postcss": "^8.5.6",
         "react": "19.1.0",
         "react-native": "0.81.5",
@@ -1746,6 +1747,8 @@
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 
     "picomatch": ["picomatch@3.0.1", "", {}, "sha512-I3EurrIQMlRc9IaAZnqRR044Phh2DXY+55o7uJ0V+hYZAcQYSuFWsc9q5PvyDHUSCe1Qxn/iBz+78s86zWnGag=="],
+
+    "piexif-ts": ["piexif-ts@2.1.0", "", {}, "sha512-Fk1T7NbZnmiI4IPHrxz8y3dpzMAywDk1+9g0iGwHf+UPYPZJ1/CKALzhPPRPqAxwalwNz2t0NB4krY/PkAI93A=="],
 
     "pirates": ["pirates@4.0.7", "", {}, "sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA=="],
 

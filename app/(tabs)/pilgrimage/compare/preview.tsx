@@ -12,7 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import { ThemedText } from '../../../../components/themed';
+import { ThemedSurface, ThemedText } from '../../../../components/themed';
 import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
 import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { scoreSnapshot } from '../../../../libs/services/pilgrimage/alignment-scoring';
@@ -709,6 +709,14 @@ export default function ComparePreviewScreen() {
               </View>
             </View>
           ) : null}
+
+          <CaptureExifInfoCard
+            animeTitle={animeTitle}
+            episode={ep}
+            spotLat={spotLat}
+            spotLng={spotLng}
+            heading={heading}
+          />
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: bottomPad(insets) }]}>
@@ -753,6 +761,99 @@ export default function ComparePreviewScreen() {
         </View>
       </SafeAreaView>
     </GestureHandlerRootView>
+  );
+}
+
+function CaptureExifInfoCard({
+  animeTitle,
+  episode,
+  spotLat,
+  spotLng,
+  heading,
+}: {
+  animeTitle: string | null;
+  episode: string | null;
+  spotLat: string | null;
+  spotLng: string | null;
+  heading: number | null;
+}) {
+  const { theme } = useTheme();
+
+  const animeRow = animeTitle && animeTitle.length > 0 ? animeTitle : null;
+  const animeWithEpisode =
+    animeRow && episode && episode.length > 0 ? `${animeRow} · EP${episode}` : animeRow;
+
+  const latNum = spotLat != null ? Number(spotLat) : Number.NaN;
+  const lngNum = spotLng != null ? Number(spotLng) : Number.NaN;
+  const gpsText =
+    Number.isFinite(latNum) && Number.isFinite(lngNum)
+      ? `${latNum.toFixed(4)}, ${lngNum.toFixed(4)}`
+      : null;
+
+  const headingText =
+    heading != null && Number.isFinite(heading) ? `${heading.toFixed(0)}°` : null;
+
+  if (!animeWithEpisode && !gpsText && !headingText) return null;
+
+  return (
+    <View style={styles.exifCardWrap}>
+      <ThemedSurface variant="card" padded>
+        <ThemedText variant="titleSmall" weight="700">
+          拍攝資訊
+        </ThemedText>
+        <View style={styles.exifRows}>
+          {animeWithEpisode ? (
+            <View style={styles.exifRow}>
+              <ThemedText
+                variant="bodySmall"
+                weight="600"
+                style={{ color: theme.text.secondary }}>
+                Anime
+              </ThemedText>
+              <ThemedText
+                variant="bodySmall"
+                weight="600"
+                style={[styles.exifRowValue, { color: theme.text.primary }]}
+                numberOfLines={2}>
+                {animeWithEpisode}
+              </ThemedText>
+            </View>
+          ) : null}
+          {gpsText ? (
+            <View style={styles.exifRow}>
+              <ThemedText
+                variant="bodySmall"
+                weight="600"
+                style={{ color: theme.text.secondary }}>
+                GPS
+              </ThemedText>
+              <ThemedText
+                variant="bodySmall"
+                weight="600"
+                style={[styles.exifRowValue, { color: theme.text.primary }]}>
+                {gpsText}
+              </ThemedText>
+            </View>
+          ) : null}
+          {headingText ? (
+            <View style={styles.exifRow}>
+              <ThemedText
+                variant="bodySmall"
+                weight="600"
+                style={{ color: theme.text.secondary }}>
+                Heading
+              </ThemedText>
+              <ThemedText
+                variant="bodySmall"
+                weight="600"
+                style={[styles.exifRowValue, { color: theme.text.primary }]}>
+                {headingText}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+      </ThemedSurface>
+    </View>
   );
 }
 
@@ -946,6 +1047,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
+  },
+  exifCardWrap: {
+    marginHorizontal: 16,
+  },
+  exifRows: {
+    marginTop: 10,
+    gap: 8,
+  },
+  exifRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  exifRowValue: {
+    flex: 1,
+    textAlign: 'right',
   },
   modeRow: {
     flexDirection: 'row',
