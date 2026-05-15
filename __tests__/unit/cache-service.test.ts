@@ -77,4 +77,74 @@ describe('CacheService', () => {
     const meta = await CacheService.getWithMeta('does-not-exist', 60_000);
     expect(meta).toBeNull();
   });
+
+  it('CACHE-010 stats() reports total entries / bytes and groups by prefix', async () => {
+    await CacheService.set('anime_detail_42', { id: 42 });
+    await CacheService.set('anime_detail_43', { id: 43 });
+    await CacheService.set('search_naruto', [1, 2, 3]);
+    await CacheService.set('seasonal_2024', { season: 'WINTER' });
+
+    const stats = await CacheService.stats(['anime_detail_', 'search_', 'seasonal_']);
+    expect(stats.totalEntries).toBe(4);
+    expect(stats.totalBytes).toBeGreaterThan(0);
+    expect(stats.byPrefix.get('anime_detail_')?.entries).toBe(2);
+    expect(stats.byPrefix.get('search_')?.entries).toBe(1);
+    expect(stats.byPrefix.get('seasonal_')?.entries).toBe(1);
+  });
+
+  it('CACHE-011 stats() groups unmatched keys under "misc"', async () => {
+    await CacheService.set('anime_detail_1', { id: 1 });
+    await CacheService.set('weird_orphan_key', { v: 1 });
+
+    const stats = await CacheService.stats(['anime_detail_']);
+    expect(stats.byPrefix.get('anime_detail_')?.entries).toBe(1);
+    expect(stats.byPrefix.get('misc')?.entries).toBe(1);
+  });
+
+  it('CACHE-012 stats() flags expired entries', async () => {
+    await CacheService.set('seasonal_a', { v: 1 }, 60_000);  // fresh
+    await CacheService.set('seasonal_b', { v: 2 }, -1);      // expired
+
+    const stats = await CacheService.stats(['seasonal_']);
+    expect(stats.totalEntries).toBe(2);
+    expect(stats.expiredEntries).toBe(1);
+    expect(stats.byPrefix.get('seasonal_')?.expiredEntries).toBe(1);
+  });
+
+  it('CACHE-013 clearByPrefix removes only matching keys and returns count', async () => {
+    await CacheService.set('anime_detail_1', { v: 1 });
+    await CacheService.set('anime_detail_2', { v: 2 });
+    await CacheService.set('search_x', [1]);
+
+    const removed = await CacheService.clearByPrefix('anime_detail_');
+    expect(removed).toBe(2);
+    expect(await CacheService.get('anime_detail_1')).toBeNull();
+    expect(await CacheService.get('anime_detail_2')).toBeNull();
+    expect(await CacheService.get<number[]>('search_x')).not.toBeNull();
+  });
+
+  it('CACHE-014 clearByPrefix on empty / unknown prefix returns 0', async () => {
+    expect(await CacheService.clearByPrefix('')).toBe(0);
+    expect(await CacheService.clearByPrefix('nope_')).toBe(0);
+  });
+
+  it('CACHE-015 prune removes expired rows only', async () => {
+    await CacheService.set('alive_1', { v: 1 }, 60_000);
+    await CacheService.set('dead_1', { v: 2 }, -1);
+    await CacheService.set('dead_2', { v: 3 }, -1);
+
+    const removed = await CacheService.prune();
+    expect(removed).toBe(2);
+    expect(await CacheService.get('alive_1')).not.toBeNull();
+    expect(await CacheService.get('dead_1')).toBeNull();
+  });
+
+  it('CACHE-016 allKeys returns every stored key', async () => {
+    await CacheService.set('a_1', { v: 1 });
+    await CacheService.set('b_2', { v: 2 });
+    await CacheService.set('c_3', { v: 3 });
+
+    const keys = await CacheService.allKeys();
+    expect(new Set(keys)).toEqual(new Set(['a_1', 'b_2', 'c_3']));
+  });
 });
