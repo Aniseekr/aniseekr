@@ -62,6 +62,8 @@ import {
   type MapThemeVars,
   type TileStyleId,
 } from '../../../libs/services/pilgrimage/leaflet-map';
+import { resolveMapMode } from '../../../libs/services/pilgrimage/map-theme-prefs';
+import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import {
   loadVisitedSpots,
   saveVisitedSpots,
@@ -346,6 +348,8 @@ function SpotMapView({
   style,
 }: SpotMapViewProps) {
   const { effectiveMode } = useTheme();
+  const { pref: mapThemePref } = useMapThemePref();
+  const mapMode = resolveMapMode(mapThemePref, effectiveMode);
   const webviewRef = useRef<WebView>(null);
   const spotsById = useRef(new Map<string, AnitabiPoint>());
   const [ready, setReady] = useState(false);
@@ -366,9 +370,9 @@ function SpotMapView({
       ? { lat: centerGeo![0], lng: centerGeo![1], zoom: desiredZoom }
       : { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: 13 };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tileStyle: TileStyleId = resolveTileStyle(mapMode);
     const themeVars: MapThemeVars = buildMapThemeVars({
-      effectiveMode,
+      effectiveMode: mapMode,
       accent: theme.accent,
       tileStyle,
     });
@@ -381,10 +385,10 @@ function SpotMapView({
   // Live tile + chrome theme push.
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
-    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tileStyle: TileStyleId = resolveTileStyle(mapMode);
     const tile = TILE_STYLES[tileStyle];
     const themeVars = buildMapThemeVars({
-      effectiveMode,
+      effectiveMode: mapMode,
       accent: theme.accent,
       tileStyle,
     });
@@ -398,7 +402,7 @@ function SpotMapView({
       })}); } catch(e) {}
       true;
     `);
-  }, [effectiveMode, theme.accent, ready]);
+  }, [mapMode, theme.accent, ready]);
 
   const markers = useMemo(() => {
     const out: MapMarkerPayload[] = [];

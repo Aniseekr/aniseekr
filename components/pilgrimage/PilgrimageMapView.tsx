@@ -48,8 +48,10 @@ import {
   type MapThemeVars,
   type TileStyleId,
 } from '../../libs/services/pilgrimage/leaflet-map';
+import { resolveMapMode } from '../../libs/services/pilgrimage/map-theme-prefs';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 import { cityToColor } from '../../libs/services/pilgrimage/region-color';
+import { useMapThemePref } from '../../hooks/useMapThemePref';
 
 export { cityToColor };
 
@@ -339,6 +341,8 @@ export function PilgrimageMapView({
   controlsBottomOffset = 12,
 }: PilgrimageMapViewProps) {
   const { theme, effectiveMode } = useTheme();
+  const { pref: mapThemePref } = useMapThemePref();
+  const mapMode = resolveMapMode(mapThemePref, effectiveMode);
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const webviewRef = useRef<WebView>(null);
   const animeById = useRef(new Map<string, AnitabiBangumi>());
@@ -352,9 +356,9 @@ export function PilgrimageMapView({
     // initial view.
     const center = { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: TOKYO_STATION.zoom };
     const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
-    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tileStyle: TileStyleId = resolveTileStyle(mapMode);
     const themeVars: MapThemeVars = buildMapThemeVars({
-      effectiveMode,
+      effectiveMode: mapMode,
       accent: theme.accent,
       tileStyle,
     });
@@ -366,10 +370,10 @@ export function PilgrimageMapView({
       tileStyle,
       themeVars,
     });
-    // userLocation/theme/effectiveMode intentionally captured once for the
-    // first paint. Live updates (theme switch, accent change) are pushed via
-    // __setTileStyle / __setMapTheme below — re-rendering the WebView would
-    // wipe the tile cache and the user's pan/zoom state.
+    // userLocation/theme/mapMode intentionally captured once for the first
+    // paint. Live updates (theme switch, accent change, map-pref toggle) are
+    // pushed via __setTileStyle / __setMapTheme below — re-rendering the
+    // WebView would wipe the tile cache and the user's pan/zoom state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -377,10 +381,10 @@ export function PilgrimageMapView({
   // picks a new accent — bridge functions repaint in place.
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
-    const tileStyle: TileStyleId = resolveTileStyle(effectiveMode);
+    const tileStyle: TileStyleId = resolveTileStyle(mapMode);
     const tile = TILE_STYLES[tileStyle];
     const themeVars = buildMapThemeVars({
-      effectiveMode,
+      effectiveMode: mapMode,
       accent: theme.accent,
       tileStyle,
     });
@@ -394,7 +398,7 @@ export function PilgrimageMapView({
       })}); } catch(e) {}
       true;
     `);
-  }, [effectiveMode, theme.accent, ready]);
+  }, [mapMode, theme.accent, ready]);
 
   const markers = useMemo(
     () => buildMarkers(animeList, animeById.current, theme.accent),

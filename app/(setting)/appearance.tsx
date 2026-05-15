@@ -28,9 +28,17 @@ import {
   patchUserPrefs,
   type UserPrefs,
 } from '../../libs/services/user-prefs';
+import { useMapThemePref } from '../../hooks/useMapThemePref';
+import type { MapThemePref } from '../../libs/services/pilgrimage/map-theme-prefs';
 
 const MODES: { id: ThemeMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { id: 'light', label: 'Light', icon: 'sunny-outline' },
+  { id: 'dark', label: 'Dark', icon: 'moon-outline' },
+  { id: 'auto', label: 'Auto', icon: 'contrast-outline' },
+];
+
+const MAP_MODES: { id: MapThemePref; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { id: 'light', label: 'Light', icon: 'map-outline' },
   { id: 'dark', label: 'Dark', icon: 'moon-outline' },
   { id: 'auto', label: 'Auto', icon: 'contrast-outline' },
 ];
@@ -60,6 +68,7 @@ export default function AppearanceScreen() {
   const [prefs, setPrefs] = useState<UserPrefs>(DEFAULT_USER_PREFS);
   const [cardHeight, setCardHeight] = useState<number>(DEFAULT_USER_PREFS.cardHeightPercent);
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const { pref: mapThemePref, setPref: setMapThemePref } = useMapThemePref();
 
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accent = theme.accent;
@@ -166,6 +175,27 @@ export default function AppearanceScreen() {
                 onPress={() => {
                   hapticsBridge.selection();
                   void setThemeMode(m.id);
+                }}
+              />
+            ))}
+          </View>
+
+          <SectionHeader>MAP</SectionHeader>
+          <ThemedText
+            variant="captionSmall"
+            tone="tertiary"
+            style={{ marginTop: -8 }}>
+            Pilgrimage map theme. Defaults to light — most maps look better that way.
+          </ThemedText>
+          <View style={styles.modeRow}>
+            {MAP_MODES.map((m) => (
+              <ModeChip
+                key={m.id}
+                mode={m}
+                selected={mapThemePref === m.id}
+                onPress={() => {
+                  hapticsBridge.selection();
+                  void setMapThemePref(m.id);
                 }}
               />
             ))}
