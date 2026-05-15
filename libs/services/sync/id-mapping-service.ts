@@ -1,4 +1,5 @@
-import * as FileSystem from 'expo-file-system';
+// Legacy import — see note on the same import in anitabi-data-service.ts.
+import * as FileSystem from 'expo-file-system/legacy';
 import { LocalDB } from '../../db';
 import type { PlatformType } from '../auth/types';
 

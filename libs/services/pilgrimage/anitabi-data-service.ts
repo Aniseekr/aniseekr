@@ -15,7 +15,11 @@
 // pipeline does that — but consumers can fetch the schema URL to validate
 // independently.
 
-import * as FileSystem from 'expo-file-system';
+// Legacy import — this file uses cacheDirectory / downloadAsync / readAsStringAsync /
+// getInfoAsync which moved to expo-file-system/legacy in SDK 54. The settings cache
+// screen uses the new Directory/File API for size reporting; this hot path keeps
+// the legacy module to minimise change surface.
+import * as FileSystem from 'expo-file-system/legacy';
 
 import {
   hydrateFromRuntime as hydrateAnitabiIndex,
