@@ -7,12 +7,30 @@ import type { FocalStop } from './types';
 const DEFAULT_STOPS: FocalStop[] = [0.5, 1, 2, 3];
 const FRONT_FACING_STOPS: FocalStop[] = [1];
 
+/**
+ * Renders 0.5x / 1x / 2x / 3x focal stop pills over the live camera preview.
+ *
+ * `availableStops` semantics (truth about the device):
+ * - `undefined` → use the legacy default (`[0.5,1,2,3]` rear, `[1]` front-facing).
+ *   Suitable when the caller doesn't know real device capabilities (e.g. before
+ *   `getAvailableLensesAsync` resolves) AND is driving digital zoom only.
+ * - `[]` (empty array) → render nothing. The device has no optical zoom and the
+ *   caller has opted out of digital-only fallback display.
+ * - Single entry (e.g. `[1]`) → still render that one pill — gives "lens lock"
+ *   feedback even though there is nothing to switch to.
+ * - Multiple entries → render the row as today.
+ *
+ * `opticalHint` toggles a small "OPTICAL" label above the row to signal real
+ * lens switching is active (vs. digital zoom). Caller passes `hasOpticalZoom`
+ * from `useLensSwitcher`.
+ */
 interface FocalPillsProps {
   activeStop: FocalStop | null;
   onPick: (stop: FocalStop) => void;
   themeColor: string;
   availableStops?: FocalStop[];
   isFrontFacing?: boolean;
+  opticalHint?: boolean;
 }
 
 function formatStop(stop: FocalStop): string {
@@ -26,54 +44,79 @@ export default function FocalPills({
   themeColor,
   availableStops,
   isFrontFacing = false,
+  opticalHint = false,
 }: FocalPillsProps) {
   const { theme } = useTheme();
   const stops =
     availableStops ?? (isFrontFacing ? FRONT_FACING_STOPS : DEFAULT_STOPS);
   const activeFg = readableTextOn(themeColor);
 
+  // Empty array = truth-respecting hide. The device offers no stops the parent
+  // wants to surface. See JSDoc above for full semantics.
+  if (stops.length === 0) return null;
+
   return (
-    <View style={styles.row}>
-      {stops.map((stop) => {
-        // activeStop === null means user is between stops — highlight nothing
-        // rather than lie about which stop is "selected".
-        const isActive = activeStop !== null && stop === activeStop;
-        return (
-          <Pressable
-            key={stop}
-            onPress={() => {
-              hapticsBridge.selection();
-              onPick(stop);
-            }}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={`${formatStop(stop)} zoom`}
-            accessibilityState={{ selected: isActive }}
-            style={({ pressed }) => [
-              styles.pill,
-              {
-                // rgba scrim — pill sits over the live camera preview, no theme
-                // surface beneath. Allowed per CLAUDE.md.
-                backgroundColor: isActive ? themeColor : 'rgba(0,0,0,0.45)',
-                borderColor: theme.glassBorder,
-              },
-              pressed && { opacity: 0.7 },
-            ]}>
-            <ThemedText
-              variant="caption"
-              weight="700"
-              align="center"
-              style={{ color: isActive ? activeFg : '#fff' }}>
-              {formatStop(stop)}
-            </ThemedText>
-          </Pressable>
-        );
-      })}
+    <View style={styles.container}>
+      {opticalHint ? (
+        <ThemedText
+          variant="captionSmall"
+          weight="700"
+          align="center"
+          tone="tertiary"
+          style={styles.opticalLabel}>
+          OPTICAL
+        </ThemedText>
+      ) : null}
+      <View style={styles.row}>
+        {stops.map((stop) => {
+          // activeStop === null means user is between stops — highlight nothing
+          // rather than lie about which stop is "selected".
+          const isActive = activeStop !== null && stop === activeStop;
+          return (
+            <Pressable
+              key={stop}
+              onPress={() => {
+                hapticsBridge.selection();
+                onPick(stop);
+              }}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`${formatStop(stop)} zoom`}
+              accessibilityState={{ selected: isActive }}
+              style={({ pressed }) => [
+                styles.pill,
+                {
+                  // rgba scrim — pill sits over the live camera preview, no theme
+                  // surface beneath. Allowed per CLAUDE.md.
+                  backgroundColor: isActive ? themeColor : 'rgba(0,0,0,0.45)',
+                  borderColor: theme.glassBorder,
+                },
+                pressed && { opacity: 0.7 },
+              ]}>
+              <ThemedText
+                variant="caption"
+                weight="700"
+                align="center"
+                style={{ color: isActive ? activeFg : '#fff' }}>
+                {formatStop(stop)}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+  },
+  opticalLabel: {
+    marginBottom: 8,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

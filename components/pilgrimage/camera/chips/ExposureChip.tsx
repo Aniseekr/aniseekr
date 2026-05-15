@@ -1,12 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { ThemedText } from '../../../themed';
 import { useTheme } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
@@ -19,40 +15,34 @@ interface ExposureChipProps {
 
 const EV_MIN = -2;
 const EV_MAX = 2;
-const EV_RANGE = EV_MAX - EV_MIN; // 4
+const EV_RANGE = EV_MAX - EV_MIN;
 const TICKS = [-2, -1, 0, 1, 2];
 const SNAP_HYSTERESIS = 0.1;
-const SCRUB_HEIGHT = 64;
 const SCRUB_WIDTH = 280;
 const SCRUB_PADDING = 16;
+const TRACK_WIDTH_DEFAULT = SCRUB_WIDTH - SCRUB_PADDING * 2;
 
-function clamp(v: number, lo: number, hi: number) {
-  'worklet';
-  return Math.max(lo, Math.min(hi, v));
-}
-
-function formatEV(value: number): string {
-  if (value === 0) return 'EV 0';
-  return value > 0 ? `+${value.toFixed(1)}` : value.toFixed(1);
+function formatEV(v: number): string {
+  if (v === 0) return 'EV 0';
+  return v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1);
 }
 
 export default function ExposureChip({ value, onChange }: ExposureChipProps) {
   const { theme } = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(TRACK_WIDTH_DEFAULT);
 
   const liveValue = useSharedValue(value);
   const startValue = useSharedValue(value);
   const lastSnappedInt = useSharedValue<number | null>(null);
-  const trackWidthSV = useSharedValue(SCRUB_WIDTH - SCRUB_PADDING * 2);
-  const [trackWidth, setTrackWidth] = useState(SCRUB_WIDTH - SCRUB_PADDING * 2);
+  const trackWidthSV = useSharedValue(TRACK_WIDTH_DEFAULT);
 
   const indicatorColor = value === 0 ? theme.status.success : theme.accent;
 
   const commit = useCallback(
     (next: number) => {
       const clamped = Math.max(EV_MIN, Math.min(EV_MAX, next));
-      const rounded = Number(clamped.toFixed(1));
-      onChange(rounded);
+      onChange(Number(clamped.toFixed(1)));
     },
     [onChange]
   );
@@ -60,12 +50,11 @@ export default function ExposureChip({ value, onChange }: ExposureChipProps) {
   const toggleExpanded = useCallback(() => {
     hapticsBridge.selection();
     setExpanded((prev) => {
-      const next = !prev;
-      if (next) {
+      if (!prev) {
         liveValue.value = value;
         lastSnappedInt.value = Number.isInteger(value) ? value : null;
       }
-      return next;
+      return !prev;
     });
   }, [value, liveValue, lastSnappedInt]);
 
@@ -106,40 +95,36 @@ export default function ExposureChip({ value, onChange }: ExposureChipProps) {
     .onUpdate((e) => {
       const width = trackWidthSV.value || 1;
       const delta = (e.translationX / width) * EV_RANGE;
-      const next = clamp(startValue.value + delta, EV_MIN, EV_MAX);
+      const raw = startValue.value + delta;
+      const next = Math.max(EV_MIN, Math.min(EV_MAX, raw));
       liveValue.value = next;
-      // Snap-only haptic: fire once per integer crossing within hysteresis.
       const nearestInt = Math.round(next);
       if (Math.abs(next - nearestInt) <= SNAP_HYSTERESIS) {
+        // Snap-only haptic + commit: fire once per integer crossing.
         if (lastSnappedInt.value !== nearestInt) {
           lastSnappedInt.value = nearestInt;
           runOnJS(hapticsBridge.selection)();
           runOnJS(commit)(nearestInt);
         }
-      } else {
-        // Left a snap zone — allow re-snap on next crossing.
-        if (lastSnappedInt.value !== null && Math.abs(next - lastSnappedInt.value) > SNAP_HYSTERESIS) {
-          lastSnappedInt.value = null;
-        }
+      } else if (
+        lastSnappedInt.value !== null &&
+        Math.abs(next - lastSnappedInt.value) > SNAP_HYSTERESIS
+      ) {
+        lastSnappedInt.value = null;
       }
     })
     .onEnd(() => {
-      const next = liveValue.value;
-      const nearestInt = Math.round(next);
+      const v = liveValue.value;
+      const nearestInt = Math.round(v);
       const snapped =
-        Math.abs(next - nearestInt) <= SNAP_HYSTERESIS
-          ? nearestInt
-          : Number(next.toFixed(1));
+        Math.abs(v - nearestInt) <= SNAP_HYSTERESIS ? nearestInt : Number(v.toFixed(1));
       liveValue.value = snapped;
       runOnJS(commit)(snapped);
     });
 
   const indicatorStyle = useAnimatedStyle(() => {
-    const width = trackWidthSV.value || 1;
     const ratio = (liveValue.value - EV_MIN) / EV_RANGE;
-    return {
-      transform: [{ translateX: ratio * width }],
-    };
+    return { transform: [{ translateX: ratio * (trackWidthSV.value || 1) }] };
   });
 
   return (
@@ -167,7 +152,7 @@ export default function ExposureChip({ value, onChange }: ExposureChipProps) {
           pressed && { opacity: 0.75 },
         ]}>
         <Ionicons name="sunny-outline" size={16} color="#fff" />
-        <ThemedText variant="caption" weight="600" style={styles.chipText}>
+        <ThemedText variant="caption" weight="600" style={styles.text}>
           {formatEV(value)}
         </ThemedText>
       </Pressable>
@@ -177,34 +162,24 @@ export default function ExposureChip({ value, onChange }: ExposureChipProps) {
           <GestureDetector gesture={panGesture}>
             <View style={styles.trackArea} onLayout={onTrackLayout}>
               <View style={styles.trackLine} />
-              {TICKS.map((tick) => {
-                const ratio = (tick - EV_MIN) / EV_RANGE;
-                return (
-                  <Pressable
-                    key={tick}
-                    onPress={() => handleTickPress(tick)}
-                    hitSlop={12}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Set exposure ${formatEV(tick)}`}
-                    style={[
-                      styles.tickHit,
-                      { left: ratio * trackWidth - 12 },
-                    ]}>
-                    <View style={styles.tickMark} />
-                  </Pressable>
-                );
-              })}
+              {TICKS.map((tick) => (
+                <Pressable
+                  key={tick}
+                  onPress={() => handleTickPress(tick)}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set exposure ${formatEV(tick)}`}
+                  style={[styles.tickHit, { left: ((tick - EV_MIN) / EV_RANGE) * trackWidth - 12 }]}>
+                  <View style={styles.tickMark} />
+                </Pressable>
+              ))}
               <Animated.View
                 pointerEvents="none"
-                style={[
-                  styles.indicator,
-                  { backgroundColor: indicatorColor },
-                  indicatorStyle,
-                ]}
+                style={[styles.indicator, { backgroundColor: indicatorColor }, indicatorStyle]}
               />
             </View>
           </GestureDetector>
-          <ThemedText variant="caption" weight="700" align="center" style={styles.panelLabel}>
+          <ThemedText variant="caption" weight="700" align="center" style={styles.text}>
             {formatEV(value)}
           </ThemedText>
         </View>
@@ -213,64 +188,26 @@ export default function ExposureChip({ value, onChange }: ExposureChipProps) {
   );
 }
 
+// rgba scrim sits over live camera — no theme surface below.
 const styles = StyleSheet.create({
   wrap: { position: 'relative' },
-  // rgba scrim sits over live camera — no theme surface below.
   chip: {
-    height: 36,
-    width: 80,
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    height: 36, width: 80, borderRadius: 18, paddingHorizontal: 12, gap: 6, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',
-    borderWidth: 1,
   },
-  chipText: { color: '#fff' },
+  text: { color: '#fff' },
   panel: {
-    position: 'absolute',
-    top: 44,
-    left: 0,
-    width: SCRUB_WIDTH,
-    paddingVertical: 8,
-    paddingHorizontal: SCRUB_PADDING,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderWidth: 1,
-    gap: 6,
+    position: 'absolute', top: 44, left: 0,
+    width: SCRUB_WIDTH, paddingVertical: 8, paddingHorizontal: SCRUB_PADDING,
+    borderRadius: 16, borderWidth: 1, gap: 6, backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  trackArea: {
-    height: SCRUB_HEIGHT - 32,
-    justifyContent: 'center',
-  },
-  trackLine: {
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-    borderRadius: 1,
-  },
+  trackArea: { height: 32, justifyContent: 'center' },
+  trackLine: { height: 2, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
   tickHit: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', top: 0, bottom: 0, width: 24,
+    alignItems: 'center', justifyContent: 'center',
   },
-  tickMark: {
-    width: 2,
-    height: 10,
-    borderRadius: 1,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-  },
-  indicator: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: -1,
-    width: 2,
-    borderRadius: 1,
-  },
-  panelLabel: { color: '#fff' },
+  tickMark: { width: 2, height: 10, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.6)' },
+  indicator: { position: 'absolute', top: 0, bottom: 0, left: -1, width: 2, borderRadius: 1 },
 });
