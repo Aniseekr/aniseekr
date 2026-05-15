@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SeasonHeader } from '../../components/bangumi/SeasonHeader';
@@ -46,6 +47,7 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../../components/themed';
 import { ShimmerEffect } from '../../components/common/ShimmerEffect';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { setFloatingTabBarHidden } from '../../libs/navigation/floating-tab-bar-visibility';
 
 // Module-level snapshot of the most-recent successful fetch per season key.
 // Survives screen unmount/remount (tab switch), so re-entering the page (or
@@ -58,6 +60,7 @@ type SeasonSnapshot = {
 const seasonSnapshots = new Map<string, SeasonSnapshot>();
 const snapshotKey = (season: string, year: number, source: string) =>
   `${season}_${year}_${source}`;
+const BANGUMI_CARDS_TAB_BAR_REASON = 'bangumi-cards-mode';
 
 type FilterMode = 'all' | 'tracking';
 type Season = 'winter' | 'spring' | 'summer' | 'fall';
@@ -271,6 +274,29 @@ export default function BangumiScreen() {
   const showUnknownDays = prefs.showUnknownDays;
   const typeFilter = prefs.typeFilter;
   const hideSwipeHint = prefs.hideSwipeHint ?? false;
+  const focusedRef = useRef(false);
+  const viewModeRef = useRef(viewMode);
+
+  // Cards mode = full-screen swipe deck; the floating tab bar would overlap the
+  // card footer / action buttons. Hide it while focused, restore on blur so the
+  // bangumi pill stays visible from other tabs.
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+    if (focusedRef.current) {
+      setFloatingTabBarHidden(BANGUMI_CARDS_TAB_BAR_REASON, viewMode === 'cards');
+    }
+  }, [viewMode]);
+
+  useFocusEffect(
+    useCallback(() => {
+      focusedRef.current = true;
+      setFloatingTabBarHidden(BANGUMI_CARDS_TAB_BAR_REASON, viewModeRef.current === 'cards');
+      return () => {
+        focusedRef.current = false;
+        setFloatingTabBarHidden(BANGUMI_CARDS_TAB_BAR_REASON, false);
+      };
+    }, [])
+  );
   const setFilterMode = useCallback(
     (mode: FilterMode) => setPrefs((p) => ({ ...p, filterMode: mode })),
     [setPrefs]
@@ -424,8 +450,17 @@ export default function BangumiScreen() {
 
   const setViewMode = useCallback(
     (mode: 'calendar' | 'list' | 'cards') => {
+      setFloatingTabBarHidden(BANGUMI_CARDS_TAB_BAR_REASON, mode === 'cards');
       hapticsBridge.selection();
       setPrefs((p) => (p.viewMode === mode ? p : { ...p, viewMode: mode }));
+    },
+    [setPrefs]
+  );
+
+  const handleSettingsChange = useCallback(
+    (next: BangumiPreferences) => {
+      setFloatingTabBarHidden(BANGUMI_CARDS_TAB_BAR_REASON, next.viewMode === 'cards');
+      setPrefs(next);
     },
     [setPrefs]
   );
@@ -577,7 +612,7 @@ export default function BangumiScreen() {
           adultContent={adultContent}
           onAdultContentChange={handleAdultContentChange}
           onClose={() => setShowSettings(false)}
-          onChange={setPrefs}
+          onChange={handleSettingsChange}
           onOpenNotifications={() => {
             setShowSettings(false);
             // Wait for the settings Modal to fully dismiss before presenting the
@@ -750,9 +785,13 @@ function BangumiCalendarSkeleton({ theme }: { theme: ThemePalette }) {
   const sidePadding = (width - cardWidth) / 2;
   return (
     <View>
-      {/* Today strip skeleton */}
+      {/* Today strip skeleton — mirrors TodayUpdatesSection: clipped container
+          + horizontal row of 168px cards that visually run off the right edge
+          (the real version uses a horizontal ScrollView with overflow:'hidden'
+          on the wrapper). */}
       <View
         style={{
+          overflow: 'hidden',
           marginHorizontal: Spacing.md,
           marginBottom: Spacing.sm,
           borderRadius: Radius.card,

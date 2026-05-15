@@ -1,17 +1,27 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Animated, {
+  Easing,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Radius, TabBar as TabBarTokens } from '../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
+import {
+  isFloatingTabBarHidden,
+  subscribeFloatingTabBarVisibility,
+} from '../libs/navigation/floating-tab-bar-visibility';
+import {
+  FLOATING_TAB_BAR_HIDE_DURATION_MS,
+  FLOATING_TAB_BAR_SHOW_DURATION_MS,
+} from '../libs/navigation/floating-tab-bar-animation';
 
 const PILL_HORIZONTAL_MARGIN = 16;
 const PILL_INNER_PADDING = 8;
@@ -25,10 +35,17 @@ const INACTIVE_ICON_SIZE = 20;
 const FOCUS_SPRING = { damping: 20, stiffness: 220, mass: 0.6 } as const;
 const PRESS_IN_SPRING = { damping: 14, stiffness: 320 } as const;
 const PRESS_OUT_SPRING = { damping: 12, stiffness: 280 } as const;
+// Slide far enough that the elevation shadow on Android also clears the screen.
+const HIDE_TRANSLATE_Y = 120;
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { theme, effectiveMode } = useTheme();
+  const externallyHidden = useSyncExternalStore(
+    subscribeFloatingTabBarVisibility,
+    isFloatingTabBarHidden,
+    isFloatingTabBarHidden
+  );
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const blurTint =
     effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
@@ -38,38 +55,72 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     android: insets.bottom > 0 ? insets.bottom + 12 : 20,
   });
 
-  const isHidden = (options: any) =>
-    options?.href === null ||
-    (options?.tabBarStyle as any)?.display === 'none' ||
-    options?.tabBarButton === null ||
-    options?.tabBarVisible === false;
+  // Permanently hidden — these routes never appear in the bar at all (e.g.
+  // `href: null`, `tabBarButton: null` registrations). They should be excluded
+  // from the visible pill list.
+  const isPermanentlyHidden = (options: any) =>
+    options?.href === null || options?.tabBarButton === null;
+
+  // Transiently hidden — the focused screen wants the bar hidden right now
+  // (e.g. bangumi cards mode, a nested sub-screen). The route itself is still
+  // a navigable tab, so it stays in `visibleRoutes` so other tabs can show its
+  // pill. The whole bar animates out instead.
+  const isTransientlyHidden = (options: any) =>
+    (options?.tabBarStyle as any)?.display === 'none' || options?.tabBarVisible === false;
 
   const visibleRoutes = state.routes.filter((route) => {
     const { options } = descriptors[route.key];
-    return !isHidden(options);
+    return !isPermanentlyHidden(options);
   });
 
   const activeRouteKey = state.routes[state.index]?.key;
   const activeOptions = activeRouteKey ? descriptors[activeRouteKey]?.options : undefined;
-  if (!activeOptions || isHidden(activeOptions)) {
-    return null;
-  }
 
-  // Hide whenever the focused tab has drilled into a nested non-index route
-  // (e.g. (rate)/rating, collection/[id]). Nested screens may forget to call
-  // parent.setOptions to hide the bar, and racey setOptions inside useEffect
-  // sometimes leaves the bar visible for a frame.
-  const activeRoute = state.routes[state.index] as { state?: { index?: number; routes?: { name: string }[] } };
-  const nested = activeRoute?.state;
-  if (nested && typeof nested.index === 'number' && nested.routes) {
-    const nestedActive = nested.routes[nested.index];
-    if (nestedActive && nestedActive.name !== 'index') {
-      return null;
+  // Hide whenever:
+  //   - active route options are missing (mid-init),
+  //   - active route is permanently or transiently hidden,
+  //   - active tab has drilled into a nested non-index route (e.g. (rate)/rating,
+  //     anime/[id]). Nested screens may forget to call parent.setOptions, and
+  //     racey setOptions inside useEffect can leave the bar visible for a frame.
+  const shouldHide = useMemo(() => {
+    if (externallyHidden) return true;
+    if (!activeOptions) return true;
+    if (isPermanentlyHidden(activeOptions)) return true;
+    if (isTransientlyHidden(activeOptions)) return true;
+    const activeRoute = state.routes[state.index] as {
+      state?: { index?: number; routes?: { name: string }[] };
+    };
+    const nested = activeRoute?.state;
+    if (nested && typeof nested.index === 'number' && nested.routes) {
+      const nestedActive = nested.routes[nested.index];
+      if (nestedActive && nestedActive.name !== 'index') return true;
     }
-  }
+    return false;
+  }, [activeOptions, externallyHidden, state.routes, state.index]);
+
+  // BlurView stays mounted across hide toggles — re-creating it on every
+  // remount was the source of the visible frame drops on Android when flipping
+  // out of bangumi cards mode. We drive translateY+opacity on the UI thread
+  // instead so the GPU keeps the blur compositing context alive.
+  const hideProgress = useSharedValue(shouldHide ? 1 : 0);
+  useEffect(() => {
+    hideProgress.value = withTiming(shouldHide ? 1 : 0, {
+      duration: shouldHide
+        ? FLOATING_TAB_BAR_HIDE_DURATION_MS
+        : FLOATING_TAB_BAR_SHOW_DURATION_MS,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [shouldHide, hideProgress]);
+
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: hideProgress.value * HIDE_TRANSLATE_Y }],
+    opacity: 1 - hideProgress.value,
+  }));
 
   return (
-    <View style={[styles.container, { bottom: bottomMargin }]} pointerEvents="box-none">
+    <Animated.View
+      style={[styles.container, { bottom: bottomMargin }, containerAnimatedStyle]}
+      pointerEvents={shouldHide ? 'none' : 'box-none'}>
       <View style={styles.pill}>
         <BlurView
           intensity={80}
@@ -121,7 +172,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           })}
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
