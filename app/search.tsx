@@ -23,6 +23,7 @@ import { EmptyStateView } from '../components/common/EmptyStateView';
 import { ErrorStateView } from '../components/common/ErrorStateView';
 import { Colors, IconSize, Radius, Spacing, Typography } from '../constants/DesignSystem';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
+import { trackingService } from '../libs/services/tracking/tracking-service';
 import { isStringArray, safeJsonParse } from '../libs/utils/safe-json';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
 import { lookupBangumiByPlatformId } from '../libs/services/pilgrimage/anitabi-cross-index';
@@ -102,8 +103,42 @@ export default function SearchScreen() {
   const [sortOpen, setSortOpen] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [trackedIds, setTrackedIds] = useState<Set<string>>(() => new Set());
+  const [bookmarkPendingId, setBookmarkPendingId] = useState<string | null>(null);
+  const [bookmarkToast, setBookmarkToast] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeQueryRef = useRef(initialQuery);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    trackingService
+      .getTrackedIdSet()
+      .then((ids) => {
+        if (!cancelled) setTrackedIds(ids);
+      })
+      .catch(() => undefined);
+    const unsubscribe = trackingService.onTrackedIdsChange((ids) => {
+      setTrackedIds(new Set(ids));
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    },
+    []
+  );
+
+  const showBookmarkToast = useCallback((message: string) => {
+    setBookmarkToast(message);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setBookmarkToast(null), 2000);
+  }, []);
 
   useEffect(() => {
     const next = getStringParam(params, 'q') ?? '';
@@ -223,6 +258,57 @@ export default function SearchScreen() {
       router.push(`/anime/${anime.id}`);
     },
     [recent, persistRecent, router, isPilgrimageMode, query]
+  );
+
+  const handleBookmarkToggle = useCallback(
+    async (anime: SearchAnime) => {
+      if (bookmarkPendingId === anime.id) return;
+      const wasTracked = trackedIds.has(anime.id);
+      hapticsBridge.selection();
+      setBookmarkPendingId(anime.id);
+      // Optimistic update so the icon flips instantly. trackingService emits
+      // through onTrackedIdsChange after the DB write completes, which will
+      // overwrite this set with the authoritative value — same result, but
+      // the user sees the change immediately.
+      setTrackedIds((prev) => {
+        const next = new Set(prev);
+        if (wasTracked) next.delete(anime.id);
+        else next.add(anime.id);
+        return next;
+      });
+      try {
+        if (wasTracked) {
+          await trackingService.removeTracking(anime.id);
+          showBookmarkToast(`Removed "${anime.title}" from your list`);
+        } else {
+          await trackingService.upsertTracking({
+            animeId: anime.id,
+            status: 'planned',
+            title: anime.title,
+            imageUrl: anime.image,
+          });
+          showBookmarkToast(
+            isPilgrimageMode
+              ? `Added "${anime.title}" to your pilgrimages`
+              : `Added "${anime.title}" to your list`
+          );
+        }
+      } catch (err) {
+        console.warn('[search] bookmark toggle failed', err);
+        hapticsBridge.warning();
+        // Roll back the optimistic flip.
+        setTrackedIds((prev) => {
+          const next = new Set(prev);
+          if (wasTracked) next.add(anime.id);
+          else next.delete(anime.id);
+          return next;
+        });
+        showBookmarkToast(wasTracked ? "Couldn't remove" : "Couldn't add to your list");
+      } finally {
+        setBookmarkPendingId(null);
+      }
+    },
+    [bookmarkPendingId, trackedIds, isPilgrimageMode, showBookmarkToast]
   );
 
   const handleRecentTap = useCallback((term: string) => {
@@ -517,7 +603,10 @@ export default function SearchScreen() {
                   item.hasPilgrimage === true ||
                   lookupBangumiByPlatformId('anilist', item.id) !== null
                 }
+                isBookmarked={trackedIds.has(item.id)}
+                bookmarkPending={bookmarkPendingId === item.id}
                 onPress={() => handleSelect(item)}
+                onBookmarkPress={() => handleBookmarkToggle(item)}
               />
             )}
             ListFooterComponent={
@@ -530,6 +619,14 @@ export default function SearchScreen() {
           />
         )}
       </SafeAreaView>
+      {bookmarkToast ? (
+        <View style={[styles.toast, { bottom: insets.bottom + Spacing.lg }]}>
+          <Ionicons name="bookmark" size={16} color={Colors.primary} />
+          <Text style={styles.toastText} numberOfLines={2}>
+            {bookmarkToast}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -544,7 +641,13 @@ interface ResultCardProps {
    * marker, never a placeholder.
    */
   hasPilgrimage?: boolean;
+  /** Whether the user has already saved this anime to their tracked list. */
+  isBookmarked?: boolean;
+  /** True while the bookmark toggle's async write is in flight. */
+  bookmarkPending?: boolean;
   onPress: () => void;
+  /** Tap on the bookmark icon. Independent from the row press. */
+  onBookmarkPress?: () => void;
 }
 
 function mapPilgrimageResultToAnime(result: PilgrimageSearchResult): SearchAnime {
@@ -580,7 +683,15 @@ function mapPilgrimageResultToAnime(result: PilgrimageSearchResult): SearchAnime
   };
 }
 
-function ResultCard({ anime, pending, hasPilgrimage, onPress }: ResultCardProps) {
+function ResultCard({
+  anime,
+  pending,
+  hasPilgrimage,
+  isBookmarked,
+  bookmarkPending,
+  onPress,
+  onBookmarkPress,
+}: ResultCardProps) {
   const score = typeof anime.score === 'number' ? formatScore(anime.score) : null;
   const tags = anime.tags?.slice(0, 3) ?? [];
   return (
@@ -646,13 +757,24 @@ function ResultCard({ anime, pending, hasPilgrimage, onPress }: ResultCardProps)
       <Pressable
         onPress={(e) => {
           e.stopPropagation?.();
-          hapticsBridge.tap();
+          onBookmarkPress?.();
         }}
         hitSlop={6}
+        disabled={bookmarkPending}
         accessibilityRole="button"
-        accessibilityLabel="Bookmark"
-        style={({ pressed }) => [styles.bookmarkBtn, pressed && { opacity: 0.78 }]}>
-        <Ionicons name="bookmark-outline" size={16} color={Colors.text.secondary} />
+        accessibilityLabel={isBookmarked ? 'Remove from your list' : 'Save to your list'}
+        accessibilityState={{ selected: !!isBookmarked, busy: !!bookmarkPending }}
+        style={({ pressed }) => [
+          styles.bookmarkBtn,
+          isBookmarked && styles.bookmarkBtnActive,
+          pressed && { opacity: 0.78 },
+          bookmarkPending && { opacity: 0.6 },
+        ]}>
+        <Ionicons
+          name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+          size={16}
+          color={isBookmarked ? Colors.primary : Colors.text.secondary}
+        />
       </Pressable>
     </Pressable>
   );
@@ -961,6 +1083,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: Colors.glass.border,
+  },
+  bookmarkBtnActive: {
+    backgroundColor: 'rgba(255,159,10,0.16)',
+    borderColor: 'rgba(255,159,10,0.55)',
+  },
+  toast: {
+    position: 'absolute',
+    left: Spacing.md,
+    right: Spacing.md,
+    bottom: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(20,20,22,0.96)',
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.32,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  toastText: {
+    flex: 1,
+    color: Colors.text.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
   footerLoader: {
     paddingVertical: Spacing.lg,
