@@ -12,6 +12,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
+import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
@@ -399,7 +400,7 @@ export default function PhotoTipsScreen() {
           style={[
             styles.footer,
             {
-              paddingBottom: insets.bottom + 14,
+              paddingBottom: bottomPad(insets),
               borderTopColor: theme.glassBorder,
               backgroundColor: `${theme.background.primary}F0`,
             },

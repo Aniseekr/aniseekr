@@ -10,7 +10,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Magnetometer } from 'expo-sensors';
-import { Radius, Spacing } from '../../../../constants/DesignSystem';
+import { Radius, Spacing, bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
@@ -312,7 +312,7 @@ export default function GpsAlignScreen() {
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 14 }]}>
+        <View style={[styles.footer, { paddingBottom: bottomPad(insets) }]}>
           <Pressable
             onPress={handleStart}
             accessibilityRole="button"

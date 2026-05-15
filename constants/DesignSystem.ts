@@ -109,6 +109,7 @@ export const IconSize = {
 export const Size = {
   minTouchTarget: 44,
   recommendedTouchTarget: 48,
+  minBottomClearance: 20,
   cardSmall: 80,
   cardMedium: 120,
   cardLarge: 180,
@@ -117,6 +118,20 @@ export const Size = {
   avatarLarge: 80,
   avatarXLarge: 120,
 } as const;
+
+/**
+ * Compute bottom padding that clears the system navigation / home indicator zone.
+ *
+ * Adds `Size.minBottomClearance` on top of the safe-area inset so touch targets
+ * never sit inside the iOS home indicator or Android gesture bar. On iPhone SE
+ * (inset.bottom = 0) this yields 20pt, on devices with a home indicator
+ * (inset.bottom ~34) this yields 54pt.
+ *
+ * Add visual air on top of this floor if needed, e.g. `bottomPad(insets) + 4`.
+ */
+export function bottomPad(insets: { bottom: number }): number {
+  return Math.max(insets.bottom, 0) + Size.minBottomClearance;
+}
 
 export const TabBar = {
   height: 62,

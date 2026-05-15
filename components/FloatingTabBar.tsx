@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Radius, TabBar as TabBarTokens } from '../constants/DesignSystem';
+import { Radius, TabBar as TabBarTokens, bottomPad } from '../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import {
   isFloatingTabBarHidden,
@@ -51,8 +51,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
 
   const bottomMargin = Platform.select({
-    ios: insets.bottom > 0 ? insets.bottom : 16,
-    android: insets.bottom > 0 ? insets.bottom + 12 : 20,
+    ios: bottomPad(insets),
+    android: bottomPad(insets),
   });
 
   // Permanently hidden — these routes never appear in the bar at all (e.g.

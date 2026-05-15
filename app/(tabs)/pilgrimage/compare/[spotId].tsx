@@ -25,6 +25,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
+import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
@@ -764,7 +765,7 @@ export default function CompareCaptureScreen() {
           style={[
             styles.bottomBar,
             isLandscape ? styles.bottomBarLandscape : null,
-            { paddingBottom: insets.bottom + (isLandscape ? 8 : 12) },
+            { paddingBottom: bottomPad(insets) + (isLandscape ? 0 : 4) },
           ]}>
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.78)']}
