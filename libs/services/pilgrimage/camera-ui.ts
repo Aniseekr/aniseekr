@@ -17,11 +17,38 @@ export interface CameraActiveInput {
   settingsOpen: boolean;
 }
 
-export const LANDSCAPE_TOOL_MENU_TRIGGER_SIZE = 44;
-export const LANDSCAPE_TOOL_MENU_PANEL_GAP = 12;
-export const LANDSCAPE_TOOL_MENU_BOTTOM_OFFSET = 14;
-export const LANDSCAPE_TOOL_MENU_MIN_PANEL_WIDTH = 280;
-export const LANDSCAPE_TOOL_MENU_PANEL_WIDTH = 300;
+// Geometry for the camera "More" tool menu — a drill-down popover anchored
+// above the dock row in both portrait and landscape. Exported (not
+// component-local) so the layout invariants stay unit-testable.
+export const CAMERA_TOOL_MENU_TRIGGER_HEIGHT = 44;
+export const CAMERA_TOOL_MENU_PANEL_GAP = 12;
+/** Landscape only: gap from the screen bottom to the dock row. */
+export const CAMERA_TOOL_MENU_DOCK_BOTTOM_OFFSET = 14;
+export const CAMERA_TOOL_MENU_MIN_PANEL_WIDTH = 280;
+export const CAMERA_TOOL_MENU_PANEL_WIDTH = 320;
+
+export interface CameraToolMenuLayoutInput {
+  isLandscape: boolean;
+  safeAreaBottomPad: number;
+  portraitDockBottom: number;
+  shutterRailWidth: number;
+}
+
+export interface CameraToolMenuLayout {
+  bottomOffset: number;
+  rightOffset: number;
+}
+
+export interface TransientCameraHudVisibilityInput {
+  toolMenuOpen: boolean;
+  afLocked: boolean;
+}
+
+export interface TransientCameraHudVisibility {
+  showAutoCaptureBadge: boolean;
+  showCaptureHistory: boolean;
+  showFocusExposureBar: boolean;
+}
 
 const RESERVED_COMPARE_ROUTES = new Set(['align', 'preview', 'share', 'tips']);
 const EV_MIN = -2;
@@ -60,6 +87,30 @@ export function cameraOrientationLockIntent(
 export function roundExposureValue(value: number): number {
   const clamped = Math.max(EV_MIN, Math.min(EV_MAX, value));
   return Number(clamped.toFixed(1));
+}
+
+export function resolveCameraToolMenuLayout(
+  input: CameraToolMenuLayoutInput
+): CameraToolMenuLayout {
+  const dockRowBottom = input.isLandscape
+    ? input.safeAreaBottomPad + CAMERA_TOOL_MENU_DOCK_BOTTOM_OFFSET
+    : input.portraitDockBottom;
+
+  return {
+    bottomOffset: dockRowBottom + CAMERA_TOOL_MENU_TRIGGER_HEIGHT + CAMERA_TOOL_MENU_PANEL_GAP,
+    rightOffset: input.isLandscape ? input.shutterRailWidth + 16 : 16,
+  };
+}
+
+export function resolveTransientCameraHudVisibility(
+  input: TransientCameraHudVisibilityInput
+): TransientCameraHudVisibility {
+  const showTransientHud = !input.toolMenuOpen;
+  return {
+    showAutoCaptureBadge: showTransientHud,
+    showCaptureHistory: showTransientHud,
+    showFocusExposureBar: input.afLocked && showTransientHud,
+  };
 }
 
 export function resolveCameraActive(input: CameraActiveInput): boolean {
