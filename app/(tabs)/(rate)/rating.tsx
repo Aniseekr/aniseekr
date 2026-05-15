@@ -35,10 +35,8 @@ import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { getDeck, putDeck, clearDeck } from '../../../libs/services/rate/deck-cache';
 import { restartGenreDeck } from '../../../libs/services/rate/restart-genre-deck';
 import { setOverride as setGenreCoverOverride } from '../../../libs/services/rate/genre-cover-override';
-import {
-  hasPotentialNextSwipePage,
-  isExhaustedSwipeDeck,
-} from '../../../libs/services/rate/swipe-pagination';
+import { isExhaustedSwipeDeck } from '../../../libs/services/rate/swipe-pagination';
+import { loadNextUsableSwipePage } from '../../../libs/services/rate/swipe-page-loader';
 import { SWIPE_PERSISTENCE_DELAY_MS } from '../../../libs/services/rate/swipe-animation';
 import {
   persistSwipeJob,
@@ -176,6 +174,7 @@ export default function RatingScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [swipePrefs, setSwipePrefs] = useState<SwipePrefs>(DEFAULT_SWIPE_PREFS);
   const [showSettings, setShowSettings] = useState(false);
+  const [restartableSeenIds, setRestartableSeenIds] = useState<string[]>([]);
   // Bumped on restart to force-remount the SwipeDeck so its internal topIndex
   // and outgoing-card list start clean.
   const [deckGeneration, setDeckGeneration] = useState(0);
@@ -185,6 +184,7 @@ export default function RatingScreen() {
   // SQLite once on mount; new swipes are pushed into both the local ref and the
   // DB so subsequent fetches can filter them out without an extra round-trip.
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const skippedSeenIdsRef = useRef<Set<string>>(new Set());
 
   const photosRef = useRef<Photo[]>([]);
   const deckRef = useRef<DeckItem[]>([]);
@@ -207,6 +207,15 @@ export default function RatingScreen() {
   // ensuing swipe-callback consumes it instead of inferring an action from the
   // direction alone (which would lose 'love' vs 'like', 'dislike' vs 'skip', …).
   const pendingRatingRef = useRef<RatingType | null>(null);
+
+  const rememberRestartableSeenIds = useCallback((ids: string[], mode: 'replace' | 'append') => {
+    const next = mode === 'replace' ? new Set(ids) : new Set(skippedSeenIdsRef.current);
+    if (mode === 'append') {
+      for (const id of ids) next.add(id);
+    }
+    skippedSeenIdsRef.current = next;
+    setRestartableSeenIds([...next]);
+  }, []);
 
   // Hydrate swipe prefs on mount; the ModeSelector + settings sheet persist
   // changes via patchSwipePrefs so they survive deck reloads.
@@ -285,28 +294,39 @@ export default function RatingScreen() {
   const loadPhotos = async () => {
     setLoading(true);
     try {
-      let animeList;
-      let nextHasMore = true;
-      // Dynamic loading guard: deck filters run after the API fetch, so a
-      // short non-empty source page is not an end-of-list signal.
+      let validPhotos: Photo[] = [];
+      let nextCurrentPage = 1;
+      let nextHasMore = false;
+
       if (params.animeId) {
         // Direct rating of a single anime — bypass the seen filter so the user
         // can still re-rate an item they explicitly opened.
         const specificAnime = await AnimeRepository.getAnimeDetails(params.animeId);
-        animeList = [specificAnime];
-        nextHasMore = false;
-      } else if (params.genreId) {
-        animeList = await AnimeRepository.getAnimeByGenre(params.genreId, 1);
-        nextHasMore = hasPotentialNextSwipePage(animeList.length);
+        const mapped = AnimeRepository.mapAnimeToPhoto(specificAnime);
+        validPhotos = mapped.url ? [mapped] : [];
+        rememberRestartableSeenIds([], 'replace');
       } else {
-        animeList = await AnimeRepository.getSeasonalAnime(undefined, undefined, 1);
-        nextHasMore = hasPotentialNextSwipePage(animeList.length);
+        const pageResult = await loadNextUsableSwipePage({
+          startPage: 1,
+          fetchPage: (page) =>
+            params.genreId
+              ? AnimeRepository.getAnimeByGenre(params.genreId, page)
+              : AnimeRepository.getSeasonalAnime(undefined, undefined, page),
+          mapItemToPhoto: AnimeRepository.mapAnimeToPhoto,
+          seenIds: seenIdsRef.current,
+        });
+        validPhotos = pageResult.photos;
+        nextCurrentPage = pageResult.currentPage;
+        nextHasMore = pageResult.hasMore;
+        rememberRestartableSeenIds(pageResult.releasableSeenIds, 'replace');
+        if (pageResult.stoppedByScanLimit) {
+          console.warn(
+            `[Rating] stopped initial swipe page scan after ${pageResult.scannedPages} empty usable pages`
+          );
+        }
       }
-      const seen = seenIdsRef.current;
-      const isAnimeIdPath = !!params.animeId;
-      const mappedPhotos = animeList.map(AnimeRepository.mapAnimeToPhoto);
-      const validPhotos = mappedPhotos.filter((p) => !!p.url && (isAnimeIdPath || !seen.has(p.id)));
-      console.log(`Loaded ${validPhotos.length} photos out of ${mappedPhotos.length} total`);
+
+      console.log(`Loaded ${validPhotos.length} swipe photos`);
       if (validPhotos.length > 0) {
         console.log('First photo URL:', validPhotos[0].url);
       }
@@ -314,7 +334,7 @@ export default function RatingScreen() {
       setDeck(buildDeck(validPhotos, adsEnabled));
       setCurrentIndex(0);
       startIndexRef.current = 0;
-      setCurrentPage(1);
+      setCurrentPage(nextCurrentPage);
       setHasMore(nextHasMore);
 
       // Q3: backfill the Discovery carousel's cover for this genre. The merge
@@ -338,38 +358,34 @@ export default function RatingScreen() {
     setLoadingMore(true);
     const nextPage = currentPage + 1;
     try {
-      let animeList;
-      let nextHasMore = true;
-      // Same guard as the initial load: only an empty source page should stop
-      // category/seasonal swipe pagination.
-      if (params.genreId) {
-        animeList = await AnimeRepository.getAnimeByGenre(params.genreId, nextPage);
-        nextHasMore = hasPotentialNextSwipePage(animeList.length);
-      } else {
-        animeList = await AnimeRepository.getSeasonalAnime(undefined, undefined, nextPage);
-        nextHasMore = hasPotentialNextSwipePage(animeList.length);
-      }
-
-      const existingIds = new Set(photos.map((p) => p.id));
-      const seen = seenIdsRef.current;
-      const newPhotos = animeList
-        .map(AnimeRepository.mapAnimeToPhoto)
-        .filter((p) => !!p.url && !existingIds.has(p.id) && !seen.has(p.id));
+      const pageResult = await loadNextUsableSwipePage({
+        startPage: nextPage,
+        fetchPage: (page) =>
+          params.genreId
+            ? AnimeRepository.getAnimeByGenre(params.genreId, page)
+            : AnimeRepository.getSeasonalAnime(undefined, undefined, page),
+        mapItemToPhoto: AnimeRepository.mapAnimeToPhoto,
+        existingIds: new Set(photos.map((p) => p.id)),
+        seenIds: seenIdsRef.current,
+      });
+      const newPhotos = pageResult.photos;
+      rememberRestartableSeenIds(pageResult.releasableSeenIds, 'append');
 
       if (newPhotos.length === 0) {
-        // Page returned but every item was already seen / duplicate. Bump the
-        // page counter so the prefetch effect can pull the next page on its
-        // own re-run — without this we'd appear stuck on "all caught up" even
-        // though more unseen pages exist.
-        setCurrentPage(nextPage);
-        if (!nextHasMore) setHasMore(false);
+        setCurrentPage(pageResult.currentPage);
+        setHasMore(pageResult.hasMore);
+        if (pageResult.stoppedByScanLimit) {
+          console.warn(
+            `[Rating] stopped load-more swipe page scan after ${pageResult.scannedPages} empty usable pages`
+          );
+        }
         return;
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
       setDeck((prev) => [...prev, ...buildDeck(newPhotos, adsEnabled)]);
-      setCurrentPage(nextPage);
-      setHasMore(nextHasMore);
+      setCurrentPage(pageResult.currentPage);
+      setHasMore(pageResult.hasMore);
     } catch (err) {
       console.warn('Failed to load more photos:', err);
     } finally {
@@ -384,6 +400,7 @@ export default function RatingScreen() {
     params.animeId,
     params.genreId,
     photos,
+    rememberRestartableSeenIds,
   ]);
 
   // Prefetch upcoming photo cards. SwipeDeck reports the visual top via
@@ -492,15 +509,22 @@ export default function RatingScreen() {
   const handleRestart = useCallback(async () => {
     if (!params.genreId || params.animeId) return;
     try {
+      const extraReleasedIds = [...skippedSeenIdsRef.current];
       const releasedIds = await restartGenreDeck(
         params.genreId,
         photosRef.current,
         deckRef.current
       );
-      for (const id of releasedIds) {
+      if (extraReleasedIds.length > 0) {
+        await LocalDB.clearSwipeSeenIds(extraReleasedIds);
+      }
+      const allReleasedIds = [...new Set([...releasedIds, ...extraReleasedIds])];
+      for (const id of allReleasedIds) {
         seenIdsRef.current.delete(id);
       }
-      releaseQueuedSwipeSeen(releasedIds);
+      releaseQueuedSwipeSeen(allReleasedIds);
+      skippedSeenIdsRef.current.clear();
+      setRestartableSeenIds([]);
       setCurrentIndex(0);
       startIndexRef.current = 0;
       setCurrentPage(1);
@@ -552,6 +576,8 @@ export default function RatingScreen() {
 
   const currentItem = deck[currentIndex];
   const currentPhoto = currentItem?.kind === 'photo' ? currentItem.photo : undefined;
+  const canRestartCurrentGenre = !!params.genreId && !params.animeId;
+  const showEmptyRestart = canRestartCurrentGenre && restartableSeenIds.length > 0;
   const showDeck = !loading && deck.length > 0;
   const showEmpty = !loading && deck.length === 0;
   const showExhausted = !loading && deck.length > 0 && currentIndex >= deck.length;
@@ -618,9 +644,28 @@ export default function RatingScreen() {
             <View style={styles.emptyContainer}>
               <Ionicons name="images-outline" size={64} color="#666" />
               <Text style={styles.emptyText}>No photos available</Text>
-              <Pressable onPress={handleClose} style={styles.goBackButton}>
-                <Text style={styles.goBackButtonText}>Go Back</Text>
-              </Pressable>
+              <View style={styles.emptyActions}>
+                {showEmptyRestart ? (
+                  <Pressable
+                    onPress={confirmRestart}
+                    style={[styles.restartButton, { backgroundColor: theme.accent }]}
+                    accessibilityLabel="Restart deck">
+                    <Ionicons
+                      name="refresh"
+                      size={16}
+                      color={readableTextOn(theme.accent)}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={[styles.restartButtonText, { color: readableTextOn(theme.accent) }]}>
+                      Restart
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable onPress={handleClose} style={styles.goBackButton}>
+                  <Text style={styles.goBackButtonText}>Go Back</Text>
+                </Pressable>
+              </View>
             </View>
           )
         ) : null}
@@ -650,7 +695,7 @@ export default function RatingScreen() {
               <Ionicons name="checkmark-done-circle-outline" size={64} color="#666" />
               <Text style={styles.emptyText}>{"You're all caught up"}</Text>
               <View style={styles.emptyActions}>
-                {!params.animeId ? (
+                {canRestartCurrentGenre ? (
                   <Pressable
                     onPress={confirmRestart}
                     style={[styles.restartButton, { backgroundColor: theme.accent }]}
