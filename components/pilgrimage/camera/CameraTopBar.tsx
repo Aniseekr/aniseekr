@@ -1,160 +1,250 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText } from '../../themed';
+import { ThemedText, readableTextOn } from '../../themed';
+import {
+  CAMERA_SIDE_RAIL_WIDTH,
+  CAMERA_TOP_BAR_CONTENT_HEIGHT,
+  resolveCameraPlaceBadgeLayout,
+} from '../../../libs/services/pilgrimage/camera-ui';
+
+// The chrome strip is translucent so the live camera still breathes behind the
+// controls. The place name now lives in its own badge so it can sit at the top
+// of the landscape camera window and just below the portrait function strip.
+// rgba over the preview is allowed (CLAUDE.md camera-scrim exception).
+const CHROME_SCRIM = 'rgba(0,0,0,0.5)';
+const TEXT_SHADOW = {
+  textShadowColor: 'rgba(0,0,0,0.6)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 3,
+} as const;
 
 interface CameraTopBarProps {
-  sceneName: string;
-  subtitleText: string;
+  /** Real spot / location name shown in a translucent floating badge. */
+  placeName: string;
   themeColor: string;
   topInset: number;
-  onClose: () => void;
-  onOpenInfo: () => void;
-  showActions?: boolean;
-  /**
-   * Extra action buttons rendered to the right of the info button. Used by the
-   * landscape layout to surface camera-swap + orientation toggle in the top
-   * bar instead of cramming them into the bottom tool drawer.
-   */
-  trailingActions?: ReactNode;
-  /** Compact mode tightens horizontal padding + drops the subtitle line. */
-  compact?: boolean;
-  /**
-   * Safe-area insets for the side edges. Critical in landscape on Android —
-   * the system status bar (signal/battery/camera indicator) lives on the long
-   * edge, so without `rightInset` padding the trailing actions sit directly
-   * under those icons. iOS landscape notches also report non-zero values
-   * here. Default 0 for portrait callers that don't care.
-   */
+  /** Side + bottom safe-area insets — non-zero on notched devices. */
   leftInset?: number;
   rightInset?: number;
+  bottomInset?: number;
+  /** Width reserved by the landscape shutter rail on the opposite side. */
+  rightRailWidth?: number;
+  /**
+   * Landscape collapses the bar into a LEFT vertical rail so the camera is
+   * framed left + right (a pillarbox) instead of top + right.
+   */
+  isLandscape: boolean;
+  onClose: () => void;
+  /** Header icon buttons (flip / overlay-edit / flash / more). */
+  trailingActions?: ReactNode;
 }
 
+/**
+ * Translucent letterbox chrome for the camera. Portrait → a top strip;
+ * landscape → a left rail mirroring the right shutter rail. The location label
+ * is rendered as a separate floating translucent badge.
+ */
 export default function CameraTopBar({
-  sceneName,
-  subtitleText,
+  placeName,
   themeColor,
   topInset,
-  onClose,
-  onOpenInfo,
-  showActions = true,
-  trailingActions,
-  compact = false,
   leftInset = 0,
   rightInset = 0,
+  bottomInset = 0,
+  rightRailWidth = 0,
+  isLandscape,
+  onClose,
+  trailingActions,
 }: CameraTopBarProps) {
-  // Compact (landscape) needs noticeably more side breathing room than portrait
-  // — Android renders the system status bar (signal/battery/camera indicator)
-  // on the long edge in landscape, and on many rotations `insets.right` is 0
-  // even though those icons are clearly present. The min keeps the trailing
-  // actions clear of those icons.
-  const basePadH = compact ? 24 : 14;
+  const placeBadgeLayout = resolveCameraPlaceBadgeLayout({
+    isLandscape,
+    topInset,
+    leftInset,
+    rightInset,
+    rightRailWidth,
+  });
+
+  if (isLandscape) {
+    return (
+      <>
+        <View
+          style={[
+            styles.rail,
+            {
+              width: CAMERA_SIDE_RAIL_WIDTH + leftInset,
+              paddingTop: topInset + 14,
+              paddingBottom: bottomInset + 14,
+              paddingLeft: leftInset,
+            },
+          ]}>
+          <CameraHeaderButton
+            icon="close"
+            accessibilityLabel="Close camera"
+            themeColor={themeColor}
+            onPress={onClose}
+          />
+          <View style={styles.railMid} pointerEvents="none" />
+          <View style={styles.railTrailing}>{trailingActions}</View>
+        </View>
+        <PlaceNameBadge placeName={placeName} layout={placeBadgeLayout} />
+      </>
+    );
+  }
+
   return (
-    <LinearGradient
-      // rgba scrim sits over the live camera preview — no theme surface below.
-      colors={['rgba(0,0,0,0.78)', 'rgba(0,0,0,0)']}
-      style={[
-        styles.topBar,
-        compact && styles.topBarCompact,
-        {
-          paddingTop: topInset + (compact ? 4 : 8),
-          paddingLeft: Math.max(basePadH, leftInset),
-          paddingRight: Math.max(basePadH, rightInset),
-        },
-      ]}>
-      {showActions ? (
-        <Pressable
+    <>
+      <View
+        style={[
+          styles.bar,
+          {
+            height: topInset + CAMERA_TOP_BAR_CONTENT_HEIGHT,
+            paddingTop: topInset,
+            paddingLeft: Math.max(12, leftInset),
+            paddingRight: Math.max(12, rightInset),
+          },
+        ]}>
+        <CameraHeaderButton
+          icon="close"
+          accessibilityLabel="Close camera"
+          themeColor={themeColor}
           onPress={onClose}
-          hitSlop={14}
-          style={({ pressed }) => [styles.topBtn, pressed && { opacity: 0.6 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Close camera">
-          {/* White icon over dark scrim — allowed exception. */}
-          <Ionicons name="close" size={22} color="#fff" />
-        </Pressable>
-      ) : (
-        <View pointerEvents="none" style={styles.topBtnSpacer} />
-      )}
-      <View style={styles.topMid}>
+        />
+        <View style={styles.mid} pointerEvents="none" />
+        <View style={styles.trailing}>{trailingActions}</View>
+      </View>
+      <PlaceNameBadge placeName={placeName} layout={placeBadgeLayout} />
+    </>
+  );
+}
+
+interface PlaceNameBadgeProps {
+  placeName: string;
+  layout: { top: number; left: number; right: number };
+}
+
+function PlaceNameBadge({ placeName, layout }: PlaceNameBadgeProps) {
+  return (
+    <View pointerEvents="none" style={[styles.placeBadgeWrap, layout]}>
+      <View style={styles.placeBadge}>
         <ThemedText
-          variant={compact ? 'caption' : 'titleSmall'}
+          variant="titleSmall"
           weight="700"
           align="center"
-          style={{ color: '#fff' }}
-          numberOfLines={1}>
-          {sceneName}
+          numberOfLines={1}
+          style={styles.placeBadgeText}>
+          {placeName}
         </ThemedText>
-        {compact ? null : (
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            align="center"
-            style={{ color: themeColor }}
-            numberOfLines={1}>
-            {subtitleText}
-          </ThemedText>
-        )}
-        {compact ? (
-          <ThemedText
-            variant="captionSmall"
-            weight="600"
-            align="center"
-            style={{ color: themeColor }}
-            numberOfLines={1}>
-            {subtitleText}
-          </ThemedText>
-        ) : null}
       </View>
-      {showActions ? (
-        <View style={styles.trailingGroup}>
-          <Pressable
-            onPress={onOpenInfo}
-            hitSlop={14}
-            style={({ pressed }) => [styles.topBtn, pressed && { opacity: 0.6 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Open framing tips">
-            <Ionicons name="information-circle-outline" size={22} color="#fff" />
-          </Pressable>
-          {trailingActions}
-        </View>
-      ) : (
-        <View pointerEvents="none" style={styles.topBtnSpacer} />
-      )}
-    </LinearGradient>
+    </View>
+  );
+}
+
+interface CameraHeaderButtonProps {
+  icon: keyof typeof Ionicons.glyphMap;
+  accessibilityLabel: string;
+  themeColor: string;
+  onPress: () => void;
+  /** Toggled state — paints a filled themeColor disc behind the icon. */
+  active?: boolean;
+  accessibilityState?: { selected?: boolean; expanded?: boolean };
+}
+
+/**
+ * The single camera-chrome icon button. Bare (no background) when idle so the
+ * translucent strip stays clean; a filled themeColor disc marks the toggled
+ * state. Every top-bar action routes through this so they never drift apart.
+ */
+export function CameraHeaderButton({
+  icon,
+  accessibilityLabel,
+  themeColor,
+  onPress,
+  active = false,
+  accessibilityState,
+}: CameraHeaderButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityState}
+      style={({ pressed }) => [styles.btn, pressed && { opacity: 0.55 }]}>
+      <View style={[styles.btnInner, active && { backgroundColor: themeColor }]}>
+        {/* White icon over the strip; dark icon over the themeColor disc. The
+            shadow keeps the bare white icon legible on bright scenes. */}
+        <Ionicons
+          name={icon}
+          size={19}
+          color={active ? readableTextOn(themeColor) : '#fff'}
+          style={active ? undefined : TEXT_SHADOW}
+        />
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  topBar: {
+  // Translucent strip — the live camera shows through it.
+  bar: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+    backgroundColor: CHROME_SCRIM,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 14,
-    gap: 8,
+    gap: 6,
   },
-  topBarCompact: {
-    paddingBottom: 8,
+  // Landscape: a translucent left rail mirroring the right shutter rail.
+  rail: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    backgroundColor: CHROME_SCRIM,
+    alignItems: 'center',
   },
-  topBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+  mid: { flex: 1, gap: 1 },
+  railMid: { flex: 1, justifyContent: 'center', paddingHorizontal: 6 },
+  placeBadgeWrap: {
+    position: 'absolute',
+    zIndex: 70,
+    alignItems: 'center',
+  },
+  placeBadge: {
+    maxWidth: '100%',
+    minHeight: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  placeBadgeText: { color: '#fff', ...TEXT_SHADOW },
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  railTrailing: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+  },
+  btn: {
+    width: 34,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topBtnSpacer: {
-    width: 36,
-    height: 36,
-  },
-  topMid: { flex: 1, gap: 2 },
-  trailingGroup: {
-    flexDirection: 'row',
+  btnInner: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
 });

@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText, readableTextOn } from '../../themed';
+import { ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
@@ -9,84 +9,37 @@ import {
   CAMERA_TOOL_MENU_PANEL_WIDTH,
 } from '../../../libs/services/pilgrimage/camera-ui';
 
-// --- Dock trigger --------------------------------------------------------
-
-interface CameraToolMenuTriggerProps {
-  themeColor: string;
-  expanded: boolean;
-  onPress: () => void;
-}
-
-/**
- * The "More" pill that lives inline in the camera dock row. Kept separate from
- * the panel so the panel can render at screen root (reliably touchable + on
- * top of everything) while the trigger stays aligned with the other chips.
- */
-export function CameraToolMenuTrigger({
-  themeColor,
-  expanded,
-  onPress,
-}: CameraToolMenuTriggerProps) {
-  const { theme } = useTheme();
-  const fg = readableTextOn(themeColor);
-  return (
-    <Pressable
-      onPress={() => {
-        hapticsBridge.selection();
-        onPress();
-      }}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel={expanded ? 'Close camera tools' : 'Open camera tools'}
-      accessibilityState={{ expanded }}
-      style={({ pressed }) => [
-        styles.trigger,
-        {
-          // rgba scrim sits over the live camera preview — no theme surface
-          // below. Allowed per CLAUDE.md.
-          backgroundColor: expanded ? themeColor : 'rgba(0,0,0,0.45)',
-          borderColor: expanded ? themeColor : theme.glassBorder,
-          opacity: pressed ? 0.72 : 1,
-        },
-      ]}>
-      <Ionicons
-        name={expanded ? 'close' : 'options-outline'}
-        size={16}
-        color={expanded ? fg : '#fff'}
-      />
-      <ThemedText variant="caption" weight="700" style={{ color: expanded ? fg : '#fff' }}>
-        {expanded ? 'Close' : 'More'}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-// --- Floating panel ------------------------------------------------------
-
 type ToolView = 'root' | 'overlay' | 'exposure';
 
 interface CameraToolMenuProps {
   visible: boolean;
   onRequestClose: () => void;
   themeColor: string;
-  /** Distance from the screen bottom to the panel's bottom edge. */
-  bottomOffset: number;
-  /** Distance from the screen right to the panel's right edge. */
-  rightOffset: number;
-  /** Status-bar inset — caps panel height so it never grows under the top bar. */
-  topInset: number;
-  /** Quick-toggle chips (self-timer / flash / aspect / settings) for the root view. */
+  /** Distance from the screen top to the panel's top edge. */
+  topOffset: number;
+  /**
+   * Horizontal anchor — exactly one is set. Portrait hugs the right margin;
+   * landscape hugs the left rail.
+   */
+  leftOffset?: number;
+  rightOffset?: number;
+  /** Chrome height the panel must not grow into — caps the body, then it scrolls. */
+  bottomReserve: number;
+  /** Quick-toggle chips (self-timer / aspect / orientation / settings) for the root view. */
   cycleChips: ReactNode;
   overlaySummary: string;
   overlayControls: ReactNode;
   /** `null` hides the exposure row — used while AF/AE is locked (the focus bar owns EV then). */
   exposureSummary: string | null;
   exposureControls: ReactNode;
+  /** Opens the framing-tips / alignment screen. */
+  onOpenTips: () => void;
 }
 
 /**
- * The camera "More" menu, rendered as a screen-root popover so it sits above
- * every camera HUD layer and is reliably touchable.
+ * The camera "More" menu — a screen-root popover that drops DOWN from the
+ * top-bar ⋯ trigger, so it sits above every camera HUD layer and is reliably
+ * touchable.
  *
  * It is a drill-down menu, NOT a stack of pop-outs: the root view lists the
  * tools, and tapping a rich tool (overlay / exposure) REPLACES the panel body
@@ -97,14 +50,16 @@ export default function CameraToolMenu({
   visible,
   onRequestClose,
   themeColor,
-  bottomOffset,
+  topOffset,
+  leftOffset,
   rightOffset,
-  topInset,
+  bottomReserve,
   cycleChips,
   overlaySummary,
   overlayControls,
   exposureSummary,
   exposureControls,
+  onOpenTips,
 }: CameraToolMenuProps) {
   const { theme } = useTheme();
   const { width: winW, height: winH } = useWindowDimensions();
@@ -123,9 +78,9 @@ export default function CameraToolMenu({
     CAMERA_TOOL_MENU_MIN_PANEL_WIDTH,
     Math.min(CAMERA_TOOL_MENU_PANEL_WIDTH, winW - 32)
   );
-  // Cap height so the panel never runs under the top bar; the body scrolls if
-  // its content is taller (matters in short landscape windows).
-  const maxBodyHeight = Math.max(180, winH - bottomOffset - topInset - 64);
+  // The panel hangs off the top bar; cap the body so it never runs into the
+  // fixed bottom bar — it scrolls instead (matters in short landscape windows).
+  const maxBodyHeight = Math.max(180, winH - topOffset - bottomReserve - 16);
 
   const goRoot = () => {
     hapticsBridge.selection();
@@ -134,6 +89,10 @@ export default function CameraToolMenu({
   const drillTo = (next: ToolView) => () => {
     hapticsBridge.selection();
     setView(next);
+  };
+  const handleTips = () => {
+    hapticsBridge.tap();
+    onOpenTips();
   };
 
   return (
@@ -154,10 +113,10 @@ export default function CameraToolMenu({
           styles.panel,
           {
             width: panelWidth,
-            bottom: bottomOffset,
-            right: rightOffset,
+            top: topOffset,
             borderColor: theme.glassBorder,
           },
+          leftOffset != null ? { left: leftOffset } : { right: rightOffset },
         ]}>
         <ScrollView
           style={{ maxHeight: maxBodyHeight }}
@@ -183,6 +142,12 @@ export default function CameraToolMenu({
                   onPress={drillTo('exposure')}
                 />
               ) : null}
+              <ToolRow
+                icon="information-circle-outline"
+                label="Framing tips"
+                themeColor={themeColor}
+                onPress={handleTips}
+              />
             </>
           ) : null}
 
@@ -212,7 +177,8 @@ function ToolRow({
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  value: string;
+  /** Optional trailing summary. Omitted for plain action rows (e.g. tips). */
+  value?: string;
   themeColor: string;
   onPress: () => void;
 }) {
@@ -220,15 +186,17 @@ function ToolRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${label}, ${value}`}
+      accessibilityLabel={value ? `${label}, ${value}` : label}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
       <Ionicons name={icon} size={18} color="#fff" />
       <ThemedText variant="bodyMedium" weight="600" style={styles.rowLabel}>
         {label}
       </ThemedText>
-      <ThemedText variant="caption" weight="700" style={{ color: themeColor }}>
-        {value}
-      </ThemedText>
+      {value ? (
+        <ThemedText variant="caption" weight="700" style={{ color: themeColor }}>
+          {value}
+        </ThemedText>
+      ) : null}
       <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.5)" />
     </Pressable>
   );
@@ -266,25 +234,14 @@ function SubView({
 
 const styles = StyleSheet.create({
   layer: { zIndex: 100 },
-  trigger: {
-    height: 44,
-    minWidth: 84,
-    paddingHorizontal: 14,
-    borderRadius: 22,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
   // rgba scrim sits over the live camera preview — no theme surface below.
-  // Allowed per CLAUDE.md. Near-opaque so the panel reads as a solid surface
-  // and the camera / anime overlay can't bleed through behind the controls.
+  // Near-opaque so the panel reads as a solid surface and the camera / anime
+  // overlay can't bleed through behind the controls.
   panel: {
     position: 'absolute',
     borderRadius: 20,
     borderWidth: 1,
-    backgroundColor: 'rgba(0,0,0,0.88)',
+    backgroundColor: 'rgba(0,0,0,0.92)',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.32,
