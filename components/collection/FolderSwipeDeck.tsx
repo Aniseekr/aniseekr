@@ -302,9 +302,11 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
                   <Text style={styles.metaText}>{(item.score / 10).toFixed(1)}</Text>
                 </View>
               ) : null}
-              <Text style={[styles.metaText, { textTransform: 'capitalize', opacity: 0.85 }]}>
-                {item.status.replace(/_/g, ' ')}
-              </Text>
+              {item.status ? (
+                <Text style={[styles.metaText, { textTransform: 'capitalize', opacity: 0.85 }]}>
+                  {item.status.replace(/_/g, ' ')}
+                </Text>
+              ) : null}
             </View>
             <View style={styles.progressTrack}>
               <View
