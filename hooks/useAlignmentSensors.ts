@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DeviceMotion, Magnetometer } from 'expo-sensors';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
-import {
-  locationService,
-  type LatLng,
-} from '../libs/services/pilgrimage/location-service';
+import { locationService, type LatLng } from '../libs/services/pilgrimage/location-service';
 import {
   computeAlignmentScore,
   type AlignmentSensors,
@@ -25,6 +22,7 @@ interface UseAlignmentSensorsOutput {
   tiltShared: SharedValue<number>;
   lockedAt: number | null;
   perfectFiredAt: number | null;
+  showPerfectBanner: boolean;
 }
 
 const FAST_INTERVAL_MS = 200;
@@ -33,6 +31,7 @@ const LOCK_THRESHOLD = 0.9;
 const RELEASE_THRESHOLD = 0.85;
 const SLOW_CONFIRM_MS = 800;
 const PERFECT_DELAY_MS = 800;
+const PERFECT_BANNER_MS = 1600;
 
 function bearingBetween(from: LatLng, to: LatLng): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -55,8 +54,10 @@ export function useAlignmentSensors({
   const [tilt, setTilt] = useState<number | null>(null);
   const [lockedAt, setLockedAt] = useState<number | null>(null);
   const [perfectFiredAt, setPerfectFiredAt] = useState<number | null>(null);
+  const [showPerfectBanner, setShowPerfectBanner] = useState(false);
 
   const tiltShared = useSharedValue<number>(0);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const targetLocation = useMemo<LatLng | null>(() => {
     const lat = Number(spotLat);
@@ -145,6 +146,15 @@ export function useAlignmentSensors({
     };
   }, [tiltShared]);
 
+  useEffect(() => {
+    return () => {
+      if (bannerTimerRef.current !== null) {
+        clearTimeout(bannerTimerRef.current);
+        bannerTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const targetBearing = useMemo<number | null>(() => {
     if (!userLocation || !targetLocation) return null;
     return bearingBetween(userLocation, targetLocation);
@@ -191,6 +201,12 @@ export function useAlignmentSensors({
       if (lockedAt === null) return;
       hapticsBridge.success();
       setPerfectFiredAt(Date.now());
+      setShowPerfectBanner(true);
+      if (bannerTimerRef.current !== null) clearTimeout(bannerTimerRef.current);
+      bannerTimerRef.current = setTimeout(() => {
+        setShowPerfectBanner(false);
+        bannerTimerRef.current = null;
+      }, PERFECT_BANNER_MS);
     }, delay);
     return () => clearTimeout(timer);
   }, [lockedAt, perfectFiredAt]);
@@ -224,5 +240,6 @@ export function useAlignmentSensors({
     tiltShared,
     lockedAt,
     perfectFiredAt,
+    showPerfectBanner,
   };
 }
