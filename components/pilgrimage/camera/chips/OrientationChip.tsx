@@ -3,35 +3,29 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../../themed';
 import { useTheme } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import type { CaptureMode } from '../../../../hooks/useCameraSettings';
+import type { CameraOrientationMode } from '../../../../libs/services/pilgrimage/camera-ui';
 
-interface CaptureModeChipProps {
-  mode: CaptureMode;
-  onChange: (next: CaptureMode) => void;
+interface OrientationChipProps {
+  mode: CameraOrientationMode;
+  onChange: (next: CameraOrientationMode) => void;
 }
 
-const CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
-
-const ICON: Record<CaptureMode, keyof typeof Ionicons.glyphMap> = {
-  single: 'camera-outline',
-  burst: 'copy-outline',
-  hdr: 'contrast-outline',
+const LABEL: Record<CameraOrientationMode, string> = {
+  auto: 'AUTO',
+  landscape: 'LAND',
 };
 
-const LABEL: Record<CaptureMode, string> = {
-  single: 'SINGLE',
-  burst: 'BURST',
-  hdr: 'HDR',
+const ICON: Record<CameraOrientationMode, keyof typeof Ionicons.glyphMap> = {
+  auto: 'phone-portrait-outline',
+  landscape: 'phone-landscape-outline',
 };
 
-export default function CaptureModeChip({ mode, onChange }: CaptureModeChipProps) {
+export default function OrientationChip({ mode, onChange }: OrientationChipProps) {
   const { theme } = useTheme();
 
   const handlePress = () => {
-    const idx = CYCLE.indexOf(mode);
-    const next = CYCLE[(idx === -1 ? 0 : idx + 1) % CYCLE.length];
     hapticsBridge.selection();
-    onChange(next);
+    onChange(mode === 'landscape' ? 'auto' : 'landscape');
   };
 
   return (
@@ -39,7 +33,8 @@ export default function CaptureModeChip({ mode, onChange }: CaptureModeChipProps
       onPress={handlePress}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={`Capture mode ${LABEL[mode]}`}
+      accessibilityLabel={`Orientation ${LABEL[mode]}`}
+      accessibilityState={{ selected: mode === 'landscape' }}
       style={({ pressed }) => [
         styles.chip,
         // rgba scrim sits over the live camera preview — no theme surface below.
