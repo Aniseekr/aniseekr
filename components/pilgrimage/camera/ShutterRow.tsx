@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bottomPad } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText } from '../../themed';
+import { CAMERA_BOTTOM_BAR_CONTENT_HEIGHT } from '../../../libs/services/pilgrimage/camera-ui';
+import type { CaptureMode } from '../../../hooks/useCameraSettings';
 import BurstIndicator from './BurstIndicator';
 
 interface ShutterRowProps {
@@ -15,6 +17,11 @@ interface ShutterRowProps {
   bottomInset: number;
   /** Status-bar inset — only consumed in landscape so the column avoids the notch. */
   topInset?: number;
+  /** Current capture mode — surfaced as the tappable caption under the shutter. */
+  captureMode: CaptureMode;
+  onChangeCaptureMode: (next: CaptureMode) => void;
+  /** Focal-stop pills, rendered along the top of the portrait bottom bar. */
+  focalSlot?: ReactNode;
   onShutter: () => void;
   onOpenMap: () => void;
   onPickReference: () => void;
@@ -24,9 +31,16 @@ interface ShutterRowProps {
   burst?: { active: boolean; captured: number; total: number };
 }
 
-/** Fixed width of the landscape control column. Parent uses this to know how
+/** Fixed width of the landscape control rail. Parent uses this to know how
  *  much horizontal space to reserve on the right edge of the camera preview. */
 export const SHUTTER_ROW_LANDSCAPE_WIDTH = 100;
+
+const CAPTURE_CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
+const CAPTURE_LABEL: Record<CaptureMode, string> = {
+  single: 'PHOTO',
+  burst: 'BURST',
+  hdr: 'HDR',
+};
 
 export default function ShutterRow({
   themeColor,
@@ -35,6 +49,9 @@ export default function ShutterRow({
   isLandscape,
   bottomInset,
   topInset = 0,
+  captureMode,
+  onChangeCaptureMode,
+  focalSlot,
   onShutter,
   onOpenMap,
   onPickReference,
@@ -43,6 +60,7 @@ export default function ShutterRow({
 }: ShutterRowProps) {
   const burstActive = burst?.active === true;
   const shutterDisabled = capturing || burstActive;
+
   const handleShutterPress = () => {
     if (shutterDisabled) return;
     hapticsBridge.success();
@@ -67,27 +85,78 @@ export default function ShutterRow({
     onPickReference();
   };
 
+  const cycleCaptureMode = () => {
+    const idx = CAPTURE_CYCLE.indexOf(captureMode);
+    hapticsBridge.selection();
+    onChangeCaptureMode(CAPTURE_CYCLE[(idx === -1 ? 0 : idx + 1) % CAPTURE_CYCLE.length]);
+  };
+
+  const renderShutter = (landscape: boolean) => (
+    <Pressable
+      onPress={handleShutterPress}
+      onLongPress={handleShutterLongPress}
+      delayLongPress={handleShutterLongPress ? 250 : undefined}
+      disabled={shutterDisabled}
+      accessibilityRole="button"
+      accessibilityLabel="Take comparison photo"
+      style={({ pressed }) => [
+        styles.shutterOuter,
+        landscape && styles.shutterOuterLandscape,
+        { borderColor: themeColor },
+        pressed && { opacity: 0.85 },
+        shutterDisabled && { opacity: 0.6 },
+      ]}>
+      {capturing && !burstActive ? (
+        <ActivityIndicator size="small" color={themeColor} />
+      ) : (
+        <View
+          style={[
+            styles.shutterInner,
+            landscape && styles.shutterInnerLandscape,
+            { backgroundColor: themeColor },
+          ]}
+        />
+      )}
+      {burstActive && burst ? (
+        <BurstIndicator captured={burst.captured} total={burst.total} themeColor={themeColor} />
+      ) : null}
+    </Pressable>
+  );
+
+  // The capture-mode cycler doubles as the shutter caption — tap to step
+  // single → burst → hdr. Non-default modes tint themeColor so the user
+  // notices the shutter will fire something other than a plain photo.
+  const modeCaption = (
+    <Pressable
+      onPress={cycleCaptureMode}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel={`Capture mode ${CAPTURE_LABEL[captureMode]}`}
+      style={styles.captionBtn}>
+      <ThemedText
+        variant="captionSmall"
+        weight="700"
+        align="center"
+        style={{
+          color: captureMode === 'single' ? 'rgba(255,255,255,0.55)' : themeColor,
+          letterSpacing: 1.5,
+        }}>
+        {CAPTURE_LABEL[captureMode]}
+      </ThemedText>
+    </Pressable>
+  );
+
   if (isLandscape) {
     return (
       <View
         style={[
-          styles.bottomBarLandscape,
+          styles.barLandscape,
           {
             width: SHUTTER_ROW_LANDSCAPE_WIDTH,
-            paddingTop: topInset + 24,
-            paddingBottom: bottomPad({ bottom: bottomInset }) + 24,
+            paddingTop: topInset + 20,
+            paddingBottom: bottomPad({ bottom: bottomInset }) + 20,
           },
         ]}>
-        <LinearGradient
-          // Horizontal scrim: transparent on the left edge of the column,
-          // near-opaque on the right edge. The strong right side hides the
-          // anime overlay so buttons in the column stay legible. Sits over the
-          // live camera preview — no theme surface below.
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
         <View style={styles.columnContent}>
           <ThumbnailBtn
             kind="reference"
@@ -95,41 +164,10 @@ export default function ShutterRow({
             imageUrl={referenceImageUrl}
             onPress={handleReferencePress}
           />
-
-          <Pressable
-            onPress={handleShutterPress}
-            onLongPress={handleShutterLongPress}
-            delayLongPress={handleShutterLongPress ? 250 : undefined}
-            disabled={shutterDisabled}
-            accessibilityRole="button"
-            accessibilityLabel="Take comparison photo"
-            style={({ pressed }) => [
-              styles.shutterOuter,
-              styles.shutterOuterLandscape,
-              { borderColor: themeColor },
-              pressed && { opacity: 0.85 },
-              shutterDisabled && { opacity: 0.6 },
-            ]}>
-            {capturing && !burstActive ? (
-              <ActivityIndicator size="small" color={themeColor} />
-            ) : (
-              <View
-                style={[
-                  styles.shutterInner,
-                  styles.shutterInnerLandscape,
-                  { backgroundColor: themeColor },
-                ]}
-              />
-            )}
-            {burstActive && burst ? (
-              <BurstIndicator
-                captured={burst.captured}
-                total={burst.total}
-                themeColor={themeColor}
-              />
-            ) : null}
-          </Pressable>
-
+          <View style={styles.shutterColumn}>
+            {renderShutter(true)}
+            {modeCaption}
+          </View>
           <ThumbnailBtn kind="map" themeColor={themeColor} onPress={handleMapPress} />
         </View>
       </View>
@@ -139,55 +177,19 @@ export default function ShutterRow({
   return (
     <View
       style={[
-        styles.bottomBar,
-        { paddingBottom: bottomPad({ bottom: bottomInset }) + 4 },
+        styles.bar,
+        {
+          height: bottomPad({ bottom: bottomInset }) + CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
+          paddingBottom: bottomPad({ bottom: bottomInset }),
+        },
       ]}>
-      <LinearGradient
-        // rgba scrim sits over the live camera preview — no theme surface below.
-        // Strong bottom opacity so the anime overlay can't bleed through the
-        // map/reference buttons that sit on the dark end.
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']}
-        style={StyleSheet.absoluteFill}
-      />
+      {focalSlot ? <View style={styles.focalSlot}>{focalSlot}</View> : null}
       <View style={styles.bottomRow}>
         <ThumbnailBtn kind="map" themeColor={themeColor} onPress={handleMapPress} />
-
         <View style={styles.shutterColumn}>
-          <Pressable
-            onPress={handleShutterPress}
-            onLongPress={handleShutterLongPress}
-            delayLongPress={handleShutterLongPress ? 250 : undefined}
-            disabled={shutterDisabled}
-            accessibilityRole="button"
-            accessibilityLabel="Take comparison photo"
-            style={({ pressed }) => [
-              styles.shutterOuter,
-              { borderColor: themeColor },
-              pressed && { opacity: 0.85 },
-              shutterDisabled && { opacity: 0.6 },
-            ]}>
-            {capturing && !burstActive ? (
-              <ActivityIndicator size="small" color={themeColor} />
-            ) : (
-              <View style={[styles.shutterInner, { backgroundColor: themeColor }]} />
-            )}
-            {burstActive && burst ? (
-              <BurstIndicator
-                captured={burst.captured}
-                total={burst.total}
-                themeColor={themeColor}
-              />
-            ) : null}
-          </Pressable>
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            align="center"
-            style={{ color: 'rgba(255,255,255,0.6)', marginTop: 6, letterSpacing: 1 }}>
-            PHOTO
-          </ThemedText>
+          {renderShutter(false)}
+          {modeCaption}
         </View>
-
         <ThumbnailBtn
           kind="reference"
           themeColor={themeColor}
@@ -230,7 +232,7 @@ function ThumbnailBtn({
           transition={120}
         />
       ) : (
-        <View style={[styles.thumbMap, { backgroundColor: 'rgba(0,0,0,0.92)' }]}>
+        <View style={styles.thumbMap}>
           <Ionicons name="map" size={18} color={themeColor} />
         </View>
       )}
@@ -239,24 +241,32 @@ function ThumbnailBtn({
 }
 
 const styles = StyleSheet.create({
-  bottomBar: {
+  // Solid black letterbox bar — opaque, not a gradient scrim. The literal #000
+  // is allowed: the bar sits over the live camera preview, not a theme surface
+  // (see CLAUDE.md camera-scrim exception).
+  bar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: '#000',
     paddingHorizontal: 18,
-    paddingTop: 24,
+    paddingTop: 12,
+    gap: 12,
   },
-  // iOS Camera-style right-edge column. The container fills the full vertical
-  // space so the LinearGradient scrim covers the entire right rail.
-  bottomBarLandscape: {
+  // Landscape parks the controls in a solid black right-edge rail.
+  barLandscape: {
     position: 'absolute',
     right: 0,
     top: 0,
     bottom: 0,
+    width: SHUTTER_ROW_LANDSCAPE_WIDTH,
+    backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+  },
+  focalSlot: {
+    alignItems: 'center',
   },
   bottomRow: {
     flexDirection: 'row',
@@ -264,7 +274,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
   },
-  // Distributes [reference thumb, shutter, map thumb] evenly down the column.
+  // Distributes [reference thumb, shutter, map thumb] evenly down the rail.
   columnContent: {
     flex: 1,
     alignItems: 'center',
@@ -273,6 +283,10 @@ const styles = StyleSheet.create({
   },
   shutterColumn: {
     alignItems: 'center',
+    gap: 6,
+  },
+  captionBtn: {
+    paddingVertical: 2,
   },
   shutterOuter: {
     width: 78,
@@ -315,5 +329,6 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
 });

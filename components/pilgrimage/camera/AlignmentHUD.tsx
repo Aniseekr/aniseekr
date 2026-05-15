@@ -10,6 +10,10 @@ interface AlignmentHUDProps {
   themeColor: string;
   topInset: number;
   bottomInset: number;
+  /** Full height of the fixed bottom bar — portrait HUD chips dock above it. */
+  bottomBarHeight: number;
+  /** Width of the landscape left rail — left-anchored badges shift clear of it. */
+  leftReserve: number;
   isLandscape: boolean;
   transformed: boolean;
   rotationDisplayDeg: number;
@@ -39,6 +43,8 @@ export default function AlignmentHUD({
   themeColor,
   topInset,
   bottomInset,
+  bottomBarHeight,
+  leftReserve,
   isLandscape,
   transformed,
   rotationDisplayDeg,
@@ -68,7 +74,7 @@ export default function AlignmentHUD({
   return (
     <>
       {score.total !== null ? (
-        <View style={[styles.liveBadgeWrap, { top: topInset + 64 }]}>
+        <View style={[styles.liveBadgeWrap, { top: topInset + 64, left: leftReserve + 14 }]}>
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
             {/* White text over translucent dark scrim — allowed exception. */}
@@ -111,7 +117,7 @@ export default function AlignmentHUD({
           accessibilityLabel="Reset overlay position"
           style={({ pressed }) => [
             styles.resetChip,
-            { top: topInset + 64, opacity: pressed ? 0.7 : 1 },
+            { top: topInset + 64, left: leftReserve + 76, opacity: pressed ? 0.7 : 1 },
           ]}>
           <Ionicons name="refresh" size={14} color="#fff" />
           <ThemedText
@@ -128,8 +134,8 @@ export default function AlignmentHUD({
           style={[
             isLandscape ? styles.alignmentChipWrapLandscape : styles.alignmentChipWrap,
             isLandscape
-              ? { bottom: bottomInset + 24 }
-              : { bottom: bottomInset + 156 },
+              ? { bottom: bottomInset + 24, left: leftReserve + 14 }
+              : { bottom: bottomBarHeight + 12 },
           ]}
           pointerEvents="none">
           <View
@@ -159,8 +165,8 @@ export default function AlignmentHUD({
             // In landscape the right edge is reserved for the ShutterRow
             // control column — narrow the banner so it doesn't crash into it.
             isLandscape
-              ? { top: topInset + 64, left: '10%', right: '40%' }
-              : { bottom: bottomInset + 232 },
+              ? { top: topInset + 64, left: leftReserve + 24, right: '36%' }
+              : { bottom: bottomBarHeight + 64 },
             {
               backgroundColor: theme.status.success,
               opacity: perfectOpacity,

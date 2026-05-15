@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
-import { useTheme } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import type { FocalStop } from './types';
 
@@ -9,7 +8,9 @@ const DEFAULT_STOPS: FocalStop[] = [0.5, 1, 2, 3];
 const FRONT_FACING_STOPS: FocalStop[] = [1];
 
 /**
- * Renders 0.5x / 1x / 2x / 3x focal stop pills over the live camera preview.
+ * Renders 0.5x / 1x / 2x / 3x focal stop pills. They sit on the solid black
+ * bottom bar in portrait, so an idle pill is a faint frosted disc and the
+ * active stop is a filled themeColor disc.
  *
  * `availableStops` semantics (truth about the device):
  * - `undefined` → use the legacy default (`[0.5,1,2,3]` rear, `[1]` front-facing).
@@ -60,7 +61,6 @@ export default function FocalPills({
   onPickVirtual,
   virtualActive = false,
 }: FocalPillsProps) {
-  const { theme } = useTheme();
   const stops = availableStops ?? (isFrontFacing ? FRONT_FACING_STOPS : DEFAULT_STOPS);
   const activeFg = readableTextOn(themeColor);
   const showAutoPill = (virtualLenses?.length ?? 0) > 0 && typeof onPickVirtual === 'function';
@@ -102,13 +102,10 @@ export default function FocalPills({
               accessibilityState={{ selected: isActive }}
               style={({ pressed }) => [
                 styles.pill,
-                {
-                  // rgba scrim — pill sits over the live camera preview, no theme
-                  // surface beneath. Allowed per CLAUDE.md.
-                  backgroundColor: isActive ? themeColor : 'rgba(0,0,0,0.45)',
-                  borderColor: theme.glassBorder,
-                },
-                pressed && { opacity: 0.7 },
+                // Frosted-white idle disc reads on the black bar AND over a
+                // live preview; filled themeColor marks the active stop.
+                { backgroundColor: isActive ? themeColor : 'rgba(255,255,255,0.14)' },
+                pressed && { opacity: 0.6 },
               ]}>
               <ThemedText
                 variant="caption"
@@ -132,11 +129,8 @@ export default function FocalPills({
             accessibilityState={{ selected: virtualActive }}
             style={({ pressed }) => [
               styles.pill,
-              {
-                backgroundColor: virtualActive ? themeColor : 'rgba(0,0,0,0.45)',
-                borderColor: theme.glassBorder,
-              },
-              pressed && { opacity: 0.7 },
+              { backgroundColor: virtualActive ? themeColor : 'rgba(255,255,255,0.14)' },
+              pressed && { opacity: 0.6 },
             ]}>
             <Ionicons name="aperture-outline" size={16} color={virtualActive ? activeFg : '#fff'} />
           </Pressable>
@@ -158,13 +152,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   pill: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -9,10 +9,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Gesture, type PinchGesture } from 'react-native-gesture-handler';
 import {
+  Easing,
   runOnJS,
   useDerivedValue,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import type { FocalStop, ZoomValue } from '../components/pilgrimage/camera/types';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
@@ -33,7 +34,10 @@ const PINCH_SENSITIVITY = 0.4;
 // 120ms cadence: matches the rotation-throttle pattern elsewhere — keeps React
 // state updates off the UI thread without lagging stop-snap visuals noticeably.
 const THROTTLE_MS = 120;
-const SNAP_SPRING = { damping: 18, stiffness: 220 };
+// Focal-stop transitions ease in once and stop — deliberately NOT a spring.
+// A spring overshot the target zoom and bounced back, which read as a cheap
+// "toy camera" wobble; a single timed ramp settles clean like a real lens.
+const ZOOM_TWEEN = { duration: 200, easing: Easing.out(Easing.cubic) } as const;
 
 export interface UseCameraZoomInput {
   minZoom?: number;
@@ -121,7 +125,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
             }
           }
           if (target !== null) {
-            zoomShared.value = withSpring(target, SNAP_SPRING);
+            zoomShared.value = withTiming(target, ZOOM_TWEEN);
             if (snapped !== null) runOnJS(snapToStop)(snapped);
           }
         }),
@@ -140,7 +144,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
   const setStop = useCallback(
     (s: FocalStop) => {
       const target = STOP_TO_ZOOM[s];
-      zoomShared.value = withSpring(target, SNAP_SPRING);
+      zoomShared.value = withTiming(target, ZOOM_TWEEN);
       setZoomState(target);
       hapticsBridge.selection();
     },
