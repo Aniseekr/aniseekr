@@ -15,6 +15,7 @@ import { dataSourceConfig } from '../libs/services/data-source-config';
 import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
+import { CacheManager } from '../libs/services/cache/cache-manager';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -41,6 +42,16 @@ export default function RootLayout() {
       void hydrateAllPilgrimageData().catch((e) =>
         console.warn('[hydratePilgrimage]', e)
       );
+      // Drop expired cache rows once per cold launch. Bucket failures are
+      // logged inside pruneAll, so a broken bucket can never block boot.
+      void CacheManager.getInstance()
+        .pruneAll()
+        .then(({ totalRemoved }) => {
+          if (totalRemoved > 0) {
+            console.log(`[CacheManager] pruned ${totalRemoved} expired entries on boot`);
+          }
+        })
+        .catch((e) => console.warn('[CacheManager.pruneAll]', e));
     }, 0);
   }, []);
 
