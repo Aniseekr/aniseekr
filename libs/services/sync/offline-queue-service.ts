@@ -74,9 +74,9 @@ export class OfflineQueueService {
     if (jobs.length === 0) return;
     const db = await LocalDB.getDatabase();
     const now = Date.now();
-    await db.withTransactionAsync(async () => {
+    await db.withExclusiveTransactionAsync(async (tx) => {
       for (const job of jobs) {
-        await db.runAsync(
+        await tx.runAsync(
           `INSERT INTO sync_jobs
            (job_type, platform, payload, attempts, next_attempt_at, state, created_at, updated_at)
            VALUES (?, ?, ?, 0, ?, 'pending', ?, ?)`,

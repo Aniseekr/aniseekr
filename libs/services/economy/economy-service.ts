@@ -123,8 +123,8 @@ export class EconomyService {
     const now = Date.now();
     const next = Math.max(0, this.cached[currency] + delta);
 
-    await db.withTransactionAsync(async () => {
-      await db.runAsync(
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      await tx.runAsync(
         `INSERT INTO economy_balance (currency, amount, updated_at)
          VALUES (?, ?, ?)
          ON CONFLICT(currency) DO UPDATE SET amount = excluded.amount, updated_at = excluded.updated_at`,
@@ -132,7 +132,7 @@ export class EconomyService {
         next,
         now
       );
-      await db.runAsync(
+      await tx.runAsync(
         `INSERT INTO economy_ledger
          (currency, delta, balance_after, reason, metadata, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,

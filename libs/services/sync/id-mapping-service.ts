@@ -127,10 +127,10 @@ export class IDMappingService {
     const db = await LocalDB.getDatabase();
     const CHUNK_SIZE = 500;
 
-    await db.withTransactionAsync(async () => {
-      await db.execAsync('DELETE FROM id_mappings');
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      await tx.execAsync('DELETE FROM id_mappings');
 
-      const statement = await db.prepareAsync(
+      const statement = await tx.prepareAsync(
         `INSERT INTO id_mappings (
           mal_id, anilist_id, kitsu_id, bangumi_id, shikimori_id, simkl_id, annict_id,
           thetvdb_id, themoviedb_id, livechart_id, anime_planet_id, anisearch_id, notify_moe_id

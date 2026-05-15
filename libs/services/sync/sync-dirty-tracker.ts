@@ -40,10 +40,10 @@ export class SyncDirtyTracker {
   ): Promise<void> {
     if (platforms.length === 0) return;
     const db = await LocalDB.getDatabase();
-    await db.withTransactionAsync(async () => {
+    await db.withExclusiveTransactionAsync(async (tx) => {
       const now = Date.now();
       for (const platform of platforms) {
-        await db.runAsync(
+        await tx.runAsync(
           `INSERT INTO sync_dirty_records (anime_id, platform, field, marked_at)
            VALUES (?, ?, ?, ?)
            ON CONFLICT(anime_id, platform, field) DO UPDATE SET marked_at = excluded.marked_at`,

@@ -45,10 +45,10 @@ describe('IDMappingService', () => {
     expect(mapped).toBe('12189');
   });
 
-  it('IDM-006 bulk insert wraps in a single transaction', async () => {
+  it('IDM-006 bulk insert wraps in a single exclusive transaction', async () => {
     const svc = IDMappingService.getInstance();
     const db = await LocalDB.getDatabase();
-    const txSpy = spyOn(db, 'withTransactionAsync');
+    const txSpy = spyOn(db, 'withExclusiveTransactionAsync');
     await svc.bulkInsert([
       { mal_id: 1, anilist_id: 11 },
       { mal_id: 2, anilist_id: 22 },
