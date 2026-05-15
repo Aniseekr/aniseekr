@@ -1,6 +1,6 @@
 // Post-capture brightness baking. expo-camera v17 has no exposure control, so
 // `useBrightnessPreview` produces a Skia ColorMatrix that we apply to the
-// captured frame on disk — that's what makes the ExposureChip's brightness
+// captured frame on disk — that's what makes the exposure tool's brightness
 // REAL instead of a preview-only overlay. The shutter callback awaits this
 // function, then the rest of the app (preview screen, share card, gallery)
 // consumes the new URI as if it were the original photo.
