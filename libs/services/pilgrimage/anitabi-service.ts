@@ -4,19 +4,23 @@
 import { LocalDB, type PilgrimageRow, type PilgrimageSaveInput } from '../../db';
 import { AnitabiClient, DataSourceError } from '../../clients/anitabi-client';
 import { CacheService } from '../cache-service';
-import type { AnitabiBangumi, AnitabiPoint, AnitabiPointDetail } from './types';
+import { normalizeRawPoints } from './anitabi-points';
+import type { AnitabiBangumi, AnitabiPoint, RawAnitabiBangumiPoints } from './types';
 
 /** Default lite-cache TTL (7 days) in milliseconds. */
 export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Cache key prefix used by getDetailedPoints (SQLite-backed). */
-const DETAIL_CACHE_KEY_PREFIX = 'anitabi_detail_';
+/**
+ * Cache key prefix for the full per-anime point list. The `_v2` suffix is a
+ * deliberate cache-bust: builds <= 1.1.5 cached the truncated `/points/detail`
+ * payload under `anitabi_detail_`; bumping the prefix forces every device to
+ * refetch the complete `/points` data instead of serving stale partial data.
+ */
+const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
 
 /** Sentinel rows for in-memory cache so we can also remember "no data" results. */
 type CacheValue = { kind: 'hit'; value: AnitabiBangumi } | { kind: 'miss' };
-type DetailCacheValue =
-  | { kind: 'hit'; value: AnitabiPointDetail[] }
-  | { kind: 'miss' };
+type DetailCacheValue = { kind: 'hit'; value: AnitabiPoint[] } | { kind: 'miss' };
 
 interface ServiceOptions {
   /** Override now() (used by tests for TTL boundaries). */
@@ -37,7 +41,7 @@ export class AnitabiService {
   private memCache = new Map<number, CacheValue>();
   private detailMemCache = new Map<number, DetailCacheValue>();
   /** In-flight detail requests deduped by bangumiId. */
-  private pendingDetail = new Map<number, Promise<AnitabiPointDetail[]>>();
+  private pendingDetail = new Map<number, Promise<AnitabiPoint[]>>();
   private now: () => number;
   private client: typeof AnitabiClient;
   private db: typeof LocalDB;
@@ -144,15 +148,16 @@ export class AnitabiService {
   }
 
   /**
-   * Fetch the full /points/detail payload.
-   * Returns [] when the anime has no pilgrimage data (HTTP 404).
+   * Fetch the COMPLETE point list for an anime — every scene-cut Anitabi has.
+   * Returns [] when the anime has no pilgrimage data (HTTP 404 / empty).
    *
-   * Lookup order matches getAnimePilgrimage: in-memory → SQLite (via
-   * CacheService) → network. The detailed payload is large (~50–300 KB) but
-   * effectively immutable for our purposes, so we cache it with the same
-   * 7-day TTL as the lite payload.
+   * Backed by `GET /bangumi/{id}/points` (see {@link AnitabiClient.getPoints}
+   * for why this is not `/points/detail`). The raw payload is large — folder /
+   * theme metadata plus hundreds of points — so we normalise it down to the
+   * fields we render before caching. Lookup order matches getAnimePilgrimage:
+   * in-memory → SQLite (via CacheService) → network, 7-day TTL.
    */
-  async getDetailedPoints(bangumiId: number): Promise<AnitabiPointDetail[]> {
+  async getDetailedPoints(bangumiId: number): Promise<AnitabiPoint[]> {
     // 1. In-memory cache (hot path on repeat visits within the session).
     const memHit = this.detailMemCache.get(bangumiId);
     if (memHit) {
@@ -163,10 +168,10 @@ export class AnitabiService {
     const pending = this.pendingDetail.get(bangumiId);
     if (pending) return pending;
 
-    const promise = (async (): Promise<AnitabiPointDetail[]> => {
+    const promise = (async (): Promise<AnitabiPoint[]> => {
       // 3. SQLite cache.
       try {
-        const cached = await this.cache.get<AnitabiPointDetail[]>(
+        const cached = await this.cache.get<AnitabiPoint[]>(
           DETAIL_CACHE_KEY_PREFIX + bangumiId
         );
         if (cached) {
@@ -174,13 +179,13 @@ export class AnitabiService {
           return cached;
         }
       } catch (err) {
-        console.warn('[AnitabiService] detail cache read failed:', err);
+        console.warn('[AnitabiService] points cache read failed:', err);
       }
 
       // 4. Network.
-      let fresh: AnitabiPointDetail[] | null;
+      let raw: RawAnitabiBangumiPoints | null;
       try {
-        fresh = await this.client.getPointsDetail(bangumiId);
+        raw = await this.client.getPoints(bangumiId);
       } catch (err) {
         if (err instanceof DataSourceError && err.code === 'NOT_FOUND') {
           this.detailMemCache.set(bangumiId, { kind: 'miss' });
@@ -189,7 +194,8 @@ export class AnitabiService {
         throw err;
       }
 
-      if (fresh === null) {
+      const fresh = raw === null ? [] : normalizeRawPoints(raw.points, bangumiId);
+      if (fresh.length === 0) {
         this.detailMemCache.set(bangumiId, { kind: 'miss' });
         return [];
       }
@@ -199,7 +205,7 @@ export class AnitabiService {
       try {
         await this.cache.set(DETAIL_CACHE_KEY_PREFIX + bangumiId, fresh, this.ttlMs);
       } catch (err) {
-        console.warn('[AnitabiService] detail cache write failed:', err);
+        console.warn('[AnitabiService] points cache write failed:', err);
       }
       return fresh;
     })();

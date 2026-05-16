@@ -8,7 +8,10 @@ import {
   AnitabiService,
   PILGRIMAGE_TTL_MS,
 } from '../../../libs/services/pilgrimage/anitabi-service';
-import type { AnitabiBangumi, AnitabiPointDetail } from '../../../libs/services/pilgrimage/types';
+import type {
+  AnitabiBangumi,
+  RawAnitabiBangumiPoints,
+} from '../../../libs/services/pilgrimage/types';
 
 const SUBJECT_ID = 7157;
 
@@ -45,17 +48,21 @@ function fakeResponse(status: number, body: unknown): Response {
   return new Response(status === 204 ? null : JSON.stringify(body), init);
 }
 
-const sampleDetail = (): AnitabiPointDetail[] => [
-  {
-    id: 'p1',
-    name: 'Kamiyama High School',
-    cn: '神山高中',
-    image: 'https://image.anitabi.cn/scenes/7157/p1.jpg',
-    ep: 1,
-    s: 90,
-    geo: [35.51, 136.91],
-  },
-];
+// Raw GET /bangumi/{id}/points payload — an object wrapping the point list,
+// not a bare array. AnitabiService normalises it before caching.
+const samplePointsResponse = (): RawAnitabiBangumiPoints => ({
+  points: [
+    {
+      id: 'p1',
+      name: 'Kamiyama High School',
+      cn: '神山高中',
+      image: 'https://image.anitabi.cn/scenes/7157/p1.jpg',
+      ep: 1,
+      s: 90,
+      geo: [35.51, 136.91],
+    },
+  ],
+});
 
 describe('AnitabiService', () => {
   let fetchSpy: ReturnType<typeof spyOn>;
@@ -114,7 +121,7 @@ describe('AnitabiService', () => {
   });
 
   it('PILG-005 getDetailedPoints caches in memory — second call does not refetch', async () => {
-    fetchSpy.mockImplementation(async () => fakeResponse(200, sampleDetail()));
+    fetchSpy.mockImplementation(async () => fakeResponse(200, samplePointsResponse()));
     const svc = AnitabiService.resetForTests();
 
     const first = await svc.getDetailedPoints(SUBJECT_ID);
@@ -124,11 +131,11 @@ describe('AnitabiService', () => {
     expect(second).toBe(first);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const url = String((fetchSpy.mock.calls[0] as unknown[])[0]);
-    expect(url).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points/detail`);
+    expect(url).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points`);
   });
 
   it('PILG-006 getDetailedPoints persists to SQLite — survives a fresh instance', async () => {
-    fetchSpy.mockImplementation(async () => fakeResponse(200, sampleDetail()));
+    fetchSpy.mockImplementation(async () => fakeResponse(200, samplePointsResponse()));
     const svc1 = AnitabiService.resetForTests();
     await svc1.getDetailedPoints(SUBJECT_ID);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -146,7 +153,7 @@ describe('AnitabiService', () => {
       fetchCount += 1;
       // Tiny delay so the second call has time to land while we're "in flight".
       await new Promise((r) => setTimeout(r, 5));
-      return fakeResponse(200, sampleDetail());
+      return fakeResponse(200, samplePointsResponse());
     });
     const svc = AnitabiService.resetForTests();
 

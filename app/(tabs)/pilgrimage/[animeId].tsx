@@ -10,6 +10,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  FlatList,
   Linking,
   Modal,
   Platform,
@@ -81,10 +82,11 @@ import {
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { getPilgrimageDetailBackRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import { groupPointsIntoSpots } from '../../../libs/services/pilgrimage/anitabi-points';
 import type {
   AnitabiBangumi,
   AnitabiPoint,
-  AnitabiPointDetail,
+  AnitabiSpot,
 } from '../../../libs/services/pilgrimage/types';
 
 type ViewMode = 'list' | 'map';
@@ -596,7 +598,10 @@ function LayoutModeButton({
 }
 
 interface SpotRowProps {
+  /** Representative scene of the location (its first cut). */
   spot: AnitabiPoint;
+  /** Number of scene-cuts filmed at this location (>= 1). */
+  sceneCount: number;
   themeColor: string;
   themeColorFg: string;
   distanceKm: number | null;
@@ -610,6 +615,7 @@ interface SpotRowProps {
 
 function SpotRow({
   spot,
+  sceneCount,
   themeColor,
   themeColorFg,
   distanceKm,
@@ -678,9 +684,18 @@ function SpotRow({
             {titles.primary}
           </ThemedText>
           <View style={styles.epRow}>
-            <Ionicons name="film-outline" size={11} color={theme.text.tertiary} />
+            <Ionicons
+              name={sceneCount > 1 ? 'images-outline' : 'film-outline'}
+              size={11}
+              color={theme.text.tertiary}
+            />
             <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-              EP {spot.ep} {titles.secondary ? `· ${titles.secondary}` : ''}
+              {sceneCount > 1
+                ? `${sceneCount} scenes`
+                : spot.ep > 0
+                  ? `EP ${spot.ep}`
+                  : 'Scene'}
+              {titles.secondary ? ` · ${titles.secondary}` : ''}
             </ThemedText>
             {distanceKm != null ? (
               <>
@@ -746,7 +761,10 @@ function SpotRow({
 }
 
 interface SceneTileProps {
+  /** Representative scene of the location (its first cut). */
   spot: AnitabiPoint;
+  /** Number of scene-cuts filmed at this location (>= 1). */
+  sceneCount: number;
   themeColor: string;
   themeColorFg: string;
   distanceKm: number | null;
@@ -761,6 +779,7 @@ interface SceneTileProps {
 
 function SceneTile({
   spot,
+  sceneCount,
   themeColor,
   themeColorFg,
   distanceKm,
@@ -774,8 +793,10 @@ function SceneTile({
 }: SceneTileProps) {
   const styles = useMemo(() => makeTileStyles(theme), [theme]);
   const titles = getPilgrimageSpotTitles(spot);
+  const primaryMeta =
+    sceneCount > 1 ? `${sceneCount} scenes` : spot.ep > 0 ? `EP ${spot.ep}` : 'Scene';
   const metaLine =
-    distanceKm != null ? `EP ${spot.ep} · ${formatDistanceKm(distanceKm)}` : `EP ${spot.ep}`;
+    distanceKm != null ? `${primaryMeta} · ${formatDistanceKm(distanceKm)}` : primaryMeta;
   const [showCapture, setShowCapture] = useState(false);
   const flipped = showCapture && !!captureUri;
   const displayedUri = flipped ? captureUri! : spot.image;
@@ -1152,11 +1173,11 @@ export default function PilgrimageDetailScreen() {
         setAnime(lite);
         setPoints(lite.litePoints ?? []);
         // Lite payload is enough to render the screen — let the user interact
-        // immediately while the heavier /points/detail call runs in the
+        // immediately while the heavier full /points call runs in the
         // background and upgrades the points when it lands.
         setLoading(false);
         try {
-          const detailed: AnitabiPointDetail[] =
+          const detailed: AnitabiPoint[] =
             await anitabiService.getDetailedPoints(validBangumiId);
           if (!cancelled && detailed.length > 0) {
             setPoints(detailed);
@@ -1260,22 +1281,60 @@ export default function PilgrimageDetailScreen() {
     }
   }, [points, spotFilter, visited, captures]);
 
+  // Anitabi returns one point per scene-cut, so a single shrine is often many
+  // same-named points. Collapse cuts of the same real-world location into one
+  // spot — the list then shows one row per place (with a scene count) instead
+  // of N near-identical rows. The map stays per-cut: leaflet clustering already
+  // handles overlapping markers.
+  const groupedSpots = useMemo(() => groupPointsIntoSpots(points), [points]);
+
+  const filteredGroupedSpots = useMemo(() => {
+    switch (spotFilter) {
+      case 'visited':
+        return groupedSpots.filter((s) => s.scenes.some((p) => visited[p.id] === true));
+      case 'unvisited':
+        return groupedSpots.filter((s) => !s.scenes.some((p) => visited[p.id] === true));
+      case 'photos':
+        return groupedSpots.filter((s) => s.scenes.some((p) => !!captures[p.id]));
+      default:
+        return groupedSpots;
+    }
+  }, [groupedSpots, spotFilter, visited, captures]);
+
+  // Filter-pill badges count locations (matching the list rows below them).
+  const groupedCounts = useMemo(() => {
+    let visitedSpots = 0;
+    let photoSpots = 0;
+    for (const s of groupedSpots) {
+      if (s.scenes.some((p) => visited[p.id] === true)) visitedSpots += 1;
+      if (s.scenes.some((p) => !!captures[p.id])) photoSpots += 1;
+    }
+    return {
+      all: groupedSpots.length,
+      visited: visitedSpots,
+      unvisited: groupedSpots.length - visitedSpots,
+      photos: photoSpots,
+    };
+  }, [groupedSpots, visited, captures]);
+
   // When the visible spot list changes (filter switch, data load) keep the
   // selection valid: if the current pick was filtered out, fall back to the
   // first spot that still has a real coordinate so the chip strip is never
   // empty while the map has markers.
   useEffect(() => {
-    if (viewMode !== 'map' || filteredPoints.length === 0) {
+    if (viewMode !== 'map' || filteredGroupedSpots.length === 0) {
       if (selectedSpotId !== null) setSelectedSpotId(null);
       return;
     }
+    // A selection stays valid if it points at any on-map scene (a tapped
+    // marker) or a chip's representative — only reset when it is neither.
     const stillVisible = selectedSpotId
       ? filteredPoints.some((p) => p.id === selectedSpotId)
       : false;
     if (stillVisible) return;
-    const firstValid = filteredPoints.find((p) => hasValidGeo(p.geo));
+    const firstValid = filteredGroupedSpots.find((s) => hasValidGeo(s.geo));
     setSelectedSpotId(firstValid ? firstValid.id : null);
-  }, [viewMode, filteredPoints, selectedSpotId]);
+  }, [viewMode, filteredPoints, filteredGroupedSpots, selectedSpotId]);
 
   const handleSpotChipPress = useCallback((spot: AnitabiPoint) => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -1306,6 +1365,33 @@ export default function PilgrimageDetailScreen() {
       void saveVisitedSpots(next);
       return next;
     });
+  }, []);
+
+  // A grouped spot is one location; "visited" applies to every cut filmed
+  // there, so the whole place flips with a single tap.
+  const handleToggleGroupedVisited = useCallback((spot: AnitabiSpot) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setVisited((prev) => {
+      const anyVisited = spot.scenes.some((p) => prev[p.id] === true);
+      const next: VisitedMap = { ...prev };
+      for (const p of spot.scenes) {
+        if (anyVisited) delete next[p.id];
+        else next[p.id] = true;
+      }
+      void saveVisitedSpots(next);
+      return next;
+    });
+  }, []);
+
+  // Single-cut location → open it directly. Multi-cut → let the user pick
+  // which scene to frame (reuses the map's cluster picker sheet).
+  const handleGroupedSpotPress = useCallback((spot: AnitabiSpot) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    if (spot.scenes.length > 1) {
+      setClusterSpots(spot.scenes);
+    } else {
+      setActiveSpot(spot.scenes[0]);
+    }
   }, []);
 
   const handleOpenMaps = useCallback((spot: AnitabiPoint) => {
@@ -1351,7 +1437,7 @@ export default function PilgrimageDetailScreen() {
     Haptics.selectionAsync().catch(() => undefined);
     const url = buildBrowseUrl(browseSource, anime.id) ?? '';
     Share.share({
-      message: `${animeTitles?.primary ?? 'Pilgrimage'} · ${stats.spotCount} spots${url ? `\n${url}` : ''}`,
+      message: `${animeTitles?.primary ?? 'Pilgrimage'} · ${stats.spotCount} scenes${url ? `\n${url}` : ''}`,
     }).catch(() => undefined);
   }, [anime, animeTitles?.primary, browseSource, stats.spotCount]);
 
@@ -1557,7 +1643,7 @@ export default function PilgrimageDetailScreen() {
                     <Ionicons name="location" size={11} color={themeColor} />
                     <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
                       {stats.spotCount}{' '}
-                      {stats.spotCount === 1 ? 'pilgrimage spot' : 'pilgrimage spots'}
+                      {stats.spotCount === 1 ? 'pilgrimage scene' : 'pilgrimage scenes'}
                     </ThemedText>
                   </View>
                 ) : null}
@@ -1601,7 +1687,7 @@ export default function PilgrimageDetailScreen() {
                 <StatCell
                   icon="place"
                   value={String(stats.spotCount)}
-                  label={stats.spotCount === 1 ? 'spot' : 'spots'}
+                  label={stats.spotCount === 1 ? 'scene' : 'scenes'}
                   color={themeColor}
                   theme={theme}
                 />
@@ -1641,7 +1727,7 @@ export default function PilgrimageDetailScreen() {
                     icon="view-list"
                     themeColor={themeColor}
                     themeColorFg={themeColorFg}
-                    count={filteredPoints.length}
+                    count={filteredGroupedSpots.length}
                     theme={theme}
                     onPress={() => handleViewToggle('list')}
                   />
@@ -1665,7 +1751,7 @@ export default function PilgrimageDetailScreen() {
                   <FilterPill
                     label="All"
                     active={spotFilter === 'all'}
-                    badge={points.length}
+                    badge={groupedCounts.all}
                     themeColor={themeColor}
                     themeColorFg={themeColorFg}
                     theme={theme}
@@ -1677,7 +1763,7 @@ export default function PilgrimageDetailScreen() {
                   <FilterPill
                     label="Unvisited"
                     active={spotFilter === 'unvisited'}
-                    badge={points.length - stats.visitedCount}
+                    badge={groupedCounts.unvisited}
                     themeColor={themeColor}
                     themeColorFg={themeColorFg}
                     theme={theme}
@@ -1689,7 +1775,7 @@ export default function PilgrimageDetailScreen() {
                   <FilterPill
                     label="Visited"
                     active={spotFilter === 'visited'}
-                    badge={stats.visitedCount}
+                    badge={groupedCounts.visited}
                     themeColor={themeColor}
                     themeColorFg={themeColorFg}
                     theme={theme}
@@ -1701,7 +1787,7 @@ export default function PilgrimageDetailScreen() {
                   <FilterPill
                     label="Photos"
                     active={spotFilter === 'photos'}
-                    badge={stats.capturedCount}
+                    badge={groupedCounts.photos}
                     themeColor={themeColor}
                     themeColorFg={themeColorFg}
                     theme={theme}
@@ -1780,7 +1866,7 @@ export default function PilgrimageDetailScreen() {
                 </Pressable>
               </View>
             ) : viewMode === 'list' ? (
-              filteredPoints.length === 0 ? (
+              filteredGroupedSpots.length === 0 ? (
                 <View style={styles.emptyCard}>
                   <ThemedText variant="bodyMedium" tone="secondary" align="center">
                     No scenes match this filter.
@@ -1788,74 +1874,80 @@ export default function PilgrimageDetailScreen() {
                 </View>
               ) : listLayout === 'grid' ? (
                 <View style={styles.gridList}>
-                  {chunkPairs(filteredPoints).map((pair) => (
+                  {chunkPairs(filteredGroupedSpots).map((pair) => (
                     <View key={pair[0].id + (pair[1]?.id ?? '_solo')} style={styles.gridRow}>
-                      {pair.map((spot) => (
-                        <View key={spot.id} style={styles.gridCell}>
-                          <SceneTile
-                            spot={spot}
-                            themeColor={themeColor}
-                            themeColorFg={themeColorFg}
-                            distanceKm={distanceFor(spot)}
-                            visited={visited[spot.id] === true}
-                            hasCapture={!!captures[spot.id]}
-                            captureUri={captures[spot.id]?.uri ?? null}
-                            theme={theme}
-                            onPress={(s) => {
-                              Haptics.selectionAsync().catch(() => undefined);
-                              setActiveSpot(s);
-                            }}
-                            onToggleVisited={handleToggleVisited}
-                            onTakeComparison={handleFrameShot}
-                          />
-                        </View>
-                      ))}
+                      {pair.map((gs) => {
+                        const rep = gs.scenes[0];
+                        const captured = gs.scenes.find((p) => captures[p.id]);
+                        return (
+                          <View key={gs.id} style={styles.gridCell}>
+                            <SceneTile
+                              spot={rep}
+                              sceneCount={gs.scenes.length}
+                              themeColor={themeColor}
+                              themeColorFg={themeColorFg}
+                              distanceKm={distanceFor(rep)}
+                              visited={gs.scenes.some((p) => visited[p.id] === true)}
+                              hasCapture={!!captured}
+                              captureUri={captured ? (captures[captured.id]?.uri ?? null) : null}
+                              theme={theme}
+                              onPress={() => handleGroupedSpotPress(gs)}
+                              onToggleVisited={() => handleToggleGroupedVisited(gs)}
+                              onTakeComparison={handleFrameShot}
+                            />
+                          </View>
+                        );
+                      })}
                       {pair.length === 1 ? <View style={styles.gridCell} /> : null}
                     </View>
                   ))}
                 </View>
               ) : (
                 <View style={styles.list}>
-                  {filteredPoints.map((spot) => (
-                    <SpotRow
-                      key={spot.id}
-                      spot={spot}
-                      themeColor={themeColor}
-                      themeColorFg={themeColorFg}
-                      distanceKm={distanceFor(spot)}
-                      visited={visited[spot.id] === true}
-                      hasCapture={!!captures[spot.id]}
-                      theme={theme}
-                      onPress={(s) => {
-                        Haptics.selectionAsync().catch(() => undefined);
-                        setActiveSpot(s);
-                      }}
-                      onToggleVisited={handleToggleVisited}
-                      onOpenMaps={handleOpenMaps}
-                    />
-                  ))}
+                  {filteredGroupedSpots.map((gs) => {
+                    const rep = gs.scenes[0];
+                    return (
+                      <SpotRow
+                        key={gs.id}
+                        spot={rep}
+                        sceneCount={gs.scenes.length}
+                        themeColor={themeColor}
+                        themeColorFg={themeColorFg}
+                        distanceKm={distanceFor(rep)}
+                        visited={gs.scenes.some((p) => visited[p.id] === true)}
+                        hasCapture={gs.scenes.some((p) => !!captures[p.id])}
+                        theme={theme}
+                        onPress={() => handleGroupedSpotPress(gs)}
+                        onToggleVisited={() => handleToggleGroupedVisited(gs)}
+                        onOpenMaps={handleOpenMaps}
+                      />
+                    );
+                  })}
                 </View>
               )
             ) : (
               <>
-                {filteredPoints.length > 0 ? (
+                {filteredGroupedSpots.length > 0 ? (
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.spotChipRow}>
-                    {filteredPoints.map((spot) => (
-                      <SpotChip
-                        key={spot.id}
-                        spot={spot}
-                        active={spot.id === selectedSpotId}
-                        themeColor={themeColor}
-                        themeColorFg={themeColorFg}
-                        visited={visited[spot.id] === true}
-                        hasCapture={!!captures[spot.id]}
-                        theme={theme}
-                        onPress={handleSpotChipPress}
-                      />
-                    ))}
+                    {filteredGroupedSpots.map((gs) => {
+                      const rep = gs.scenes[0];
+                      return (
+                        <SpotChip
+                          key={gs.id}
+                          spot={rep}
+                          active={rep.id === selectedSpotId}
+                          themeColor={themeColor}
+                          themeColorFg={themeColorFg}
+                          visited={gs.scenes.some((p) => visited[p.id] === true)}
+                          hasCapture={gs.scenes.some((p) => !!captures[p.id])}
+                          theme={theme}
+                          onPress={handleSpotChipPress}
+                        />
+                      );
+                    })}
                   </ScrollView>
                 ) : null}
                 <View
@@ -2078,17 +2170,20 @@ function SpotClusterPicker({
                 <Ionicons name="close" size={20} color={theme.text.secondary} />
               </Pressable>
             </View>
-            <ScrollView
+            <FlatList
               style={styles.list}
               contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}>
-              {spots.map((spot) => {
+              showsVerticalScrollIndicator={false}
+              data={spots}
+              keyExtractor={(spot) => spot.id}
+              initialNumToRender={12}
+              windowSize={9}
+              renderItem={({ item: spot }) => {
                 const isVisited = visited[spot.id] === true;
                 const km = distanceFor(spot);
                 const titles = getPilgrimageSpotTitles(spot);
                 return (
                   <Pressable
-                    key={spot.id}
                     onPress={() => onPick(spot)}
                     style={({ pressed }) => [
                       styles.row,
@@ -2104,14 +2199,16 @@ function SpotClusterPicker({
                         contentFit="cover"
                         transition={120}
                       />
-                      <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
-                        <ThemedText
-                          variant="captionSmall"
-                          weight="800"
-                          style={{ color: themeColorFg }}>
-                          EP {spot.ep}
-                        </ThemedText>
-                      </View>
+                      {spot.ep > 0 ? (
+                        <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
+                          <ThemedText
+                            variant="captionSmall"
+                            weight="800"
+                            style={{ color: themeColorFg }}>
+                            EP {spot.ep}
+                          </ThemedText>
+                        </View>
+                      ) : null}
                     </View>
                     <View style={styles.rowBody}>
                       <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
@@ -2143,8 +2240,8 @@ function SpotClusterPicker({
                     )}
                   </Pressable>
                 );
-              })}
-            </ScrollView>
+              }}
+            />
           </SafeAreaView>
         </View>
       </View>

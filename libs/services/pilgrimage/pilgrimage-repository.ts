@@ -7,7 +7,7 @@ import { IDMappingService } from '../sync/id-mapping-service';
 import { lookupBangumiByPlatformId } from './anitabi-cross-index';
 import { AnitabiService, anitabiService } from './anitabi-service';
 import { LocationService, locationService, type LatLng } from './location-service';
-import type { AnitabiBangumi, AnitabiPointDetail } from './types';
+import type { AnitabiBangumi, AnitabiPoint } from './types';
 
 /** Returned by {@link PilgrimageRepository.getNearbyAnime}. */
 export interface NearbyAnimeResult {
@@ -72,9 +72,9 @@ export class PilgrimageRepository {
   }
 
   /**
-   * Lazy-load the full points list (e.g. once the user opens the map screen).
+   * Lazy-load the complete points list (e.g. once the user opens the map screen).
    */
-  async getDetailedPointsByBangumiId(bangumiId: number): Promise<AnitabiPointDetail[]> {
+  async getDetailedPointsByBangumiId(bangumiId: number): Promise<AnitabiPoint[]> {
     return this.service.getDetailedPoints(bangumiId);
   }
 
