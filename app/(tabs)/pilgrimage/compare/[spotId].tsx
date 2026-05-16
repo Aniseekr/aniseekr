@@ -20,6 +20,9 @@ import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
 import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 import type { EdgeIntensity } from '../../../../libs/services/pilgrimage/edge-overlay';
+import type { SubjectFocus } from '../../../../libs/services/pilgrimage/subject-overlay';
+import { compositeSubjectIntoPhoto } from '../../../../libs/services/pilgrimage/subject-composite';
+import { shouldCompositeSubjectOverlay } from '../../../../libs/services/pilgrimage/subject-composite-plan';
 import { applyBrightnessToImage } from '../../../../libs/services/pilgrimage/apply-brightness';
 import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-exif-metadata';
 import { pilgrimageRepository } from '../../../../libs/services/pilgrimage/pilgrimage-repository';
@@ -175,6 +178,8 @@ export default function CompareCaptureScreen() {
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [overlayMode, setOverlayMode] = useState<OverlayMode>('anime');
   const [edgeIntensity, setEdgeIntensity] = useState<EdgeIntensity>('low');
+  const [subjectFocus, setSubjectFocus] = useState<SubjectFocus>('normal');
+  const [subjectCombine, setSubjectCombine] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(0.35);
   const [editMode, setEditMode] = useState(false);
   const [evValue, setEvValue] = useState(0);
@@ -240,13 +245,16 @@ export default function CompareCaptureScreen() {
   } = lifecycle;
   const brightness = useBrightnessPreview({ value: evValue });
   const overlayTransform = useOverlayTransform({ enabled: editMode });
+  const getOverlayTransformSnapshot = overlayTransform.getSnapshot;
   const sensors = useAlignmentSensors({ spotLat: params.spotLat, spotLng: params.spotLng });
   const edgeOrSketch = useEdgeOrSketch({
     mode: overlayMode,
     hiResImageUrl,
     themeColor,
     edgeIntensity,
+    subjectFocus,
   });
+  const subjectReady = overlayMode === 'subject' && hiResImageUrl.length > 0;
 
   // Shared metadata + sensor snapshot for the burst/HDR hooks. The hooks
   // mirror inputs into refs internally so it's fine that this object is
@@ -667,6 +675,55 @@ export default function CompareCaptureScreen() {
     ]
   );
 
+  const maybeCompositeSubjectShot = useCallback(
+    async (
+      shot: { uri: string; width: number; height: number },
+      exif: Record<string, unknown> | null = null
+    ): Promise<{ uri: string; width: number; height: number }> => {
+      if (
+        !shouldCompositeSubjectOverlay({
+          mode: overlayMode,
+          enabled: subjectCombine,
+          subjectReady,
+        })
+      ) {
+        return shot;
+      }
+
+      const composite = await compositeSubjectIntoPhoto({
+        photoUri: shot.uri,
+        referenceUri: hiResImageUrl,
+        photoWidth: shot.width,
+        photoHeight: shot.height,
+        previewWidth: winW,
+        previewHeight: winH,
+        opacity: overlayOpacity,
+        focus: subjectFocus,
+        transform: getOverlayTransformSnapshot(),
+        quality: qualityToNumber(settings.quality),
+        exif,
+      });
+
+      return {
+        uri: composite.uri,
+        width: composite.width || shot.width,
+        height: composite.height || shot.height,
+      };
+    },
+    [
+      overlayMode,
+      subjectCombine,
+      subjectReady,
+      hiResImageUrl,
+      winW,
+      winH,
+      overlayOpacity,
+      subjectFocus,
+      getOverlayTransformSnapshot,
+      settings.quality,
+    ]
+  );
+
   const runSingle = useCallback(
     async (
       source: 'manual' | 'auto' = 'manual',
@@ -757,14 +814,22 @@ export default function CompareCaptureScreen() {
           colorMatrix: brightness.colorMatrix,
           quality: qualityNum,
         });
+        const output = await maybeCompositeSubjectShot(
+          {
+            uri: baked.uri,
+            width: baked.width || captured.width,
+            height: baked.height || captured.height,
+          },
+          captured.exif
+        );
         tapFocus.releaseLock();
         // Capture is decoupled from navigation: record the shot into the
         // session here; the caller (manual shutter vs auto-capture) decides
         // whether to navigate to the preview or stay on the camera.
         return recordShot({
-          uri: baked.uri,
-          width: baked.width || captured.width,
-          height: baked.height || captured.height,
+          uri: output.uri,
+          width: output.width,
+          height: output.height,
           captureMode,
           source,
         });
@@ -781,6 +846,7 @@ export default function CompareCaptureScreen() {
       settings.mute,
       brightness.colorMatrix,
       tapFocus,
+      maybeCompositeSubjectShot,
       recordShot,
       spotId,
       name,
@@ -799,18 +865,25 @@ export default function CompareCaptureScreen() {
       if (!result) return null;
       tapFocus.releaseLock();
       const idx = result.bestIndex;
-      return recordShot({
+      const output = await maybeCompositeSubjectShot({
         uri: result.uris[idx],
         width: result.widths[idx],
         height: result.heights[idx],
+      });
+      const burstUris = [...result.uris];
+      burstUris[idx] = output.uri;
+      return recordShot({
+        uri: output.uri,
+        width: output.width,
+        height: output.height,
         captureMode: 'burst',
         source,
         burstTotal: result.total,
-        burstUris: result.uris,
+        burstUris,
         burstBestIndex: idx,
       });
     },
-    [burst, tapFocus, recordShot]
+    [burst, tapFocus, maybeCompositeSubjectShot, recordShot]
   );
 
   const runHdr = useCallback(
@@ -821,17 +894,22 @@ export default function CompareCaptureScreen() {
       const result = await hdr.run();
       if (!result) return null;
       tapFocus.releaseLock();
-      return recordShot({
+      const output = await maybeCompositeSubjectShot({
         uri: result.uri,
         width: result.width,
         height: result.height,
+      });
+      return recordShot({
+        uri: output.uri,
+        width: output.width,
+        height: output.height,
         // Rule 8: when compositing fell back to the mid frame we mark it as
         // single, not HDR — telling the preview screen the truth.
         captureMode: result.wasHdr ? 'hdr' : 'single',
         source,
       });
     },
-    [androidNativeHdrReady, runSingle, hdr, tapFocus, recordShot]
+    [androidNativeHdrReady, runSingle, hdr, tapFocus, maybeCompositeSubjectShot, recordShot]
   );
 
   const anyCapturing = capturing || burst.capturing || hdr.capturing;
@@ -1358,12 +1436,16 @@ export default function CompareCaptureScreen() {
             <OverlayControls
               mode={overlayMode}
               edgeIntensity={edgeIntensity}
+              subjectFocus={subjectFocus}
+              subjectCombine={subjectCombine}
               opacity={overlayOpacity}
               flipped={overlayTransform.flipped}
               editMode={editMode}
               themeColor={themeColor}
               onSelectMode={setOverlayMode}
               onSelectEdgeIntensity={setEdgeIntensity}
+              onSelectSubjectFocus={setSubjectFocus}
+              onToggleSubjectCombine={() => setSubjectCombine((v) => !v)}
               onChangeOpacity={setOverlayOpacity}
               onToggleFlip={overlayTransform.toggleFlip}
               onToggleEdit={handleToggleEdit}
