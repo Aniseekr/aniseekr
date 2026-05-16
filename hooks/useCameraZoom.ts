@@ -3,9 +3,9 @@
 // `useOverlayTransform` (gesture composition in compare/[spotId].tsx) handles
 // overlay zoom; if you want both, compose them with `Gesture.Simultaneous`.
 //
-// Stop-to-zoom mapping is an APPROXIMATION calibrated for iPhone-class devices.
-// Real devices have non-linear zoom curves (especially with multi-camera fusion);
-// verify on Android via field test before relying on these numbers for parity.
+// Stop→zoom is COMPUTED from an exponential inverse (see STOP_TO_ZOOM below),
+// not hand-calibrated. It still relies on an assumed videoMaxZoomFactor, so
+// treat 2×/3× as approximate and field-test before relying on exact parity.
 import { useCallback, useMemo, useState } from 'react';
 import { Gesture, type PinchGesture } from 'react-native-gesture-handler';
 import {
@@ -18,12 +18,43 @@ import {
 import type { FocalStop, ZoomValue } from '../components/pilgrimage/camera/types';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 
-// Calibrated for iPhone-class devices. Adjust per device family via field test.
+// expo-camera maps this normalized `zoom` (0..1) to the iOS videoZoomFactor
+// EXPONENTIALLY — videoZoomFactor = videoMaxZoomFactor ** zoom (see
+// CameraSessionManager.updateZoom). A focal-stop pill is a real zoom *factor*
+// (1×/2×/3×), so to land factor N we invert that curve:
+//   zoom = ln(N) / ln(videoMaxZoomFactor)
+//
+// videoMaxZoomFactor (M) is device/format-specific and expo-camera does NOT
+// expose it to JS, so we assume a value. The error is asymmetric: too LOW
+// over-zooms (the blur bug), too HIGH under-zooms (still sharp, just timid) —
+// so err high. 50 is mid-upper of the realistic iPhone single-lens range
+// (~16–123): a 2× pill then lands ~1.6–2.4×, 3× ~2.2–3.9× across that range,
+// vs the old linear guess's 5–17× and 16–123×.
+// TODO: a per-model override or a native getter for the real M makes this exact.
+const ASSUMED_MAX_ZOOM_FACTOR = 50;
+
+// The real zoom factor each focal-stop pill targets. A digital-only lens can't
+// go below its native FOV, so 0.5× clamps to 1× (factorToZoom maps <=1 to 0).
+const STOP_TO_FACTOR: Record<FocalStop, number> = {
+  0.5: 1,
+  1: 1,
+  2: 2,
+  3: 3,
+};
+
+/** Invert expo-camera's exponential zoom curve: real factor → normalized 0..1. */
+function factorToZoom(factor: number): ZoomValue {
+  if (factor <= 1) return 0;
+  return Math.min(1, Math.max(0, Math.log(factor) / Math.log(ASSUMED_MAX_ZOOM_FACTOR)));
+}
+
+// Derived from the exponential inverse — not hand-tuned. Consumers (snap, pinch,
+// setStop, initial seed) read this unchanged.
 export const STOP_TO_ZOOM: Record<FocalStop, ZoomValue> = {
-  0.5: 0, // ultra-wide
-  1: 0.25, // 1x (main)
-  2: 0.6, // 2x
-  3: 1.0, // 3x (telephoto or max)
+  0.5: factorToZoom(STOP_TO_FACTOR[0.5]),
+  1: factorToZoom(STOP_TO_FACTOR[1]),
+  2: factorToZoom(STOP_TO_FACTOR[2]),
+  3: factorToZoom(STOP_TO_FACTOR[3]),
 };
 
 const DEFAULT_STOPS: FocalStop[] = [0.5, 1, 2, 3];
