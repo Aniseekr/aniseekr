@@ -43,6 +43,11 @@ export interface SensorSnapshot {
   frameReason?: 'dark' | 'lowDetail' | 'lowContrast' | 'analysisFailed' | null;
 }
 
+export interface CaptureGeoLocation {
+  latitude: number;
+  longitude: number;
+}
+
 export interface PilgrimageCapture {
   spotId: string;
   /** local file URI (saved by expo-camera or via FileSystem cache). */
@@ -55,6 +60,12 @@ export interface PilgrimageCapture {
   heading?: number;
   /** new: alignment sensor snapshot taken at shutter time */
   sensorSnapshot?: SensorSnapshot;
+  /** User GPS at capture/import time. Distinct from the anime spot's own geo. */
+  userLocation?: CaptureGeoLocation;
+  /** User-entered album description. */
+  note?: string;
+  /** Whether the image came from the live camera or the user's photo library. */
+  source?: 'camera' | 'auto' | 'library';
   /** Bangumi subject id for album hydration when the anime is not preloaded. */
   animeId?: number;
   animeTitle?: string;
