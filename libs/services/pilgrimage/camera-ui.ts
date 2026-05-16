@@ -27,6 +27,15 @@ export const CAMERA_BOTTOM_BAR_CONTENT_HEIGHT = 164;
 // mirroring the right shutter rail so the camera is framed left + right.
 export const CAMERA_SIDE_RAIL_WIDTH = 100;
 
+// Minimum bottom inset (px) the camera chrome assumes for the Android gesture
+// navigation bar — the "海帶條" pill. Some Android edge-to-edge configurations
+// report `useSafeAreaInsets().bottom` as 0 even though the gesture bar is drawn
+// over the window; the raw inset would then let the shutter row sit underneath
+// it. Flooring the camera's bottom inset at this value keeps the controls
+// clear. Deliberately conservative: on a device with no navigation bar this
+// only adds a little extra letterbox to an already-letterboxed screen.
+export const ANDROID_GESTURE_NAV_MIN_INSET = 24;
+
 // The "More" tool menu is a drill-down popover. Portrait: it drops down from
 // the top bar. Landscape: it opens just inside the camera window, clear of the
 // left rail. Exported (not component-local) so the anchor maths stay
@@ -163,6 +172,27 @@ export function resolveTransientCameraHudVisibility(
 
 export function resolveCameraActive(input: CameraActiveInput): boolean {
   return input.appIsForeground && !input.settingsOpen;
+}
+
+/**
+ * Resolve the bottom safe-area inset the camera capture screen should pad for.
+ *
+ * iOS home-indicator insets are reliable, so the reported value is used as-is.
+ * On Android the value is floored at {@link ANDROID_GESTURE_NAV_MIN_INSET} so a
+ * mis-reported `0` (a known Android edge-to-edge quirk) can't let the system
+ * navigation bar cover the shutter. A genuine, larger inset (e.g. the
+ * three-button nav bar) is always kept.
+ */
+export function resolveCameraBottomInset(
+  reportedBottomInset: number,
+  platformOS: string
+): number {
+  const safe =
+    Number.isFinite(reportedBottomInset) && reportedBottomInset > 0 ? reportedBottomInset : 0;
+  if (platformOS === 'android') {
+    return Math.max(safe, ANDROID_GESTURE_NAV_MIN_INSET);
+  }
+  return safe;
 }
 
 function firstParam(value: CameraHeaderInput['animeTitle'] | CameraHeaderInput['ep']): string {

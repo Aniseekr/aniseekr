@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  ANDROID_GESTURE_NAV_MIN_INSET,
   cameraOrientationLockIntent,
   CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
   CAMERA_SIDE_RAIL_WIDTH,
@@ -9,6 +10,7 @@ import {
   CAMERA_TOP_BAR_CONTENT_HEIGHT,
   formatCameraHeader,
   isCameraCapturePath,
+  resolveCameraBottomInset,
   resolveCameraToolMenuAnchor,
   resolveCameraPlaceBadgeLayout,
   resolveCameraActive,
@@ -135,5 +137,24 @@ describe('camera UI helpers', () => {
       showCaptureHistory: true,
       showFocusExposureBar: true,
     });
+  });
+
+  it('floors the Android camera bottom inset so the gesture bar cannot cover the shutter', () => {
+    // Android edge-to-edge can mis-report the gesture-bar inset as 0.
+    expect(resolveCameraBottomInset(0, 'android')).toBe(ANDROID_GESTURE_NAV_MIN_INSET);
+    expect(resolveCameraBottomInset(10, 'android')).toBe(ANDROID_GESTURE_NAV_MIN_INSET);
+    // A genuine, larger inset (e.g. the three-button nav bar) is kept as-is.
+    expect(resolveCameraBottomInset(48, 'android')).toBe(48);
+  });
+
+  it('trusts the reported home-indicator inset on iOS', () => {
+    expect(resolveCameraBottomInset(34, 'ios')).toBe(34);
+    expect(resolveCameraBottomInset(0, 'ios')).toBe(0);
+  });
+
+  it('treats a non-finite or negative reported inset as zero before flooring', () => {
+    expect(resolveCameraBottomInset(Number.NaN, 'ios')).toBe(0);
+    expect(resolveCameraBottomInset(-5, 'ios')).toBe(0);
+    expect(resolveCameraBottomInset(-5, 'android')).toBe(ANDROID_GESTURE_NAV_MIN_INSET);
   });
 });
