@@ -10,6 +10,7 @@ import {
   withSpring,
 } from 'react-native-reanimated';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
+import type { OverlayTransformValues } from '../components/pilgrimage/camera/types';
 
 interface UseOverlayTransformInput {
   enabled: boolean;
@@ -20,6 +21,7 @@ interface UseOverlayTransformOutput {
   animatedStyle: ViewStyle;
   transformed: boolean;
   rotationDisplayDeg: number;
+  getSnapshot: () => OverlayTransformValues;
   resetTransforms: () => void;
   toggleFlip: () => void;
   flipped: boolean;
@@ -138,6 +140,17 @@ export function useOverlayTransform({
     setTransformed(false);
   }, [scale, translateX, translateY, rotation, flipScale]);
 
+  const getSnapshot = useCallback(
+    (): OverlayTransformValues => ({
+      scale: scale.value,
+      translateX: translateX.value,
+      translateY: translateY.value,
+      rotationRad: rotation.value,
+      flipScaleX: flipScale.value < 0 ? -1 : 1,
+    }),
+    [scale, translateX, translateY, rotation, flipScale]
+  );
+
   const toggleFlip = useCallback(() => {
     hapticsBridge.selection();
     const next = !flipped;
@@ -151,6 +164,7 @@ export function useOverlayTransform({
     animatedStyle,
     transformed,
     rotationDisplayDeg,
+    getSnapshot,
     resetTransforms,
     toggleFlip,
     flipped,
