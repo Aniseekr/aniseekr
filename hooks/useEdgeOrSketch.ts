@@ -1,6 +1,14 @@
 import type { SkImage } from '@shopify/react-native-skia';
-import { useEdgeImage, useSketchImage } from '../libs/services/pilgrimage/edge-image-skia';
+import {
+  useEdgeImage,
+  useSketchImage,
+  useSubjectImage,
+} from '../libs/services/pilgrimage/edge-image-skia';
 import { getEdgeOverlayConfig, type EdgeIntensity } from '../libs/services/pilgrimage/edge-overlay';
+import {
+  getSubjectOverlayConfig,
+  type SubjectFocus,
+} from '../libs/services/pilgrimage/subject-overlay';
 import type { OverlayMode } from '../components/pilgrimage/camera/types';
 
 interface UseEdgeOrSketchInput {
@@ -8,6 +16,7 @@ interface UseEdgeOrSketchInput {
   hiResImageUrl: string;
   themeColor: string;
   edgeIntensity: EdgeIntensity;
+  subjectFocus: SubjectFocus;
 }
 
 interface UseEdgeOrSketchOutput {
@@ -22,8 +31,10 @@ export function useEdgeOrSketch({
   hiResImageUrl,
   themeColor,
   edgeIntensity,
+  subjectFocus,
 }: UseEdgeOrSketchInput): UseEdgeOrSketchOutput {
   const edgeConfig = getEdgeOverlayConfig(edgeIntensity);
+  const subjectConfig = getSubjectOverlayConfig(subjectFocus);
   const {
     edgeImage,
     loading: edgeLoading,
@@ -41,6 +52,11 @@ export function useEdgeOrSketch({
     inkColor: '#1A1A1A',
     inkOpacity: 1,
   });
+  const {
+    subjectImage,
+    loading: subjectLoading,
+    error: subjectError,
+  } = useSubjectImage(mode === 'subject' ? hiResImageUrl : null, subjectConfig);
 
   if (mode === 'edge') {
     return {
@@ -52,6 +68,9 @@ export function useEdgeOrSketch({
   }
   if (mode === 'sketch') {
     return { image: sketchImage, loading: sketchLoading, error: sketchError, sourceOpacity: 0 };
+  }
+  if (mode === 'subject') {
+    return { image: subjectImage, loading: subjectLoading, error: subjectError, sourceOpacity: 0 };
   }
   return { image: null, loading: false, error: null, sourceOpacity: 0 };
 }

@@ -11,16 +11,17 @@ describe('edge overlay intensity', () => {
     expect(EDGE_INTENSITIES).toEqual(['low', 'mid', 'high']);
   });
 
-  it('maps low to Edge+ with a faint reference backdrop', () => {
+  it('maps low to Edge+ with a faint reference backdrop and sparse lines', () => {
     expect(edgeIntensityLabel('low')).toBe('Edge+');
     expect(getEdgeOverlayConfig('low')).toEqual({
-      threshold: 0.12,
-      inkOpacity: 0.72,
-      sourceOpacity: 0.18,
+      threshold: 0.24,
+      inkOpacity: 0.42,
+      sourceOpacity: 0.24,
     });
   });
 
-  it('maps mid and high to progressively stronger edge-only overlays', () => {
+  it('maps mid and high to progressively denser but still pale edge-only overlays', () => {
+    const low = getEdgeOverlayConfig('low');
     const mid = getEdgeOverlayConfig('mid');
     const high = getEdgeOverlayConfig('high');
 
@@ -28,8 +29,11 @@ describe('edge overlay intensity', () => {
     expect(edgeIntensityLabel('high')).toBe('Edge Max');
     expect(mid.sourceOpacity).toBe(0);
     expect(high.sourceOpacity).toBe(0);
+    expect(low.threshold).toBeGreaterThan(mid.threshold);
+    expect(mid.threshold).toBeGreaterThan(high.threshold);
+    expect(low.inkOpacity).toBeLessThan(mid.inkOpacity);
     expect(high.inkOpacity).toBeGreaterThan(mid.inkOpacity);
-    expect(high.threshold).toBeLessThan(mid.threshold);
+    expect(high.inkOpacity).toBeLessThanOrEqual(0.68);
   });
 
   it('falls back to low for unknown persisted values', () => {

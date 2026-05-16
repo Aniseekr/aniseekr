@@ -124,6 +124,8 @@ function OverlayContent({
         transition={120}
       />
     ) : null;
+  const errorLabel =
+    mode === 'subject' ? '無法載入主體' : mode === 'sketch' ? '無法載入草稿' : '無法載入描邊';
 
   if (edgeOrSketchLoading) {
     return (
@@ -144,7 +146,7 @@ function OverlayContent({
         <View style={styles.edgeLoader}>
           <View style={styles.errorTile}>
             <ThemedText variant="captionSmall" weight="700" style={styles.errorText}>
-              無法載入描邊
+              {errorLabel}
             </ThemedText>
           </View>
         </View>

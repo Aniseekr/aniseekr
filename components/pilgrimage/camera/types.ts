@@ -5,7 +5,7 @@ export type { LatLng };
 
 export type CameraFacing = CameraType;
 export type FlashMode = 'off' | 'on' | 'auto' | 'torch';
-export type OverlayMode = 'anime' | 'sketch' | 'edge';
+export type OverlayMode = 'anime' | 'sketch' | 'edge' | 'subject';
 export type AspectRatio = '4:3' | '16:9' | '1:1' | 'full';
 export type ChipKind = 'overlay' | 'flash' | 'exposure' | 'aspect';
 export type FocalStop = 0.5 | 1 | 2 | 3;

@@ -8,11 +8,18 @@ import {
   edgeIntensityLabel,
   type EdgeIntensity,
 } from '../../../../libs/services/pilgrimage/edge-overlay';
+import {
+  SUBJECT_FOCI,
+  subjectFocusLabel,
+  type SubjectFocus,
+} from '../../../../libs/services/pilgrimage/subject-overlay';
 import type { OverlayMode } from '../types';
 
 interface OverlayControlsProps {
   mode: OverlayMode;
   edgeIntensity: EdgeIntensity;
+  subjectFocus: SubjectFocus;
+  subjectCombine: boolean;
   opacity: number;
   flipped: boolean;
   /** Whether the overlay is in free-drag reposition mode. */
@@ -20,6 +27,8 @@ interface OverlayControlsProps {
   themeColor: string;
   onSelectMode: (mode: OverlayMode) => void;
   onSelectEdgeIntensity: (intensity: EdgeIntensity) => void;
+  onSelectSubjectFocus: (focus: SubjectFocus) => void;
+  onToggleSubjectCombine: () => void;
   onChangeOpacity: (opacity: number) => void;
   onToggleFlip: () => void;
   /** Toggles reposition mode. The parent closes this popover so the drag surface is clear. */
@@ -36,6 +45,7 @@ const MODES: ModeMeta[] = [
   { id: 'anime', icon: 'image-outline', label: 'Anime' },
   { id: 'sketch', icon: 'pencil-outline', label: 'Sketch' },
   { id: 'edge', icon: 'analytics-outline', label: 'Edge' },
+  { id: 'subject', icon: 'person-outline', label: 'Subject' },
 ];
 
 /**
@@ -46,12 +56,16 @@ const MODES: ModeMeta[] = [
 export default function OverlayControls({
   mode,
   edgeIntensity,
+  subjectFocus,
+  subjectCombine,
   opacity,
   flipped,
   editMode,
   themeColor,
   onSelectMode,
   onSelectEdgeIntensity,
+  onSelectSubjectFocus,
+  onToggleSubjectCombine,
   onChangeOpacity,
   onToggleFlip,
   onToggleEdit,
@@ -68,9 +82,20 @@ export default function OverlayControls({
     onSelectEdgeIntensity(next);
   };
 
+  const handleSelectSubjectFocus = (next: SubjectFocus) => {
+    if (next === subjectFocus) return;
+    hapticsBridge.selection();
+    onSelectSubjectFocus(next);
+  };
+
   const handleFlip = () => {
     hapticsBridge.tap();
     onToggleFlip();
+  };
+
+  const handleToggleSubjectCombine = () => {
+    hapticsBridge.selection();
+    onToggleSubjectCombine();
   };
 
   return (
@@ -92,7 +117,11 @@ export default function OverlayControls({
                 pressed && { opacity: 0.75 },
               ]}>
               <Ionicons name={m.icon} size={14} color={fg} />
-              <ThemedText variant="captionSmall" weight="600" style={{ color: fg }}>
+              <ThemedText
+                variant="captionSmall"
+                weight="600"
+                numberOfLines={1}
+                style={{ color: fg }}>
                 {m.label}
               </ThemedText>
             </Pressable>
@@ -127,6 +156,57 @@ export default function OverlayControls({
               </Pressable>
             );
           })}
+        </View>
+      ) : null}
+
+      {mode === 'subject' ? (
+        <View style={styles.subjectGroup}>
+          <View style={styles.edgeIntensityRow}>
+            {SUBJECT_FOCI.map((focus) => {
+              const active = focus === subjectFocus;
+              const fg = active ? readableTextOn(themeColor) : '#fff';
+              return (
+                <Pressable
+                  key={focus}
+                  onPress={() => handleSelectSubjectFocus(focus)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Subject focus ${subjectFocusLabel(focus)}`}
+                  accessibilityState={{ selected: active }}
+                  style={({ pressed }) => [
+                    styles.edgeIntensityBtn,
+                    active && { backgroundColor: themeColor, borderColor: themeColor },
+                    pressed && { opacity: 0.75 },
+                  ]}>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="700"
+                    numberOfLines={1}
+                    style={{ color: fg }}>
+                    {subjectFocusLabel(focus)}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Pressable
+            onPress={handleToggleSubjectCombine}
+            accessibilityRole="checkbox"
+            accessibilityLabel="Combine subject overlay into captured photo"
+            accessibilityState={{ checked: subjectCombine }}
+            style={({ pressed }) => [
+              styles.subjectCombineBtn,
+              subjectCombine && { borderColor: themeColor },
+              pressed && { opacity: 0.75 },
+            ]}>
+            <Ionicons
+              name={subjectCombine ? 'checkbox' : 'square-outline'}
+              size={18}
+              color={subjectCombine ? themeColor : '#fff'}
+            />
+            <ThemedText variant="captionSmall" weight="700" style={styles.subjectCombineText}>
+              Combine with photo
+            </ThemedText>
+          </Pressable>
         </View>
       ) : null}
 
@@ -200,9 +280,10 @@ export default function OverlayControls({
 
 const styles = StyleSheet.create({
   root: { gap: 10 },
-  modeRow: { flexDirection: 'row', gap: 8 },
+  modeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   modePill: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '47%',
     minHeight: 40,
     borderRadius: 12,
     paddingHorizontal: 8,
@@ -225,6 +306,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  subjectGroup: { gap: 8 },
   edgeIntensityBtn: {
     flex: 1,
     minHeight: 38,
@@ -235,6 +317,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.22)',
   },
+  subjectCombineBtn: {
+    minHeight: 44,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  subjectCombineText: { color: '#fff' },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     flex: 1,
