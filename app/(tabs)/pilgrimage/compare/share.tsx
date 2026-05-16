@@ -33,6 +33,8 @@ import {
 } from '../../../../components/pilgrimage/ShareCard';
 import {
   buildShareCaption,
+  saveShareImage,
+  shareSavedImage,
   shareToInstagram,
   shareToLine,
   shareToSystem,
@@ -113,18 +115,19 @@ export default function ShareComparisonScreen() {
       flashToast('Media access denied');
       return;
     }
-    const uri = await captureCard();
-    if (!uri) {
+    const saved = await saveShareImage({
+      captureImage: captureCard,
+      saveImage: MediaLibrary.saveToLibraryAsync,
+    });
+    if (saved.status === 'capture-failed') {
       flashToast('Capture failed');
       return;
     }
-    try {
-      await MediaLibrary.saveToLibraryAsync(uri);
-      flashToast('Saved to camera roll');
-    } catch (err) {
-      console.warn('save share card failed', err);
+    if (saved.status === 'save-failed') {
       flashToast('Save failed');
+      return;
     }
+    flashToast('Saved to camera roll');
   }, [ensureMediaPerm, captureCard, flashToast]);
 
   const performShare = useCallback(
@@ -135,16 +138,6 @@ export default function ShareComparisonScreen() {
         flashToast('Media access denied');
         return;
       }
-      const uri = await captureCard();
-      if (!uri) {
-        flashToast('Capture failed');
-        return;
-      }
-      try {
-        await MediaLibrary.saveToLibraryAsync(uri);
-      } catch (err) {
-        console.warn('save before share failed', err);
-      }
       const caption = buildShareCaption({
         sceneName,
         animeTitle,
@@ -152,16 +145,27 @@ export default function ShareComparisonScreen() {
         matchScore,
         locationText,
       });
-      let result: ShareIntentResult;
-      if (platform === 'instagram') {
-        result = await shareToInstagram({ imageUri: uri, caption });
-      } else if (platform === 'twitter') {
-        result = await shareToTwitter({ imageUri: uri, caption });
-      } else if (platform === 'line') {
-        result = await shareToLine({ imageUri: uri, caption });
-      } else {
-        result = await shareToSystem({ imageUri: uri, caption });
+      const savedShare = await shareSavedImage({
+        captureImage: captureCard,
+        saveImage: MediaLibrary.saveToLibraryAsync,
+        shareImage: async (uri) => {
+          if (platform === 'instagram') {
+            return shareToInstagram({ imageUri: uri, caption });
+          }
+          if (platform === 'twitter') {
+            return shareToTwitter({ imageUri: uri, caption });
+          }
+          if (platform === 'line') {
+            return shareToLine({ imageUri: uri, caption });
+          }
+          return shareToSystem({ imageUri: uri, caption });
+        },
+      });
+      if (savedShare.status !== 'shared') {
+        flashToast(savedShare.status === 'capture-failed' ? 'Capture failed' : 'Save failed');
+        return;
       }
+      const result = savedShare.result;
       const toastText = describeShareResult(result);
       if (toastText) flashToast(toastText);
     },
@@ -400,15 +404,21 @@ export default function ShareComparisonScreen() {
 }
 
 function describeShareResult(result: ShareIntentResult): string | null {
-  if (result.delivered === 'failed') return 'Share cancelled';
+  if (result.delivered === 'failed') return 'Share cancelled · Image saved';
   if (result.platform === 'instagram') {
-    return result.captionCopied ? 'Instagram opened · Caption copied' : 'Instagram opened';
+    return result.captionCopied
+      ? 'Image saved · Instagram opened · Caption copied'
+      : 'Image saved · Instagram opened';
   }
   if (result.platform === 'twitter') {
-    return 'X / Twitter opened';
+    return result.captionCopied
+      ? 'Image saved · Share to X · Caption copied'
+      : 'Image saved · Share to X';
   }
   if (result.platform === 'line') {
-    return 'LINE share opened';
+    return result.captionCopied
+      ? 'Image saved · Share to LINE · Caption copied'
+      : 'Image saved · Share to LINE';
   }
   return null;
 }

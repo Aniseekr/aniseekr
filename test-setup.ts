@@ -376,6 +376,11 @@ mock.module('expo-haptics', () => ({
   selectionAsync: async () => undefined,
 }));
 
+mock.module('expo-sharing', () => ({
+  isAvailableAsync: async () => true,
+  shareAsync: async (_url: string, _options?: unknown) => undefined,
+}));
+
 // expo-location default shim. Tests that need richer behaviour install their
 // own mocks through LocationService's `module` constructor option.
 mock.module('expo-location', () => ({
@@ -431,6 +436,12 @@ mock.module('react-native', () => {
     canOpenURL: async (_url: string) => true,
   };
 
+  const Share = {
+    sharedAction: 'sharedAction',
+    dismissedAction: 'dismissedAction',
+    share: async (_content: unknown) => ({ action: 'sharedAction' }),
+  };
+
   const Platform = {
     OS: 'ios' as const,
     select<T>(spec: { ios?: T; android?: T; default?: T; web?: T }): T | undefined {
@@ -462,6 +473,7 @@ mock.module('react-native', () => {
     Switch: passthrough('Switch'),
     StyleSheet,
     Linking,
+    Share,
     Platform,
     TurboModuleRegistry,
     NativeModules,
