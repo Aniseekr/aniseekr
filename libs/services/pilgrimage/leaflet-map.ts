@@ -492,8 +492,10 @@ export const MAP_BASE_JS = `
   }
 
   var stats = { ok: 0, err: 0, cached: 0 };
+  var offlineOnly = false;
   var loadingEl = null, bannerEl = null, bannerLabel = null;
   var bannerTimer = null;
+  var transparentTile = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 
   function setBanner(text, kind) {
     if (!bannerEl) return;
@@ -508,6 +510,7 @@ export const MAP_BASE_JS = `
   }
   function refreshLoadingState() {
     if (loadingEl && (stats.ok + stats.cached > 0)) loadingEl.classList.add('hidden');
+    if (loadingEl && offlineOnly && (stats.ok + stats.cached + stats.err > 0)) loadingEl.classList.add('hidden');
     if (stats.err >= 4 && stats.ok === 0) {
       setBanner(stats.cached > 0 ? 'Offline — showing cached tiles' : 'Offline — no cached tiles for this area', 'offline');
     } else if (stats.err > 0 && stats.ok > 0 && !bannerTimer) {
@@ -538,9 +541,26 @@ export const MAP_BASE_JS = `
         };
         tile.src = src;
       };
+      var applyBlank = function() {
+        tile.onload = function(){
+          stats.err++;
+          refreshLoadingState();
+          done(null, tile);
+        };
+        tile.onerror = function(){
+          stats.err++;
+          refreshLoadingState();
+          done(new Error('offline tile unavailable'), tile);
+        };
+        tile.src = transparentTile;
+      };
 
       getCachedBlob(url).then(function(blob){
         if (blob) { apply(URL.createObjectURL(blob), true, true); return; }
+        if (offlineOnly) {
+          applyBlank();
+          return;
+        }
         fetch(url, { mode: 'cors', credentials: 'omit' })
           .then(function(resp){
             if (!resp.ok) throw new Error('http ' + resp.status);
@@ -557,6 +577,22 @@ export const MAP_BASE_JS = `
       return tile;
     }
   });
+
+  window.__setOfflineOnly = function(enabled) {
+    offlineOnly = !!enabled;
+    stats = { ok: 0, err: 0, cached: 0 };
+    var loading = document.getElementById('map-loading');
+    if (loading) loading.classList.remove('hidden');
+    if (offlineOnly) setBanner('Offline cache mode — cached tiles only', 'offline');
+    else setBanner('', '');
+    if (window.__activeMap) {
+      try {
+        window.__activeMap.eachLayer(function(layer){
+          if (layer && typeof layer.redraw === 'function' && typeof layer.getTileUrl === 'function') layer.redraw();
+        });
+      } catch (e) {}
+    }
+  };
 
   window.__post = function(payload){
     if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
@@ -781,7 +817,7 @@ export const MAP_BASE_JS = `
 
     // Online/offline browser events fire inside WebViews on most platforms.
     if (typeof window.addEventListener === 'function') {
-      window.addEventListener('online', function(){ setBanner('Back online', 'warn'); });
+      window.addEventListener('online', function(){ offlineOnly ? setBanner('Offline cache mode — cached tiles only', 'offline') : setBanner('Back online', 'warn'); });
       window.addEventListener('offline', function(){ setBanner('Offline — showing cached tiles', 'offline'); });
     }
   };
