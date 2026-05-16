@@ -14,6 +14,7 @@ import {
   useDerivedValue,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import type { FocalStop, ZoomValue } from '../components/pilgrimage/camera/types';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
@@ -83,6 +84,13 @@ export interface UseCameraZoomOutput {
   setZoom: (z: number) => void;
   setStop: (s: FocalStop) => void;
   pinchGesture: PinchGesture;
+  /**
+   * The live normalized 0..1 zoom written on the UI thread. `zoom` (the JS
+   * state above) is a THROTTLED mirror of this value; gesture handlers that
+   * want jank-free continuous zoom (pinch, the ZoomDial) should write
+   * `zoomShared.value` directly on the UI thread instead of calling `setZoom`.
+   */
+  zoomShared: SharedValue<number>;
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -187,5 +195,5 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
     [zoom, stops]
   );
 
-  return { zoom, activeStop, setZoom, setStop, pinchGesture };
+  return { zoom, activeStop, setZoom, setStop, pinchGesture, zoomShared };
 }

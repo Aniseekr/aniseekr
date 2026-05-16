@@ -93,7 +93,13 @@ export function useLensSwitcher(input: UseLensSwitcherInput): UseLensSwitcherOut
     void refreshAvailableLenses();
   }, [refreshAvailableLenses]);
 
-  const availableStops = stopsForAvailableLenses(availableLenses, telephotoStop) as FocalStop[];
+  // Memoized so the array identity stays stable across renders that don't
+  // change `availableLenses` — consumers (the ZoomDial) key useMemo/useEffect
+  // chains on this, so an unstable identity would re-seed the dial every render.
+  const availableStops = useMemo(
+    () => stopsForAvailableLenses(availableLenses, telephotoStop) as FocalStop[],
+    [availableLenses, telephotoStop]
+  );
 
   const setStop = useCallback(
     (stop: FocalStop) => {
