@@ -110,6 +110,28 @@ describe('groupPointsIntoSpots', () => {
     expect(spots[0].scenes.length).toBe(2);
   });
 
+  it('uses the Chinese title as the grouping key when Anitabi sends a non-string name', () => {
+    const points: AnitabiPoint[] = [
+      point({
+        id: 'a',
+        name: 556 as unknown as string,
+        cn: '山梨县立图书馆',
+        geo: [35.6683, 138.5702],
+      }),
+      point({
+        id: 'b',
+        name: 557 as unknown as string,
+        cn: '山梨县立图书馆',
+        geo: [35.66831, 138.57021],
+      }),
+    ];
+
+    const spots = groupPointsIntoSpots(points);
+
+    expect(spots.length).toBe(1);
+    expect(spots[0].scenes.map((p) => p.id)).toEqual(['a', 'b']);
+  });
+
   it('keeps same-name points apart when further than 60m', () => {
     const points: AnitabiPoint[] = [
       point({ id: 'a', name: '通学路', geo: [35.0, 139.0] }),

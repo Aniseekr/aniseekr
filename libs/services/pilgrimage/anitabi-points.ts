@@ -94,16 +94,18 @@ export function groupPointsIntoSpots(points: readonly AnitabiPoint[]): AnitabiSp
   // Pass 2 — name + proximity fallback for everything Anitabi left ungrouped.
   const looseGroups: AnitabiPoint[][] = [];
   for (const p of loose) {
-    const key = nameKey(p.name);
+    const key = pointNameKey(p);
     let placed = false;
-    for (const group of looseGroups) {
-      const head = group[0];
-      if (nameKey(head.name) !== key) continue;
-      if (!hasGeo(head.geo) || !hasGeo(p.geo)) continue;
-      if (distanceMeters(head.geo, p.geo) <= PROXIMITY_MERGE_M) {
-        group.push(p);
-        placed = true;
-        break;
+    if (key) {
+      for (const group of looseGroups) {
+        const head = group[0];
+        if (pointNameKey(head) !== key) continue;
+        if (!hasGeo(head.geo) || !hasGeo(p.geo)) continue;
+        if (distanceMeters(head.geo, p.geo) <= PROXIMITY_MERGE_M) {
+          group.push(p);
+          placed = true;
+          break;
+        }
       }
     }
     if (!placed) looseGroups.push([p]);
@@ -127,8 +129,8 @@ function toSpot(members: AnitabiPoint[], indexOf: Map<string, number>): AnitabiS
   const head = scenes[0];
   return {
     id: head.id,
-    name: head.name,
-    cn: head.cn,
+    name: displayName(head),
+    cn: textOrUndefined(head.cn),
     geo: head.geo,
     image: head.image,
     scenes,
@@ -170,8 +172,24 @@ function hasGeo(geo: [number, number]): boolean {
   );
 }
 
-function nameKey(name: string): string {
-  return name.normalize('NFKC').trim().toLowerCase();
+function pointNameKey(point: AnitabiPoint): string | null {
+  return textKey(point.name) ?? textKey(point.cn);
+}
+
+function textKey(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const key = value.normalize('NFKC').trim().toLowerCase();
+  return key.length > 0 ? key : null;
+}
+
+function displayName(point: AnitabiPoint): string {
+  return textOrUndefined(point.name) ?? textOrUndefined(point.cn) ?? '';
+}
+
+function textOrUndefined(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function distanceMeters(a: [number, number], b: [number, number]): number {
