@@ -28,6 +28,7 @@ import {
   cameraOrientationLockIntent,
   CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
   CAMERA_SIDE_RAIL_WIDTH,
+  resolveCameraBottomInset,
   resolveCameraToolMenuAnchor,
   resolveCameraActive,
   resolveTransientCameraHudVisibility,
@@ -51,7 +52,7 @@ import CameraTopBar, {
   CameraHeaderButton,
 } from '../../../../components/pilgrimage/camera/CameraTopBar';
 import AlignmentHUD from '../../../../components/pilgrimage/camera/AlignmentHUD';
-import FocalPills from '../../../../components/pilgrimage/camera/FocalPills';
+import ZoomDial from '../../../../components/pilgrimage/camera/ZoomDial';
 import CameraToolMenu, {
   type CameraTool,
 } from '../../../../components/pilgrimage/camera/CameraToolMenu';
@@ -71,7 +72,7 @@ import type {
   FocalStop,
   OverlayMode,
 } from '../../../../components/pilgrimage/camera/types';
-import { useCameraZoom } from '../../../../hooks/useCameraZoom';
+import { useCameraZoom, STOP_TO_ZOOM } from '../../../../hooks/useCameraZoom';
 import { useTapToFocus } from '../../../../hooks/useTapToFocus';
 import { useLensSwitcher } from '../../../../hooks/useLensSwitcher';
 import { useBrightnessPreview } from '../../../../hooks/useBrightnessPreview';
@@ -96,6 +97,9 @@ import SceneSwitcherSheet from '../../../../components/pilgrimage/camera/SceneSw
 import CaptureModeToast, {
   type CaptureModeToastValue,
 } from '../../../../components/pilgrimage/camera/CaptureModeToast';
+import OverlayOpacityToast, {
+  type OverlayOpacityToastValue,
+} from '../../../../components/pilgrimage/camera/OverlayOpacityToast';
 
 type CameraRouteParams = {
   spotId: string;
@@ -129,6 +133,11 @@ const CAPTURE_MODE_ICON: Record<CaptureMode, keyof typeof Ionicons.glyphMap> = {
 };
 const CAPTURE_MODE_CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
 
+// Overlay opacity has a quick-cycle top-bar button so the user can adjust the
+// blend without the tool popover covering the preview. Five evenly-spread
+// levels matching the slider's useful range.
+const OVERLAY_OPACITY_CYCLE = [0.2, 0.35, 0.5, 0.7, 0.9];
+
 export default function CompareCaptureScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -149,7 +158,7 @@ export default function CompareCaptureScreen() {
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [overlayMode, setOverlayMode] = useState<OverlayMode>('anime');
-  const [overlayOpacity, setOverlayOpacity] = useState(0.5);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.35);
   const [editMode, setEditMode] = useState(false);
   const [evValue, setEvValue] = useState(0);
   const [orientationMode, setOrientationMode] = useState<CameraOrientationMode>('auto');
@@ -158,6 +167,9 @@ export default function CompareCaptureScreen() {
   const [activeTool, setActiveTool] = useState<CameraTool | null>(null);
   // `null` until the first capture-mode change — a fresh value re-fires the toast.
   const [captureModeToast, setCaptureModeToast] = useState<CaptureModeToastValue | null>(null);
+  // `null` until the first opacity cycle — a fresh value re-fires the toast.
+  const [overlayOpacityToast, setOverlayOpacityToast] =
+    useState<OverlayOpacityToastValue | null>(null);
   const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
   const [availablePictureSizes, setAvailablePictureSizes] = useState<string[]>([]);
   const [sceneSwitcherOpen, setSceneSwitcherOpen] = useState(false);
@@ -287,7 +299,7 @@ export default function CompareCaptureScreen() {
   }, [appIsForeground, settingsOpen, setCameraActive]);
 
   // T1 fix: when the user flips facing, re-query lenses (iOS exposes a
-  // different physical lens set per camera) so FocalPills reflect reality.
+  // different physical lens set per camera) so the zoom dial reflects reality.
   useEffect(() => {
     void refreshAvailableLenses();
   }, [facing, refreshAvailableLenses]);
@@ -315,6 +327,27 @@ export default function CompareCaptureScreen() {
     setSettings({ captureMode: next });
     setCaptureModeToast({ mode: next });
   }, [settings.captureMode, setSettings]);
+
+  // Quick overlay-opacity cycle from the top bar — advances through five blend
+  // levels with wraparound so the user can tune the overlay without the tool
+  // popover covering the preview. A short toast confirms the new level.
+  const cycleOverlayOpacity = useCallback(() => {
+    setOverlayOpacity((cur) => {
+      let nearest = 0;
+      for (let i = 1; i < OVERLAY_OPACITY_CYCLE.length; i += 1) {
+        if (
+          Math.abs(OVERLAY_OPACITY_CYCLE[i] - cur) <
+          Math.abs(OVERLAY_OPACITY_CYCLE[nearest] - cur)
+        ) {
+          nearest = i;
+        }
+      }
+      const next = OVERLAY_OPACITY_CYCLE[(nearest + 1) % OVERLAY_OPACITY_CYCLE.length];
+      hapticsBridge.selection();
+      setOverlayOpacityToast({ opacity: next });
+      return next;
+    });
+  }, []);
 
   // The overlay reposition toggle lives inside the Overlay popover; toggling it
   // closes the popover so the drag surface underneath is clear.
@@ -792,7 +825,11 @@ export default function CompareCaptureScreen() {
   const activeFocalStop = hasOpticalZoom
     ? (stopForLens(selectedLens) as FocalStop | null)
     : zoom.activeStop;
-  const safeAreaBottomPad = bottomPad(insets);
+  // Android edge-to-edge can report insets.bottom as 0 even when the gesture
+  // navigation bar (海帶條) is drawn over the window — floor it so the shutter
+  // row + HUD layers always clear the system bar. iOS insets are used as-is.
+  const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
+  const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
   // Fixed letterbox bars — neither moves, so every floating HUD layer anchors
   // off this height instead of the old AF-reactive offset that made the dock
   // physically jump 68px the moment tap-to-focus locked.
@@ -810,16 +847,19 @@ export default function CompareCaptureScreen() {
     hapticsBridge.tap();
     router.push({ pathname: '/pilgrimage/compare/align', params: { ...params } });
   };
-  // One FocalPills instance, reused: it lives inside the portrait bottom bar
-  // and free-floats bottom-left in landscape.
-  const focalPills = (
-    <FocalPills
+  // One ZoomDial instance, reused: it lives inside the portrait bottom bar and
+  // free-floats bottom-left in landscape. Continuous digital zoom writes
+  // zoom.zoomShared on the UI thread; labeled detents route through
+  // onPickFocalStop so optical lens switching is unchanged.
+  const focalDial = (
+    <ZoomDial
+      zoomShared={zoom.zoomShared}
       activeStop={activeFocalStop}
       themeColor={themeColor}
       availableStops={hasOpticalZoom ? availableStops : undefined}
-      opticalHint={false}
       isFrontFacing={facing === 'front'}
-      onPick={onPickFocalStop}
+      stopZoom={STOP_TO_ZOOM}
+      onPickFocalStop={onPickFocalStop}
       virtualLenses={virtualLenses}
       virtualActive={isVirtualLensActive}
       onPickVirtual={() => {
@@ -877,6 +917,7 @@ export default function CompareCaptureScreen() {
           animatedStyle={overlayTransform.animatedStyle}
           edgeOrSketchImage={edgeOrSketch.image}
           edgeOrSketchLoading={edgeOrSketch.loading}
+          edgeOrSketchError={edgeOrSketch.error}
         />
 
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -896,7 +937,7 @@ export default function CompareCaptureScreen() {
           topInset={insets.top}
           leftInset={insets.left}
           rightInset={insets.right}
-          bottomInset={insets.bottom}
+          bottomInset={cameraBottomInset}
           rightRailWidth={isLandscape ? SHUTTER_ROW_LANDSCAPE_WIDTH : 0}
           isLandscape={isLandscape}
           onClose={() => router.back()}
@@ -927,6 +968,13 @@ export default function CompareCaptureScreen() {
                   hapticsBridge.selection();
                   setActiveTool((t) => (t === 'overlay' ? null : 'overlay'));
                 }}
+              />
+              <CameraHeaderButton
+                icon="layers-outline"
+                accessibilityLabel={`Overlay opacity ${Math.round(overlayOpacity * 100)}%`}
+                themeColor={themeColor}
+                active={false}
+                onPress={cycleOverlayOpacity}
               />
               <CameraHeaderButton
                 icon="sunny-outline"
@@ -976,7 +1024,7 @@ export default function CompareCaptureScreen() {
           score={sensors.score}
           themeColor={themeColor}
           topInset={insets.top}
-          bottomInset={insets.bottom}
+          bottomInset={cameraBottomInset}
           bottomBarHeight={bottomBarHeight}
           leftReserve={isLandscape ? CAMERA_SIDE_RAIL_WIDTH + insets.left : 0}
           isLandscape={isLandscape}
@@ -986,8 +1034,8 @@ export default function CompareCaptureScreen() {
           onReset={overlayTransform.resetTransforms}
         />
 
-        {/* Landscape floats the focal pills just inside the left rail; in
-            portrait they live inside the fixed bottom bar (ShutterRow). */}
+        {/* Landscape floats the zoom dial just inside the left rail; in
+            portrait it lives inside the fixed bottom bar (ShutterRow). */}
         {isLandscape ? (
           <View
             pointerEvents="box-none"
@@ -998,7 +1046,7 @@ export default function CompareCaptureScreen() {
                 bottom: safeAreaBottomPad + 16,
               },
             ]}>
-            {focalPills}
+            {focalDial}
           </View>
         ) : null}
 
@@ -1071,8 +1119,8 @@ export default function CompareCaptureScreen() {
           capturing={anyCapturing}
           isLandscape={isLandscape}
           topInset={insets.top}
-          bottomInset={insets.bottom}
-          focalSlot={isLandscape ? undefined : focalPills}
+          bottomInset={cameraBottomInset}
+          focalSlot={isLandscape ? undefined : focalDial}
           onShutter={onShutter}
           onLongPress={onShutterLongPress}
           burst={
@@ -1107,6 +1155,7 @@ export default function CompareCaptureScreen() {
               : { left: 0, right: 0, bottom: bottomBarHeight + 84 },
           ]}>
           <CaptureModeToast toast={captureModeToast} themeColor={themeColor} />
+          <OverlayOpacityToast toast={overlayOpacityToast} themeColor={themeColor} />
         </View>
 
         {/* Secondary-tool popover. Each top-bar tool icon opens this panel with

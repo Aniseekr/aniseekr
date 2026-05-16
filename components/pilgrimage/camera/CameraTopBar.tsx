@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   // The portrait bar fits its trailing actions in one row; the landscape rail
-  // is only ~100px wide, so 7 actions wrap into two columns to stay clear of
+  // is only ~100px wide, so the actions wrap into two columns to stay clear of
   // the close button and the bottom inset on short landscape windows.
   railTrailing: {
     flexDirection: 'row',
