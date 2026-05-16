@@ -79,6 +79,14 @@ export interface UseBurstCaptureOutput {
 const DEFAULT_FRAME_COUNT = 6;
 const DEFAULT_INTERVAL_MS = 150;
 
+interface RawBurstFrame {
+  uri: string;
+  width: number;
+  height: number;
+  exif: Record<string, unknown> | null;
+  score: number;
+}
+
 function computeBestIndex(scores: number[]): number {
   if (scores.length === 0) return 0;
   let bestIdx = 0;
@@ -143,6 +151,7 @@ export function useBurstCapture(input: UseBurstCaptureInput): UseBurstCaptureOut
     setCapturing(true);
     setCaptured(0);
 
+    const rawFrames: RawBurstFrame[] = [];
     const uris: string[] = [];
     const widths: number[] = [];
     const heights: number[] = [];
@@ -176,18 +185,14 @@ export function useBurstCapture(input: UseBurstCaptureInput): UseBurstCaptureOut
           });
           if (!photo?.uri) continue;
 
-          const baked = await applyBrightnessToImage({
-            inputUri: photo.uri,
+          rawFrames.push({
+            uri: photo.uri,
+            width: photo.width || 0,
+            height: photo.height || 0,
             exif: mergeCaptureExif(photo.exif, additionalExif),
-            colorMatrix: colorMatrixRef.current,
-            quality: qualityRef.current,
+            score: snapshot.scoreTotal ?? NaN,
           });
-
-          uris.push(baked.uri);
-          widths.push(baked.width || photo.width || 0);
-          heights.push(baked.height || photo.height || 0);
-          scores.push(snapshot.scoreTotal ?? NaN);
-          setCaptured(uris.length);
+          setCaptured(rawFrames.length);
 
           hapticsBridge.tap();
         } catch (frameError) {
@@ -198,6 +203,26 @@ export function useBurstCapture(input: UseBurstCaptureInput): UseBurstCaptureOut
         if (i < total - 1) {
           await delay(interval);
         }
+      }
+
+      for (const frame of rawFrames) {
+        try {
+          const baked = await applyBrightnessToImage({
+            inputUri: frame.uri,
+            exif: frame.exif,
+            colorMatrix: colorMatrixRef.current,
+            quality: qualityRef.current,
+          });
+          uris.push(baked.uri);
+          widths.push(baked.width || frame.width);
+          heights.push(baked.height || frame.height);
+        } catch (processError) {
+          console.warn('[useBurstCapture] frame processing failed', processError);
+          uris.push(frame.uri);
+          widths.push(frame.width);
+          heights.push(frame.height);
+        }
+        scores.push(frame.score);
       }
     } finally {
       setCapturing(false);
