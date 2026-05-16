@@ -1,18 +1,21 @@
 // CameraView lifecycle bookkeeping. We track three independent things:
-//   1. isReady — flips true on the first `onCameraReady`. Stays sticky so the
-//      warmup spinner doesn't blink when the SDK fires ready more than once.
+//   1. isReady — flips true on the first `onCameraReady` and STAYS sticky.
+//      `onCameraReady` fires exactly once, when the native capture session
+//      first starts (CameraSessionManager.startSession). Pausing/resuming via
+//      the `active` prop only calls startRunning()/stopRunning() natively — it
+//      does NOT re-fire `onCameraReady`. So `isReady` must never be cleared on
+//      a resume: doing that strands the "Preparing camera…" warmup veil
+//      forever, and with it the shutter (gated on `isReady` in the screen).
 //   2. mountError — string from `onMountError`, cleared on the next ready event
 //      so a recovered camera no longer shows the error banner.
-//   3. active — exposed as a controlled boolean so callers can pause/resume
-//      capture (e.g. when navigating to a sheet) without unmounting.
+//   3. active — a controlled boolean so callers can pause/resume the camera
+//      session (e.g. while a sheet covers the preview, or on app background)
+//      without unmounting CameraView.
 //
-// When the caller flips `setActive(false → true)` we also reset `isReady` so
-// the warmup spinner reappears during re-mount — the CameraView will fire
-// `onCameraReady` again once the underlying surface is back. This matches the
-// behavior the compare screen needs after returning from a backgrounded state.
+// `reset()` is the only thing that clears `isReady` — call it solely for a
+// genuine remount (e.g. a keyed CameraView), never for an `active` toggle.
 //
-// Pure React state only — no AsyncStorage, no side effects beyond the
-// `setActive` transition handling.
+// Pure React state only — no AsyncStorage, no side effects.
 
 import { useCallback, useState } from 'react';
 
@@ -23,17 +26,17 @@ export interface UseCameraLifecycleOutput {
   onCameraReady: () => void;
   /** Bind to `CameraView.onMountError` via an adapter that produces `{ nativeEvent }`. */
   onMountError: (e: { nativeEvent: { message: string } }) => void;
-  /** Pause/resume the camera session. Re-activating also resets `isReady`. */
+  /** Pause/resume the camera session. Does not touch `isReady`. */
   setActive: (active: boolean) => void;
   active: boolean;
-  /** Force `isReady` back to false. Use on intentional remounts. */
+  /** Force `isReady` back to false. Use only on intentional remounts. */
   reset: () => void;
 }
 
 export function useCameraLifecycle(initialActive: boolean = true): UseCameraLifecycleOutput {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [mountError, setMountError] = useState<string | null>(null);
-  const [active, setActiveState] = useState<boolean>(initialActive);
+  const [active, setActive] = useState<boolean>(initialActive);
 
   const onCameraReady = useCallback(() => {
     setIsReady(true);
@@ -47,17 +50,6 @@ export function useCameraLifecycle(initialActive: boolean = true): UseCameraLife
 
   const reset = useCallback(() => {
     setIsReady(false);
-  }, []);
-
-  const setActive = useCallback((next: boolean) => {
-    setActiveState((prev) => {
-      // A false → true transition implies a re-mount; clear `isReady` so the
-      // warmup spinner shows until CameraView reports ready again.
-      if (!prev && next) {
-        setIsReady(false);
-      }
-      return next;
-    });
   }, []);
 
   return {
