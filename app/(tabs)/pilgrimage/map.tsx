@@ -65,6 +65,8 @@ import {
   getPilgrimageAnimeTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import { loadNearbySpots, type NearbySpot } from '../../../libs/services/pilgrimage/nearby-spots';
+import NearbySpotsSheet from '../../../components/pilgrimage/NearbySpotsSheet';
 
 interface HubMapMarker {
   /** Unique within a marker set: "bgm:<id>" for Anitabi-centroid markers, "88:<entryId>" for Tourism 88 city pins. */
@@ -244,6 +246,37 @@ function buildHubMapHtml(initial: {
     line-height: 16px; text-align: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
+
+  /* Individual nearby scene points — a smaller photo balloon than the anime
+     centroid markers, so they read as finer-grained "scenes around you". */
+  .spot-pin {
+    position: relative;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 2.5px solid #ffffff;
+    background: var(--map-chrome);
+    overflow: visible;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.30), 0 4px 8px 3px rgba(0,0,0,0.15);
+  }
+  .spot-pin .photo {
+    width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .spot-pin .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .spot-pin::after {
+    content: ''; position: absolute;
+    bottom: -7px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #ffffff;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,0.18));
+  }
+  .spot-pin .ring {
+    position: absolute; right: -3px; bottom: 0;
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
 </style>
 </head>
 <body>
@@ -266,11 +299,23 @@ ${MAP_BASE_BODY}
   // See index.tsx for the rationale behind the post-mount user pin update.
   var userMarker = null;
   var didSnapToUser = false;
+  // Last compass heading (deg) pushed from native; re-applied whenever the
+  // user marker is rebuilt so a location update never drops the cone.
+  var lastHeading = null;
+  function applyUserHeading() {
+    if (!userMarker || lastHeading == null) return;
+    var el = userMarker.getElement();
+    var cone = el && el.querySelector ? el.querySelector('.user-heading') : null;
+    if (!cone) return;
+    cone.style.transform = 'rotate(' + lastHeading + 'deg)';
+    cone.classList.add('active');
+  }
   function applyUser(user) {
     if (userMarker) { try { map.removeLayer(userMarker); } catch (e) {} userMarker = null; }
     if (user && typeof user.lat === 'number' && typeof user.lng === 'number') {
-      var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
+      var userIcon = L.divIcon({ className: '', html: '<div class="user-loc"><div class="user-heading"></div><div class="user-pulse"></div></div>', iconSize: [16,16], iconAnchor: [8,8] });
       userMarker = L.marker([user.lat, user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+      applyUserHeading();
       // First time we get a real location fix, snap the camera to a local
       // ~10-30 km framing around the user. Permission usually resolves
       // after the WebView is up, so we can't just rely on the initial
@@ -285,6 +330,21 @@ ${MAP_BASE_BODY}
   }
   applyUser(initial.user);
   window.__updateUser = applyUser;
+
+  // Native pushes the device compass heading here; rotate the cone in place.
+  // A null/non-finite value clears the cone — never show a fake direction.
+  window.__updateHeading = function(deg) {
+    lastHeading = typeof deg === 'number' && isFinite(deg) ? deg : null;
+    if (lastHeading == null) {
+      if (userMarker) {
+        var el = userMarker.getElement();
+        var cone = el && el.querySelector ? el.querySelector('.user-heading') : null;
+        if (cone) cone.classList.remove('active');
+      }
+      return;
+    }
+    applyUserHeading();
+  };
 
   window.__bindMap(map, function recenter() {
     window.__post({ type: 'locatePress' });
@@ -369,6 +429,42 @@ ${MAP_BASE_BODY}
     try { map.flyTo([target.lat, target.lng], 11, { duration: 0.6 }); } catch (e) {}
   };
 
+  // Individual nearby scene points live in their own cluster layer above the
+  // anime centroids. They cluster until zoom 15, so panning out shows a count
+  // bubble and zooming in reveals each real-world location.
+  var spotLayer = window.__makeClusterGroup({ ringColor: initial.ringColor, disableAt: 15 });
+  spotLayer.addTo(map);
+
+  window.__updateSpots = function(spots) {
+    try { spotLayer.clearLayers(); } catch (e) {}
+    if (!spots || !spots.length) return;
+    var batch = [];
+    for (var i = 0; i < spots.length; i++) {
+      (function(s){
+        var ring = s.ringColor || initial.ringColor;
+        var photoInner = s.image ? '<img src="' + s.image + '" loading="lazy" />' : '';
+        var html = '<div class="spot-pin">' +
+          '<div class="photo">' + photoInner + '</div>' +
+          '<span class="ring" style="background:' + ring + '"></span>' +
+        '</div>';
+        var icon = L.divIcon({ className: '', html: html, iconSize: [38, 46], iconAnchor: [19, 46] });
+        var marker = L.marker([s.lat, s.lng], { icon: icon, regionColor: ring });
+        marker.on('click', function() {
+          try { map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 16), { duration: 0.4 }); } catch (e) {}
+        });
+        batch.push(marker);
+      })(spots[i]);
+    }
+    if (typeof spotLayer.addLayers === 'function') spotLayer.addLayers(batch);
+    else for (var k = 0; k < batch.length; k++) spotLayer.addLayer(batch[k]);
+  };
+
+  // React side asks the map to fly to a spot tapped in the Nearby panel.
+  window.__focusSpot = function(t) {
+    if (!t || typeof t.lat !== 'number' || typeof t.lng !== 'number') return;
+    try { map.flyTo([t.lat, t.lng], Math.max(map.getZoom(), 16), { duration: 0.5 }); } catch (e) {}
+  };
+
   // Fly the camera to a region (or whole Japan). Pure navigation — does NOT
   // change which markers are visible. The bounds-based lazy loader picks up
   // the markers that fall into the new viewport on its own.
@@ -426,6 +522,12 @@ export default function PilgrimageMapScreen() {
   const [collectionIds, setCollectionIds] = useState<Set<number>>(() => new Set());
   const animesRef = useRef<AnitabiBangumi[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [userHeading, setUserHeading] = useState<number | null>(null);
+  const [nearbySpots, setNearbySpots] = useState<NearbySpot[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [focusSpotRequest, setFocusSpotRequest] = useState<
+    { key: string; lat: number; lng: number } | null
+  >(null);
   const [loading, setLoading] = useState(true);
 
   // Same priority as the hub: collection first, featured backfills.
@@ -521,6 +623,40 @@ export default function PilgrimageMapScreen() {
     };
   }, [mergeNearbyIndexed]);
 
+  // Compass heading for the user-location cone — subscribed only while the map
+  // is visible. Rounded + thresholded so small wrist movements don't spam the
+  // WebView bridge with sub-degree jitter.
+  useEffect(() => {
+    if (mode !== 'map') return;
+    let last = Number.NaN;
+    const unsubscribe = locationService.subscribeToHeading((deg) => {
+      const rounded = Math.round(deg);
+      if (Number.isFinite(last) && Math.abs(rounded - last) < 3) return;
+      last = rounded;
+      setUserHeading(rounded);
+    });
+    return unsubscribe;
+  }, [mode]);
+
+  // Expand the closest anime into individual scene spots — powers both the
+  // on-map scene points and the Nearby panel. Re-runs when the location moves.
+  useEffect(() => {
+    if (!userLocation) return;
+    let cancelled = false;
+    setNearbyLoading(true);
+    loadNearbySpots(userLocation)
+      .then((spots) => {
+        if (!cancelled) setNearbySpots(spots);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setNearbyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userLocation]);
+
   const handleBoundsChange = useCallback(
     (bounds: BoundingBox) => {
       const seen = new Set<number>();
@@ -549,11 +685,20 @@ export default function PilgrimageMapScreen() {
 
   const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
 
+  // Anime ids the Nearby feature has expanded into individual scene points.
+  const nearbySpotAnimeIds = useMemo(
+    () => new Set(nearbySpots.map((s) => s.animeId)),
+    [nearbySpots]
+  );
+
   const baseAnitabiMarkers = useMemo<HubMapMarker[]>(() => {
     const out: HubMapMarker[] = [];
     const seen = new Set<number>();
     for (const anime of animes) {
       if (!isValidGeo(anime.geo)) continue;
+      // Anime expanded into individual nearby spots are drawn as scene points
+      // instead — skip their centroid so the two don't double up.
+      if (nearbySpotAnimeIds.has(anime.id)) continue;
       const titles = getPilgrimageAnimeTitles(anime);
       seen.add(anime.id);
       out.push({
@@ -570,6 +715,7 @@ export default function PilgrimageMapScreen() {
     }
     for (const entry of extraIndexed.values()) {
       if (seen.has(entry.id)) continue;
+      if (nearbySpotAnimeIds.has(entry.id)) continue;
       const titles = getPilgrimageAnimeTitles({
         id: entry.id,
         title: entry.title,
@@ -588,7 +734,7 @@ export default function PilgrimageMapScreen() {
       });
     }
     return out;
-  }, [animes, extraIndexed, theme.accent]);
+  }, [animes, extraIndexed, theme.accent, nearbySpotAnimeIds]);
 
   const markers = useMemo<HubMapMarker[]>(() => {
     if (!official88Mode) return baseAnitabiMarkers;
@@ -598,11 +744,22 @@ export default function PilgrimageMapScreen() {
     return build88Markers(filtered);
   }, [official88Mode, focusedRegion, all88WithCoords, baseAnitabiMarkers]);
 
-  // Bumped whenever the filter set fundamentally changes so the WebView can
-  // clear stale markers (we re-render gold city pins ↔ anitabi anime centroids).
+  // The Nearby scene points are hidden while the Official 88 filter is on —
+  // that view is its own thing (gold city pins, no per-scene detail).
+  const visibleNearbySpots = useMemo<NearbySpot[]>(
+    () => (official88Mode ? [] : nearbySpots),
+    [official88Mode, nearbySpots]
+  );
+
+  // Bumped whenever the marker set fundamentally changes so the WebView clears
+  // stale markers instead of additively merging: gold 88 city pins ↔ anitabi
+  // centroids, and centroids dropping out as anime expand into nearby spots.
   const refitNonce = useMemo(
-    () => `${official88Mode ? '88' : 'all'}:${focusedRegion ?? 'any'}`,
-    [official88Mode, focusedRegion]
+    () =>
+      `${official88Mode ? '88' : 'all'}:${focusedRegion ?? 'any'}:${[...nearbySpotAnimeIds]
+        .sort((a, b) => a - b)
+        .join(',')}`,
+    [official88Mode, focusedRegion, nearbySpotAnimeIds]
   );
 
   // Camera-fly request derived from focusedRegion + flyTick. Whole-Japan when
@@ -650,6 +807,15 @@ export default function PilgrimageMapScreen() {
     },
     [router]
   );
+
+  const handlePickNearbySpot = useCallback((spot: NearbySpot) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setFocusSpotRequest({
+      key: `${spot.markerId}#${Date.now()}`,
+      lat: spot.lat,
+      lng: spot.lng,
+    });
+  }, []);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -722,6 +888,9 @@ export default function PilgrimageMapScreen() {
               markers={markers}
               replaceKey={refitNonce}
               userLocation={userLocation}
+              userHeading={userHeading}
+              spots={visibleNearbySpots}
+              focusSpotRequest={focusSpotRequest}
               ringColor={theme.accent}
               theme={theme}
               focusBangumiId={focusBangumiId}
@@ -738,6 +907,12 @@ export default function PilgrimageMapScreen() {
               onToggleOfficial88={handleToggleOfficial88}
               onPickRegion={handlePickRegion}
               onResetToJapan={handleResetToJapan}
+            />
+            <NearbySpotsSheet
+              spots={visibleNearbySpots}
+              loading={!official88Mode && nearbyLoading}
+              bottomInset={insets.bottom}
+              onPickSpot={handlePickNearbySpot}
             />
           </>
         )
@@ -1067,6 +1242,12 @@ interface FullscreenMapViewProps {
   /** Bump when the marker set transitions to a different filter view; triggers a clear+rebuild. */
   replaceKey: string;
   userLocation: LatLng | null;
+  /** Device compass heading in degrees (0 = north, clockwise), or null when unknown. */
+  userHeading: number | null;
+  /** Individual nearby scene points, plotted in their own marker layer. */
+  spots: readonly NearbySpot[];
+  /** When set, fly the map to this spot. Key changes per tap so re-taps re-fly. */
+  focusSpotRequest: { key: string; lat: number; lng: number } | null;
   ringColor: string;
   theme: ThemePalette;
   focusBangumiId: number | null;
@@ -1081,6 +1262,9 @@ function FullscreenMapView({
   markers,
   replaceKey,
   userLocation,
+  userHeading,
+  spots,
+  focusSpotRequest,
   ringColor,
   theme,
   focusBangumiId,
@@ -1161,6 +1345,39 @@ function FullscreenMapView({
       true;
     `);
   }, [userLocation, ready]);
+
+  // Push compass heading so the user dot can show a Google-Maps-style cone.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const payload = userHeading === null ? 'null' : String(userHeading);
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateHeading && window.__updateHeading(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [userHeading, ready]);
+
+  // Push the individual nearby scene points into their own marker layer.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const json = JSON.stringify(spots).replace(/</g, '\\u003c');
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateSpots && window.__updateSpots(${json}); } catch(e) {}
+      true;
+    `);
+  }, [spots, ready]);
+
+  // Fly the map to a spot picked in the Nearby panel.
+  useEffect(() => {
+    if (!ready || !webviewRef.current || !focusSpotRequest) return;
+    const payload = JSON.stringify({
+      lat: focusSpotRequest.lat,
+      lng: focusSpotRequest.lng,
+    });
+    webviewRef.current.injectJavaScript(`
+      try { window.__focusSpot && window.__focusSpot(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [focusSpotRequest, ready]);
 
   useEffect(() => {
     if (!ready || !webviewRef.current || focusBangumiId === null) return;
