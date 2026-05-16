@@ -170,6 +170,7 @@ export default function CompareCaptureScreen() {
     onCameraReady,
     onMountError,
     setActive: setCameraActive,
+    reset: resetCameraLifecycle,
   } = lifecycle;
   const brightness = useBrightnessPreview({ value: evValue });
   const overlayTransform = useOverlayTransform({ enabled: editMode });
@@ -295,6 +296,19 @@ export default function CompareCaptureScreen() {
     };
   }, []);
 
+  // Drive the OS orientation lock off the auto/land chip. `auto` unlocks so
+  // the device rotates freely; `landscape` pins the screen to landscape.
+  //
+  // iOS CameraView only re-aligns its live preview to the interface
+  // orientation on a *physical* device rotation or a fresh capture session —
+  // it never observes the programmatic rotation expo-screen-orientation does
+  // here, so a toggle leaves the HUD rotated but the preview stuck sideways.
+  // `orientationResyncPending` arms a one-shot CameraView remount that the
+  // effect below fires once the rotation has actually settled.
+  const [cameraEpoch, setCameraEpoch] = useState(0);
+  const orientationResyncPending = useRef(false);
+  const orientationInitDone = useRef(false);
+
   useEffect(() => {
     const lockIntent = cameraOrientationLockIntent(orientationMode);
     const op =
@@ -302,7 +316,32 @@ export default function CompareCaptureScreen() {
         ? ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
         : ScreenOrientation.unlockAsync();
     op.catch(() => undefined);
+    // The first run is the initial mount: the capture session is brand new
+    // and already adopts the current orientation — nothing to re-sync.
+    if (!orientationInitDone.current) {
+      orientationInitDone.current = true;
+      return;
+    }
+    orientationResyncPending.current = true;
+    // Safety disarm: if the toggle doesn't actually rotate the screen (e.g.
+    // locking landscape while the device is already landscape) no layout
+    // change arrives — drop the arm so a later physical rotation can't trip it.
+    const disarm = setTimeout(() => {
+      orientationResyncPending.current = false;
+    }, 1500);
+    return () => clearTimeout(disarm);
   }, [orientationMode]);
+
+  // Once a toggle-driven rotation settles (window dimensions swap), remount
+  // CameraView so a fresh capture session adopts the new interface
+  // orientation. Physical rotations in `auto` mode never arm the flag — those
+  // are handled natively by expo-camera — so they don't trigger a remount.
+  useEffect(() => {
+    if (!orientationResyncPending.current) return;
+    orientationResyncPending.current = false;
+    resetCameraLifecycle();
+    setCameraEpoch((epoch) => epoch + 1);
+  }, [isLandscape, resetCameraLifecycle]);
 
   // Reset cached spot list whenever the anime context changes, so opening the
   // switcher refetches against the new animeId instead of showing stale spots.
@@ -760,6 +799,7 @@ export default function CompareCaptureScreen() {
       <View style={styles.root}>
         <CameraErrorBoundary>
           <CameraStage
+            key={cameraEpoch}
             cameraRef={cameraRef}
             facing={facing}
             zoom={zoom.zoom}
