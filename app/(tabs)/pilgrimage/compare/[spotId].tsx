@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   AppState,
   Linking,
   Platform,
@@ -11,6 +12,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -104,9 +107,11 @@ import { useAutoCapture } from '../../../../hooks/useAutoCapture';
 import { useCaptureSession } from '../../../../hooks/useCaptureSession';
 import { useAndroidCameraNativeCapabilities } from '../../../../hooks/useAndroidCameraNativeCapabilities';
 import {
+  buildLibraryCaptureSessionShot,
   getShots as getCaptureSessionShots,
   type CaptureSessionShot,
 } from '../../../../libs/services/pilgrimage/capture-session';
+import { locationService } from '../../../../libs/services/pilgrimage/location-service';
 import AutoCaptureStatusBadge from '../../../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../../../components/pilgrimage/camera/CaptureHistoryStrip';
 import SceneSwitcherSheet from '../../../../components/pilgrimage/camera/SceneSwitcherSheet';
@@ -156,6 +161,32 @@ const CAPTURE_MODE_CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
 // blend without the tool popover covering the preview. Five evenly-spread
 // levels matching the slider's useful range.
 const OVERLAY_OPACITY_CYCLE = [0.2, 0.35, 0.5, 0.7, 0.9];
+const IMPORTED_CAPTURE_DIR = FileSystem.documentDirectory
+  ? `${FileSystem.documentDirectory}pilgrimage-imports/`
+  : null;
+
+function importedCaptureExtension(asset: ImagePicker.ImagePickerAsset): string {
+  const candidate = asset.fileName ?? asset.uri;
+  const clean = candidate.split('?')[0] ?? '';
+  const match = clean.match(/\.([a-z0-9]+)$/i);
+  const ext = match?.[1]?.toLowerCase();
+  if (!ext) return 'jpg';
+  if (ext === 'jpeg') return 'jpg';
+  return ['jpg', 'png', 'webp', 'heic', 'heif'].includes(ext) ? ext : 'jpg';
+}
+
+async function copyImportedCapture(asset: ImagePicker.ImagePickerAsset): Promise<string> {
+  if (!IMPORTED_CAPTURE_DIR) return asset.uri;
+  const info = await FileSystem.getInfoAsync(IMPORTED_CAPTURE_DIR);
+  if (!info.exists) {
+    await FileSystem.makeDirectoryAsync(IMPORTED_CAPTURE_DIR, { intermediates: true });
+  }
+  const dest = `${IMPORTED_CAPTURE_DIR}${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}.${importedCaptureExtension(asset)}`;
+  await FileSystem.copyAsync({ from: asset.uri, to: dest });
+  return dest;
+}
 
 export default function CompareCaptureScreen() {
   const router = useRouter();
@@ -582,15 +613,7 @@ export default function CompareCaptureScreen() {
   // the preview — that's what lets the user return ("再拍") via router.back()
   // with the capture session still intact.
   const navigateToPreview = useCallback(
-    (shot: {
-      uri: string;
-      width: number;
-      height: number;
-      captureMode: 'single' | 'burst' | 'hdr';
-      burstTotal?: number;
-      burstUris?: string[];
-      burstBestIndex?: number;
-    }) => {
+    (shot: CaptureSessionShot) => {
       router.push({
         pathname: '/pilgrimage/compare/preview',
         params: {
@@ -599,6 +622,7 @@ export default function CompareCaptureScreen() {
           shotUri: shot.uri,
           shotWidth: String(shot.width),
           shotHeight: String(shot.height),
+          capturedAt: String(shot.createdAt),
           name,
           ep: ep ?? '',
           animeId: animeId ?? '',
@@ -613,6 +637,10 @@ export default function CompareCaptureScreen() {
             sensors.score.headingDeltaDeg != null ? String(sensors.score.headingDeltaDeg) : '',
           tilt: sensors.tilt != null ? String(sensors.tilt) : '',
           captureMode: shot.captureMode,
+          shotSource: shot.source,
+          userLat: shot.userLocation?.latitude != null ? String(shot.userLocation.latitude) : '',
+          userLng: shot.userLocation?.longitude != null ? String(shot.userLocation.longitude) : '',
+          note: shot.note ?? '',
           burstTotal: shot.burstTotal != null ? String(shot.burstTotal) : '',
           burstUris: shot.burstUris ? JSON.stringify(shot.burstUris) : '',
           burstBestIndex: shot.burstBestIndex != null ? String(shot.burstBestIndex) : '',
@@ -664,6 +692,7 @@ export default function CompareCaptureScreen() {
         distanceMeters: sensors.score.distanceMeters,
         headingDeltaDeg: sensors.score.headingDeltaDeg,
         tilt: sensors.tilt,
+        userLocation: sensors.userLocation,
         burstTotal: shot.burstTotal,
         burstUris: shot.burstUris,
         burstBestIndex: shot.burstBestIndex,
@@ -677,6 +706,7 @@ export default function CompareCaptureScreen() {
       sensors.score.distanceMeters,
       sensors.score.headingDeltaDeg,
       sensors.tilt,
+      sensors.userLocation,
     ]
   );
 
@@ -1008,6 +1038,77 @@ export default function CompareCaptureScreen() {
     if (!shot) return;
     navigateToPreview(shot);
   }, [autoCapture, anyCapturing, cameraIsReady, runBurst, navigateToPreview]);
+
+  const ensurePhotoLibraryPermission = useCallback(async (): Promise<boolean> => {
+    const current = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (current.granted) return true;
+    if (current.canAskAgain) {
+      const next = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (next.granted) return true;
+    }
+    Alert.alert('Photo access needed', 'Allow photo library access to score an existing image.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
+    ]);
+    return false;
+  }, []);
+
+  const handlePickLibraryImage = useCallback(async () => {
+    autoCapture.cancel();
+    if (anyCapturing) return;
+
+    const granted = await ensurePhotoLibraryPermission();
+    if (!granted) return;
+
+    setCapturing(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+        exif: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const uri = await copyImportedCapture(asset);
+      const userLocation =
+        sensors.userLocation ?? (await locationService.getCurrentLocation().catch(() => null));
+      const shot = buildLibraryCaptureSessionShot({
+        asset: {
+          uri,
+          width: asset.width,
+          height: asset.height,
+        },
+        createdAt: Date.now(),
+        userLocation,
+        heading: sensors.heading,
+        distanceMeters: sensors.score.distanceMeters,
+        headingDeltaDeg: sensors.score.headingDeltaDeg,
+        tilt: sensors.tilt,
+      });
+      captureSession.addShot(shot);
+      hapticsBridge.success();
+      navigateToPreview(shot);
+    } catch (err) {
+      console.warn('[camera] library import failed', err);
+      hapticsBridge.error();
+      Alert.alert('Could not import photo', 'Please try another image from your library.');
+    } finally {
+      setCapturing(false);
+    }
+  }, [
+    autoCapture,
+    anyCapturing,
+    ensurePhotoLibraryPermission,
+    sensors.userLocation,
+    sensors.heading,
+    sensors.score.distanceMeters,
+    sensors.score.headingDeltaDeg,
+    sensors.tilt,
+    captureSession,
+    navigateToPreview,
+  ]);
 
   const onPickFocalStop = useCallback(
     (stop: FocalStop) => {
@@ -1389,6 +1490,7 @@ export default function CompareCaptureScreen() {
               params: { spotId, animeId: animeId ?? '' },
             })
           }
+          onPickLibrary={handlePickLibraryImage}
           onPickReference={() => {
             hapticsBridge.tap();
             setSceneSwitcherOpen(true);

@@ -19,6 +19,7 @@ interface ShutterRowProps {
   focalSlot?: ReactNode;
   onShutter: () => void;
   onOpenMap: () => void;
+  onPickLibrary: () => void;
   onPickReference: () => void;
   /** Optional long-press handler. Triggers burst capture in the parent. */
   onLongPress?: () => void;
@@ -40,6 +41,7 @@ export default function ShutterRow({
   focalSlot,
   onShutter,
   onOpenMap,
+  onPickLibrary,
   onPickReference,
   onLongPress,
   burst,
@@ -64,6 +66,11 @@ export default function ShutterRow({
   const handleMapPress = () => {
     hapticsBridge.tap();
     onOpenMap();
+  };
+
+  const handleLibraryPress = () => {
+    hapticsBridge.tap();
+    onPickLibrary();
   };
 
   const handleReferencePress = () => {
@@ -121,6 +128,7 @@ export default function ShutterRow({
             imageUrl={referenceImageUrl}
             onPress={handleReferencePress}
           />
+          <ThumbnailBtn kind="library" themeColor={themeColor} onPress={handleLibraryPress} />
           {renderShutter(true)}
           <ThumbnailBtn kind="map" themeColor={themeColor} onPress={handleMapPress} />
         </View>
@@ -140,6 +148,7 @@ export default function ShutterRow({
       {focalSlot ? <View style={styles.focalSlot}>{focalSlot}</View> : null}
       <View style={styles.bottomRow}>
         <ThumbnailBtn kind="map" themeColor={themeColor} onPress={handleMapPress} />
+        <ThumbnailBtn kind="library" themeColor={themeColor} onPress={handleLibraryPress} />
         {renderShutter(false)}
         <ThumbnailBtn
           kind="reference"
@@ -158,7 +167,7 @@ function ThumbnailBtn({
   themeColor,
   onPress,
 }: {
-  kind: 'map' | 'reference';
+  kind: 'map' | 'library' | 'reference';
   imageUrl?: string;
   themeColor: string;
   onPress: () => void;
@@ -167,7 +176,13 @@ function ThumbnailBtn({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={kind === 'map' ? 'Open map' : 'Show anime reference'}
+      accessibilityLabel={
+        kind === 'map'
+          ? 'Open map'
+          : kind === 'library'
+            ? 'Pick photo from library'
+            : 'Show anime reference'
+      }
       style={({ pressed }) => [
         styles.thumbBtn,
         {
@@ -184,7 +199,11 @@ function ThumbnailBtn({
         />
       ) : (
         <View style={styles.thumbMap}>
-          <Ionicons name="map" size={18} color={themeColor} />
+          <Ionicons
+            name={kind === 'library' ? 'images-outline' : 'map'}
+            size={18}
+            color={themeColor}
+          />
         </View>
       )}
     </Pressable>
@@ -222,10 +241,11 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 8,
+    gap: 12,
   },
-  // Distributes [reference thumb, shutter, map thumb] evenly down the rail.
+  // Distributes the compact actions + shutter evenly down the rail.
   columnContent: {
     flex: 1,
     alignItems: 'center',
