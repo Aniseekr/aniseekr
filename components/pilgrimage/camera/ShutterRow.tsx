@@ -4,9 +4,7 @@ import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bottomPad } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { ThemedText } from '../../themed';
 import { CAMERA_BOTTOM_BAR_CONTENT_HEIGHT } from '../../../libs/services/pilgrimage/camera-ui';
-import type { CaptureMode } from '../../../hooks/useCameraSettings';
 import BurstIndicator from './BurstIndicator';
 
 interface ShutterRowProps {
@@ -17,9 +15,6 @@ interface ShutterRowProps {
   bottomInset: number;
   /** Status-bar inset — only consumed in landscape so the column avoids the notch. */
   topInset?: number;
-  /** Current capture mode — surfaced as the tappable caption under the shutter. */
-  captureMode: CaptureMode;
-  onChangeCaptureMode: (next: CaptureMode) => void;
   /** Focal-stop pills, rendered along the top of the portrait bottom bar. */
   focalSlot?: ReactNode;
   onShutter: () => void;
@@ -35,13 +30,6 @@ interface ShutterRowProps {
  *  much horizontal space to reserve on the right edge of the camera preview. */
 export const SHUTTER_ROW_LANDSCAPE_WIDTH = 100;
 
-const CAPTURE_CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
-const CAPTURE_LABEL: Record<CaptureMode, string> = {
-  single: 'PHOTO',
-  burst: 'BURST',
-  hdr: 'HDR',
-};
-
 export default function ShutterRow({
   themeColor,
   referenceImageUrl,
@@ -49,8 +37,6 @@ export default function ShutterRow({
   isLandscape,
   bottomInset,
   topInset = 0,
-  captureMode,
-  onChangeCaptureMode,
   focalSlot,
   onShutter,
   onOpenMap,
@@ -85,12 +71,6 @@ export default function ShutterRow({
     onPickReference();
   };
 
-  const cycleCaptureMode = () => {
-    const idx = CAPTURE_CYCLE.indexOf(captureMode);
-    hapticsBridge.selection();
-    onChangeCaptureMode(CAPTURE_CYCLE[(idx === -1 ? 0 : idx + 1) % CAPTURE_CYCLE.length]);
-  };
-
   const renderShutter = (landscape: boolean) => (
     <Pressable
       onPress={handleShutterPress}
@@ -123,29 +103,6 @@ export default function ShutterRow({
     </Pressable>
   );
 
-  // The capture-mode cycler doubles as the shutter caption — tap to step
-  // single → burst → hdr. Non-default modes tint themeColor so the user
-  // notices the shutter will fire something other than a plain photo.
-  const modeCaption = (
-    <Pressable
-      onPress={cycleCaptureMode}
-      hitSlop={12}
-      accessibilityRole="button"
-      accessibilityLabel={`Capture mode ${CAPTURE_LABEL[captureMode]}`}
-      style={styles.captionBtn}>
-      <ThemedText
-        variant="captionSmall"
-        weight="700"
-        align="center"
-        style={{
-          color: captureMode === 'single' ? 'rgba(255,255,255,0.55)' : themeColor,
-          letterSpacing: 1.5,
-        }}>
-        {CAPTURE_LABEL[captureMode]}
-      </ThemedText>
-    </Pressable>
-  );
-
   if (isLandscape) {
     return (
       <View
@@ -164,10 +121,7 @@ export default function ShutterRow({
             imageUrl={referenceImageUrl}
             onPress={handleReferencePress}
           />
-          <View style={styles.shutterColumn}>
-            {renderShutter(true)}
-            {modeCaption}
-          </View>
+          {renderShutter(true)}
           <ThumbnailBtn kind="map" themeColor={themeColor} onPress={handleMapPress} />
         </View>
       </View>
@@ -186,10 +140,7 @@ export default function ShutterRow({
       {focalSlot ? <View style={styles.focalSlot}>{focalSlot}</View> : null}
       <View style={styles.bottomRow}>
         <ThumbnailBtn kind="map" themeColor={themeColor} onPress={handleMapPress} />
-        <View style={styles.shutterColumn}>
-          {renderShutter(false)}
-          {modeCaption}
-        </View>
+        {renderShutter(false)}
         <ThumbnailBtn
           kind="reference"
           themeColor={themeColor}
@@ -280,13 +231,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-  },
-  shutterColumn: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  captionBtn: {
-    paddingVertical: 2,
   },
   shutterOuter: {
     width: 78,

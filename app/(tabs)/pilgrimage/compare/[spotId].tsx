@@ -52,18 +52,17 @@ import CameraTopBar, {
 } from '../../../../components/pilgrimage/camera/CameraTopBar';
 import AlignmentHUD from '../../../../components/pilgrimage/camera/AlignmentHUD';
 import FocalPills from '../../../../components/pilgrimage/camera/FocalPills';
-import CameraToolMenu from '../../../../components/pilgrimage/camera/CameraToolMenu';
+import CameraToolMenu, {
+  type CameraTool,
+} from '../../../../components/pilgrimage/camera/CameraToolMenu';
 import ShutterRow, {
   SHUTTER_ROW_LANDSCAPE_WIDTH,
 } from '../../../../components/pilgrimage/camera/ShutterRow';
 import OverlayControls from '../../../../components/pilgrimage/camera/chips/OverlayControls';
-import ExposureControls, {
-  formatEV,
-} from '../../../../components/pilgrimage/camera/chips/ExposureControls';
+import ExposureControls from '../../../../components/pilgrimage/camera/chips/ExposureControls';
 import AspectChip from '../../../../components/pilgrimage/camera/chips/AspectChip';
 import CountdownChip from '../../../../components/pilgrimage/camera/chips/CountdownChip';
 import OrientationChip from '../../../../components/pilgrimage/camera/chips/OrientationChip';
-import SettingsChip from '../../../../components/pilgrimage/camera/chips/SettingsChip';
 import CameraSettingsSheet from '../../../../components/pilgrimage/camera/CameraSettingsSheet';
 import { CountdownOverlay } from '../../../../components/pilgrimage/camera/CountdownOverlay';
 import type {
@@ -79,7 +78,12 @@ import { useBrightnessPreview } from '../../../../hooks/useBrightnessPreview';
 import { useOverlayTransform } from '../../../../hooks/useOverlayTransform';
 import { useAlignmentSensors } from '../../../../hooks/useAlignmentSensors';
 import { useEdgeOrSketch } from '../../../../hooks/useEdgeOrSketch';
-import { useCameraSettings, qualityToNumber } from '../../../../hooks/useCameraSettings';
+import {
+  useCameraSettings,
+  qualityToNumber,
+  resolvePictureSize,
+  type CaptureMode,
+} from '../../../../hooks/useCameraSettings';
 import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
 import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
@@ -89,6 +93,9 @@ import { useCaptureHistory } from '../../../../hooks/useCaptureHistory';
 import AutoCaptureStatusBadge from '../../../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../../../components/pilgrimage/camera/CaptureHistoryStrip';
 import SceneSwitcherSheet from '../../../../components/pilgrimage/camera/SceneSwitcherSheet';
+import CaptureModeToast, {
+  type CaptureModeToastValue,
+} from '../../../../components/pilgrimage/camera/CaptureModeToast';
 
 type CameraRouteParams = {
   spotId: string;
@@ -112,6 +119,15 @@ const FLASH_ICON: Record<FlashMode, keyof typeof Ionicons.glyphMap> = {
 };
 const FLASH_REAR_CYCLE: FlashMode[] = ['off', 'auto', 'on', 'torch'];
 const FLASH_FRONT_CYCLE: FlashMode[] = ['off', 'auto', 'on'];
+
+// Capture mode is a top-bar icon button that cycles single → burst → hdr; the
+// icon mirrors the live mode and a toast explains each mode on change.
+const CAPTURE_MODE_ICON: Record<CaptureMode, keyof typeof Ionicons.glyphMap> = {
+  single: 'camera-outline',
+  burst: 'albums-outline',
+  hdr: 'contrast-outline',
+};
+const CAPTURE_MODE_CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
 
 export default function CompareCaptureScreen() {
   const router = useRouter();
@@ -139,7 +155,9 @@ export default function CompareCaptureScreen() {
   const [orientationMode, setOrientationMode] = useState<CameraOrientationMode>('auto');
   const [capturing, setCapturing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [toolMenuOpen, setToolMenuOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<CameraTool | null>(null);
+  // `null` until the first capture-mode change — a fresh value re-fires the toast.
+  const [captureModeToast, setCaptureModeToast] = useState<CaptureModeToastValue | null>(null);
   const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
   const [availablePictureSizes, setAvailablePictureSizes] = useState<string[]>([]);
   const [sceneSwitcherOpen, setSceneSwitcherOpen] = useState(false);
@@ -287,6 +305,24 @@ export default function CompareCaptureScreen() {
       return cycle[(idx === -1 ? 0 : idx + 1) % cycle.length];
     });
   }, [facing]);
+
+  // Capture mode lives in the top bar — tapping cycles single → burst → hdr
+  // and surfaces a short toast describing what the next shutter press will do.
+  const cycleCaptureMode = useCallback(() => {
+    const idx = CAPTURE_MODE_CYCLE.indexOf(settings.captureMode);
+    const next = CAPTURE_MODE_CYCLE[(idx === -1 ? 0 : idx + 1) % CAPTURE_MODE_CYCLE.length];
+    hapticsBridge.selection();
+    setSettings({ captureMode: next });
+    setCaptureModeToast({ mode: next });
+  }, [settings.captureMode, setSettings]);
+
+  // The overlay reposition toggle lives inside the Overlay popover; toggling it
+  // closes the popover so the drag surface underneath is clear.
+  const handleToggleEdit = useCallback(() => {
+    hapticsBridge.selection();
+    setEditMode((v) => !v);
+    setActiveTool(null);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -767,7 +803,7 @@ export default function CompareCaptureScreen() {
     isLandscape,
   });
   const cameraHudVisibility = resolveTransientCameraHudVisibility({
-    toolMenuOpen,
+    toolMenuOpen: activeTool !== null,
     afLocked: tapFocus.afLocked,
   });
   const handleOpenInfo = () => {
@@ -816,7 +852,7 @@ export default function CompareCaptureScreen() {
             // `takePictureAsync({ shutterSound: ... })` in each capture path.
             // Don't forward settings.mute here.
             mirror={settings.mirror}
-            pictureSize={settings.pictureSize ?? undefined}
+            pictureSize={resolvePictureSize(settings.resolutionTier, availablePictureSizes)}
             pinchGesture={zoom.pinchGesture}
             tapGesture={tapFocus.tapGesture}
             brightnessOverlayStyle={brightness.overlayStyle}
@@ -875,17 +911,6 @@ export default function CompareCaptureScreen() {
                 onPress={toggleFacing}
               />
               <CameraHeaderButton
-                icon={editMode ? 'lock-open' : 'move'}
-                accessibilityLabel={editMode ? 'Lock overlay' : 'Edit overlay position'}
-                accessibilityState={{ selected: editMode }}
-                themeColor={themeColor}
-                active={editMode}
-                onPress={() => {
-                  hapticsBridge.selection();
-                  setEditMode((v) => !v);
-                }}
-              />
-              <CameraHeaderButton
                 icon={FLASH_ICON[flashMode]}
                 accessibilityLabel={`Flash ${flashMode}`}
                 themeColor={themeColor}
@@ -893,14 +918,54 @@ export default function CompareCaptureScreen() {
                 onPress={cycleFlash}
               />
               <CameraHeaderButton
-                icon={toolMenuOpen ? 'close' : 'ellipsis-horizontal'}
-                accessibilityLabel={toolMenuOpen ? 'Close camera tools' : 'Camera tools'}
-                accessibilityState={{ expanded: toolMenuOpen }}
+                icon="image-outline"
+                accessibilityLabel="Overlay tools"
+                accessibilityState={{ expanded: activeTool === 'overlay' }}
                 themeColor={themeColor}
-                active={toolMenuOpen}
+                active={activeTool === 'overlay' || editMode}
                 onPress={() => {
                   hapticsBridge.selection();
-                  setToolMenuOpen((v) => !v);
+                  setActiveTool((t) => (t === 'overlay' ? null : 'overlay'));
+                }}
+              />
+              <CameraHeaderButton
+                icon="sunny-outline"
+                accessibilityLabel="Exposure"
+                accessibilityState={{ expanded: activeTool === 'exposure' }}
+                themeColor={themeColor}
+                active={activeTool === 'exposure'}
+                onPress={() => {
+                  hapticsBridge.selection();
+                  setActiveTool((t) => (t === 'exposure' ? null : 'exposure'));
+                }}
+              />
+              <CameraHeaderButton
+                icon={CAPTURE_MODE_ICON[settings.captureMode]}
+                accessibilityLabel={`Capture mode: ${settings.captureMode}`}
+                themeColor={themeColor}
+                active={settings.captureMode !== 'single'}
+                onPress={cycleCaptureMode}
+              />
+              <CameraHeaderButton
+                icon="settings-outline"
+                accessibilityLabel="Camera settings"
+                accessibilityState={{ expanded: settingsOpen }}
+                themeColor={themeColor}
+                active={settingsOpen}
+                onPress={() => {
+                  hapticsBridge.tap();
+                  setSettingsOpen(true);
+                }}
+              />
+              <CameraHeaderButton
+                icon={activeTool === 'more' ? 'close' : 'ellipsis-horizontal'}
+                accessibilityLabel={activeTool === 'more' ? 'Close camera tools' : 'More camera tools'}
+                accessibilityState={{ expanded: activeTool === 'more' }}
+                themeColor={themeColor}
+                active={activeTool === 'more'}
+                onPress={() => {
+                  hapticsBridge.selection();
+                  setActiveTool((t) => (t === 'more' ? null : 'more'));
                 }}
               />
             </>
@@ -1007,8 +1072,6 @@ export default function CompareCaptureScreen() {
           isLandscape={isLandscape}
           topInset={insets.top}
           bottomInset={insets.bottom}
-          captureMode={settings.captureMode}
-          onChangeCaptureMode={(m) => setSettings({ captureMode: m })}
           focalSlot={isLandscape ? undefined : focalPills}
           onShutter={onShutter}
           onLongPress={onShutterLongPress}
@@ -1029,12 +1092,29 @@ export default function CompareCaptureScreen() {
           }}
         />
 
-        {/* Drill-down popover for the secondary camera tools. Rendered at
-            screen root (after ShutterRow) so it floats above every HUD layer
-            and is reliably touchable — see CameraToolMenu for the rationale. */}
+        {/* Capture-mode change feedback — a brief toast naming the new mode.
+            Rendered before the tool popover so the popover layers above it. */}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.modeToastWrap,
+            isLandscape
+              ? {
+                  left: CAMERA_SIDE_RAIL_WIDTH + insets.left,
+                  right: SHUTTER_ROW_LANDSCAPE_WIDTH,
+                  bottom: safeAreaBottomPad + 24,
+                }
+              : { left: 0, right: 0, bottom: bottomBarHeight + 84 },
+          ]}>
+          <CaptureModeToast toast={captureModeToast} themeColor={themeColor} />
+        </View>
+
+        {/* Secondary-tool popover. Each top-bar tool icon opens this panel with
+            just that tool's controls. Rendered at screen root (after ShutterRow)
+            so it floats above every HUD layer and is reliably touchable. */}
         <CameraToolMenu
-          visible={toolMenuOpen}
-          onRequestClose={() => setToolMenuOpen(false)}
+          tool={activeTool}
+          onRequestClose={() => setActiveTool(null)}
           themeColor={themeColor}
           topOffset={toolMenuAnchor.topOffset}
           leftOffset={toolMenuAnchor.leftOffset}
@@ -1048,27 +1128,21 @@ export default function CompareCaptureScreen() {
               />
               <AspectChip aspect={aspect} onChange={setAspect} />
               <OrientationChip mode={orientationMode} onChange={setOrientationMode} />
-              <SettingsChip
-                onPress={() => {
-                  setToolMenuOpen(false);
-                  setSettingsOpen(true);
-                }}
-              />
             </>
           }
-          overlaySummary={`${Math.round(overlayOpacity * 100)}%`}
           overlayControls={
             <OverlayControls
               mode={overlayMode}
               opacity={overlayOpacity}
               flipped={overlayTransform.flipped}
+              editMode={editMode}
               themeColor={themeColor}
               onSelectMode={setOverlayMode}
               onChangeOpacity={setOverlayOpacity}
               onToggleFlip={overlayTransform.toggleFlip}
+              onToggleEdit={handleToggleEdit}
             />
           }
-          exposureSummary={tapFocus.afLocked ? null : formatEV(evValue)}
           exposureControls={<ExposureControls value={evValue} onChange={setEvValue} />}
           onOpenTips={handleOpenInfo}
         />
@@ -1084,7 +1158,6 @@ export default function CompareCaptureScreen() {
           onClose={() => setSettingsOpen(false)}
           settings={settings}
           onSettingsChange={setSettings}
-          availablePictureSizes={availablePictureSizes}
         />
 
         <SceneSwitcherSheet
@@ -1117,6 +1190,8 @@ const styles = StyleSheet.create({
     zIndex: 60,
   },
   autoBadgeWrap: { position: 'absolute', alignItems: 'center' },
+  // Sits above the place badge (z 70) but below the tool popover (z 100).
+  modeToastWrap: { position: 'absolute', alignItems: 'center', zIndex: 80 },
   captureHistoryWrap: { position: 'absolute', alignItems: 'center' },
   hidden: { display: 'none' },
   levelHorizonWrap: {

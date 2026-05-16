@@ -9,10 +9,14 @@ interface OverlayControlsProps {
   mode: OverlayMode;
   opacity: number;
   flipped: boolean;
+  /** Whether the overlay is in free-drag reposition mode. */
+  editMode: boolean;
   themeColor: string;
   onSelectMode: (mode: OverlayMode) => void;
   onChangeOpacity: (opacity: number) => void;
   onToggleFlip: () => void;
+  /** Toggles reposition mode. The parent closes this popover so the drag surface is clear. */
+  onToggleEdit: () => void;
 }
 
 interface ModeMeta {
@@ -36,10 +40,12 @@ export default function OverlayControls({
   mode,
   opacity,
   flipped,
+  editMode,
   themeColor,
   onSelectMode,
   onChangeOpacity,
   onToggleFlip,
+  onToggleEdit,
 }: OverlayControlsProps) {
   const handleSelectMode = (next: OverlayMode) => {
     if (next === mode) return;
@@ -96,28 +102,53 @@ export default function OverlayControls({
         />
       </View>
 
-      <Pressable
-        onPress={handleFlip}
-        accessibilityRole="button"
-        accessibilityLabel="Flip overlay horizontally"
-        accessibilityState={{ selected: flipped }}
-        style={({ pressed }) => [
-          styles.flipBtn,
-          flipped && { backgroundColor: themeColor, borderColor: themeColor },
-          pressed && { opacity: 0.75 },
-        ]}>
-        <Ionicons
-          name="swap-horizontal"
-          size={14}
-          color={flipped ? readableTextOn(themeColor) : '#fff'}
-        />
-        <ThemedText
-          variant="captionSmall"
-          weight="600"
-          style={{ color: flipped ? readableTextOn(themeColor) : '#fff' }}>
-          Flip
-        </ThemedText>
-      </Pressable>
+      <View style={styles.actionRow}>
+        <Pressable
+          onPress={onToggleEdit}
+          accessibilityRole="button"
+          accessibilityLabel={editMode ? 'Lock overlay position' : 'Reposition overlay'}
+          accessibilityState={{ selected: editMode }}
+          style={({ pressed }) => [
+            styles.actionBtn,
+            editMode && { backgroundColor: themeColor, borderColor: themeColor },
+            pressed && { opacity: 0.75 },
+          ]}>
+          <Ionicons
+            name={editMode ? 'lock-open' : 'move'}
+            size={14}
+            color={editMode ? readableTextOn(themeColor) : '#fff'}
+          />
+          <ThemedText
+            variant="captionSmall"
+            weight="600"
+            style={{ color: editMode ? readableTextOn(themeColor) : '#fff' }}>
+            {editMode ? 'Repositioning' : 'Reposition'}
+          </ThemedText>
+        </Pressable>
+
+        <Pressable
+          onPress={handleFlip}
+          accessibilityRole="button"
+          accessibilityLabel="Flip overlay horizontally"
+          accessibilityState={{ selected: flipped }}
+          style={({ pressed }) => [
+            styles.actionBtn,
+            flipped && { backgroundColor: themeColor, borderColor: themeColor },
+            pressed && { opacity: 0.75 },
+          ]}>
+          <Ionicons
+            name="swap-horizontal"
+            size={14}
+            color={flipped ? readableTextOn(themeColor) : '#fff'}
+          />
+          <ThemedText
+            variant="captionSmall"
+            weight="600"
+            style={{ color: flipped ? readableTextOn(themeColor) : '#fff' }}>
+            Flip
+          </ThemedText>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -145,7 +176,9 @@ const styles = StyleSheet.create({
   },
   sliderLabel: { color: '#fff', width: 40 },
   slider: { flex: 1, height: 36 },
-  flipBtn: {
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: {
+    flex: 1,
     minHeight: 44,
     borderRadius: 12,
     paddingHorizontal: 12,

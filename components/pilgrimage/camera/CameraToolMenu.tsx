@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
@@ -9,10 +9,12 @@ import {
   CAMERA_TOOL_MENU_PANEL_WIDTH,
 } from '../../../libs/services/pilgrimage/camera-ui';
 
-type ToolView = 'root' | 'overlay' | 'exposure';
+/** Which secondary tool the popover is currently showing. */
+export type CameraTool = 'overlay' | 'exposure' | 'more';
 
 interface CameraToolMenuProps {
-  visible: boolean;
+  /** Active tool, or `null` to render nothing. Each tool has its own top-bar trigger. */
+  tool: CameraTool | null;
   onRequestClose: () => void;
   themeColor: string;
   /** Distance from the screen top to the panel's top edge. */
@@ -25,29 +27,38 @@ interface CameraToolMenuProps {
   rightOffset?: number;
   /** Chrome height the panel must not grow into — caps the body, then it scrolls. */
   bottomReserve: number;
-  /** Quick-toggle chips (self-timer / aspect / orientation / settings) for the root view. */
+  /** Quick-cycle chips (self-timer / aspect / orientation) for the `more` view. */
   cycleChips: ReactNode;
-  overlaySummary: string;
+  /** Overlay tool body. */
   overlayControls: ReactNode;
-  /** `null` hides the exposure row — used while AF/AE is locked (the focus bar owns EV then). */
-  exposureSummary: string | null;
+  /** Exposure tool body. */
   exposureControls: ReactNode;
-  /** Opens the framing-tips / alignment screen. */
+  /** Opens the framing-tips / alignment screen — listed in the `more` view. */
   onOpenTips: () => void;
 }
 
+const TITLE: Record<CameraTool, string> = {
+  overlay: 'Overlay',
+  exposure: 'Exposure',
+  more: 'More',
+};
+
+// Header (title + close) sits above the scrolling body — reserve its height
+// so the body cap leaves room for it and never runs past the chrome.
+const PANEL_HEADER_HEIGHT = 48;
+
 /**
- * The camera "More" menu — a screen-root popover that drops DOWN from the
- * top-bar ⋯ trigger, so it sits above every camera HUD layer and is reliably
- * touchable.
+ * The camera tool popover. Each secondary tool — overlay / exposure / more —
+ * has its own top-bar trigger; this single panel drops DOWN from that bar and
+ * shows just the active tool's controls.
  *
- * It is a drill-down menu, NOT a stack of pop-outs: the root view lists the
- * tools, and tapping a rich tool (overlay / exposure) REPLACES the panel body
- * with that tool's controls + a back arrow. Nothing ever floats on top of
- * anything else, so there is no overlap to clip or mis-position.
+ * One panel, one tool: no drill-down, no stacked pop-outs, so nothing ever
+ * floats on top of anything else and there is no overlap to clip or
+ * mis-position. It sits at screen root so it floats above every camera HUD
+ * layer and is reliably touchable.
  */
 export default function CameraToolMenu({
-  visible,
+  tool,
   onRequestClose,
   themeColor,
   topOffset,
@@ -55,23 +66,14 @@ export default function CameraToolMenu({
   rightOffset,
   bottomReserve,
   cycleChips,
-  overlaySummary,
   overlayControls,
-  exposureSummary,
   exposureControls,
   onOpenTips,
 }: CameraToolMenuProps) {
   const { theme } = useTheme();
   const { width: winW, height: winH } = useWindowDimensions();
-  const [view, setView] = useState<ToolView>('root');
 
-  // Always reopen on the root view — the user expects a fresh menu, not
-  // whichever sub-panel they happened to leave open last time.
-  useEffect(() => {
-    if (!visible) setView('root');
-  }, [visible]);
-
-  if (!visible) return null;
+  if (!tool) return null;
 
   // Clamp width so the panel always keeps a ≥16px margin on both screen edges.
   const panelWidth = Math.max(
@@ -80,16 +82,11 @@ export default function CameraToolMenu({
   );
   // The panel hangs off the top bar; cap the body so it never runs into the
   // fixed bottom bar — it scrolls instead (matters in short landscape windows).
-  const maxBodyHeight = Math.max(180, winH - topOffset - bottomReserve - 16);
+  const maxBodyHeight = Math.max(
+    160,
+    winH - topOffset - bottomReserve - PANEL_HEADER_HEIGHT - 16
+  );
 
-  const goRoot = () => {
-    hapticsBridge.selection();
-    setView('root');
-  };
-  const drillTo = (next: ToolView) => () => {
-    hapticsBridge.selection();
-    setView(next);
-  };
   const handleTips = () => {
     hapticsBridge.tap();
     onOpenTips();
@@ -97,7 +94,7 @@ export default function CameraToolMenu({
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.layer]}>
-      {/* Transparent backdrop — a tap anywhere off the panel closes the menu. */}
+      {/* Transparent backdrop — a tap anywhere off the panel closes the popover. */}
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={onRequestClose}
@@ -107,41 +104,38 @@ export default function CameraToolMenu({
 
       <View
         // Claim touches on the panel's own padding/border so they don't fall
-        // through to the backdrop and close the menu unexpectedly.
+        // through to the backdrop and close the popover unexpectedly.
         onStartShouldSetResponder={() => true}
         style={[
           styles.panel,
-          {
-            width: panelWidth,
-            top: topOffset,
-            borderColor: theme.glassBorder,
-          },
+          { width: panelWidth, top: topOffset, borderColor: theme.glassBorder },
           leftOffset != null ? { left: leftOffset } : { right: rightOffset },
         ]}>
+        <View style={styles.header}>
+          <ThemedText variant="titleSmall" weight="700" style={styles.headerTitle}>
+            {TITLE[tool]}
+          </ThemedText>
+          <Pressable
+            onPress={onRequestClose}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Close camera tools"
+            style={({ pressed }) => [styles.headerClose, pressed && { opacity: 0.6 }]}>
+            <Ionicons name="close" size={18} color="#fff" />
+          </Pressable>
+        </View>
+        <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
+
         <ScrollView
           style={{ maxHeight: maxBodyHeight }}
           contentContainerStyle={styles.body}
           showsVerticalScrollIndicator={false}>
-          {view === 'root' ? (
+          {tool === 'overlay' ? overlayControls : null}
+          {tool === 'exposure' ? exposureControls : null}
+          {tool === 'more' ? (
             <>
               <View style={styles.cycleRow}>{cycleChips}</View>
               <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
-              <ToolRow
-                icon="image-outline"
-                label="Overlay"
-                value={overlaySummary}
-                themeColor={themeColor}
-                onPress={drillTo('overlay')}
-              />
-              {exposureSummary != null ? (
-                <ToolRow
-                  icon="sunny-outline"
-                  label="Exposure"
-                  value={exposureSummary}
-                  themeColor={themeColor}
-                  onPress={drillTo('exposure')}
-                />
-              ) : null}
               <ToolRow
                 icon="information-circle-outline"
                 label="Framing tips"
@@ -149,18 +143,6 @@ export default function CameraToolMenu({
                 onPress={handleTips}
               />
             </>
-          ) : null}
-
-          {view === 'overlay' ? (
-            <SubView title="Overlay" onBack={goRoot} dividerColor={theme.glassBorder}>
-              {overlayControls}
-            </SubView>
-          ) : null}
-
-          {view === 'exposure' ? (
-            <SubView title="Exposure" onBack={goRoot} dividerColor={theme.glassBorder}>
-              {exposureControls}
-            </SubView>
           ) : null}
         </ScrollView>
       </View>
@@ -171,14 +153,10 @@ export default function CameraToolMenu({
 function ToolRow({
   icon,
   label,
-  value,
-  themeColor,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  /** Optional trailing summary. Omitted for plain action rows (e.g. tips). */
-  value?: string;
   themeColor: string;
   onPress: () => void;
 }) {
@@ -186,49 +164,14 @@ function ToolRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={value ? `${label}, ${value}` : label}
+      accessibilityLabel={label}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}>
       <Ionicons name={icon} size={18} color="#fff" />
       <ThemedText variant="bodyMedium" weight="600" style={styles.rowLabel}>
         {label}
       </ThemedText>
-      {value ? (
-        <ThemedText variant="caption" weight="700" style={{ color: themeColor }}>
-          {value}
-        </ThemedText>
-      ) : null}
       <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.5)" />
     </Pressable>
-  );
-}
-
-function SubView({
-  title,
-  onBack,
-  dividerColor,
-  children,
-}: {
-  title: string;
-  onBack: () => void;
-  dividerColor: string;
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <Pressable
-        onPress={onBack}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel="Back to camera tools"
-        style={({ pressed }) => [styles.subHeader, pressed && { opacity: 0.7 }]}>
-        <Ionicons name="chevron-back" size={20} color="#fff" />
-        <ThemedText variant="titleSmall" weight="700" style={{ color: '#fff' }}>
-          {title}
-        </ThemedText>
-      </Pressable>
-      <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-      {children}
-    </>
   );
 }
 
@@ -249,6 +192,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 12,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: PANEL_HEADER_HEIGHT,
+    paddingLeft: 14,
+    paddingRight: 8,
+  },
+  headerTitle: { flex: 1, color: '#fff' },
+  headerClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   body: { padding: 12, gap: 10 },
   cycleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   divider: { height: StyleSheet.hairlineWidth },
@@ -261,11 +219,4 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   rowLabel: { flex: 1, color: '#fff' },
-  subHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minHeight: 36,
-    marginLeft: -4,
-  },
 });

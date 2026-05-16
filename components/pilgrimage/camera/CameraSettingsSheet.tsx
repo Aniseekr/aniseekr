@@ -1,25 +1,16 @@
-import { ReactNode, useMemo } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  View,
-} from 'react-native';
+import { ReactNode } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedSurface, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import {
-  CAPTURE_MODES,
   COUNTDOWN_SECONDS,
-  PICTURE_QUALITIES,
+  RESOLUTION_TIERS,
   type CameraSettings,
-  type CaptureMode,
   type CountdownSeconds,
-  type PictureQuality,
+  type ResolutionTier,
 } from '../../../hooks/useCameraSettings';
 
 export interface CameraSettingsSheetProps {
@@ -27,14 +18,7 @@ export interface CameraSettingsSheetProps {
   onClose: () => void;
   settings: CameraSettings;
   onSettingsChange: (patch: Partial<CameraSettings>) => void;
-  availablePictureSizes: string[];
 }
-
-const CAPTURE_MODE_LABEL: Record<CaptureMode, string> = {
-  single: 'Single',
-  burst: 'Burst',
-  hdr: 'HDR',
-};
 
 const COUNTDOWN_LABEL: Record<CountdownSeconds, string> = {
   0: 'Off',
@@ -43,31 +27,18 @@ const COUNTDOWN_LABEL: Record<CountdownSeconds, string> = {
   10: '10s',
 };
 
-const QUALITY_LABEL: Record<PictureQuality, string> = {
-  standard: 'Standard',
-  high: 'High',
-  max: 'Max',
+const RESOLUTION_LABEL: Record<ResolutionTier, string> = {
+  '4k': '4K',
+  '2k': '2K',
 };
-
-// Auto is a synthetic value at the top of the picture-size list — when picked
-// we store `null` so the camera falls back to expo-camera's default size.
-const AUTO_SIZE_VALUE = '__auto__';
 
 export default function CameraSettingsSheet({
   visible,
   onClose,
   settings,
   onSettingsChange,
-  availablePictureSizes,
 }: CameraSettingsSheetProps) {
   const { theme } = useTheme();
-
-  const pictureSizeOptions = useMemo(
-    () => [AUTO_SIZE_VALUE, ...availablePictureSizes],
-    [availablePictureSizes]
-  );
-  const selectedPictureSize = settings.pictureSize ?? AUTO_SIZE_VALUE;
-  const pictureSizesDisabled = availablePictureSizes.length === 0;
 
   const handleSelect = <K extends keyof CameraSettings>(key: K, value: CameraSettings[K]) => {
     if (settings[key] === value) return;
@@ -78,14 +49,6 @@ export default function CameraSettingsSheet({
   const handleSwitch = <K extends keyof CameraSettings>(key: K, value: boolean) => {
     hapticsBridge.selection();
     onSettingsChange({ [key]: value } as Partial<CameraSettings>);
-  };
-
-  const handlePickPictureSize = (option: string) => {
-    if (pictureSizesDisabled) return;
-    const nextValue: string | null = option === AUTO_SIZE_VALUE ? null : option;
-    if (settings.pictureSize === nextValue) return;
-    hapticsBridge.selection();
-    onSettingsChange({ pictureSize: nextValue });
   };
 
   return (
@@ -125,12 +88,15 @@ export default function CameraSettingsSheet({
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}>
-            <SettingsSection title="Capture mode">
+            <SettingsSection title="Resolution">
               <SegmentedRow
-                options={CAPTURE_MODES.map((m) => ({ value: m, label: CAPTURE_MODE_LABEL[m] }))}
-                value={settings.captureMode}
-                onSelect={(v) => handleSelect('captureMode', v)}
+                options={RESOLUTION_TIERS.map((t) => ({ value: t, label: RESOLUTION_LABEL[t] }))}
+                value={settings.resolutionTier}
+                onSelect={(v) => handleSelect('resolutionTier', v)}
               />
+              <ThemedText variant="caption" tone="secondary">
+                4K keeps the most detail. 2K captures faster and uses less storage.
+              </ThemedText>
             </SettingsSection>
 
             <SettingsSection title="Self-timer">
@@ -139,36 +105,6 @@ export default function CameraSettingsSheet({
                 value={settings.countdownSeconds}
                 onSelect={(v) => handleSelect('countdownSeconds', v)}
               />
-            </SettingsSection>
-
-            <SettingsSection title="Quality">
-              <SegmentedRow
-                options={PICTURE_QUALITIES.map((q) => ({ value: q, label: QUALITY_LABEL[q] }))}
-                value={settings.quality}
-                onSelect={(v) => handleSelect('quality', v)}
-              />
-            </SettingsSection>
-
-            <SettingsSection title="Picture size">
-              <View style={styles.sizeGrid}>
-                {pictureSizeOptions.map((option) => {
-                  const label = option === AUTO_SIZE_VALUE ? 'Auto' : option;
-                  const active = option === selectedPictureSize;
-                  return (
-                    <Segment
-                      key={option}
-                      label={label}
-                      active={active}
-                      disabled={pictureSizesDisabled && option !== AUTO_SIZE_VALUE}
-                      onPress={() => handlePickPictureSize(option)}
-                      accent={theme.accent}
-                      borderColor={theme.glassBorder}
-                      surfaceColor={theme.background.tertiary}
-                      textColor={theme.text.primary}
-                    />
-                  );
-                })}
-              </View>
             </SettingsSection>
 
             <SwitchRow
@@ -258,7 +194,6 @@ interface SegmentProps {
   borderColor: string;
   surfaceColor: string;
   textColor: string;
-  disabled?: boolean;
 }
 
 function Segment({
@@ -269,22 +204,20 @@ function Segment({
   borderColor,
   surfaceColor,
   textColor,
-  disabled = false,
 }: SegmentProps) {
   const onAccent = readableTextOn(accent);
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected: active, disabled }}
+      accessibilityState={{ selected: active }}
       style={({ pressed }) => [
         styles.segment,
         {
           borderColor: active ? accent : borderColor,
           backgroundColor: active ? accent : surfaceColor,
-          opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
+          opacity: pressed ? 0.85 : 1,
         },
       ]}>
       <ThemedText variant="bodySmall" weight="600" style={{ color: active ? onAccent : textColor }}>
@@ -371,11 +304,6 @@ const styles = StyleSheet.create({
   },
   segmentedRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  sizeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: Spacing.xs,
   },
   segment: {

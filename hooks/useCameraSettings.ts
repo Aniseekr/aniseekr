@@ -15,13 +15,16 @@ export {
   COUNTDOWN_SECONDS,
   DEFAULT_CAMERA_SETTINGS,
   PICTURE_QUALITIES,
+  RESOLUTION_TIERS,
   qualityToNumber,
+  resolvePictureSize,
 } from '../libs/services/pilgrimage/camera-settings';
 export type {
   CameraSettings,
   CaptureMode,
   CountdownSeconds,
   PictureQuality,
+  ResolutionTier,
 } from '../libs/services/pilgrimage/camera-settings';
 
 export interface UseCameraSettingsResult {

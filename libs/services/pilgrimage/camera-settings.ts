@@ -1,5 +1,5 @@
 // Persisted camera tool prefs (mute shutter, mirror selfie, animation,
-// quality, picture size, countdown, capture mode).
+// quality, resolution tier, countdown, capture mode).
 //
 // Lives in its own AsyncStorage key — independent of UserPrefs and the map
 // theme pref — so the camera screen can read/write without dragging unrelated
@@ -11,11 +11,14 @@ import { isObject, safeJsonParse } from '../../utils/safe-json';
 
 // v3 adds `skipProcessing` — bumped so legacy payloads fall through to
 // DEFAULT_CAMERA_SETTINGS rather than silently coexisting with the new shape.
+// (The later `pictureSize` → `resolutionTier` swap needs no bump: a legacy
+// payload simply lacks `resolutionTier` and picks up the default.)
 export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v3';
 
 export type CaptureMode = 'single' | 'burst' | 'hdr';
 export type CountdownSeconds = 0 | 3 | 5 | 10;
 export type PictureQuality = 'standard' | 'high' | 'max';
+export type ResolutionTier = '4k' | '2k';
 
 export const CAPTURE_MODES: readonly CaptureMode[] = ['single', 'burst', 'hdr'] as const;
 export const COUNTDOWN_SECONDS: readonly CountdownSeconds[] = [0, 3, 5, 10] as const;
@@ -24,13 +27,24 @@ export const PICTURE_QUALITIES: readonly PictureQuality[] = [
   'high',
   'max',
 ] as const;
+export const RESOLUTION_TIERS: readonly ResolutionTier[] = ['4k', '2k'] as const;
+
+// A "2K" capture keeps frames in the FHD/QHD range — its long edge must not
+// exceed this. Anything larger reads as 4K to the user.
+const TWO_K_MAX_LONG_EDGE = 2600;
 
 export interface CameraSettings {
   mute: boolean;
   mirror: boolean;
   animateShutter: boolean;
   quality: PictureQuality;
-  pictureSize: string | null;
+  /**
+   * User-facing capture resolution. The camera screen resolves this to a
+   * concrete device picture-size string at runtime via `resolvePictureSize`
+   * (Android reports exact `WIDTHxHEIGHT` sizes; some devices report none, in
+   * which case expo-camera's own default is used).
+   */
+  resolutionTier: ResolutionTier;
   countdownSeconds: CountdownSeconds;
   captureMode: CaptureMode;
   /**
@@ -54,7 +68,7 @@ export const DEFAULT_CAMERA_SETTINGS: CameraSettings = {
   mirror: false,
   animateShutter: true,
   quality: 'high',
-  pictureSize: null,
+  resolutionTier: '4k',
   countdownSeconds: 0,
   captureMode: 'single',
   autoCapture: false,
@@ -77,6 +91,42 @@ export function qualityToNumber(q: PictureQuality): number {
   }
 }
 
+/**
+ * Resolves the user-facing 4K/2K tier onto a concrete device picture-size
+ * string. `availableSizes` is whatever `getAvailablePictureSizesAsync()`
+ * reported — Android returns `"WIDTHxHEIGHT"`, so we parse those and ignore
+ * any non-numeric presets.
+ *
+ * - `4k` → the largest size the device offers.
+ * - `2k` → the largest size whose long edge is ≤ 2600px (FHD/QHD range);
+ *   if every size is bigger, the smallest available is used.
+ *
+ * Returns `undefined` when no size string can be parsed, so the camera falls
+ * back to expo-camera's own default instead of a guessed value (CLAUDE.md
+ * Rule 8 — no fabricated data).
+ */
+export function resolvePictureSize(
+  tier: ResolutionTier,
+  availableSizes: readonly string[]
+): string | undefined {
+  const parsed = availableSizes
+    .map((raw) => {
+      const match = /(\d+)\s*[x×]\s*(\d+)/i.exec(raw);
+      if (!match) return null;
+      const w = Number(match[1]);
+      const h = Number(match[2]);
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+      return { raw, longEdge: Math.max(w, h), area: w * h };
+    })
+    .filter((v): v is { raw: string; longEdge: number; area: number } => v !== null)
+    .sort((a, b) => b.area - a.area);
+
+  if (parsed.length === 0) return undefined;
+  if (tier === '4k') return parsed[0].raw;
+  const twoK = parsed.find((s) => s.longEdge <= TWO_K_MAX_LONG_EDGE);
+  return (twoK ?? parsed[parsed.length - 1]).raw;
+}
+
 function isCaptureMode(value: unknown): value is CaptureMode {
   return value === 'single' || value === 'burst' || value === 'hdr';
 }
@@ -89,15 +139,17 @@ function isPictureQuality(value: unknown): value is PictureQuality {
   return value === 'standard' || value === 'high' || value === 'max';
 }
 
+function isResolutionTier(value: unknown): value is ResolutionTier {
+  return value === '4k' || value === '2k';
+}
+
 function pickValidSettings(value: Record<string, unknown>): Partial<CameraSettings> {
   const out: Partial<CameraSettings> = {};
   if (typeof value.mute === 'boolean') out.mute = value.mute;
   if (typeof value.mirror === 'boolean') out.mirror = value.mirror;
   if (typeof value.animateShutter === 'boolean') out.animateShutter = value.animateShutter;
   if (isPictureQuality(value.quality)) out.quality = value.quality;
-  if (value.pictureSize === null || typeof value.pictureSize === 'string') {
-    out.pictureSize = value.pictureSize;
-  }
+  if (isResolutionTier(value.resolutionTier)) out.resolutionTier = value.resolutionTier;
   if (isCountdownSeconds(value.countdownSeconds)) {
     out.countdownSeconds = value.countdownSeconds;
   }
