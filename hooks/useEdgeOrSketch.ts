@@ -1,34 +1,37 @@
 import type { SkImage } from '@shopify/react-native-skia';
-import {
-  useEdgeImage,
-  useSketchImage,
-} from '../libs/services/pilgrimage/edge-image-skia';
+import { useEdgeImage, useSketchImage } from '../libs/services/pilgrimage/edge-image-skia';
+import { getEdgeOverlayConfig, type EdgeIntensity } from '../libs/services/pilgrimage/edge-overlay';
 import type { OverlayMode } from '../components/pilgrimage/camera/types';
 
 interface UseEdgeOrSketchInput {
   mode: OverlayMode;
   hiResImageUrl: string;
   themeColor: string;
+  edgeIntensity: EdgeIntensity;
 }
 
 interface UseEdgeOrSketchOutput {
   image: SkImage | null;
   loading: boolean;
   error: Error | null;
+  sourceOpacity: number;
 }
 
 export function useEdgeOrSketch({
   mode,
   hiResImageUrl,
   themeColor,
+  edgeIntensity,
 }: UseEdgeOrSketchInput): UseEdgeOrSketchOutput {
+  const edgeConfig = getEdgeOverlayConfig(edgeIntensity);
   const {
     edgeImage,
     loading: edgeLoading,
     error: edgeError,
   } = useEdgeImage(mode === 'edge' ? hiResImageUrl : null, {
     inkColor: themeColor,
-    inkOpacity: 1,
+    inkOpacity: edgeConfig.inkOpacity,
+    threshold: edgeConfig.threshold,
   });
   const {
     sketchImage,
@@ -40,10 +43,15 @@ export function useEdgeOrSketch({
   });
 
   if (mode === 'edge') {
-    return { image: edgeImage, loading: edgeLoading, error: edgeError };
+    return {
+      image: edgeImage,
+      loading: edgeLoading,
+      error: edgeError,
+      sourceOpacity: edgeConfig.sourceOpacity,
+    };
   }
   if (mode === 'sketch') {
-    return { image: sketchImage, loading: sketchLoading, error: sketchError };
+    return { image: sketchImage, loading: sketchLoading, error: sketchError, sourceOpacity: 0 };
   }
-  return { image: null, loading: false, error: null };
+  return { image: null, loading: false, error: null, sourceOpacity: 0 };
 }

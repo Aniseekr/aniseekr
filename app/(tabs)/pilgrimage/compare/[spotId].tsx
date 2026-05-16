@@ -19,6 +19,7 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
 import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
+import type { EdgeIntensity } from '../../../../libs/services/pilgrimage/edge-overlay';
 import { applyBrightnessToImage } from '../../../../libs/services/pilgrimage/apply-brightness';
 import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-exif-metadata';
 import { pilgrimageRepository } from '../../../../libs/services/pilgrimage/pilgrimage-repository';
@@ -165,6 +166,7 @@ export default function CompareCaptureScreen() {
   const [flashMode, setFlashMode] = useState<FlashMode>('off');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [overlayMode, setOverlayMode] = useState<OverlayMode>('anime');
+  const [edgeIntensity, setEdgeIntensity] = useState<EdgeIntensity>('low');
   const [overlayOpacity, setOverlayOpacity] = useState(0.35);
   const [editMode, setEditMode] = useState(false);
   const [evValue, setEvValue] = useState(0);
@@ -175,8 +177,9 @@ export default function CompareCaptureScreen() {
   // `null` until the first capture-mode change — a fresh value re-fires the toast.
   const [captureModeToast, setCaptureModeToast] = useState<CaptureModeToastValue | null>(null);
   // `null` until the first opacity cycle — a fresh value re-fires the toast.
-  const [overlayOpacityToast, setOverlayOpacityToast] =
-    useState<OverlayOpacityToastValue | null>(null);
+  const [overlayOpacityToast, setOverlayOpacityToast] = useState<OverlayOpacityToastValue | null>(
+    null
+  );
   // `null` until the first auto-capture — a fresh value re-fires the toast.
   const [autoCaptureToast, setAutoCaptureToast] = useState<AutoCaptureToastValue | null>(null);
   const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
@@ -214,7 +217,12 @@ export default function CompareCaptureScreen() {
   const brightness = useBrightnessPreview({ value: evValue });
   const overlayTransform = useOverlayTransform({ enabled: editMode });
   const sensors = useAlignmentSensors({ spotLat: params.spotLat, spotLng: params.spotLng });
-  const edgeOrSketch = useEdgeOrSketch({ mode: overlayMode, hiResImageUrl, themeColor });
+  const edgeOrSketch = useEdgeOrSketch({
+    mode: overlayMode,
+    hiResImageUrl,
+    themeColor,
+    edgeIntensity,
+  });
 
   // Shared metadata + sensor snapshot for the burst/HDR hooks. The hooks
   // mirror inputs into refs internally so it's fine that this object is
@@ -356,8 +364,7 @@ export default function CompareCaptureScreen() {
       let nearest = 0;
       for (let i = 1; i < OVERLAY_OPACITY_CYCLE.length; i += 1) {
         if (
-          Math.abs(OVERLAY_OPACITY_CYCLE[i] - cur) <
-          Math.abs(OVERLAY_OPACITY_CYCLE[nearest] - cur)
+          Math.abs(OVERLAY_OPACITY_CYCLE[i] - cur) < Math.abs(OVERLAY_OPACITY_CYCLE[nearest] - cur)
         ) {
           nearest = i;
         }
@@ -622,122 +629,124 @@ export default function CompareCaptureScreen() {
     async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
       if (!cameraRef.current) return null;
       setCapturing(true);
-    try {
-      // EXIF metadata embedded into the captured file via expo-camera's native
-      // writer. Rule 8: every field is sourced from real sensor data — missing
-      // values are simply omitted by buildAdditionalExif.
-      const additionalExif = buildAdditionalExif({
-        spotId,
-        spotName: name,
-        animeId: animeId ?? undefined,
-        animeTitle: animeTitle || undefined,
-        episode: ep ?? undefined,
-        userLocation: sensors.userLocation,
-        heading: sensors.heading,
-        tilt: sensors.tilt,
-      });
-      const qualityNum = qualityToNumber(settings.quality);
-
-      type ResolvedCapture = {
-        uri: string;
-        width: number;
-        height: number;
-        exif: Record<string, unknown> | null;
-      };
-
-      const captureClassic = async (): Promise<ResolvedCapture | null> => {
-        const photo = await cameraRef.current?.takePictureAsync({
-          quality: qualityNum,
-          skipProcessing: settings.skipProcessing,
-          exif: true,
-          additionalExif,
-          // Silent shutter belongs on the takePictureAsync option (not CameraView.mute,
-          // which is for video audio). `settings.mute` is the user-facing toggle.
-          shutterSound: !settings.mute,
+      try {
+        // EXIF metadata embedded into the captured file via expo-camera's native
+        // writer. Rule 8: every field is sourced from real sensor data — missing
+        // values are simply omitted by buildAdditionalExif.
+        const additionalExif = buildAdditionalExif({
+          spotId,
+          spotName: name,
+          animeId: animeId ?? undefined,
+          animeTitle: animeTitle || undefined,
+          episode: ep ?? undefined,
+          userLocation: sensors.userLocation,
+          heading: sensors.heading,
+          tilt: sensors.tilt,
         });
-        if (!photo) return null;
-        const uri = resolveCapturedUri(photo);
-        if (!uri) return null;
-        return {
-          uri,
-          width: photo.width || 0,
-          height: photo.height || 0,
-          exif: mergeCaptureExif(photo.exif, additionalExif),
-        };
-      };
+        const qualityNum = qualityToNumber(settings.quality);
 
-      let captured: ResolvedCapture | null = null;
-      if (Platform.OS === 'ios') {
-        try {
-          // iOS PictureRef avoids the native-side double-write. The public
-          // SavePictureOptions API writes metadata via `metadata`, and iOS
-          // native currently returns `url` instead of the JS `uri` shape.
-          const pictureRef = await cameraRef.current.takePictureAsync({
-            pictureRef: true,
+        type ResolvedCapture = {
+          uri: string;
+          width: number;
+          height: number;
+          exif: Record<string, unknown> | null;
+        };
+
+        const captureClassic = async (): Promise<ResolvedCapture | null> => {
+          const photo = await cameraRef.current?.takePictureAsync({
             quality: qualityNum,
             skipProcessing: settings.skipProcessing,
+            exif: true,
+            additionalExif,
+            // Silent shutter belongs on the takePictureAsync option (not CameraView.mute,
+            // which is for video audio). `settings.mute` is the user-facing toggle.
             shutterSound: !settings.mute,
           });
-          const saved = await pictureRef.savePictureAsync({
-            quality: qualityNum,
-            metadata: additionalExif,
-          });
-          const uri = resolveCapturedUri(saved);
-          if (uri) {
-            captured = {
-              uri,
-              width: saved.width || 0,
-              height: saved.height || 0,
-              exif: additionalExif,
-            };
+          if (!photo) return null;
+          const uri = resolveCapturedUri(photo);
+          if (!uri) return null;
+          return {
+            uri,
+            width: photo.width || 0,
+            height: photo.height || 0,
+            exif: mergeCaptureExif(photo.exif, additionalExif),
+          };
+        };
+
+        let captured: ResolvedCapture | null = null;
+        if (Platform.OS === 'ios') {
+          try {
+            // iOS PictureRef avoids the native-side double-write. The public
+            // SavePictureOptions API writes metadata via `metadata`, and iOS
+            // native currently returns `url` instead of the JS `uri` shape.
+            const pictureRef = await cameraRef.current.takePictureAsync({
+              pictureRef: true,
+              quality: qualityNum,
+              skipProcessing: settings.skipProcessing,
+              shutterSound: !settings.mute,
+            });
+            const saved = await pictureRef.savePictureAsync({
+              quality: qualityNum,
+              metadata: additionalExif,
+            });
+            const uri = resolveCapturedUri(saved);
+            if (uri) {
+              captured = {
+                uri,
+                width: saved.width || 0,
+                height: saved.height || 0,
+                exif: additionalExif,
+              };
+            }
+          } catch (pictureRefError) {
+            console.warn('[camera] PictureRef capture failed, falling back', pictureRefError);
           }
-        } catch (pictureRefError) {
-          console.warn('[camera] PictureRef capture failed, falling back', pictureRefError);
         }
+
+        captured = captured ?? (await captureClassic());
+        if (!captured) return null;
+
+        const baked = await applyBrightnessToImage({
+          inputUri: captured.uri,
+          exif: captured.exif,
+          colorMatrix: brightness.colorMatrix,
+          quality: qualityNum,
+        });
+        tapFocus.releaseLock();
+        // Capture is decoupled from navigation: record the shot into the
+        // session here; the caller (manual shutter vs auto-capture) decides
+        // whether to navigate to the preview or stay on the camera.
+        return recordShot({
+          uri: baked.uri,
+          width: baked.width || captured.width,
+          height: baked.height || captured.height,
+          captureMode: 'single',
+          source,
+        });
+      } catch (e) {
+        console.warn('[camera] single capture failed', e);
+        return null;
+      } finally {
+        setCapturing(false);
       }
-
-      captured = captured ?? (await captureClassic());
-      if (!captured) return null;
-
-      const baked = await applyBrightnessToImage({
-        inputUri: captured.uri,
-        exif: captured.exif,
-        colorMatrix: brightness.colorMatrix,
-        quality: qualityNum,
-      });
-      tapFocus.releaseLock();
-      // Capture is decoupled from navigation: record the shot into the
-      // session here; the caller (manual shutter vs auto-capture) decides
-      // whether to navigate to the preview or stay on the camera.
-      return recordShot({
-        uri: baked.uri,
-        width: baked.width || captured.width,
-        height: baked.height || captured.height,
-        captureMode: 'single',
-        source,
-      });
-    } catch (e) {
-      console.warn('[camera] single capture failed', e);
-      return null;
-    } finally {
-      setCapturing(false);
-    }
-  }, [
-    settings.quality,
-    settings.skipProcessing,
-    settings.mute,
-    brightness.colorMatrix,
-    tapFocus,
-    recordShot,
-    spotId,
-    name,
-    ep,
-    animeId,
-    animeTitle,
-    sensors.userLocation,
-    sensors.heading,
-    sensors.tilt,
-  ]);
+    },
+    [
+      settings.quality,
+      settings.skipProcessing,
+      settings.mute,
+      brightness.colorMatrix,
+      tapFocus,
+      recordShot,
+      spotId,
+      name,
+      ep,
+      animeId,
+      animeTitle,
+      sensors.userLocation,
+      sensors.heading,
+      sensors.tilt,
+    ]
+  );
 
   const runBurst = useCallback(
     async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
@@ -849,13 +858,7 @@ export default function CompareCaptureScreen() {
     // directly (the hook's `shots` in this closure is the stale render-time
     // snapshot). Rule 8: a real count, never a guess.
     setAutoCaptureToast({ sessionCount: getCaptureSessionShots().length });
-  }, [
-    anyCapturing,
-    cameraIsReady,
-    settings.countdownSeconds,
-    countdown,
-    captureForMode,
-  ]);
+  }, [anyCapturing, cameraIsReady, settings.countdownSeconds, countdown, captureForMode]);
 
   // Keep the ref current so useAutoCapture's onFire calls the latest closure.
   useEffect(() => {
@@ -1028,6 +1031,7 @@ export default function CompareCaptureScreen() {
           edgeOrSketchImage={edgeOrSketch.image}
           edgeOrSketchLoading={edgeOrSketch.loading}
           edgeOrSketchError={edgeOrSketch.error}
+          edgeSourceOpacity={edgeOrSketch.sourceOpacity}
         />
 
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -1117,7 +1121,9 @@ export default function CompareCaptureScreen() {
               />
               <CameraHeaderButton
                 icon={activeTool === 'more' ? 'close' : 'ellipsis-horizontal'}
-                accessibilityLabel={activeTool === 'more' ? 'Close camera tools' : 'More camera tools'}
+                accessibilityLabel={
+                  activeTool === 'more' ? 'Close camera tools' : 'More camera tools'
+                }
                 accessibilityState={{ expanded: activeTool === 'more' }}
                 themeColor={themeColor}
                 active={activeTool === 'more'}
@@ -1291,11 +1297,13 @@ export default function CompareCaptureScreen() {
           overlayControls={
             <OverlayControls
               mode={overlayMode}
+              edgeIntensity={edgeIntensity}
               opacity={overlayOpacity}
               flipped={overlayTransform.flipped}
               editMode={editMode}
               themeColor={themeColor}
               onSelectMode={setOverlayMode}
+              onSelectEdgeIntensity={setEdgeIntensity}
               onChangeOpacity={setOverlayOpacity}
               onToggleFlip={overlayTransform.toggleFlip}
               onToggleEdit={handleToggleEdit}

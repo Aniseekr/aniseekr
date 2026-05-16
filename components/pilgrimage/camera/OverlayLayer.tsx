@@ -23,6 +23,7 @@ interface OverlayLayerProps {
   edgeOrSketchImage: SkImage | null;
   edgeOrSketchLoading: boolean;
   edgeOrSketchError?: Error | null;
+  edgeSourceOpacity: number;
 }
 
 export default function OverlayLayer({
@@ -38,6 +39,7 @@ export default function OverlayLayer({
   edgeOrSketchImage,
   edgeOrSketchLoading,
   edgeOrSketchError = null,
+  edgeSourceOpacity,
 }: OverlayLayerProps) {
   const content = (
     <OverlayContent
@@ -50,6 +52,7 @@ export default function OverlayLayer({
       edgeOrSketchImage={edgeOrSketchImage}
       edgeOrSketchLoading={edgeOrSketchLoading}
       edgeOrSketchError={edgeOrSketchError}
+      edgeSourceOpacity={edgeSourceOpacity}
     />
   );
 
@@ -84,6 +87,7 @@ interface OverlayContentProps {
   edgeOrSketchImage: SkImage | null;
   edgeOrSketchLoading: boolean;
   edgeOrSketchError: Error | null;
+  edgeSourceOpacity: number;
 }
 
 function OverlayContent({
@@ -96,6 +100,7 @@ function OverlayContent({
   edgeOrSketchImage,
   edgeOrSketchLoading,
   edgeOrSketchError,
+  edgeSourceOpacity,
 }: OverlayContentProps) {
   if (mode === 'anime') {
     return (
@@ -107,10 +112,26 @@ function OverlayContent({
       />
     );
   }
+  const edgeBackdrop =
+    mode === 'edge' && edgeSourceOpacity > 0 ? (
+      <ExpoImage
+        source={{ uri: hiResImageUrl }}
+        style={[
+          styles.absoluteOverlayImage,
+          { width: winW, height: winH, opacity: opacity * edgeSourceOpacity },
+        ]}
+        contentFit="contain"
+        transition={120}
+      />
+    ) : null;
+
   if (edgeOrSketchLoading) {
     return (
-      <View style={[styles.overlayWrap, styles.edgeLoader]}>
-        <ActivityIndicator color={themeColor} />
+      <View style={[styles.overlayImage, { width: winW, height: winH }]}>
+        {edgeBackdrop}
+        <View style={styles.edgeLoader}>
+          <ActivityIndicator color={themeColor} />
+        </View>
       </View>
     );
   }
@@ -118,28 +139,27 @@ function OverlayContent({
   // The compact scrim tile sits over the live camera (camera-scrim exception).
   if (!edgeOrSketchImage && edgeOrSketchError) {
     return (
-      <View style={[styles.overlayWrap, styles.edgeLoader]}>
-        <View style={styles.errorTile}>
-          <ThemedText variant="captionSmall" weight="700" style={styles.errorText}>
-            無法載入描邊
-          </ThemedText>
+      <View style={[styles.overlayImage, { width: winW, height: winH }]}>
+        {edgeBackdrop}
+        <View style={styles.edgeLoader}>
+          <View style={styles.errorTile}>
+            <ThemedText variant="captionSmall" weight="700" style={styles.errorText}>
+              無法載入描邊
+            </ThemedText>
+          </View>
         </View>
       </View>
     );
   }
   // No image, no error, not loading — nothing to draw.
-  if (!edgeOrSketchImage) return null;
+  if (!edgeOrSketchImage) return edgeBackdrop;
   return (
-    <Canvas style={[styles.overlayImage, { width: winW, height: winH, opacity }]}>
-      <SkiaImage
-        image={edgeOrSketchImage}
-        x={0}
-        y={0}
-        width={winW}
-        height={winH}
-        fit="contain"
-      />
-    </Canvas>
+    <View style={[styles.overlayImage, { width: winW, height: winH }]}>
+      {edgeBackdrop}
+      <Canvas style={[styles.absoluteOverlayImage, { width: winW, height: winH, opacity }]}>
+        <SkiaImage image={edgeOrSketchImage} x={0} y={0} width={winW} height={winH} fit="contain" />
+      </Canvas>
+    </View>
   );
 }
 
@@ -156,7 +176,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  absoluteOverlayImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
   edgeLoader: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },

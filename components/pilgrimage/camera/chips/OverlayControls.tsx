@@ -3,16 +3,23 @@ import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../../themed';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
+import {
+  EDGE_INTENSITIES,
+  edgeIntensityLabel,
+  type EdgeIntensity,
+} from '../../../../libs/services/pilgrimage/edge-overlay';
 import type { OverlayMode } from '../types';
 
 interface OverlayControlsProps {
   mode: OverlayMode;
+  edgeIntensity: EdgeIntensity;
   opacity: number;
   flipped: boolean;
   /** Whether the overlay is in free-drag reposition mode. */
   editMode: boolean;
   themeColor: string;
   onSelectMode: (mode: OverlayMode) => void;
+  onSelectEdgeIntensity: (intensity: EdgeIntensity) => void;
   onChangeOpacity: (opacity: number) => void;
   onToggleFlip: () => void;
   /** Toggles reposition mode. The parent closes this popover so the drag surface is clear. */
@@ -38,11 +45,13 @@ const MODES: ModeMeta[] = [
  */
 export default function OverlayControls({
   mode,
+  edgeIntensity,
   opacity,
   flipped,
   editMode,
   themeColor,
   onSelectMode,
+  onSelectEdgeIntensity,
   onChangeOpacity,
   onToggleFlip,
   onToggleEdit,
@@ -51,6 +60,12 @@ export default function OverlayControls({
     if (next === mode) return;
     hapticsBridge.selection();
     onSelectMode(next);
+  };
+
+  const handleSelectEdgeIntensity = (next: EdgeIntensity) => {
+    if (next === edgeIntensity) return;
+    hapticsBridge.selection();
+    onSelectEdgeIntensity(next);
   };
 
   const handleFlip = () => {
@@ -84,6 +99,36 @@ export default function OverlayControls({
           );
         })}
       </View>
+
+      {mode === 'edge' ? (
+        <View style={styles.edgeIntensityRow}>
+          {EDGE_INTENSITIES.map((intensity) => {
+            const active = intensity === edgeIntensity;
+            const fg = active ? readableTextOn(themeColor) : '#fff';
+            return (
+              <Pressable
+                key={intensity}
+                onPress={() => handleSelectEdgeIntensity(intensity)}
+                accessibilityRole="button"
+                accessibilityLabel={`Edge intensity ${edgeIntensityLabel(intensity)}`}
+                accessibilityState={{ selected: active }}
+                style={({ pressed }) => [
+                  styles.edgeIntensityBtn,
+                  active && { backgroundColor: themeColor, borderColor: themeColor },
+                  pressed && { opacity: 0.75 },
+                ]}>
+                <ThemedText
+                  variant="captionSmall"
+                  weight="700"
+                  numberOfLines={1}
+                  style={{ color: fg }}>
+                  {edgeIntensityLabel(intensity)}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       <View style={styles.sliderRow}>
         <ThemedText variant="captionSmall" weight="600" style={styles.sliderLabel}>
@@ -176,6 +221,20 @@ const styles = StyleSheet.create({
   },
   sliderLabel: { color: '#fff', width: 40 },
   slider: { flex: 1, height: 36 },
+  edgeIntensityRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  edgeIntensityBtn: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     flex: 1,
