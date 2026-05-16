@@ -6,11 +6,6 @@
 //   • Detail view: when entered with an `animeId` param (or via folder tap) we
 //     render the existing two-column comparison cards for that anime's spots.
 //
-// Match scores are derived deterministically from `capture.spotId + capturedAt`
-// (see deriveMatch) — that keeps numbers stable across renders without
-// requiring an extra persisted field. When real alignment scoring lands, this
-// helper is the single replacement point.
-//
 // Layout obeys the project rules: ThemedText / theme tokens only (no hex
 // surfaces), 44pt touch targets, hapticsBridge on every interactive element,
 // and no fake spot-specific data (placeholders fall back to generic copy).
@@ -28,7 +23,12 @@ import { ThemedText, readableTextOn } from '../../../components/themed';
 import { Shadow, Spacing } from '../../../constants/DesignSystem';
 import { listCaptures, type PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
+import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
+import {
+  buildPilgrimageAlbumEntries,
+  type PilgrimageAlbumEntry,
+} from '../../../libs/services/pilgrimage/album-captures';
 import {
   get88EntriesByBangumiId,
   type AnimeTourism88Region,
@@ -37,22 +37,18 @@ import {
   getPilgrimageAnimeTitles,
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 
-interface AlbumEntry {
-  capture: PilgrimageCapture;
-  spot: AnitabiPoint;
-  anime: AnitabiBangumi;
-  match: number;
-}
+type AlbumEntry = PilgrimageAlbumEntry;
 
 interface FolderGroup {
   anime: AnitabiBangumi;
   entries: AlbumEntry[];
   /** Most recent capture timestamp; used for sort + "last visited" line. */
   lastCapturedAt: number;
-  /** Average match score across the folder's captures (rounded). */
-  avgMatch: number;
+  /** Average real frame-match score across captures with analysis. */
+  avgMatch: number | null;
   /** Distinct spot ids visited (folder progress). */
   visitedSpots: number;
   /** Total spots known to the anime (from Anitabi.pointsLength). */
@@ -87,17 +83,6 @@ const REGION_ORDER: AnimeTourism88Region[] = [
   'kyushu_okinawa',
 ];
 
-// Deterministic match score from capture id — keeps numbers stable across
-// renders without persisting another field. Replace with real alignment data
-// once captures.ts stores it.
-function deriveMatch(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  }
-  return 78 + (Math.abs(hash) % 20);
-}
-
 function formatRelative(timestamp: number, now: number): string {
   const delta = Math.max(0, now - timestamp);
   const minute = 60_000;
@@ -127,9 +112,7 @@ export default function PilgrimageAlbumScreen() {
   const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>({});
   const [animes, setAnimes] = useState<AnitabiBangumi[]>([]);
   const [regionFilter, setRegionFilter] = useState<RegionFilter>('all');
-  const [selectedAnimeId, setSelectedAnimeId] = useState<string | null>(
-    animeIdParam ?? null
-  );
+  const [selectedAnimeId, setSelectedAnimeId] = useState<string | null>(animeIdParam ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,43 +126,42 @@ export default function PilgrimageAlbumScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.allSettled(
-      FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) =>
-        pilgrimageRepository.getSpotsByBangumiId(bangumiId)
-      )
-    ).then((results) => {
-      if (cancelled) return;
-      const list = results
-        .filter((r): r is PromiseFulfilledResult<AnitabiBangumi | null> => r.status === 'fulfilled')
-        .map((r) => r.value)
-        .filter((v): v is AnitabiBangumi => v !== null);
-      setAnimes(list);
-    });
+    async function loadAlbumAnimeIndex() {
+      const byId = new Map<number, AnitabiBangumi>();
+      try {
+        const collectionEntries = await collectionPilgrimageService.getEntries();
+        for (const entry of collectionEntries) byId.set(entry.anime.id, entry.anime);
+      } catch (err) {
+        console.warn('[PilgrimageAlbum] collection anime load failed:', err);
+      }
+
+      const featured = await Promise.allSettled(
+        FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) =>
+          pilgrimageRepository.getSpotsByBangumiId(bangumiId)
+        )
+      );
+      for (const result of featured) {
+        if (result.status === 'fulfilled' && result.value) {
+          byId.set(result.value.id, result.value);
+        }
+      }
+
+      if (!cancelled) setAnimes([...byId.values()]);
+    }
+    void loadAlbumAnimeIndex();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Flatten captures × spots × anime — one row per capture that matches a
-  // known spot. Captures with no matching spot are dropped.
+  // Flatten captures into album rows. Current captures carry enough metadata
+  // to render even before the related anime appears in the preloaded index;
+  // legacy captures still get matched through known Anitabi lite points.
   const entries = useMemo<AlbumEntry[]>(() => {
-    const list: AlbumEntry[] = [];
-    const captureList = Object.values(captures);
-    for (const capture of captureList) {
-      for (const anime of animes) {
-        const spot = anime.litePoints?.find((p) => p.id === capture.spotId);
-        if (spot) {
-          list.push({
-            capture,
-            spot,
-            anime,
-            match: deriveMatch(capture.spotId + String(capture.capturedAt)),
-          });
-          break;
-        }
-      }
-    }
-    return list.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt);
+    return buildPilgrimageAlbumEntries({
+      captures: Object.values(captures),
+      animes,
+    });
   }, [captures, animes]);
 
   // Group entries by anime to form folders.
@@ -197,7 +179,7 @@ export default function PilgrimageAlbumScreen() {
           anime: entry.anime,
           entries: [entry],
           lastCapturedAt: entry.capture.capturedAt,
-          avgMatch: 0,
+          avgMatch: null,
           visitedSpots: 0,
           totalSpots: entry.anime.pointsLength ?? entry.anime.litePoints?.length ?? 0,
           cover: entry.anime.cover || entry.spot.image || entry.capture.uri,
@@ -208,13 +190,14 @@ export default function PilgrimageAlbumScreen() {
     // Compute folder aggregates after grouping.
     for (const folder of map.values()) {
       const distinct = new Set(folder.entries.map((e) => e.spot.id));
+      const matches = folder.entries
+        .map((entry) => entry.matchPercent)
+        .filter((value): value is number => typeof value === 'number');
       folder.visitedSpots = distinct.size;
       folder.avgMatch =
-        folder.entries.length > 0
-          ? Math.round(
-              folder.entries.reduce((s, e) => s + e.match, 0) / folder.entries.length
-            )
-          : 0;
+        matches.length > 0
+          ? Math.round(matches.reduce((sum, value) => sum + value, 0) / matches.length)
+          : null;
     }
     return Array.from(map.values()).sort((a, b) => b.lastCapturedAt - a.lastCapturedAt);
   }, [entries]);
@@ -242,35 +225,54 @@ export default function PilgrimageAlbumScreen() {
   // Stats reflect the active filter so the user can scope "how am I doing in
   // Kanto" without recomputing in their head.
   const stats = useMemo(() => {
-    const source =
-      regionFilter === 'all' ? folders : filteredFolders;
+    const source = regionFilter === 'all' ? folders : filteredFolders;
     const visited = source.reduce((s, f) => s + f.visitedSpots, 0);
     const photos = source.reduce((s, f) => s + f.entries.length, 0);
-    const totalMatch = source.reduce(
-      (s, f) => s + f.avgMatch * f.entries.length,
-      0
+    const matches = source.flatMap((folder) =>
+      folder.entries
+        .map((entry) => entry.matchPercent)
+        .filter((value): value is number => typeof value === 'number')
     );
-    const avgMatch = photos > 0 ? Math.round(totalMatch / photos) : 0;
+    const avgMatch =
+      matches.length > 0
+        ? Math.round(matches.reduce((sum, value) => sum + value, 0) / matches.length)
+        : null;
     return { visited, photos, avgMatch, folders: source.length };
   }, [folders, filteredFolders, regionFilter]);
 
   const handleEntryPress = useCallback(
     (entry: AlbumEntry) => {
       hapticsBridge.selection();
+      const animeTitles = getPilgrimageAnimeTitles(entry.anime);
+      const spotTitles = getPilgrimageSpotTitles(entry.spot);
+      const params: Record<string, string> = {
+        spotId: entry.spot.id,
+        imageUrl: entry.spot.image,
+        shotUri: entry.capture.uri,
+        shotWidth: '0',
+        shotHeight: '0',
+        capturedAt: String(entry.capture.capturedAt),
+        name: spotTitles.primary,
+        ep: String(entry.spot.ep),
+        animeId: String(entry.anime.id),
+        animeTitle: animeTitles.primary,
+        themeColor: entry.anime.color || theme.accent,
+        heading: entry.capture.heading != null ? String(entry.capture.heading) : '',
+      };
+      const [lat, lng] = entry.spot.geo;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        params.spotLat = String(lat);
+        params.spotLng = String(lng);
+      }
+      const snapshot = entry.capture.sensorSnapshot;
+      if (snapshot?.distanceMeters != null) params.distanceMeters = String(snapshot.distanceMeters);
+      if (snapshot?.headingDeltaDeg != null) {
+        params.headingDeltaDeg = String(snapshot.headingDeltaDeg);
+      }
+      if (snapshot?.tilt != null) params.tilt = String(snapshot.tilt);
       router.push({
         pathname: '/pilgrimage/compare/preview',
-        params: {
-          spotId: entry.spot.id,
-          imageUrl: entry.spot.image,
-          shotUri: entry.capture.uri,
-          shotWidth: '0',
-          shotHeight: '0',
-          name: getPilgrimageSpotTitles(entry.spot).primary,
-          ep: String(entry.spot.ep),
-          animeId: String(entry.anime.id),
-          themeColor: theme.accent,
-          heading: entry.capture.heading != null ? String(entry.capture.heading) : '',
-        },
+        params,
       });
     },
     [router, theme.accent]
@@ -278,8 +280,17 @@ export default function PilgrimageAlbumScreen() {
 
   const handleAddNew = useCallback(() => {
     hapticsBridge.tap();
+    if (selectedAnimeId) {
+      router.push(
+        buildPilgrimageDetailRoute(selectedAnimeId, {
+          returnTo: 'album',
+          albumAnimeId: selectedAnimeId,
+        })
+      );
+      return;
+    }
     router.push('/pilgrimage');
-  }, [router]);
+  }, [router, selectedAnimeId]);
 
   const handleOpenFolder = useCallback((folder: FolderGroup) => {
     hapticsBridge.tap();
@@ -390,10 +401,10 @@ export default function PilgrimageAlbumScreen() {
               icon="checkmark-circle"
               iconColor={theme.status.success}
               label="Avg Match"
-              value={stats.avgMatch > 0 ? `${stats.avgMatch}` : '—'}
-              valueSuffix={stats.avgMatch > 0 ? '%' : undefined}
+              value={stats.avgMatch !== null ? `${stats.avgMatch}` : '—'}
+              valueSuffix={stats.avgMatch !== null ? '%' : undefined}
               subtitle="average"
-              valueColor={theme.status.success}
+              valueColor={stats.avgMatch !== null ? theme.status.success : theme.text.tertiary}
               theme={theme}
             />
           </View>
@@ -459,27 +470,29 @@ export default function PilgrimageAlbumScreen() {
                       {getPilgrimageAnimeTitles(selectedFolder.anime).primary}
                     </ThemedText>
                     {selectedFolder.region ? (
-                      <ThemedText
-                        variant="captionSmall"
-                        tone="secondary"
-                        style={{ marginTop: 2 }}>
+                      <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 2 }}>
                         {REGION_LABELS[selectedFolder.region]} · {selectedFolder.entries.length}{' '}
                         captures
                       </ThemedText>
                     ) : null}
                   </View>
-                  <View
-                    style={[
-                      styles.matchBadge,
-                      { backgroundColor: `${theme.status.success}1F`, borderColor: theme.status.success },
-                    ]}>
-                    <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
-                    <ThemedText
-                      weight="700"
-                      style={{ color: theme.status.success, fontSize: 12 }}>
-                      {selectedFolder.avgMatch}%
-                    </ThemedText>
-                  </View>
+                  {selectedFolder.avgMatch !== null ? (
+                    <View
+                      style={[
+                        styles.matchBadge,
+                        {
+                          backgroundColor: `${theme.status.success}1F`,
+                          borderColor: theme.status.success,
+                        },
+                      ]}>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
+                      <ThemedText
+                        weight="700"
+                        style={{ color: theme.status.success, fontSize: 12 }}>
+                        {selectedFolder.avgMatch}%
+                      </ThemedText>
+                    </View>
+                  ) : null}
                 </View>
                 <View style={styles.grid}>
                   <View style={styles.col}>
@@ -517,9 +530,7 @@ export default function PilgrimageAlbumScreen() {
             <EmptyState
               theme={theme}
               title={
-                folders.length === 0
-                  ? 'No pilgrimage folders yet'
-                  : `No folders in this region`
+                folders.length === 0 ? 'No pilgrimage folders yet' : `No folders in this region`
               }
               body={
                 folders.length === 0
@@ -677,9 +688,7 @@ function Chip({
           style={[
             styles.chipCount,
             {
-              backgroundColor: active
-                ? 'rgba(255,255,255,0.22)'
-                : theme.background.tertiary,
+              backgroundColor: active ? 'rgba(255,255,255,0.22)' : theme.background.tertiary,
             },
           ]}>
           <ThemedText
@@ -780,10 +789,7 @@ function FolderCard({
         {regionLabel ? (
           <View style={styles.regionPill}>
             <Ionicons name="location-outline" size={10} color="#FFFFFF" />
-            <ThemedText
-              weight="700"
-              style={{ color: '#FFFFFF', fontSize: 10 }}
-              numberOfLines={1}>
+            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }} numberOfLines={1}>
               {regionLabel}
             </ThemedText>
           </View>
@@ -794,12 +800,8 @@ function FolderCard({
             {folder.entries.length}
           </ThemedText>
         </View>
-        {folder.avgMatch > 0 ? (
-          <View
-            style={[
-              styles.matchOverlay,
-              { backgroundColor: `${theme.status.success}E6` },
-            ]}>
+        {folder.avgMatch !== null ? (
+          <View style={[styles.matchOverlay, { backgroundColor: `${theme.status.success}E6` }]}>
             <Ionicons name="checkmark-circle" size={11} color="#FFFFFF" />
             <ThemedText weight="800" style={{ color: '#FFFFFF', fontSize: 11 }}>
               {folder.avgMatch}%
@@ -821,10 +823,7 @@ function FolderCard({
           </ThemedText>
         </View>
         <View style={styles.folderFootRow}>
-          <ThemedText
-            variant="captionSmall"
-            tone="tertiary"
-            style={{ fontSize: 10 }}>
+          <ThemedText variant="captionSmall" tone="tertiary" style={{ fontSize: 10 }}>
             {formatRelative(folder.lastCapturedAt, now)}
           </ThemedText>
           <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
@@ -893,19 +892,17 @@ function CompareCard({
             </ThemedText>
           </View>
         </View>
-        <View style={styles.matchPill}>
-          <Ionicons name="checkmark-circle" size={10} color={theme.status.success} />
-          <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }}>
-            {entry.match}%
-          </ThemedText>
-        </View>
+        {entry.matchPercent !== null ? (
+          <View style={styles.matchPill}>
+            <Ionicons name="checkmark-circle" size={10} color={theme.status.success} />
+            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }}>
+              {entry.matchPercent}%
+            </ThemedText>
+          </View>
+        ) : null}
       </View>
       <View style={styles.compareFoot}>
-        <ThemedText
-          variant="captionSmall"
-          weight="700"
-          numberOfLines={1}
-          style={{ fontSize: 12 }}>
+        <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
           {spotTitles.primary}
         </ThemedText>
         <View style={styles.compareMetaRow}>
@@ -928,15 +925,7 @@ function CompareCard({
   );
 }
 
-function EmptyState({
-  theme,
-  title,
-  body,
-}: {
-  theme: ThemePalette;
-  title: string;
-  body: string;
-}) {
+function EmptyState({ theme, title, body }: { theme: ThemePalette; title: string; body: string }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.emptyState}>
