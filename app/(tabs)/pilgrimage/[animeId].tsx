@@ -43,7 +43,6 @@ import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { ON_DARK, Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
-import { anitabiService } from '../../../libs/services/pilgrimage/anitabi-service';
 import { listCaptures, type PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
 import {
@@ -104,11 +103,15 @@ import {
   type SpotIntentMap,
 } from '../../../libs/services/pilgrimage/spot-intents';
 import { sameLatLng } from '../../../libs/services/pilgrimage/pilgrimage-screen-state';
-import type {
-  AnitabiBangumi,
-  AnitabiPoint,
-  AnitabiSpot,
-} from '../../../libs/services/pilgrimage/types';
+import {
+  annotatePilgrimageSeriesPoints,
+  mergePilgrimageSeriesEntries,
+  resolvePilgrimageSeries,
+  type PilgrimageSeriesEntry,
+  type PilgrimageSeriesPoint,
+  type PilgrimageSeriesSelection,
+} from '../../../libs/services/pilgrimage/pilgrimage-series';
+import type { AnitabiPoint, AnitabiSpot } from '../../../libs/services/pilgrimage/types';
 
 type ViewMode = 'list' | 'map';
 type MapMarkerMode = 'photo' | 'dot';
@@ -150,9 +153,18 @@ function buildBrowseUrl(platform: PlatformType, bangumiId: number): string | nul
   return `${ANITABI_BASE_PAGE}${bangumiId}`;
 }
 
+function getPointSourceBangumiId(point: AnitabiPoint): number | null {
+  const source = (point as Partial<PilgrimageSeriesPoint>).sourceBangumiId;
+  return typeof source === 'number' && Number.isFinite(source) && source > 0 ? source : null;
+}
+
+function getPointSourceLabel(point: AnitabiPoint): string | null {
+  const label = (point as Partial<PilgrimageSeriesPoint>).sourceLabel;
+  return typeof label === 'string' && label.length > 0 ? label : null;
+}
+
 interface DetailLoadState {
-  anime: AnitabiBangumi | null;
-  points: readonly AnitabiPoint[];
+  seriesEntries: readonly PilgrimageSeriesEntry[];
   loading: boolean;
   error: string | null;
 }
@@ -161,8 +173,12 @@ type DetailLoadAction =
   | { type: 'loading' }
   | { type: 'invalid_id' }
   | { type: 'empty' }
-  | { type: 'lite_loaded'; anime: AnitabiBangumi; points: readonly AnitabiPoint[] }
-  | { type: 'detailed_points_loaded'; points: readonly AnitabiPoint[] }
+  | { type: 'series_loaded'; entries: readonly PilgrimageSeriesEntry[] }
+  | {
+      type: 'detailed_points_loaded';
+      subjectId: number;
+      points: readonly PilgrimageSeriesPoint[];
+    }
   | { type: 'error'; message: string };
 
 function detailLoadReducer(state: DetailLoadState, action: DetailLoadAction): DetailLoadState {
@@ -176,18 +192,22 @@ function detailLoadReducer(state: DetailLoadState, action: DetailLoadAction): De
         ? state
         : { ...state, loading: false, error: 'Invalid anime id' };
     case 'empty':
-      return !state.anime && state.points.length === 0 && !state.loading && state.error === null
+      return state.seriesEntries.length === 0 && !state.loading && state.error === null
         ? state
-        : { anime: null, points: [], loading: false, error: null };
-    case 'lite_loaded':
+        : { seriesEntries: [], loading: false, error: null };
+    case 'series_loaded':
       return {
-        anime: action.anime,
-        points: action.points,
+        seriesEntries: action.entries,
         loading: false,
         error: null,
       };
     case 'detailed_points_loaded':
-      return state.points === action.points ? state : { ...state, points: action.points };
+      return {
+        ...state,
+        seriesEntries: state.seriesEntries.map((entry) =>
+          entry.subject.id === action.subjectId ? { ...entry, points: action.points } : entry
+        ),
+      };
     case 'error':
       return state.error === action.message && !state.loading
         ? state
@@ -736,6 +756,10 @@ function SpotRow({
   const styles = useMemo(() => makeRowStyles(theme), [theme]);
   const hasGeo = hasValidGeo(spot.geo);
   const titles = getPilgrimageSpotTitles(spot);
+  const sourceLabel = getPointSourceLabel(spot);
+  const sceneMeta =
+    sceneCount > 1 ? `${sceneCount} scenes` : spot.ep > 0 ? `EP ${spot.ep}` : 'Scene';
+  const metaLabel = sourceLabel ? `${sourceLabel} · ${sceneMeta}` : sceneMeta;
   return (
     <Pressable
       onPress={() => onPress(spot)}
@@ -797,7 +821,7 @@ function SpotRow({
               color={theme.text.tertiary}
             />
             <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-              {sceneCount > 1 ? `${sceneCount} scenes` : spot.ep > 0 ? `EP ${spot.ep}` : 'Scene'}
+              {metaLabel}
               {titles.secondary ? ` · ${titles.secondary}` : ''}
             </ThemedText>
             {distanceKm != null ? (
@@ -902,10 +926,12 @@ function SceneTile({
 }: SceneTileProps) {
   const styles = useMemo(() => makeTileStyles(theme), [theme]);
   const titles = getPilgrimageSpotTitles(spot);
+  const sourceLabel = getPointSourceLabel(spot);
   const primaryMeta =
     sceneCount > 1 ? `${sceneCount} scenes` : spot.ep > 0 ? `EP ${spot.ep}` : 'Scene';
+  const labelledMeta = sourceLabel ? `${sourceLabel} · ${primaryMeta}` : primaryMeta;
   const metaLine =
-    distanceKm != null ? `${primaryMeta} · ${formatDistanceKm(distanceKm)}` : primaryMeta;
+    distanceKm != null ? `${labelledMeta} · ${formatDistanceKm(distanceKm)}` : labelledMeta;
   const [showCapture, setShowCapture] = useState(false);
   const flipped = showCapture && !!captureUri;
   const displayedUri = flipped ? captureUri! : spot.image;
@@ -1275,12 +1301,12 @@ export default function PilgrimageDetailScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const [{ anime, points, loading, error }, dispatchLoad] = useReducer(detailLoadReducer, {
-    anime: null,
-    points: [],
+  const [{ seriesEntries, loading, error }, dispatchLoad] = useReducer(detailLoadReducer, {
+    seriesEntries: [],
     loading: true,
     error: null,
   });
+  const [seriesSelection, setSeriesSelection] = useState<PilgrimageSeriesSelection>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [listLayout, setListLayout] = useState<'grid' | 'rows'>('grid');
   const [mapMarkerMode, setMapMarkerMode] = useState<MapMarkerMode>('photo');
@@ -1299,6 +1325,24 @@ export default function PilgrimageDetailScreen() {
   // first valid spot when the user first switches to map view so they always
   // land on a concrete pin instead of an unfocused overview.
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+
+  const availableSeriesEntries = useMemo(
+    () => seriesEntries.filter((entry) => entry.anime !== null),
+    [seriesEntries]
+  );
+  const effectiveSeriesSelection = useMemo<PilgrimageSeriesSelection>(() => {
+    if (seriesSelection === 'all') return 'all';
+    return availableSeriesEntries.some((entry) => entry.subject.id === seriesSelection)
+      ? seriesSelection
+      : 'all';
+  }, [availableSeriesEntries, seriesSelection]);
+  const mergedSeries = useMemo(
+    () => mergePilgrimageSeriesEntries(availableSeriesEntries, effectiveSeriesSelection),
+    [availableSeriesEntries, effectiveSeriesSelection]
+  );
+  const anime = mergedSeries.anime;
+  const points = mergedSeries.points;
+  const hasSeriesSwitcher = seriesEntries.length > 1;
 
   const themeColor = anime?.color || theme.accent;
   const themeColorFg = readableTextOn(themeColor);
@@ -1331,28 +1375,44 @@ export default function PilgrimageDetailScreen() {
     }
     const validBangumiId = bangumiId;
 
+    setSeriesSelection('all');
     dispatchLoad({ type: 'loading' });
 
-    pilgrimageRepository
-      .getSpotsByBangumiId(validBangumiId)
-      .then(async (lite) => {
+    resolvePilgrimageSeries(validBangumiId)
+      .then(async (series) => {
         if (cancelled) return;
-        if (!lite) {
+        if (series.availableEntries.length === 0) {
+          dispatchLoad({ type: 'series_loaded', entries: series.entries });
+          if (series.entries.length > 0) return;
           dispatchLoad({ type: 'empty' });
           return;
         }
-        // Lite payload is enough to render the screen — let the user interact
-        // immediately while the heavier full /points call runs in the
-        // background and upgrades the points when it lands.
-        dispatchLoad({ type: 'lite_loaded', anime: lite, points: lite.litePoints ?? [] });
-        try {
-          const detailed: AnitabiPoint[] = await anitabiService.getDetailedPoints(validBangumiId);
-          if (!cancelled && detailed.length > 0) {
-            dispatchLoad({ type: 'detailed_points_loaded', points: detailed });
-          }
-        } catch {
-          // Lite data is enough; ignore.
-        }
+        // Lite payloads render immediately. Full point lists are fetched per
+        // available related subject and replace that subject's points as they land.
+        dispatchLoad({ type: 'series_loaded', entries: series.entries });
+        await Promise.all(
+          series.availableEntries.map(async (entry) => {
+            if (!entry.anime) return;
+            try {
+              const detailed = await pilgrimageRepository.getDetailedPointsByBangumiId(
+                entry.subject.id
+              );
+              if (!cancelled && detailed.length > 0) {
+                dispatchLoad({
+                  type: 'detailed_points_loaded',
+                  subjectId: entry.subject.id,
+                  points: annotatePilgrimageSeriesPoints(
+                    detailed,
+                    entry.anime,
+                    entry.subject.label
+                  ),
+                });
+              }
+            } catch {
+              // Lite data is enough; ignore.
+            }
+          })
+        );
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -1420,11 +1480,12 @@ export default function PilgrimageDetailScreen() {
   // 404s — so we previously rendered a black hero. Bangumi's /image redirect
   // returns the full-quality cover for any subject id we know.
   const posterUri = useMemo(() => {
-    if (typeof bangumiId === 'number' && bangumiId > 0) {
-      return `https://api.bgm.tv/v0/subjects/${bangumiId}/image?type=large`;
+    const posterSubjectId = anime?.id ?? bangumiId;
+    if (typeof posterSubjectId === 'number' && posterSubjectId > 0) {
+      return `https://api.bgm.tv/v0/subjects/${posterSubjectId}/image?type=large`;
     }
     return anime?.cover ?? '';
-  }, [bangumiId, anime?.cover]);
+  }, [bangumiId, anime?.id, anime?.cover]);
 
   const stats = useMemo(() => {
     const spotCount = anime?.pointsLength ?? points.length;
@@ -1766,6 +1827,7 @@ export default function PilgrimageDetailScreen() {
       const lng = hasValidGeo(spot.geo) ? String(spot.geo[1]) : undefined;
       const animeTitle = animeTitles?.primary ?? '';
       const spotTitles = getPilgrimageSpotTitles(spot);
+      const sourceBangumiId = getPointSourceBangumiId(spot) ?? bangumiId;
       router.push({
         pathname: '/pilgrimage/compare/tips',
         params: {
@@ -1773,7 +1835,7 @@ export default function PilgrimageDetailScreen() {
           imageUrl: spot.image,
           name: spotTitles.primary,
           ep: String(spot.ep),
-          animeId: bangumiId !== null ? String(bangumiId) : '',
+          animeId: sourceBangumiId !== null ? String(sourceBangumiId) : '',
           animeTitle,
           themeColor,
           ...(lat ? { spotLat: lat } : {}),
@@ -1978,6 +2040,21 @@ export default function PilgrimageDetailScreen() {
             {!isEmpty && anime ? (
               <>
                 <View style={styles.controlsPanel}>
+                  {hasSeriesSwitcher ? (
+                    <SeriesSwitchRow
+                      entries={seriesEntries}
+                      availableCount={availableSeriesEntries.length}
+                      selection={effectiveSeriesSelection}
+                      themeColor={themeColor}
+                      themeColorFg={themeColorFg}
+                      theme={theme}
+                      onSelect={(next) => {
+                        Haptics.selectionAsync().catch(() => undefined);
+                        setSeriesSelection(next);
+                      }}
+                    />
+                  ) : null}
+
                   <View style={styles.searchBox}>
                     <Ionicons name="search" size={16} color={theme.text.tertiary} />
                     <TextInput
@@ -2397,6 +2474,130 @@ interface FilterPillProps {
   onPress: () => void;
 }
 
+interface SeriesSwitchRowProps {
+  entries: readonly PilgrimageSeriesEntry[];
+  availableCount: number;
+  selection: PilgrimageSeriesSelection;
+  themeColor: string;
+  themeColorFg: string;
+  theme: ThemePalette;
+  onSelect: (selection: PilgrimageSeriesSelection) => void;
+}
+
+function SeriesSwitchRow({
+  entries,
+  availableCount,
+  selection,
+  themeColor,
+  themeColorFg,
+  theme,
+  onSelect,
+}: SeriesSwitchRowProps) {
+  const styles = useMemo(() => makeSeriesSwitchStyles(theme), [theme]);
+  const canSelectAll = availableCount > 1;
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.row}>
+      {canSelectAll ? (
+        <SeriesSwitchChip
+          label="All"
+          sublabel={`${availableCount} titles`}
+          active={selection === 'all'}
+          disabled={false}
+          themeColor={themeColor}
+          themeColorFg={themeColorFg}
+          theme={theme}
+          onPress={() => onSelect('all')}
+        />
+      ) : null}
+      {entries.map((entry) => {
+        const enabled = entry.anime !== null;
+        const title = entry.subject.titleCn || entry.subject.title;
+        const active =
+          selection === entry.subject.id || (!canSelectAll && selection === 'all' && enabled);
+        return (
+          <SeriesSwitchChip
+            key={entry.subject.id}
+            label={entry.subject.label}
+            sublabel={title}
+            active={active}
+            disabled={!enabled}
+            badge={entry.anime?.pointsLength ?? 0}
+            themeColor={themeColor}
+            themeColorFg={themeColorFg}
+            theme={theme}
+            onPress={() => onSelect(entry.subject.id)}
+          />
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+interface SeriesSwitchChipProps {
+  label: string;
+  sublabel: string;
+  active: boolean;
+  disabled: boolean;
+  badge?: number;
+  themeColor: string;
+  themeColorFg: string;
+  theme: ThemePalette;
+  onPress: () => void;
+}
+
+function SeriesSwitchChip({
+  label,
+  sublabel,
+  active,
+  disabled,
+  badge,
+  themeColor,
+  themeColorFg,
+  theme,
+  onPress,
+}: SeriesSwitchChipProps) {
+  const styles = useMemo(() => makeSeriesSwitchStyles(theme), [theme]);
+  const fg = active ? themeColorFg : theme.text.primary;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, disabled }}
+      style={({ pressed }) => [
+        styles.chip,
+        active
+          ? { backgroundColor: themeColor, borderColor: themeColor }
+          : { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+        disabled && { opacity: 0.45 },
+        pressed && !disabled && { opacity: 0.86 },
+      ]}>
+      <View style={styles.chipTop}>
+        <ThemedText variant="bodySmall" weight="800" numberOfLines={1} style={{ color: fg }}>
+          {label}
+        </ThemedText>
+        {badge !== undefined ? (
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={{ color: active ? themeColorFg : theme.text.tertiary }}>
+            {badge}
+          </ThemedText>
+        ) : null}
+      </View>
+      <ThemedText
+        variant="captionSmall"
+        numberOfLines={1}
+        style={{ color: active ? themeColorFg : theme.text.tertiary }}>
+        {disabled ? 'No spots yet' : sublabel}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
 function FilterPill({
   label,
   active,
@@ -2469,6 +2670,8 @@ function SpotChip({
 }: SpotChipProps) {
   const styles = useMemo(() => makeSpotChipStyles(theme), [theme]);
   const label = getPilgrimageSpotTitles(spot).primary;
+  const sourceLabel = getPointSourceLabel(spot);
+  const epLabel = `${sourceLabel ? `${sourceLabel} ` : ''}EP ${spot.ep}`;
   return (
     <Pressable
       onPress={() => onPress(spot)}
@@ -2491,7 +2694,7 @@ function SpotChip({
           variant="captionSmall"
           weight="800"
           style={{ color: active ? themeColorFg : theme.text.secondary }}>
-          EP {spot.ep}
+          {epLabel}
         </ThemedText>
       </View>
       <ThemedText
@@ -2577,6 +2780,7 @@ function SpotClusterPicker({
                 const isVisited = visited[spot.id] === true;
                 const km = distanceFor(spot);
                 const titles = getPilgrimageSpotTitles(spot);
+                const sourceLabel = getPointSourceLabel(spot);
                 return (
                   <Pressable
                     onPress={() => onPick(spot)}
@@ -2600,7 +2804,7 @@ function SpotClusterPicker({
                             variant="captionSmall"
                             weight="800"
                             style={{ color: themeColorFg }}>
-                            EP {spot.ep}
+                            {sourceLabel ? `${sourceLabel} · ` : ''}EP {spot.ep}
                           </ThemedText>
                         </View>
                       ) : null}
@@ -3038,6 +3242,31 @@ function makePillStyles(theme: ThemePalette) {
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+  });
+}
+
+function makeSeriesSwitchStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    row: {
+      gap: 8,
+      paddingRight: 2,
+    },
+    chip: {
+      width: 132,
+      minHeight: 52,
+      justifyContent: 'center',
+      gap: 3,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+    },
+    chipTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 6,
     },
   });
 }
