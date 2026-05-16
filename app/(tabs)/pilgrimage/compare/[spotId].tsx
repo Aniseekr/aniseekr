@@ -90,7 +90,11 @@ import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
 import { usePseudoHDR } from '../../../../hooks/usePseudoHDR';
 import { useAutoCapture } from '../../../../hooks/useAutoCapture';
-import { useCaptureHistory } from '../../../../hooks/useCaptureHistory';
+import { useCaptureSession } from '../../../../hooks/useCaptureSession';
+import {
+  getShots as getCaptureSessionShots,
+  type CaptureSessionShot,
+} from '../../../../libs/services/pilgrimage/capture-session';
 import AutoCaptureStatusBadge from '../../../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../../../components/pilgrimage/camera/CaptureHistoryStrip';
 import SceneSwitcherSheet from '../../../../components/pilgrimage/camera/SceneSwitcherSheet';
@@ -100,6 +104,9 @@ import CaptureModeToast, {
 import OverlayOpacityToast, {
   type OverlayOpacityToastValue,
 } from '../../../../components/pilgrimage/camera/OverlayOpacityToast';
+import AutoCaptureToast, {
+  type AutoCaptureToastValue,
+} from '../../../../components/pilgrimage/camera/AutoCaptureToast';
 
 type CameraRouteParams = {
   spotId: string;
@@ -170,6 +177,8 @@ export default function CompareCaptureScreen() {
   // `null` until the first opacity cycle — a fresh value re-fires the toast.
   const [overlayOpacityToast, setOverlayOpacityToast] =
     useState<OverlayOpacityToastValue | null>(null);
+  // `null` until the first auto-capture — a fresh value re-fires the toast.
+  const [autoCaptureToast, setAutoCaptureToast] = useState<AutoCaptureToastValue | null>(null);
   const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
   const [availablePictureSizes, setAvailablePictureSizes] = useState<string[]>([]);
   const [sceneSwitcherOpen, setSceneSwitcherOpen] = useState(false);
@@ -247,10 +256,21 @@ export default function CompareCaptureScreen() {
     skipProcessing: settings.skipProcessing,
   });
   const countdown = useCaptureCountdown();
-  // Session-only history of capture URIs (newest first, max 6). Each
-  // run{Single|Burst|Hdr} pushes the visible/best frame so the strip near the
-  // shutter reflects what the user just shot.
-  const captureHistory = useCaptureHistory();
+  // Capture session — accumulates every shot the user takes this visit
+  // (newest first). It survives the camera → preview navigation (the preview
+  // is pushed, not replaced) so the multi-shot album can read all shots from
+  // one store. Each run{Single|Burst|Hdr} adds the visible/best frame here.
+  const captureSession = useCaptureSession();
+
+  // Start a fresh session each time the camera mounts for a spot, so a new
+  // pilgrimage visit doesn't surface stale shots. Returning from the preview
+  // via router.back() does NOT remount this screen, so the "再拍" round-trip
+  // keeps the session intact.
+  useEffect(() => {
+    captureSession.clearSession();
+    // Run once on mount — clearSession is a stable store binding.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // CameraView fires onCameraReady once the native surface is up. We compose
   // three concerns there: (1) flip `isReady` so the warmup spinner clears,
@@ -495,6 +515,10 @@ export default function CompareCaptureScreen() {
   // thumbnail strip later. All burst frames are saved (`burst.run` already
   // wrote them to cache); we serialise the URI list so the preview can
   // surface them without a separate fetch.
+  //
+  // Uses router.push (not replace) so this camera screen stays mounted under
+  // the preview — that's what lets the user return ("再拍") via router.back()
+  // with the capture session still intact.
   const navigateToPreview = useCallback(
     (shot: {
       uri: string;
@@ -505,7 +529,7 @@ export default function CompareCaptureScreen() {
       burstUris?: string[];
       burstBestIndex?: number;
     }) => {
-      router.replace({
+      router.push({
         pathname: '/pilgrimage/compare/preview',
         params: {
           spotId,
@@ -551,9 +575,53 @@ export default function CompareCaptureScreen() {
     ]
   );
 
-  const runSingle = useCallback(async () => {
-    if (!cameraRef.current) return;
-    setCapturing(true);
+  // Add a freshly captured shot to the capture session, snapshotting the
+  // sensor readings AT CAPTURE TIME. Rule 8: every sensor field is the real
+  // live value or `null` — nothing is invented. Returns the stored record.
+  const recordShot = useCallback(
+    (shot: {
+      uri: string;
+      width: number;
+      height: number;
+      captureMode: 'single' | 'burst' | 'hdr';
+      source: 'manual' | 'auto';
+      burstTotal?: number;
+      burstUris?: string[];
+      burstBestIndex?: number;
+    }): CaptureSessionShot => {
+      const createdAt = Date.now();
+      const record: CaptureSessionShot = {
+        id: `${createdAt}-${Math.random()}`,
+        uri: shot.uri,
+        width: shot.width,
+        height: shot.height,
+        captureMode: shot.captureMode,
+        source: shot.source,
+        createdAt,
+        heading: sensors.heading,
+        distanceMeters: sensors.score.distanceMeters,
+        headingDeltaDeg: sensors.score.headingDeltaDeg,
+        tilt: sensors.tilt,
+        burstTotal: shot.burstTotal,
+        burstUris: shot.burstUris,
+        burstBestIndex: shot.burstBestIndex,
+      };
+      captureSession.addShot(record);
+      return record;
+    },
+    [
+      captureSession,
+      sensors.heading,
+      sensors.score.distanceMeters,
+      sensors.score.headingDeltaDeg,
+      sensors.tilt,
+    ]
+  );
+
+  const runSingle = useCallback(
+    async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
+      if (!cameraRef.current) return null;
+      setCapturing(true);
     try {
       // EXIF metadata embedded into the captured file via expo-camera's native
       // writer. Rule 8: every field is sourced from real sensor data — missing
@@ -629,7 +697,7 @@ export default function CompareCaptureScreen() {
       }
 
       captured = captured ?? (await captureClassic());
-      if (!captured) return;
+      if (!captured) return null;
 
       const baked = await applyBrightnessToImage({
         inputUri: captured.uri,
@@ -637,16 +705,20 @@ export default function CompareCaptureScreen() {
         colorMatrix: brightness.colorMatrix,
         quality: qualityNum,
       });
-      captureHistory.push(baked.uri);
       tapFocus.releaseLock();
-      navigateToPreview({
+      // Capture is decoupled from navigation: record the shot into the
+      // session here; the caller (manual shutter vs auto-capture) decides
+      // whether to navigate to the preview or stay on the camera.
+      return recordShot({
         uri: baked.uri,
         width: baked.width || captured.width,
         height: baked.height || captured.height,
         captureMode: 'single',
+        source,
       });
     } catch (e) {
       console.warn('[camera] single capture failed', e);
+      return null;
     } finally {
       setCapturing(false);
     }
@@ -656,8 +728,7 @@ export default function CompareCaptureScreen() {
     settings.mute,
     brightness.colorMatrix,
     tapFocus,
-    captureHistory,
-    navigateToPreview,
+    recordShot,
     spotId,
     name,
     ep,
@@ -668,56 +739,76 @@ export default function CompareCaptureScreen() {
     sensors.tilt,
   ]);
 
-  const runBurst = useCallback(async () => {
-    const result = await burst.run();
-    if (!result) return;
-    tapFocus.releaseLock();
-    const idx = result.bestIndex;
-    captureHistory.push(result.uris[idx]);
-    navigateToPreview({
-      uri: result.uris[idx],
-      width: result.widths[idx],
-      height: result.heights[idx],
-      captureMode: 'burst',
-      burstTotal: result.total,
-      burstUris: result.uris,
-      burstBestIndex: idx,
-    });
-  }, [burst, tapFocus, captureHistory, navigateToPreview]);
+  const runBurst = useCallback(
+    async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
+      const result = await burst.run();
+      if (!result) return null;
+      tapFocus.releaseLock();
+      const idx = result.bestIndex;
+      return recordShot({
+        uri: result.uris[idx],
+        width: result.widths[idx],
+        height: result.heights[idx],
+        captureMode: 'burst',
+        source,
+        burstTotal: result.total,
+        burstUris: result.uris,
+        burstBestIndex: idx,
+      });
+    },
+    [burst, tapFocus, recordShot]
+  );
 
-  const runHdr = useCallback(async () => {
-    const result = await hdr.run();
-    if (!result) return;
-    tapFocus.releaseLock();
-    captureHistory.push(result.uri);
-    navigateToPreview({
-      uri: result.uri,
-      width: result.width,
-      height: result.height,
-      // Rule 8: when compositing fell back to the mid frame we mark it as
-      // single, not HDR — telling the preview screen the truth.
-      captureMode: result.wasHdr ? 'hdr' : 'single',
-    });
-  }, [hdr, tapFocus, captureHistory, navigateToPreview]);
+  const runHdr = useCallback(
+    async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
+      const result = await hdr.run();
+      if (!result) return null;
+      tapFocus.releaseLock();
+      return recordShot({
+        uri: result.uri,
+        width: result.width,
+        height: result.height,
+        // Rule 8: when compositing fell back to the mid frame we mark it as
+        // single, not HDR — telling the preview screen the truth.
+        captureMode: result.wasHdr ? 'hdr' : 'single',
+        source,
+      });
+    },
+    [hdr, tapFocus, recordShot]
+  );
 
   const anyCapturing = capturing || burst.capturing || hdr.capturing;
 
-  // useAutoCapture watches sensors.score.total and fires onShutter when the
-  // user holds the perfect alignment long enough. `enabled` is the user
-  // setting; `captureBusy` pauses watching while any capture is in-flight
-  // OR a countdown is running (so we don't double-fire).
+  // Run the capture path for the current mode and return the recorded shot.
+  // Pure capture-and-record — navigation is the caller's decision.
+  const captureForMode = useCallback(
+    (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
+      if (settings.captureMode === 'burst') return runBurst(source);
+      if (settings.captureMode === 'hdr') return runHdr(source);
+      return runSingle(source);
+    },
+    [settings.captureMode, runBurst, runHdr, runSingle]
+  );
+
+  // useAutoCapture watches sensors.score.total + autofocus lock and fires when
+  // the user holds the perfect alignment (with AF locked) long enough.
+  // `enabled` is the user setting; `captureBusy` pauses watching while any
+  // capture is in-flight OR a countdown is running (so we don't double-fire).
   const AUTO_SUSTAIN_MS = 1500;
-  const onShutterRef = useRef<() => void>(() => undefined);
+  const onAutoFireRef = useRef<() => void>(() => undefined);
   const autoCapture = useAutoCapture({
     scoreTotal: sensors.score.total,
+    afLocked: tapFocus.afLocked,
     enabled: settings.autoCapture,
     captureBusy: anyCapturing || countdown.isRunning,
     sustainMs: AUTO_SUSTAIN_MS,
     onFire: () => {
-      onShutterRef.current();
+      onAutoFireRef.current();
     },
   });
 
+  // Manual shutter press: capture for the current mode, then navigate to the
+  // preview. The camera screen stays mounted underneath (router.push).
   const onShutter = useCallback(async () => {
     // Cancel any pending auto-fire FIRST so a manual press doesn't double-fire
     // when the user reflexively taps while auto is arming.
@@ -729,41 +820,60 @@ export default function CompareCaptureScreen() {
       const completed = await countdown.start(settings.countdownSeconds);
       if (!completed) return;
     }
-    if (settings.captureMode === 'burst') {
-      await runBurst();
-      return;
-    }
-    if (settings.captureMode === 'hdr') {
-      await runHdr();
-      return;
-    }
-    await runSingle();
+    const shot = await captureForMode('manual');
+    if (!shot) return;
+    navigateToPreview(shot);
   }, [
     autoCapture,
     anyCapturing,
     cameraIsReady,
     settings.countdownSeconds,
-    settings.captureMode,
     countdown,
-    runBurst,
-    runHdr,
-    runSingle,
+    captureForMode,
+    navigateToPreview,
   ]);
 
-  // Keep the ref up to date so useAutoCapture's onFire calls the latest closure.
+  // Auto-capture fire path: capture for the current mode and STAY on the
+  // camera so the user can keep pre-shooting. A brief toast confirms the shot
+  // with the real running session count.
+  const onAutoCapture = useCallback(async () => {
+    if (anyCapturing || !cameraRef.current || !cameraIsReady) return;
+    if (settings.countdownSeconds > 0) {
+      const completed = await countdown.start(settings.countdownSeconds);
+      if (!completed) return;
+    }
+    const shot = await captureForMode('auto');
+    if (!shot) return;
+    hapticsBridge.success();
+    // The session length AFTER this shot landed — read the live store
+    // directly (the hook's `shots` in this closure is the stale render-time
+    // snapshot). Rule 8: a real count, never a guess.
+    setAutoCaptureToast({ sessionCount: getCaptureSessionShots().length });
+  }, [
+    anyCapturing,
+    cameraIsReady,
+    settings.countdownSeconds,
+    countdown,
+    captureForMode,
+  ]);
+
+  // Keep the ref current so useAutoCapture's onFire calls the latest closure.
   useEffect(() => {
-    onShutterRef.current = () => {
-      void onShutter();
+    onAutoFireRef.current = () => {
+      void onAutoCapture();
     };
-  }, [onShutter]);
+  }, [onAutoCapture]);
 
   // Long-press the shutter to fire a burst regardless of the current mode —
   // power-user shortcut so the user doesn't have to switch modes mid-shot.
-  const onShutterLongPress = useCallback(() => {
+  // This is a manual gesture, so it navigates to the preview like onShutter.
+  const onShutterLongPress = useCallback(async () => {
     autoCapture.cancel();
     if (anyCapturing || !cameraRef.current || !cameraIsReady) return;
-    void runBurst();
-  }, [autoCapture, anyCapturing, cameraIsReady, runBurst]);
+    const shot = await runBurst('manual');
+    if (!shot) return;
+    navigateToPreview(shot);
+  }, [autoCapture, anyCapturing, cameraIsReady, runBurst, navigateToPreview]);
 
   const onPickFocalStop = useCallback(
     (stop: FocalStop) => {
@@ -1099,15 +1209,13 @@ export default function CompareCaptureScreen() {
             !cameraHudVisibility.showCaptureHistory && styles.hidden,
           ]}>
           <CaptureHistoryStrip
-            uris={captureHistory.history}
-            onSelect={(uri) =>
-              navigateToPreview({
-                uri,
-                width: 0,
-                height: 0,
-                captureMode: 'single',
-              })
-            }
+            uris={captureSession.shots.map((s) => s.uri)}
+            onSelect={(uri) => {
+              // Resolve the matching session shot so the preview gets the real
+              // dimensions + burst metadata, not a synthetic zero-sized shot.
+              const shot = captureSession.shots.find((s) => s.uri === uri);
+              if (shot) navigateToPreview(shot);
+            }}
             themeColor={themeColor}
             isLandscape={isLandscape}
           />
@@ -1156,6 +1264,7 @@ export default function CompareCaptureScreen() {
           ]}>
           <CaptureModeToast toast={captureModeToast} themeColor={themeColor} />
           <OverlayOpacityToast toast={overlayOpacityToast} themeColor={themeColor} />
+          <AutoCaptureToast toast={autoCaptureToast} themeColor={themeColor} />
         </View>
 
         {/* Secondary-tool popover. Each top-bar tool icon opens this panel with
