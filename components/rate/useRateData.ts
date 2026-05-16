@@ -9,6 +9,7 @@ export function useRateData() {
   const [viewMode, setViewMode] = useState<ViewMode>('discovery');
   const [discoveryMode, setDiscoveryMode] = useState<DiscoveryMode>('genres');
   const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
+  const [genresLoading, setGenresLoading] = useState(true);
   const [trendAnime, setTrendAnime] = useState<Anime[]>([]);
   const [weeklyTrendAnime, setWeeklyTrendAnime] = useState<Anime[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -29,11 +30,14 @@ export function useRateData() {
   const [nextAvailableAt, setNextAvailableAt] = useState<Date | null>(null);
 
   const loadGenres = useCallback(async () => {
+    setGenresLoading(true);
     try {
       const genres = await AnimeRepository.getGenres();
       setAvailableGenres(genres);
     } catch (error) {
       console.error('Failed to load genres:', error);
+    } finally {
+      setGenresLoading(false);
     }
   }, []);
 
@@ -147,6 +151,7 @@ export function useRateData() {
       viewMode,
       discoveryMode,
       availableGenres,
+      genresLoading,
       trendAnime,
       weeklyTrendAnime,
       recommendations,
@@ -158,6 +163,7 @@ export function useRateData() {
     [
       personalizedPick,
       availableGenres,
+      genresLoading,
       discoveryMode,
       nextAvailableAt,
       queueSize,

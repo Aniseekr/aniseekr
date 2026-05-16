@@ -19,7 +19,7 @@ import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Skeleton, readableTextOn } from '../../../components/themed';
-import { GenreCarousel } from '../../../components/rate/GenreCarousel';
+import { GenreCarousel, GenreCarouselSkeleton } from '../../../components/rate/GenreCarousel';
 import { SeasonalView } from '../../../components/rate/seasonal/SeasonalView';
 import { PersonalizedPickSheet } from '../../../components/rate/PersonalizedPickSheet';
 import { ModeSelector } from '../../../components/rate/ModeSelector';
@@ -302,7 +302,11 @@ export default function HomeRateScreen() {
 
             {state.viewMode === 'discovery' ? (
               <View style={styles.discoveryWrap}>
-                <GenreCarousel data={state.availableGenres} onSelect={handleGenreSelect} />
+                {state.genresLoading && state.availableGenres.length === 0 ? (
+                  <GenreCarouselSkeleton />
+                ) : (
+                  <GenreCarousel data={state.availableGenres} onSelect={handleGenreSelect} />
+                )}
               </View>
             ) : null}
 
