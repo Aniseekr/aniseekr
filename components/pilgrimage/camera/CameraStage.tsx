@@ -12,8 +12,9 @@
 // The optional `showWarmup` overlay renders a translucent theme-aware veil
 // with a spinner + label, used by the parent while waiting for the first
 // `onCameraReady` after a (re-)mount.
-import type { RefObject } from 'react';
+import type { ComponentProps, RefObject } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedProps, type SharedValue } from 'react-native-reanimated';
 import {
   CameraView,
   type AvailableLenses,
@@ -34,11 +35,26 @@ import type { AndroidCameraExtensionMode } from '../../../libs/services/pilgrima
 import { ThemedText } from '../../themed';
 import BrightnessPreview from './BrightnessPreview';
 
+const AnimatedCameraView = Animated.createAnimatedComponent(CameraView);
+type AnimatedCameraViewProps = ComponentProps<typeof AnimatedCameraView>;
+
+interface AndroidZoomRange {
+  minZoomRatio: number;
+  maxZoomRatio: number;
+}
+
+interface CameraAnimatedProps {
+  zoom: number;
+  zoomRatio?: number;
+}
+
 interface CameraStageProps {
   cameraRef: RefObject<CameraView | null>;
   facing: CameraType;
   zoom: number;
+  zoomShared: SharedValue<number>;
   androidZoomRatio?: number;
+  androidZoomRange?: AndroidZoomRange | null;
   androidCameraExtensionMode?: AndroidCameraExtensionMode;
   autofocus: FocusMode;
   flashMode: FlashMode;
@@ -78,7 +94,9 @@ export default function CameraStage({
   cameraRef,
   facing,
   zoom,
+  zoomShared,
   androidZoomRatio,
+  androidZoomRange,
   androidCameraExtensionMode,
   autofocus,
   flashMode,
@@ -100,6 +118,33 @@ export default function CameraStage({
   showWarmup,
 }: CameraStageProps) {
   const { theme } = useTheme();
+  const useAndroidNativeZoom =
+    Platform.OS === 'android' &&
+    androidZoomRange !== null &&
+    androidZoomRange !== undefined &&
+    androidZoomRange.maxZoomRatio > androidZoomRange.minZoomRatio;
+  const minZoomRatio = androidZoomRange?.minZoomRatio ?? 1;
+  const maxZoomRatio = androidZoomRange?.maxZoomRatio ?? 1;
+  const animatedCameraProps = useAnimatedProps<CameraAnimatedProps>(() => {
+    const rawZoom = zoomShared.value;
+    const normalizedZoom =
+      rawZoom === rawZoom && rawZoom !== Infinity && rawZoom !== -Infinity
+        ? Math.min(1, Math.max(0, rawZoom))
+        : 0;
+
+    if (!useAndroidNativeZoom) {
+      return { zoom: normalizedZoom };
+    }
+
+    const ratio = Math.exp(
+      Math.log(minZoomRatio) + normalizedZoom * (Math.log(maxZoomRatio) - Math.log(minZoomRatio))
+    );
+
+    return {
+      zoom: normalizedZoom,
+      zoomRatio: Math.min(maxZoomRatio, Math.max(minZoomRatio, ratio)),
+    };
+  }, [maxZoomRatio, minZoomRatio, useAndroidNativeZoom]);
   const androidNativeProps =
     Platform.OS === 'android'
       ? ({
@@ -112,10 +157,11 @@ export default function CameraStage({
     <View style={styles.root}>
       <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, tapGesture)}>
         <View style={StyleSheet.absoluteFill}>
-          <CameraView
+          <AnimatedCameraView
             {...androidNativeProps}
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
+            animatedProps={animatedCameraProps as AnimatedCameraViewProps['animatedProps']}
             facing={facing}
             zoom={zoom}
             autofocus={autofocus}
