@@ -32,3 +32,34 @@ export function buildCaptureSessionShotFromRoute(params: RouterParams): CaptureS
     tilt: getFiniteNumber(params, 'tilt'),
   };
 }
+
+export function resolveCapturePreviewFocus(
+  previousFocusedId: string | null,
+  shots: readonly CaptureSessionShot[]
+): string | null {
+  if (previousFocusedId && shots.some((shot) => shot.id === previousFocusedId)) {
+    return previousFocusedId;
+  }
+  return shots[0]?.id ?? null;
+}
+
+export function reconcileCapturePreviewSelection(
+  previousSelectedIds: Set<string>,
+  shots: readonly CaptureSessionShot[]
+): Set<string> {
+  const valid = new Set<string>();
+  for (const shot of shots) {
+    if (previousSelectedIds.has(shot.id)) valid.add(shot.id);
+  }
+  if (valid.size === 0 && shots[0]) valid.add(shots[0].id);
+  if (setsEqual(previousSelectedIds, valid)) return previousSelectedIds;
+  return valid;
+}
+
+function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const value of a) {
+    if (!b.has(value)) return false;
+  }
+  return true;
+}

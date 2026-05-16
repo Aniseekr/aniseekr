@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 
-import { buildCaptureSessionShotFromRoute } from '../../../libs/services/pilgrimage/capture-preview-route';
+import {
+  buildCaptureSessionShotFromRoute,
+  reconcileCapturePreviewSelection,
+  resolveCapturePreviewFocus,
+} from '../../../libs/services/pilgrimage/capture-preview-route';
+import type { CaptureSessionShot } from '../../../libs/services/pilgrimage/capture-session';
 import type { RouterParams } from '../../../libs/utils/route-params';
 
 describe('capture preview route shot hydration', () => {
@@ -34,5 +39,37 @@ describe('capture preview route shot hydration', () => {
 
   it('returns null when the route does not carry a shot uri', () => {
     expect(buildCaptureSessionShotFromRoute({ spotId: 'spot-7' })).toBeNull();
+  });
+});
+
+function shot(id: string): CaptureSessionShot {
+  return {
+    id,
+    uri: `file:///${id}.jpg`,
+    width: 100,
+    height: 100,
+    captureMode: 'single',
+    source: 'manual',
+    createdAt: 1,
+    heading: null,
+    distanceMeters: null,
+    headingDeltaDeg: null,
+    tilt: null,
+  };
+}
+
+describe('capture preview state reconciliation', () => {
+  it('keeps the same selected-id Set when the effective selection did not change', () => {
+    const selected = new Set(['a']);
+
+    expect(reconcileCapturePreviewSelection(selected, [shot('a')])).toBe(selected);
+  });
+
+  it('selects the newest shot when the previous selection is empty', () => {
+    expect([...reconcileCapturePreviewSelection(new Set(), [shot('new')])]).toEqual(['new']);
+  });
+
+  it('keeps the focused shot stable when it is still present', () => {
+    expect(resolveCapturePreviewFocus('a', [shot('a')])).toBe('a');
   });
 });
