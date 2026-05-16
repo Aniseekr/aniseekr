@@ -323,6 +323,29 @@ export const MAP_BASE_CSS = `
     100% { box-shadow: 0 0 0 0 rgba(66,133,244,0),     0 1px 4px rgba(0,0,0,0.4); }
   }
 
+  /* Heading beam — a translucent Google-Maps-style cone fanning out from the
+     user dot in the direction the device faces. Sits behind the dot, hidden
+     until a real compass reading arrives (.active); rotated by __updateHeading. */
+  .user-loc { position: relative; width: 16px; height: 16px; }
+  .user-loc .user-pulse { position: absolute; left: 0; top: 0; }
+  .user-heading {
+    position: absolute; left: 50%; top: 50%;
+    width: 80px; height: 80px;
+    margin: -40px 0 0 -40px;
+    pointer-events: none;
+    background: conic-gradient(from -32deg at 50% 50%,
+      rgba(66,133,244,0) 0deg,
+      rgba(66,133,244,0.5) 32deg,
+      rgba(66,133,244,0) 64deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 12%, rgba(0,0,0,0) 64%);
+    mask-image: radial-gradient(circle at 50% 50%, #000 12%, rgba(0,0,0,0) 64%);
+    transform: rotate(0deg);
+    transform-origin: 50% 50%;
+    transition: transform 0.18s ease-out;
+    opacity: 0;
+  }
+  .user-heading.active { opacity: 1; }
+
   /* Branded cluster bubble — flat Material disc, no inset shadows or text
      reflections (those were skeuomorphic and clashed with Material 3). */
   .marker-cluster {
