@@ -55,6 +55,19 @@ export interface PilgrimageCapture {
   heading?: number;
   /** new: alignment sensor snapshot taken at shutter time */
   sensorSnapshot?: SensorSnapshot;
+  /** Bangumi subject id for album hydration when the anime is not preloaded. */
+  animeId?: number;
+  animeTitle?: string;
+  animeTitleCn?: string;
+  animeCover?: string;
+  animeColor?: string;
+  animeCity?: string;
+  spotName?: string;
+  spotNameCn?: string;
+  spotImage?: string;
+  spotEp?: number;
+  spotSecond?: number;
+  spotGeo?: [number, number];
 }
 
 interface Index {
