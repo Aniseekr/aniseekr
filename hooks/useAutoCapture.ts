@@ -4,6 +4,11 @@
 // (`armThreshold` to enter, `releaseThreshold` to exit). Orthogonal to the
 // existing capture mode (single/burst/hdr) and stacks with the countdown.
 //
+// The fire gate is two-part: `scoreTotal >= armThreshold` AND `afLocked` must
+// BOTH be held continuously for `sustainMs`. If autofocus unlocks mid-arming,
+// that's treated like a score release — the arming timer is cancelled and the
+// per-cycle fire latch is reset, so both signals must be re-acquired together.
+//
 // Rule 8: only real signal arms a fire. A `null` score (sensors warming up)
 // never starts the timer, and we never invent "plausible" remaining-ms when
 // we don't have data.
@@ -16,8 +21,10 @@ export interface UseAutoCaptureInput {
   armThreshold?: number;
   /** Score below this releases the lock and resets the arming. Default 0.9. */
   releaseThreshold?: number;
-  /** How long the score must stay above armThreshold to fire. Default 1500ms. */
+  /** How long the score + afLocked must stay held to fire. Default 1500ms. */
   sustainMs?: number;
+  /** True iff autofocus is currently locked. Required for arming AND firing. */
+  afLocked: boolean;
   /** Globally enables/disables the hook (e.g. settings.autoCapture). */
   enabled: boolean;
   /** True iff a capture is currently in-flight — pause the watcher. */
@@ -47,6 +54,7 @@ export function useAutoCapture(input: UseAutoCaptureInput): UseAutoCaptureOutput
     armThreshold = DEFAULT_ARM_THRESHOLD,
     releaseThreshold = DEFAULT_RELEASE_THRESHOLD,
     sustainMs = DEFAULT_SUSTAIN_MS,
+    afLocked,
     enabled,
     captureBusy,
     onFire,
@@ -102,6 +110,16 @@ export function useAutoCapture(input: UseAutoCaptureInput): UseAutoCaptureOutput
       return;
     }
 
+    // Autofocus is part of the fire gate: arming AND firing both require a
+    // locked AF. Losing the lock mid-arming is a hard release — reset the
+    // per-cycle latch so a re-lock has to hold both signals from scratch.
+    if (!afLocked) {
+      if (armedAtRef.current !== null || firedThisCycleRef.current) {
+        cancel();
+      }
+      return;
+    }
+
     // Score released — reset the per-cycle fire latch so the NEXT re-lock can
     // fire again. Releasing also tears down any in-flight timer.
     if (scoreTotal < releaseThreshold) {
@@ -117,9 +135,9 @@ export function useAutoCapture(input: UseAutoCaptureInput): UseAutoCaptureOutput
       return;
     }
 
-    // Score >= armThreshold from here. Start arming only when we aren't
-    // already arming and haven't already fired during this continuous
-    // above-release session.
+    // Score >= armThreshold AND afLocked from here. Start arming only when we
+    // aren't already arming and haven't already fired during this continuous
+    // above-release + AF-locked session.
     if (armedAtRef.current !== null || firedThisCycleRef.current) {
       return;
     }
@@ -149,6 +167,7 @@ export function useAutoCapture(input: UseAutoCaptureInput): UseAutoCaptureOutput
     armThreshold,
     releaseThreshold,
     sustainMs,
+    afLocked,
     enabled,
     captureBusy,
     cancel,
