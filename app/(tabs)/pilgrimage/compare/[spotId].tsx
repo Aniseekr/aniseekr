@@ -39,6 +39,7 @@ import {
   resolveCameraToolMenuAnchor,
   resolveCameraActive,
   resolveTransientCameraHudVisibility,
+  shouldRemountCameraForOrientationSettle,
   type CameraOrientationMode,
 } from '../../../../libs/services/pilgrimage/camera-ui';
 import {
@@ -490,6 +491,7 @@ export default function CompareCaptureScreen() {
   const [cameraEpoch, setCameraEpoch] = useState(0);
   const orientationResyncPending = useRef(false);
   const orientationInitDone = useRef(false);
+  const previousIsLandscape = useRef<boolean | null>(null);
 
   useEffect(() => {
     const lockIntent = cameraOrientationLockIntent(orientationMode);
@@ -514,12 +516,19 @@ export default function CompareCaptureScreen() {
     return () => clearTimeout(disarm);
   }, [orientationMode]);
 
-  // Once a toggle-driven rotation settles (window dimensions swap), remount
-  // CameraView so a fresh capture session adopts the new interface
-  // orientation. Physical rotations in `auto` mode never arm the flag — those
-  // are handled natively by expo-camera — so they don't trigger a remount.
+  // Once a rotation settles (window dimensions swap), remount CameraView so a
+  // fresh native capture session adopts the new surface dimensions. This is
+  // needed both for the LAND chip and for physical rotations in auto mode:
+  // CameraX/AVCapture can leave the old preview surface black after the React
+  // layout flips under an already-running session.
   useEffect(() => {
-    if (!orientationResyncPending.current) return;
+    const shouldRemount = shouldRemountCameraForOrientationSettle({
+      previousIsLandscape: previousIsLandscape.current,
+      isLandscape,
+      resyncPending: orientationResyncPending.current,
+    });
+    previousIsLandscape.current = isLandscape;
+    if (!shouldRemount) return;
     orientationResyncPending.current = false;
     resetCameraLifecycle();
     setCameraEpoch((epoch) => epoch + 1);

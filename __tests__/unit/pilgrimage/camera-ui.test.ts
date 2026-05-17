@@ -16,6 +16,7 @@ import {
   resolveCameraActive,
   resolveTransientCameraHudVisibility,
   roundExposureValue,
+  shouldRemountCameraForOrientationSettle,
 } from '../../../libs/services/pilgrimage/camera-ui';
 
 describe('camera UI helpers', () => {
@@ -47,6 +48,16 @@ describe('camera UI helpers', () => {
   it('requests flexible landscape instead of pinning the camera to the right side', () => {
     expect(cameraOrientationLockIntent('auto')).toBe('unlock');
     expect(cameraOrientationLockIntent('landscape')).toBe('landscape');
+  });
+
+  it('resyncs the camera when the physical layout rotates in auto mode', () => {
+    expect(
+      shouldRemountCameraForOrientationSettle({
+        previousIsLandscape: false,
+        isLandscape: true,
+        resyncPending: false,
+      })
+    ).toBe(true);
   });
 
   it('rounds AF exposure bar values to clamped one-decimal EV values', () => {
