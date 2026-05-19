@@ -4,9 +4,12 @@
 //
 // Spec: spec/pilgrimage_spec.md §7 (PilgrimageSpotList) and §8 (Routes).
 
+import { useMemo } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { readableTextOn } from '../themed';
 import type { AnitabiPoint } from '../../libs/services/pilgrimage/types';
 
 export interface PilgrimageSpotListProps {
@@ -34,6 +37,11 @@ export function buildMapsURL(lat: number, lng: number): string {
 
 export function PilgrimageSpotList({ points, openURL }: PilgrimageSpotListProps) {
   const opener = openURL ?? Linking.openURL.bind(Linking);
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  // The "Open in Maps" button is filled with the accent — its label must use
+  // the contrast-safe foreground so it stays readable on light accents.
+  const mapsFg = readableTextOn(theme.accent);
 
   if (points.length === 0) {
     return (
@@ -77,8 +85,8 @@ export function PilgrimageSpotList({ points, openURL }: PilgrimageSpotListProps)
                 disabled={!valid}
                 accessibilityRole="button"
                 accessibilityLabel={`Open ${point.name} in maps`}>
-                <Ionicons name="map" size={14} color={valid ? '#FFFFFF' : '#666666'} />
-                <Text style={[styles.mapsText, !valid && styles.mapsTextDisabled]}>
+                <Ionicons name="map" size={14} color={valid ? mapsFg : theme.text.tertiary} />
+                <Text style={[styles.mapsText, { color: valid ? mapsFg : theme.text.tertiary }]}>
                   {valid ? 'Open in Maps' : 'No coordinates'}
                 </Text>
               </Pressable>
@@ -90,83 +98,81 @@ export function PilgrimageSpotList({ points, openURL }: PilgrimageSpotListProps)
   );
 }
 
-const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  card: {
-    flexBasis: '48%',
-    flexGrow: 1,
-    backgroundColor: '#252528',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  image: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#1B1B1D',
-  },
-  episodeBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(27,27,29,0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  episodeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  body: {
-    padding: 10,
-  },
-  name: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  nameCN: {
-    color: '#A3A3A3',
-    fontSize: 11,
-    marginBottom: 8,
-  },
-  mapsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    paddingVertical: 6,
-  },
-  mapsBtnDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  mapsText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  mapsTextDisabled: {
-    color: '#666666',
-  },
-  emptyState: {
-    paddingHorizontal: 16,
-    paddingVertical: 32,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 14,
-  },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingBottom: 24,
+    },
+    card: {
+      flexBasis: '48%',
+      flexGrow: 1,
+      backgroundColor: theme.background.secondary,
+      borderRadius: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    image: {
+      width: '100%',
+      height: 120,
+      backgroundColor: theme.background.tertiary,
+    },
+    episodeBadge: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+      backgroundColor: theme.background.primary,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    episodeText: {
+      color: theme.text.primary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    body: {
+      padding: 10,
+    },
+    name: {
+      color: theme.text.primary,
+      fontSize: 13,
+      fontWeight: '600',
+      marginBottom: 2,
+    },
+    nameCN: {
+      color: theme.text.secondary,
+      fontSize: 11,
+      marginBottom: 8,
+    },
+    mapsBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      backgroundColor: theme.accent,
+      borderRadius: 8,
+      paddingVertical: 6,
+    },
+    mapsBtnDisabled: {
+      backgroundColor: theme.background.tertiary,
+    },
+    mapsText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    emptyState: {
+      paddingHorizontal: 16,
+      paddingVertical: 32,
+      alignItems: 'center',
+    },
+    emptyText: {
+      color: theme.text.tertiary,
+      fontSize: 14,
+    },
+  });
+}

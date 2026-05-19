@@ -16,15 +16,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Spacing, Radius, Shadow, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
-import { ThemedText } from '../themed';
+import { ThemedText, readableTextOn } from '../themed';
 import type {
   AnimeTourism88Region,
   UniqueAnime88Entry,
 } from '../../libs/services/pilgrimage/anime88-repository';
-
-// Eighty-eight selection mark colour — picked for "official certification"
-// connotation (vs. theme.accent which can drift between user themes).
-export const OFFICIAL_88_GOLD = '#D4AF37';
 
 const REGION_LABELS: Record<AnimeTourism88Region, string> = {
   hokkaido_tohoku: 'Hokkaido / Tohoku',
@@ -148,7 +144,7 @@ function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Touri
         </View>
         {inCollection ? (
           <View style={styles.collectedBadge}>
-            <Ionicons name="checkmark" size={11} color="#1c1c1e" />
+            <Ionicons name="checkmark" size={11} color={readableTextOn(theme.status.success)} />
           </View>
         ) : null}
         {cityCount > 1 ? (
@@ -176,6 +172,9 @@ function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Touri
 }
 
 function makeStyles(theme: ThemePalette) {
+  const officialAccent = theme.status.warning;
+  const officialAccentFg = readableTextOn(officialAccent);
+
   return StyleSheet.create({
     section: {
       marginTop: Spacing.lg,
@@ -196,11 +195,11 @@ function makeStyles(theme: ThemePalette) {
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 8,
-      backgroundColor: OFFICIAL_88_GOLD,
+      backgroundColor: officialAccent,
     },
     officialBadgeLabel: {
       ...Typography.captionSmall,
-      color: '#1c1c1e',
+      color: officialAccentFg,
       fontSize: 10,
       letterSpacing: 0.3,
     },
@@ -222,7 +221,7 @@ function makeStyles(theme: ThemePalette) {
       borderRadius: Radius.md,
       overflow: 'hidden',
       borderWidth: 2,
-      borderColor: OFFICIAL_88_GOLD,
+      borderColor: officialAccent,
       backgroundColor: theme.background.secondary,
       ...Shadow.subtle,
     },
@@ -241,11 +240,11 @@ function makeStyles(theme: ThemePalette) {
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
-      backgroundColor: OFFICIAL_88_GOLD,
+      backgroundColor: officialAccent,
     },
     idChipLabel: {
       ...Typography.captionSmall,
-      color: '#1c1c1e',
+      color: officialAccentFg,
       fontSize: 10,
       letterSpacing: 0.2,
     },
@@ -256,11 +255,11 @@ function makeStyles(theme: ThemePalette) {
       width: 22,
       height: 22,
       borderRadius: 11,
-      backgroundColor: '#30D158',
+      backgroundColor: theme.status.success,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
-      borderColor: '#1c1c1e',
+      borderColor: theme.background.primary,
     },
     cityCount: {
       position: 'absolute',
@@ -269,11 +268,11 @@ function makeStyles(theme: ThemePalette) {
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
-      backgroundColor: 'rgba(28,28,30,0.85)',
+      backgroundColor: theme.background.secondary,
     },
     cityCountLabel: {
       ...Typography.captionSmall,
-      color: '#fff',
+      color: theme.text.primary,
       fontSize: 9,
     },
     meta: {

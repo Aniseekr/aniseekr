@@ -4,10 +4,12 @@
 //
 // Spec: spec/pilgrimage_spec.md §7 (NearbyPilgrimageBadge).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { readableTextOn } from '../themed';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 
@@ -39,6 +41,11 @@ export function NearbyPilgrimageBadge(props: NearbyPilgrimageBadgeProps) {
   const sourcePlatform = 'sourcePlatform' in props ? props.sourcePlatform : undefined;
   const sourceId = 'id' in props ? props.id : undefined;
   const [data, setData] = useState<AnitabiBangumi | null>(null);
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  // The badge is filled with the accent — its label/icons must use the
+  // contrast-safe foreground so they stay readable on light accents.
+  const fg = readableTextOn(theme.accent);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +86,7 @@ export function NearbyPilgrimageBadge(props: NearbyPilgrimageBadgeProps) {
         onPress={onPress ? handlePress : undefined}
         style={styles.iconBadge}
         testID="pilgrimage-badge-icon">
-        <Ionicons name="location" size={12} color="#FFFFFF" />
+        <Ionicons name="location" size={12} color={fg} />
       </Wrapper>
     );
   }
@@ -93,42 +100,41 @@ export function NearbyPilgrimageBadge(props: NearbyPilgrimageBadgeProps) {
         onPress && pressed ? styles.pillPressed : null,
       ]}
       testID="pilgrimage-badge-pill">
-      <Ionicons name="location" size={12} color="#FFFFFF" />
-      <Text style={styles.pillText} numberOfLines={1}>
+      <Ionicons name="location" size={12} color={fg} />
+      <Text style={[styles.pillText, { color: fg }]} numberOfLines={1}>
         {data.city || `${data.pointsLength} spots`}
       </Text>
-      {onPress ? (
-        <Ionicons name="chevron-forward" size={11} color="rgba(255,255,255,0.85)" />
-      ) : null}
+      {onPress ? <Ionicons name="chevron-forward" size={11} color={fg} /> : null}
     </Wrapper>
   );
 }
 
-const styles = StyleSheet.create({
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(141, 197, 216, 0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    alignSelf: 'flex-start',
-  },
-  pillPressed: {
-    opacity: 0.75,
-  },
-  pillText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  iconBadge: {
-    backgroundColor: 'rgba(141, 197, 216, 0.85)',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: theme.accent,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      alignSelf: 'flex-start',
+    },
+    pillPressed: {
+      opacity: 0.75,
+    },
+    pillText: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    iconBadge: {
+      backgroundColor: theme.accent,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}
