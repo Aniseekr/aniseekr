@@ -19,6 +19,7 @@ const TEST_IDS: Partial<Record<AdSlot, string>> = {
 
 export function getAdUnitId(slot: AdSlot): string | null {
   if (process.env.EXPO_PUBLIC_ADS_DISABLED === '1') return null;
+  if (Platform.OS === 'web') return null;
   if (__DEV__) return TEST_IDS[slot] ?? null;
   return resolveProdId(slot);
 }
