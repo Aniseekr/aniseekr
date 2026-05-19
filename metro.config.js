@@ -5,6 +5,10 @@ const { withNativewind } = require('nativewind/metro');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
+if (!config.resolver.assetExts.includes('wasm')) {
+  config.resolver.assetExts.push('wasm');
+}
+
 // Keep test scaffolding and CLI scripts out of the production bundle —
 // they import from `bun:test` and use `import.meta.dir` which Hermes can't compile.
 const blocked = [
