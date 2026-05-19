@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -22,13 +22,10 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
 import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
-import type { EdgeIntensity } from '../../../../libs/services/pilgrimage/edge-overlay';
-import type { SubjectFocus } from '../../../../libs/services/pilgrimage/subject-overlay';
 import { compositeSubjectIntoPhoto } from '../../../../libs/services/pilgrimage/subject-composite';
 import { shouldCompositeSubjectOverlay } from '../../../../libs/services/pilgrimage/subject-composite-plan';
 import { applyBrightnessToImage } from '../../../../libs/services/pilgrimage/apply-brightness';
 import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-exif-metadata';
-import { pilgrimageRepository } from '../../../../libs/services/pilgrimage/pilgrimage-repository';
 import { getPilgrimageSpotTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
 import {
@@ -38,7 +35,6 @@ import {
   resolveCameraActive,
   resolveCameraTopChromeHeight,
   resolveTransientCameraHudVisibility,
-  type CameraOrientationMode,
 } from '../../../../libs/services/pilgrimage/camera-ui';
 import {
   mergeCaptureExif,
@@ -82,7 +78,6 @@ import CamSwitchToast, {
   type CamSwitchToastValue,
 } from '../../../../components/pilgrimage/camera/CamSwitchToast';
 import type {
-  AspectRatio,
   FlashMode,
   FocalStop,
   OverlayMode,
@@ -100,6 +95,8 @@ import {
   resolvePictureSize,
   type CaptureMode,
 } from '../../../../hooks/useCameraSettings';
+import { useCameraHud } from '../../../../hooks/useCameraHud';
+import { useSceneSwitcherSpots } from '../../../../hooks/useSceneSwitcherSpots';
 import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
 import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
@@ -116,13 +113,9 @@ import { locationService } from '../../../../libs/services/pilgrimage/location-s
 import AutoCaptureStatusBadge from '../../../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../../../components/pilgrimage/camera/CaptureHistoryStrip';
 import SceneSwitcherSheet from '../../../../components/pilgrimage/camera/SceneSwitcherSheet';
-import CaptureModeToast, {
-  type CaptureModeToastValue,
-} from '../../../../components/pilgrimage/camera/CaptureModeToast';
+import CaptureModeToast from '../../../../components/pilgrimage/camera/CaptureModeToast';
 
-import AutoCaptureToast, {
-  type AutoCaptureToastValue,
-} from '../../../../components/pilgrimage/camera/AutoCaptureToast';
+import AutoCaptureToast from '../../../../components/pilgrimage/camera/AutoCaptureToast';
 
 type CameraRouteParams = {
   spotId: string;
@@ -208,35 +201,41 @@ export default function CompareCaptureScreen() {
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [flashMode, setFlashMode] = useState<FlashMode>('off');
-  const [aspect, setAspect] = useState<AspectRatio>('16:9');
-  const [overlayMode, setOverlayMode] = useState<OverlayMode>('anime');
-  const [edgeIntensity, setEdgeIntensity] = useState<EdgeIntensity>('low');
-  const [subjectFocus, setSubjectFocus] = useState<SubjectFocus>('normal');
-  const [subjectCombine, setSubjectCombine] = useState(false);
-  const [overlayOpacity, setOverlayOpacity] = useState(0.35);
-  const [editMode, setEditMode] = useState(false);
-  const [evValue, setEvValue] = useState(0);
-  const [orientationMode, setOrientationMode] = useState<CameraOrientationMode>('auto');
+  // CLAUDE.md Rule 9: the camera HUD's discrete interaction state (facing,
+  // flash, aspect, overlay config, panels, toasts) lives in one reducer hook,
+  // not ~19 loose top-level useStates. Destructured so existing reads stay as
+  // bare identifiers; writes go through `setHud(patch)`.
+  const { hud, setHud } = useCameraHud();
+  const {
+    facing,
+    flashMode,
+    aspect,
+    overlayMode,
+    edgeIntensity,
+    subjectFocus,
+    subjectCombine,
+    overlayOpacity,
+    editMode,
+    evValue,
+    orientationMode,
+    settingsOpen,
+    quickControlsOpen,
+    overlayDockOpen,
+    overlayVisible,
+    captureModeToast,
+    autoCaptureToast,
+    switchToast,
+    sceneSwitcherOpen,
+  } = hud;
+  // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [quickControlsOpen, setQuickControlsOpen] = useState(true);
-  const [overlayDockOpen, setOverlayDockOpen] = useState(true);
-  // Overlay visibility toggle (Off segment in OverlayControlsBar). Starts on.
-  const [overlayVisible, setOverlayVisible] = useState(true);
-  // `null` until the first capture-mode change — a fresh value re-fires the toast.
-  const [captureModeToast, setCaptureModeToast] = useState<CaptureModeToastValue | null>(null);
-  // `null` until the first auto-capture — a fresh value re-fires the toast.
-  const [autoCaptureToast, setAutoCaptureToast] = useState<AutoCaptureToastValue | null>(null);
-  // Generic switch toast for overlay mode changes.
-  const [switchToast, setSwitchToast] = useState<CamSwitchToastValue | null>(null);
   const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
   const [availablePictureSizes, setAvailablePictureSizes] = useState<string[]>([]);
-  const [sceneSwitcherOpen, setSceneSwitcherOpen] = useState(false);
-  // null = not yet fetched. Empty array = fetch ran but returned nothing.
-  const [availableSpots, setAvailableSpots] = useState<readonly AnitabiPoint[] | null>(null);
-  const [spotsLoading, setSpotsLoading] = useState(false);
+  // Scene-switcher spot list — lazily fetched the first time the sheet opens.
+  const { spots: availableSpots, loading: spotsLoading } = useSceneSwitcherSpots(
+    animeId,
+    sceneSwitcherOpen
+  );
 
   const { settings, setSettings } = useCameraSettings();
   const lifecycle = useCameraLifecycle(true);
@@ -425,17 +424,17 @@ export default function CompareCaptureScreen() {
 
   const toggleFacing = useCallback(() => {
     hapticsBridge.selection();
-    setFacing((f) => (f === 'back' ? 'front' : 'back'));
-  }, []);
+    setHud((h) => ({ facing: h.facing === 'back' ? 'front' : 'back' }));
+  }, [setHud]);
 
   const cycleFlash = useCallback(() => {
     hapticsBridge.selection();
-    setFlashMode((cur) => {
-      const cycle = facing === 'front' ? FLASH_FRONT_CYCLE : FLASH_REAR_CYCLE;
-      const idx = cycle.indexOf(cur);
-      return cycle[(idx === -1 ? 0 : idx + 1) % cycle.length];
+    setHud((h) => {
+      const cycle = h.facing === 'front' ? FLASH_FRONT_CYCLE : FLASH_REAR_CYCLE;
+      const idx = cycle.indexOf(h.flashMode);
+      return { flashMode: cycle[(idx === -1 ? 0 : idx + 1) % cycle.length] };
     });
-  }, [facing]);
+  }, [setHud]);
 
   // Capture mode lives in the top bar — tapping cycles single → burst → hdr
   // and surfaces a short toast describing what the next shutter press will do.
@@ -444,13 +443,13 @@ export default function CompareCaptureScreen() {
     const next = CAPTURE_MODE_CYCLE[(idx === -1 ? 0 : idx + 1) % CAPTURE_MODE_CYCLE.length];
     hapticsBridge.selection();
     setSettings({ captureMode: next });
-    setCaptureModeToast({ mode: next });
-  }, [settings.captureMode, setSettings]);
+    setHud({ captureModeToast: { mode: next } });
+  }, [settings.captureMode, setSettings, setHud]);
 
   const handleToggleEdit = useCallback(() => {
     hapticsBridge.selection();
-    setEditMode((v) => !v);
-  }, []);
+    setHud((h) => ({ editMode: !h.editMode }));
+  }, [setHud]);
 
   useEffect(() => {
     return () => {
@@ -523,59 +522,12 @@ export default function CompareCaptureScreen() {
     setCameraEpoch((epoch) => epoch + 1);
   }, [isLandscape, resetCameraLifecycle]);
 
-  // Reset cached spot list whenever the anime context changes, so opening the
-  // switcher refetches against the new animeId instead of showing stale spots.
-  useEffect(() => {
-    setAvailableSpots(null);
-  }, [animeId]);
-
-  // Lazily fetch the full points list the first time the user opens the
-  // switcher. The repository has in-memory + SQLite caches, so this is
-  // near-instant when the user came from the anime detail page (which has
-  // already fetched the same payload). Rule 8: on failure / unknown animeId
-  // we render an explicit "Unavailable" state — no fake placeholders.
-  //
-  // NOTE: `spotsLoading` is deliberately NOT in the deps. Including it would
-  // cause the effect to re-run when we flip it to `true`, the cleanup would
-  // cancel the in-flight fetch, and the data would never land.
-  useEffect(() => {
-    if (!sceneSwitcherOpen) return;
-    if (availableSpots != null) return;
-    const bangumiId = Number(animeId);
-    if (!Number.isFinite(bangumiId) || bangumiId <= 0) {
-      setAvailableSpots([]);
-      return;
-    }
-    let cancelled = false;
-    setSpotsLoading(true);
-    (async () => {
-      try {
-        const detailed = await pilgrimageRepository.getDetailedPointsByBangumiId(bangumiId);
-        if (cancelled) return;
-        if (detailed && detailed.length > 0) {
-          setAvailableSpots(detailed);
-          return;
-        }
-        // Detailed returned nothing — fall back to the lite payload so the
-        // user at least sees the headline scenes.
-        const lite = await pilgrimageRepository.getSpotsByBangumiId(bangumiId);
-        if (cancelled) return;
-        setAvailableSpots(lite?.litePoints ?? []);
-      } catch {
-        if (cancelled) return;
-        setAvailableSpots([]);
-      } finally {
-        if (!cancelled) setSpotsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [sceneSwitcherOpen, availableSpots, animeId]);
+  // Scene-switcher spot loading lives in `useSceneSwitcherSpots` — see the
+  // `availableSpots` / `spotsLoading` binding near the top of the component.
 
   const handlePickSpot = useCallback(
     (spot: AnitabiPoint) => {
-      setSceneSwitcherOpen(false);
+      setHud({ sceneSwitcherOpen: false });
       if (spot.id === spotId) return;
       const titles = getPilgrimageSpotTitles(spot);
       const hasGeo =
@@ -597,7 +549,7 @@ export default function CompareCaptureScreen() {
         },
       });
     },
-    [router, spotId, animeId, animeTitle, themeColor]
+    [router, spotId, animeId, animeTitle, themeColor, setHud]
   );
 
   // Centralised navigation: every capture mode lands on the same preview
@@ -1016,8 +968,8 @@ export default function CompareCaptureScreen() {
     // The session length AFTER this shot landed — read the live store
     // directly (the hook's `shots` in this closure is the stale render-time
     // snapshot). Rule 8: a real count, never a guess.
-    setAutoCaptureToast({ sessionCount: getCaptureSessionShots().length });
-  }, [anyCapturing, cameraIsReady, settings.countdownSeconds, countdown, captureForMode]);
+    setHud({ autoCaptureToast: { sessionCount: getCaptureSessionShots().length } });
+  }, [anyCapturing, cameraIsReady, settings.countdownSeconds, countdown, captureForMode, setHud]);
 
   // Keep the ref current so useAutoCapture's onFire calls the latest closure.
   useEffect(() => {
@@ -1225,18 +1177,19 @@ export default function CompareCaptureScreen() {
       editMode={editMode}
       themeColor={themeColor}
       onSelectOff={() => {
-        setOverlayVisible(false);
-        setSwitchToast({ ...OVERLAY_MODE_TOAST.off });
+        setHud({ overlayVisible: false, switchToast: { ...OVERLAY_MODE_TOAST.off } });
       }}
       onSelectMode={(m) => {
-        setOverlayMode(m);
-        setOverlayVisible(true);
-        setSwitchToast({ ...OVERLAY_MODE_TOAST[m] });
+        setHud({
+          overlayMode: m,
+          overlayVisible: true,
+          switchToast: { ...OVERLAY_MODE_TOAST[m] },
+        });
       }}
-      onSelectEdgeIntensity={setEdgeIntensity}
-      onSelectSubjectFocus={setSubjectFocus}
-      onToggleSubjectCombine={() => setSubjectCombine((v) => !v)}
-      onChangeOpacity={setOverlayOpacity}
+      onSelectEdgeIntensity={(i) => setHud({ edgeIntensity: i })}
+      onSelectSubjectFocus={(f) => setHud({ subjectFocus: f })}
+      onToggleSubjectCombine={() => setHud((h) => ({ subjectCombine: !h.subjectCombine }))}
+      onChangeOpacity={(o) => setHud({ overlayOpacity: o })}
       onToggleFlip={overlayTransform.toggleFlip}
       onToggleEdit={handleToggleEdit}
     />
@@ -1340,21 +1293,24 @@ export default function CompareCaptureScreen() {
                 active={settingsOpen}
                 onPress={() => {
                   hapticsBridge.tap();
-                  setSettingsOpen(true);
+                  setHud({ settingsOpen: true });
                 }}
               />
             </>
           }
           quickControlsExpanded={quickControlsOpen}
-          onToggleQuickControls={() => setQuickControlsOpen((v) => !v)}
+          onToggleQuickControls={() => setHud((h) => ({ quickControlsOpen: !h.quickControlsOpen }))}
           quickControls={
             <>
               <CountdownChip
                 seconds={settings.countdownSeconds}
                 onChange={(s) => setSettings({ countdownSeconds: s })}
               />
-              <AspectChip aspect={aspect} onChange={setAspect} />
-              <OrientationChip mode={orientationMode} onChange={setOrientationMode} />
+              <AspectChip aspect={aspect} onChange={(a) => setHud({ aspect: a })} />
+              <OrientationChip
+                mode={orientationMode}
+                onChange={(m) => setHud({ orientationMode: m })}
+              />
               <CameraChip
                 icon="information-circle-outline"
                 label="Guide"
@@ -1376,7 +1332,7 @@ export default function CompareCaptureScreen() {
             imageUrl={imageUrl}
             themeColor={themeColor}
             isLandscape={isLandscape}
-            onPress={() => setSceneSwitcherOpen(true)}
+            onPress={() => setHud({ sceneSwitcherOpen: true })}
           />
         </View>
 
@@ -1413,7 +1369,7 @@ export default function CompareCaptureScreen() {
             themeColor={themeColor}
             bottomOffset={focusEvBarBottom}
             isLandscape={isLandscape}
-            onChange={setEvValue}
+            onChange={(v) => setHud({ evValue: v })}
           />
         ) : null}
 
@@ -1499,7 +1455,7 @@ export default function CompareCaptureScreen() {
 
         <OverlayDock
           open={overlayDockOpen}
-          onToggle={() => setOverlayDockOpen((v) => !v)}
+          onToggle={() => setHud((h) => ({ overlayDockOpen: !h.overlayDockOpen }))}
           themeColor={themeColor}
           isLandscape={isLandscape}
           bottomBarHeight={bottomBarHeight}
@@ -1565,18 +1521,18 @@ export default function CompareCaptureScreen() {
 
         <CameraSettingsSheet
           visible={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => setHud({ settingsOpen: false })}
           settings={settings}
           onSettingsChange={setSettings}
           aspect={aspect}
-          onAspectChange={setAspect}
+          onAspectChange={(a) => setHud({ aspect: a })}
           captureMode={settings.captureMode}
           onCaptureModeChange={(m) => setSettings({ captureMode: m })}
         />
 
         <SceneSwitcherSheet
           visible={sceneSwitcherOpen}
-          onClose={() => setSceneSwitcherOpen(false)}
+          onClose={() => setHud({ sceneSwitcherOpen: false })}
           spots={availableSpots}
           currentSpotId={spotId}
           themeColor={themeColor}
