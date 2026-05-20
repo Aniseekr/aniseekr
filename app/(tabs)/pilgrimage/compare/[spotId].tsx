@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useSharedValue } from 'react-native-reanimated';
+import { useCameraPermission } from 'react-native-vision-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -24,7 +25,6 @@ import { ThemedText, readableTextOn } from '../../../../components/themed';
 import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { compositeSubjectIntoPhoto } from '../../../../libs/services/pilgrimage/subject-composite';
 import { shouldCompositeSubjectOverlay } from '../../../../libs/services/pilgrimage/subject-composite-plan';
-import { applyBrightnessToImage } from '../../../../libs/services/pilgrimage/apply-brightness';
 import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-exif-metadata';
 import { getPilgrimageSpotTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
@@ -36,23 +36,14 @@ import {
   resolveCameraTopChromeHeight,
   resolveTransientCameraHudVisibility,
 } from '../../../../libs/services/pilgrimage/camera-ui';
-import {
-  mergeCaptureExif,
-  resolveCapturedUri,
-} from '../../../../libs/services/pilgrimage/camera-capture';
-import {
-  pickAutoVirtualLens,
-  stopForLens,
-} from '../../../../libs/services/pilgrimage/lens-switching';
-import {
-  androidCameraExtensionModeForCapture,
-  androidNativeStopsForCapabilities,
-  androidStopZoomMap,
-  shouldUseAndroidNativeHdr,
-  zoomRatioForZoomValue,
-} from '../../../../libs/services/pilgrimage/native-camera';
+import { embedCaptureMetadata } from '../../../../libs/services/pilgrimage/embed-capture-metadata';
+import { availableStopsFromDeviceInfo } from '../../../../libs/services/pilgrimage/lens-switching';
+import type {
+  CameraDeviceInfo,
+  CameraEngineHandle,
+} from '../../../../components/pilgrimage/camera/camera-engine';
 import CameraErrorBoundary from '../../../../components/pilgrimage/camera/CameraErrorBoundary';
-import CameraStage from '../../../../components/pilgrimage/camera/CameraStage';
+import { CameraStage } from '../../../../components/pilgrimage/camera/CameraStage';
 import OverlayLayer from '../../../../components/pilgrimage/camera/OverlayLayer';
 import { FocusReticle } from '../../../../components/pilgrimage/camera/FocusReticle';
 import { LevelHorizon } from '../../../../components/pilgrimage/camera/LevelHorizon';
@@ -84,15 +75,13 @@ import type {
 } from '../../../../components/pilgrimage/camera/types';
 import { useCameraZoom, STOP_TO_ZOOM } from '../../../../hooks/useCameraZoom';
 import { useTapToFocus } from '../../../../hooks/useTapToFocus';
-import { useLensSwitcher } from '../../../../hooks/useLensSwitcher';
-import { useBrightnessPreview } from '../../../../hooks/useBrightnessPreview';
 import { useOverlayTransform } from '../../../../hooks/useOverlayTransform';
 import { useAlignmentSensors } from '../../../../hooks/useAlignmentSensors';
 import { useEdgeOrSketch } from '../../../../hooks/useEdgeOrSketch';
 import {
   useCameraSettings,
   qualityToNumber,
-  resolvePictureSize,
+  qualityToPrioritization,
   type CaptureMode,
 } from '../../../../hooks/useCameraSettings';
 import { useCameraHud } from '../../../../hooks/useCameraHud';
@@ -103,7 +92,6 @@ import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
 import { usePseudoHDR } from '../../../../hooks/usePseudoHDR';
 import { useAutoCapture } from '../../../../hooks/useAutoCapture';
 import { useCaptureSession } from '../../../../hooks/useCaptureSession';
-import { useAndroidCameraNativeCapabilities } from '../../../../hooks/useAndroidCameraNativeCapabilities';
 import {
   buildLibraryCaptureSessionShot,
   getShots as getCaptureSessionShots,
@@ -198,8 +186,9 @@ export default function CompareCaptureScreen() {
 
   const { width: winW, height: winH } = useWindowDimensions();
   const isLandscape = winW > winH;
-  const cameraRef = useRef<CameraView | null>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  // The engine handle is owned by CameraStage and exposed via the ref.
+  const cameraRef = useRef<CameraEngineHandle | null>(null);
+  const { hasPermission, requestPermission, canRequestPermission, status } = useCameraPermission();
 
   // CLAUDE.md Rule 9: the camera HUD's discrete interaction state (facing,
   // flash, aspect, overlay config, panels, toasts) lives in one reducer hook,
@@ -230,7 +219,10 @@ export default function CompareCaptureScreen() {
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
   const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
-  const [availablePictureSizes, setAvailablePictureSizes] = useState<string[]>([]);
+  // Real device capabilities reported by VisionCamera through the engine. Null
+  // until the first device pick resolves; drives zoom range, HDR availability,
+  // and the focal-stop pill set on the dial.
+  const [deviceInfo, setDeviceInfo] = useState<CameraDeviceInfo | null>(null);
   // Scene-switcher spot list — lazily fetched the first time the sheet opens.
   const { spots: availableSpots, loading: spotsLoading } = useSceneSwitcherSpots(
     animeId,
@@ -239,46 +231,45 @@ export default function CompareCaptureScreen() {
 
   const { settings, setSettings } = useCameraSettings();
   const lifecycle = useCameraLifecycle(true);
-  const { capabilities: androidNativeCapabilities, refresh: refreshAndroidNativeCapabilities } =
-    useAndroidCameraNativeCapabilities({ cameraRef });
-  const androidNativeStops = useMemo(
-    () => androidNativeStopsForCapabilities(androidNativeCapabilities),
-    [androidNativeCapabilities]
-  );
-  const androidNativeStopZoom = useMemo(
-    () => androidStopZoomMap(androidNativeCapabilities),
-    [androidNativeCapabilities]
-  );
-  const useAndroidNativeZoom =
-    Platform.OS === 'android' && facing === 'back' && androidNativeCapabilities !== null;
-
-  const zoom = useCameraZoom({
-    initial: 1,
-    stops: useAndroidNativeZoom ? androidNativeStops : undefined,
-    stopZoom: useAndroidNativeZoom ? androidNativeStopZoom : undefined,
-  });
-  const tapFocus = useTapToFocus({ lockTimeoutMs: 5000 });
-  const lensSwitcher = useLensSwitcher({ cameraRef });
-  const {
-    availableLenses,
-    availableStops,
-    selectedLens,
-    setStop: setOpticalStop,
-    hasOpticalZoom,
-    refreshAvailableLenses,
-    virtualLenses,
-    setVirtualLens,
-    isVirtualLensActive,
-  } = lensSwitcher;
   const {
     active: cameraActive,
     isReady: cameraIsReady,
     onCameraReady,
     onMountError,
     setActive: setCameraActive,
-    reset: resetCameraLifecycle,
   } = lifecycle;
-  const brightness = useBrightnessPreview({ value: evValue });
+
+  // Zoom is in REAL factor units now (e.g. 1×, 2×, 3×). Bounds + available
+  // pillars come straight from the device — no expo-camera-era guesses.
+  const availableStops = useMemo(() => availableStopsFromDeviceInfo(deviceInfo), [deviceInfo]);
+  const minZoom = deviceInfo?.minZoom ?? 1;
+  const maxZoom = deviceInfo?.maxZoom ?? 1;
+  const zoom = useCameraZoom({
+    initial: 1,
+    minZoom,
+    maxZoom,
+    stops: availableStops,
+  });
+
+  const tapFocus = useTapToFocus({
+    lockTimeoutMs: 5000,
+    onFocus: (point) => {
+      // Drives a real AE/AF/AWB metering operation at the tap location.
+      void cameraRef.current?.focus(point);
+    },
+  });
+
+  // Exposure SharedValue mirrored from the HUD EV slider. CameraStage feeds
+  // this straight to VisionCamera's `exposure` prop — REAL EV bias, not a
+  // post-capture brightness fake. Clamped to the device's reported bias range
+  // so we never push values the OS will reject.
+  const exposureShared = useSharedValue(0);
+  useEffect(() => {
+    const min = deviceInfo?.minExposureBias ?? 0;
+    const max = deviceInfo?.maxExposureBias ?? 0;
+    exposureShared.value = Math.max(min, Math.min(max, evValue));
+  }, [evValue, deviceInfo, exposureShared]);
+
   const overlayTransform = useOverlayTransform({ enabled: editMode });
   const getOverlayTransformSnapshot = overlayTransform.getSnapshot;
   const sensors = useAlignmentSensors({ spotLat: params.spotLat, spotLng: params.spotLng });
@@ -291,19 +282,7 @@ export default function CompareCaptureScreen() {
   });
   const subjectReady = overlayMode === 'subject' && hiResImageUrl.length > 0;
 
-  // Shared metadata + sensor snapshot for the burst/HDR hooks. The hooks
-  // mirror inputs into refs internally so it's fine that this object is
-  // rebuilt on each render.
-  const captureMetadata = useMemo(
-    () => ({
-      spotId,
-      spotName: name,
-      animeId: animeId ?? undefined,
-      animeTitle: animeTitle || undefined,
-      episode: ep ?? undefined,
-    }),
-    [spotId, name, animeId, animeTitle, ep]
-  );
+  // Live alignment snapshot shared with burst / HDR + EXIF embed flows.
   const getSensorSnapshot = useCallback(
     () => ({
       userLocation: sensors.userLocation,
@@ -313,22 +292,28 @@ export default function CompareCaptureScreen() {
     }),
     [sensors.userLocation, sensors.heading, sensors.tilt, sensors.score.total]
   );
+
+  // Flash on the back camera supports torch; on the front it cycles off/auto/on.
+  // The torch is a live Camera prop, the flash is a per-capture takePhoto opt.
+  const enableTorch = flashMode === 'torch';
+  const captureFlash: 'on' | 'off' | 'auto' = flashMode === 'torch' ? 'off' : flashMode;
+
+  // True HDR is gated on the device actually supporting hardware photo-HDR.
+  // When false (older devices), the screen routes HDR mode through
+  // `usePseudoHDR`'s 3-frame Skia composite fallback instead.
+  const realHdrTargeted = settings.captureMode === 'hdr' && (deviceInfo?.supportsPhotoHdr ?? false);
+
   const burst = useBurstCapture({
-    cameraRef,
+    engineRef: cameraRef,
     getSensorSnapshot,
-    metadata: captureMetadata,
-    colorMatrix: brightness.colorMatrix,
-    quality: qualityToNumber(settings.quality),
     silent: settings.mute,
-    skipProcessing: settings.skipProcessing,
+    flashMode: captureFlash,
   });
   const hdr = usePseudoHDR({
-    cameraRef,
-    getSensorSnapshot,
-    metadata: captureMetadata,
+    engineRef: cameraRef,
     quality: qualityToNumber(settings.quality),
     silent: settings.mute,
-    skipProcessing: settings.skipProcessing,
+    flashMode: 'off',
   });
   const countdown = useCaptureCountdown();
   // Capture session — accumulates every shot the user takes this visit
@@ -347,63 +332,14 @@ export default function CompareCaptureScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // CameraView fires onCameraReady once the native surface is up. We compose
-  // three concerns there: (1) flip `isReady` so the warmup spinner clears,
-  // (2) re-query physical lenses (the ref is usually null at first render),
-  // (3) probe getAvailablePictureSizesAsync so the settings sheet can list
-  // real device sizes instead of guessing.
-  const handleCameraReady = useCallback(() => {
-    onCameraReady();
-    void refreshAvailableLenses();
-    void refreshAndroidNativeCapabilities();
-    const cam = cameraRef.current;
-    if (cam && typeof cam.getAvailablePictureSizesAsync === 'function') {
-      cam
-        .getAvailablePictureSizesAsync()
-        .then((sizes) => {
-          if (Array.isArray(sizes)) setAvailablePictureSizes(sizes);
-        })
-        .catch(() => undefined);
-    }
-  }, [onCameraReady, refreshAvailableLenses, refreshAndroidNativeCapabilities]);
-
-  // CameraView.flash only accepts 'on'|'off'|'auto'; torch surfaces via enableTorch.
-  const enableTorch = flashMode === 'torch';
-  const cameraFlash: 'on' | 'off' | 'auto' = flashMode === 'torch' ? 'off' : flashMode;
-  const androidCameraExtensionMode = androidCameraExtensionModeForCapture(
-    Platform.OS,
-    settings.captureMode,
-    androidNativeCapabilities
-  );
-  const androidNativeHdrTargeted = shouldUseAndroidNativeHdr(
-    Platform.OS,
-    settings.captureMode,
-    androidNativeCapabilities
-  );
-  const androidZoomRange =
-    Platform.OS === 'android' && useAndroidNativeZoom && androidNativeCapabilities
-      ? {
-          minZoomRatio: androidNativeCapabilities.minZoomRatio,
-          maxZoomRatio: androidNativeCapabilities.maxZoomRatio,
-        }
-      : null;
-  const androidZoomRatio =
-    Platform.OS === 'android' && useAndroidNativeZoom
-      ? zoomRatioForZoomValue(zoom.zoom, androidNativeCapabilities)
-      : undefined;
-
+  // Re-request permission when the user is in 'not-determined' on mount.
   useEffect(() => {
-    if (permission && !permission.granted && permission.canAskAgain) {
+    if (!hasPermission && canRequestPermission) {
       requestPermission().catch(() => undefined);
     }
-  }, [permission, requestPermission]);
+  }, [hasPermission, canRequestPermission, requestPermission]);
 
-  // T1 fix: actually drive CameraView.active off lifecycle events.
-  //   - When the app is backgrounded: setActive(false) so iOS pauses the camera
-  //     session (saves battery + drops thermal pressure).
-  //   - When the settings sheet is open: also setActive(false) — the user can't
-  //     see the preview anyway.
-  // active is iOS-only effective; on Android the prop is a no-op (no harm).
+  // T1 fix: drive the camera's active flag off app lifecycle + settings sheet.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       setAppIsForeground(state === 'active');
@@ -414,13 +350,6 @@ export default function CompareCaptureScreen() {
   useEffect(() => {
     setCameraActive(resolveCameraActive({ appIsForeground, settingsOpen }));
   }, [appIsForeground, settingsOpen, setCameraActive]);
-
-  // T1 fix: when the user flips facing, re-query lenses (iOS exposes a
-  // different physical lens set per camera) so the zoom dial reflects reality.
-  useEffect(() => {
-    void refreshAvailableLenses();
-    void refreshAndroidNativeCapabilities();
-  }, [facing, refreshAvailableLenses, refreshAndroidNativeCapabilities]);
 
   const toggleFacing = useCallback(() => {
     hapticsBridge.selection();
@@ -459,25 +388,10 @@ export default function CompareCaptureScreen() {
     };
   }, []);
 
-  // Drive the OS orientation lock off the auto/land chip. `auto` unlocks so
-  // the device rotates freely; `landscape` pins the screen to landscape.
-  //
-  // iOS CameraView only re-aligns its live preview to the interface
-  // orientation on a *physical* device rotation or a fresh capture session —
-  // it never observes the programmatic rotation expo-screen-orientation does
-  // here, so a toggle leaves the HUD rotated but the preview stuck sideways.
-  // `orientationResyncPending` arms a one-shot CameraView remount that the
-  // effect below fires once the rotation has actually settled.
-  //
-  // Regression guard: do not bring back the old `previousIsLandscape` /
-  // `shouldRemountCameraForOrientationSettle` path. A bare `isLandscape`
-  // change includes physical device rotation; remounting the keyed CameraStage
-  // during that native re-layout can race CameraX/CameraView binding and leave
-  // the preview black.
-  const [cameraEpoch, setCameraEpoch] = useState(0);
-  const orientationResyncPending = useRef(false);
-  const orientationInitDone = useRef(false);
-
+  // Drive the OS orientation lock off the auto/land chip. VisionCamera realigns
+  // its own preview natively via `orientationSource="interface"`, so unlike
+  // expo-camera we no longer need the keyed-remount trick to clear a stale
+  // preview rotation.
   useEffect(() => {
     const lockIntent = cameraOrientationLockIntent(orientationMode);
     const op =
@@ -485,45 +399,7 @@ export default function CompareCaptureScreen() {
         ? ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
         : ScreenOrientation.unlockAsync();
     op.catch(() => undefined);
-    // The first run is the initial mount: the capture session is brand new
-    // and already adopts the current orientation — nothing to re-sync.
-    if (!orientationInitDone.current) {
-      orientationInitDone.current = true;
-      return;
-    }
-    orientationResyncPending.current = true;
-    // Safety disarm: if the toggle doesn't actually rotate the screen (e.g.
-    // locking landscape while the device is already landscape) no layout
-    // change arrives — drop the arm so a later physical rotation can't trip it.
-    const disarm = setTimeout(() => {
-      orientationResyncPending.current = false;
-    }, 1500);
-    return () => clearTimeout(disarm);
   }, [orientationMode]);
-
-  // Remount CameraView once after the LAND chip's *programmatic* rotation
-  // settles. iOS CameraView never observes the rotation expo-screen-orientation
-  // performs, so its live preview stays sideways until the native capture
-  // session is rebuilt. `orientationResyncPending` is armed by the chip effect
-  // above and consumed here when the rotation finally swaps the window
-  // dimensions — `isLandscape` is only the trigger, not read in the body.
-  //
-  // A *physical* rotation in auto mode must NOT remount: expo-camera realigns
-  // its own preview surface natively (Android re-lays the PreviewView on the
-  // size change, iOS handles `orientationDidChangeNotification`). Remounting
-  // there instead races CameraX's process-wide `ProcessCameraProvider` — the
-  // torn-down view's `unbindAll()` can unbind the freshly-bound new camera and
-  // leave the preview black with no spinner and no error. So this effect acts
-  // only on the armed resync flag, never on a bare `isLandscape` change.
-  useEffect(() => {
-    if (!orientationResyncPending.current) return;
-    orientationResyncPending.current = false;
-    resetCameraLifecycle();
-    setCameraEpoch((epoch) => epoch + 1);
-  }, [isLandscape, resetCameraLifecycle]);
-
-  // Scene-switcher spot loading lives in `useSceneSwitcherSpots` — see the
-  // `availableSpots` / `spotsLoading` binding near the top of the component.
 
   const handlePickSpot = useCallback(
     (spot: AnitabiPoint) => {
@@ -553,15 +429,7 @@ export default function CompareCaptureScreen() {
   );
 
   // Centralised navigation: every capture mode lands on the same preview
-  // screen with the same shape of route params. `captureMode` + optional
-  // burst fields let the preview render an honest "best of N" badge or a
-  // thumbnail strip later. All burst frames are saved (`burst.run` already
-  // wrote them to cache); we serialise the URI list so the preview can
-  // surface them without a separate fetch.
-  //
-  // Uses router.push (not replace) so this camera screen stays mounted under
-  // the preview — that's what lets the user return ("再拍") via router.back()
-  // with the capture session still intact.
+  // screen with the same shape of route params.
   const navigateToPreview = useCallback(
     (shot: CaptureSessionShot) => {
       router.push({
@@ -660,6 +528,21 @@ export default function CompareCaptureScreen() {
     ]
   );
 
+  // Build the EXIF payload from the current sensor snapshot + route params.
+  // Centralised so single/burst/HDR all stamp the same set of tags.
+  const buildExifNow = useCallback(() => {
+    return buildAdditionalExif({
+      spotId,
+      spotName: name,
+      animeId: animeId ?? undefined,
+      animeTitle: animeTitle || undefined,
+      episode: ep ?? undefined,
+      userLocation: sensors.userLocation,
+      heading: sensors.heading,
+      tilt: sensors.tilt,
+    });
+  }, [spotId, name, animeId, animeTitle, ep, sensors.userLocation, sensors.heading, sensors.tilt]);
+
   const maybeCompositeSubjectShot = useCallback(
     async (
       shot: { uri: string; width: number; height: number },
@@ -714,103 +597,25 @@ export default function CompareCaptureScreen() {
       source: 'manual' | 'auto' = 'manual',
       captureMode: CaptureMode = 'single'
     ): Promise<CaptureSessionShot | null> => {
-      if (!cameraRef.current) return null;
+      const engine = cameraRef.current;
+      if (!engine) return null;
       setCapturing(true);
       try {
-        // EXIF metadata embedded into the captured file via expo-camera's native
-        // writer. Rule 8: every field is sourced from real sensor data — missing
-        // values are simply omitted by buildAdditionalExif.
-        const additionalExif = buildAdditionalExif({
-          spotId,
-          spotName: name,
-          animeId: animeId ?? undefined,
-          animeTitle: animeTitle || undefined,
-          episode: ep ?? undefined,
-          userLocation: sensors.userLocation,
-          heading: sensors.heading,
-          tilt: sensors.tilt,
+        const additionalExif = buildExifNow();
+        const photo = await engine.takePhoto({
+          flashMode: captureFlash,
+          enableShutterSound: !settings.mute,
         });
-        const qualityNum = qualityToNumber(settings.quality);
-
-        type ResolvedCapture = {
-          uri: string;
-          width: number;
-          height: number;
-          exif: Record<string, unknown> | null;
-        };
-
-        const captureClassic = async (): Promise<ResolvedCapture | null> => {
-          const photo = await cameraRef.current?.takePictureAsync({
-            quality: qualityNum,
-            skipProcessing: settings.skipProcessing,
-            exif: true,
-            additionalExif,
-            // Silent shutter belongs on the takePictureAsync option (not CameraView.mute,
-            // which is for video audio). `settings.mute` is the user-facing toggle.
-            shutterSound: !settings.mute,
-          });
-          if (!photo) return null;
-          const uri = resolveCapturedUri(photo);
-          if (!uri) return null;
-          return {
-            uri,
-            width: photo.width || 0,
-            height: photo.height || 0,
-            exif: mergeCaptureExif(photo.exif, additionalExif),
-          };
-        };
-
-        let captured: ResolvedCapture | null = null;
-        if (Platform.OS === 'ios') {
-          try {
-            // iOS PictureRef avoids the native-side double-write. The public
-            // SavePictureOptions API writes metadata via `metadata`, and iOS
-            // native currently returns `url` instead of the JS `uri` shape.
-            const pictureRef = await cameraRef.current.takePictureAsync({
-              pictureRef: true,
-              quality: qualityNum,
-              skipProcessing: settings.skipProcessing,
-              shutterSound: !settings.mute,
-            });
-            const saved = await pictureRef.savePictureAsync({
-              quality: qualityNum,
-              metadata: additionalExif,
-            });
-            const uri = resolveCapturedUri(saved);
-            if (uri) {
-              captured = {
-                uri,
-                width: saved.width || 0,
-                height: saved.height || 0,
-                exif: additionalExif,
-              };
-            }
-          } catch (pictureRefError) {
-            console.warn('[camera] PictureRef capture failed, falling back', pictureRefError);
-          }
-        }
-
-        captured = captured ?? (await captureClassic());
-        if (!captured) return null;
-
-        const baked = await applyBrightnessToImage({
-          inputUri: captured.uri,
-          exif: captured.exif,
-          colorMatrix: brightness.colorMatrix,
-          quality: qualityNum,
-        });
+        if (!photo?.uri) return null;
+        // VisionCamera writes raw bytes — embed our EXIF (anime title, scene,
+        // GPS, heading, tilt) onto the JPEG ourselves. Failure is logged and
+        // ignored; the photo survives without metadata rather than disappear.
+        await embedCaptureMetadata(photo.uri, additionalExif);
         const output = await maybeCompositeSubjectShot(
-          {
-            uri: baked.uri,
-            width: baked.width || captured.width,
-            height: baked.height || captured.height,
-          },
-          captured.exif
+          { uri: photo.uri, width: photo.width, height: photo.height },
+          additionalExif
         );
         tapFocus.releaseLock();
-        // Capture is decoupled from navigation: record the shot into the
-        // session here; the caller (manual shutter vs auto-capture) decides
-        // whether to navigate to the preview or stay on the camera.
         return recordShot({
           uri: output.uri,
           width: output.width,
@@ -825,23 +630,7 @@ export default function CompareCaptureScreen() {
         setCapturing(false);
       }
     },
-    [
-      settings.quality,
-      settings.skipProcessing,
-      settings.mute,
-      brightness.colorMatrix,
-      tapFocus,
-      maybeCompositeSubjectShot,
-      recordShot,
-      spotId,
-      name,
-      ep,
-      animeId,
-      animeTitle,
-      sensors.userLocation,
-      sensors.heading,
-      sensors.tilt,
-    ]
+    [buildExifNow, captureFlash, settings.mute, tapFocus, maybeCompositeSubjectShot, recordShot]
   );
 
   const runBurst = useCallback(
@@ -849,12 +638,16 @@ export default function CompareCaptureScreen() {
       const result = await burst.run();
       if (!result) return null;
       tapFocus.releaseLock();
+      const additionalExif = buildExifNow();
+      // Stamp the same EXIF onto each frame. A ~900ms burst window doesn't
+      // meaningfully change heading / GPS, so a single snapshot is honest
+      // enough — and far simpler than per-frame embeds.
+      await Promise.all(result.uris.map((uri) => embedCaptureMetadata(uri, additionalExif)));
       const idx = result.bestIndex;
-      const output = await maybeCompositeSubjectShot({
-        uri: result.uris[idx],
-        width: result.widths[idx],
-        height: result.heights[idx],
-      });
+      const output = await maybeCompositeSubjectShot(
+        { uri: result.uris[idx], width: result.widths[idx], height: result.heights[idx] },
+        additionalExif
+      );
       const burstUris = [...result.uris];
       burstUris[idx] = output.uri;
       return recordShot({
@@ -868,22 +661,26 @@ export default function CompareCaptureScreen() {
         burstBestIndex: idx,
       });
     },
-    [burst, tapFocus, maybeCompositeSubjectShot, recordShot]
+    [burst, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
   );
 
   const runHdr = useCallback(
     async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
-      if (androidNativeHdrTargeted) {
+      // When the device supports real photo-HDR, a single `takePhoto` already
+      // produced an HDR frame because CameraStage mounted with the
+      // `{ photoHDR: true }` constraint.
+      if (realHdrTargeted) {
         return runSingle(source, 'hdr');
       }
       const result = await hdr.run();
       if (!result) return null;
       tapFocus.releaseLock();
-      const output = await maybeCompositeSubjectShot({
-        uri: result.uri,
-        width: result.width,
-        height: result.height,
-      });
+      const additionalExif = buildExifNow();
+      await embedCaptureMetadata(result.uri, additionalExif);
+      const output = await maybeCompositeSubjectShot(
+        { uri: result.uri, width: result.width, height: result.height },
+        additionalExif
+      );
       return recordShot({
         uri: output.uri,
         width: output.width,
@@ -894,13 +691,11 @@ export default function CompareCaptureScreen() {
         source,
       });
     },
-    [androidNativeHdrTargeted, runSingle, hdr, tapFocus, maybeCompositeSubjectShot, recordShot]
+    [realHdrTargeted, runSingle, hdr, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
   );
 
   const anyCapturing = capturing || burst.capturing || hdr.capturing;
 
-  // Run the capture path for the current mode and return the recorded shot.
-  // Pure capture-and-record — navigation is the caller's decision.
   const captureForMode = useCallback(
     (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
       if (settings.captureMode === 'burst') return runBurst(source);
@@ -912,8 +707,6 @@ export default function CompareCaptureScreen() {
 
   // useAutoCapture watches sensors.score.total + autofocus lock and fires when
   // the user holds the perfect alignment (with AF locked) long enough.
-  // `enabled` is the user setting; `captureBusy` pauses watching while any
-  // capture is in-flight OR a countdown is running (so we don't double-fire).
   const AUTO_SUSTAIN_MS = 1500;
   const onAutoFireRef = useRef<() => void>(() => undefined);
   const autoCapture = useAutoCapture({
@@ -927,15 +720,9 @@ export default function CompareCaptureScreen() {
     },
   });
 
-  // Manual shutter press: capture for the current mode, then navigate to the
-  // preview. The camera screen stays mounted underneath (router.push).
   const onShutter = useCallback(async () => {
-    // Cancel any pending auto-fire FIRST so a manual press doesn't double-fire
-    // when the user reflexively taps while auto is arming.
     autoCapture.cancel();
     if (anyCapturing || !cameraRef.current || !cameraIsReady) return;
-    // Countdown gate runs before any mode-specific work. `cancel()` on the
-    // overlay resolves the promise with `false` so we skip capture entirely.
     if (settings.countdownSeconds > 0) {
       const completed = await countdown.start(settings.countdownSeconds);
       if (!completed) return;
@@ -953,9 +740,6 @@ export default function CompareCaptureScreen() {
     navigateToPreview,
   ]);
 
-  // Auto-capture fire path: capture for the current mode and STAY on the
-  // camera so the user can keep pre-shooting. A brief toast confirms the shot
-  // with the real running session count.
   const onAutoCapture = useCallback(async () => {
     if (anyCapturing || !cameraRef.current || !cameraIsReady) return;
     if (settings.countdownSeconds > 0) {
@@ -965,22 +749,15 @@ export default function CompareCaptureScreen() {
     const shot = await captureForMode('auto');
     if (!shot) return;
     hapticsBridge.success();
-    // The session length AFTER this shot landed — read the live store
-    // directly (the hook's `shots` in this closure is the stale render-time
-    // snapshot). Rule 8: a real count, never a guess.
     setHud({ autoCaptureToast: { sessionCount: getCaptureSessionShots().length } });
   }, [anyCapturing, cameraIsReady, settings.countdownSeconds, countdown, captureForMode, setHud]);
 
-  // Keep the ref current so useAutoCapture's onFire calls the latest closure.
   useEffect(() => {
     onAutoFireRef.current = () => {
       void onAutoCapture();
     };
   }, [onAutoCapture]);
 
-  // Long-press the shutter to fire a burst regardless of the current mode —
-  // power-user shortcut so the user doesn't have to switch modes mid-shot.
-  // This is a manual gesture, so it navigates to the preview like onShutter.
   const onShutterLongPress = useCallback(async () => {
     autoCapture.cancel();
     if (anyCapturing || !cameraRef.current || !cameraIsReady) return;
@@ -1060,19 +837,14 @@ export default function CompareCaptureScreen() {
     navigateToPreview,
   ]);
 
-  const onPickFocalStop = useCallback(
-    (stop: FocalStop) => {
-      if (hasOpticalZoom) setOpticalStop(stop);
-      else zoom.setStop(stop);
-    },
-    [hasOpticalZoom, setOpticalStop, zoom]
-  );
-
-  if (!permission) {
+  // Permission UI — `status === 'not-determined'` is the brief initial state
+  // before the platform answers; treat it as "still loading" instead of
+  // jumping straight into the denied CTA.
+  if (status === 'not-determined' && !hasPermission) {
     return <View style={[styles.permRoot, { backgroundColor: theme.background.primary }]} />;
   }
 
-  if (!permission.granted) {
+  if (!hasPermission) {
     return (
       <View style={[styles.permRoot, { backgroundColor: theme.background.primary }]}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -1092,7 +864,7 @@ export default function CompareCaptureScreen() {
             <Pressable
               onPress={() => {
                 hapticsBridge.tap();
-                if (permission.canAskAgain) void requestPermission();
+                if (canRequestPermission) void requestPermission();
                 else Linking.openSettings().catch(() => undefined);
               }}
               style={({ pressed }) => [
@@ -1103,7 +875,7 @@ export default function CompareCaptureScreen() {
                 variant="titleSmall"
                 weight="700"
                 style={{ color: readableTextOn(themeColor) }}>
-                {permission.canAskAgain ? 'Grant access' : 'Open Settings'}
+                {canRequestPermission ? 'Grant access' : 'Open Settings'}
               </ThemedText>
             </Pressable>
             <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -1117,22 +889,11 @@ export default function CompareCaptureScreen() {
     );
   }
 
-  const activeFocalStop = hasOpticalZoom
-    ? (stopForLens(selectedLens) as FocalStop | null)
-    : zoom.activeStop;
-  const dialAvailableStops = hasOpticalZoom
-    ? availableStops
-    : useAndroidNativeZoom
-      ? androidNativeStops
-      : undefined;
-  const dialStopZoom = useAndroidNativeZoom ? androidNativeStopZoom : STOP_TO_ZOOM;
   // Android edge-to-edge can report insets.bottom as 0 even when the gesture
   // navigation bar (海帶條) is drawn over the window — floor it so the shutter
   // row + HUD layers always clear the system bar. iOS insets are used as-is.
   const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
   const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
-  // The slim bottom bar (portrait) and the floating shutter cluster (landscape)
-  // are fixed, so every floating HUD layer anchors off these.
   const bottomBarHeight = safeAreaBottomPad + CAMERA_BOTTOM_BAR_CONTENT_HEIGHT;
   const topBarBottom = insets.top + resolveCameraTopChromeHeight({ quickControlsOpen });
   const focusEvBarBottom = isLandscape ? safeAreaBottomPad + 72 : bottomBarHeight + 84;
@@ -1144,25 +905,16 @@ export default function CompareCaptureScreen() {
     hapticsBridge.tap();
     router.push({ pathname: '/pilgrimage/compare/align', params: { ...params } });
   };
-  // One ZoomDial instance, reused: it lives inside the portrait bottom bar and
-  // free-floats bottom-left in landscape. Continuous digital zoom writes
-  // zoom.zoomShared on the UI thread; labeled detents route through
-  // onPickFocalStop so optical lens switching is unchanged.
   const focalDial = (
     <ZoomDial
       zoomShared={zoom.zoomShared}
-      activeStop={activeFocalStop}
+      activeStop={zoom.activeStop as FocalStop | null}
       themeColor={themeColor}
-      availableStops={dialAvailableStops}
+      availableStops={availableStops}
       isFrontFacing={facing === 'front'}
-      stopZoom={dialStopZoom}
-      onPickFocalStop={onPickFocalStop}
-      virtualLenses={virtualLenses}
-      virtualActive={isVirtualLensActive}
-      onPickVirtual={() => {
-        const pick = pickAutoVirtualLens(availableLenses);
-        if (pick) setVirtualLens(pick);
-      }}
+      stopZoom={STOP_TO_ZOOM}
+      maxZoom={maxZoom}
+      onPickFocalStop={zoom.setStop}
     />
   );
   const overlayControls = (
@@ -1201,36 +953,24 @@ export default function CompareCaptureScreen() {
       <View style={styles.root}>
         <CameraErrorBoundary>
           <CameraStage
-            key={cameraEpoch}
-            cameraRef={cameraRef}
+            ref={cameraRef}
             facing={facing}
-            zoom={zoom.zoom}
             zoomShared={zoom.zoomShared}
-            androidZoomRatio={androidZoomRatio}
-            androidZoomRange={androidZoomRange}
-            androidCameraExtensionMode={androidCameraExtensionMode}
-            autofocus={tapFocus.autofocus}
-            flashMode={cameraFlash}
+            exposureShared={exposureShared}
+            preferHdr={realHdrTargeted}
             enableTorch={enableTorch}
-            selectedLens={selectedLens}
-            ratio={aspect === 'full' ? undefined : aspect}
-            responsiveOrientationWhenOrientationLocked
+            mirrorSelfie={settings.mirror}
             active={cameraActive}
-            animateShutter={settings.animateShutter}
-            // NOTE: CameraView.mute controls VIDEO recording audio. The silent
-            // shutter UI lives on `settings.mute` and is wired to
-            // `takePictureAsync({ shutterSound: ... })` in each capture path.
-            // Don't forward settings.mute here.
-            mirror={settings.mirror}
-            pictureSize={resolvePictureSize(settings.resolutionTier, availablePictureSizes)}
+            resolutionTier={settings.resolutionTier}
+            aspect={aspect}
+            qualityPrioritization={qualityToPrioritization(settings.quality)}
+            quality={qualityToNumber(settings.quality)}
+            enableShutterSound={!settings.mute}
             pinchGesture={zoom.pinchGesture}
             tapGesture={tapFocus.tapGesture}
-            brightnessOverlayStyle={brightness.overlayStyle}
-            onCameraReady={handleCameraReady}
+            onCameraReady={onCameraReady}
             onMountError={onMountError}
-            onAvailableLensesChanged={() => {
-              void refreshAvailableLenses();
-            }}
+            onDeviceInfo={setDeviceInfo}
             showWarmup={!cameraIsReady}
           />
         </CameraErrorBoundary>
@@ -1350,8 +1090,6 @@ export default function CompareCaptureScreen() {
           onReset={overlayTransform.resetTransforms}
         />
 
-        {/* The zoom dial floats just above the slim bottom bar (portrait) or
-            bottom-left of the full-bleed preview (landscape). */}
         <View
           pointerEvents="box-none"
           style={[
@@ -1380,8 +1118,6 @@ export default function CompareCaptureScreen() {
             isLandscape
               ? { right: SHUTTER_ROW_LANDSCAPE_WIDTH + 12, bottom: safeAreaBottomPad + 80 }
               : { left: 0, right: 0, bottom: bottomBarHeight + 156 },
-            // The overlay panel covers this region — drop it out entirely while
-            // the panel is open so nothing peeks past the panel edges.
             !cameraHudVisibility.showAutoCaptureBadge && styles.hidden,
           ]}>
           <AutoCaptureStatusBadge
@@ -1397,7 +1133,6 @@ export default function CompareCaptureScreen() {
             styles.captureHistoryWrap,
             isLandscape
               ? {
-                  // Clears the top strip and the alignment badge below it.
                   right: SHUTTER_ROW_LANDSCAPE_WIDTH + 8,
                   top: topBarBottom + 48,
                   bottom: safeAreaBottomPad + 96,
@@ -1414,8 +1149,6 @@ export default function CompareCaptureScreen() {
           <CaptureHistoryStrip
             uris={captureSession.shots.map((s) => s.uri)}
             onSelect={(uri) => {
-              // Resolve the matching session shot so the preview gets the real
-              // dimensions + burst metadata, not a synthetic zero-sized shot.
               const shot = captureSession.shots.find((s) => s.uri === uri);
               if (shot) navigateToPreview(shot);
             }}
@@ -1439,6 +1172,7 @@ export default function CompareCaptureScreen() {
               themeColor={themeColor}
               capturing={anyCapturing}
               isLandscape={false}
+              animateCapture={settings.animateShutter}
               isFrontFacing={facing === 'front'}
               onShutter={onShutter}
               onLongPress={onShutterLongPress}
@@ -1466,7 +1200,6 @@ export default function CompareCaptureScreen() {
           {overlayControls}
         </OverlayDock>
 
-        {/* Landscape: shutter cluster on right; overlay controls live in OverlayDock. */}
         {isLandscape && (
           <View
             style={[
@@ -1477,6 +1210,7 @@ export default function CompareCaptureScreen() {
               themeColor={themeColor}
               capturing={anyCapturing}
               isLandscape={true}
+              animateCapture={settings.animateShutter}
               isFrontFacing={facing === 'front'}
               onShutter={onShutter}
               onLongPress={onShutterLongPress}
@@ -1491,7 +1225,6 @@ export default function CompareCaptureScreen() {
           </View>
         )}
 
-        {/* Capture feedback toasts — brief and transient. */}
         <View
           pointerEvents="none"
           style={[
@@ -1507,7 +1240,7 @@ export default function CompareCaptureScreen() {
           <CaptureModeToast
             toast={captureModeToast}
             themeColor={themeColor}
-            nativeHdrActive={androidNativeHdrTargeted}
+            nativeHdrActive={realHdrTargeted}
           />
           <AutoCaptureToast toast={autoCaptureToast} themeColor={themeColor} />
           <CamSwitchToast toast={switchToast} themeColor={themeColor} />
@@ -1560,7 +1293,6 @@ const styles = StyleSheet.create({
   autoBadgeWrap: { position: 'absolute', alignItems: 'center', zIndex: 60 },
   modeToastWrap: { position: 'absolute', alignItems: 'center', zIndex: 80 },
   captureHistoryWrap: { position: 'absolute', alignItems: 'center', zIndex: 58 },
-  // Portrait: overlay controls bar + shutter row stacked, fixed to screen bottom.
   portraitBottomPanel: {
     position: 'absolute',
     left: 0,
@@ -1569,7 +1301,6 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     justifyContent: 'center',
   },
-  // Landscape: shutter column centered vertically on the right edge.
   landscapeCluster: {
     position: 'absolute',
     zIndex: 70,

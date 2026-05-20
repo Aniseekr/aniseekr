@@ -1,188 +1,281 @@
-// Container for the live camera surface. It owns the CameraView plus camera
-// gestures and the exposure preview tint. Reference overlays and focus/level
-// guides are sibling layers in the screen so their z-order stays explicit.
+// Live camera surface. This is the single file that imports
+// react-native-vision-camera — everything else in the app talks to the
+// `CameraEngineHandle` interface (see ../camera-engine.ts).
 //
-// Lifecycle plumbing is intentionally minimal here: this component just
-// forwards the camera lifecycle props through to CameraView. The compose
-// (e.g. wire `onCameraReady` to BOTH `useCameraLifecycle` and
-// `useLensSwitcher.refreshAvailableLenses`) happens in the parent screen, so
-// that ordering and dependencies stay visible at the call site instead of
-// being buried inside this child component.
+// Responsibilities:
+//  - Resolve the physical device + photo output.
+//  - Forward UI-thread zoom and exposure SharedValues to the native props.
+//  - Wire HDR through a `PhotoHDRConstraint` when capture mode requests it.
+//  - Drive the selfie mirror via `mirrorMode` (VisionCamera mirrors the
+//    saved photo, not just the preview).
+//  - Adapt the tap-gesture into a real `focusTo()` metering call.
+//  - Expose `takePhoto`, `focus`, and `getDeviceInfo` to the screen via an
+//    imperative handle.
 //
-// The optional `showWarmup` overlay renders a translucent theme-aware veil
-// with a spinner + label, used by the parent while waiting for the first
-// `onCameraReady` after a (re-)mount.
-import type { ComponentProps, RefObject } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedProps, type SharedValue } from 'react-native-reanimated';
-import {
-  CameraView,
-  type AvailableLenses,
-  type CameraMountError,
-  type CameraRatio,
-  type CameraType,
-  type FlashMode,
-  type FocusMode,
-} from 'expo-camera';
+// The parent (`compare/[spotId].tsx`) keeps doing its own composition of
+// onCameraReady / lens-info refresh / picture-size probing.
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import {
   Gesture,
   GestureDetector,
   type PinchGesture,
   type TapGesture,
 } from 'react-native-gesture-handler';
+import {
+  Camera,
+  CommonResolutions,
+  type CameraRef,
+  type Constraint,
+  type DeviceType,
+  type MirrorMode,
+  type QualityPrioritization,
+  useCameraDevice,
+  usePhotoOutput,
+} from 'react-native-vision-camera';
 import { useTheme } from '../../../context/ThemeContext';
-import type { AndroidCameraExtensionMode } from '../../../libs/services/pilgrimage/native-camera';
+import {
+  preferredPhysicalDevicesForFacing,
+  resolveCapturedPhotoDimensions,
+} from '../../../libs/services/pilgrimage/camera-engine-parity';
 import { ThemedText } from '../../themed';
-import BrightnessPreview from './BrightnessPreview';
+import type {
+  CameraDeviceInfo,
+  CameraEngineHandle,
+  EnginePhoto,
+  EnginePhysicalLensType,
+} from './camera-engine';
+import type { AspectRatio, CameraFacing } from './types';
 
-const AnimatedCameraView = Animated.createAnimatedComponent(CameraView);
-type AnimatedCameraViewProps = ComponentProps<typeof AnimatedCameraView>;
+const FILE_SCHEME = 'file://';
 
-interface AndroidZoomRange {
-  minZoomRatio: number;
-  maxZoomRatio: number;
+type ResolutionTier = '4k' | '2k';
+
+const PHYSICAL_LENS_TYPES: ReadonlySet<EnginePhysicalLensType> = new Set([
+  'ultra-wide-angle',
+  'wide-angle',
+  'telephoto',
+]);
+
+function isPhysicalLensType(value: DeviceType): value is EnginePhysicalLensType {
+  return PHYSICAL_LENS_TYPES.has(value as EnginePhysicalLensType);
 }
 
-interface CameraAnimatedProps {
-  zoom: number;
-  zoomRatio?: number;
+// VisionCamera reports the photo path without a scheme. The rest of the app
+// (Skia decode, expo-file-system, expo-image) expects a `file://` URI.
+function pathToFileUri(path: string): string {
+  if (path.startsWith(FILE_SCHEME) || path.startsWith('http')) return path;
+  return path.startsWith('/') ? `${FILE_SCHEME}${path}` : `${FILE_SCHEME}/${path}`;
 }
 
-interface CameraStageProps {
-  cameraRef: RefObject<CameraView | null>;
-  facing: CameraType;
-  zoom: number;
+function resolveTargetResolution(tier: ResolutionTier, aspect: AspectRatio) {
+  if (tier === '2k') {
+    return aspect === '16:9' ? CommonResolutions.QHD_16_9 : CommonResolutions.QHD_4_3;
+  }
+  return aspect === '16:9' ? CommonResolutions.UHD_16_9 : CommonResolutions.UHD_4_3;
+}
+
+export interface CameraStageProps {
+  facing: CameraFacing;
+  /** Real zoom factor units (e.g. 1, 2, 3 — bounded by device.minZoom..maxZoom). */
   zoomShared: SharedValue<number>;
-  androidZoomRatio?: number;
-  androidZoomRange?: AndroidZoomRange | null;
-  androidCameraExtensionMode?: AndroidCameraExtensionMode;
-  autofocus: FocusMode;
-  flashMode: FlashMode;
+  /** Real EV bias. Bounded by device.minExposureBias..maxExposureBias. */
+  exposureShared: SharedValue<number>;
+  /** When true, the live preview drives an HDR-enabled session via the PhotoHDR constraint. */
+  preferHdr?: boolean;
   enableTorch: boolean;
-  selectedLens: string | null;
-  pictureSize?: string;
-  ratio?: CameraRatio;
-  responsiveOrientationWhenOrientationLocked?: boolean;
+  /** Mirror the saved selfie when on. Front-only; ignored on the back camera. */
+  mirrorSelfie?: boolean;
   active?: boolean;
-  animateShutter?: boolean;
-  mute?: boolean;
-  mirror?: boolean;
+  resolutionTier: ResolutionTier;
+  aspect: AspectRatio;
+  qualityPrioritization: QualityPrioritization;
+  quality: number;
+  /** Whether the next capture should fire the system shutter sound. Defaults to true. */
+  enableShutterSound?: boolean;
 
   pinchGesture: PinchGesture;
   tapGesture: TapGesture;
 
-  brightnessOverlayStyle: { backgroundColor: string; opacity: number };
-
-  /**
-   * Forwarded to `CameraView.onCameraReady`. The parent is expected to
-   * compose this with other ready-time work (e.g. `lensSwitcher.refreshAvailableLenses`).
-   */
+  /** Fired when the underlying session first starts streaming preview frames. */
   onCameraReady?: () => void;
-  /**
-   * Wrapper around `CameraView.onMountError`: we rewrap the bare `{ message }`
-   * payload into `{ nativeEvent }` so the consumer matches the
-   * `useCameraLifecycle` hook contract.
-   */
+  /** Native session error (recoverable or fatal). */
   onMountError?: (e: { nativeEvent: { message: string } }) => void;
-  onAvailableLensesChanged?: (e: AvailableLenses) => void;
+  /** Pushed whenever device caps are (re)resolved — typically once per device pick. */
+  onDeviceInfo?: (info: CameraDeviceInfo | null) => void;
 
-  /** When true, paint a translucent overlay + spinner while CameraView warms up. */
+  /** Paint a translucent overlay + spinner while the session warms up. */
   showWarmup?: boolean;
 }
 
-export default function CameraStage({
-  cameraRef,
-  facing,
-  zoom,
-  zoomShared,
-  androidZoomRatio,
-  androidZoomRange,
-  androidCameraExtensionMode,
-  autofocus,
-  flashMode,
-  enableTorch,
-  selectedLens,
-  pictureSize,
-  ratio,
-  responsiveOrientationWhenOrientationLocked,
-  active = true,
-  animateShutter,
-  mute,
-  mirror,
-  pinchGesture,
-  tapGesture,
-  brightnessOverlayStyle,
-  onCameraReady,
-  onMountError,
-  onAvailableLensesChanged,
-  showWarmup,
-}: CameraStageProps) {
+export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(function CameraStage(
+  {
+    facing,
+    zoomShared,
+    exposureShared,
+    preferHdr,
+    enableTorch,
+    mirrorSelfie,
+    active = true,
+    resolutionTier,
+    aspect,
+    qualityPrioritization,
+    quality,
+    enableShutterSound = true,
+    pinchGesture,
+    tapGesture,
+    onCameraReady,
+    onMountError,
+    onDeviceInfo,
+    showWarmup,
+  },
+  ref
+) {
   const { theme } = useTheme();
-  const useAndroidNativeZoom =
-    Platform.OS === 'android' &&
-    androidZoomRange !== null &&
-    androidZoomRange !== undefined &&
-    androidZoomRange.maxZoomRatio > androidZoomRange.minZoomRatio;
-  const minZoomRatio = androidZoomRange?.minZoomRatio ?? 1;
-  const maxZoomRatio = androidZoomRange?.maxZoomRatio ?? 1;
-  const animatedCameraProps = useAnimatedProps<CameraAnimatedProps>(() => {
-    const rawZoom = zoomShared.value;
-    const normalizedZoom =
-      rawZoom === rawZoom && rawZoom !== Infinity && rawZoom !== -Infinity
-        ? Math.min(1, Math.max(0, rawZoom))
-        : 0;
+  const cameraRef = useRef<CameraRef>(null);
+  const enableShutterSoundRef = useRef(enableShutterSound);
+  enableShutterSoundRef.current = enableShutterSound;
 
-    if (!useAndroidNativeZoom) {
-      return { zoom: normalizedZoom };
+  const physicalDevices = useMemo(() => [...preferredPhysicalDevicesForFacing(facing)], [facing]);
+  const device = useCameraDevice(facing, { physicalDevices });
+  const targetResolution = useMemo(
+    () => resolveTargetResolution(resolutionTier, aspect),
+    [resolutionTier, aspect]
+  );
+  const photoOutput = usePhotoOutput({
+    targetResolution,
+    containerFormat: 'jpeg',
+    quality,
+    qualityPrioritization,
+  });
+  const outputs = useMemo(() => [photoOutput], [photoOutput]);
+  const constraints = useMemo<Constraint[]>(
+    () => (preferHdr ? [{ photoHDR: true }] : []),
+    [preferHdr]
+  );
+
+  // Compute the engine-shaped device info, derived directly from VisionCamera's
+  // CameraDevice. Re-fires `onDeviceInfo` whenever the device swaps (e.g.
+  // front/back flip) or its caps change.
+  const deviceInfo = useMemo<CameraDeviceInfo | null>(() => {
+    if (!device) return null;
+    const physicalLensTypes: EnginePhysicalLensType[] = [];
+    if (isPhysicalLensType(device.type)) physicalLensTypes.push(device.type);
+    for (const child of device.physicalDevices) {
+      if (isPhysicalLensType(child.type) && !physicalLensTypes.includes(child.type)) {
+        physicalLensTypes.push(child.type);
+      }
     }
-
-    const ratio = Math.exp(
-      Math.log(minZoomRatio) + normalizedZoom * (Math.log(maxZoomRatio) - Math.log(minZoomRatio))
-    );
-
     return {
-      zoom: normalizedZoom,
-      zoomRatio: Math.min(maxZoomRatio, Math.max(minZoomRatio, ratio)),
+      minZoom: device.minZoom,
+      maxZoom: device.maxZoom,
+      neutralZoom: 1,
+      physicalLensTypes,
+      zoomLensSwitchFactors: [...device.zoomLensSwitchFactors],
+      supportsPhotoHdr: device.supportsPhotoHDR,
+      minExposureBias: device.minExposureBias,
+      maxExposureBias: device.maxExposureBias,
+      supportsFocusMetering: device.supportsFocusMetering,
+      hasFlash: device.hasFlash,
+      hasTorch: device.hasTorch,
     };
-  }, [maxZoomRatio, minZoomRatio, useAndroidNativeZoom]);
-  const androidNativeProps =
-    Platform.OS === 'android'
-      ? ({
-          zoomRatio: androidZoomRatio,
-          cameraExtensionMode: androidCameraExtensionMode ?? 'none',
-        } as Record<string, unknown>)
-      : {};
+  }, [device]);
+
+  const deviceInfoRef = useRef<CameraDeviceInfo | null>(deviceInfo);
+  deviceInfoRef.current = deviceInfo;
+
+  useEffect(() => {
+    onDeviceInfo?.(deviceInfo);
+  }, [deviceInfo, onDeviceInfo]);
+
+  const takePhoto = useCallback(
+    async (opts?: {
+      flashMode?: 'on' | 'off' | 'auto';
+      enableShutterSound?: boolean;
+    }): Promise<EnginePhoto | null> => {
+      const camera = cameraRef.current;
+      if (!camera) return null;
+      // photoOutput is the live ref-stable output owned by this stage; it's
+      // safe to call directly because Camera is mounted with it.
+      const file = await photoOutput.capturePhotoToFile(
+        {
+          flashMode: opts?.flashMode ?? 'off',
+          enableShutterSound: opts?.enableShutterSound ?? enableShutterSoundRef.current,
+        },
+        {}
+      );
+      const uri = pathToFileUri(file.filePath);
+      // VisionCamera's PhotoFile only carries the path. Decode the written file
+      // once so preview, subject-composite, burst, and HDR records carry the real
+      // pixel dimensions instead of the requested target resolution.
+      const dimensions = await resolveCapturedPhotoDimensions(uri, targetResolution);
+      return { uri, width: dimensions.width, height: dimensions.height };
+    },
+    [photoOutput, targetResolution]
+  );
+
+  const focus = useCallback(async (point: { x: number; y: number }) => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    const info = deviceInfoRef.current;
+    if (info && !info.supportsFocusMetering) return;
+    try {
+      // `responsiveness: 'snappy'` is recommended while taking photos.
+      // The default 5s auto-reset matches our previous lock-timeout UX.
+      await camera.focusTo({ x: point.x, y: point.y }, { responsiveness: 'snappy' });
+    } catch (error) {
+      // Focus may throw if the camera was reconfigured mid-flight; swallow so
+      // a stale tap doesn't bubble up to the screen.
+      console.warn('[CameraStage] focus failed', error);
+    }
+  }, []);
+
+  const getDeviceInfo = useCallback(() => deviceInfoRef.current, []);
+
+  useImperativeHandle(ref, () => ({ takePhoto, focus, getDeviceInfo }), [
+    takePhoto,
+    focus,
+    getDeviceInfo,
+  ]);
+
+  // Selfie mirroring is a Camera prop in VisionCamera v5 (it mirrors the
+  // *saved* output, not just the preview). 'auto' is VisionCamera's default
+  // behaviour — we only deviate to 'off' when the user explicitly toggled
+  // mirror off on the front camera.
+  const mirrorMode: MirrorMode | undefined = useMemo(() => {
+    if (facing !== 'front') return undefined;
+    return mirrorSelfie === false ? 'off' : 'auto';
+  }, [facing, mirrorSelfie]);
+
+  const handleMountError = useCallback(
+    (err: Error) => {
+      onMountError?.({ nativeEvent: { message: err.message } });
+    },
+    [onMountError]
+  );
 
   return (
     <View style={styles.root}>
       <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, tapGesture)}>
         <View style={StyleSheet.absoluteFill}>
-          <AnimatedCameraView
-            {...androidNativeProps}
-            ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            animatedProps={animatedCameraProps as AnimatedCameraViewProps['animatedProps']}
-            facing={facing}
-            zoom={zoom}
-            autofocus={autofocus}
-            flash={flashMode}
-            enableTorch={enableTorch}
-            // CameraView's selectedLens prop is `string | undefined` — never pass null.
-            selectedLens={selectedLens ?? undefined}
-            pictureSize={pictureSize}
-            ratio={ratio}
-            responsiveOrientationWhenOrientationLocked={responsiveOrientationWhenOrientationLocked}
-            active={active}
-            animateShutter={animateShutter}
-            mute={mute}
-            mirror={mirror}
-            onCameraReady={onCameraReady}
-            onMountError={(event: CameraMountError) =>
-              onMountError?.({ nativeEvent: { message: event.message } })
-            }
-            onAvailableLensesChanged={onAvailableLensesChanged}
-          />
-          <BrightnessPreview overlayStyle={brightnessOverlayStyle} />
+          {device ? (
+            <Camera
+              ref={cameraRef}
+              style={StyleSheet.absoluteFill}
+              device={device}
+              outputs={outputs}
+              isActive={active}
+              zoom={zoomShared}
+              exposure={exposureShared}
+              torchMode={enableTorch ? 'on' : 'off'}
+              mirrorMode={mirrorMode}
+              constraints={constraints}
+              orientationSource="interface"
+              onStarted={onCameraReady}
+              onError={handleMountError}
+            />
+          ) : null}
           {showWarmup ? (
             <View
               pointerEvents="none"
@@ -203,7 +296,9 @@ export default function CameraStage({
       </GestureDetector>
     </View>
   );
-}
+});
+
+export default CameraStage;
 
 const styles = StyleSheet.create({
   root: {

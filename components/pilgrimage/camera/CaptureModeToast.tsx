@@ -10,7 +10,11 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
 import type { CaptureMode } from '../../../hooks/useCameraSettings';
+import { captureModeToastCopy } from '../../../libs/services/pilgrimage/capture-mode-copy';
 
+// Frame counts are the real values the capture hooks use. Burst still picks
+// the best alignment score, not sharpness. HDR copy is resolved at render time:
+// hardware HDR on capable devices, otherwise the honest multi-frame fallback.
 /**
  * A fresh object identity each time the user cycles capture mode re-triggers
  * the toast — `null` until the first change so nothing shows on mount.
@@ -18,29 +22,6 @@ import type { CaptureMode } from '../../../hooks/useCameraSettings';
 export interface CaptureModeToastValue {
   mode: CaptureMode;
 }
-
-interface ModeCopy {
-  label: string;
-  hint: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}
-
-// Frame counts are the real values the capture hooks use. Android may use
-// CameraX HDR extension instead of the pseudo-HDR stack when the device
-// reports it, so HDR copy is resolved at render time.
-const MODE_COPY: Record<CaptureMode, ModeCopy> = {
-  single: { label: 'Photo', hint: 'One sharp shot', icon: 'camera-outline' },
-  burst: {
-    label: 'Burst',
-    hint: 'Captures 6 frames, keeps the sharpest',
-    icon: 'albums-outline',
-  },
-  hdr: {
-    label: 'HDR',
-    hint: 'Blends 3 exposures for high-contrast scenes',
-    icon: 'contrast-outline',
-  },
-};
 
 const VISIBLE_MS = 1500;
 const FADE_IN_MS = 200;
@@ -85,18 +66,16 @@ export default function CaptureModeToast({
   }));
 
   if (!toast) return null;
-  const copy =
-    toast.mode === 'hdr' && nativeHdrActive
-      ? {
-          ...MODE_COPY.hdr,
-          hint: 'Uses Android native HDR when available',
-        }
-      : MODE_COPY[toast.mode];
+  const copy = captureModeToastCopy(toast.mode, nativeHdrActive);
 
   return (
     <Animated.View pointerEvents="none" style={[styles.toast, animatedStyle]}>
       <View style={[styles.iconBadge, { backgroundColor: themeColor }]}>
-        <Ionicons name={copy.icon} size={15} color={readableTextOn(themeColor)} />
+        <Ionicons
+          name={copy.icon as keyof typeof Ionicons.glyphMap}
+          size={15}
+          color={readableTextOn(themeColor)}
+        />
       </View>
       <View style={styles.text}>
         <ThemedText

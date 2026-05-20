@@ -3,11 +3,11 @@
 //
 // HOW IT WORKS
 // A horizontal strip of tick marks pans left/right under a FIXED center
-// indicator. Dragging the strip = continuous digital zoom (the fine "0.55x
-// feel"). The labeled major detents (1x/2x/3x, plus 0.5x when an ultrawide
-// lens exists) are BOTH tap targets and snap points; tapping or snapping a
-// detent routes through `onPickFocalStop` so the screen's existing optical
-// lens-switching logic is completely unchanged.
+// indicator. Dragging the strip = continuous native zoom in real factor units.
+// The labeled major detents (1x/2x/3x, plus 0.5x when an ultrawide lens exists)
+// are BOTH tap targets and snap points; tapping or snapping a detent routes
+// through `onPickFocalStop` so the screen's existing optical lens-switching
+// logic is completely unchanged.
 //
 // PERFORMANCE
 // The continuous drag must NOT re-render the heavy compare screen. The pan
@@ -18,9 +18,8 @@
 //
 // RULE 8 (no fake data)
 // Only the real detents get a text label (0.5/1/2/3x). Every other tick is
-// neutral. Past the last detent the strip keeps neutral ticks with NO labels —
-// the app does not know the device's true max zoom factor, so it must never
-// print an invented value like "4.2x".
+// neutral. Past the last detent the strip keeps neutral ticks with NO labels up
+// to the native device max zoom, so it never prints invented values like "4.2x".
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -61,7 +60,7 @@ const EDGE_FADE_PX = 56;
 const EDGE_MIN_OPACITY = 0.12;
 
 interface ZoomDialProps {
-  /** SharedValue from useCameraZoom — the live normalized 0..1 digital zoom. */
+  /** SharedValue from useCameraZoom — the live native zoom factor. */
   zoomShared: SharedValue<number>;
   /** The focal stop currently considered active (optical lens or digital snap). */
   activeStop: FocalStop | null;
@@ -69,14 +68,15 @@ interface ZoomDialProps {
   onPickFocalStop: (stop: FocalStop) => void;
   themeColor: string;
   /**
-   * Focal stops the device exposes via real optical lenses (from
-   * useLensSwitcher). When `undefined` the dial falls back to digital-only
-   * detents (`[1,2,3]`, or `[1]` front-facing).
+   * Focal stops the active VisionCamera device exposes. When `undefined` the
+   * dial falls back to digital-only detents (`[1,2,3]`, or `[1]` front-facing).
    */
   availableStops?: FocalStop[];
   isFrontFacing?: boolean;
-  /** Normalized 0..1 zoom for each focal stop (useCameraZoom's STOP_TO_ZOOM). */
+  /** Real native zoom factor for each focal stop (useCameraZoom's STOP_TO_ZOOM). */
   stopZoom: StopZoomMap;
+  /** Real native maximum zoom factor from VisionCamera's active device. */
+  maxZoom?: number;
   /** Virtual / auto-switching lenses the device exposes. Empty → no AUTO button. */
   virtualLenses?: string[];
   /** Tap handler for the AUTO button. Required when `virtualLenses` is non-empty. */
@@ -120,6 +120,7 @@ export default function ZoomDial({
   availableStops,
   isFrontFacing = false,
   stopZoom,
+  maxZoom,
   virtualLenses,
   onPickVirtual,
   virtualActive = false,
@@ -134,8 +135,12 @@ export default function ZoomDial({
 
   const showAutoBtn = (virtualLenses?.length ?? 0) > 0 && typeof onPickVirtual === 'function';
   const activeFg = readableTextOn(themeColor);
-  // A single detent (front camera) → nothing to drag to; render a static dial.
-  const interactive = detents.length > 1;
+  const hasContinuousTail =
+    detents.length > 0 &&
+    typeof maxZoom === 'number' &&
+    Number.isFinite(maxZoom) &&
+    maxZoom > detents[detents.length - 1].zoom;
+  const interactive = detents.length > 1 || hasContinuousTail;
 
   // `dragPx` is the strip's scroll position (px sitting under the center
   // indicator). Lives on the UI thread; React never re-renders on drag.
@@ -153,14 +158,14 @@ export default function ZoomDial({
   useEffect(() => {
     if (!interactive) return;
     if (dragging.value) return;
-    const target = positionForZoom(zoomShared.value, detents);
+    const target = positionForZoom(zoomShared.value, detents, undefined, maxZoom);
     dragPx.value = withTiming(target, { duration: 180 });
     setHighlightStop(activeStop);
     lastCrossStop.current = activeStop;
     // zoomShared / dragPx / dragging are stable SharedValues — reading once is
     // intentional; continuous updates flow through the gesture, not this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detents, interactive, activeStop]);
+  }, [detents, interactive, activeStop, maxZoom]);
 
   // Haptic + highlight feedback when a labeled detent crosses the center line.
   const syncDetentHighlight = useCallback(
@@ -203,7 +208,7 @@ export default function ZoomDial({
         .onUpdate((e) => {
           const next = dragPositionForTranslation(startPx.value, e.translationX, spanPx);
           dragPx.value = next;
-          zoomShared.value = zoomForPosition(next, detents);
+          zoomShared.value = zoomForPosition(next, detents, undefined, maxZoom);
           syncDetentHighlight(next);
         })
         .onEnd(() => {
@@ -212,7 +217,7 @@ export default function ZoomDial({
             const snapPx = positionForStop(snapStop, detents);
             if (snapPx !== null) {
               dragPx.value = withTiming(snapPx, { duration: 160 });
-              zoomShared.value = withTiming(zoomForPosition(snapPx, detents), {
+              zoomShared.value = withTiming(zoomForPosition(snapPx, detents, undefined, maxZoom), {
                 duration: 160,
               });
             }
@@ -232,6 +237,7 @@ export default function ZoomDial({
       startPx,
       dragging,
       zoomShared,
+      maxZoom,
       commitRelease,
       syncDetentHighlight,
     ]
@@ -250,12 +256,14 @@ export default function ZoomDial({
       if (px === null) return;
       hapticsBridge.selection();
       dragPx.value = withTiming(px, { duration: 160 });
-      zoomShared.value = withTiming(zoomForPosition(px, detents), { duration: 160 });
+      zoomShared.value = withTiming(zoomForPosition(px, detents, undefined, maxZoom), {
+        duration: 160,
+      });
       lastCrossStop.current = stop;
       setHighlightStop(stop);
       onPickFocalStop(stop);
     },
-    [interactive, detents, onPickFocalStop, dragPx, zoomShared]
+    [interactive, detents, onPickFocalStop, dragPx, zoomShared, maxZoom]
   );
 
   if (detents.length === 0 && !showAutoBtn) return null;

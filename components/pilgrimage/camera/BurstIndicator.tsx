@@ -10,7 +10,7 @@
 
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
-import { ThemedText } from '../../themed';
+import { ThemedText } from '../../themed/ThemedText';
 
 interface BurstIndicatorProps {
   captured: number;

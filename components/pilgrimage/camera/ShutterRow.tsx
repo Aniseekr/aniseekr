@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { readableTextOn } from '../../themed';
+import { readableTextOn } from '../../themed/contrast';
 import { CAMERA_LANDSCAPE_CLUSTER_RESERVE } from '../../../libs/services/pilgrimage/camera-ui';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
 import BurstIndicator from './BurstIndicator';
@@ -17,6 +17,8 @@ interface ShutterRowProps {
   themeColor: string;
   capturing: boolean;
   isLandscape: boolean;
+  /** Show a shutter pulse over the button while a single capture is in-flight. */
+  animateCapture?: boolean;
   /** Front camera active — flips the flip button into its toggled state. */
   isFrontFacing: boolean;
   onShutter: () => void;
@@ -43,6 +45,7 @@ export default function ShutterRow({
   themeColor,
   capturing,
   isLandscape,
+  animateCapture = true,
   isFrontFacing,
   onShutter,
   onPickLibrary,
@@ -103,6 +106,16 @@ export default function ShutterRow({
           ]}
         />
       )}
+      {capturing && !burstActive && animateCapture ? (
+        <View
+          pointerEvents="none"
+          testID="shutter-pulse"
+          style={[
+            styles.shutterPulse,
+            { width: shutterSize, height: shutterSize, borderRadius: shutterSize / 2 },
+          ]}
+        />
+      ) : null}
       {burstActive && burst ? (
         <BurstIndicator captured={burst.captured} total={burst.total} themeColor={themeColor} />
       ) : null}
@@ -202,6 +215,12 @@ const styles = StyleSheet.create({
   },
   shutterPressed: { backgroundColor: 'rgba(0,0,0,0.38)' },
   shutterCore: { backgroundColor: '#fff' },
+  shutterPulse: {
+    position: 'absolute',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.78)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
   sideBtn: {
     width: CameraChrome.circleSize,
     height: CameraChrome.circleSize,

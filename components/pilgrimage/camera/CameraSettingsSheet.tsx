@@ -14,6 +14,7 @@ import {
   type ResolutionTier,
 } from '../../../hooks/useCameraSettings';
 import type { AspectRatio } from './types';
+import { CAPTURE_MODE_HELP_TEXT } from '../../../libs/services/pilgrimage/capture-mode-copy';
 
 const CAPTURE_MODES: CaptureMode[] = ['single', 'burst', 'hdr'];
 const CAPTURE_MODE_LABEL: Record<CaptureMode, string> = {
@@ -123,7 +124,7 @@ export default function CameraSettingsSheet({
                 }}
               />
               <ThemedText variant="caption" tone="secondary">
-                Single: one shot. Burst: 6 frames, keeps the sharpest. HDR: blends 3 exposures.
+                {CAPTURE_MODE_HELP_TEXT}
               </ThemedText>
             </SettingsSection>
 
@@ -174,12 +175,6 @@ export default function CameraSettingsSheet({
               description="Show the shutter pulse on capture"
               value={settings.animateShutter}
               onValueChange={(v) => handleSwitch('animateShutter', v)}
-            />
-            <SwitchRow
-              label="Skip processing"
-              description="Faster capture. Image may be rotated incorrectly on some devices."
-              value={settings.skipProcessing}
-              onValueChange={(v) => handleSwitch('skipProcessing', v)}
             />
             <SwitchRow
               label="Auto-capture when aligned"

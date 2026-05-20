@@ -11,7 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCameraPermissions } from 'expo-camera';
+import { useCameraPermission } from 'react-native-vision-camera';
 import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
@@ -89,35 +89,25 @@ export default function PhotoTipsScreen() {
   const warnings = analysis ? inferWarnings(analysis) : null;
   const palette = analysis?.palette ?? [];
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const { hasPermission, requestPermission, canRequestPermission } = useCameraPermission();
   const [requesting, setRequesting] = useState(false);
 
   const handleStart = useCallback(async () => {
-    // Pre-check camera permission here so the user sees the iOS/Android
-    // dialog from an explicit gesture (firing it inside the camera screen's
-    // useEffect on mount sometimes silently fails on iOS, which is exactly
-    // the "no permission" symptom users report).
+    // Pre-check camera permission so the user sees the iOS/Android dialog
+    // from an explicit gesture — firing it inside the camera screen's mount
+    // effect can silently fail on iOS.
     if (requesting) return;
-    let current = permission;
-    if (!current) {
-      // First call ever — useCameraPermissions hasn't settled yet. Trigger
-      // requestPermission directly; it returns a fresh status object.
+    let granted = hasPermission;
+    if (!granted && canRequestPermission) {
       try {
         setRequesting(true);
-        current = await requestPermission();
-      } finally {
-        setRequesting(false);
-      }
-    } else if (!current.granted && current.canAskAgain) {
-      try {
-        setRequesting(true);
-        current = await requestPermission();
+        granted = await requestPermission();
       } finally {
         setRequesting(false);
       }
     }
 
-    if (!current?.granted) {
+    if (!granted) {
       // Permanently denied (or user said no). Offer Settings deep-link
       // instead of navigating into a broken camera screen.
       hapticsBridge.warning();
@@ -142,7 +132,7 @@ export default function PhotoTipsScreen() {
       pathname: '/pilgrimage/compare/[spotId]',
       params: { ...params },
     });
-  }, [router, params, permission, requestPermission, requesting]);
+  }, [router, params, hasPermission, canRequestPermission, requestPermission, requesting]);
 
   const handleHelp = useCallback(() => {
     hapticsBridge.tap();
