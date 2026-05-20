@@ -51,6 +51,17 @@ export interface CameraDeviceInfo {
    * for single-lens devices.
    */
   zoomLensSwitchFactors: number[];
+  /**
+   * Raw focal length (in mm on Android, 35mm-equivalent on iOS) of each
+   * constituent physical lens, sorted ascending. Populated from the parent
+   * device's `physicalDevices` children; entries with no reported focal length
+   * are skipped. Used as the Android-side fallback signal for lens detection
+   * because CameraX's `PhysicalCameraInfoAdapter` reports every child's
+   * {@link physicalLensTypes | type} as `UNKNOWN` and the virtual device's
+   * {@link zoomLensSwitchFactors} as empty (VisionCamera Android bug: the
+   * extension stubs that data out to avoid a Camera2 interop crash).
+   */
+  physicalFocalLengths: number[];
   /** True if the device's chosen format supports real photo-HDR capture. */
   supportsPhotoHdr: boolean;
   /** Real exposure bias range in EV units. `0`/`0` if the device doesn't support bias. */

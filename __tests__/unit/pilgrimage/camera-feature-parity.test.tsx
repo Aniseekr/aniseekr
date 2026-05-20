@@ -74,9 +74,12 @@ describe('camera feature parity', () => {
     expect(CAPTURE_MODE_HELP_TEXT).not.toContain('blends 3 exposures');
 
     expect(captureModeToastCopy('burst', false).hint).toContain('best-aligned');
-    expect(captureModeToastCopy('hdr', true).hint).toContain('hardware HDR');
-    expect(captureModeToastCopy('hdr', false).hint).toContain('multi-frame');
-    expect(captureModeToastCopy('hdr', true).hint).not.toContain('Android');
+    // 'auto' is the replacement for the retired 'hdr' mode. When the scene
+    // analyzer agrees AND the device has native photo-HDR, the toast advertises
+    // hardware HDR. Otherwise it describes the bracket fallback honestly.
+    expect(captureModeToastCopy('auto', true).hint).toContain('hardware HDR');
+    expect(captureModeToastCopy('auto', false).hint).toContain('bracket');
+    expect(captureModeToastCopy('auto', true).hint).not.toContain('Android');
   });
 
   it('wires the animate-shutter setting into visible shutter feedback', () => {

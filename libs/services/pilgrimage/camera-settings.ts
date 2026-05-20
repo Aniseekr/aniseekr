@@ -15,15 +15,46 @@ import { isObject, safeJsonParse } from '../../utils/safe-json';
 // to the photo output.
 export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
 
-export type CaptureMode = 'single' | 'burst' | 'hdr';
+// User-facing capture modes. 'hdr' was retired when we replaced the fake
+// usePseudoHDR with a real exposure bracket + scene-aware 'auto' mode. Persisted
+// 'hdr' values migrate to 'auto' in `pickValidSettings` so users who saved
+// 'hdr' under v4 don't get reset to default.
+export type CaptureMode = 'single' | 'burst' | 'auto';
 export type CountdownSeconds = 0 | 3 | 5 | 10;
 export type PictureQuality = 'standard' | 'high' | 'max';
 export type ResolutionTier = '4k' | '2k';
 
-export const CAPTURE_MODES: readonly CaptureMode[] = ['single', 'burst', 'hdr'] as const;
+export const CAPTURE_MODES: readonly CaptureMode[] = ['single', 'burst', 'auto'] as const;
 export const COUNTDOWN_SECONDS: readonly CountdownSeconds[] = [0, 3, 5, 10] as const;
 export const PICTURE_QUALITIES: readonly PictureQuality[] = ['standard', 'high', 'max'] as const;
 export const RESOLUTION_TIERS: readonly ResolutionTier[] = ['4k', '2k'] as const;
+
+/**
+ * EV stops used for the real exposure bracket. Pass through
+ * `clampBracketEvStops` against the device's reported bias range before
+ * driving the SharedValue, because some devices report a tighter range than
+ * ±2 EV (older sensors, telephoto on some Android devices).
+ */
+export const BRACKET_EV_STOPS: readonly [number, number, number] = [-2, 0, 2];
+
+/**
+ * Clamp a 3-stop bracket to the device's `minExposureBias..maxExposureBias`
+ * range. Pure function — does not allocate when the input is already in range
+ * but always returns a fresh tuple (mutation-safe for callers).
+ */
+export function clampBracketEvStops(
+  stops: readonly [number, number, number],
+  min: number,
+  max: number
+): [number, number, number] {
+  const lo = Math.min(min, max);
+  const hi = Math.max(min, max);
+  return [
+    Math.max(lo, Math.min(hi, stops[0])),
+    Math.max(lo, Math.min(hi, stops[1])),
+    Math.max(lo, Math.min(hi, stops[2])),
+  ];
+}
 
 export interface CameraSettings {
   mute: boolean;
@@ -41,7 +72,7 @@ export interface CameraSettings {
   /**
    * When true, the camera screen arms an auto-capture watcher that fires the
    * shutter once alignment is sustained above the threshold. Orthogonal to
-   * `captureMode` — the active mode (single/burst/hdr) still applies — and
+   * `captureMode` — the active mode (single/burst/auto) still applies — and
    * stacks with `countdownSeconds`.
    */
   autoCapture: boolean;
@@ -90,7 +121,7 @@ export function qualityToPrioritization(q: PictureQuality): 'speed' | 'balanced'
 }
 
 function isCaptureMode(value: unknown): value is CaptureMode {
-  return value === 'single' || value === 'burst' || value === 'hdr';
+  return value === 'single' || value === 'burst' || value === 'auto';
 }
 
 function isCountdownSeconds(value: unknown): value is CountdownSeconds {
@@ -115,7 +146,15 @@ function pickValidSettings(value: Record<string, unknown>): Partial<CameraSettin
   if (isCountdownSeconds(value.countdownSeconds)) {
     out.countdownSeconds = value.countdownSeconds;
   }
-  if (isCaptureMode(value.captureMode)) out.captureMode = value.captureMode;
+  if (isCaptureMode(value.captureMode)) {
+    out.captureMode = value.captureMode;
+  } else if (value.captureMode === 'hdr') {
+    // v4 migration: the retired 'hdr' user-facing mode maps to the new 'auto'
+    // mode (which routes to native HDR when the device supports it, else to
+    // the real exposure bracket). Done in-place so the next save rewrites the
+    // stored value and existing users keep their HDR-leaning preference.
+    out.captureMode = 'auto';
+  }
   if (typeof value.autoCapture === 'boolean') out.autoCapture = value.autoCapture;
   return out;
 }

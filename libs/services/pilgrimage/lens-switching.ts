@@ -1,13 +1,29 @@
 // Derives the zoom-dial's focal-stop set from VisionCamera device info.
 //
-// On v5 every device reports its real physical lenses (`physicalLensTypes`)
-// AND the zoom factors at which a virtual multi-lens device auto-switches
-// between them (`zoomLensSwitchFactors`). Both are real values straight from
-// the OS — no iOS-only Apple lens-name table, no Android native-patch.
+// On iOS every multi-lens device reports its real physical lenses
+// (`physicalLensTypes`) AND the zoom factors at which a virtual multi-lens
+// device auto-switches between them (`zoomLensSwitchFactors`). Both are real
+// values straight from the OS — no Apple-only lens-name table, no native patch.
 //
-// The dial is then driven entirely by `zoomShared` (a real factor): picking a
-// pillar is "set zoom to N", and the OS lights up the matching physical lens.
-// Per CLAUDE.md Rule 8 the dial only renders pillars the device truly has.
+// On Android both fields are empty on every multi-camera device today because
+// VisionCamera's CameraX adapter stubs them out to avoid Camera2 interop
+// crashes (`CameraInfo+zoomLensSwitchFactors.kt` always returns an empty
+// DoubleArray; `CameraInfo+deviceType.kt` returns UNKNOWN on every
+// `PhysicalCameraInfoAdapter`). Without a fallback the dial would render only
+// the neutral 1× pillar even on a Pixel 8 Pro or Samsung S24 Ultra.
+//
+// The fallback consumes the two real signals CameraX *does* give us:
+//   * The virtual device's `minZoom` (from `zoomState.minZoomRatio`) — values
+//     under ~1.0 are only physically reachable through an ultra-wide lens, so
+//     `minZoom <= 0.65` reliably means a 0.5× pillar should appear.
+//   * Each physical child's raw focal length (from
+//     `LENS_INFO_AVAILABLE_FOCAL_LENGTHS`) — ratios across siblings approximate
+//     the optical zoom factor of the telephoto sibling. Rounded conservatively
+//     to the closest 2× or 3× pillar in our snap set.
+//
+// Per CLAUDE.md Rule 8 the dial still only renders pillars the device truly
+// has: every pillar comes from a *real* CameraX value, never a hash, random,
+// or platform guess.
 import type {
   CameraDeviceInfo,
   EnginePhysicalLensType,
@@ -26,6 +42,27 @@ const SWITCH_FACTOR_TOLERANCE = 0.15;
 
 const ALL_STOPS: readonly FocalStop[] = [0.5, 1, 2, 3] as const;
 
+/**
+ * Snap boundary between the 2× and 3× pillars when inferring a telephoto from
+ * the raw focal-length ratio of two physical siblings. Raw-mm ratios
+ * systematically underestimate the optical zoom factor on smartphones because
+ * the telephoto sensor is smaller than the main sensor (the extra crop
+ * contributes to the perceived zoom). Empirical raw ratios across common
+ * hardware:
+ *   * iPhone 11/12 Pro (2× optical): ≈ 1.7–2.0
+ *   * Pixel 6/7/8 + Samsung S22/S23/S24 (3× optical): ≈ 2.5–3.0
+ *   * Pixel 8 Pro / Samsung S25 (5× optical): ≈ 2.4–3.5
+ * A boundary of 2.2 keeps the 2× pillar for genuine 2× hardware while routing
+ * everything 3× and up to the 3× pillar (the highest snap we expose).
+ */
+const TELEPHOTO_SNAP_BOUNDARY = 2.2;
+const TELEPHOTO_MIN_RATIO = 1.7;
+
+/** A reported sub-1× minZoom this small (or smaller) is the canonical Android
+ *  signal that a physical ultra-wide lens is present — digital crop cannot
+ *  zoom out below 1.0. Anything in (0.65, 1) is suspicious enough to ignore. */
+const ULTRA_WIDE_MIN_ZOOM_THRESHOLD = 0.65;
+
 function isFocalStop(value: number): value is FocalStop {
   return value === 0.5 || value === 1 || value === 2 || value === 3;
 }
@@ -35,13 +72,45 @@ function dedupeSorted(stops: FocalStop[]): FocalStop[] {
 }
 
 /**
+ * Android fallback that infers focal stops from the two real CameraX signals
+ * we still have access to when `physicalLensTypes` / `zoomLensSwitchFactors`
+ * come back empty: the virtual device's `minZoom` and each physical child's
+ * raw `focalLength`.
+ */
+function inferStopsFromFallbackSignals(info: CameraDeviceInfo): FocalStop[] {
+  const stops: FocalStop[] = [];
+  const hasUltraWide = info.minZoom > 0 && info.minZoom <= ULTRA_WIDE_MIN_ZOOM_THRESHOLD;
+  if (hasUltraWide) stops.push(0.5);
+
+  // Sorted ascending by CameraStage. With an ultra-wide present, the main
+  // wide lens is the second-shortest focal length; without one the main is
+  // simply the shortest sibling.
+  const lengths = info.physicalFocalLengths;
+  if (lengths.length >= 2) {
+    const mainIndex = hasUltraWide ? 1 : 0;
+    const mainFocal = lengths[mainIndex];
+    if (mainFocal > 0) {
+      for (let i = mainIndex + 1; i < lengths.length; i++) {
+        const ratio = lengths[i] / mainFocal;
+        if (ratio < TELEPHOTO_MIN_RATIO) continue;
+        stops.push(ratio <= TELEPHOTO_SNAP_BOUNDARY ? 2 : 3);
+      }
+    }
+  }
+  return stops;
+}
+
+/**
  * Returns the focal-stop pillars the dial should render for this device.
  *
  * The priority order is:
  *   1. Physical lenses (`ultra-wide-angle` → 0.5, `wide-angle` → 1, `telephoto` → telephotoStop).
  *   2. Zoom-lens switch factors (when a virtual device auto-switches at e.g.
  *      `[1, 3]` we surface 1× and 3× as snap pillars).
- *   3. The neutral 1× pillar — always present so the dial isn't empty on
+ *   3. Android fallback — when (1) and (2) are both empty but the device looks
+ *      like a multi-cam virtual device, infer pillars from `minZoom` and the
+ *      raw focal lengths of the physical children.
+ *   4. The neutral 1× pillar — always present so the dial isn't empty on
  *      single-lens hardware.
  *
  * Stops outside the device's `minZoom..maxZoom` window are filtered out.
@@ -71,9 +140,28 @@ export function availableStopsFromDeviceInfo(
     }
     if (isFocalStop(factor)) stops.push(factor);
   }
+
+  // Android path: both iOS-derived signals are empty, but CameraX still hands
+  // us a real `minZoom` and per-child `focalLength`. Use those before we fall
+  // back to the lonely 1× pillar.
+  if (
+    info.physicalLensTypes.length === 0 &&
+    info.zoomLensSwitchFactors.length === 0 &&
+    (info.minZoom < 1 || info.physicalFocalLengths.length >= 2)
+  ) {
+    for (const inferred of inferStopsFromFallbackSignals(info)) stops.push(inferred);
+  }
+
   stops.push(1);
 
-  const filtered = stops.filter((s) => s >= info.minZoom - 0.05 && s <= info.maxZoom + 0.05);
+  // The 0.5× pillar is allowed whenever the device reports any sub-1× minZoom:
+  // values like 0.6 are typical on Android multi-cams (vendor-dependent) and
+  // would otherwise be filtered out by the `minZoom - 0.05` floor. Tapping the
+  // pillar still routes through `useCameraZoom`, which clamps the request to
+  // the real minZoom, so the camera never receives an out-of-range value.
+  const lowerBoundFor = (s: FocalStop): number =>
+    s === 0.5 && info.minZoom > 0 && info.minZoom < 1 ? 0 : info.minZoom - 0.05;
+  const filtered = stops.filter((s) => s >= lowerBoundFor(s) && s <= info.maxZoom + 0.05);
   const deduped = dedupeSorted(filtered);
   return deduped.length > 0 ? deduped : [1];
 }

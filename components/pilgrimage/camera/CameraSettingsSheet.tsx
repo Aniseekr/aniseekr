@@ -16,11 +16,11 @@ import {
 import type { AspectRatio } from './types';
 import { CAPTURE_MODE_HELP_TEXT } from '../../../libs/services/pilgrimage/capture-mode-copy';
 
-const CAPTURE_MODES: CaptureMode[] = ['single', 'burst', 'hdr'];
+const CAPTURE_MODES: CaptureMode[] = ['single', 'burst', 'auto'];
 const CAPTURE_MODE_LABEL: Record<CaptureMode, string> = {
   single: 'Single',
   burst: 'Burst',
-  hdr: 'HDR',
+  auto: 'Auto',
 };
 
 const ASPECT_RATIOS: AspectRatio[] = ['16:9', '4:3', '1:1', 'full'];

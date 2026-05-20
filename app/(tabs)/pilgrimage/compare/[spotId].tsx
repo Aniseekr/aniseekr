@@ -89,7 +89,8 @@ import { useSceneSwitcherSpots } from '../../../../hooks/useSceneSwitcherSpots';
 import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
 import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
-import { usePseudoHDR } from '../../../../hooks/usePseudoHDR';
+import { useExposureBracket } from '../../../../hooks/useExposureBracket';
+import { useSceneAnalyzer } from '../../../../hooks/useSceneAnalyzer';
 import { useAutoCapture } from '../../../../hooks/useAutoCapture';
 import { useCaptureSession } from '../../../../hooks/useCaptureSession';
 import {
@@ -137,14 +138,18 @@ const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', CamSwitchToastValue> = {
   subject: { icon: 'person-outline', label: 'Subject', hint: 'Subject extract overlay' },
 };
 
-// Capture mode is a top-bar icon button that cycles single → burst → hdr; the
-// icon mirrors the live mode and a toast explains each mode on change.
+// Capture mode is a top-bar icon button that cycles single → burst → auto; the
+// icon mirrors the live mode and a toast explains each mode on change. 'auto'
+// replaces the retired 'hdr' mode — it captures a single shot when the scene
+// looks well-exposed, and falls through to a real 3-frame exposure bracket
+// (or native single-shot HDR when the device supports it) when the scene
+// detector flags clipped shadows + highlights.
 const CAPTURE_MODE_ICON: Record<CaptureMode, keyof typeof Ionicons.glyphMap> = {
   single: 'camera-outline',
   burst: 'albums-outline',
-  hdr: 'contrast-outline',
+  auto: 'sparkles-outline',
 };
-const CAPTURE_MODE_CYCLE: CaptureMode[] = ['single', 'burst', 'hdr'];
+const CAPTURE_MODE_CYCLE: CaptureMode[] = ['single', 'burst', 'auto'];
 
 const IMPORTED_CAPTURE_DIR = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}pilgrimage-imports/`
@@ -298,10 +303,16 @@ export default function CompareCaptureScreen() {
   const enableTorch = flashMode === 'torch';
   const captureFlash: 'on' | 'off' | 'auto' = flashMode === 'torch' ? 'off' : flashMode;
 
-  // True HDR is gated on the device actually supporting hardware photo-HDR.
-  // When false (older devices), the screen routes HDR mode through
-  // `usePseudoHDR`'s 3-frame Skia composite fallback instead.
-  const realHdrTargeted = settings.captureMode === 'hdr' && (deviceInfo?.supportsPhotoHdr ?? false);
+  // Auto mode runs the scene analyzer at ~5 Hz. When it flags clipped shadows
+  // + highlights AND the device supports native photo-HDR, the camera mounts
+  // with the PhotoHDR constraint so a single takePhoto already produces a true
+  // HDR JPEG. Otherwise the auto path falls through to a real 3-frame
+  // exposure bracket via `useExposureBracket`.
+  const sceneAnalyzer = useSceneAnalyzer({ enabled: settings.captureMode === 'auto' });
+  const realHdrTargeted =
+    settings.captureMode === 'auto' &&
+    sceneAnalyzer.hdrRecommended &&
+    (deviceInfo?.supportsPhotoHdr ?? false);
 
   const burst = useBurstCapture({
     engineRef: cameraRef,
@@ -309,8 +320,14 @@ export default function CompareCaptureScreen() {
     silent: settings.mute,
     flashMode: captureFlash,
   });
-  const hdr = usePseudoHDR({
+  const bracket = useExposureBracket({
     engineRef: cameraRef,
+    exposureShared,
+    evBiasRange: {
+      min: deviceInfo?.minExposureBias ?? 0,
+      max: deviceInfo?.maxExposureBias ?? 0,
+    },
+    restoreEv: evValue,
     quality: qualityToNumber(settings.quality),
     silent: settings.mute,
     flashMode: 'off',
@@ -319,7 +336,8 @@ export default function CompareCaptureScreen() {
   // Capture session — accumulates every shot the user takes this visit
   // (newest first). It survives the camera → preview navigation (the preview
   // is pushed, not replaced) so the multi-shot album can read all shots from
-  // one store. Each run{Single|Burst|Hdr} adds the visible/best frame here.
+  // one store. Each run{Single|Burst|Auto|HdrBracket} adds the visible/best
+  // frame here.
   const captureSession = useCaptureSession();
 
   // Start a fresh session each time the camera mounts for a spot, so a new
@@ -365,7 +383,7 @@ export default function CompareCaptureScreen() {
     });
   }, [setHud]);
 
-  // Capture mode lives in the top bar — tapping cycles single → burst → hdr
+  // Capture mode lives in the top bar — tapping cycles single → burst → auto
   // and surfaces a short toast describing what the next shutter press will do.
   const cycleCaptureMode = useCallback(() => {
     const idx = CAPTURE_MODE_CYCLE.indexOf(settings.captureMode);
@@ -595,7 +613,11 @@ export default function CompareCaptureScreen() {
   const runSingle = useCallback(
     async (
       source: 'manual' | 'auto' = 'manual',
-      captureMode: CaptureMode = 'single'
+      // Recorded SHOT-level mode (NOT the user-facing CaptureMode). The shot
+      // store still distinguishes 'hdr' from 'single' because we want the
+      // preview/album to label a native single-shot HDR honestly even though
+      // 'hdr' is no longer a user-facing setting.
+      captureMode: CaptureSessionShot['captureMode'] = 'single'
     ): Promise<CaptureSessionShot | null> => {
       const engine = cameraRef.current;
       if (!engine) return null;
@@ -664,15 +686,13 @@ export default function CompareCaptureScreen() {
     [burst, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
   );
 
-  const runHdr = useCallback(
-    async (source: 'manual' | 'auto' = 'manual'): Promise<CaptureSessionShot | null> => {
-      // When the device supports real photo-HDR, a single `takePhoto` already
-      // produced an HDR frame because CameraStage mounted with the
-      // `{ photoHDR: true }` constraint.
-      if (realHdrTargeted) {
-        return runSingle(source, 'hdr');
-      }
-      const result = await hdr.run();
+  // Run a real exposure bracket (3 frames at clamped [-2, 0, +2] EV) and
+  // record the composited HDR result. Used by `runAuto` when the scene
+  // analyzer flags a high-DR frame AND the device doesn't support native
+  // single-shot HDR.
+  const runHdrBracket = useCallback(
+    async (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
+      const result = await bracket.run();
       if (!result) return null;
       tapFocus.releaseLock();
       const additionalExif = buildExifNow();
@@ -685,24 +705,45 @@ export default function CompareCaptureScreen() {
         uri: output.uri,
         width: output.width,
         height: output.height,
-        // Rule 8: when compositing fell back to the mid frame we mark it as
-        // single, not HDR — telling the preview screen the truth.
+        // Rule 8: when the bracket fell back to a single mid frame we mark
+        // it as 'single', not 'hdr' — telling the preview screen the truth
+        // about which shot was actually produced.
         captureMode: result.wasHdr ? 'hdr' : 'single',
         source,
       });
     },
-    [realHdrTargeted, runSingle, hdr, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
+    [bracket, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
   );
 
-  const anyCapturing = capturing || burst.capturing || hdr.capturing;
+  // Auto mode: route the shot based on the live scene analyzer.
+  //   - Scene flags HDR + device has native photo-HDR → single takePhoto
+  //     (CameraStage already mounted with `{ photoHDR: true }`, so the single
+  //     shot is a true HDR JPEG and we record it as 'hdr').
+  //   - Scene flags HDR but the device cannot do native photo-HDR → real
+  //     3-frame exposure bracket via `runHdrBracket`.
+  //   - Scene looks balanced → plain single shot.
+  const runAuto = useCallback(
+    async (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
+      if (realHdrTargeted) {
+        return runSingle(source, 'hdr');
+      }
+      if (sceneAnalyzer.hdrRecommended) {
+        return runHdrBracket(source);
+      }
+      return runSingle(source, 'single');
+    },
+    [realHdrTargeted, sceneAnalyzer.hdrRecommended, runSingle, runHdrBracket]
+  );
+
+  const anyCapturing = capturing || burst.capturing || bracket.capturing;
 
   const captureForMode = useCallback(
     (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
       if (settings.captureMode === 'burst') return runBurst(source);
-      if (settings.captureMode === 'hdr') return runHdr(source);
+      if (settings.captureMode === 'auto') return runAuto(source);
       return runSingle(source);
     },
-    [settings.captureMode, runBurst, runHdr, runSingle]
+    [settings.captureMode, runBurst, runAuto, runSingle]
   );
 
   // useAutoCapture watches sensors.score.total + autofocus lock and fires when
@@ -972,6 +1013,7 @@ export default function CompareCaptureScreen() {
             onMountError={onMountError}
             onDeviceInfo={setDeviceInfo}
             showWarmup={!cameraIsReady}
+            frameOutput={sceneAnalyzer.frameOutput}
           />
         </CameraErrorBoundary>
 
@@ -1075,6 +1117,43 @@ export default function CompareCaptureScreen() {
             onPress={() => setHud({ sceneSwitcherOpen: true })}
           />
         </View>
+
+        {/* Persistent AUTO chip when the user picked auto mode — flips to
+            "AUTO · HDR" once the scene analyzer agrees and the camera is
+            preparing an HDR shot. Rule 8: this only renders the real live
+            recommendation, never a guess. */}
+        {settings.captureMode === 'auto' ? (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.autoModeBadgeWrap,
+              {
+                top: topBarBottom + 8,
+                right: Math.max(14, insets.right + 12),
+              },
+            ]}>
+            <View
+              style={[
+                styles.autoModeBadge,
+                {
+                  borderColor: sceneAnalyzer.hdrRecommended ? themeColor : 'rgba(255,255,255,0.4)',
+                  backgroundColor: sceneAnalyzer.hdrRecommended
+                    ? themeColor
+                    : 'rgba(0,0,0,0.55)',
+                },
+              ]}>
+              <ThemedText
+                variant="captionSmall"
+                weight="700"
+                style={{
+                  color: sceneAnalyzer.hdrRecommended ? readableTextOn(themeColor) : '#fff',
+                  letterSpacing: 1,
+                }}>
+                {sceneAnalyzer.hdrRecommended ? 'AUTO · HDR' : 'AUTO'}
+              </ThemedText>
+            </View>
+          </View>
+        ) : null}
 
         <AlignmentHUD
           score={sensors.score}
@@ -1291,6 +1370,13 @@ const styles = StyleSheet.create({
   refThumbWrap: { position: 'absolute', zIndex: 66 },
   focalDock: { position: 'absolute', zIndex: 58 },
   autoBadgeWrap: { position: 'absolute', alignItems: 'center', zIndex: 60 },
+  autoModeBadgeWrap: { position: 'absolute', zIndex: 66 },
+  autoModeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
   modeToastWrap: { position: 'absolute', alignItems: 'center', zIndex: 80 },
   captureHistoryWrap: { position: 'absolute', alignItems: 'center', zIndex: 58 },
   portraitBottomPanel: {

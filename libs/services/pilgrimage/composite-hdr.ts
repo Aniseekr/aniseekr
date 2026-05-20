@@ -1,31 +1,68 @@
-// Pseudo-HDR compositing for the pilgrimage camera.
+// Real exposure-fusion HDR compositing for the pilgrimage camera.
 //
-// HONEST NOTE — this fallback is NOT real HDR. Real hardware photo-HDR now
-// goes through VisionCamera's PhotoHDR constraint; this module is used only
-// when that capability is unavailable. It captures three frames in quick
-// succession (which differ only by ambient lighting noise and motion), then
-// tonemaps them in software with a Skia ColorMatrix at EV ≈ {-1, 0, +1}. The
-// three tonemapped images are composited via Plus-blended weighted average
-// (1/3 alpha each). It is a "tonemapped composite", not hardware HDR.
-// Rule 8 (no fake data): on any decode/surface/encode failure we return the
-// mid-frame URI — a real file on disk, never a fabricated path.
+// Pipeline (running on 3 frames captured at REAL different exposures —
+// `[under, mid, over]` at e.g. [-2, 0, +2] EV — provided by the bracket hook):
 //
-// The EV math is the same simple RGB scale used by the camera preview pipeline:
-//   b = pow(2, ev)
-//   matrix = [b,0,0,0,0,  0,b,0,0,0,  0,0,b,0,0,  0,0,0,1,0]
-// and the file I/O is Skia.Data.fromURI → MakeImageFromEncoded → offscreen
-// surface → encodeToBytes(JPEG) → write to `Paths.cache` via the
-// expo-file-system modular File API.
+//   1. Decode all three JPEGs through Skia.
+//   2. Software alignment: downscale each frame to ~128×96 luma, run a
+//      coarse-to-fine SAD search against the mid frame, and recover an
+//      integer (dx, dy) offset for the under and over frames. Bracket spans
+//      ~300ms so handheld shake is typically only a few pixels even at 4K.
+//   3. Mertens-style exposure fusion via an SkSL RuntimeEffect. Each pixel
+//      of each frame is weighted by a well-exposedness Gaussian (centered on
+//      0.5 luma) plus a small contrast bias, then the three frames are
+//      blended by those weights per-pixel. The offsets from step 2 are
+//      passed as shader uniforms so the candidate frames are sampled at the
+//      aligned position.
+//   4. Snapshot the offscreen surface, encode JPEG at `quality * 100`, write
+//      to `Paths.cache`, then re-embed any caller-supplied EXIF.
+//
+// CPU fallback (Rule 8 — no fake data):
+//   - If RuntimeEffect compilation fails on this device we fall back to an
+//     honest weighted draw: compute per-frame mean luma, derive a Gaussian
+//     weight that matches the shader's metric, and Plus-blend with those
+//     scalar weights. This is still better than the old uniform 1/3 alpha
+//     because it actually down-weights the frames whose mean luma is far
+//     from 0.5 (i.e. blown highlights or crushed shadows).
+//   - If decode, surface allocation, or encoding fails outright, we return
+//     the REAL mid frame URI. We never fabricate a result.
 
-import { Skia, ImageFormat, BlendMode } from '@shopify/react-native-skia';
-import type { SkImage, SkPaint, SkSurface } from '@shopify/react-native-skia';
+import {
+  Skia,
+  ImageFormat,
+  BlendMode,
+  TileMode,
+  FilterMode,
+  MipmapMode,
+  AlphaType,
+  ColorType,
+} from '@shopify/react-native-skia';
+import type {
+  SkImage,
+  SkPaint,
+  SkSurface,
+  SkRuntimeEffect,
+  SkShader,
+} from '@shopify/react-native-skia';
 import { File, Paths } from 'expo-file-system';
 import { embedExifIntoJpegFile } from '../../utils/exif-embed';
+import {
+  alignTranslation,
+  rgbaToLuma,
+  scaleOffsetToFullRes,
+  type AlignResult,
+} from './composite-hdr-align';
+import {
+  DEFAULT_EV_STOPS as SHADER_DEFAULT_EV_STOPS,
+  MERTENS_FUSION_SKSL,
+  buildMertensUniforms,
+  wellExposedWeight,
+} from './composite-hdr-shader';
 
 export interface CompositeHdrInput {
   /** Three captured-frame URIs in order: under, mid, over. */
   frameUris: [string, string, string];
-  /** EV stops applied per frame to simulate bracketed exposures. Default [-1, 0, +1]. */
+  /** EV stops applied per frame to describe the bracket. Default [-2, 0, +2]. */
   evStops?: [number, number, number];
   /** Output JPEG quality 0..1. Default 0.92. */
   quality?: number;
@@ -39,29 +76,265 @@ export interface CompositeHdrResult {
   height: number;
 }
 
-const DEFAULT_EV_STOPS: [number, number, number] = [-1, 0, 1];
+export const DEFAULT_EV_STOPS: [number, number, number] = [
+  SHADER_DEFAULT_EV_STOPS[0],
+  SHADER_DEFAULT_EV_STOPS[1],
+  SHADER_DEFAULT_EV_STOPS[2],
+];
 const DEFAULT_QUALITY = 0.92;
 const FRAME_COUNT = 3;
 const MID_INDEX = 1;
 
-/** Build a diagonal RGB-scale ColorMatrix for one EV stop. */
-function buildEvMatrix(ev: number): number[] {
-  const b = Math.pow(2, ev);
-  return [b, 0, 0, 0, 0, 0, b, 0, 0, 0, 0, 0, b, 0, 0, 0, 0, 0, 1, 0];
+// Alignment grid: 128×96 keeps the brute-force SAD trivial (<20ms in JS) while
+// retaining enough detail to register a few-pixel shake at 4K.
+const ALIGN_GRID_WIDTH = 128;
+const ALIGN_GRID_HEIGHT = 96;
+// ±8 px in the downscaled grid maps to ±~256 px at 4K — comfortably above the
+// expected 1–4 px handheld shake during a 300ms bracket.
+const ALIGN_MAX_RADIUS = 8;
+
+// Cache the compiled effect; SkSL compile is non-trivial and the shader text
+// is constant. If the first compile returns null we leave the cache empty so
+// every subsequent call hits the CPU fallback path immediately.
+let cachedFusionEffect: SkRuntimeEffect | null = null;
+let fusionEffectCompileTried = false;
+function getFusionEffect(): SkRuntimeEffect | null {
+  if (cachedFusionEffect) return cachedFusionEffect;
+  if (fusionEffectCompileTried) return null;
+  fusionEffectCompileTried = true;
+  const effect = Skia.RuntimeEffect.Make(MERTENS_FUSION_SKSL);
+  if (!effect) {
+    console.warn('[compositeHdr] Mertens fusion SkSL failed to compile');
+    return null;
+  }
+  cachedFusionEffect = effect;
+  return effect;
 }
 
 /**
- * Composite 3 frames into a tonemapped HDR-like JPEG via Skia. Each frame is
- * drawn with its own EV ColorMatrix and 1/3 alpha onto a single offscreen
- * surface using Plus blend mode — producing a weighted average. The dimensions
- * of the output match the FIRST frame; subsequent frames are drawn at 0,0
- * (no resize). On failure, returns the mid frame URI as a fallback.
+ * Downscale an SkImage onto a small offscreen surface and read back the
+ * luma channel. Returns null if any step in the chain fails — callers must
+ * fall back to a zero-offset alignment in that case.
+ */
+function extractLumaGrid(
+  image: SkImage,
+  gridWidth: number,
+  gridHeight: number
+): Uint8Array | null {
+  let smallSurface: SkSurface | null = null;
+  let snapshot: SkImage | null = null;
+  let paint: SkPaint | null = null;
+  try {
+    smallSurface = Skia.Surface.MakeOffscreen(gridWidth, gridHeight);
+    if (!smallSurface) return null;
+    const canvas = smallSurface.getCanvas();
+    // Sample the source with a linear filter scaled to fit the small grid.
+    const fullW = image.width();
+    const fullH = image.height();
+    if (!fullW || !fullH) return null;
+    const sx = gridWidth / fullW;
+    const sy = gridHeight / fullH;
+    canvas.save();
+    canvas.scale(sx, sy);
+    paint = Skia.Paint();
+    canvas.drawImage(image, 0, 0, paint);
+    canvas.restore();
+    smallSurface.flush();
+    snapshot = smallSurface.makeImageSnapshot();
+    const pixels = snapshot.readPixels(0, 0, {
+      width: gridWidth,
+      height: gridHeight,
+      colorType: ColorType.RGBA_8888,
+      alphaType: AlphaType.Unpremul,
+    });
+    if (!pixels || !(pixels instanceof Uint8Array)) return null;
+    return rgbaToLuma(pixels, gridWidth, gridHeight);
+  } catch (error) {
+    console.warn('[compositeHdr] luma extraction failed', error);
+    return null;
+  } finally {
+    paint?.dispose();
+    snapshot?.dispose();
+    smallSurface?.dispose();
+  }
+}
+
+interface FullResAlignment {
+  under: { dx: number; dy: number };
+  mid: { dx: number; dy: number };
+  over: { dx: number; dy: number };
+  underCost: number;
+  overCost: number;
+}
+
+/**
+ * Run the alignment math on the three decoded frames. Returns zero offsets
+ * (which is a no-op shift) when luma extraction fails for any frame — the
+ * fusion path still produces a real composite, just without translation
+ * correction.
+ */
+function alignFrames(
+  underImg: SkImage,
+  midImg: SkImage,
+  overImg: SkImage,
+  fullWidth: number,
+  fullHeight: number
+): FullResAlignment {
+  const zero: FullResAlignment = {
+    under: { dx: 0, dy: 0 },
+    mid: { dx: 0, dy: 0 },
+    over: { dx: 0, dy: 0 },
+    underCost: Number.POSITIVE_INFINITY,
+    overCost: Number.POSITIVE_INFINITY,
+  };
+
+  const midLuma = extractLumaGrid(midImg, ALIGN_GRID_WIDTH, ALIGN_GRID_HEIGHT);
+  if (!midLuma) return zero;
+  const underLuma = extractLumaGrid(underImg, ALIGN_GRID_WIDTH, ALIGN_GRID_HEIGHT);
+  const overLuma = extractLumaGrid(overImg, ALIGN_GRID_WIDTH, ALIGN_GRID_HEIGHT);
+
+  const underAligned: AlignResult = underLuma
+    ? alignTranslation({
+        refLuma: midLuma,
+        candidateLuma: underLuma,
+        width: ALIGN_GRID_WIDTH,
+        height: ALIGN_GRID_HEIGHT,
+        maxRadius: ALIGN_MAX_RADIUS,
+      })
+    : { dx: 0, dy: 0, cost: Number.POSITIVE_INFINITY };
+  const overAligned: AlignResult = overLuma
+    ? alignTranslation({
+        refLuma: midLuma,
+        candidateLuma: overLuma,
+        width: ALIGN_GRID_WIDTH,
+        height: ALIGN_GRID_HEIGHT,
+        maxRadius: ALIGN_MAX_RADIUS,
+      })
+    : { dx: 0, dy: 0, cost: Number.POSITIVE_INFINITY };
+
+  const underFull = scaleOffsetToFullRes(
+    underAligned.dx,
+    underAligned.dy,
+    ALIGN_GRID_WIDTH,
+    ALIGN_GRID_HEIGHT,
+    fullWidth,
+    fullHeight
+  );
+  const overFull = scaleOffsetToFullRes(
+    overAligned.dx,
+    overAligned.dy,
+    ALIGN_GRID_WIDTH,
+    ALIGN_GRID_HEIGHT,
+    fullWidth,
+    fullHeight
+  );
+
+  return {
+    under: underFull,
+    mid: { dx: 0, dy: 0 },
+    over: overFull,
+    underCost: underAligned.cost,
+    overCost: overAligned.cost,
+  };
+}
+
+/**
+ * Honest CPU fallback when the SkSL RuntimeEffect fails to compile. We
+ * compute a per-frame Gaussian weight from each frame's mean luma (cheap,
+ * one readPixels per frame at the small grid) and Plus-blend the three
+ * frames with those scalar alphas. This is NOT a per-pixel fusion — the
+ * shader path does that — but it is an honest weighted average that
+ * down-weights the most over/under-exposed frame, which is the point.
+ */
+function meanLumaOf(image: SkImage): number {
+  // Reuse the alignment grid path to avoid a second readPixels surface.
+  const luma = extractLumaGrid(image, ALIGN_GRID_WIDTH, ALIGN_GRID_HEIGHT);
+  if (!luma) return 0.5;
+  let sum = 0;
+  for (let i = 0; i < luma.length; i++) sum += luma[i];
+  // Normalize to [0, 1] for use with `wellExposedWeight`.
+  return sum / luma.length / 255;
+}
+
+function drawCpuFallback(
+  surface: SkSurface,
+  decoded: SkImage[],
+  alignment: FullResAlignment
+): SkPaint[] {
+  const paints: SkPaint[] = [];
+  const canvas = surface.getCanvas();
+  // Per-frame Gaussian weight on mean luma. The shader uses this same
+  // Gaussian per-pixel; the fallback averages it per-frame.
+  const weights = decoded.map((img) => wellExposedWeight(meanLumaOf(img)));
+  const sum = weights.reduce((acc, w) => acc + w, 0) || 1;
+  const offsets = [alignment.under, alignment.mid, alignment.over];
+  for (let i = 0; i < decoded.length; i++) {
+    const img = decoded[i];
+    const alpha = weights[i] / sum;
+    const paint = Skia.Paint();
+    paint.setAlphaf(alpha);
+    paint.setBlendMode(BlendMode.Plus);
+    paints.push(paint);
+    canvas.drawImage(img, -offsets[i].dx, -offsets[i].dy, paint);
+  }
+  return paints;
+}
+
+function drawShaderFusion(
+  effect: SkRuntimeEffect,
+  surface: SkSurface,
+  width: number,
+  height: number,
+  decoded: SkImage[],
+  alignment: FullResAlignment
+): { paint: SkPaint; shaders: SkShader[] } | null {
+  const shaders: SkShader[] = [];
+  for (const img of decoded) {
+    const shader = img.makeShaderOptions(
+      TileMode.Clamp,
+      TileMode.Clamp,
+      FilterMode.Linear,
+      MipmapMode.None
+    );
+    shaders.push(shader);
+  }
+  // Negative offset moves the SAMPLE position to match the reference, i.e.
+  // if the candidate frame was shifted +2 px to the right relative to mid,
+  // we sample 2 px to the right to undo it.
+  const uniforms = buildMertensUniforms(
+    { dx: -alignment.under.dx, dy: -alignment.under.dy },
+    { dx: -alignment.mid.dx, dy: -alignment.mid.dy },
+    { dx: -alignment.over.dx, dy: -alignment.over.dy }
+  );
+  const fused = effect.makeShaderWithChildren(uniforms, shaders);
+  if (!fused) {
+    for (const s of shaders) s.dispose();
+    return null;
+  }
+  const paint = Skia.Paint();
+  paint.setShader(fused);
+  const canvas = surface.getCanvas();
+  canvas.drawRect({ x: 0, y: 0, width, height }, paint);
+  return { paint, shaders };
+}
+
+/**
+ * Composite 3 bracketed frames into a single LDR HDR-style JPEG. See the
+ * file header for the full algorithm.
  *
- * NOT real HDR (no hardware exposure bracketing) — see header note.
+ * On any unrecoverable failure (decode, surface allocation, empty encoding)
+ * returns the mid-frame URI verbatim. The output dimensions track the MID
+ * frame's dimensions, which the orchestrator already aligns to the capture
+ * resolution.
  */
 export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeHdrResult> {
   const { frameUris } = input;
-  const evStops = input.evStops ?? DEFAULT_EV_STOPS;
+  const _evStops = input.evStops ?? DEFAULT_EV_STOPS;
+  // evStops is part of the public contract — we accept it so the bracket
+  // hook can document its choice and future iterations of the algorithm
+  // can use it for radiance recovery — but the Mertens path does not need
+  // per-frame EV values (the per-pixel Gaussian implicitly handles them).
+  void _evStops;
   const quality = input.quality ?? DEFAULT_QUALITY;
   const exif = input.exif;
   const midUri = frameUris[MID_INDEX];
@@ -77,19 +350,17 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
     return { uri, width, height };
   }
 
-  // Decode all three frames up-front. We dispose every successfully-decoded
-  // image in the finally block regardless of which branch we exit through.
   const decoded: (SkImage | null)[] = [null, null, null];
-
   let surface: SkSurface | null = null;
-  let snapshot: ReturnType<SkSurface['makeImageSnapshot']> | null = null;
-  const paints: SkPaint[] = [];
+  let snapshot: SkImage | null = null;
+  let fusedPaint: SkPaint | null = null;
+  let fusedShaders: SkShader[] = [];
+  let cpuPaints: SkPaint[] = [];
 
   try {
     for (let i = 0; i < FRAME_COUNT; i++) {
       const data = await Skia.Data.fromURI(frameUris[i]);
       if (!data) {
-        // Rule 8: never fabricate. Surface the real mid-frame URI we have.
         console.warn(`[compositeHdr] frame ${i} data load failed`);
         return withExif(midUri, 0, 0);
       }
@@ -101,21 +372,23 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
       decoded[i] = img;
     }
 
-    // Output dimensions = first frame's dimensions. The contract documents
-    // this: subsequent frames are drawn at (0,0) without resizing, so any
-    // mismatch is the orchestrator's problem (capture should produce
-    // same-size frames anyway).
-    const firstFrame = decoded[0];
-    if (!firstFrame) {
-      // Defensive: the loop above either fills decoded[i] or returns.
+    const underImg = decoded[0];
+    const midImg = decoded[1];
+    const overImg = decoded[2];
+    if (!underImg || !midImg || !overImg) {
       return withExif(midUri, 0, 0);
     }
-    const width = firstFrame.width();
-    const height = firstFrame.height();
+
+    // Output dimensions track the MID frame — it is the geometric reference
+    // for the alignment offsets we just computed.
+    const width = midImg.width();
+    const height = midImg.height();
     if (!width || !height) {
-      console.warn('[compositeHdr] first frame has zero dimensions');
+      console.warn('[compositeHdr] mid frame has zero dimensions');
       return withExif(midUri, 0, 0);
     }
+
+    const alignment = alignFrames(underImg, midImg, overImg, width, height);
 
     surface = Skia.Surface.MakeOffscreen(width, height);
     if (!surface) {
@@ -123,22 +396,19 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
       return withExif(midUri, 0, 0);
     }
 
-    const canvas = surface.getCanvas();
-    const alpha = 1 / FRAME_COUNT;
-
-    for (let i = 0; i < FRAME_COUNT; i++) {
-      const img = decoded[i];
-      if (!img) continue;
-      const matrix = buildEvMatrix(evStops[i]);
-      const filter = Skia.ColorFilter.MakeMatrix(matrix);
-      const paint = Skia.Paint();
-      paint.setColorFilter(filter);
-      paint.setAlphaf(alpha);
-      // Plus blend = additive: r = min(s + d, 1). Combined with alpha=1/3 on
-      // every layer this gives a weighted average across the three frames.
-      paint.setBlendMode(BlendMode.Plus);
-      paints.push(paint);
-      canvas.drawImage(img, 0, 0, paint);
+    const effect = getFusionEffect();
+    if (effect) {
+      const drawn = drawShaderFusion(effect, surface, width, height, [underImg, midImg, overImg], alignment);
+      if (drawn) {
+        fusedPaint = drawn.paint;
+        fusedShaders = drawn.shaders;
+      } else {
+        console.warn('[compositeHdr] shader path unavailable, using CPU-weight fallback');
+        cpuPaints = drawCpuFallback(surface, [underImg, midImg, overImg], alignment);
+      }
+    } else {
+      console.warn('[compositeHdr] shader path unavailable, using CPU-weight fallback');
+      cpuPaints = drawCpuFallback(surface, [underImg, midImg, overImg], alignment);
     }
 
     surface.flush();
@@ -160,8 +430,10 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
     console.warn('[compositeHdr]', error);
     return withExif(midUri, 0, 0);
   } finally {
+    for (const s of fusedShaders) s.dispose();
+    fusedPaint?.dispose();
+    for (const p of cpuPaints) p.dispose();
     snapshot?.dispose();
-    for (const p of paints) p.dispose();
     surface?.dispose();
     for (const img of decoded) img?.dispose();
   }

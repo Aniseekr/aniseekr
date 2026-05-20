@@ -26,11 +26,13 @@ import {
 import {
   Camera,
   CommonResolutions,
+  type CameraFrameOutput,
   type CameraRef,
   type Constraint,
   type DeviceType,
   type MirrorMode,
   type QualityPrioritization,
+  type TorchMode,
   useCameraDevice,
   usePhotoOutput,
 } from 'react-native-vision-camera';
@@ -107,6 +109,14 @@ export interface CameraStageProps {
 
   /** Paint a translucent overlay + spinner while the session warms up. */
   showWarmup?: boolean;
+
+  /**
+   * Optional CameraFrameOutput produced by `useFrameOutput` (e.g. the auto-mode
+   * scene analyzer). When provided, the underlying VisionCamera session adds
+   * a frame-streaming output alongside the photo output. When undefined, no
+   * frame processor is attached and the session runs with photo-only outputs.
+   */
+  frameOutput?: CameraFrameOutput;
 }
 
 export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(function CameraStage(
@@ -129,6 +139,7 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
     onMountError,
     onDeviceInfo,
     showWarmup,
+    frameOutput,
   },
   ref
 ) {
@@ -149,7 +160,14 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
     quality,
     qualityPrioritization,
   });
-  const outputs = useMemo(() => [photoOutput], [photoOutput]);
+  // When the auto-mode scene analyzer is active, its CameraFrameOutput rides
+  // alongside the photo output so the session streams preview frames to the
+  // worklet. The frame output is dropped from the list when undefined to avoid
+  // spinning up an unused frame-processing thread.
+  const outputs = useMemo(
+    () => (frameOutput ? [photoOutput, frameOutput] : [photoOutput]),
+    [photoOutput, frameOutput]
+  );
   const constraints = useMemo<Constraint[]>(
     () => (preferHdr ? [{ photoHDR: true }] : []),
     [preferHdr]
@@ -162,17 +180,23 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
     if (!device) return null;
     const physicalLensTypes: EnginePhysicalLensType[] = [];
     if (isPhysicalLensType(device.type)) physicalLensTypes.push(device.type);
+    const physicalFocalLengths: number[] = [];
     for (const child of device.physicalDevices) {
       if (isPhysicalLensType(child.type) && !physicalLensTypes.includes(child.type)) {
         physicalLensTypes.push(child.type);
       }
+      if (typeof child.focalLength === 'number' && Number.isFinite(child.focalLength) && child.focalLength > 0) {
+        physicalFocalLengths.push(child.focalLength);
+      }
     }
+    physicalFocalLengths.sort((a, b) => a - b);
     return {
       minZoom: device.minZoom,
       maxZoom: device.maxZoom,
       neutralZoom: 1,
       physicalLensTypes,
       zoomLensSwitchFactors: [...device.zoomLensSwitchFactors],
+      physicalFocalLengths,
       supportsPhotoHdr: device.supportsPhotoHDR,
       minExposureBias: device.minExposureBias,
       maxExposureBias: device.maxExposureBias,
@@ -248,6 +272,32 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
     return mirrorSelfie === false ? 'off' : 'auto';
   }, [facing, mirrorSelfie]);
 
+  // Torch / exposure / zoom props feed CameraX directly. When the session is
+  // stopped (`active=false`), CameraX rejects `enableTorch()`,
+  // `setExposureBias()`, and `setZoom()` with "Camera is not active" and
+  // VisionCamera surfaces that as an unhandled JS promise rejection.
+  //
+  // The fix is to pass `undefined` for these props while the session is
+  // paused so VisionCamera's *Updater hooks early-return without ever
+  // touching the dormant controller. VisionCamera also runs its own
+  // `useCameraSessionIsRunning` effect first (declared before the
+  // *Updater hooks in `Camera.tsx`), so the session stop completes before
+  // these effects re-evaluate — meaning the "undefined → no-op" branch is
+  // what actually runs, not a stale "set value" call.
+  //
+  // When `active` flips back to true the SharedValues / TorchMode flow
+  // through again on the next render and the Updater hooks call
+  // setTorchMode / setExposureBias / setZoom against the freshly running
+  // session. No reset gymnastics required: the SharedValues retain their
+  // current values across the pause.
+  const resolvedTorchMode: TorchMode | undefined = active
+    ? enableTorch
+      ? 'on'
+      : 'off'
+    : undefined;
+  const resolvedExposure = active ? exposureShared : undefined;
+  const resolvedZoom = active ? zoomShared : undefined;
+
   const handleMountError = useCallback(
     (err: Error) => {
       onMountError?.({ nativeEvent: { message: err.message } });
@@ -266,9 +316,9 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
               device={device}
               outputs={outputs}
               isActive={active}
-              zoom={zoomShared}
-              exposure={exposureShared}
-              torchMode={enableTorch ? 'on' : 'off'}
+              zoom={resolvedZoom}
+              exposure={resolvedExposure}
+              torchMode={resolvedTorchMode}
               mirrorMode={mirrorMode}
               constraints={constraints}
               orientationSource="interface"
