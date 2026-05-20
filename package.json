@@ -26,8 +26,10 @@
     "gcp:rotate-key": "./scripts/gcp-rotate-key.sh"
   },
   "dependencies": {
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.0.1",
+    "@shopify/flash-list": "^2.3.1",
     "@shopify/react-native-skia": "2.2.12",
     "@tailwindcss/postcss": "^4.1.13",
     "expo": "^54.0.0",
