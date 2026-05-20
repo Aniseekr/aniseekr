@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   INITIAL_SCENE_SWITCHER_SPOTS,
   sceneSwitcherSpotsReducer,
-} from '../../../hooks/useSceneSwitcherSpots';
+} from '../../../libs/services/pilgrimage/scene-switcher-spots-state';
 
 describe('sceneSwitcherSpotsReducer', () => {
   it('clears an in-flight loading state when the switcher closes', () => {

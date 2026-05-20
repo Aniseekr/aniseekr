@@ -3,6 +3,7 @@
 // can run in Node without an Expo runtime.
 
 import { mock } from 'bun:test';
+import * as React from 'react';
 
 // AsyncStorage in-memory shim
 const asyncStorageMemory = new Map<string, string>();
@@ -394,7 +395,6 @@ mock.module('expo-location', () => ({
 // expo-image: render as RN Image + cache-clearing stubs used by ImageDiskBucket /
 // ImageMemoryBucket.
 mock.module('expo-image', () => {
-  const React = require('react');
   const ImageComponent: any = React.forwardRef((props: any, ref: any) =>
     React.createElement('Image', { ...props, ref })
   );
@@ -407,7 +407,6 @@ mock.module('expo-image', () => {
 // substitute a minimal subset that returns plain React.createElement nodes.
 // Only the surface used by our components needs to exist.
 mock.module('react-native', () => {
-  const React = require('react');
   const passthrough = (tag: string) =>
     React.forwardRef((props: any, ref: any) => React.createElement(tag, { ...props, ref }));
 
@@ -478,6 +477,7 @@ mock.module('react-native', () => {
     TurboModuleRegistry,
     NativeModules,
     AppState,
+    useColorScheme: () => 'light',
     Alert: { alert: () => undefined },
     Dimensions: {
       get: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
@@ -496,7 +496,6 @@ mock.module('expo-secure-store', () => ({
 mock.module('expo-auth-session', () => ({
   makeRedirectUri: () => 'aniseekr://oauth/test',
   AuthRequest: class {
-    constructor() {}
     async promptAsync() {
       return { type: 'cancel' };
     }
@@ -536,7 +535,6 @@ mock.module('expo-tracking-transparency', () => ({
 }));
 
 mock.module('@expo/vector-icons', () => {
-  const React = require('react');
   const Icon = (name: string) =>
     React.forwardRef((props: any, ref: any) =>
       React.createElement(`Icon:${name}`, { ...props, ref })
@@ -550,6 +548,22 @@ mock.module('@expo/vector-icons', () => {
     Entypo: Icon('Entypo'),
   };
 });
+
+for (const iconName of [
+  'Ionicons',
+  'MaterialIcons',
+  'MaterialCommunityIcons',
+  'Feather',
+  'FontAwesome',
+  'Entypo',
+]) {
+  mock.module(`@expo/vector-icons/${iconName}`, () => {
+    const Icon = React.forwardRef((props: any, ref: any) =>
+      React.createElement(`Icon:${iconName}`, { ...props, ref })
+    );
+    return { default: Icon };
+  });
+}
 
 // @shopify/react-native-skia: scene analysis imports Skia for native decode.
 // Tests cover the pure inference functions only, so a stub that satisfies the
@@ -566,7 +580,6 @@ mock.module('@shopify/react-native-skia', () => ({
 }));
 
 mock.module('expo-linear-gradient', () => {
-  const React = require('react');
   return {
     LinearGradient: React.forwardRef((props: any, ref: any) =>
       React.createElement('LinearGradient', { ...props, ref })
