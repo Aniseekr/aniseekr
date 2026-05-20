@@ -34,6 +34,11 @@ android
 # Secrets - service account keys, never commit
 /secrets/
 
+# Environment variables - never commit (use .env.example as the template)
+.env
+.env.*
+!.env.example
+
 # Terraform state and per-env vars (clean mode: tfstate stays local, key stays out of state)
 infra/terraform/.terraform/
 infra/terraform/*.tfstate

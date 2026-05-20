@@ -94,7 +94,7 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformAuthConfig> = {
     icon: 'database',
     color: '#2E51A2',
     oauth: {
-      clientId: '', // Set from env
+      clientId: process.env.EXPO_PUBLIC_MAL_CLIENT_ID || '',
       redirectUri: 'aniseekr://oauth/mal',
       authorizationEndpoint: 'https://myanimelist.net/v1/oauth2/authorize',
       tokenEndpoint: 'https://myanimelist.net/v1/oauth2/token',
@@ -111,8 +111,9 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformAuthConfig> = {
     icon: 'tv',
     color: '#F09199',
     oauth: {
-      clientId: '', // Set from env
-      clientSecret: '', // Set from env
+      clientId: process.env.EXPO_PUBLIC_BGM_CLIENT_ID || '',
+      // clientSecret must NOT live in the mobile bundle - exchange the code
+      // through a backend proxy that holds BGM_CLIENT_SECRET server-side.
       redirectUri: 'aniseekr://oauth/bangumi',
       authorizationEndpoint: 'https://bgm.tv/oauth/authorize',
       tokenEndpoint: 'https://bgm.tv/oauth/access_token',
@@ -128,8 +129,10 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformAuthConfig> = {
     icon: 'paw',
     color: '#F75239',
     oauth: {
-      clientId: 'dd031b32d2f56c990b1425efe6c42ad847e7fe3ab46bf1299f05ecd856bdb7dd',
-      clientSecret: '54d7307928f63414defd96399fc31ba847961ceaecef3a5fd93144e960c0e151',
+      // The previously hardcoded clientId/clientSecret values are considered
+      // leaked - rotate them on Kitsu before reuse. Token exchange must go
+      // through a backend proxy that holds KITSU_CLIENT_SECRET server-side.
+      clientId: process.env.EXPO_PUBLIC_KITSU_CLIENT_ID || '',
       redirectUri: '',
       authorizationEndpoint: '',
       tokenEndpoint: 'https://kitsu.io/api/oauth/token',
@@ -145,8 +148,9 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformAuthConfig> = {
     icon: 'film',
     color: '#343434',
     oauth: {
-      clientId: '', // Set from env
-      clientSecret: '', // Set from env
+      clientId: process.env.EXPO_PUBLIC_SHIKIMORI_CLIENT_ID || '',
+      // clientSecret must NOT live in the mobile bundle - proxy the token
+      // exchange through a backend that holds SHIKIMORI_CLIENT_SECRET.
       redirectUri: 'aniseekr://oauth/shikimori',
       authorizationEndpoint: 'https://shikimori.one/oauth/authorize',
       tokenEndpoint: 'https://shikimori.one/oauth/token',
@@ -162,7 +166,7 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformAuthConfig> = {
     icon: 'play-circle',
     color: '#0B0F1A',
     oauth: {
-      clientId: '', // Set from env
+      clientId: process.env.EXPO_PUBLIC_SIMKL_CLIENT_ID || '',
       redirectUri: 'aniseekr://oauth/simkl',
       authorizationEndpoint: 'https://simkl.com/oauth/authorize',
       tokenEndpoint: 'https://api.simkl.com/oauth/token',
@@ -178,8 +182,9 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformAuthConfig> = {
     icon: 'calendar',
     color: '#F85B73',
     oauth: {
-      clientId: '', // Set from env
-      clientSecret: '', // Set from env
+      clientId: process.env.EXPO_PUBLIC_ANNICT_CLIENT_ID || '',
+      // clientSecret must NOT live in the mobile bundle - proxy the token
+      // exchange through a backend that holds ANNICT_CLIENT_SECRET.
       redirectUri: 'aniseekr://oauth/annict',
       authorizationEndpoint: 'https://annict.com/oauth/authorize',
       tokenEndpoint: 'https://annict.com/oauth/token',
