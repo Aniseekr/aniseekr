@@ -52,6 +52,26 @@ export interface UseCameraZoomInput {
   stops?: FocalStop[];
   initial?: FocalStop;
   stopZoom?: Record<FocalStop, ZoomValue>;
+  /**
+   * Fired once per pinch gesture when the user pinches IN past 85% of the
+   * device's `minZoom` floor — a clear "I want to go wider than this lens
+   * can give me" intent. The compare screen wires this to the strategic
+   * FSM's `requestSwitch('ultra-wide')` on standalone-switch cohorts so a
+   * pinch-in past 1× on the wide session swaps to the standalone ultra-wide
+   * session (the 0.5× affordance, gesture-driven rather than chip-driven).
+   * One-shot per gesture: resets in `onBegin`.
+   */
+  onPinchBelowMin?: () => void;
+  /**
+   * Mirror of {@link onPinchBelowMin} for the reverse direction. Fired once
+   * per pinch gesture when the user pinches OUT past 115% of `maxZoom` —
+   * used on the ultra-wide session (`maxZoom ≈ 1.0`) to swap back to the
+   * wide session when the user pinches out past ~1.15×. Callers should only
+   * supply this on lenses where a swap target exists; otherwise leave
+   * undefined so a normal wide-session zoom-in past `maxZoom` is just
+   * clamped, not interpreted as a swap intent.
+   */
+  onPinchAboveMax?: () => void;
 }
 
 export interface UseCameraZoomOutput {
@@ -99,11 +119,19 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
   const stops = input?.stops ?? DEFAULT_STOPS;
   const initial = input?.initial ?? 1;
   const stopZoom = input?.stopZoom ?? STOP_TO_ZOOM;
+  const onPinchBelowMin = input?.onPinchBelowMin;
+  const onPinchAboveMax = input?.onPinchAboveMax;
 
   const initialFactor = clamp(stopZoom[initial], minZoom, maxZoom);
   const zoomShared = useSharedValue<number>(initialFactor);
   const savedZoom = useSharedValue<number>(initialFactor);
   const lastUpdate = useSharedValue<number>(0);
+  // Per-gesture trigger latches: ensure each onPinchBelowMin / onPinchAboveMax
+  // fires at most ONCE per pinch. Without these the user would re-fire the
+  // lens-swap intent on every onUpdate frame while the threshold is held,
+  // spamming the FSM with TAP_ISLAND events and racing the session swap.
+  const belowMinTriggered = useSharedValue<boolean>(false);
+  const aboveMaxTriggered = useSharedValue<boolean>(false);
   const previousInitialZoomRef = useRef<number>(initialFactor);
 
   const [zoom, setZoomState] = useState<number>(initialFactor);
@@ -140,12 +168,37 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
       Gesture.Pinch()
         .onBegin(() => {
           savedZoom.value = zoomShared.value;
+          // Reset trigger latches so a fresh gesture can fire its swap
+          // callback again. Without this only the first pinch of the session
+          // could trigger a lens swap.
+          belowMinTriggered.value = false;
+          aboveMaxTriggered.value = false;
         })
         .onUpdate((e) => {
           // Multiplicative pinch in factor space: a 2× pinch doubles the
           // current zoom, a 0.5× pinch halves it. Matches native camera UX.
           const next = savedZoom.value * e.scale;
           zoomShared.value = clamp(next, minZoom, maxZoom);
+          // Lens-swap intent detection. 85% (below) / 115% (above) thresholds
+          // require a clear "past the wall" gesture, not just brushing the
+          // floor with a small numeric overshoot from gesture noise. Each
+          // callback latches per-gesture so we don't re-fire on every frame.
+          if (
+            onPinchBelowMin !== undefined &&
+            !belowMinTriggered.value &&
+            next < minZoom * 0.85
+          ) {
+            belowMinTriggered.value = true;
+            runOnJS(onPinchBelowMin)();
+          }
+          if (
+            onPinchAboveMax !== undefined &&
+            !aboveMaxTriggered.value &&
+            next > maxZoom * 1.15
+          ) {
+            aboveMaxTriggered.value = true;
+            runOnJS(onPinchAboveMax)();
+          }
         })
         .onEnd(() => {
           let target: number | null = null;
@@ -166,7 +219,19 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
             runOnJS(setZoomState)(zoomShared.value);
           }
         }),
-    [zoomShared, savedZoom, minZoom, maxZoom, stops, stopZoom, snapToStop]
+    [
+      zoomShared,
+      savedZoom,
+      minZoom,
+      maxZoom,
+      stops,
+      stopZoom,
+      snapToStop,
+      belowMinTriggered,
+      aboveMaxTriggered,
+      onPinchBelowMin,
+      onPinchAboveMax,
+    ]
   );
 
   const setZoom = useCallback(

@@ -384,11 +384,36 @@ export default function CompareCaptureScreen() {
   );
   const minZoom = deviceInfo?.minZoom ?? 1;
   const maxZoom = deviceInfo?.maxZoom ?? 1;
+
+  // Pinch-driven lens swap. On standalone-switch cohorts (S20 FE / Pixel 8)
+  // pinching IN past 85% of the wide session's minZoom is a clear "I want
+  // wider than this lens can give me" intent → swap to the standalone
+  // ultra-wide. Mirror: on the ultra-wide session, pinching OUT past 115%
+  // of maxZoom swaps back to wide. Both go through `handleRequestSwitch`
+  // so the freeze-frame snapshot kicks in just like the chip-tap path.
+  const canPinchToUltraWide =
+    cohort?.strategy === 'standalone-switch' &&
+    cohort.ultraWide !== undefined &&
+    strategic.activeLens === 'wide';
+  const canPinchBackToWide =
+    cohort?.strategy === 'standalone-switch' &&
+    strategic.activeLens === 'ultra-wide';
+  const handlePinchBelowMin = useCallback(() => {
+    if (strategic.isSwitching) return;
+    handleRequestSwitch('ultra-wide');
+  }, [strategic.isSwitching, handleRequestSwitch]);
+  const handlePinchAboveMax = useCallback(() => {
+    if (strategic.isSwitching) return;
+    handleRequestSwitch('wide');
+  }, [strategic.isSwitching, handleRequestSwitch]);
+
   const zoom = useCameraZoom({
     initial: 1,
     minZoom,
     maxZoom,
     stops: availableStops,
+    onPinchBelowMin: canPinchToUltraWide ? handlePinchBelowMin : undefined,
+    onPinchAboveMax: canPinchBackToWide ? handlePinchAboveMax : undefined,
   });
 
   const tapFocus = useTapToFocus({
