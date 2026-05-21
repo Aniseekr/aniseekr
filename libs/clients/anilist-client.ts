@@ -36,7 +36,18 @@ export interface AniListClientOptions {
   accessToken?: string | null;
   /** Override fetch for tests; defaults to global `fetch`. */
   fetchImpl?: typeof fetch;
+  /** Per-request timeout in ms. Default 20 000. Set 0 to disable. */
+  timeoutMs?: number;
+  /** Max attempts on transient network errors (>= 1). Default 3 (initial + 2 retries). */
+  maxAttempts?: number;
+  /** Override the sleep helper for tests so backoff doesn't burn real wall time. */
+  sleep?: (ms: number) => Promise<void>;
 }
+
+const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_MAX_ATTEMPTS = 3;
+const NETWORK_RETRY_BACKOFF_MS = [500, 1500];
+const DEFAULT_SLEEP = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export interface AniListLegacyQueryOptions {
   includeAdult?: boolean;
@@ -167,10 +178,16 @@ const MEDIA_FRAGMENT = `
 export class AniListClient {
   private fetchImpl: typeof fetch;
   private accessToken: string | null;
+  private readonly timeoutMs: number;
+  private readonly maxAttempts: number;
+  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(options: AniListClientOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.accessToken = options.accessToken ?? null;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.maxAttempts = Math.max(1, options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS);
+    this.sleep = options.sleep ?? DEFAULT_SLEEP;
   }
 
   setAccessToken(token: string | null): void {
@@ -187,13 +204,17 @@ export class AniListClient {
    *
    * Throws `DataSourceError`:
    *   - HTTP 4xx/5xx via `DataSourceError.fromHttpStatus`
-   *   - Network failures via `DataSourceError.fromNetwork`
+   *   - Network failures via `DataSourceError.fromNetwork` (after retries)
    *   - JSON parse failures via `DataSourceError.fromDecoding`
    *   - GraphQL `errors[]` via a synthesized `SERVER_ERROR`
+   *
+   * Resilience:
+   *   - Per-request timeout via AbortController (`timeoutMs`, default 20s)
+   *   - Up to `maxAttempts` total tries on transient `NETWORK_ERROR`
+   *     (DNS / TLS / connection blips). HTTP failures and decode failures
+   *     are NOT retried — they aren't transient by definition.
    */
   async query<T>(graphql: string, variables: Record<string, unknown> = {}): Promise<T> {
-    await rateLimiter.waitForAvailability('anilist');
-
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -201,16 +222,48 @@ export class AniListClient {
     if (this.accessToken) {
       headers.Authorization = `Bearer ${this.accessToken}`;
     }
+    const body = JSON.stringify({ query: graphql, variables });
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(ANILIST_ENDPOINT, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ query: graphql, variables }),
-      });
-    } catch (cause) {
-      throw DataSourceError.fromNetwork(cause, 'anilist');
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
+      await rateLimiter.waitForAvailability('anilist');
+
+      const controller =
+        typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+      const timer =
+        controller !== undefined && this.timeoutMs > 0
+          ? setTimeout(() => controller.abort(), this.timeoutMs)
+          : undefined;
+
+      try {
+        response = await this.fetchImpl(ANILIST_ENDPOINT, {
+          method: 'POST',
+          headers,
+          body,
+          signal: controller?.signal,
+        });
+        break;
+      } catch (cause) {
+        const isLast = attempt >= this.maxAttempts - 1;
+        if (isLast) throw DataSourceError.fromNetwork(cause, 'anilist');
+        const waitMs = NETWORK_RETRY_BACKOFF_MS[attempt] ?? 1500;
+        Logger.warn(
+          `[AniListClient] network error — attempt ${attempt + 1}/${this.maxAttempts}, retrying in ${waitMs}ms`,
+          cause instanceof Error ? cause.message : cause
+        );
+        await this.sleep(waitMs);
+        continue;
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+    }
+
+    if (!response) {
+      // Defensive: loop either assigned response or threw on the last attempt.
+      throw DataSourceError.fromNetwork(
+        new Error('AniList request produced no response'),
+        'anilist'
+      );
     }
 
     if (response.status === 429) {
