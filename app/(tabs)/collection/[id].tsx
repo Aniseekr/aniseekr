@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -6,7 +6,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -184,6 +184,22 @@ export default function FolderDetailScreen() {
   useEffect(() => {
     loadItems();
   }, [loadItems]);
+
+  // Refresh when returning from a child screen (e.g. anime detail) so changes
+  // made there — favorite toggle, status update, score edit — propagate back
+  // without a manual pull. The first focus is skipped because the useEffect
+  // above already kicked off the initial load. Revalidation is silent: the
+  // snapshot cache means the skeleton doesn't reappear. See CLAUDE.md Rule 10.
+  const focusInitRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusInitRef.current) {
+        focusInitRef.current = true;
+        return;
+      }
+      void loadItems();
+    }, [loadItems])
+  );
 
   const handleBack = useCallback(() => {
     hapticsBridge.tap();
