@@ -26,6 +26,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -48,7 +49,25 @@ import {
   type Detent,
   type StopZoomMap,
 } from '../../../libs/services/pilgrimage/zoom-dial';
+import type { ActiveLens } from '../../../libs/services/pilgrimage/dial-spaces';
 import type { FocalStop } from './types';
+
+/**
+ * Off-strip lens-switching chip. When non-null, ZoomDial renders a tappable
+ * island to the LEFT of the continuous strip. Tapping it requests a session
+ * swap to `targetLens` (used on Android phones where the wide-active session
+ * can't physically reach 0.5×). When null, the dial is a single continuous
+ * strip — exact iOS behaviour, no regression.
+ *
+ * The island always lives OUTSIDE the strip. We never draft 0.5× into the
+ * strip's snap detents on a wide-active standalone-switch device, because
+ * VisionCamera would clamp the zoom request to the device's `minZoom`
+ * silently — the user would drag to 0.5 and see the camera stop at 1.0.
+ */
+export interface ZoomDialIsland {
+  readonly stop: FocalStop;
+  readonly targetLens: ActiveLens;
+}
 
 /** Visible width of the dial window — the strip overflows and is clipped. */
 const DIAL_WIDTH = 220;
@@ -83,6 +102,14 @@ interface ZoomDialProps {
   onPickVirtual?: () => void;
   /** Highlight the AUTO button when an auto-switching lens is active. */
   virtualActive?: boolean;
+  /** Off-strip lens-switch chip (Android standalone-switch cohorts). Tapping
+   *  fires `onPickIsland(island.targetLens)` to request a camera session swap.
+   *  `null` / undefined → no chip, dial behaves exactly as before. */
+  island?: ZoomDialIsland | null;
+  /** Called when the user taps the off-strip island chip. */
+  onPickIsland?: (target: ActiveLens) => void;
+  /** Dim the chip while a session swap is in flight to communicate progress. */
+  islandPending?: boolean;
 }
 
 function formatStop(stop: FocalStop): string {
@@ -124,6 +151,9 @@ export default function ZoomDial({
   virtualLenses,
   onPickVirtual,
   virtualActive = false,
+  island,
+  onPickIsland,
+  islandPending = false,
 }: ZoomDialProps) {
   const stops = useMemo<FocalStop[]>(
     () => availableStops ?? (isFrontFacing ? FRONT_FACING_DETENT_STOPS : DEFAULT_DETENT_STOPS),
@@ -168,16 +198,17 @@ export default function ZoomDial({
   }, [detents, interactive, activeStop, maxZoom]);
 
   // Haptic + highlight feedback when a labeled detent crosses the center line.
-  const syncDetentHighlight = useCallback(
-    (px: number) => {
-      const stop = nearestDetent(px, detents, SNAP_TOLERANCE_PX);
-      if (stop === lastCrossStop.current) return;
-      lastCrossStop.current = stop;
-      if (stop !== null) hapticsBridge.selection();
-      setHighlightStop(stop);
-    },
-    [detents]
-  );
+  // Pure JS — invoked from the pan-gesture worklet via runOnJS so the gesture
+  // itself stays on the UI thread. The worklet decides which stop crossed
+  // (it already has `detents` in closure for the px<->zoom math) and just
+  // forwards the resulting FocalStop | null. No array serialisation across
+  // the bridge.
+  const syncDetentHighlight = useCallback((stop: FocalStop | null) => {
+    if (stop === lastCrossStop.current) return;
+    lastCrossStop.current = stop;
+    if (stop !== null) hapticsBridge.selection();
+    setHighlightStop(stop);
+  }, []);
 
   // Commit a focal-stop pick on release. Routes through the screen's existing
   // onPickFocalStop so optical lens switching is unchanged. A release that
@@ -189,29 +220,37 @@ export default function ZoomDial({
     [onPickFocalStop]
   );
 
-  // Pan gesture: writes SharedValues without re-rendering on every move.
+  // Pan gesture lives on the UI thread. The zoom-dial helpers
+  // (`dragPositionForTranslation`, `zoomForPosition`, `nearestDetent`,
+  // `positionForStop`) are all marked `'worklet'`, so the gesture runs at
+  // 60+ fps without crossing the JS bridge each frame. Only events that
+  // genuinely require React state — detent-cross highlight, snap-on-release
+  // commit — get routed back via `runOnJS`. This replaces a prior
+  // `runOnJS(true)` workaround that pushed every drag frame through JS and
+  // caused noticeable jitter under load.
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
-        // Keep this tiny control on the JS thread. Dragging used to send the
-        // detent object array + imported helpers into Reanimated's UI runtime;
-        // on some devices that path crashes as soon as the gesture updates.
-        .runOnJS(true)
         .enabled(interactive)
         .onBegin(() => {
+          'worklet';
           startPx.value = dragPx.value;
           dragging.value = true;
-          lastCrossStop.current = nearestDetent(dragPx.value, detents, SNAP_TOLERANCE_PX);
+          const startStop = nearestDetent(dragPx.value, detents, SNAP_TOLERANCE_PX);
+          runOnJS(syncDetentHighlight)(startStop);
         })
         // Dragging the strip LEFT brings its higher-zoom ticks toward the
         // center, so a leftward translation increases zoom — invert translationX.
         .onUpdate((e) => {
+          'worklet';
           const next = dragPositionForTranslation(startPx.value, e.translationX, spanPx);
           dragPx.value = next;
           zoomShared.value = zoomForPosition(next, detents, undefined, maxZoom);
-          syncDetentHighlight(next);
+          const stop = nearestDetent(next, detents, SNAP_TOLERANCE_PX);
+          runOnJS(syncDetentHighlight)(stop);
         })
         .onEnd(() => {
+          'worklet';
           const snapStop = nearestDetent(dragPx.value, detents, SNAP_TOLERANCE_PX);
           if (snapStop !== null) {
             const snapPx = positionForStop(snapStop, detents);
@@ -221,12 +260,12 @@ export default function ZoomDial({
                 duration: 160,
               });
             }
-            lastCrossStop.current = snapStop;
-            setHighlightStop(snapStop);
-            commitRelease(snapStop);
+            runOnJS(syncDetentHighlight)(snapStop);
+            runOnJS(commitRelease)(snapStop);
           }
         })
         .onFinalize(() => {
+          'worklet';
           dragging.value = false;
         }),
     [
@@ -271,6 +310,27 @@ export default function ZoomDial({
   return (
     <View style={styles.container}>
       <View style={styles.row}>
+        {island ? (
+          <Pressable
+            disabled={islandPending}
+            onPress={() => {
+              hapticsBridge.selection();
+              onPickIsland?.(island.targetLens);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Switch to ${island.targetLens === 'ultra-wide' ? 'ultra-wide' : 'wide'} lens`}
+            accessibilityState={{ disabled: islandPending }}
+            style={({ pressed }) => [
+              styles.islandChip,
+              islandPending && { opacity: 0.5 },
+              pressed && { opacity: 0.6 },
+            ]}>
+            <ThemedText variant="captionSmall" weight="700" style={styles.islandLabel}>
+              {formatStop(island.stop)}
+            </ThemedText>
+          </Pressable>
+        ) : null}
         <GestureDetector gesture={panGesture}>
           <View style={[styles.dial, { width: DIAL_WIDTH }]}>
             <Animated.View style={[styles.strip, stripStyle]}>
@@ -511,5 +571,21 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The 0.5× / 1× island chip sits to the LEFT of the dial. Visually distinct
+  // from the AUTO button so users learn it's a session-swap affordance, not
+  // a snap detent. ~44px diameter satisfies the touch-target minimum.
+  islandChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  islandLabel: {
+    color: '#fff',
   },
 });

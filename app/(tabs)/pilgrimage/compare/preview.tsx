@@ -34,6 +34,7 @@ import {
   type FrameMatch,
 } from '../../../../libs/services/pilgrimage/frame-match';
 import { useCaptureSession, type CaptureSessionShot } from '../../../../hooks/useCaptureSession';
+import { capturedOnWideAngle } from '../../../../libs/services/pilgrimage/capture-lens-gate';
 import { sanitizeCaptureNote } from '../../../../libs/services/pilgrimage/capture-session';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
 
@@ -324,6 +325,14 @@ export default function ComparePreviewScreen() {
   );
 
   // Persist one session shot's capture record so the spot shows "captured".
+  //
+  // Rule 8 gate: when the capture wasn't taken on the wide-angle baseline
+  // (ultra-wide / telephoto), frame-match and HDR composite results are
+  // optical-mismatch artifacts — useful as a live reference for the user but
+  // not comparable apples-to-apples with wide-angle captures. We keep the
+  // live UI display (preview.tsx still shows the score) but write null
+  // through to `recordCapture` so the album-level average isn't polluted
+  // by lens-induced bias. See `capture-lens-gate.ts`.
   const persistShot = useCallback(
     async (
       shot: CaptureSessionShot,
@@ -331,20 +340,23 @@ export default function ComparePreviewScreen() {
       compositeUri?: string,
       noteText?: string
     ) => {
+      const lensAllowsAnalysis = capturedOnWideAngle(shot);
+      const effectiveFrame = lensAllowsAnalysis ? frame : null;
+      const effectiveCompositeUri = lensAllowsAnalysis ? compositeUri : undefined;
       const snap = snapshotFromShot(shot);
       const cleanedNote = sanitizeCaptureNote(noteText ?? shot.note);
       const enrichedSnapshot: SensorSnapshot | undefined = snap
         ? {
             ...snap,
-            frameMatch: frame?.total ?? null,
-            frameValid: frame ? frame.valid : null,
-            frameReason: frame?.reason ?? null,
+            frameMatch: effectiveFrame?.total ?? null,
+            frameValid: effectiveFrame ? effectiveFrame.valid : null,
+            frameReason: effectiveFrame?.reason ?? null,
           }
         : undefined;
       await recordCapture({
         spotId,
         uri: shot.uri,
-        compositeUri,
+        compositeUri: effectiveCompositeUri,
         capturedAt: shot.createdAt,
         heading: shot.heading ?? undefined,
         sensorSnapshot: enrichedSnapshot,

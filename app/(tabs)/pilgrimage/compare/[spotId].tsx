@@ -38,6 +38,9 @@ import {
 } from '../../../../libs/services/pilgrimage/camera-ui';
 import { embedCaptureMetadata } from '../../../../libs/services/pilgrimage/embed-capture-metadata';
 import { availableStopsFromDeviceInfo } from '../../../../libs/services/pilgrimage/lens-switching';
+import { captureAnalysisGate } from '../../../../libs/services/pilgrimage/capture-lens-gate';
+import { useResolvedCameraDevices } from '../../../../hooks/useResolvedCameraDevices';
+import { useStrategicCameraDevice } from '../../../../hooks/useStrategicCameraDevice';
 import type {
   CameraDeviceInfo,
   CameraEngineHandle,
@@ -244,9 +247,117 @@ export default function CompareCaptureScreen() {
     setActive: setCameraActive,
   } = lifecycle;
 
+  // Cohort hint: derives `{ strategy, hasStandaloneUltraWide }` from the
+  // full device list so the dial can route the 0.5 affordance correctly
+  // — onto the ISLAND chip (Android standalone-switch) or onto the strip
+  // (iOS / Xiaomi-style logical, where the active session covers 0.5
+  // continuously). The strategic hook then drives the actual session swap
+  // when the island is tapped.
+  const { cohort, cachedSnapshot } = useResolvedCameraDevices(facing);
+  // While the live cohort enumerates (cold launch, ~150–500ms on Android),
+  // fall back to last session's cached snapshot so the dial paints its
+  // final layout on frame 1 instead of flashing [1, max] → [0.5, 1, max].
+  // The cache stores strategy + device IDs, not live `CameraDevice`
+  // handles, so it's safe ONLY for layout decisions (cohortHint) — never
+  // for opening a session, which always uses the live `cohort`.
+  const cohortHint = useMemo(() => {
+    if (cohort) {
+      return {
+        strategy: cohort.strategy,
+        hasStandaloneUltraWide: cohort.ultraWide !== undefined,
+      };
+    }
+    if (cachedSnapshot) {
+      return {
+        strategy: cachedSnapshot.strategy,
+        hasStandaloneUltraWide: cachedSnapshot.ultraWideDeviceId !== undefined,
+      };
+    }
+    return undefined;
+  }, [cohort, cachedSnapshot]);
+  // Strategic device: runs the lens-switch FSM (dwell-then-switch + tap-
+  // bypass). `activeDevice` is what CameraStage opens its session on;
+  // `requestSwitch` is what ZoomDial's island chip calls.
+  const strategic = useStrategicCameraDevice(cohort);
+
+  // Snapshot of the previous lens's preview, captured right before a session
+  // swap so CameraStage can render it as a freeze-frame overlay while
+  // CameraX tears down the old session. Android-only (engine.takeSnapshot
+  // returns null on iOS); the animated vignette covers the iOS path.
+  const [freezeFrameUri, setFreezeFrameUri] = useState<string | null>(null);
+
+  // Clear the freeze-frame once the new session is up and the warmup overlay
+  // has finished its fade-out (~250ms). Also delete the temp file so we don't
+  // leak ~100 kB JPEGs into the cache each swap.
+  useEffect(() => {
+    if (strategic.isSwitching) return;
+    if (!freezeFrameUri) return;
+    const uri = freezeFrameUri;
+    const timer = setTimeout(() => {
+      setFreezeFrameUri(null);
+      // Best-effort cleanup; if the file vanished already or the path is
+      // malformed we just move on. No error toast — the snapshot is purely a
+      // visual nicety; failure should never reach the user.
+      FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+    }, 260);
+    return () => clearTimeout(timer);
+  }, [strategic.isSwitching, freezeFrameUri]);
+
+  // Wrapper around the FSM's `requestSwitch` that grabs a freeze-frame first
+  // (fire-and-forget — the snapshot Promise is allowed to land after the
+  // dispatch). The native takeSnapshot call is issued synchronously so the
+  // preview buffer is read while it's still showing the OLD lens; the JS
+  // Promise just tells us when the file is on disk. Tap-island happens
+  // immediately after, so the FSM doesn't wait on disk I/O.
+  const handleRequestSwitch = useCallback(
+    (target: 'wide' | 'ultra-wide') => {
+      if (Platform.OS === 'android') {
+        const snap = cameraRef.current?.takeSnapshot();
+        if (snap) {
+          snap
+            .then((uri) => {
+              if (uri) setFreezeFrameUri(uri);
+            })
+            .catch(() => undefined);
+        }
+      }
+      strategic.requestSwitch(target);
+    },
+    [strategic]
+  );
+  // Compose `onCameraReady` with the FSM's `onCameraStarted` so the FSM
+  // learns when a session swap has completed and flips back to STABLE.
+  const handleCameraReady = useCallback(() => {
+    strategic.onCameraStarted();
+    onCameraReady();
+  }, [strategic, onCameraReady]);
+  const handleMountError = useCallback(
+    (e: { nativeEvent: { message: string } }) => {
+      strategic.onCameraError(e.nativeEvent.message);
+      onMountError(e);
+    },
+    [strategic, onMountError]
+  );
+  // Surface lens-switch failures via the existing switch-toast HUD slot.
+  // Without this, a CAMERA_ERROR leaves the FSM in ERROR phase silently:
+  // `activeDevice` falls back to the previous lens (so the preview still
+  // works) but the user has no idea their requested swap didn't take.
+  useEffect(() => {
+    if (!strategic.error) return;
+    setHud({
+      switchToast: {
+        icon: 'alert-circle-outline',
+        label: '切換失敗，已退回主鏡頭',
+      },
+    });
+  }, [strategic.error, setHud]);
+
   // Zoom is in REAL factor units now (e.g. 1×, 2×, 3×). Bounds + available
   // pillars come straight from the device — no expo-camera-era guesses.
-  const availableStops = useMemo(() => availableStopsFromDeviceInfo(deviceInfo), [deviceInfo]);
+  const availableStops = useMemo(
+    () => availableStopsFromDeviceInfo(deviceInfo, 3, cohortHint),
+    [deviceInfo, cohortHint]
+  );
   const minZoom = deviceInfo?.minZoom ?? 1;
   const maxZoom = deviceInfo?.maxZoom ?? 1;
   const zoom = useCameraZoom({
@@ -514,6 +625,9 @@ export default function CompareCaptureScreen() {
       burstTotal?: number;
       burstUris?: string[];
       burstBestIndex?: number;
+      /** Physical lens family the capture was taken on — surfaced from
+       *  the engine so the album/preview can gate cross-lens analysis. */
+      lensType?: 'ultra-wide-angle' | 'wide-angle' | 'telephoto';
     }): CaptureSessionShot => {
       const createdAt = Date.now();
       const record: CaptureSessionShot = {
@@ -532,6 +646,7 @@ export default function CompareCaptureScreen() {
         burstTotal: shot.burstTotal,
         burstUris: shot.burstUris,
         burstBestIndex: shot.burstBestIndex,
+        lensType: shot.lensType,
       };
       captureSession.addShot(record);
       return record;
@@ -638,12 +753,27 @@ export default function CompareCaptureScreen() {
           additionalExif
         );
         tapFocus.releaseLock();
+        // Lens-gate banner: when the capture was taken on the standalone
+        // ultra-wide (or telephoto) we surface a short toast so the user
+        // understands why the post-capture analytics card will be missing
+        // for this shot. Wide-angle captures get no banner (the default
+        // flow is unchanged). See `capture-lens-gate.ts` for the policy.
+        const gate = captureAnalysisGate({ lensType: photo.lensType });
+        if (gate.bannerMessage) {
+          setHud({
+            switchToast: {
+              icon: 'information-circle-outline',
+              label: gate.bannerMessage,
+            },
+          });
+        }
         return recordShot({
           uri: output.uri,
           width: output.width,
           height: output.height,
           captureMode,
           source,
+          lensType: photo.lensType,
         });
       } catch (e) {
         console.warn('[camera] single capture failed', e);
@@ -681,6 +811,7 @@ export default function CompareCaptureScreen() {
         burstTotal: result.total,
         burstUris,
         burstBestIndex: idx,
+        lensType: result.lensType,
       });
     },
     [burst, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
@@ -710,6 +841,7 @@ export default function CompareCaptureScreen() {
         // about which shot was actually produced.
         captureMode: result.wasHdr ? 'hdr' : 'single',
         source,
+        lensType: result.lensType,
       });
     },
     [bracket, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
@@ -722,8 +854,19 @@ export default function CompareCaptureScreen() {
   //   - Scene flags HDR but the device cannot do native photo-HDR → real
   //     3-frame exposure bracket via `runHdrBracket`.
   //   - Scene looks balanced → plain single shot.
+  //
+  // Non-wide lens gate: when the active session is the standalone ultra-wide
+  // (or telephoto) the cross-lens analyses are off the table — the scene
+  // analyzer's histogram is calibrated against the wide reference, and the
+  // bracket composite would compare frames whose lens distortion differs
+  // from the reference. Force runSingle for non-wide captures; the banner
+  // surfaced from runSingle tells the user why analytics is skipped.
   const runAuto = useCallback(
     async (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
+      const lensIsWide = strategic.activeLens === 'wide';
+      if (!lensIsWide) {
+        return runSingle(source, 'single');
+      }
       if (realHdrTargeted) {
         return runSingle(source, 'hdr');
       }
@@ -732,10 +875,22 @@ export default function CompareCaptureScreen() {
       }
       return runSingle(source, 'single');
     },
-    [realHdrTargeted, sceneAnalyzer.hdrRecommended, runSingle, runHdrBracket]
+    [
+      realHdrTargeted,
+      sceneAnalyzer.hdrRecommended,
+      runSingle,
+      runHdrBracket,
+      strategic.activeLens,
+    ]
   );
 
-  const anyCapturing = capturing || burst.capturing || bracket.capturing;
+  // strategic.isSwitching covers the ~200–400ms session-swap window. Without
+  // it the shutter can fire mid-swap and VisionCamera throws
+  // `Camera is not active` — the UI looks frozen because the throw kills
+  // the takePhoto promise. Cheaper to disable the button than to handle the
+  // race on the capture path.
+  const anyCapturing =
+    capturing || burst.capturing || bracket.capturing || strategic.isSwitching;
 
   const captureForMode = useCallback(
     (source: 'manual' | 'auto'): Promise<CaptureSessionShot | null> => {
@@ -946,6 +1101,18 @@ export default function CompareCaptureScreen() {
     hapticsBridge.tap();
     router.push({ pathname: '/pilgrimage/compare/align', params: { ...params } });
   };
+  // Island chip wires the off-strip lens-switch affordance for
+  // standalone-switch cohorts (S20FE / Pixel 8). The chip is null when:
+  //   * the cohort is logical (iOS / Xiaomi true-0.5) — strip handles 0.5
+  //     continuously, no chip needed; OR
+  //   * the cohort is wide-only (Pixel 6a) — no ultra-wide hardware exists.
+  //   * the cohort is still null (enumeration in flight) — never lie.
+  const dialIsland =
+    cohort && cohort.strategy === 'standalone-switch' && cohort.ultraWide
+      ? strategic.activeLens === 'wide'
+        ? ({ stop: 0.5 as FocalStop, targetLens: 'ultra-wide' as const })
+        : ({ stop: 1 as FocalStop, targetLens: 'wide' as const })
+      : null;
   const focalDial = (
     <ZoomDial
       zoomShared={zoom.zoomShared}
@@ -956,6 +1123,9 @@ export default function CompareCaptureScreen() {
       stopZoom={STOP_TO_ZOOM}
       maxZoom={maxZoom}
       onPickFocalStop={zoom.setStop}
+      island={dialIsland}
+      onPickIsland={strategic.requestSwitch}
+      islandPending={strategic.isSwitching}
     />
   );
   const overlayControls = (
@@ -996,6 +1166,7 @@ export default function CompareCaptureScreen() {
           <CameraStage
             ref={cameraRef}
             facing={facing}
+            device={strategic.activeDevice}
             zoomShared={zoom.zoomShared}
             exposureShared={exposureShared}
             preferHdr={realHdrTargeted}
@@ -1009,10 +1180,10 @@ export default function CompareCaptureScreen() {
             enableShutterSound={!settings.mute}
             pinchGesture={zoom.pinchGesture}
             tapGesture={tapFocus.tapGesture}
-            onCameraReady={onCameraReady}
-            onMountError={onMountError}
+            onCameraReady={handleCameraReady}
+            onMountError={handleMountError}
             onDeviceInfo={setDeviceInfo}
-            showWarmup={!cameraIsReady}
+            showWarmup={!cameraIsReady || strategic.isSwitching}
             frameOutput={sceneAnalyzer.frameOutput}
           />
         </CameraErrorBoundary>
