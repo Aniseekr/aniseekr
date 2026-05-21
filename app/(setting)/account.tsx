@@ -132,7 +132,7 @@ export default function AccountScreen() {
   const handleDisconnect = (platform: PlatformDef) => {
     Alert.alert(
       `Disconnect ${platform.name}?`,
-      'Your local data stays. You can reconnect any time.',
+      `This removes the OAuth token and any cached library, ratings, and progress from ${platform.name} on this device. To also delete data on ${platform.name}'s servers, revoke access in your ${platform.name} account settings.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -141,6 +141,38 @@ export default function AccountScreen() {
           onPress: async () => {
             try {
               await authService.signOut(platform.id);
+              hapticsBridge.warning();
+            } catch (e) {
+              hapticsBridge.error();
+            } finally {
+              await refreshAll();
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDisconnectAll = () => {
+    const connectedCount = Object.values(connections).filter(Boolean).length;
+    if (connectedCount === 0) {
+      Alert.alert(
+        'Nothing to disconnect',
+        'You are not connected to any platforms on this device.'
+      );
+      return;
+    }
+    Alert.alert(
+      'Disconnect everything from this device?',
+      'This signs you out of every connected platform and erases every stored OAuth token from this device. To also delete data held by each platform, revoke access in their own account settings. To wipe local caches as well, delete the app.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect all',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.signOut();
               hapticsBridge.warning();
             } catch (e) {
               hapticsBridge.error();
@@ -235,11 +267,24 @@ export default function AccountScreen() {
             refreshAll();
           }}
         />
+        <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
+        <SettingsRow
+          icon="delete-forever"
+          label="Disconnect everything from this device"
+          description="Signs out of every platform and erases all stored OAuth tokens locally"
+          onPress={() => {
+            hapticsBridge.tap();
+            handleDisconnectAll();
+          }}
+          destructive
+        />
       </SettingsSection>
 
       <Text style={[styles.footnote, { color: theme.text.tertiary }]}>
-        Tokens live in your device&apos;s secure enclave. Reset them by uninstalling the app or
-        revoking access in each platform&apos;s account settings.
+        Aniseekr has no server-side account — your library lives only on this device. Disconnecting
+        a platform removes its OAuth token and the cached library it pulled. To fully delete data on
+        each platform, revoke access in that platform&apos;s account settings. To erase every local
+        cache, screenshot, preference and SQLite store as well, delete the app from your device.
       </Text>
 
       <PlatformAuthSheet
