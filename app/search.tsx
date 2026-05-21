@@ -251,11 +251,17 @@ export default function SearchScreen() {
       Keyboard.dismiss();
 
       if (isPilgrimageMode) {
+        const chromeSeed = {
+          title: anime.title,
+          titleSecondary: anime.secondaryTitle ?? anime.titleEnglish ?? null,
+          poster: anime.image,
+        };
         if (typeof anime.bangumiId === 'number') {
           router.push(
             buildPilgrimageDetailRoute(anime.bangumiId, {
               returnTo: 'search',
               returnQuery: query,
+              ...chromeSeed,
             })
           );
           return;
@@ -282,6 +288,7 @@ export default function SearchScreen() {
             buildPilgrimageDetailRoute(bangumiId, {
               returnTo: 'search',
               returnQuery: query,
+              ...chromeSeed,
             })
           );
         } catch (e) {

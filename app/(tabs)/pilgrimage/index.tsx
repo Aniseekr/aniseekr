@@ -316,7 +316,15 @@ export default function PilgrimageHubScreen() {
   const handleAnimePress = useCallback(
     (anime: AnitabiBangumi) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(buildPilgrimageDetailRoute(anime.id, { returnTo: 'hub' }));
+      router.push(
+        buildPilgrimageDetailRoute(anime.id, {
+          returnTo: 'hub',
+          title: anime.title || anime.cn,
+          titleSecondary: anime.cn && anime.cn !== anime.title ? anime.cn : null,
+          poster: anime.cover,
+          themeColor: anime.color,
+        })
+      );
     },
     [router]
   );
@@ -384,9 +392,17 @@ export default function PilgrimageHubScreen() {
   const handle88EntryPress = useCallback(
     (entry: (typeof tourism88Entries)[number]) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(buildPilgrimageDetailRoute(entry.bangumiId, { returnTo: 'hub' }));
+      router.push(
+        buildPilgrimageDetailRoute(entry.bangumiId, {
+          returnTo: 'hub',
+          title: entry.titleJa || entry.titleEn,
+          titleSecondary:
+            entry.titleEn && entry.titleEn !== entry.titleJa ? entry.titleEn : null,
+          poster: tourism88Covers.get(entry.bangumiId) ?? null,
+        })
+      );
     },
-    [router]
+    [router, tourism88Covers]
   );
   const handleSee88All = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);

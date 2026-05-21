@@ -289,20 +289,6 @@ export default function PilgrimageAlbumScreen() {
     [router, theme.accent]
   );
 
-  const handleAddNew = useCallback(() => {
-    hapticsBridge.tap();
-    if (selectedAnimeId) {
-      router.push(
-        buildPilgrimageDetailRoute(selectedAnimeId, {
-          returnTo: 'album',
-          albumAnimeId: selectedAnimeId,
-        })
-      );
-      return;
-    }
-    router.push('/pilgrimage');
-  }, [router, selectedAnimeId]);
-
   const handleOpenFolder = useCallback((folder: FolderGroup) => {
     hapticsBridge.tap();
     cameFromUrlRef.current = false;
@@ -323,6 +309,26 @@ export default function PilgrimageAlbumScreen() {
     () => folders.find((f) => String(f.anime.id) === selectedAnimeId) ?? null,
     [folders, selectedAnimeId]
   );
+
+  const handleAddNew = useCallback(() => {
+    hapticsBridge.tap();
+    if (selectedAnimeId) {
+      const anime = selectedFolder?.anime ?? null;
+      router.push(
+        buildPilgrimageDetailRoute(selectedAnimeId, {
+          returnTo: 'album',
+          albumAnimeId: selectedAnimeId,
+          title: anime?.title || anime?.cn || null,
+          titleSecondary:
+            anime?.cn && anime.cn !== anime.title ? anime.cn : null,
+          poster: anime?.cover ?? null,
+          themeColor: anime?.color ?? null,
+        })
+      );
+      return;
+    }
+    router.push('/pilgrimage');
+  }, [router, selectedAnimeId, selectedFolder]);
 
   // Detail-view masonry — split the selected folder's entries into two columns
   // with a small height variation so the grid still feels organic.

@@ -36,7 +36,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../context/ThemeContext';
-import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
+import { ThemedText, readableTextOn } from '../../../components/themed';
 import { PLATFORM_CONFIGS, type PlatformType } from '../../../libs/services/auth/types';
 import { isSupportedBrowseSource } from '../../../libs/services/data-source-config';
 import { getNumberParam } from '../../../libs/utils/route-params';
@@ -45,7 +45,10 @@ import {
   getPilgrimageAnimeTitles,
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { getPilgrimageDetailBackRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import {
+  getPilgrimageDetailBackRoute,
+  getPilgrimageDetailChromeSeed,
+} from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   mergePilgrimageSeriesEntries,
   type PilgrimageSeriesSelection,
@@ -65,6 +68,7 @@ import { usePilgrimageSpotSheet } from '../../../hooks/usePilgrimageSpotSheet';
 import {
   FilterPill,
   LayoutModeButton,
+  PilgrimageDetailLoadingShell,
   PilgrimageDetailSheet,
   RoundHeaderButton,
   SeriesSwitchRow,
@@ -90,6 +94,10 @@ export default function PilgrimageDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  // Frame-1 chrome seed (title / poster / themeColor) carried in by the
+  // lister so we can paint hero + accent before any I/O resolves
+  // (CLAUDE.md Rule 10). When the real data arrives it replaces the seed.
+  const chromeSeed = useMemo(() => getPilgrimageDetailChromeSeed(params), [params]);
 
   const { view, setView } = usePilgrimageDetailView();
   const {
@@ -128,7 +136,7 @@ export default function PilgrimageDetailScreen() {
   const points = mergedSeries.points;
   const hasSeriesSwitcher = seriesEntries.length > 1;
 
-  const themeColor = anime?.color || theme.accent;
+  const themeColor = anime?.color || chromeSeed.themeColor || theme.accent;
   const themeColorFg = readableTextOn(themeColor);
   const styles = useMemo(
     () => makePilgrimageDetailStyles(theme, insets.top),
@@ -140,7 +148,7 @@ export default function PilgrimageDetailScreen() {
   );
   const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
 
-  const userLocation = usePilgrimageUserLocation();
+  const { location: userLocation, heading: userHeading } = usePilgrimageUserLocation();
   const interactions = usePilgrimageInteractions();
   const {
     visited,
@@ -237,8 +245,8 @@ export default function PilgrimageDetailScreen() {
     if (typeof posterSubjectId === 'number' && posterSubjectId > 0) {
       return `https://api.bgm.tv/v0/subjects/${posterSubjectId}/image?type=large`;
     }
-    return anime?.cover ?? '';
-  }, [bangumiId, anime?.id, anime?.cover]);
+    return anime?.cover ?? chromeSeed.poster ?? '';
+  }, [bangumiId, anime?.id, anime?.cover, chromeSeed.poster]);
 
   const handleOpenMaps = useCallback((spot: AnitabiPoint) => {
     if (!hasValidGeo(spot.geo)) return;
@@ -437,12 +445,15 @@ export default function PilgrimageDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         {loading ? (
-          <View>
-            <Skeleton.HeroDetail showEpisodes={false} />
-            <View style={{ paddingHorizontal: 16 }}>
-              <Skeleton.AnimeCardList count={5} />
-            </View>
-          </View>
+          <PilgrimageDetailLoadingShell
+            themeColor={themeColor}
+            seedTitle={chromeSeed.title ?? null}
+            seedSubtitle={chromeSeed.titleSecondary ?? null}
+            seedPoster={chromeSeed.poster ?? null}
+            topInset={insets.top}
+            theme={theme}
+            onBack={handleBack}
+          />
         ) : error ? (
           <SafeAreaView style={styles.errorContainer}>
             <ThemedText variant="titleMedium" weight="700" align="center">
@@ -472,11 +483,13 @@ export default function PilgrimageDetailScreen() {
                   visited={visited}
                   ringColor={themeColor}
                   userLocation={userLocation}
+                  userHeading={userHeading}
                   centerGeo={anime?.geo ?? null}
                   centerZoom={anime?.zoom ?? 12}
                   markerMode={mapMarkerMode}
                   offlineOnly={mapOfflineOnly}
                   focusSpotId={selectedSpotId}
+                  controlsBottomOffset={sheetPeekOffset}
                   theme={theme}
                   onSpotPress={openSpot}
                   onClusterPick={openCluster}

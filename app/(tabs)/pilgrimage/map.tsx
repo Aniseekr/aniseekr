@@ -976,10 +976,21 @@ export default function PilgrimageMapScreen() {
   // The actual drill-down. Same handler whether the user tapped a marker, the
   // focused card, or a list row. returnTo=map so the detail screen's back
   // button returns to *this* hub map view rather than the tab root.
+  // Accepts an optional chrome seed so the detail screen can paint hero +
+  // title + accent on frame 1 instead of flashing a skeleton (CLAUDE.md Rule 10).
   const navigateToDetail = useCallback(
-    (bangumiId: number) => {
+    (bangumiId: number, anime?: AnitabiBangumi | null) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(buildPilgrimageDetailRoute(bangumiId, { returnTo: 'map' }));
+      router.push(
+        buildPilgrimageDetailRoute(bangumiId, {
+          returnTo: 'map',
+          title: anime?.title || anime?.cn || null,
+          titleSecondary:
+            anime?.cn && anime.cn !== anime.title ? anime.cn : null,
+          poster: anime?.cover ?? null,
+          themeColor: anime?.color ?? null,
+        })
+      );
     },
     [router]
   );
@@ -989,13 +1000,14 @@ export default function PilgrimageMapScreen() {
       // Tapping a marker focuses the card AND drills in. This is the fastest
       // path to detail for users who already know which marker they want.
       setFocusedAnimeId(bangumiId);
-      navigateToDetail(bangumiId);
+      const anime = knownAnimes.find((a) => a.id === bangumiId) ?? null;
+      navigateToDetail(bangumiId, anime);
     },
-    [navigateToDetail]
+    [knownAnimes, navigateToDetail]
   );
 
   const handleSheetAnimePress = useCallback(
-    (anime: AnitabiBangumi) => navigateToDetail(anime.id),
+    (anime: AnitabiBangumi) => navigateToDetail(anime.id, anime),
     [navigateToDetail]
   );
 

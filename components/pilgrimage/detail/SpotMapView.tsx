@@ -54,6 +54,12 @@ export interface SpotMapViewProps {
   visited: VisitedMap;
   ringColor: string;
   userLocation: LatLng | null;
+  /**
+   * Compass heading in degrees (0 = true north, clockwise) used to rotate
+   * the Google-Maps-style heading cone on the user dot. `null` clears the
+   * cone — never show a fake direction.
+   */
+  userHeading?: number | null;
   centerGeo: readonly [number, number] | null;
   centerZoom: number;
   markerMode: MapMarkerMode;
@@ -64,6 +70,14 @@ export interface SpotMapViewProps {
    * doubles as a quick spot picker without forcing the modal sheet open.
    */
   focusSpotId?: string | null;
+  /**
+   * Pixels to lift the in-WebView FABs (zoom + recenter) and the Leaflet
+   * attribution off the bottom edge so they clear whatever floating UI sits
+   * on top of the map (bottom sheet peek, tab bar, etc.). Defaults to 16
+   * (true-fullscreen maps). The detail screen passes the sheet peek height
+   * + a small margin so the buttons stay tappable while the sheet is at peek.
+   */
+  controlsBottomOffset?: number;
   onSpotPress: (spot: AnitabiPoint) => void;
   onClusterPick: (spots: readonly AnitabiPoint[]) => void;
   theme: ThemePalette;
@@ -77,6 +91,8 @@ function buildSpotMapHtml(initial: {
   hasCenter: boolean;
   tileStyle: TileStyleId;
   themeVars: MapThemeVars;
+  /** Pixels to lift the FABs + attribution off the WebView bottom. */
+  controlsBottom: number;
 }): string {
   const initialJson = JSON.stringify(initial).replace(/</g, '\\u003c');
   const tile = TILE_STYLES[initial.tileStyle];
@@ -92,7 +108,11 @@ function buildSpotMapHtml(initial: {
 <style>${LEAFLET_MARKERCLUSTER_CSS}</style>
 <style>${MAP_BASE_CSS}</style>
 <style>
-  :root { ${themeVarsCss} }
+  :root {
+    --mc-bottom: ${initial.controlsBottom}px;
+    --attr-bottom: ${Math.max(0, initial.controlsBottom - 32)}px;
+    ${themeVarsCss}
+  }
   .map-btn.disabled { opacity: 0.4; pointer-events: none; }
   .spot-marker {
     position: relative;
@@ -106,6 +126,7 @@ function buildSpotMapHtml(initial: {
   .spot-marker .photo {
     width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
+    background: var(--ring, var(--map-chrome));
   }
   .spot-marker .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .spot-marker::after {
@@ -167,10 +188,52 @@ ${MAP_BASE_BODY}
     updateWhenIdle: false
   }).addTo(map);
 
-  if (initial.user) {
-    var userIcon = L.divIcon({ className: '', html: '<div class="user-pulse"></div>', iconSize: [16,16], iconAnchor: [8,8] });
-    L.marker([initial.user.lat, initial.user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
+  // Google-Maps-style "you are here" marker. The icon ships an empty
+  // .user-heading cone that __updateHeading rotates + activates when the
+  // device compass produces a real reading. Position + cone are managed
+  // outside the heavy __updateMarkers payload so location ticks don't
+  // re-render the spot pins.
+  var userMarker = null;
+  var lastHeading = null;
+  function applyUserHeading() {
+    if (!userMarker || lastHeading == null) return;
+    var el = userMarker.getElement();
+    var cone = el && el.querySelector ? el.querySelector('.user-heading') : null;
+    if (!cone) return;
+    cone.style.transform = 'rotate(' + lastHeading + 'deg)';
+    cone.classList.add('active');
   }
+  function applyUser(user) {
+    if (userMarker) { try { map.removeLayer(userMarker); } catch (e) {} userMarker = null; }
+    if (user && typeof user.lat === 'number' && typeof user.lng === 'number') {
+      var userIcon = L.divIcon({
+        className: '',
+        html: '<div class="user-loc"><div class="user-heading"></div><div class="user-pulse"></div></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      userMarker = L.marker([user.lat, user.lng], { icon: userIcon, interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(map);
+      applyUserHeading();
+    }
+    initial.user = user;
+  }
+  applyUser(initial.user);
+  window.__updateUser = applyUser;
+
+  // Native pushes the device compass heading here; rotate the cone in place.
+  // A null/non-finite value clears the cone — never show a fake direction.
+  window.__updateHeading = function(deg) {
+    lastHeading = typeof deg === 'number' && isFinite(deg) ? deg : null;
+    if (lastHeading == null) {
+      if (userMarker) {
+        var el = userMarker.getElement();
+        var cone = el && el.querySelector ? el.querySelector('.user-heading') : null;
+        if (cone) cone.classList.remove('active');
+      }
+      return;
+    }
+    applyUserHeading();
+  };
 
   var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
   var initialZoom = initial.center.zoom;
@@ -247,9 +310,11 @@ ${MAP_BASE_BODY}
           });
         } else {
           var cls = 'spot-marker' + (m.visited ? ' visited' : '');
-          var photoInner = m.image ? '<img src="' + m.image + '" loading="lazy" />' : '';
-          var html = '<div class="' + cls + '">' +
-            '<div class="photo">' + photoInner + '</div>' +
+          var imgTag = m.image
+            ? '<img src="' + m.image + '" loading="lazy" alt="" onerror="this.style.display=\\'none\\'" />'
+            : '';
+          var html = '<div class="' + cls + '" style="--ring:' + m.ringColor + '">' +
+            '<div class="photo">' + imgTag + '</div>' +
             '<span class="region-dot" style="background:' + m.ringColor + '"></span>' +
             '<span class="ep">EP ' + m.ep + '</span>' +
           '</div>';
@@ -302,9 +367,11 @@ ${MAP_BASE_BODY}
         });
       } else {
         var cls = 'spot-marker' + (nextVisited ? ' visited' : '');
-        var photoInner = marker.__image ? '<img src="' + marker.__image + '" loading="lazy" />' : '';
-        var html = '<div class="' + cls + '">' +
-          '<div class="photo">' + photoInner + '</div>' +
+        var imgTag = marker.__image
+          ? '<img src="' + marker.__image + '" loading="lazy" alt="" onerror="this.style.display=\\'none\\'" />'
+          : '';
+        var html = '<div class="' + cls + '" style="--ring:' + marker.__ringColor + '">' +
+          '<div class="photo">' + imgTag + '</div>' +
           '<span class="region-dot" style="background:' + marker.__ringColor + '"></span>' +
           '<span class="ep">EP ' + marker.__ep + '</span>' +
         '</div>';
@@ -331,11 +398,13 @@ function SpotMapViewImpl({
   visited,
   ringColor,
   userLocation,
+  userHeading,
   centerGeo,
   centerZoom,
   markerMode,
   offlineOnly,
   focusSpotId,
+  controlsBottomOffset = 16,
   onSpotPress,
   onClusterPick,
   theme,
@@ -375,6 +444,7 @@ function SpotMapViewImpl({
       hasCenter,
       tileStyle,
       themeVars,
+      controlsBottom: controlsBottomOffset,
     });
     // First-paint values captured once. Live theme updates pushed via the
     // bridge effect below — re-rendering would wipe tile cache + camera state.
@@ -492,6 +562,48 @@ function SpotMapViewImpl({
     `);
   }, [focusSpotId, ready]);
 
+  // Push the user-location dot. Sent separately from the spot markers so
+  // location ticks don't re-render hundreds of pins. `null` removes the dot.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const payload = userLocation
+      ? JSON.stringify({ lat: userLocation.latitude, lng: userLocation.longitude })
+      : 'null';
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateUser && window.__updateUser(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [userLocation, ready]);
+
+  // Re-push the FAB / attribution bottom offset whenever it changes (e.g. the
+  // bottom sheet's peek height shifts on rotation or inset change). The
+  // initial value is baked into the first-paint HTML, but the prop can change
+  // later — without this, the buttons would stay at their original height.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const mc = controlsBottomOffset;
+    const attr = Math.max(0, controlsBottomOffset - 32);
+    webviewRef.current.injectJavaScript(`
+      try {
+        document.documentElement.style.setProperty('--mc-bottom', '${mc}px');
+        document.documentElement.style.setProperty('--attr-bottom', '${attr}px');
+      } catch(e) {}
+      true;
+    `);
+  }, [controlsBottomOffset, ready]);
+
+  // Push the compass heading. Hub map and detail map share the same WebView
+  // hook (__updateHeading) so the cone behaves identically across screens.
+  useEffect(() => {
+    if (!ready || !webviewRef.current) return;
+    const payload =
+      userHeading == null || !Number.isFinite(userHeading) ? 'null' : String(userHeading);
+    webviewRef.current.injectJavaScript(`
+      try { window.__updateHeading && window.__updateHeading(${payload}); } catch(e) {}
+      true;
+    `);
+  }, [userHeading, ready]);
+
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data) as {
@@ -558,11 +670,13 @@ function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
     prev.visited === next.visited &&
     prev.ringColor === next.ringColor &&
     prev.userLocation === next.userLocation &&
+    prev.userHeading === next.userHeading &&
     prev.centerGeo === next.centerGeo &&
     prev.centerZoom === next.centerZoom &&
     prev.markerMode === next.markerMode &&
     prev.offlineOnly === next.offlineOnly &&
     prev.focusSpotId === next.focusSpotId &&
+    prev.controlsBottomOffset === next.controlsBottomOffset &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onClusterPick === next.onClusterPick &&
     prev.theme === next.theme &&

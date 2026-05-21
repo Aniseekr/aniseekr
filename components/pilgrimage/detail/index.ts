@@ -29,6 +29,8 @@ export { PilgrimageList } from './PilgrimageList';
 export type { PilgrimageListProps } from './PilgrimageList';
 export { PilgrimageDetailSheet } from './PilgrimageDetailSheet';
 export type { PilgrimageDetailSheetProps } from './PilgrimageDetailSheet';
+export { PilgrimageDetailLoadingShell } from './PilgrimageDetailLoadingShell';
+export type { PilgrimageDetailLoadingShellProps } from './PilgrimageDetailLoadingShell';
 export {
   HEADER_HEIGHT,
   HERO_HEIGHT,

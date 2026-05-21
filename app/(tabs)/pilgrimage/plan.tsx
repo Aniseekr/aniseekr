@@ -113,7 +113,15 @@ export default function PilgrimagePlanScreen() {
   const handleAnimePress = useCallback(
     (anime: AnitabiBangumi) => {
       Haptics.selectionAsync().catch(() => undefined);
-      router.push(buildPilgrimageDetailRoute(anime.id, { returnTo: 'plan' }));
+      router.push(
+        buildPilgrimageDetailRoute(anime.id, {
+          returnTo: 'plan',
+          title: anime.title || anime.cn,
+          titleSecondary: anime.cn && anime.cn !== anime.title ? anime.cn : null,
+          poster: anime.cover,
+          themeColor: anime.color,
+        })
+      );
     },
     [router]
   );
