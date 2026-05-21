@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { collectionService } from '../../../libs/services/collection/collection-service';
+import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { trackingService } from '../../../libs/services/tracking/tracking-service';
 import { LocalDB } from '../../../libs/db';
 import { NearbyPilgrimageBadge } from '../../../components/pilgrimage/NearbyPilgrimageBadge';
@@ -34,6 +35,10 @@ interface FolderItem {
   status: string;
   score: number;
 }
+
+// Sync mirror so re-entering a folder paints frame 1 from memory instead of
+// awaiting SQLite. Populated on every successful load. See CLAUDE.md Rule 10.
+const folderSnapshotCache = new Map<string, FolderItem[]>();
 
 function ProgressBar({
   progress,
@@ -66,13 +71,17 @@ export default function FolderDetailScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
-  const [items, setItems] = useState<FolderItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Rule 10: seed from the sync snapshot so the grid is on screen frame 1.
+  const initialItems = id ? folderSnapshotCache.get(id) ?? [] : [];
+  const [items, setItems] = useState<FolderItem[]>(initialItems);
+  const [loading, setLoading] = useState(initialItems.length === 0);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
 
   const loadItems = useCallback(async () => {
-    setLoading(true);
+    // Only flip the blocking skeleton when we have nothing to render. Warm
+    // re-entries revalidate silently.
+    if (!folderSnapshotCache.has(id ?? '')) setLoading(true);
     try {
       if (!id) return;
       const db = await LocalDB.getDatabase();
@@ -107,25 +116,26 @@ export default function FolderDetailScreen() {
           trackingMap = new Map(trackingRows.map((t) => [t.anime_id, t]));
         }
 
-        setItems(
-          favRows.map((r) => {
-            const t = trackingMap.get(r.id);
-            return {
-              id: r.id,
-              title: r.title || 'Unknown Title',
-              image_url: r.image || '',
-              progress: t?.progress ?? 0,
-              total_episodes: t?.total_episodes ?? 0,
-              status: t?.status ?? 'favorites',
-              score: t?.score ?? 0,
-            };
-          })
-        );
+        const mapped = favRows.map((r) => {
+          const t = trackingMap.get(r.id);
+          return {
+            id: r.id,
+            title: r.title || 'Unknown Title',
+            image_url: r.image || '',
+            progress: t?.progress ?? 0,
+            total_episodes: t?.total_episodes ?? 0,
+            status: t?.status ?? 'favorites',
+            score: t?.score ?? 0,
+          };
+        });
+        folderSnapshotCache.set(id, mapped);
+        setItems(mapped);
         return;
       }
 
       const animeIds = await collectionService.getFolderItems(id);
       if (animeIds.length === 0) {
+        folderSnapshotCache.set(id, []);
         setItems([]);
         return;
       }
@@ -162,6 +172,7 @@ export default function FolderDetailScreen() {
           });
         }
       }
+      folderSnapshotCache.set(id, loadedItems);
       setItems(loadedItems);
     } catch (error) {
       console.error('Failed to load folder items:', error);
@@ -290,7 +301,11 @@ export default function FolderDetailScreen() {
       }}
       onLongPress={() => {
         hapticsBridge.longPress();
-        router.push(`/anime/${item.id}`);
+        pushAnimeDetail(router, {
+          id: item.id,
+          title: item.title,
+          image: item.image_url,
+        });
       }}
       delayLongPress={350}>
       {item.image_url ? (

@@ -8,6 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
+import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { LocalDB } from '../../libs/db';
 import { Anime } from '../../components/rate/types';
 import { GlassCard } from '../../components/common/GlassCard';
@@ -95,7 +96,19 @@ function mediaReducer(state: MediaState, action: MediaAction): MediaState {
 }
 
 export default function AnimeDetailScreen() {
-  const { id, openWatch } = useLocalSearchParams<{ id: string; openWatch?: string }>();
+  const {
+    id,
+    openWatch,
+    title: paramTitle,
+    image: paramImage,
+    bannerImage: paramBanner,
+  } = useLocalSearchParams<{
+    id: string;
+    openWatch?: string;
+    title?: string;
+    image?: string;
+    bannerImage?: string;
+  }>();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -107,8 +120,27 @@ export default function AnimeDetailScreen() {
   }, [navigation]);
 
 
-  const [anime, setAnime] = useState<Anime | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Rule 10: seed initial state from the sync cache (warm hit) or route-param
+  // chrome (cold hit), so frame 1 shows real content instead of a skeleton.
+  const initialAnimeRef = useRef<Anime | null>(null);
+  if (initialAnimeRef.current === null) {
+    const cached = id ? AnimeRepository.getAnimeDetailsSync(id) : null;
+    if (cached) {
+      initialAnimeRef.current = cached;
+    } else if (id && paramTitle && paramImage) {
+      initialAnimeRef.current = {
+        id,
+        title: paramTitle,
+        image: paramImage,
+        bannerImage: paramBanner,
+      } as Anime;
+    }
+  }
+  const [anime, setAnime] = useState<Anime | null>(initialAnimeRef.current);
+  // Cache hit means we have the full record; param-seed still needs a fetch but
+  // the user already sees a hero, so we don't show a blocking skeleton.
+  const hasFullRecord = !!(initialAnimeRef.current && (initialAnimeRef.current.description !== undefined || initialAnimeRef.current.episodes !== undefined));
+  const [loading, setLoading] = useState(!hasFullRecord);
   const [pilgrimage, setPilgrimage] = useState<AnitabiBangumi | null>(null);
 
   const [media, dispatchMedia] = useReducer(mediaReducer, INITIAL_MEDIA);
@@ -157,7 +189,10 @@ export default function AnimeDetailScreen() {
   useEffect(() => {
     let cancelled = false;
     if (!id) return;
-    setLoading(true);
+    // Rule 10: don't flip loading=true if we already painted real content from
+    // the sync cache; revalidate silently. Only spinner-block when frame 1 was
+    // genuinely empty.
+    if (!initialAnimeRef.current) setLoading(true);
     AnimeRepository.getAnimeDetails(id)
       .then((data) => {
         if (!cancelled) setAnime(data);
@@ -415,7 +450,9 @@ export default function AnimeDetailScreen() {
     }
   }, [anime]);
 
-  if (loading || !anime) {
+  // Rule 10: only show the blocking skeleton when frame 1 has nothing — cache
+  // hit or route-seeded chrome both render the real layout below.
+  if (!anime) {
     return (
       <View className="flex-1 bg-black">
         <Stack.Screen options={{ headerShown: false }} />
@@ -853,7 +890,7 @@ function RelationsSection({ items }: { items: AnimeRelation[] }) {
   const open = (entry: AnimeRelation) => {
     if (!entry.id) return;
     Haptics.selectionAsync();
-    router.push(`/anime/${entry.id}`);
+    pushAnimeDetail(router, { id: entry.id, title: entry.title, image: entry.imageUrl });
   };
 
   return (
