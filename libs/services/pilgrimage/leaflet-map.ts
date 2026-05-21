@@ -347,38 +347,55 @@ export const MAP_BASE_CSS = `
   .user-heading.active { opacity: 1; }
 
   /* Branded cluster bubble — flat Material disc, no inset shadows or text
-     reflections (those were skeuomorphic and clashed with Material 3). */
+     reflections (those were skeuomorphic and clashed with Material 3).
+     The bundled leaflet.markercluster CSS sets a 20px border-radius on the
+     outer .marker-cluster and forces .marker-cluster div to 30x30 with
+     5px margins. Those defaults make our custom .ms-cluster render as a
+     tiny dot offset inside a rounded-rect outline (empty box on the map).
+     We reset the outer container and override layout on .ms-cluster with
+     !important so the plugin's selector specificity does not win. */
   .marker-cluster {
     background: transparent !important;
     border: none !important;
+    border-radius: 0 !important;
   }
-  .marker-cluster div {
-    background: transparent !important;
-    margin: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
-  .marker-cluster span { display: none; }
   .ms-cluster {
-    width: 100%; height: 100%;
+    width: 100% !important; height: 100% !important;
+    margin: 0 !important;
     border-radius: 50%;
     background: var(--ring, #4285F4);
-    border: 3px solid #ffffff;
+    border: 2px solid #ffffff;
     color: #ffffff;
     display: flex; align-items: center; justify-content: center;
-    font: 700 16px 'Google Sans Text', Roboto, system-ui, -apple-system, sans-serif;
+    font: 700 12px 'Google Sans Text', Roboto, system-ui, -apple-system, sans-serif;
     letter-spacing: -0.2px;
-    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.30),
-                0 4px 8px 3px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.28),
+                0 3px 6px 1px rgba(0,0,0,0.14);
     transition: transform .12s ease;
     cursor: pointer;
     position: relative;
   }
   .ms-cluster .ms-cluster-count { line-height: 1; font-weight: 700; }
   .ms-cluster:active { transform: scale(0.94); }
-  .ms-cluster.sm { font-size: 14px; }
-  .ms-cluster.lg { font-size: 18px; }
-  .ms-cluster.xl { font-size: 20px; }
+  .ms-cluster.sm { font-size: 10px; }
+  .ms-cluster.lg { font-size: 14px; }
+  .ms-cluster.xl { font-size: 16px; }
+  /* Compact "dot" cluster — used when zoomed out so far that a numbered
+     bubble would be unreadable, or when the cluster is small enough that
+     the count is not worth the chrome. The soft halo (box-shadow ring)
+     reads as "this area has scenes" without intruding on the map. */
+  .ms-dot {
+    width: 100% !important; height: 100% !important;
+    margin: 0 !important;
+    border-radius: 50%;
+    background: var(--ring, #4285F4);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 4px var(--halo, rgba(66,133,244,0.22)),
+                0 1px 2px 0 rgba(0,0,0,0.30);
+    transition: transform .12s ease;
+    cursor: pointer;
+  }
+  .ms-dot:active { transform: scale(0.92); }
   /* Animations are off for snappier feel; keep transition only for fades. */
   .leaflet-cluster-anim .leaflet-marker-icon,
   .leaflet-cluster-anim .leaflet-marker-shadow {
@@ -723,13 +740,8 @@ export const MAP_BASE_JS = `
       },
       iconCreateFunction: function(cluster) {
         var n = cluster.getChildCount();
-        // Sizes lifted to comfortably exceed the iOS 44pt tap target.
-        var size, sizeClass;
-        if (n < 10)        { size = 48; sizeClass = ' sm'; }
-        else if (n < 50)   { size = 56; sizeClass = ''; }
-        else if (n < 200)  { size = 64; sizeClass = ' lg'; }
-        else               { size = 72; sizeClass = ' xl'; }
-        var label = n >= 1000 ? (Math.floor(n / 100) / 10).toFixed(1) + 'k' : String(n);
+        var clusterMap = cluster._group && cluster._group._map;
+        var zoom = clusterMap ? clusterMap.getZoom() : 12;
 
         // Color the bubble after the dominant region color present in the
         // cluster. Each marker is expected to carry its color via
@@ -747,6 +759,32 @@ export const MAP_BASE_JS = `
         }
         var pickHalo = hexToRgba(pick, 0.22);
 
+        // Dot mode: zoomed out so far that numbered text would be unreadable,
+        // or the cluster is small enough that the count is not informative.
+        // The dot scales with member count so dense regions still read as
+        // "more" even without a label. Stops looking blocky in dense areas.
+        if (zoom <= 8 || n < 10) {
+          var dotSize;
+          if (n < 5)        dotSize = 12;
+          else if (n < 25)  dotSize = 16;
+          else if (n < 100) dotSize = 20;
+          else              dotSize = 24;
+          var dotHtml = '<div class="ms-dot" style="--ring:' + pick + ';--halo:' + pickHalo + '"></div>';
+          return L.divIcon({
+            html: dotHtml,
+            className: 'marker-cluster',
+            iconSize: L.point(dotSize, dotSize)
+          });
+        }
+
+        // Numbered bubble — zoomed in enough that the text reads, and the
+        // count is high enough to be worth showing.
+        var size, sizeClass;
+        if (n < 50)        { size = 34; sizeClass = ' sm'; }
+        else if (n < 200)  { size = 42; sizeClass = ''; }
+        else               { size = 50; sizeClass = ' lg'; }
+        var label = n >= 1000 ? (Math.floor(n / 100) / 10).toFixed(1) + 'k' : String(n);
+
         var html = '<div class="ms-cluster' + sizeClass + '" style="--ring:' + pick + ';--halo:' + pickHalo + '">' +
           '<span class="ms-cluster-count">' + label + '</span>' +
         '</div>';
@@ -756,6 +794,27 @@ export const MAP_BASE_JS = `
           iconSize: L.point(size, size)
         });
       }
+    });
+
+    // Crossing the dot/bubble zoom boundary (8 ↔ 9) only changes the cluster
+    // radius from 50 to 38 — clusters that stay together keep their cached
+    // icon and look stale. Force a refresh so the bubble/dot swap happens
+    // exactly when the user expects it. Only fires on threshold crossings to
+    // avoid recomputing on every pinch.
+    var lastDotZoom = null;
+    group.on('add', function() {
+      var attachedMap = group._map;
+      if (!attachedMap) return;
+      attachedMap.on('zoomend', function() {
+        var z = attachedMap.getZoom();
+        var isDot = z <= 8;
+        if (lastDotZoom !== null && lastDotZoom !== isDot) {
+          if (typeof group.refreshClusters === 'function') {
+            try { group.refreshClusters(); } catch (e) {}
+          }
+        }
+        lastDotZoom = isDot;
+      });
     });
 
     // Always-attached click handler. Native side gets clusterPress for
