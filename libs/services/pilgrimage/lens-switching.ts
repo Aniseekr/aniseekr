@@ -42,6 +42,30 @@ import type {
   EnginePhysicalLensType,
 } from '../../../components/pilgrimage/camera/camera-engine';
 import type { FocalStop } from '../../../components/pilgrimage/camera/types';
+import type { CohortStrategy } from './device-cohort';
+
+/**
+ * Cohort hint passed by the camera screen when the dial is being built. When
+ * provided, it overrides the per-device minZoom heuristic in two directions:
+ *
+ *   * `strategy = 'standalone-switch'` with `hasStandaloneUltraWide = true`
+ *     forces the 0.5 pillar onto the dial even when the primary device's
+ *     `minZoom` ≥ 1 (S20FE-shape: primary is a wide standalone whose own
+ *     minZoom can't reveal the standalone ultra-wide that exists alongside
+ *     it).
+ *
+ *   * `strategy = 'wide-only'` suppresses the 0.5 pillar even when the
+ *     per-device fallback would otherwise surface it from a transient
+ *     sub-1× minZoom — the cohort has already audited the cross-device
+ *     hardware and reports no ultra-wide reach. Rule 8 guard.
+ *
+ * When `cohort` is omitted callers get the legacy fallback behavior — every
+ * existing iOS path and tests work unchanged.
+ */
+export interface CohortHint {
+  readonly strategy: CohortStrategy;
+  readonly hasStandaloneUltraWide: boolean;
+}
 
 const LENS_TO_STOP: Record<EnginePhysicalLensType, FocalStop> = {
   'ultra-wide-angle': 0.5,
@@ -192,7 +216,8 @@ function inferStopsFromFallbackSignals(
  */
 export function availableStopsFromDeviceInfo(
   info: CameraDeviceInfo | null,
-  telephotoStop: 2 | 3 = 3
+  telephotoStop: 2 | 3 = 3,
+  cohort?: CohortHint
 ): FocalStop[] {
   if (!info) return [1];
 
@@ -237,11 +262,35 @@ export function availableStopsFromDeviceInfo(
 
   stops.push(1);
 
-  // The 0.5× pillar is allowed whenever the device reports any sub-1× minZoom:
-  // values like 0.6 are typical on Android multi-cams (vendor-dependent) and
-  // would otherwise be filtered out by the `minZoom - 0.05` floor. Tapping the
-  // pillar still routes through `useCameraZoom`, which clamps the request to
-  // the real minZoom, so the camera never receives an out-of-range value.
+  // Cohort override: drives the strip's 0.5 visibility based on what the
+  // cross-device cohort actually carries, NOT just the active device's
+  // minZoom. Three branches:
+  //
+  //   * `standalone-switch` — the 0.5 detent is OWNED BY THE ISLAND CHIP
+  //     (ZoomDial's `island` prop), not the strip. The strip must stop at
+  //     the active device's minZoom because dragging past it can't reach
+  //     0.5 (CameraX would just clamp). Strip = [activeMin, max], island =
+  //     0.5. Tapping the island fires a session swap via the strategic
+  //     hook. Filter out any 0.5 the per-device fallback may have pushed.
+  //
+  //   * `wide-only` — no hardware reaches 0.5 anywhere. Filter out any
+  //     0.5 a transient minZoom signal may have caused.
+  //
+  //   * `logical` — the primary device's minZoom drives 0.5 visibility
+  //     directly (no override needed; the existing fallback path already
+  //     handles it).
+  if (cohort && cohort.strategy !== 'logical') {
+    for (let i = stops.length - 1; i >= 0; i -= 1) {
+      if (stops[i] === 0.5) stops.splice(i, 1);
+    }
+  }
+
+  // The 0.5× pillar is allowed on the STRIP whenever the device reports
+  // sub-1× minZoom (logical cohorts: the active session can reach 0.5
+  // continuously). For standalone-switch the filter above already removed
+  // the pillar — 0.5 lives on the island chip, not the strip — so the
+  // lower-bound test here only fires for logical cohorts and back-compat
+  // callers that pass no cohort hint at all.
   const lowerBoundFor = (s: FocalStop): number =>
     s === 0.5 && info.minZoom > 0 && info.minZoom < 1 ? 0 : info.minZoom - 0.05;
   const filtered = stops.filter((s) => s >= lowerBoundFor(s) && s <= info.maxZoom + 0.05);

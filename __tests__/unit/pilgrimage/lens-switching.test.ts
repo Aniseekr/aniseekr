@@ -230,6 +230,88 @@ describe('availableStopsFromDeviceInfo', () => {
   });
 });
 
+describe('availableStopsFromDeviceInfo + cohort', () => {
+  it('S20FE strategy=standalone-switch → strip OMITS 0.5 (island chip owns it)', () => {
+    // Dual-space contract: when the active session can't physically reach
+    // 0.5 (S20FE wide standalone, minZoom=1), 0.5 must NOT appear in the
+    // strip's snap detents. Putting it there would let the user drag-snap
+    // to a value the camera silently clamps to 1.0. Instead, ZoomDial
+    // renders a separate `island` chip whose tap triggers a session swap.
+    const device = makeDevice({
+      minZoom: 1,
+      maxZoom: 10,
+    });
+    const stops = availableStopsFromDeviceInfo(device, 3, {
+      strategy: 'standalone-switch',
+      hasStandaloneUltraWide: true,
+    });
+    expect(stops).not.toContain(0.5);
+    expect(stops).toContain(1);
+  });
+
+  it('Pixel 8 logical 0.67 + cohort=standalone-switch → strip OMITS 0.5 (uses island)', () => {
+    // Pixel 8 case: the logical multi-cam reports minZoom 0.67, which
+    // would normally put 0.5 on the strip via the sub-1× fallback. But
+    // the cohort marks this device as standalone-switch (you must swap
+    // sessions to reach 0.5). Honour the cohort — strip stays [0.67, max]
+    // (technically rounded to the nearest stop), island provides 0.5.
+    const device = makeDevice({
+      minZoom: 0.67,
+      maxZoom: 20,
+      physicalDeviceCount: 3,
+    });
+    const stops = availableStopsFromDeviceInfo(device, 3, {
+      strategy: 'standalone-switch',
+      hasStandaloneUltraWide: true,
+    });
+    expect(stops).not.toContain(0.5);
+  });
+
+  it('cohort=wide-only → no 0.5 pillar even if minZoom signal says otherwise', () => {
+    // Belt-and-braces: if a device transiently misreports minZoom < 1
+    // during CameraX configuration but the cohort says no ultra-wide
+    // hardware exists, trust the cohort. (This shouldn't happen in the
+    // wild but protects against Rule 8 violations from sensor float
+    // noise.)
+    const device = makeDevice({
+      minZoom: 0.95,
+      maxZoom: 8,
+    });
+    const stops = availableStopsFromDeviceInfo(device, 3, {
+      strategy: 'wide-only',
+      hasStandaloneUltraWide: false,
+    });
+    expect(stops).not.toContain(0.5);
+  });
+
+  it('no cohort arg preserves existing fallback heuristic (backwards compat)', () => {
+    // Existing callers (iOS path, anything not yet wired to the cohort
+    // pipeline) keep their behavior. minZoom=0.6 → 0.5 pillar surfaces
+    // via the existing sub-1× fallback.
+    const device = makeDevice({
+      minZoom: 0.6,
+      maxZoom: 10,
+    });
+    expect(availableStopsFromDeviceInfo(device)).toEqual([0.5, 1]);
+  });
+
+  it('cohort=logical mirrors existing behavior — minZoom drives 0.5 detection', () => {
+    // For logical cohorts the primary device's minZoom is the source of
+    // truth (iOS Triple-Camera reports 0.5 directly). Cohort hint is
+    // compatible but redundant; we should not break the existing path.
+    const device = makeDevice({
+      minZoom: 0.5,
+      maxZoom: 15,
+      physicalLensTypes: ['ultra-wide-angle', 'wide-angle', 'telephoto'],
+    });
+    const stops = availableStopsFromDeviceInfo(device, 3, {
+      strategy: 'logical',
+      hasStandaloneUltraWide: false,
+    });
+    expect(stops).toEqual([0.5, 1, 3]);
+  });
+});
+
 describe('hasMultipleLenses', () => {
   it('is true when the dial would render two or more pillars', () => {
     const device = makeDevice({
