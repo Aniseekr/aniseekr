@@ -11,7 +11,7 @@
 // to decide whether to fade in detents or jump-in.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Application from 'expo-application';
+import * as Application from 'expo-application';
 import {
   cohortCacheKey,
   readCohortSnapshot,

@@ -285,6 +285,16 @@ export default function CompareCaptureScreen() {
   // CameraX tears down the old session. Android-only (engine.takeSnapshot
   // returns null on iOS); the animated vignette covers the iOS path.
   const [freezeFrameUri, setFreezeFrameUri] = useState<string | null>(null);
+  // Mirror so cleanup paths can read the latest URI without depending on the
+  // closure-captured state value — used when a new switch arrives before the
+  // previous swap has finished cleaning up its temp file.
+  const freezeFrameUriRef = useRef<string | null>(null);
+  freezeFrameUriRef.current = freezeFrameUri;
+
+  const deleteFreezeFrame = useCallback((uri: string | null) => {
+    if (!uri) return;
+    FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+  }, []);
 
   // Clear the freeze-frame once the new session is up and the warmup overlay
   // has finished its fade-out (~250ms). Also delete the temp file so we don't
@@ -298,10 +308,18 @@ export default function CompareCaptureScreen() {
       // Best-effort cleanup; if the file vanished already or the path is
       // malformed we just move on. No error toast — the snapshot is purely a
       // visual nicety; failure should never reach the user.
-      FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+      deleteFreezeFrame(uri);
     }, 260);
     return () => clearTimeout(timer);
-  }, [strategic.isSwitching, freezeFrameUri]);
+  }, [strategic.isSwitching, freezeFrameUri, deleteFreezeFrame]);
+
+  // Always sweep the temp file on unmount so backgrounded swaps don't leak.
+  useEffect(() => {
+    return () => {
+      const pending = freezeFrameUriRef.current;
+      if (pending) deleteFreezeFrame(pending);
+    };
+  }, [deleteFreezeFrame]);
 
   // Wrapper around the FSM's `requestSwitch` that grabs a freeze-frame first
   // (fire-and-forget — the snapshot Promise is allowed to land after the
@@ -312,18 +330,24 @@ export default function CompareCaptureScreen() {
   const handleRequestSwitch = useCallback(
     (target: 'wide' | 'ultra-wide') => {
       if (Platform.OS === 'android') {
+        // If a previous freeze-frame is still hanging around (rapid double-
+        // tap), delete it before overwriting. The ref read avoids racing the
+        // cleanup-timer effect that hasn't fired yet.
+        const previous = freezeFrameUriRef.current;
         const snap = cameraRef.current?.takeSnapshot();
         if (snap) {
           snap
             .then((uri) => {
-              if (uri) setFreezeFrameUri(uri);
+              if (!uri) return;
+              if (previous && previous !== uri) deleteFreezeFrame(previous);
+              setFreezeFrameUri(uri);
             })
             .catch(() => undefined);
         }
       }
       strategic.requestSwitch(target);
     },
-    [strategic]
+    [strategic, deleteFreezeFrame]
   );
   // Compose `onCameraReady` with the FSM's `onCameraStarted` so the FSM
   // learns when a session swap has completed and flips back to STABLE.

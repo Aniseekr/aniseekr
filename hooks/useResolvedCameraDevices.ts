@@ -19,7 +19,7 @@
 // enumeration completes. The cache cannot synthesise live `CameraDevice`
 // handles — those still come from VisionCamera's enumerate — so it is
 // strictly a layout hint, not a session source.
-import Application from 'expo-application';
+import * as Application from 'expo-application';
 import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { useCameraDevices, type CameraDevice } from 'react-native-vision-camera';
