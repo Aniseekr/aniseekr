@@ -92,6 +92,25 @@ export interface UseCameraZoomInput {
  *  snap calculation. */
 const ULTRA_WIDE_INTRINSIC_RATIO = 0.5;
 
+/**
+ * Native zoom on the ultra-wide session at which a pinch-out / drag-right
+ * intent should trigger a swap back to the wide session.
+ *
+ * Why not `maxZoom * 1.05` (the previous formula): Samsung CameraX exposes
+ * the standalone ultra-wide with `maxZoom = 8.0` (digital crop into the
+ * ultra-wide sensor), so `8 * 1.05 = 8.4` — the user would have to pinch
+ * out across the full digital range before the swap fires. The honest
+ * "user crossed the wide camera's territory" boundary is at wide-equivalent
+ * 1.0, which on a 0.5× lens equals native 2.0; we add the same 5% margin
+ * as below-min for hysteresis: `2.0 * 1.05 = 2.1`.
+ *
+ * Only consulted when `onPinchAboveMax` is supplied (i.e. when the active
+ * session is the ultra-wide and a swap target exists), so wide-active
+ * digital zoom past 2.1× — which is perfectly legitimate on the wide lens —
+ * never triggers anything.
+ */
+const ULTRA_WIDE_SWAP_BACK_NATIVE = (1 / ULTRA_WIDE_INTRINSIC_RATIO) * 1.05;
+
 export interface UseCameraZoomOutput {
   /** Throttled (120ms) JS mirror of `zoomShared`. Safe to render. */
   zoom: number;
@@ -213,7 +232,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
           if (
             onPinchAboveMax !== undefined &&
             !aboveMaxTriggered.value &&
-            next > maxZoom * 1.05
+            next > ULTRA_WIDE_SWAP_BACK_NATIVE
           ) {
             aboveMaxTriggered.value = true;
             runOnJS(onPinchAboveMax)();

@@ -297,8 +297,12 @@ export default function ZoomDial({
           if (
             onDragAboveMax !== undefined &&
             !dragAboveMaxTriggered.value &&
-            typeof maxZoom === 'number' &&
-            computed > maxZoom * 1.05
+            // Hard-coded to match `useCameraZoom.ULTRA_WIDE_SWAP_BACK_NATIVE`
+            // (= `(1 / 0.5) * 1.05 = 2.1`). The boundary is at wide-equivalent
+            // 1.0× on a 0.5× lens, NOT at the device's maxZoom — Samsung
+            // exposes the ultra-wide with maxZoom=8 so the old `maxZoom * 1.05`
+            // threshold was effectively 8.4× and never fired in practice.
+            computed > 2.1
           ) {
             dragAboveMaxTriggered.value = true;
             runOnJS(onDragAboveMax)();
