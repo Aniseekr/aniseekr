@@ -11,12 +11,19 @@
 import { embedExifIntoJpegFile, type ExifInput } from '../../utils/exif-embed';
 
 /**
- * Embeds the given EXIF record into the JPEG at `uri` (a `file://` URI). Strips
- * the `file://` prefix because `embedExifIntoJpegFile` operates on filesystem
- * paths via `expo-file-system`.
+ * Embeds the given EXIF record into the JPEG at `uri` (a `file://` URI).
  *
- * Returns silently on success or failure — the original file is preserved in
- * both cases.
+ * `embedExifIntoJpegFile` instantiates `new File(uri)` from the modern
+ * `expo-file-system` package, which requires an absolute URI — passing a
+ * raw `/data/...` path throws `URI is not absolute`. The prior strip-and-
+ * call comment described the older legacy-FileSystem behaviour; the
+ * underlying API has since moved to the URI-only signature, so we forward
+ * `uri` as-is. The only normalisation we still need is to ensure the
+ * `file://` scheme is present when callers hand us a raw path (rare —
+ * `EnginePhoto.uri` is always a URI — but defensive).
+ *
+ * Returns silently on success or failure — the original file is preserved
+ * in both cases.
  */
 export async function embedCaptureMetadata(
   uri: string | null | undefined,
@@ -24,9 +31,13 @@ export async function embedCaptureMetadata(
 ): Promise<void> {
   if (!uri) return;
   if (!exif || typeof exif !== 'object') return;
-  const path = uri.startsWith('file://') ? uri.slice('file://'.length) : uri;
+  const absoluteUri = uri.startsWith('file://')
+    ? uri
+    : uri.startsWith('/')
+      ? `file://${uri}`
+      : uri;
   try {
-    await embedExifIntoJpegFile(path, exif);
+    await embedExifIntoJpegFile(absoluteUri, exif);
   } catch (error) {
     console.warn('[embedCaptureMetadata] failed', error);
   }

@@ -347,12 +347,21 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
     if (!FileSystem.cacheDirectory) return null;
     try {
       const image = await preview.takeSnapshot();
-      const path = `${FileSystem.cacheDirectory}lens-switch-snapshot-${Date.now()}.jpg`;
+      // `expo-file-system/legacy.cacheDirectory` comes back as a `file://`
+      // URI, but nitro-image's `saveToFileAsync` is documented to take a
+      // raw filesystem path — it pipes straight to Android's
+      // `FileOutputStream(path)` (see `Bitmap+saveToFile.kt`), which treats
+      // the literal `file:/data/...` as a relative path and errors with
+      // ENOENT. Strip the scheme before saving, then re-add it on the
+      // return so downstream consumers (`<Image source={{ uri }} />`,
+      // `expo-file-system`'s new `File()`) get the URI they expect.
+      const cacheUri = `${FileSystem.cacheDirectory}lens-switch-snapshot-${Date.now()}.jpg`;
+      const fsPath = cacheUri.replace(/^file:\/+/, '/');
       // 60 quality keeps the file under ~100 kB for a 1080p preview — fast
       // enough that the save finishes well before CameraX has finished
       // tearing down the old session.
-      await image.saveToFileAsync(path, 'jpg', 60);
-      return path.startsWith(FILE_SCHEME) ? path : `${FILE_SCHEME}${path.replace(/^file:\/+/, '/')}`;
+      await image.saveToFileAsync(fsPath, 'jpg', 60);
+      return `${FILE_SCHEME}${fsPath}`;
     } catch (error) {
       console.warn('[CameraStage] takeSnapshot failed', error);
       return null;
