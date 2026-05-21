@@ -40,6 +40,13 @@ export default function AdvancedScreen() {
 
   const diagnosticsRows: Row[] = [
     {
+      key: 'camera-diagnostics',
+      icon: 'camera-outline',
+      label: 'Camera diagnostics',
+      description: 'Hardware capabilities + cohort classification for bug reports',
+      onPress: () => router.push('/(setting)/camera-diagnostics'),
+    },
+    {
       key: 'otaku-dna',
       icon: 'finger-print-outline',
       label: 'Otaku DNA',
