@@ -5,6 +5,11 @@ import {
   normalizeProfileShortcuts,
   type ShortcutId,
 } from './profile-shortcuts';
+import {
+  STREAMING_PLATFORM_IDS,
+  getStreamingPlatform,
+  type StreamingPlatformId,
+} from './streaming/streaming-platforms';
 
 interface AsyncStorageLike {
   getItem(key: string): Promise<string | null>;
@@ -64,6 +69,25 @@ export const SEASONAL_LAYOUTS: readonly SeasonalLayout[] = [
   'spotlight',
 ] as const;
 
+export interface StreamingPrefs {
+  /**
+   * Ordered list of platform ids the user has enabled. Order matters: the
+   * settings screen renders this list verbatim and the resolver uses it as
+   * the secondary sort key (after `primary`).
+   */
+  enabled: StreamingPlatformId[];
+  /** The platform opened by the "Watch now" CTA. Must be a member of `enabled` or null. */
+  primary: StreamingPlatformId | null;
+  /** When true, the linker probes the platform's deep-link scheme before opening the web URL. */
+  preferAppDeepLink: boolean;
+}
+
+export const DEFAULT_STREAMING_PREFS: StreamingPrefs = {
+  enabled: [],
+  primary: null,
+  preferAppDeepLink: true,
+};
+
 export interface UserPrefs {
   cardHeightPercent: number; // 70-100
   allowAdultContent: boolean;
@@ -75,6 +99,7 @@ export interface UserPrefs {
   lastAddedFolderId: string;
   swipe: SwipePrefs;
   seasonalLayout: SeasonalLayout;
+  streamingPlatforms: StreamingPrefs;
 }
 
 export const DEFAULT_USER_PREFS: UserPrefs = {
@@ -86,7 +111,43 @@ export const DEFAULT_USER_PREFS: UserPrefs = {
   lastAddedFolderId: 'system_favorites',
   swipe: { ...DEFAULT_SWIPE_PREFS },
   seasonalLayout: 'carousel',
+  streamingPlatforms: { ...DEFAULT_STREAMING_PREFS },
 };
+
+export function normalizeStreamingPrefs(input: unknown): StreamingPrefs {
+  if (!input || typeof input !== 'object') return { ...DEFAULT_STREAMING_PREFS };
+  const obj = input as Partial<StreamingPrefs> & { enabled?: unknown; primary?: unknown };
+
+  const enabledRaw = Array.isArray(obj.enabled) ? obj.enabled : [];
+  const seen = new Set<StreamingPlatformId>();
+  const enabled: StreamingPlatformId[] = [];
+  for (const id of enabledRaw) {
+    if (typeof id !== 'string') continue;
+    if (!getStreamingPlatform(id)) continue;
+    const valid = id as StreamingPlatformId;
+    if (seen.has(valid)) continue;
+    seen.add(valid);
+    enabled.push(valid);
+  }
+
+  let primary: StreamingPlatformId | null = null;
+  if (typeof obj.primary === 'string' && getStreamingPlatform(obj.primary)) {
+    const candidate = obj.primary as StreamingPlatformId;
+    if (seen.has(candidate)) {
+      primary = candidate;
+    }
+  }
+  // Fall back to first enabled when the supplied primary is missing/invalid
+  // — keeps the "Watch now" CTA always pointing at *something* the user picked.
+  if (!primary && enabled.length > 0) primary = enabled[0];
+
+  const preferAppDeepLink =
+    typeof obj.preferAppDeepLink === 'boolean'
+      ? obj.preferAppDeepLink
+      : DEFAULT_STREAMING_PREFS.preferAppDeepLink;
+
+  return { enabled, primary, preferAppDeepLink };
+}
 
 export async function loadUserPrefs(): Promise<UserPrefs> {
   try {
@@ -102,6 +163,7 @@ export async function loadUserPrefs(): Promise<UserPrefs> {
       seasonalLayout: SEASONAL_LAYOUTS.includes(parsed.seasonalLayout as SeasonalLayout)
         ? (parsed.seasonalLayout as SeasonalLayout)
         : DEFAULT_USER_PREFS.seasonalLayout,
+      streamingPlatforms: normalizeStreamingPrefs(parsed.streamingPlatforms),
     };
     // Mirror the adult-content flag onto the data-source config so the read
     // pipeline (AniList isAdult, Jikan sfw, repository safety net) reflects
@@ -120,6 +182,34 @@ export async function saveUserPrefs(prefs: UserPrefs): Promise<void> {
     await syncAdultFlag(prefs.allowAdultContent);
   } catch (err) {
     Logger.warn('[UserPrefs] save failed', err);
+  }
+  // Notify even if persistence threw — the in-memory state held by the
+  // caller already reflects the change, so other screens should match.
+  notifyPrefsChanged(prefs);
+}
+
+// Pub/sub so screens that already mounted (and won't re-run their initial
+// useEffect) still see prefs changes — e.g. when the anime detail page is
+// kept in the Expo Router stack while the user toggles primary platform
+// over in /(setting)/watch-platforms, the detail page subscribes to this
+// emitter so its "Watch on" rail and CTA reflect the new primary on resume.
+type PrefsListener = (prefs: UserPrefs) => void;
+const prefsListeners: Set<PrefsListener> = new Set();
+
+export function subscribeUserPrefs(listener: PrefsListener): () => void {
+  prefsListeners.add(listener);
+  return () => {
+    prefsListeners.delete(listener);
+  };
+}
+
+function notifyPrefsChanged(prefs: UserPrefs): void {
+  for (const listener of prefsListeners) {
+    try {
+      listener(prefs);
+    } catch (err) {
+      Logger.warn('[UserPrefs] listener threw', err);
+    }
   }
 }
 
@@ -149,3 +239,20 @@ export async function patchSwipePrefs(patch: Partial<SwipePrefs>): Promise<Swipe
   await saveUserPrefs({ ...current, swipe: nextSwipe });
   return nextSwipe;
 }
+
+export async function patchStreamingPrefs(
+  patch: Partial<StreamingPrefs>
+): Promise<StreamingPrefs> {
+  const current = await loadUserPrefs();
+  const nextStreaming = normalizeStreamingPrefs({
+    ...current.streamingPlatforms,
+    ...patch,
+  });
+  await saveUserPrefs({ ...current, streamingPlatforms: nextStreaming });
+  return nextStreaming;
+}
+
+// Re-exported for consumers that want to enumerate the catalog without
+// importing both modules; keeps the public surface of user-prefs cohesive.
+export { STREAMING_PLATFORM_IDS };
+export type { StreamingPlatformId };

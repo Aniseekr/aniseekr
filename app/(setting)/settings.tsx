@@ -36,6 +36,7 @@ import {
   DEFAULT_USER_PREFS,
   loadUserPrefs,
   patchUserPrefs,
+  subscribeUserPrefs,
   type UserPrefs,
 } from '../../libs/services/user-prefs';
 import { UserRepository, type UserProfile } from '../../libs/repositories/user-repository';
@@ -122,8 +123,12 @@ export default function SettingsScreen() {
         // ignore
       }
     })();
+    const unsub = subscribeUserPrefs((p) => {
+      if (mounted) setPrefs(p);
+    });
     return () => {
       mounted = false;
+      unsub();
     };
   }, []);
 
@@ -580,6 +585,16 @@ export default function SettingsScreen() {
               icon="cloud-outline"
               label="Browse source"
               onPress={() => router.push('/(setting)/data-source')}
+            />
+            <SettingsRow
+              icon="play-circle-outline"
+              label="Watch platforms"
+              description={
+                prefs.streamingPlatforms.enabled.length > 0
+                  ? `${prefs.streamingPlatforms.enabled.length} enabled · primary: ${prefs.streamingPlatforms.primary ?? 'none'}`
+                  : 'Pick where you watch (Netflix, Bahamut, Crunchyroll…)'
+              }
+              onPress={() => router.push('/(setting)/watch-platforms')}
             />
             <SettingsRow
               icon="server-outline"

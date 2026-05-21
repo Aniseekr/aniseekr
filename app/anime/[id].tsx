@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useNavigation, useRouter, Stack } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking, Share } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,13 +22,25 @@ import type { PlatformType } from '../../libs/services/auth/types';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import { lookupBangumiByPlatformId } from '../../libs/services/pilgrimage/anitabi-cross-index';
 import { dataSourceConfig } from '../../libs/services/data-source-config';
-import { Skeleton } from '../../components/themed';
+import { Skeleton, readableTextOn } from '../../components/themed';
+import { PlatformLogo } from '../../components/streaming/PlatformLogo';
 import { AnimePilgrimageCard } from '../../components/pilgrimage/AnimePilgrimageCard';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 import { AddToCollectionSheet } from '../../components/collection/AddToCollectionSheet';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { collectionService } from '../../libs/services/collection/collection-service';
-import { loadUserPrefs, patchUserPrefs } from '../../libs/services/user-prefs';
+import {
+  DEFAULT_STREAMING_PREFS,
+  loadUserPrefs,
+  patchUserPrefs,
+  subscribeUserPrefs,
+  type StreamingPrefs,
+} from '../../libs/services/user-prefs';
+import {
+  resolveWatchOptions,
+  type WatchOption,
+} from '../../libs/services/streaming/streaming-resolver';
+import { openWatchOption } from '../../libs/services/streaming/streaming-linker';
 import {
   animeNotificationService,
   useIsAnimeScheduled,
@@ -36,8 +48,54 @@ import {
 
 type RatingEntry = { platform: PlatformType; data: PlatformRatingData };
 
+interface MediaState {
+  streaming: AnimeStreaming[];
+  themes: AnimeTheme | null;
+  relations: AnimeRelation[];
+  staff: AnimeStaff[];
+  ratings: RatingEntry[];
+  loading: boolean;
+}
+
+type MediaAction =
+  | { type: 'reset' }
+  | { type: 'streaming'; value: AnimeStreaming[] }
+  | { type: 'themes'; value: AnimeTheme | null }
+  | { type: 'relations'; value: AnimeRelation[] }
+  | { type: 'staff'; value: AnimeStaff[] }
+  | { type: 'ratings'; value: RatingEntry[] }
+  | { type: 'done' };
+
+const INITIAL_MEDIA: MediaState = {
+  streaming: [],
+  themes: null,
+  relations: [],
+  staff: [],
+  ratings: [],
+  loading: true,
+};
+
+function mediaReducer(state: MediaState, action: MediaAction): MediaState {
+  switch (action.type) {
+    case 'reset':
+      return INITIAL_MEDIA;
+    case 'streaming':
+      return { ...state, streaming: action.value };
+    case 'themes':
+      return { ...state, themes: action.value };
+    case 'relations':
+      return { ...state, relations: action.value };
+    case 'staff':
+      return { ...state, staff: action.value };
+    case 'ratings':
+      return { ...state, ratings: action.value };
+    case 'done':
+      return state.loading ? { ...state, loading: false } : state;
+  }
+}
+
 export default function AnimeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, openWatch } = useLocalSearchParams<{ id: string; openWatch?: string }>();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -53,16 +111,48 @@ export default function AnimeDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [pilgrimage, setPilgrimage] = useState<AnitabiBangumi | null>(null);
 
-  const [streaming, setStreaming] = useState<AnimeStreaming[]>([]);
-  const [relations, setRelations] = useState<AnimeRelation[]>([]);
-  const [themes, setThemes] = useState<AnimeTheme | null>(null);
-  const [staff, setStaff] = useState<AnimeStaff[]>([]);
-  const [platformRatings, setPlatformRatings] = useState<RatingEntry[]>([]);
-  const [mediaLoading, setMediaLoading] = useState(true);
+  const [media, dispatchMedia] = useReducer(mediaReducer, INITIAL_MEDIA);
+  const {
+    streaming,
+    themes,
+    relations,
+    staff,
+    ratings: platformRatings,
+    loading: mediaLoading,
+  } = media;
   const [favorite, setFavorite] = useState(false);
   const [inCollection, setInCollection] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [streamingPrefs, setStreamingPrefs] = useState<StreamingPrefs>(DEFAULT_STREAMING_PREFS);
   const reminderScheduled = useIsAnimeScheduled(id);
+
+  useEffect(() => {
+    let mounted = true;
+    loadUserPrefs().then((p) => {
+      if (mounted) setStreamingPrefs(p.streamingPlatforms);
+    });
+    // Stay in sync when the user toggles primary / enabled platforms on the
+    // settings screen and returns here — the detail page is still mounted in
+    // the Expo Router stack so the initial loadUserPrefs above won't re-run.
+    const unsub = subscribeUserPrefs((p) => {
+      if (mounted) setStreamingPrefs(p.streamingPlatforms);
+    });
+    return () => {
+      mounted = false;
+      unsub();
+    };
+  }, []);
+
+  const watchOptions: WatchOption[] = useMemo(
+    () =>
+      resolveWatchOptions({
+        animeTitle: anime?.titleEnglish || anime?.title || '',
+        anilistStreaming: streaming,
+        prefs: streamingPrefs,
+      }),
+    [anime, streaming, streamingPrefs]
+  );
+  const primaryOption = watchOptions[0] ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -124,78 +214,113 @@ export default function AnimeDetailScreen() {
     };
   }, [id]);
 
-  // Cross-platform media: streaming + themes → 0.6s → relations + staff → 0.6s → ratings.
-  // Mirrors the native iOS cadence so Jikan rate-limits are respected.
+  // Cross-platform media: streaming, themes, relations, staff, ratings.
+  // Fired in parallel — the per-channel rate limiter inside each client
+  // (AniList 666ms, Jikan 350ms, Bangumi 333ms) handles spacing, so the
+  // previous hand-scripted `await sleep(600)` cadence was redundant and
+  // just slowed the page down by ~1.2s. Each settle dispatches into its
+  // own slice so the UI fills in progressively as data arrives.
   useEffect(() => {
     if (!id) return;
-    let cancelled = false;
     const numericId = Number(id);
     if (!Number.isFinite(numericId)) {
-      setMediaLoading(false);
+      dispatchMedia({ type: 'done' });
       return;
     }
 
-    setStreaming([]);
-    setRelations([]);
-    setThemes(null);
-    setStaff([]);
-    setPlatformRatings([]);
-    setMediaLoading(true);
-
+    dispatchMedia({ type: 'reset' });
+    let cancelled = false;
     const repo = AnimeRepository.defaultInstance();
 
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const tasks: Promise<unknown>[] = [
+      repo
+        .fetchAnimeStreaming(numericId, 'anilist')
+        .then((v) => {
+          if (!cancelled) dispatchMedia({ type: 'streaming', value: v });
+        })
+        .catch((e) => console.warn('[AnimeDetail] streaming failed', e)),
+      repo
+        .fetchAnimeThemes(numericId, 'anilist')
+        .then((v) => {
+          if (!cancelled) dispatchMedia({ type: 'themes', value: v });
+        })
+        .catch((e) => console.warn('[AnimeDetail] themes failed', e)),
+      repo
+        .fetchAnimeRelations(numericId, 'anilist')
+        .then((v) => {
+          if (!cancelled) dispatchMedia({ type: 'relations', value: v });
+        })
+        .catch((e) => console.warn('[AnimeDetail] relations failed', e)),
+      repo
+        .fetchAnimeStaff(numericId, 'anilist')
+        .then((v) => {
+          if (!cancelled) dispatchMedia({ type: 'staff', value: v });
+        })
+        .catch((e) => console.warn('[AnimeDetail] staff failed', e)),
+      repo
+        .fetchMultiPlatformRatings(numericId, 'anilist')
+        .then((v) => {
+          if (!cancelled) dispatchMedia({ type: 'ratings', value: v });
+        })
+        .catch((e) => console.warn('[AnimeDetail] ratings failed', e)),
+    ];
 
-    const run = async () => {
-      try {
-        const [s, t] = await Promise.all([
-          repo.fetchAnimeStreaming(numericId, 'anilist').catch(() => [] as AnimeStreaming[]),
-          repo.fetchAnimeThemes(numericId, 'anilist').catch(() => null),
-        ]);
-        if (cancelled) return;
-        setStreaming(s);
-        setThemes(t);
+    void Promise.allSettled(tasks).then(() => {
+      if (!cancelled) dispatchMedia({ type: 'done' });
+    });
 
-        await sleep(600);
-        if (cancelled) return;
-
-        const [rel, st] = await Promise.all([
-          repo.fetchAnimeRelations(numericId, 'anilist').catch(() => [] as AnimeRelation[]),
-          repo.fetchAnimeStaff(numericId, 'anilist').catch(() => [] as AnimeStaff[]),
-        ]);
-        if (cancelled) return;
-        setRelations(rel);
-        setStaff(st);
-
-        await sleep(600);
-        if (cancelled) return;
-
-        const ratings = await repo
-          .fetchMultiPlatformRatings(numericId, 'anilist')
-          .catch(() => [] as RatingEntry[]);
-        if (cancelled) return;
-        setPlatformRatings(ratings);
-      } finally {
-        if (!cancelled) setMediaLoading(false);
-      }
-    };
-
-    run();
     return () => {
       cancelled = true;
     };
   }, [id]);
 
+  const openOption = useCallback(
+    async (option: WatchOption | null) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (option) {
+        await openWatchOption(option, {
+          preferAppDeepLink: streamingPrefs.preferAppDeepLink,
+          linker: Linking,
+        });
+        return;
+      }
+      // No resolved option at all — fall back to AniList page so the CTA is
+      // never dead. Safe because anilist.co/anime/<id> is always reachable
+      // from any id we have, and we never fabricate any platform-specific
+      // detail (per CLAUDE.md Rule 8).
+      if (id) {
+        await Linking.openURL(`https://anilist.co/anime/${id}`).catch(() => undefined);
+      }
+    },
+    [id, streamingPrefs.preferAppDeepLink]
+  );
+
   const handleWatch = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (streaming.length > 0) {
-      Linking.openURL(streaming[0].url).catch(() => undefined);
+    void openOption(primaryOption);
+  }, [openOption, primaryOption]);
+
+  // When the user arrives via a notification tap (openWatch=1), surface the
+  // primary platform once the resolver has something real. We only fire it
+  // when there *is* a resolved option — otherwise we'd be guessing.
+  //
+  // `firedRef` survives re-renders, so even if `openOption` / `primaryOption`
+  // rebuild before `setParams({ openWatch: undefined })` propagates, the deep
+  // link can never fire twice for the same arrival. When `openWatch` flips
+  // back to something other than '1' we reset the latch so a second
+  // notification arriving while the page is still mounted still works.
+  const openWatchFiredRef = useRef(false);
+  useEffect(() => {
+    if (openWatch !== '1') {
+      openWatchFiredRef.current = false;
       return;
     }
-    if (id) {
-      Linking.openURL(`https://anilist.co/anime/${id}`).catch(() => undefined);
-    }
-  }, [streaming, id]);
+    if (!primaryOption) return;
+    if (openWatchFiredRef.current) return;
+    openWatchFiredRef.current = true;
+    void openOption(primaryOption);
+    // Drop the query param so a back/forward doesn't re-trigger the jump.
+    router.setParams({ openWatch: undefined } as never);
+  }, [openWatch, primaryOption, openOption, router]);
 
   const openSheet = useCallback(() => {
     if (!anime) return;
@@ -406,9 +531,27 @@ export default function AnimeDetailScreen() {
           <View className="mt-6 flex-row gap-3">
             <Pressable
               onPress={handleWatch}
+              accessibilityLabel={
+                primaryOption
+                  ? `Watch on ${primaryOption.displayName}`
+                  : 'Open AniList page (no streaming platform configured)'
+              }
               className="flex-1 flex-row items-center justify-center gap-2 rounded-full bg-white py-3">
-              <Ionicons name="play" size={20} color="black" />
-              <Text className="text-base font-bold text-black">Watch Now</Text>
+              {primaryOption ? (
+                <PlatformLogo
+                  size={22}
+                  logoDomain={primaryOption.logoDomain}
+                  iconUrl={primaryOption.iconUrl}
+                  monogram={primaryOption.monogram}
+                  brandColor={primaryOption.color}
+                  background="transparent"
+                />
+              ) : (
+                <Ionicons name="play" size={20} color="black" />
+              )}
+              <Text className="text-base font-bold text-black" numberOfLines={1}>
+                {primaryOption ? `Watch on ${primaryOption.displayName}` : 'Watch Now'}
+              </Text>
             </Pressable>
             <Pressable
               onPress={openSheet}
@@ -477,7 +620,13 @@ export default function AnimeDetailScreen() {
             </View>
           ) : null}
 
-          {streaming.length > 0 ? <StreamingSection items={streaming} /> : null}
+          {watchOptions.length > 0 ? (
+            <WatchOptionsSection
+              items={watchOptions}
+              onOpen={(opt) => void openOption(opt)}
+              onConfigure={() => router.push('/(setting)/watch-platforms')}
+            />
+          ) : null}
 
           {pilgrimage ? (
             <View className="mt-8">
@@ -580,22 +729,104 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-// MARK: - Streaming
+// MARK: - Watch options
 
-function StreamingSection({ items }: { items: AnimeStreaming[] }) {
+function WatchOptionsSection({
+  items,
+  onOpen,
+  onConfigure,
+}: {
+  items: WatchOption[];
+  onOpen: (option: WatchOption) => void;
+  onConfigure: () => void;
+}) {
+  // Mirror the Staff section's horizontal avatar+caption layout. Each
+  // platform is a round brand-tinted disc (icon only) with the name
+  // underneath — no rectangular chip backgrounds competing with Synopsis/
+  // Tags/Information panels.
   return (
     <View className="mt-8">
-      <Text className="mb-3 text-lg font-bold text-white">Available At</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View className="flex-row gap-2 pr-5">
-          {items.map((s) => (
+      <View className="mb-3 flex-row items-center justify-between">
+        <Text className="text-lg font-bold text-white">Watch on</Text>
+        <Pressable
+          onPress={onConfigure}
+          accessibilityLabel="Configure watch platforms"
+          hitSlop={8}>
+          <Text className="text-xs font-semibold text-blue-400">Configure ›</Text>
+        </Pressable>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 6, paddingBottom: 2 }}>
+        <View className="flex-row gap-4 pr-5">
+          {items.map((opt, idx) => (
             <Pressable
-              key={`${s.site}:${s.url}`}
-              onPress={() => Linking.openURL(s.url).catch(() => undefined)}
-              accessibilityLabel={`Open ${s.site}`}
-              className="flex-row items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-2.5">
-              <Ionicons name="play-circle" size={18} color="#60a5fa" />
-              <Text className="text-sm font-medium text-blue-400">{s.site}</Text>
+              key={`${opt.platformId ?? 'unknown'}:${opt.url}:${idx}`}
+              onPress={() => onOpen(opt)}
+              accessibilityLabel={`${opt.source === 'official' ? 'Open' : 'Search'} ${opt.displayName}`}
+              style={{
+                width: 72,
+                opacity: opt.isEnabled || opt.source === 'official' ? 1 : 0.7,
+                alignItems: 'center',
+              }}>
+              <View
+                style={{
+                  position: 'relative',
+                  width: 56,
+                  height: 56,
+                  overflow: 'visible',
+                }}>
+                <PlatformLogo
+                  size={56}
+                  logoDomain={opt.logoDomain}
+                  iconUrl={opt.iconUrl}
+                  monogram={opt.monogram}
+                  brandColor={opt.color}
+                  containerStyle={
+                    opt.isPrimary
+                      ? { borderWidth: 2, borderColor: opt.color }
+                      : undefined
+                  }
+                />
+                {opt.isPrimary ? (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      backgroundColor: '#000',
+                      borderWidth: 1.5,
+                      borderColor: opt.color,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'visible',
+                      shadowColor: '#000',
+                      shadowOpacity: 0.4,
+                      shadowRadius: 3,
+                      shadowOffset: { width: 0, height: 1 },
+                      elevation: 2,
+                    }}>
+                    <Ionicons name="star" size={11} color="#FFD60A" />
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                numberOfLines={2}
+                className="mt-2 text-center text-xs font-medium text-white">
+                {opt.displayName}
+              </Text>
+              {opt.source === 'search' ? (
+                <Text
+                  numberOfLines={1}
+                  className="text-center text-zinc-500"
+                  style={{ fontSize: 10 }}>
+                  search
+                </Text>
+              ) : null}
             </Pressable>
           ))}
         </View>
