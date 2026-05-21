@@ -90,8 +90,20 @@ export function useResolvedCameraDevices(
 
   const cohort = useMemo<DeviceCohort | null>(() => {
     if (facing === 'front') {
-      const front = devices.find((d) => d.position === 'front');
-      return front ? { strategy: 'wide-only', primary: front } : null;
+      // Prefer a real `wide-angle` front camera over any other front-facing
+      // device. Defensive against Samsung phones that expose non-photographic
+      // sensors (the ambient-brightness sensor used by
+      // `com.samsung.adaptivebrightnessgo` on the S20FE shows up as
+      // position='front', type='telephoto', focalLength≈3.72mm — confirmed
+      // via real-device dump). VisionCamera's stock picker considers all
+      // front devices, so without this filter we could occasionally bind
+      // the preview to a tiny luminance sensor and hand the user a black
+      // preview / broken AE-AF.
+      const wideFront = devices.find(
+        (d) => d.position === 'front' && d.type === 'wide-angle'
+      );
+      const fallbackFront = wideFront ?? devices.find((d) => d.position === 'front');
+      return fallbackFront ? { strategy: 'wide-only', primary: fallbackFront } : null;
     }
     // Back: classify. On iOS the picker still ends up at `logical` because
     // Apple's Triple-Camera reports minZoom 0.5 directly, so we don't need

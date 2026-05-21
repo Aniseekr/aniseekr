@@ -387,60 +387,70 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
   // Torch / exposure / zoom props feed CameraX directly. Two gates protect
   // these from racing the underlying session:
   //
-  //   1. `active=false` — the user has paused the session (sheet covers the
-  //      preview, app backgrounded). VisionCamera's *Updater hooks call
-  //      setZoom / setExposureBias / setTorchMode unconditionally on every
-  //      re-render of the relevant prop, so we substitute `undefined` to
-  //      make them early-return.
+  //   1. `active=false` — the user has paused the session (sheet covers
+  //      the preview, app backgrounded). VisionCamera's *Updater hooks
+  //      call setZoom / setExposureBias / setTorchMode unconditionally on
+  //      every re-render of the relevant prop, so we substitute
+  //      `undefined` to make them early-return.
   //
-  //   2. `sessionStarted=false` — the Camera view has mounted but the
-  //      CameraX session hasn't yet reached its "active" state. The
-  //      *Updater hooks fire on first mount with a defined `controller`,
-  //      but CameraX takes ~100–500ms more before accepting operations.
-  //      In that window every setZoom / setExposureBias / setTorchMode
-  //      throws `androidx.camera.core.CameraControl$OperationCanceledException:
-  //      Camera is not active` — an unhandled promise rejection that
-  //      shows up in the dev red box even though the camera continues to
-  //      come up cleanly. Holding the props at `undefined` until
-  //      `onStarted` fires sidesteps the race; the SharedValues flow
-  //      through on the next render and reach a controller that's truly
-  //      ready.
+  //   2. `startedForDeviceId !== device?.id` — either the Camera view has
+  //      mounted but its CameraX session hasn't reached "active" state
+  //      yet (cold start, ~100–500ms before operations are accepted), OR
+  //      the `device` prop just flipped to a new lens and the OLD session
+  //      is still tearing down. Both windows throw
+  //      `CameraControl$OperationCanceledException: Camera is not active.`
+  //      if any setZoom / setExposureBias / setTorchMode call lands on
+  //      the dead controller. Holding the props at `undefined` until the
+  //      NEW session reports `onStarted` for the NEW device sidesteps
+  //      both windows in one shot — see the `startedForDeviceId` state
+  //      below.
+  // `startedForDeviceId` records the device.id for which the CURRENT
+  // CameraX session has fired `onStarted`. Comparing it to the LIVE `device.id`
+  // at render time gives us a SYNCHRONOUS "is this session truly active?"
+  // signal — no useEffect timing windows.
   //
-  // `sessionStarted` stays `true` across pauses (CameraX's
-  // startRunning/stopRunning doesn't re-fire onStarted), so the gate only
-  // bites during the cold-start window.
-  const [sessionStarted, setSessionStarted] = useState(false);
-  // When the active `device` changes (lens swap via the strategic FSM, or
-  // facing flip), VisionCamera tears down the previous CameraX session and
-  // brings up a new one for the new device. `sessionStarted` must reset to
-  // `false` for the duration of that swap — otherwise zoom/exposure/torch
-  // would re-fire against a freshly-dead controller before the new session
-  // reports `onStarted`, throwing the same OperationCanceledException the
-  // cold-start gate was added to suppress.
-  const lastDeviceIdRef = useRef<string | undefined>(device?.id);
+  // Why the prior `useState(sessionStarted) + useEffect(setSessionStarted(false))`
+  // approach raced: when `device` prop flipped from wide → ultra-wide, the
+  // render that mounted the new device still had `sessionStarted = true`
+  // from the OLD device, because `setSessionStarted(false)` only fires in a
+  // post-render `useEffect`. VisionCamera's zoom-updater hook saw a defined
+  // zoom prop on the new device and fired `setZoom` on the still-dead
+  // CameraX controller, throwing `CameraControl$OperationCanceledException:
+  // Camera is not active.`
+  //
+  // The new shape: `sessionReady = active && startedForDeviceId === device?.id`
+  // is computed at render. The moment device.id changes, the equality check
+  // fails, `resolvedZoom` flips to `undefined` in the SAME render, and
+  // VisionCamera's hook never sees a stale value-on-dead-controller pairing.
+  // Once the new session fires onStarted (via handleStarted ↘ setStarted-
+  // ForDeviceId(deviceIdRef.current)), the equality holds again and the
+  // SharedValues flow through.
+  const [startedForDeviceId, setStartedForDeviceId] = useState<string | undefined>(undefined);
+  const deviceIdRef = useRef<string | undefined>(device?.id);
+  deviceIdRef.current = device?.id;
+  const sessionReady = active && startedForDeviceId === device?.id && device !== undefined;
+
+  // One-time zoom clamp on device-id change (unrelated to session-ready
+  // gating). Without this, a wide-session zoomShared of 2.0 carried into
+  // the freshly-mounted ultra-wide controller (minZoom=1, maxZoom=8 on
+  // S20FE) would be in-range and still get sent through — visually fine
+  // but conceptually leaks the prior lens's zoom intent into the new lens.
+  // We snap to the new device's neutral so the dial indicator lands at
+  // the right pillar after a swap.
+  const lastClampedDeviceIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (device?.id !== lastDeviceIdRef.current) {
-      lastDeviceIdRef.current = device?.id;
-      setSessionStarted(false);
-      // Clamp `zoomShared` to the NEW device's range BEFORE the next CameraX
-      // setZoom fires. Without this, a wide-session zoomShared of 2.0 would
-      // be passed to the freshly-mounted ultra-wide controller (maxZoom ≈ 1.0)
-      // and CameraX throws `CameraControl$OperationCanceledException: zoom
-      // out of range ...`. Clamping to `1.0` (= ultra-wide's native widest /
-      // wide's native widest) also lands the dial indicator on the new
-      // device's neutral position so it doesn't visually flicker.
-      if (zoomShared && device) {
-        const safeMin = Number.isFinite(device.minZoom) && device.minZoom > 0 ? device.minZoom : 1;
-        const safeMax = Number.isFinite(device.maxZoom) && device.maxZoom > 0 ? device.maxZoom : 1;
-        const current = zoomShared.value;
-        const clamped = current < safeMin ? safeMin : current > safeMax ? safeMax : current;
-        if (clamped !== current) {
-          zoomShared.value = clamped;
-        }
+    if (device?.id === lastClampedDeviceIdRef.current) return;
+    lastClampedDeviceIdRef.current = device?.id;
+    if (zoomShared && device) {
+      const safeMin = Number.isFinite(device.minZoom) && device.minZoom > 0 ? device.minZoom : 1;
+      const safeMax = Number.isFinite(device.maxZoom) && device.maxZoom > 0 ? device.maxZoom : 1;
+      const current = zoomShared.value;
+      const clamped = current < safeMin ? safeMin : current > safeMax ? safeMax : current;
+      if (clamped !== current) {
+        zoomShared.value = clamped;
       }
     }
   }, [device, zoomShared]);
-  const sessionReady = active && sessionStarted;
   const resolvedTorchMode: TorchMode | undefined = sessionReady
     ? enableTorch
       ? 'on'
@@ -475,7 +485,13 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
   const resolvedZoom = sessionReady ? safeZoom : undefined;
 
   const handleStarted = useCallback(() => {
-    setSessionStarted(true);
+    // Read deviceIdRef (kept in sync each render) so the recorded id
+    // reflects the device VisionCamera ACTUALLY mounted, not a stale
+    // useCallback closure. Without the ref, fast device flips could
+    // pair `onStarted` from session B with an in-flight render still
+    // seeing session A's device.id, leaving sessionReady stuck at
+    // false until the next render.
+    setStartedForDeviceId(deviceIdRef.current);
     onCameraReady?.();
   }, [onCameraReady]);
 
