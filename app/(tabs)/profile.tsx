@@ -261,6 +261,22 @@ export default function ProfileScreen() {
                     borderColor: theme.glassBorder,
                   },
                 ]}>
+                <View
+                  style={[
+                    styles.betaTag,
+                    {
+                      backgroundColor: theme.accent + '24',
+                      borderColor: theme.accent + '66',
+                    },
+                  ]}>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="800"
+                    style={[styles.betaTagText, { color: theme.accent }]}>
+                    BETA
+                  </ThemedText>
+                </View>
+                <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
                 <View style={styles.currencyItem}>
                   <MaterialIcons name="monetization-on" size={16} color="#FFD60A" />
                   <ThemedText variant="bodyMedium" weight="600">
@@ -470,6 +486,18 @@ const styles = StyleSheet.create({
   currencyDivider: {
     width: 1,
     height: 18,
+  },
+  betaTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    marginLeft: 4,
+    marginRight: 4,
+  },
+  betaTagText: {
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   statsRow: {
     flexDirection: 'row',
