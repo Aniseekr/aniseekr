@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   InteractionManager,
   Pressable,
   StyleSheet,
@@ -14,8 +13,8 @@ import { Photo, DeckItem } from '../../../components/rate/types';
 import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { isAdSlotEnabled } from '../../../libs/services/ads/ad-config';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { RatingInfoOverlay } from '../../../components/rate/RatingInfoOverlay';
-import { ModeSelector } from '../../../components/rate/ModeSelector';
+import { ModePill } from '../../../components/rate/ModePill';
+import { ModeSwitcherSheet, type ModeOption } from '../../../components/rate/ModeSwitcherSheet';
 import { RatingActionButtons, type RatingType } from '../../../components/rate/RatingActionButtons';
 import { ImageDisplaySettingsSheet } from '../../../components/rate/ImageDisplaySettingsSheet';
 import { SwipeDeck, type SwipeDeckRef } from '../../../components/rate/SwipeDeck';
@@ -43,21 +42,15 @@ import {
   type SwipePersistenceJob,
 } from '../../../libs/services/rate/swipe-persistence';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const AD_INTERVAL = 12;
 const PREFETCH_THRESHOLD = 5;
-// Card sizing — baseline 1:7:1 horizontal ratio, scaled up 1.15x in width so
-// the deck reads as the primary surface. Vertical paddings stay at baseline
-// (bottom padding fully restored) so the card never overlaps the bottom
-// skip/super-like/like buttons; the top trims a touch to balance the wider
-// footprint.
-const CARD_SCALE = 1.15;
-const BASE_CARD_PADDING_BOTTOM = 180;
-const BASE_CARD_WIDTH = (SCREEN_WIDTH * 7) / 9;
-const CARD_HORIZONTAL_PADDING = (SCREEN_WIDTH - BASE_CARD_WIDTH * CARD_SCALE) / 2;
-const CARD_PADDING_TOP = 92;
-const CARD_PADDING_BOTTOM = BASE_CARD_PADDING_BOTTOM;
+// Card sizing — the top padding stacks on top of the safe-area inset so the
+// card always clears the X + ModePill on notched devices (otherwise the
+// inline Tap-for-info chip sits behind the pill). The bottom only needs to
+// clear the action buttons since the hint now lives inside the card.
+const CARD_HORIZONTAL_PADDING = 28;
+const CARD_TOP_GAP = 56;
+const CARD_PADDING_BOTTOM = 125;
 
 function buildDeck(photos: Photo[], includeAds: boolean): DeckItem[] {
   if (!includeAds) return photos.map((photo) => ({ kind: 'photo', photo }));
@@ -141,16 +134,20 @@ function releaseQueuedSwipeSeen(ids: string[]): void {
   }
 }
 
-type ModeOption = {
-  value: SwipeMode;
-  label: string;
-  icon: ComponentProps<typeof Ionicons>['name'];
-};
+const PLAN_COLOR = '#0A84FF';
+const LIKE_COLOR = '#FF4F5E';
+const SKIP_COLOR = '#FF6F60';
 
 const MODE_OPTIONS: readonly ModeOption[] = [
-  { value: 'plan', label: 'Plan', icon: 'bookmark' },
-  { value: 'like', label: 'Like', icon: 'heart' },
+  { value: 'plan', label: 'Plan', icon: 'bookmark', color: PLAN_COLOR },
+  { value: 'like', label: 'Like', icon: 'heart', color: LIKE_COLOR },
 ];
+
+const SKIP_INDICATOR = { icon: 'close', color: SKIP_COLOR } as const;
+const RIGHT_INDICATOR_BY_MODE: Record<SwipeMode, { icon: 'bookmark' | 'heart'; color: string }> = {
+  plan: { icon: 'bookmark', color: PLAN_COLOR },
+  like: { icon: 'heart', color: LIKE_COLOR },
+};
 
 export default function RatingScreen() {
   const { top, bottom } = useSafeAreaInsets();
@@ -174,6 +171,7 @@ export default function RatingScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [swipePrefs, setSwipePrefs] = useState<SwipePrefs>(DEFAULT_SWIPE_PREFS);
   const [showSettings, setShowSettings] = useState(false);
+  const [showModeSwitcher, setShowModeSwitcher] = useState(false);
   const [restartableSeenIds, setRestartableSeenIds] = useState<string[]>([]);
   // Bumped on restart to force-remount the SwipeDeck so its internal topIndex
   // and outgoing-card list start clean.
@@ -485,6 +483,14 @@ export default function RatingScreen() {
     setCurrentIndex(index);
   }, []);
 
+  const handlePressTopCard = useCallback(
+    (item: DeckItem) => {
+      if (item.kind !== 'photo') return;
+      router.push(`/anime/${item.photo.id}`);
+    },
+    [router]
+  );
+
   // Bottom-button taps: stash the desired rating then animate the card out in
   // a sensible direction so the deck visually matches the action.
   const handleRateFromButton = useCallback((rating: RatingType) => {
@@ -563,10 +569,10 @@ export default function RatingScreen() {
   const cardContainerStyle = useMemo(
     () => ({
       paddingHorizontal: CARD_HORIZONTAL_PADDING,
-      paddingTop: CARD_PADDING_TOP,
+      paddingTop: top + CARD_TOP_GAP,
       paddingBottom: CARD_PADDING_BOTTOM,
     }),
-    []
+    [top]
   );
   const deckScopeKey = params.animeId
     ? `anime-${params.animeId}`
@@ -576,6 +582,8 @@ export default function RatingScreen() {
 
   const currentItem = deck[currentIndex];
   const currentPhoto = currentItem?.kind === 'photo' ? currentItem.photo : undefined;
+  const activeModeOption =
+    MODE_OPTIONS.find((m) => m.value === swipePrefs.mode) ?? MODE_OPTIONS[0];
   const canRestartCurrentGenre = !!params.genreId && !params.animeId;
   const showEmptyRestart = canRestartCurrentGenre && restartableSeenIds.length > 0;
   const showDeck = !loading && deck.length > 0;
@@ -584,52 +592,41 @@ export default function RatingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: 0 }]} edges={['left', 'right']}>
-      {/* Header & Filters */}
+      {/* Header — close (left) + compact mode pill, then optional settings (right). */}
       <View style={[styles.headerContainer, { paddingTop: top + 10 }]}>
-        {/* Top Bar */}
         <View style={styles.topBar}>
-          <Pressable onPress={handleClose} style={styles.closeButton} accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color="#fff" />
-          </Pressable>
-
-          <View style={styles.headerActions}>
+          <View style={styles.headerLeftCluster}>
             <Pressable
-              style={styles.actionButton}
-              accessibilityLabel="Rating preferences"
-              onPress={() => {
-                hapticsBridge.tap();
-                setShowSettings(true);
-              }}>
-              <Ionicons name="options-outline" size={20} color="#fff" />
+              onPress={handleClose}
+              style={styles.closeButton}
+              accessibilityLabel="Close">
+              <Ionicons name="close" size={20} color="#fff" />
             </Pressable>
-            <Pressable
-              style={styles.actionButton}
-              accessibilityLabel="View anime details"
-              onPress={() => {
-                if (currentPhoto) {
-                  router.push(`/anime/${currentPhoto.id}`);
-                }
-              }}>
-              <Ionicons name="eye" size={22} color="#fff" />
-            </Pressable>
+            <ModePill
+              icon={activeModeOption.icon}
+              label={activeModeOption.label}
+              color={activeModeOption.color ?? theme.accent}
+              onPress={() => setShowModeSwitcher(true)}
+            />
           </View>
-        </View>
 
-        {/* Mode selector: Plan (right swipe → Plan to Watch) / Like (right swipe → Favorites). */}
-        <View style={styles.modeSelectorRow}>
-          <ModeSelector
-            options={MODE_OPTIONS}
-            value={swipePrefs.mode}
-            onChange={handleModeChange}
-            accentColor={theme.accent}
-          />
+          <Pressable
+            style={styles.actionButton}
+            accessibilityLabel="Rating preferences"
+            onPress={() => {
+              hapticsBridge.tap();
+              setShowSettings(true);
+            }}>
+            <Ionicons name="options-outline" size={20} color="#fff" />
+          </Pressable>
         </View>
       </View>
 
       {/* Card Stack (Full Screen) */}
       <View style={styles.cardStackContainer}>
         {loading ? (
-          <View style={styles.skeletonCardWrapper}>
+          <View
+            style={[styles.skeletonCardWrapper, { paddingTop: top + CARD_TOP_GAP }]}>
             <Skeleton.RatingCard />
           </View>
         ) : null}
@@ -681,6 +678,9 @@ export default function RatingScreen() {
             onCommit={handleCommit}
             onTopChange={handleTopChange}
             onNeedMore={loadMorePhotos}
+            onPressTop={handlePressTopCard}
+            rightIndicator={RIGHT_INDICATOR_BY_MODE[swipePrefs.mode]}
+            leftIndicator={SKIP_INDICATOR}
           />
         ) : null}
 
@@ -721,33 +721,30 @@ export default function RatingScreen() {
         ) : null}
       </View>
 
-      {/* Overlays (Info & Buttons) */}
+      {/* Bottom overlay — just the action buttons. The Tap-for-info hint now
+          lives inside the card so the screen reads as one cohesive surface. */}
       <View
         style={[styles.overlayContainer, { paddingBottom: bottom + 16 }]}
         pointerEvents="box-none">
-        {currentPhoto && (
-          <RatingInfoOverlay
-            photo={currentPhoto}
-            onClose={() => {}}
-            onMoreDetails={() => router.push(`/anime/${currentPhoto.id}`)}
-          />
-        )}
-
         {currentPhoto ? (
           swipePrefs.mode === 'plan' ? (
-            <View style={styles.actionButtonsRow}>
+            <View style={styles.planButtonsRow}>
               <Pressable
                 onPress={() => triggerSwipe('left')}
-                style={styles.skipButton}
+                style={styles.planSideButton}
                 accessibilityLabel="Skip">
-                <Ionicons name="close" size={28} color="#000" />
+                <Ionicons name="close" size={26} color="#FF6F60" />
               </Pressable>
 
               <Pressable
                 onPress={() => handleRateFromButton('tracking')}
-                style={[styles.planButton, { backgroundColor: theme.accent }]}
+                style={[
+                  styles.planSideButton,
+                  styles.planSidePrimary,
+                  { borderColor: theme.accent },
+                ]}
                 accessibilityLabel="Add to Plan to Watch">
-                <Ionicons name="calendar" size={32} color={readableTextOn(theme.accent)} />
+                <Ionicons name="bookmark" size={24} color={theme.accent} />
               </Pressable>
             </View>
           ) : (
@@ -759,6 +756,14 @@ export default function RatingScreen() {
           )
         ) : null}
       </View>
+
+      <ModeSwitcherSheet
+        visible={showModeSwitcher}
+        value={swipePrefs.mode}
+        options={MODE_OPTIONS}
+        onSelect={handleModeChange}
+        onClose={() => setShowModeSwitcher(false)}
+      />
 
       <ImageDisplaySettingsSheet
         visible={showSettings}
@@ -792,29 +797,25 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(30,30,34,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerActions: {
+  headerLeftCluster: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(30,30,34,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  modeSelectorRow: {
-    paddingTop: 12,
-    paddingBottom: 4,
   },
   cardStackContainer: {
     flex: 1,
@@ -875,7 +876,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     paddingHorizontal: CARD_HORIZONTAL_PADDING,
-    paddingTop: CARD_PADDING_TOP,
     paddingBottom: CARD_PADDING_BOTTOM,
   },
   overlayContainer: {
@@ -886,41 +886,30 @@ const styles = StyleSheet.create({
     zIndex: 50,
     paddingHorizontal: 20,
   },
-  actionButtonsRow: {
+  planButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 32,
-    marginTop: 16,
-    paddingTop: 16,
+    paddingHorizontal: 28,
+    paddingTop: 4,
   },
-  skipButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#fff',
+  planSideButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    // Shadow
+    backgroundColor: 'rgba(20,20,22,0.85)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 111, 96, 0.55)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  planButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  planSidePrimary: {
+    borderWidth: 1.5,
   },
   likeModeButtons: {
     marginTop: 16,

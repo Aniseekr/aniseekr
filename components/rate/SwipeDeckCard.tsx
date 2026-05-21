@@ -8,7 +8,7 @@ import Animated, {
   useDerivedValue,
 } from 'react-native-reanimated';
 import { NativeAdCard, type NativeAdCardRef } from '../ads/NativeAdCard';
-import { PhotoCard, type PhotoCardRef } from './PhotoCard';
+import { PhotoCard, type PhotoCardRef, type SwipeIndicatorConfig } from './PhotoCard';
 import type { DeckItem } from './types';
 import {
   CARD_OPACITY_STEP,
@@ -31,6 +31,12 @@ interface Props {
   containerStyle?: ViewStyle;
   /** Notify when the card commits a swipe — same contract as PhotoCard.onSwipe. */
   onSwipe: (direction: 'left' | 'right') => void;
+  /** Tap handler — only honored for the top photo card. */
+  onPress?: () => void;
+  /** Right/left swipe indicators — forwarded to PhotoCard so the gesture
+   * preview matches the screen's action buttons. */
+  rightIndicator?: SwipeIndicatorConfig;
+  leftIndicator?: SwipeIndicatorConfig;
 }
 
 // Per-slot stack offset table. Values stay in sync with the original
@@ -65,7 +71,20 @@ const SLOT_AHEAD: Record<DeckSlot, DeckSlot> = {
 };
 
 export const SwipeDeckCard = forwardRef<SwipeDeckCardRef, Props>(
-  ({ item, slot, topTranslationX, index, containerStyle, onSwipe }, ref) => {
+  (
+    {
+      item,
+      slot,
+      topTranslationX,
+      index,
+      containerStyle,
+      onSwipe,
+      onPress,
+      rightIndicator,
+      leftIndicator,
+    },
+    ref
+  ) => {
     const isTop = slot === 'top';
 
     // 0..1 progress of the top card sliding toward commit. Background slots
@@ -124,7 +143,10 @@ export const SwipeDeckCard = forwardRef<SwipeDeckCardRef, Props>(
             index={index}
             isTop={isTop}
             onSwipe={onSwipe}
+            onPress={onPress}
             activeTranslation={activeTranslation}
+            rightIndicator={rightIndicator}
+            leftIndicator={leftIndicator}
           />
         ) : (
           <NativeAdCard

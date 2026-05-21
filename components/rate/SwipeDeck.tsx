@@ -10,6 +10,7 @@ import {
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SwipeDeckCard, type SwipeDeckCardRef } from './SwipeDeckCard';
+import type { SwipeIndicatorConfig } from './PhotoCard';
 import type { DeckItem } from './types';
 import { OUTGOING_CARD_LIFETIME_MS } from '../../libs/services/rate/swipe-animation';
 import {
@@ -41,6 +42,12 @@ interface Props {
   onTopChange?: (item: DeckItem | null, index: number) => void;
   /** Asked for more data when remaining drops below threshold. */
   onNeedMore?: () => void;
+  /** Tap on the top photo card — used to open anime details. */
+  onPressTop?: (item: DeckItem) => void;
+  /** Right/left swipe indicator configs forwarded to each card so the
+   * gesture preview matches the screen's current action buttons. */
+  rightIndicator?: SwipeIndicatorConfig;
+  leftIndicator?: SwipeIndicatorConfig;
 }
 
 const DEFAULT_THRESHOLD = 5;
@@ -55,6 +62,9 @@ export const SwipeDeck = forwardRef<SwipeDeckRef, Props>(
       onCommit,
       onTopChange,
       onNeedMore,
+      onPressTop,
+      rightIndicator,
+      leftIndicator,
     },
     ref
   ) => {
@@ -171,6 +181,9 @@ export const SwipeDeck = forwardRef<SwipeDeckRef, Props>(
               index={idx}
               containerStyle={cardContainerStyle}
               onSwipe={handleSwipe}
+              onPress={isTop && onPressTop ? () => onPressTop(entry.item) : undefined}
+              rightIndicator={rightIndicator}
+              leftIndicator={leftIndicator}
             />
           );
         })}

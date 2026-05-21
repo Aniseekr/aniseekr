@@ -1,7 +1,15 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, Text, View, StyleSheet } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  Text,
+  View,
+  StyleSheet,
+  type ViewStyle,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   SharedValue,
@@ -63,19 +71,55 @@ export interface PhotoCardRef {
   swipe: (direction: 'left' | 'right') => void;
 }
 
+export type SwipeIndicatorConfig = {
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+};
+
+const DEFAULT_RIGHT_INDICATOR: SwipeIndicatorConfig = {
+  icon: 'flame',
+  color: '#F97316',
+};
+const DEFAULT_LEFT_INDICATOR: SwipeIndicatorConfig = {
+  icon: 'close',
+  color: '#FF4F5E',
+};
+
 type Props = {
   photo: Photo;
   index: number;
   isTop: boolean;
   onSwipe: (direction: 'left' | 'right') => void;
   onLongPress?: () => void;
+  /** Tap the card to open details — only the top card is interactive. */
+  onPress?: () => void;
   activeTranslation?: SharedValue<number>;
+  /** Optional extra style applied to the inner card surface — used to shrink
+   * the visual footprint without changing the wrapper layout. */
+  cardStyle?: ViewStyle;
+  /** Indicators that appear under the gesture, so the user sees a preview of
+   * the action that matches the bottom button. */
+  rightIndicator?: SwipeIndicatorConfig;
+  leftIndicator?: SwipeIndicatorConfig;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const PhotoCard = forwardRef<PhotoCardRef, Props>(
-  ({ photo, isTop, onSwipe, onLongPress, activeTranslation }, ref) => {
+  (
+    {
+      photo,
+      isTop,
+      onSwipe,
+      onLongPress,
+      onPress,
+      activeTranslation,
+      cardStyle,
+      rightIndicator = DEFAULT_RIGHT_INDICATOR,
+      leftIndicator = DEFAULT_LEFT_INDICATOR,
+    },
+    ref
+  ) => {
     // 🟢 Performance: Start true, only set false once. No complex state resets.
     // This component is keyed by ID in parent, so it remounts for new photos anyway.
     const [isLoading, setIsLoading] = useState(true);
@@ -318,11 +362,27 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
       };
     });
 
+    const formattedScore =
+      typeof photo.score === 'number' && photo.score > 0
+        ? photo.score >= 10
+          ? photo.score.toFixed(0)
+          : photo.score.toFixed(1)
+        : null;
+    const metaParts: string[] = [];
+    if (photo.year) metaParts.push(String(photo.year));
+    if (photo.type) metaParts.push(photo.type);
+    const metaLine = metaParts.join(' · ');
+
     return (
       <View style={styles.container} pointerEvents={isTop ? 'auto' : 'none'}>
         <GestureDetector gesture={composed}>
           <AnimatedPressable
-            style={[styles.card, animatedStyle]}
+            style={[styles.card, animatedStyle, cardStyle]}
+            onPress={() => {
+              if (!isTop || !onPress) return;
+              hapticsBridge.tap();
+              onPress();
+            }}
             onLongPress={() => {
               onLongPress?.();
               hapticsBridge.selection();
@@ -356,22 +416,70 @@ export const PhotoCard = forwardRef<PhotoCardRef, Props>(
 
             {/* Bottom Gradient for text readability */}
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+              colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
               style={styles.bottomGradient}
             />
 
-            {/* Swipe Indicators */}
+            {/* Title + score at the bottom of the card (original layout). */}
+            {photo.title ? (
+              <View style={styles.metaOverlay} pointerEvents="none">
+                <View style={styles.metaTitleColumn}>
+                  <Text style={styles.metaTitle} numberOfLines={2}>
+                    {photo.title}
+                  </Text>
+                  {metaLine ? <Text style={styles.metaSubtitle}>{metaLine}</Text> : null}
+                </View>
+                {formattedScore ? (
+                  <View style={styles.metaScoreBadge}>
+                    <Ionicons name="star" size={14} color="#FBBF24" />
+                    <Text style={styles.metaScoreText}>{formattedScore}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Tap-for-info chip lives at the top of the card so it reads as
+                part of the card chrome without disturbing the title. */}
+            {isTop && onPress ? (
+              <View style={styles.tapHintTopWrap} pointerEvents="none">
+                <View style={styles.tapHintChip}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={11}
+                    color="rgba(255,255,255,0.85)"
+                  />
+                  <Text style={styles.tapHintChipText}>Tap for info</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Swipe indicators — mirror the bottom action buttons so the
+                gesture previews the action the user is about to commit. */}
             {isTop && (
               <>
                 <Animated.View
                   style={[styles.indicatorContainer, styles.indicatorRight, flameStyle]}>
-                  <View style={styles.likeIndicator}>
-                    <Ionicons name="flame" size={36} color="#fff" />
+                  <View
+                    style={[
+                      styles.swipeIndicator,
+                      {
+                        backgroundColor: rightIndicator.color,
+                        shadowColor: rightIndicator.color,
+                      },
+                    ]}>
+                    <Ionicons name={rightIndicator.icon} size={32} color="#fff" />
                   </View>
                 </Animated.View>
                 <Animated.View style={[styles.indicatorContainer, styles.indicatorLeft, xStyle]}>
-                  <View style={styles.skipIndicator}>
-                    <Ionicons name="close" size={32} color="#fff" />
+                  <View
+                    style={[
+                      styles.swipeIndicator,
+                      {
+                        backgroundColor: leftIndicator.color,
+                        shadowColor: leftIndicator.color,
+                      },
+                    ]}>
+                    <Ionicons name={leftIndicator.icon} size={30} color="#fff" />
                   </View>
                 </Animated.View>
               </>
@@ -423,6 +531,78 @@ const styles = StyleSheet.create({
     height: 200,
     zIndex: 2,
   },
+  metaOverlay: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 18,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+    zIndex: 3,
+  },
+  tapHintTopWrap: {
+    position: 'absolute',
+    top: 14,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 4,
+  },
+  tapHintChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  tapHintChipText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  metaTitleColumn: {
+    flex: 1,
+  },
+  metaTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 26,
+    letterSpacing: 0.1,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  metaSubtitle: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    letterSpacing: 0.2,
+  },
+  metaScoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.35)',
+  },
+  metaScoreText: {
+    color: '#FBBF24',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   indicatorContainer: {
     position: 'absolute',
     top: 80,
@@ -434,29 +614,18 @@ const styles = StyleSheet.create({
   indicatorLeft: {
     left: 24,
   },
-  likeIndicator: {
+  swipeIndicator: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(249, 115, 22, 0.9)', // orange-500
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.3)',
-    // Glow effect
-    shadowColor: '#F97316',
+    // Glow comes from the per-indicator shadowColor passed inline.
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 12,
-  },
-  skipIndicator: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(63, 63, 70, 0.9)', // zinc-700
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowRadius: 14,
+    elevation: 8,
   },
 });
