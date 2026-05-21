@@ -146,13 +146,17 @@ export function PlatformAuthSheet({
 
             {kind === 'password' ? (
               <>
-                <FieldLabel label="Username" />
+                <FieldLabel label={platform === 'kitsu' ? 'Email' : 'Username'} />
                 <Input
                   value={username}
                   onChangeText={setUsername}
-                  placeholder="username or email"
+                  placeholder={
+                    platform === 'kitsu' ? 'you@example.com' : 'username or email'
+                  }
                   autoCapitalize="none"
                   autoCorrect={false}
+                  keyboardType={platform === 'kitsu' ? 'email-address' : 'default'}
+                  textContentType={platform === 'kitsu' ? 'emailAddress' : 'username'}
                 />
                 <FieldLabel label="Password" />
                 <Input
@@ -162,6 +166,7 @@ export function PlatformAuthSheet({
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="password"
                 />
               </>
             ) : null}
