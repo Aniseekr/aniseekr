@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { router } from 'expo-router';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -185,6 +186,15 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
 
             {error ? <Text style={[styles.error, { color: '#FF453A' }]}>{error}</Text> : null}
 
+            {!subscription.unsupported ? (
+              <Text style={[styles.disclosure, { color: theme.text.tertiary }]}>
+                Subscriptions auto-renew at the displayed price until cancelled at least 24 hours
+                before the end of the current period. Payment is charged to your Apple ID at
+                confirmation of purchase. Manage or cancel anytime in your Apple ID account
+                settings. Lifetime is a one-time purchase and does not renew.
+              </Text>
+            ) : null}
+
             <Pressable
               onPress={handleRestore}
               disabled={busy}
@@ -193,6 +203,36 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
                 Restore purchases
               </Text>
             </Pressable>
+
+            <View style={styles.legalRow}>
+              <Pressable
+                onPress={() => {
+                  hapticsBridge.tap();
+                  onClose();
+                  router.push('/(setting)/terms');
+                }}
+                hitSlop={8}
+                accessibilityRole="link"
+                accessibilityLabel="Terms of Service">
+                <Text style={[styles.legalLink, { color: theme.text.secondary }]}>
+                  Terms of Service
+                </Text>
+              </Pressable>
+              <Text style={[styles.legalSeparator, { color: theme.text.tertiary }]}>·</Text>
+              <Pressable
+                onPress={() => {
+                  hapticsBridge.tap();
+                  onClose();
+                  router.push('/(setting)/privacy');
+                }}
+                hitSlop={8}
+                accessibilityRole="link"
+                accessibilityLabel="Privacy Policy">
+                <Text style={[styles.legalLink, { color: theme.text.secondary }]}>
+                  Privacy Policy
+                </Text>
+              </Pressable>
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -318,5 +358,27 @@ const styles = StyleSheet.create({
   },
   restoreLabel: {
     ...Typography.titleSmall,
+  },
+  disclosure: {
+    ...Typography.captionSmall,
+    lineHeight: 16,
+    marginTop: Spacing.sm,
+    paddingHorizontal: 2,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    paddingBottom: Spacing.sm,
+  },
+  legalLink: {
+    ...Typography.captionSmall,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalSeparator: {
+    ...Typography.captionSmall,
   },
 });
