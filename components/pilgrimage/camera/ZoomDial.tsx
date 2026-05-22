@@ -39,7 +39,7 @@ import {
   FRONT_FACING_DETENT_STOPS,
   SNAP_TOLERANCE_PX,
   TICK_SPACING_PX,
-  buildDetents,
+  buildDetentsWithFloor,
   dialSpanPx,
   dragPositionForTranslation,
   nearestDetent,
@@ -47,6 +47,7 @@ import {
   positionForZoom,
   zoomForPosition,
   type Detent,
+  type DetentKind,
   type StopZoomMap,
 } from '../../../libs/services/pilgrimage/zoom-dial';
 import type { ActiveLens } from '../../../libs/services/pilgrimage/dial-spaces';
@@ -132,6 +133,14 @@ function formatStop(stop: FocalStop): string {
   return `${stop}x`;
 }
 
+/** Display label for any detent: the floor detent's own `label` (rounded real
+ *  minZoom, e.g. "0.7x"), otherwise the focal stop formatted as "1x". */
+function detentLabel(detent: Detent): string {
+  if (detent.label !== undefined) return detent.label;
+  // Non-floor detents always carry a real FocalStop.
+  return formatStop(detent.stop as FocalStop);
+}
+
 /** A single tick mark on the strip. `detent` is set only on labeled detents. */
 interface Tick {
   px: number;
@@ -178,7 +187,15 @@ export default function ZoomDial({
     () => availableStops ?? (isFrontFacing ? FRONT_FACING_DETENT_STOPS : DEFAULT_DETENT_STOPS),
     [availableStops, isFrontFacing]
   );
-  const detents = useMemo(() => buildDetents(stops, stopZoom), [stops, stopZoom]);
+  // `buildDetentsWithFloor` prepends a synthetic 'floor' detent at the real
+  // device minZoom when the device is sub-1 (e.g. Pixel 0.67×) AND has no
+  // existing zoom-out affordance (no 0.5 detent, no 0.5× island). Devices that
+  // already have one are unchanged. `island != null` is the "has 0.5× chip"
+  // signal — when present the user already has a wider affordance.
+  const detents = useMemo(
+    () => buildDetentsWithFloor(stops, stopZoom, minZoom, island != null),
+    [stops, stopZoom, minZoom, island]
+  );
   const spanPx = useMemo(() => dialSpanPx(detents), [detents]);
   const ticks = useMemo(() => buildTicks(detents, spanPx), [detents, spanPx]);
 
@@ -204,8 +221,9 @@ export default function ZoomDial({
   const dragAboveMaxTriggered = useSharedValue<boolean>(false);
   // The detent whose label is highlighted — the only per-drag React state, and
   // it changes only on a detent cross (a few times per drag, not per frame).
-  const [highlightStop, setHighlightStop] = useState<FocalStop | null>(activeStop);
-  const lastCrossStop = useRef<FocalStop | null>(activeStop);
+  // `DetentKind` so the synthetic 'floor' detent can highlight like any other.
+  const [highlightStop, setHighlightStop] = useState<DetentKind | null>(activeStop);
+  const lastCrossStop = useRef<DetentKind | null>(activeStop);
 
   // Seed/resync the strip from the live zoom when zoom changes from OUTSIDE the
   // dial (a focal-stop pick, pinch, mount). Skipped mid-drag so we don't fight
@@ -215,8 +233,13 @@ export default function ZoomDial({
     if (dragging.value) return;
     const target = positionForZoom(zoomShared.value, detents, undefined, maxZoom);
     dragPx.value = withTiming(target, { duration: 180 });
-    setHighlightStop(activeStop);
-    lastCrossStop.current = activeStop;
+    // Highlight the detent the strip parked on, derived from the seeded
+    // position — so the synthetic 'floor' detent highlights too (`activeStop`
+    // from useCameraZoom only knows real FocalStops). Falls back to
+    // `activeStop` when the zoom sits between detents.
+    const seeded = nearestDetent(target, detents, SNAP_TOLERANCE_PX) ?? activeStop;
+    setHighlightStop(seeded);
+    lastCrossStop.current = seeded;
     // zoomShared / dragPx / dragging are stable SharedValues — reading once is
     // intentional; continuous updates flow through the gesture, not this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,18 +251,22 @@ export default function ZoomDial({
   // (it already has `detents` in closure for the px<->zoom math) and just
   // forwards the resulting FocalStop | null. No array serialisation across
   // the bridge.
-  const syncDetentHighlight = useCallback((stop: FocalStop | null) => {
+  const syncDetentHighlight = useCallback((stop: DetentKind | null) => {
     if (stop === lastCrossStop.current) return;
     lastCrossStop.current = stop;
     if (stop !== null) hapticsBridge.selection();
     setHighlightStop(stop);
   }, []);
 
-  // Commit a focal-stop pick on release. Routes through the screen's existing
-  // onPickFocalStop so optical lens switching is unchanged. A release that
-  // lands between detents keeps the user's hand-set digital zoom (no lie).
+  // Commit a detent pick on release. Real focal stops route through the
+  // screen's existing onPickFocalStop so optical lens switching is unchanged.
+  // The 'floor' detent is NOT a FocalStop — its zoom was already written to
+  // `zoomShared` in the pan gesture's onEnd, so it must NOT call
+  // onPickFocalStop. A release that lands between detents keeps the user's
+  // hand-set digital zoom (no lie).
   const commitRelease = useCallback(
-    (snapStop: FocalStop) => {
+    (snapStop: DetentKind) => {
+      if (snapStop === 'floor') return;
       onPickFocalStop(snapStop);
     },
     [onPickFocalStop]
@@ -351,9 +378,12 @@ export default function ZoomDial({
     transform: [{ translateX: CENTER_X - dragPx.value }],
   }));
 
-  // Tapping a detent label/tick: snap there and route the pick.
+  // Tapping a detent label/tick: snap there and route the pick. Real focal
+  // stops route through onPickFocalStop (optical lens switching). The 'floor'
+  // detent is not a FocalStop — the zoom write to `zoomShared` below is the
+  // whole action; it must NOT call onPickFocalStop.
   const handleTapStop = useCallback(
-    (stop: FocalStop) => {
+    (stop: DetentKind) => {
       if (!interactive) return;
       const px = positionForStop(stop, detents);
       if (px === null) return;
@@ -364,7 +394,7 @@ export default function ZoomDial({
       });
       lastCrossStop.current = stop;
       setHighlightStop(stop);
-      onPickFocalStop(stop);
+      if (stop !== 'floor') onPickFocalStop(stop);
     },
     [interactive, detents, onPickFocalStop, dragPx, zoomShared, maxZoom]
   );
@@ -472,7 +502,7 @@ interface TickMarkProps {
   activeFg: string;
   highlighted: boolean;
   interactive: boolean;
-  onTap: (stop: FocalStop) => void;
+  onTap: (stop: DetentKind) => void;
 }
 
 /** One tick on the strip, absolutely positioned at `left: tick.px`. Labeled
@@ -509,7 +539,7 @@ function TickMark({
           onPress={() => onTap(detent.stop)}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel={`${formatStop(detent.stop)} zoom`}
+          accessibilityLabel={`${detentLabel(detent)} zoom`}
           accessibilityState={{ selected: highlighted }}
           style={styles.detentTap}>
           <View
@@ -524,7 +554,7 @@ function TickMark({
               weight="700"
               align="center"
               style={{ color: highlighted ? activeFg : '#fff' }}>
-              {formatStop(detent.stop)}
+              {detentLabel(detent)}
             </ThemedText>
           </View>
         </Pressable>

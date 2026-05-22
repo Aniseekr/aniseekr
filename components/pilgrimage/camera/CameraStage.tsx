@@ -50,11 +50,16 @@ import {
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { useTheme } from '../../../context/ThemeContext';
-import { resolveCapturedPhotoDimensions } from '../../../libs/services/pilgrimage/camera-engine-parity';
+import {
+  pickResolvedPhotoDimensions,
+  resolveCapturedPhotoDimensions,
+  type PhotoDimensions,
+} from '../../../libs/services/pilgrimage/camera-engine-parity';
 import { useResolvedCameraDevice } from '../../../hooks/useResolvedCameraDevice';
 import type {
   CameraDeviceInfo,
   CameraEngineHandle,
+  EngineCaptureOptions,
   EnginePhoto,
   EnginePhysicalLensType,
 } from './camera-engine';
@@ -281,32 +286,63 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
   captureLensTypeRef.current = device && isPhysicalLensType(device.type) ? device.type : undefined;
 
   const takePhoto = useCallback(
-    async (opts?: {
-      flashMode?: 'on' | 'off' | 'auto';
-      enableShutterSound?: boolean;
-    }): Promise<EnginePhoto | null> => {
+    async (opts?: EngineCaptureOptions): Promise<EnginePhoto | null> => {
       const camera = cameraRef.current;
       if (!camera) return null;
       // photoOutput is the live ref-stable output owned by this stage; it's
       // safe to call directly because Camera is mounted with it.
-      const file = await photoOutput.capturePhotoToFile(
+      //
+      // We use the in-memory `capturePhoto()` rather than `capturePhotoToFile()`
+      // because the returned `Photo` hybrid object carries `.width` / `.height`
+      // directly. The old path decoded the whole written JPEG through Skia just
+      // to read its dimensions — a full-image decode on EVERY capture, i.e.
+      // 6×/3× wasted decodes per burst/bracket.
+      const photo = await photoOutput.capturePhoto(
         {
           flashMode: opts?.flashMode ?? 'off',
           enableShutterSound: opts?.enableShutterSound ?? enableShutterSoundRef.current,
         },
         {}
       );
-      const uri = pathToFileUri(file.filePath);
-      // VisionCamera's PhotoFile only carries the path. Decode the written file
-      // once so preview, subject-composite, burst, and HDR records carry the real
-      // pixel dimensions instead of the requested target resolution.
-      const dimensions = await resolveCapturedPhotoDimensions(uri, targetResolution);
-      return {
-        uri,
-        width: dimensions.width,
-        height: dimensions.height,
-        lensType: captureLensTypeRef.current,
-      };
+      try {
+        // `saveToTemporaryFileAsync` returns a raw filesystem path (no scheme);
+        // the rest of the app (Skia decode, expo-file-system, expo-image)
+        // expects a `file://` URI.
+        const savedPath = await photo.saveToTemporaryFileAsync();
+        const uri = pathToFileUri(savedPath);
+
+        // `Photo.width` / `.height` are the sensor-buffer pixel dimensions.
+        // `saveToTemporaryFileAsync` writes those buffer pixels plus an EXIF
+        // orientation flag — it does NOT physically rotate the pixels. Skia's
+        // `MakeImageFromEncoded` (used by the parity decode AND by every
+        // downstream consumer: subject-composite, frame-match) reads raw pixel
+        // dimensions and ignores the EXIF flag, so a Skia decode of the saved
+        // file yields exactly `Photo.width` / `.height`. The fast path is
+        // therefore consistent with the rest of the pipeline — no orientation
+        // swap is needed.
+        const fast: PhotoDimensions = { width: photo.width, height: photo.height };
+        const fastValid =
+          Number.isFinite(fast.width) &&
+          fast.width > 0 &&
+          Number.isFinite(fast.height) &&
+          fast.height > 0;
+        // Honest fallback (Rule 8): only if the Photo reported missing/zero
+        // dimensions do we pay for a one-off Skia decode of the saved file.
+        const dimensions = fastValid
+          ? pickResolvedPhotoDimensions({ decoded: fast, fallback: targetResolution })
+          : await resolveCapturedPhotoDimensions(uri, targetResolution);
+
+        return {
+          uri,
+          width: dimensions.width,
+          height: dimensions.height,
+          lensType: captureLensTypeRef.current,
+        };
+      } finally {
+        // The Photo holds a large native buffer; release it once the file is
+        // written so the JS runtime doesn't sit on it until the next GC.
+        photo.dispose();
+      }
     },
     [photoOutput, targetResolution]
   );

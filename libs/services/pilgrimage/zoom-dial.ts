@@ -21,10 +21,22 @@ import type { FocalStop } from '../../../components/pilgrimage/camera/types';
  *  no React/hook dependency. The caller passes the live map in. */
 export type StopZoomMap = Record<FocalStop, number>;
 
+/**
+ * Detent kind. Real focal stops route picks through the screen's optical
+ * lens-switching logic (`onPickFocalStop`). The `'floor'` kind is the special
+ * "wide-floor" detent we add for sub-1 Android cameras (e.g. Pixel 0.67×
+ * minZoom) that have no 0.5× affordance — it is NOT a `FocalStop`, so it never
+ * routes through `onPickFocalStop`; the dial drives `zoomShared` directly.
+ */
+export type DetentKind = FocalStop | 'floor';
+
 /** A labeled detent on the dial: a tap target AND a snap point. */
 export interface Detent {
-  /** The focal stop this detent represents (0.5 / 1 / 2 / 3). */
-  stop: FocalStop;
+  /**
+   * What this detent represents: a real focal stop (0.5 / 1 / 2 / 3) or the
+   * non-`FocalStop` `'floor'` for the device's true sub-1 minZoom.
+   */
+  stop: DetentKind;
   /** Pixel offset of this detent's tick, measured from the strip's left edge. */
   px: number;
   /**
@@ -32,6 +44,13 @@ export interface Detent {
    * VisionCamera, so 0.5x stays 0.5 and 3x stays 3.
    */
   zoom: number;
+  /**
+   * Display label override. Set only on the `'floor'` detent, which has no
+   * `FocalStop` to derive a label from — it carries the rounded real minZoom
+   * (e.g. "0.7x"). Real focal stops leave this undefined and label themselves
+   * from `stop` at the component layer.
+   */
+  label?: string;
 }
 
 /** Default detent set for a digital-only (no optical lens info) rear camera. */
@@ -113,6 +132,78 @@ export function buildDetents(
       zoom: isFiniteNumber(rawZoom) && rawZoom > 0 ? rawZoom : stop,
     };
   });
+}
+
+// --- Wide-floor detent (sub-1 Android cameras with no 0.5× affordance) ---
+//
+// Some Android logical rear cameras (e.g. Pixel 6 Pro) report a `minZoom`
+// that is sub-1 but NOT 0.5-class — typically ~0.67×, the Pixel ultra-wide
+// reach floor. When such a device is a `wide-only` cohort it has neither a
+// `0.5` detent nor a 0.5× island chip, so the dial's lowest detent is `1×` and
+// the strip clamps there: the user can't reach the widest the lens offers.
+//
+// We close that gap with one extra leftmost `'floor'` detent at the real
+// `minZoom`. It is NOT a `FocalStop` (0.67 isn't in the union), so it carries
+// its own numeric `zoom` + `label` and the dial drives `zoomShared` directly
+// instead of routing through `onPickFocalStop`.
+
+/** Lower bound (exclusive) of the wide-floor band. A `minZoom` at or below
+ *  this is the iOS / logical 0.5-class case that already has a `0.5` detent. */
+export const WIDE_FLOOR_MIN_ZOOM = 0.55;
+/** Upper bound (exclusive) of the wide-floor band. A `minZoom` at or above
+ *  this has no meaningful sub-1 reach, so no floor detent is shown. */
+export const WIDE_FLOOR_MAX_ZOOM = 0.95;
+
+/**
+ * True when the active device needs a synthetic wide-floor detent: its
+ * `minZoom` is sub-1-but-not-0.5-class AND it has no existing zoom-out
+ * affordance (no `0.5` in `stops`, and `hasIsland` is false). Devices that
+ * already expose a `0.5` detent or a 0.5× island chip are left unchanged.
+ */
+export function needsWideFloor(
+  minZoom: number | undefined,
+  stops: readonly FocalStop[],
+  hasIsland: boolean
+): boolean {
+  if (hasIsland) return false;
+  if (stops.includes(0.5)) return false;
+  if (typeof minZoom !== 'number' || !Number.isFinite(minZoom)) return false;
+  return minZoom > WIDE_FLOOR_MIN_ZOOM && minZoom < WIDE_FLOOR_MAX_ZOOM;
+}
+
+/** Compact display label for the wide-floor detent: the real `minZoom`
+ *  rounded to 1 decimal place (e.g. 0.67 → "0.7x"). Uses the dial's lowercase
+ *  `x` convention (see `formatStop` in ZoomDial). An honest rounding of a real
+ *  CameraX value, not an invented number (CLAUDE.md Rule 8). */
+export function wideFloorLabel(minZoom: number): string {
+  return `${(Math.round(minZoom * 10) / 10).toFixed(1)}x`;
+}
+
+/**
+ * Like {@link buildDetents}, but prepends a `'floor'` detent at the real
+ * `minZoom` when {@link needsWideFloor} is satisfied. The floor detent sits at
+ * `px = 0`; every existing detent shifts one `segPx` to the right. When no
+ * floor is needed this is exactly `buildDetents`.
+ */
+export function buildDetentsWithFloor(
+  stops: readonly FocalStop[],
+  stopZoom: StopZoomMap,
+  minZoom: number | undefined,
+  hasIsland: boolean,
+  segPx: number = 96
+): Detent[] {
+  const base = buildDetents(stops, stopZoom, segPx);
+  if (!needsWideFloor(minZoom, stops, hasIsland)) return base;
+  // `minZoom` is verified finite + in-band by needsWideFloor above.
+  const floorZoom = minZoom as number;
+  const floor: Detent = {
+    stop: 'floor',
+    px: 0,
+    zoom: floorZoom,
+    label: wideFloorLabel(floorZoom),
+  };
+  const shifted = base.map((d) => ({ ...d, px: d.px + segPx }));
+  return [floor, ...shifted];
 }
 
 /**
@@ -227,17 +318,17 @@ export function positionForZoom(
 }
 
 /**
- * Returns the focal stop of the detent nearest `px`, or `null` when the nearest
- * detent is further than `tolerancePx`. Used for snap-on-release and to decide
- * which detent label to highlight while dragging.
+ * Returns the kind of the detent nearest `px` (a `FocalStop` or `'floor'`), or
+ * `null` when the nearest detent is further than `tolerancePx`. Used for
+ * snap-on-release and to decide which detent label to highlight while dragging.
  */
 export function nearestDetent(
   px: number,
   detents: readonly Detent[],
   tolerancePx: number = 22
-): FocalStop | null {
+): DetentKind | null {
   'worklet';
-  let best: FocalStop | null = null;
+  let best: DetentKind | null = null;
   let bestDelta = Infinity;
   for (const d of detents) {
     const delta = Math.abs(px - d.px);
@@ -250,8 +341,12 @@ export function nearestDetent(
   return null;
 }
 
-/** Pixel offset of a detent by its focal stop, or `null` if not on the dial. */
-export function positionForStop(stop: FocalStop, detents: readonly Detent[]): number | null {
+/**
+ * Pixel offset of a detent by its kind (`FocalStop` or `'floor'`), or `null` if
+ * not on the dial. A `FocalStop` argument never matches the `'floor'` detent
+ * and vice versa, so existing `FocalStop`-typed call sites stay correct.
+ */
+export function positionForStop(stop: DetentKind, detents: readonly Detent[]): number | null {
   'worklet';
   const found = detents.find((d) => d.stop === stop);
   return found ? found.px : null;

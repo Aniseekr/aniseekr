@@ -64,7 +64,11 @@ export interface UseBurstCaptureOutput {
 }
 
 const DEFAULT_FRAME_COUNT = 6;
-const DEFAULT_INTERVAL_MS = 150;
+// Burst frames are awaited sequentially, so this delay is pure pacing — it
+// cannot cause captures to overlap. A standard camera burst fires fast; ~70ms
+// keeps the cadence snappy while still giving AE/AF a moment to breathe
+// between shots.
+const DEFAULT_INTERVAL_MS = 70;
 
 interface RawBurstFrame {
   uri: string;

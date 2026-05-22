@@ -502,16 +502,21 @@ export default function CompareCaptureScreen() {
   const enableTorch = flashMode === 'torch';
   const captureFlash: 'on' | 'off' | 'auto' = flashMode === 'torch' ? 'off' : flashMode;
 
-  // Auto mode runs the scene analyzer at ~5 Hz. When it flags clipped shadows
-  // + highlights AND the device supports native photo-HDR, the camera mounts
-  // with the PhotoHDR constraint so a single takePhoto already produces a true
-  // HDR JPEG. Otherwise the auto path falls through to a real 3-frame
-  // exposure bracket via `useExposureBracket`.
+  // Auto mode runs the scene analyzer at ~5 Hz to drive the AUTO·HDR badge
+  // and, on non-HDR devices, the bracket-vs-single decision.
   const sceneAnalyzer = useSceneAnalyzer({ enabled: settings.captureMode === 'auto' });
-  const realHdrTargeted =
-    settings.captureMode === 'auto' &&
-    sceneAnalyzer.hdrRecommended &&
-    (deviceInfo?.supportsPhotoHdr ?? false);
+  // The PhotoHDR constraint is armed for the WHOLE auto-mode session on
+  // HDR-capable devices — deliberately NOT gated on the live scene analyzer.
+  // Gating it on `hdrRecommended` made `constraints` flip as the user panned,
+  // and every flip rebuilds the CameraX session (a visible preview stutter).
+  // Kept stable, the constraint changes only on auto-mode enter/exit, folded
+  // into the same reconfig as the scene-analyzer frame output.
+  const autoHdrSessionArmed =
+    settings.captureMode === 'auto' && (deviceInfo?.supportsPhotoHdr ?? false);
+  // "this specific shot will be a true HDR JPEG" — the session is armed AND
+  // the live scene actually clips enough to benefit. Drives the capture-mode
+  // toast and the 'hdr' shot label only; it does NOT gate the constraint.
+  const realHdrTargeted = autoHdrSessionArmed && sceneAnalyzer.hdrRecommended;
 
   const burst = useBurstCapture({
     engineRef: cameraRef,
@@ -935,13 +940,14 @@ export default function CompareCaptureScreen() {
     [bracket, tapFocus, maybeCompositeSubjectShot, recordShot, buildExifNow]
   );
 
-  // Auto mode: route the shot based on the live scene analyzer.
-  //   - Scene flags HDR + device has native photo-HDR → single takePhoto
-  //     (CameraStage already mounted with `{ photoHDR: true }`, so the single
-  //     shot is a true HDR JPEG and we record it as 'hdr').
-  //   - Scene flags HDR but the device cannot do native photo-HDR → real
-  //     3-frame exposure bracket via `runHdrBracket`.
-  //   - Scene looks balanced → plain single shot.
+  // Auto mode: route the shot.
+  //   - HDR-capable device: the PhotoHDR constraint is armed for the whole
+  //     auto session, so a single takePhoto is already a true HDR JPEG. We
+  //     label it 'hdr' only when the live scene actually clipped enough to
+  //     benefit, 'single' otherwise — the shot still went through the HDR
+  //     pipeline, but the label tracks whether HDR meaningfully helped.
+  //   - Non-HDR device: scene flags HDR → real 3-frame exposure bracket via
+  //     `runHdrBracket`; balanced scene → plain single shot.
   //
   // Non-wide lens gate: when the active session is the standalone ultra-wide
   // (or telephoto) the cross-lens analyses are off the table — the scene
@@ -955,8 +961,8 @@ export default function CompareCaptureScreen() {
       if (!lensIsWide) {
         return runSingle(source, 'single');
       }
-      if (realHdrTargeted) {
-        return runSingle(source, 'hdr');
+      if (autoHdrSessionArmed) {
+        return runSingle(source, sceneAnalyzer.hdrRecommended ? 'hdr' : 'single');
       }
       if (sceneAnalyzer.hdrRecommended) {
         return runHdrBracket(source);
@@ -964,7 +970,7 @@ export default function CompareCaptureScreen() {
       return runSingle(source, 'single');
     },
     [
-      realHdrTargeted,
+      autoHdrSessionArmed,
       sceneAnalyzer.hdrRecommended,
       runSingle,
       runHdrBracket,
@@ -1262,7 +1268,7 @@ export default function CompareCaptureScreen() {
             device={strategic.activeDevice}
             zoomShared={zoom.zoomShared}
             exposureShared={exposureShared}
-            preferHdr={realHdrTargeted}
+            preferHdr={autoHdrSessionArmed}
             enableTorch={enableTorch}
             mirrorSelfie={settings.mirror}
             active={cameraActive}

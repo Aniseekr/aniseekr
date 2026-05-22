@@ -10,18 +10,30 @@
 // the Camera's `outputs` array). When disabled, we return `frameOutput:
 // undefined` so the parent can skip adding it to the outputs list.
 //
+// Downsampling strategy: we cap the camera-side `targetResolution` at VGA so
+// the pipeline never streams 4K Y-planes, and when the GPU resizer is present
+// we hand the frame straight to it — the resize → small RGB pixel-buffer path
+// is intentionally kept general so a future on-device ML stage (anime-image
+// matching, Live2D doll insertion) can reuse the same resized buffer.
+//
 // Rule 8: every value reported (`hdrRecommended`) is derived from real frame
-// pixels. When the scene is disabled or the worklet runtime is unavailable,
-// we return `false` honestly — never a fake recommendation.
+// pixels. When the scene is disabled or neither the GPU nor the CPU path can
+// produce pixels, we return `false` honestly — never a fake recommendation.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
 import {
+  CommonResolutions,
   useFrameOutput,
   type CameraFrameOutput,
   type Frame,
 } from 'react-native-vision-camera';
+import {
+  isResizerAvailable,
+  useResizer,
+  type GPUFrame,
+} from 'react-native-vision-camera-resizer';
 import {
   advanceHysteresis,
   analyzeLumaHistogram,
@@ -56,6 +68,21 @@ export function useSceneAnalyzer({ enabled }: UseSceneAnalyzerInput): UseSceneAn
   const lastSampleTimestamp = useSharedValue(0);
   const hysteresisShared = useSharedValue(createHysteresisState(false));
 
+  // GPU-accelerated downsampler. Configured to emit the SAMPLE_GRID×SAMPLE_GRID
+  // analysis grid directly as 8-bit interleaved RGB so the worklet reads one
+  // contiguous (R,G,B) triple per pixel — `cover` keeps the centre framing the
+  // user actually sees. `useResizer` is a no-op until the native module links;
+  // we still gate the worklet on `isResizerAvailable()` so a Metal/Vulkan-less
+  // device falls back cleanly.
+  const { resizer } = useResizer({
+    width: SAMPLE_GRID,
+    height: SAMPLE_GRID,
+    channelOrder: 'rgb',
+    dataType: 'uint8',
+    pixelLayout: 'interleaved',
+    scaleMode: 'cover',
+  });
+
   // Re-seed the hysteresis whenever auto mode is toggled — switching away
   // should not leak a stale "agree count" into the next session.
   useEffect(() => {
@@ -75,52 +102,91 @@ export function useSceneAnalyzer({ enabled }: UseSceneAnalyzerInput): UseSceneAn
 
   // The worklet itself. It MUST be re-created when the camera unmounts (handled
   // by `useFrameOutput`'s lifecycle) but we keep the inner closure dependency
-  // surface minimal — only the shared values + the stable flip callback.
+  // surface minimal — only the shared values, the resizer, and the stable flip
+  // callback.
   //
-  // dispose() is called once in the `finally` block; the early-return branches
-  // must NOT call it themselves or NativeState is freed twice and the second
-  // dispose throws "Cannot call hybrid function `HybridObject.dispose(...)`".
+  // dispose() ordering: the `frame` is released once in the `finally` block;
+  // the GPU `resized` frame is also released there, but guarded with `?.`
+  // because the 5 Hz timestamp gate early-returns BEFORE the resize runs — on
+  // those frames there is no GPU frame to dispose. Disposing twice (or
+  // disposing an object that was never created) frees NativeState a second
+  // time and surfaces as "Cannot call hybrid function `HybridObject.dispose`".
   const onFrame = useCallback(
     (frame: Frame) => {
       'worklet';
+      let resized: GPUFrame | undefined;
       try {
         if (!frame.isValid) return;
         const ts = frame.timestamp;
         if (ts - lastSampleTimestamp.value < SAMPLE_INTERVAL_NS) return;
         lastSampleTimestamp.value = ts;
 
-        // Defensive: planar Y-plane reads on the YUV pipeline. If anything is
-        // unavailable (non-planar RGB frame, native-only buffer, dispose race),
-        // bail out without crashing — we'll just skip this sample.
-        const planes = frame.isPlanar ? frame.getPlanes() : [];
-        const yPlane = planes[0];
-        if (!yPlane || !yPlane.isValid) return;
-        const yWidth = yPlane.width;
-        const yHeight = yPlane.height;
-        const yStride = yPlane.bytesPerRow;
-        if (yWidth <= 0 || yHeight <= 0 || yStride <= 0) return;
-        const buffer = yPlane.getPixelBuffer();
-        if (!buffer) return;
-        const bytes = new Uint8Array(buffer);
-
-        // Stride-sample the Y plane onto a SAMPLE_GRID×SAMPLE_GRID histogram
-        // bucket — full-resolution scanning is wasted work for a clip-count
-        // signal, and pulling the whole buffer through the JS engine every
-        // frame would peg the UI thread.
-        const stepX = Math.max(1, Math.floor(yWidth / SAMPLE_GRID));
-        const stepY = Math.max(1, Math.floor(yHeight / SAMPLE_GRID));
-        const samples: number[] = [];
-        for (let y = 0; y < yHeight; y += stepY) {
-          const rowOffset = y * yStride;
-          for (let x = 0; x < yWidth; x += stepX) {
-            samples.push(bytes[rowOffset + x]);
+        if (resizer != null && isResizerAvailable()) {
+          // GPU path: resize on the GPU to the analysis grid and read back a
+          // small interleaved-RGB buffer. ~64×64×3 bytes instead of a
+          // full-resolution Y-plane copy.
+          resized = resizer.resize(frame);
+          const buffer = resized.getPixelBuffer();
+          if (buffer) {
+            const rgb = new Uint8Array(buffer);
+            const pixelCount = (rgb.length / 3) | 0;
+            const luma: number[] = [];
+            for (let i = 0; i < pixelCount; i++) {
+              const base = i * 3;
+              // BT.601 RGB→luma; output stays on the 8-bit 0..255 scale the
+              // histogram thresholds in scene-analyzer.ts are tuned for.
+              luma.push(
+                0.299 * rgb[base] + 0.587 * rgb[base + 1] + 0.114 * rgb[base + 2]
+              );
+            }
+            const { needsHdr } = analyzeLumaHistogram(luma);
+            const { flipped, current } = advanceHysteresis(
+              hysteresisShared.value,
+              needsHdr
+            );
+            if (flipped) {
+              runOnJS(flipRecommendation)(current);
+            }
           }
-        }
+        } else {
+          // CPU fallback: stride-sample the YUV Y-plane directly. Used when the
+          // GPU resizer is unavailable (no Metal/Vulkan, or native module not
+          // linked). If anything here is unavailable (non-planar RGB frame,
+          // native-only buffer, dispose race) we bail without crashing — the
+          // analyzer just stays at its last recommendation.
+          const planes = frame.isPlanar ? frame.getPlanes() : [];
+          const yPlane = planes[0];
+          if (!yPlane || !yPlane.isValid) return;
+          const yWidth = yPlane.width;
+          const yHeight = yPlane.height;
+          const yStride = yPlane.bytesPerRow;
+          if (yWidth <= 0 || yHeight <= 0 || yStride <= 0) return;
+          const buffer = yPlane.getPixelBuffer();
+          if (!buffer) return;
+          const bytes = new Uint8Array(buffer);
 
-        const { needsHdr } = analyzeLumaHistogram(samples);
-        const { flipped, current } = advanceHysteresis(hysteresisShared.value, needsHdr);
-        if (flipped) {
-          runOnJS(flipRecommendation)(current);
+          // Stride-sample the Y plane onto a SAMPLE_GRID×SAMPLE_GRID histogram
+          // bucket — full-resolution scanning is wasted work for a clip-count
+          // signal, and pulling the whole buffer through the JS engine every
+          // frame would peg the UI thread.
+          const stepX = Math.max(1, Math.floor(yWidth / SAMPLE_GRID));
+          const stepY = Math.max(1, Math.floor(yHeight / SAMPLE_GRID));
+          const samples: number[] = [];
+          for (let y = 0; y < yHeight; y += stepY) {
+            const rowOffset = y * yStride;
+            for (let x = 0; x < yWidth; x += stepX) {
+              samples.push(bytes[rowOffset + x]);
+            }
+          }
+
+          const { needsHdr } = analyzeLumaHistogram(samples);
+          const { flipped, current } = advanceHysteresis(
+            hysteresisShared.value,
+            needsHdr
+          );
+          if (flipped) {
+            runOnJS(flipRecommendation)(current);
+          }
         }
       } catch {
         // The worklet runtime cannot surface errors through the camera
@@ -129,8 +195,17 @@ export function useSceneAnalyzer({ enabled }: UseSceneAnalyzerInput): UseSceneAn
         // honest behaviour: we don't know if the scene needs HDR.
       } finally {
         // Single dispose path: even if an early-return fired or the try threw,
-        // the frame is released here exactly once. dispose() on an
-        // already-disposed frame would surface as a NativeState-null crash.
+        // the frame is released here exactly once. The GPU `resized` frame is
+        // released here too — `resized?.dispose()` is a no-op when the 5 Hz
+        // gate returned before the resize, so it is never double-disposed.
+        // dispose() on an already-disposed object surfaces as a NativeState
+        // crash.
+        try {
+          resized?.dispose();
+        } catch {
+          // Defensive: the GPU frame's NativeState may already be gone if the
+          // camera tore down between resize and this line.
+        }
         try {
           frame.dispose();
         } catch {
@@ -139,13 +214,22 @@ export function useSceneAnalyzer({ enabled }: UseSceneAnalyzerInput): UseSceneAn
         }
       }
     },
-    [hysteresisShared, lastSampleTimestamp, flipRecommendation]
+    [hysteresisShared, lastSampleTimestamp, flipRecommendation, resizer]
   );
 
   // useFrameOutput must be called unconditionally (hooks rule). Suppress it by
   // ignoring its return when disabled so the camera doesn't add a frame output
   // to its session. The frame processor itself is cheap when not invoked.
-  const frameOutput = useFrameOutput({ onFrame });
+  //
+  // targetResolution is capped at VGA (vs. the HD default) so the camera never
+  // negotiates a 4K frame-processor stream — the analyzer only needs a coarse
+  // clip-count signal. `pixelFormat: 'yuv'` is the cheapest CPU-readable format
+  // and is also the input the GPU resizer expects on iOS.
+  const frameOutput = useFrameOutput({
+    onFrame,
+    targetResolution: CommonResolutions.VGA_16_9,
+    pixelFormat: 'yuv',
+  });
 
   return {
     frameOutput: enabled ? frameOutput : undefined,
