@@ -69,13 +69,15 @@ const withCloudKitBridge = (config, options = {}) => {
   config = withXcodeProject(config, (cfg) => {
     const project = cfg.modResults;
     const projectName = cfg.modRequest.projectName || 'AniSeekr';
-    const groupKey = ensureGroup(project, [projectName, SUBDIR]);
+    const groupKey = ensureGroupUnderParent(project, projectName, SUBDIR);
 
     const sources = [SWIFT_NAME, OBJC_NAME];
     for (const fileName of sources) {
-      const relativePath = `${SUBDIR}/${fileName}`;
-      if (!fileAlreadyInProject(project, relativePath)) {
-        project.addSourceFile(relativePath, { target: project.getFirstTarget().uuid }, groupKey);
+      // fileName only (not SUBDIR/fileName) — the group already carries the
+      // CloudKitBridge path, so prepending it again produces a double segment
+      // and Xcode looks in ios/CloudKitBridge/CloudKitBridge/…
+      if (!fileAlreadyInProject(project, fileName)) {
+        project.addSourceFile(fileName, { target: project.getFirstTarget().uuid }, groupKey);
       }
     }
     return cfg;
@@ -84,27 +86,45 @@ const withCloudKitBridge = (config, options = {}) => {
   return config;
 };
 
-function ensureGroup(project, pathSegments) {
-  let parentKey = project.findPBXGroupKey({ name: pathSegments[0] }) || project.getFirstProject().firstProject.mainGroup;
-  for (let i = 1; i < pathSegments.length; i++) {
-    const segment = pathSegments[i];
-    let existing = project.findPBXGroupKey({ name: segment });
-    if (!existing) {
-      const group = project.addPbxGroup([], segment, segment);
-      project.addToPbxGroup(group.uuid, parentKey);
-      existing = group.uuid;
+// Creates (or finds) a PBXGroup named `childName` as a direct child of the
+// group named `parentName`.  Returns the child group's UUID.
+// Using a scoped child search avoids the global findPBXGroupKey fallback that
+// was silently re-parenting the group under mainGroup when AniSeekr wasn't
+// found by name, which produced ios/CloudKitBridge/… instead of ios/AniSeekr/CloudKitBridge/…
+function ensureGroupUnderParent(project, parentName, childName) {
+  const parentKey =
+    project.findPBXGroupKey({ name: parentName }) ||
+    project.getFirstProject().firstProject.mainGroup;
+
+  // Search children of parentKey for an existing group with childName
+  const allGroups = project.hash.project.objects['PBXGroup'] || {};
+  const parentGroup = allGroups[parentKey];
+  if (parentGroup && Array.isArray(parentGroup.children)) {
+    for (const child of parentGroup.children) {
+      const childGroup = allGroups[child.value];
+      if (
+        childGroup &&
+        (childGroup.name === childName ||
+          childGroup.name === `"${childName}"` ||
+          childGroup.path === childName ||
+          childGroup.path === `"${childName}"`)
+      ) {
+        return child.value;
+      }
     }
-    parentKey = existing;
   }
-  return parentKey;
+
+  const newGroup = project.addPbxGroup([], childName, childName);
+  project.addToPbxGroup(newGroup.uuid, parentKey);
+  return newGroup.uuid;
 }
 
-function fileAlreadyInProject(project, relativePath) {
+function fileAlreadyInProject(project, fileName) {
   const fileRefs = project.pbxFileReferenceSection();
   return Object.values(fileRefs).some((ref) => {
     if (typeof ref !== 'object' || !ref) return false;
     const p = ref.path;
-    return typeof p === 'string' && p.replace(/^"|"$/g, '') === relativePath;
+    return typeof p === 'string' && p.replace(/^"|"$/g, '') === fileName;
   });
 }
 
