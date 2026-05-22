@@ -15,7 +15,11 @@ const blocked = [
   /\/__tests__\/.*/,
   /\/test-setup\.ts$/,
   /\/scripts\/check-spec-traceability\.ts$/,
-  /\/spec\/.*/,
+  // Project-local spec/ only. The node_modules negative lookahead is required —
+  // some packages (e.g. @react-native-google-signin) ship runtime code under a
+  // `spec/` folder; a bare /\/spec\// blocks their TurboModule specs and breaks
+  // the build with "Unable to resolve module ../spec/NativeGoogleSignin.js".
+  /^(?!.*\/node_modules\/).*\/spec\//,
 ];
 const existing = config.resolver.blockList;
 config.resolver.blockList = Array.isArray(existing)
