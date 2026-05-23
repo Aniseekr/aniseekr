@@ -2,8 +2,8 @@
 // Tap a card to open the anime detail. Falls back to action buttons for users
 // who prefer not to swipe (also serves as a discoverability cue on first run).
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -12,18 +12,30 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
+  type SharedValue,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Anime } from '../rate/types';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { readableTextOn } from '../themed';
+import {
+  OUTGOING_CARD_LIFETIME_MS,
+  SWIPE_PERSISTENCE_DELAY_MS,
+} from '../../libs/services/rate/swipe-animation';
+import {
+  bangumiDeckEntryKey,
+  computeBangumiDeckWindow,
+  expireBangumiOutgoing,
+  type BangumiDeckSlot,
+  type BangumiOutgoingCard,
+} from '../../libs/services/bangumi/card-deck-window';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - Spacing.lg * 2, 360);
@@ -31,6 +43,21 @@ const CARD_HEIGHT = Math.round(CARD_WIDTH * 1.4);
 const SWIPE_THRESHOLD = 110;
 const VELOCITY_THRESHOLD = 800;
 const ROTATION_DEG = 12;
+const STACK_REVEAL_DISTANCE = Math.min(CARD_WIDTH * 0.72, 260);
+
+const EXIT_SPRING_CONFIG = {
+  damping: 26,
+  stiffness: 200,
+  mass: 1,
+  overshootClamping: true,
+};
+
+const RESET_SPRING_CONFIG = {
+  damping: 30,
+  stiffness: 600,
+  mass: 0.9,
+  overshootClamping: false,
+};
 
 interface BangumiCardDeckProps {
   anime: Anime[];
@@ -55,25 +82,104 @@ export function BangumiCardDeck({
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [index, setIndex] = useState(0);
+  const [outgoing, setOutgoing] = useState<BangumiOutgoingCard<Anime>[]>([]);
+  const topTranslationX = useSharedValue(0);
+  const animeRef = useRef(anime);
+  const indexRef = useRef(index);
+  const outgoingKeysRef = useRef(new Set<string>());
+  const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistenceTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const onSwipeRemindRef = useRef(onSwipeRemind);
+  const onSwipePlanRef = useRef(onSwipePlan);
+
+  animeRef.current = anime;
+  indexRef.current = index;
+  onSwipeRemindRef.current = onSwipeRemind;
+  onSwipePlanRef.current = onSwipePlan;
 
   useEffect(() => {
     setIndex(0);
+    setOutgoing([]);
+    outgoingKeysRef.current.clear();
+    topTranslationX.value = 0;
   }, [resetKey]);
 
   const current = anime[index];
-  const next = anime[index + 1];
+  const windowEntries = useMemo(
+    () => computeBangumiDeckWindow({ items: anime, topIndex: index, outgoing }),
+    [anime, index, outgoing]
+  );
   const planFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
 
+  const queueSwipeSideEffect = useCallback((direction: 'left' | 'right', item: Anime) => {
+    const timer = setTimeout(() => {
+      persistenceTimersRef.current.delete(timer);
+      InteractionManager.runAfterInteractions(() => {
+        if (direction === 'left') onSwipeRemindRef.current(item);
+        else onSwipePlanRef.current(item);
+      });
+    }, SWIPE_PERSISTENCE_DELAY_MS);
+    persistenceTimersRef.current.add(timer);
+  }, []);
+
+  const scheduleOutgoingExpiry = useCallback(() => {
+    if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
+    expiryTimerRef.current = setTimeout(() => {
+      expiryTimerRef.current = null;
+      setOutgoing((prev) => {
+        const next = expireBangumiOutgoing({
+          outgoing: prev,
+          now: Date.now(),
+          lifetimeMs: OUTGOING_CARD_LIFETIME_MS,
+        });
+        outgoingKeysRef.current = new Set(next.map((card) => card.key));
+        return next;
+      });
+    }, OUTGOING_CARD_LIFETIME_MS);
+  }, []);
+
   const advance = useCallback(
-    (direction: 'left' | 'right', item: Anime) => {
-      if (direction === 'left') onSwipeRemind(item);
-      else onSwipePlan(item);
+    (direction: 'left' | 'right') => {
+      const snapshot = animeRef.current;
+      const idx = indexRef.current;
+      const item = snapshot[idx];
+      if (!item) return;
+
+      const key = bangumiDeckEntryKey(item, idx);
+      if (outgoingKeysRef.current.has(key)) return;
+
+      const now = Date.now();
+      outgoingKeysRef.current.add(key);
+      setOutgoing((prev) => {
+        const next = [
+          ...expireBangumiOutgoing({
+            outgoing: prev,
+            now,
+            lifetimeMs: OUTGOING_CARD_LIFETIME_MS,
+          }),
+          { item, key, direction, committedAt: now },
+        ];
+        outgoingKeysRef.current = new Set(next.map((card) => card.key));
+        return next;
+      });
       setIndex((i) => i + 1);
+      topTranslationX.value = 0;
+      queueSwipeSideEffect(direction, item);
+      scheduleOutgoingExpiry();
     },
-    [onSwipeRemind, onSwipePlan]
+    [queueSwipeSideEffect, scheduleOutgoingExpiry, topTranslationX]
   );
 
-  if (!current) {
+  useEffect(() => {
+    return () => {
+      if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
+      for (const timer of persistenceTimersRef.current) clearTimeout(timer);
+      persistenceTimersRef.current.clear();
+      outgoingKeysRef.current.clear();
+    };
+  }, []);
+
+  if (!current && outgoing.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIconWrap}>
@@ -91,102 +197,105 @@ export function BangumiCardDeck({
     <View style={styles.container}>
       <View style={styles.counterRow}>
         <Text style={styles.counterText}>
-          {index + 1}
+          {Math.min(index + 1, anime.length)}
           <Text style={styles.counterTextMuted}> / {anime.length}</Text>
         </Text>
       </View>
 
       <View style={styles.deck}>
-        {next ? <BackCard anime={next} theme={theme} /> : null}
-        <TopCard
-          key={current.id}
-          anime={current}
-          theme={theme}
-          onSwipe={(dir) => advance(dir, current)}
-          onOpenDetail={() => {
-            hapticsBridge.tap();
-            pushAnimeDetail(router, current);
-          }}
-        />
+        {windowEntries.map((entry) =>
+          entry.slot === 'next' ? (
+            <BackCard
+              key={entry.key}
+              anime={entry.item}
+              theme={theme}
+              activeTranslation={topTranslationX}
+            />
+          ) : (
+            <TopCard
+              key={entry.key}
+              anime={entry.item}
+              slot={entry.slot}
+              theme={theme}
+              activeTranslation={entry.slot === 'top' ? topTranslationX : undefined}
+              onSwipe={advance}
+              onOpenDetail={() => {
+                hapticsBridge.tap();
+                pushAnimeDetail(router, entry.item);
+              }}
+            />
+          )
+        )}
       </View>
 
-      <View style={styles.actionRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Set reminder"
-          onPress={() => {
-            hapticsBridge.selection();
-            advance('left', current);
-          }}
-          style={({ pressed }) => [
-            styles.actionButton,
-            styles.actionRemind,
-            pressed && { opacity: 0.85 },
-          ]}>
-          <MaterialIcons name="notifications-active" size={18} color={theme.status.info} />
-          <Text style={[styles.actionLabel, { color: theme.status.info }]}>Remind</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add to plan"
-          onPress={() => {
-            hapticsBridge.success();
-            advance('right', current);
-          }}
-          style={({ pressed }) => [
-            styles.actionButton,
-            { backgroundColor: theme.accent, borderColor: theme.accent },
-            pressed && { opacity: 0.9 },
-          ]}>
-          <MaterialIcons name="bookmark-add" size={18} color={planFg} />
-          <Text style={[styles.actionLabel, { color: planFg }]}>Plan</Text>
-        </Pressable>
-      </View>
+      {current ? (
+        <View style={styles.actionRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Set reminder"
+            onPress={() => {
+              hapticsBridge.selection();
+              advance('left');
+            }}
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.actionRemind,
+              pressed && { opacity: 0.85 },
+            ]}>
+            <MaterialIcons name="notifications-active" size={18} color={theme.status.info} />
+            <Text style={[styles.actionLabel, { color: theme.status.info }]}>Remind</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add to plan"
+            onPress={() => {
+              hapticsBridge.success();
+              advance('right');
+            }}
+            style={({ pressed }) => [
+              styles.actionButton,
+              { backgroundColor: theme.accent, borderColor: theme.accent },
+              pressed && { opacity: 0.9 },
+            ]}>
+            <MaterialIcons name="bookmark-add" size={18} color={planFg} />
+            <Text style={[styles.actionLabel, { color: planFg }]}>Plan</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 interface TopCardProps {
   anime: Anime;
+  slot: Extract<BangumiDeckSlot, 'outgoing' | 'top'>;
   theme: ThemePalette;
   onSwipe: (direction: 'left' | 'right') => void;
   onOpenDetail: () => void;
+  activeTranslation?: SharedValue<number>;
 }
 
-function TopCard({ anime, theme, onSwipe, onOpenDetail }: TopCardProps) {
+function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation }: TopCardProps) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const rotate = useSharedValue(0);
   const thresholdHit = useSharedValue(false);
-
-  const flingOut = useCallback(
-    (direction: 'left' | 'right') => {
-      const targetX = direction === 'right' ? SCREEN_WIDTH * 1.4 : -SCREEN_WIDTH * 1.4;
-      translateX.value = withSpring(
-        targetX,
-        { damping: 26, stiffness: 200, overshootClamping: true },
-        (finished) => {
-          if (finished) runOnJS(onSwipe)(direction);
-        }
-      );
-      rotate.value = withSpring(direction === 'right' ? 20 : -20, {
-        damping: 22,
-        stiffness: 200,
-      });
-    },
-    [onSwipe, rotate, translateX]
-  );
+  const isTop = slot === 'top';
 
   const pan = useMemo(
     () =>
       Gesture.Pan()
+        .enabled(isTop)
         .onBegin(() => {
           thresholdHit.value = false;
         })
         .onChange((event) => {
           translateX.value = event.translationX;
           translateY.value = event.translationY * 0.4;
+          if (activeTranslation) {
+            activeTranslation.value = event.translationX;
+          }
           rotate.value = interpolate(
             event.translationX,
             [-SCREEN_WIDTH, SCREEN_WIDTH],
@@ -196,7 +305,7 @@ function TopCard({ anime, theme, onSwipe, onOpenDetail }: TopCardProps) {
           const distance = Math.abs(event.translationX);
           if (distance > SWIPE_THRESHOLD && !thresholdHit.value) {
             thresholdHit.value = true;
-            runOnJS(hapticsBridge.swipeThreshold)();
+            scheduleOnRN(hapticsBridge.swipeThreshold);
           } else if (distance < SWIPE_THRESHOLD * 0.7 && thresholdHit.value) {
             thresholdHit.value = false;
           }
@@ -208,15 +317,39 @@ function TopCard({ anime, theme, onSwipe, onOpenDetail }: TopCardProps) {
             Math.abs(distance) > SWIPE_THRESHOLD || Math.abs(velocity) > VELOCITY_THRESHOLD;
           if (shouldCommit) {
             const dir = distance > 0 ? 'right' : 'left';
-            runOnJS(flingOut)(dir);
+            const targetX = dir === 'right' ? SCREEN_WIDTH * 1.4 : -SCREEN_WIDTH * 1.4;
+            translateX.value = withSpring(targetX, {
+              ...EXIT_SPRING_CONFIG,
+              velocity,
+            });
+            translateY.value = withSpring(-44, EXIT_SPRING_CONFIG);
+            rotate.value = withSpring(dir === 'right' ? 20 : -20, {
+              ...EXIT_SPRING_CONFIG,
+              velocity: velocity / 10,
+            });
+            if (activeTranslation) {
+              activeTranslation.value = withSpring(
+                dir === 'right' ? STACK_REVEAL_DISTANCE : -STACK_REVEAL_DISTANCE,
+                EXIT_SPRING_CONFIG
+              );
+            }
+            scheduleOnRN(onSwipe, dir);
+            scheduleOnRN(
+              hapticsBridge.impact,
+              Math.abs(velocity) > 2000 ? 'heavy' : 'medium'
+            );
           } else {
-            translateX.value = withSpring(0, { damping: 22, stiffness: 320 });
-            translateY.value = withSpring(0, { damping: 22, stiffness: 320 });
-            rotate.value = withSpring(0, { damping: 22, stiffness: 320 });
+            translateX.value = withSpring(0, RESET_SPRING_CONFIG);
+            translateY.value = withSpring(0, RESET_SPRING_CONFIG);
+            rotate.value = withSpring(0, RESET_SPRING_CONFIG);
+            if (activeTranslation) {
+              activeTranslation.value = withSpring(0, RESET_SPRING_CONFIG);
+            }
+            scheduleOnRN(hapticsBridge.swipeCancel);
           }
           thresholdHit.value = false;
         }),
-    [flingOut, rotate, thresholdHit, translateX, translateY]
+    [activeTranslation, isTop, onSwipe, rotate, thresholdHit, translateX, translateY]
   );
 
   const cardStyle = useAnimatedStyle(() => ({
@@ -237,8 +370,14 @@ function TopCard({ anime, theme, onSwipe, onOpenDetail }: TopCardProps) {
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.card, cardStyle]}>
-        <Pressable onPress={onOpenDetail} style={StyleSheet.absoluteFill}>
+      <Animated.View
+        style={[
+          styles.card,
+          slot === 'outgoing' ? styles.outgoingCard : styles.topCard,
+          cardStyle,
+        ]}
+        pointerEvents={isTop ? 'auto' : 'none'}>
+        <Pressable onPress={isTop ? onOpenDetail : undefined} style={StyleSheet.absoluteFill}>
           <Image
             source={{ uri: anime.image }}
             style={styles.cardImage}
@@ -293,10 +432,29 @@ function TopCard({ anime, theme, onSwipe, onOpenDetail }: TopCardProps) {
   );
 }
 
-function BackCard({ anime, theme }: { anime: Anime; theme: ThemePalette }) {
+function BackCard({
+  anime,
+  theme,
+  activeTranslation,
+}: {
+  anime: Anime;
+  theme: ThemePalette;
+  activeTranslation: SharedValue<number>;
+}) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const cardStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(activeTranslation.value) / STACK_REVEAL_DISTANCE, 1);
+    return {
+      opacity: interpolate(progress, [0, 1], [0.7, 1], Extrapolation.CLAMP),
+      transform: [
+        { scale: interpolate(progress, [0, 1], [0.94, 1], Extrapolation.CLAMP) },
+        { translateY: interpolate(progress, [0, 1], [14, 0], Extrapolation.CLAMP) },
+      ],
+    };
+  });
+
   return (
-    <View style={[styles.card, styles.backCard]} pointerEvents="none">
+    <Animated.View style={[styles.card, styles.backCard, cardStyle]} pointerEvents="none">
       <Image
         source={{ uri: anime.image }}
         style={styles.cardImage}
@@ -306,7 +464,7 @@ function BackCard({ anime, theme }: { anime: Anime; theme: ThemePalette }) {
         transition={120}
       />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.cardGradient} />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -350,9 +508,14 @@ const makeStyles = (theme: ThemePalette) =>
       shadowRadius: 18,
       elevation: 8,
     },
+    topCard: {
+      zIndex: 20,
+    },
+    outgoingCard: {
+      zIndex: 30,
+    },
     backCard: {
-      transform: [{ scale: 0.94 }, { translateY: 14 }],
-      opacity: 0.7,
+      zIndex: 10,
     },
     cardImage: {
       ...StyleSheet.absoluteFillObject,

@@ -1,13 +1,45 @@
-import {
-  DEFAULT_BANGUMI_PREFS,
-  type BangumiPreferences,
-} from '../../components/bangumi/BangumiSettingsSheet';
+import type { BangumiPreferences } from '../../components/bangumi/BangumiSettingsSheet';
 import { patchUserPrefs } from './user-prefs';
 import { kvGet, kvSet } from './storage/app-storage';
 import { BANGUMI_PREFS_STORAGE_KEY } from './storage/keys';
 import { Logger } from '../utils/logger';
 
 export { BANGUMI_PREFS_STORAGE_KEY };
+
+const DEFAULT_BANGUMI_PREFS: BangumiPreferences = {
+  viewMode: 'calendar',
+  baseViewMode: 'calendar',
+  filterMode: 'all',
+  typeFilter: 'all',
+  showUnknownDays: false,
+  notificationsEnabled: true,
+};
+
+function normalizeLoadedPrefs(
+  rest: Partial<BangumiPreferences>
+): BangumiPreferences {
+  const merged = { ...DEFAULT_BANGUMI_PREFS, ...rest };
+  // Migration: old blobs may not have `baseViewMode`. Seed it from the
+  // current viewMode if it's a base view; otherwise keep the default.
+  if (
+    rest.baseViewMode === undefined &&
+    (rest.viewMode === 'calendar' || rest.viewMode === 'list')
+  ) {
+    merged.baseViewMode = rest.viewMode;
+  }
+  // `cards` is a transient full-screen swipe mode. Persisting/restoring it
+  // makes the tab repeatedly reopen in swipe mode after a remount; start from
+  // the user's selected base mode instead.
+  if (merged.viewMode === 'cards') {
+    merged.viewMode = merged.baseViewMode;
+  }
+  return merged;
+}
+
+function normalizePrefsForStorage(prefs: BangumiPreferences): BangumiPreferences {
+  if (prefs.viewMode !== 'cards') return prefs;
+  return { ...prefs, viewMode: prefs.baseViewMode };
+}
 
 /**
  * Synchronous MMKV read. Safe for first-frame `useState` initialisers.
@@ -29,13 +61,7 @@ export function loadBangumiPrefsSync(): BangumiPreferences {
     // the async `loadBangumiPrefs` once for the side effect.
     const { showAdult: _ignored, ...rest } = parsed;
     void _ignored;
-    const merged = { ...DEFAULT_BANGUMI_PREFS, ...rest };
-    // Migration: old blobs may not have `baseViewMode`. Seed it from the
-    // current viewMode if it's a base view; otherwise keep the default.
-    if (rest.baseViewMode === undefined && (rest.viewMode === 'calendar' || rest.viewMode === 'list')) {
-      merged.baseViewMode = rest.viewMode;
-    }
-    return merged;
+    return normalizeLoadedPrefs(rest);
   } catch (err) {
     Logger.warn('[BangumiPrefs] load failed, using defaults', err);
     return DEFAULT_BANGUMI_PREFS;
@@ -55,11 +81,7 @@ export async function loadBangumiPrefs(): Promise<BangumiPreferences> {
       // Fire-and-forget: promote legacy `showAdult` into the unified pref.
       void patchUserPrefs({ allowAdultContent: true }).catch(() => {});
     }
-    const merged = { ...DEFAULT_BANGUMI_PREFS, ...rest };
-    if (rest.baseViewMode === undefined && (rest.viewMode === 'calendar' || rest.viewMode === 'list')) {
-      merged.baseViewMode = rest.viewMode;
-    }
-    return merged;
+    return normalizeLoadedPrefs(rest);
   } catch (err) {
     Logger.warn('[BangumiPrefs] load failed, using defaults', err);
     return DEFAULT_BANGUMI_PREFS;
@@ -68,7 +90,7 @@ export async function loadBangumiPrefs(): Promise<BangumiPreferences> {
 
 export async function saveBangumiPrefs(prefs: BangumiPreferences): Promise<void> {
   try {
-    kvSet(BANGUMI_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+    kvSet(BANGUMI_PREFS_STORAGE_KEY, JSON.stringify(normalizePrefsForStorage(prefs)));
   } catch (err) {
     Logger.warn('[BangumiPrefs] save failed', err);
   }
