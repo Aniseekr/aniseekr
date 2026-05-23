@@ -8,6 +8,7 @@ import { Radius, Spacing } from '../../../constants/DesignSystem';
 import {
   COUNTDOWN_SECONDS,
   RESOLUTION_TIERS,
+  SILENT_SHUTTER_HELP_TEXT,
   type CameraSettings,
   type CaptureMode,
   type CountdownSeconds,
@@ -161,7 +162,7 @@ export default function CameraSettingsSheet({
 
             <SwitchRow
               label="Silent shutter"
-              description="Mute the shutter sound"
+              description={SILENT_SHUTTER_HELP_TEXT}
               value={settings.mute}
               onValueChange={(v) => handleSwitch('mute', v)}
             />

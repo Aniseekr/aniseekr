@@ -33,6 +33,9 @@ export const COUNTDOWN_SECONDS: readonly CountdownSeconds[] = [0, 3, 5, 10] as c
 export const PICTURE_QUALITIES: readonly PictureQuality[] = ['standard', 'high', 'max'] as const;
 export const RESOLUTION_TIERS: readonly ResolutionTier[] = ['4k', '2k'] as const;
 
+export const SILENT_SHUTTER_HELP_TEXT =
+  'Mute where supported. iOS may still force shutter sound, especially in Japan/Korea or on devices that disallow suppression.';
+
 /**
  * EV stops used for the real exposure bracket. Pass through
  * `clampBracketEvStops` against the device's reported bias range before

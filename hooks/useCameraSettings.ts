@@ -15,6 +15,7 @@ export {
   DEFAULT_CAMERA_SETTINGS,
   PICTURE_QUALITIES,
   RESOLUTION_TIERS,
+  SILENT_SHUTTER_HELP_TEXT,
   qualityToNumber,
   qualityToPrioritization,
 } from '../libs/services/pilgrimage/camera-settings';

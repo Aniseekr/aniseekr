@@ -50,11 +50,7 @@ import {
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { useTheme } from '../../../context/ThemeContext';
-import {
-  pickResolvedPhotoDimensions,
-  resolveCapturedPhotoDimensions,
-  type PhotoDimensions,
-} from '../../../libs/services/pilgrimage/camera-engine-parity';
+import { persistPhotoForSkiaPipeline } from '../../../libs/services/pilgrimage/vision-camera-photo';
 import { useResolvedCameraDevice } from '../../../hooks/useResolvedCameraDevice';
 import type {
   CameraDeviceInfo,
@@ -77,13 +73,6 @@ const PHYSICAL_LENS_TYPES: ReadonlySet<EnginePhysicalLensType> = new Set([
 
 function isPhysicalLensType(value: DeviceType): value is EnginePhysicalLensType {
   return PHYSICAL_LENS_TYPES.has(value as EnginePhysicalLensType);
-}
-
-// VisionCamera reports the photo path without a scheme. The rest of the app
-// (Skia decode, expo-file-system, expo-image) expects a `file://` URI.
-function pathToFileUri(path: string): string {
-  if (path.startsWith(FILE_SCHEME) || path.startsWith('http')) return path;
-  return path.startsWith('/') ? `${FILE_SCHEME}${path}` : `${FILE_SCHEME}/${path}`;
 }
 
 function resolveTargetResolution(tier: ResolutionTier, aspect: AspectRatio) {
@@ -293,10 +282,8 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
       // safe to call directly because Camera is mounted with it.
       //
       // We use the in-memory `capturePhoto()` rather than `capturePhotoToFile()`
-      // because the returned `Photo` hybrid object carries `.width` / `.height`
-      // directly. The old path decoded the whole written JPEG through Skia just
-      // to read its dimensions — a full-image decode on EVERY capture, i.e.
-      // 6×/3× wasted decodes per burst/bracket.
+      // so the returned `Photo` can be converted through `toImageAsync()`,
+      // baking orientation/mirror metadata into pixels before Skia sees it.
       const photo = await photoOutput.capturePhoto(
         {
           flashMode: opts?.flashMode ?? 'off',
@@ -305,37 +292,19 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
         {}
       );
       try {
-        // `saveToTemporaryFileAsync` returns a raw filesystem path (no scheme);
-        // the rest of the app (Skia decode, expo-file-system, expo-image)
-        // expects a `file://` URI.
-        const savedPath = await photo.saveToTemporaryFileAsync();
-        const uri = pathToFileUri(savedPath);
-
-        // `Photo.width` / `.height` are the sensor-buffer pixel dimensions.
-        // `saveToTemporaryFileAsync` writes those buffer pixels plus an EXIF
-        // orientation flag — it does NOT physically rotate the pixels. Skia's
-        // `MakeImageFromEncoded` (used by the parity decode AND by every
-        // downstream consumer: subject-composite, frame-match) reads raw pixel
-        // dimensions and ignores the EXIF flag, so a Skia decode of the saved
-        // file yields exactly `Photo.width` / `.height`. The fast path is
-        // therefore consistent with the rest of the pipeline — no orientation
-        // swap is needed.
-        const fast: PhotoDimensions = { width: photo.width, height: photo.height };
-        const fastValid =
-          Number.isFinite(fast.width) &&
-          fast.width > 0 &&
-          Number.isFinite(fast.height) &&
-          fast.height > 0;
-        // Honest fallback (Rule 8): only if the Photo reported missing/zero
-        // dimensions do we pay for a one-off Skia decode of the saved file.
-        const dimensions = fastValid
-          ? pickResolvedPhotoDimensions({ decoded: fast, fallback: targetResolution })
-          : await resolveCapturedPhotoDimensions(uri, targetResolution);
+        // Convert to NitroImage before saving so VisionCamera applies
+        // `photo.orientation` / `photo.isMirrored` to the actual pixels. Skia
+        // ignores EXIF orientation, so saving the raw Photo would make portrait
+        // captures appear landscape in preview/composite paths.
+        const persisted = await persistPhotoForSkiaPipeline(photo, {
+          targetResolution,
+          quality,
+        });
 
         return {
-          uri,
-          width: dimensions.width,
-          height: dimensions.height,
+          uri: persisted.uri,
+          width: persisted.width,
+          height: persisted.height,
           lensType: captureLensTypeRef.current,
         };
       } finally {
@@ -344,7 +313,7 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
         photo.dispose();
       }
     },
-    [photoOutput, targetResolution]
+    [photoOutput, quality, targetResolution]
   );
 
   const focus = useCallback(async (point: { x: number; y: number }) => {
@@ -648,7 +617,7 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
                 torchMode={resolvedTorchMode}
                 mirrorMode={mirrorMode}
                 constraints={constraints}
-                orientationSource="interface"
+                orientationSource="device"
                 onStarted={handleStarted}
                 onError={handleMountError}
               />

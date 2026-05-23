@@ -5,6 +5,7 @@ import {
   CAMERA_SETTINGS_STORAGE_KEY,
   CAPTURE_MODES,
   DEFAULT_CAMERA_SETTINGS,
+  SILENT_SHUTTER_HELP_TEXT,
   clampBracketEvStops,
   loadCameraSettings,
   loadCameraSettingsSync,
@@ -32,6 +33,14 @@ describe('qualityToPrioritization', () => {
 describe('CAPTURE_MODES', () => {
   it('drops the retired "hdr" mode and ships "auto" instead', () => {
     expect([...CAPTURE_MODES]).toEqual(['single', 'burst', 'auto']);
+  });
+});
+
+describe('SILENT_SHUTTER_HELP_TEXT', () => {
+  it('does not promise mute on iOS regions or devices that force camera sound', () => {
+    expect(SILENT_SHUTTER_HELP_TEXT).toContain('iOS');
+    expect(SILENT_SHUTTER_HELP_TEXT).toContain('Japan');
+    expect(SILENT_SHUTTER_HELP_TEXT).toContain('Korea');
   });
 });
 

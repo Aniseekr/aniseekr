@@ -35,6 +35,12 @@ describe('camera feature parity', () => {
     expect(workletsPatch).toContain('React_Core/RCTMessageThread.h');
   });
 
+  it('drives photo orientation off the physical device so portrait shots stay portrait', async () => {
+    const stageSource = await Bun.file('components/pilgrimage/camera/CameraStage.tsx').text();
+    expect(stageSource).toContain('orientationSource="device"');
+    expect(stageSource).not.toContain('orientationSource="interface"');
+  });
+
   it('prefers the combined back-camera device so zoom pillars can switch physical lenses', () => {
     expect(preferredPhysicalDevicesForFacing('back')).toEqual([
       'ultra-wide-angle',
