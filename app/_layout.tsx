@@ -12,7 +12,7 @@ import { installPromiseRejectionFilter } from '../libs/services/setup/promise-re
 // component renders and emits its first setZoom.
 installPromiseRejectionFilter();
 import { useEffect, useRef, useState } from 'react';
-import { Stack, usePathname, useRouter } from 'expo-router';
+import { Stack, useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
 import { InteractionManager, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -30,16 +30,29 @@ import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
+import { resolveOnboardingGate } from '../libs/navigation/root-layout-navigation';
 
 export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  // Read the onboarding flag synchronously so the very first render of
-  // `_layout` already knows whether to gate tabs or push to `/onboarding`.
-  // Previously we awaited an async read, which on a fresh install always
-  // painted the tabs for one frame before flipping to the onboarding route.
-  const [onboardingChecked] = useState(true);
+  const navigationRef = useNavigationContainerRef();
+  const [rootNavigationReady, setRootNavigationReady] = useState(false);
+  // MMKV makes this preference available synchronously, but navigation side
+  // effects still need to wait until Expo Router's NavigationContainer is ready.
   const onboardingDoneRef = useRef(isOnboardingCompleteSync());
+  const onboardingGateRanRef = useRef(false);
+  const coldLaunchNotificationHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (navigationRef.isReady()) {
+      setRootNavigationReady(true);
+      return;
+    }
+    const unsubscribe = navigationRef.addListener('ready', () => {
+      setRootNavigationReady(true);
+    });
+    return unsubscribe;
+  }, [navigationRef]);
 
   useEffect(() => {
     // `dataSourceConfig` is already seeded synchronously from MMKV in its
@@ -97,6 +110,7 @@ export default function RootLayout() {
   // streaming platform. The unit test for routeForNotificationResponse
   // pins the routing contract; this effect only owns the side effect.
   useEffect(() => {
+    if (!rootNavigationReady) return;
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const target = routeForNotificationResponse(response);
       if (!target) return;
@@ -108,12 +122,14 @@ export default function RootLayout() {
       }
     });
     return () => sub.remove();
-  }, [router]);
+  }, [rootNavigationReady, router]);
 
   // Cold-launch case (separate effect with `[]` so it never re-fires when
   // `router` rebuilds — otherwise tapping a notification on cold launch
   // could double-route as the layout re-renders during bootstrap).
   useEffect(() => {
+    if (!rootNavigationReady || coldLaunchNotificationHandledRef.current) return;
+    coldLaunchNotificationHandledRef.current = true;
     void Notifications.getLastNotificationResponseAsync().then((response) => {
       if (!response) return;
       const target = routeForNotificationResponse(response);
@@ -124,21 +140,23 @@ export default function RootLayout() {
         console.warn('[Notifications] failed to route from cold launch', target, e);
       }
     });
-    // router is intentionally omitted — this runs once on mount.
+    // router is intentionally omitted — this runs once after root navigation is ready.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rootNavigationReady]);
 
   useEffect(() => {
-    if (!onboardingDoneRef.current && pathname !== '/onboarding') {
+    if (onboardingGateRanRef.current) return;
+    const gate = resolveOnboardingGate({
+      rootNavigationReady,
+      onboardingComplete: onboardingDoneRef.current,
+      pathname,
+    });
+    if (!gate.evaluated) return;
+    onboardingGateRanRef.current = true;
+    if (gate.redirectToOnboarding) {
       router.replace('/onboarding');
     }
-    // pathname intentionally excluded — we only gate once on bootstrap; later
-    // nav back to /onboarding (e.g. via dev reset) is handled by the user.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Avoid a flash of tabs before the gate decides where to send us.
-  void onboardingChecked;
+  }, [pathname, rootNavigationReady, router]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
