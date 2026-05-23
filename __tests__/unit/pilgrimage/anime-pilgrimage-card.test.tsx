@@ -7,9 +7,41 @@
 
 import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import * as Haptics from 'expo-haptics';
-import { AnimePilgrimageCard } from '../../../components/pilgrimage/AnimePilgrimageCard';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { findAll, getAllText, render } from './render-helpers';
+
+mock.module('../../../context/ThemeContext', () => ({
+  useTheme: () => ({
+    theme: {
+      accent: '#FF9900',
+      accentLight: '#FFB84D',
+      accentDark: '#CC7A00',
+      secondary: '#00BCD4',
+      background: {
+        primary: '#0A1929',
+        secondary: '#102033',
+        tertiary: '#172A44',
+      },
+      text: {
+        primary: '#FFFFFF',
+        secondary: '#D6DFEA',
+        tertiary: '#A7B4C4',
+      },
+      glassBorder: 'rgba(255,255,255,0.16)',
+      gradient: ['#0A1929', '#102033'],
+      status: {
+        success: '#32D74B',
+        warning: '#FFD60A',
+        error: '#FF453A',
+        info: '#64D2FF',
+      },
+    },
+  }),
+}));
+
+const { AnimePilgrimageCard } = await import(
+  '../../../components/pilgrimage/AnimePilgrimageCard'
+);
 
 const sampleAnime: AnitabiBangumi = {
   id: 7157,

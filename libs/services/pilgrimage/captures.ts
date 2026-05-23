@@ -1,29 +1,16 @@
 // Local index of pilgrimage spots the user has photographed.
-// Persists in AsyncStorage so SpotSheet / map markers can show a "shot taken"
+// Persists in MMKV so SpotSheet / map markers can show a "shot taken"
 // indicator without us re-scanning the camera roll.
+//
+// The parsed index is memoised against the raw MMKV string: repeated
+// listCaptures / getCapture calls reuse the parsed object instead of
+// re-running JSON.parse, and the cache self-invalidates whenever the stored
+// string changes (a save, or the one-time AsyncStorage → MMKV migration).
 
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-}
+import { kvGet, kvSet, migrateToMMKV } from '../storage/app-storage';
+import { CAPTURES_STORAGE_KEY } from '../storage/keys';
 
-let AsyncStorage: AsyncStorageLike;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
-} catch {
-  const memory = new Map<string, string>();
-  AsyncStorage = {
-    async getItem(key) {
-      return memory.get(key) ?? null;
-    },
-    async setItem(key, value) {
-      memory.set(key, value);
-    },
-  };
-}
-
-const STORAGE_KEY = '@aniseekr/pilgrimage/captures/v1';
+export { CAPTURES_STORAGE_KEY };
 
 export interface SensorSnapshot {
   /** meters to target spot at shutter time; null if location unavailable */
@@ -87,50 +74,71 @@ interface Index {
   spots: Record<string, PilgrimageCapture>;
 }
 
-const EMPTY: Index = { spots: {} };
+let cache: { raw: string | null; index: Index } | null = null;
 
-async function load(): Promise<Index> {
+function parseIndex(raw: string | null): Index {
+  if (!raw) return { spots: {} };
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<Index>;
     if (parsed && typeof parsed === 'object' && parsed.spots) {
       return { spots: parsed.spots };
     }
-    return EMPTY;
   } catch {
-    return EMPTY;
+    // fall through to empty
   }
+  return { spots: {} };
 }
 
-async function persist(idx: Index): Promise<void> {
+function loadSync(): Index {
+  const raw = kvGet(CAPTURES_STORAGE_KEY);
+  if (cache && cache.raw === raw) return cache.index;
+  const index = parseIndex(raw);
+  cache = { raw, index };
+  return index;
+}
+
+function persist(idx: Index): void {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(idx));
+    const raw = JSON.stringify(idx);
+    kvSet(CAPTURES_STORAGE_KEY, raw);
+    cache = { raw, index: idx };
   } catch {
     // best-effort; ignore
   }
 }
 
+/** Synchronous read of every recorded capture — safe for first-frame seeding. */
+export function loadCapturesSync(): Record<string, PilgrimageCapture> {
+  return loadSync().spots;
+}
+
 export async function recordCapture(capture: PilgrimageCapture): Promise<void> {
-  const idx = await load();
-  idx.spots[capture.spotId] = capture;
-  await persist(idx);
+  await migrateToMMKV();
+  const idx = loadSync();
+  const next: Index = { spots: { ...idx.spots, [capture.spotId]: capture } };
+  persist(next);
 }
 
 export async function listCaptures(): Promise<Record<string, PilgrimageCapture>> {
-  const idx = await load();
-  return idx.spots;
+  await migrateToMMKV();
+  return loadSync().spots;
 }
 
 export async function getCapture(spotId: string): Promise<PilgrimageCapture | null> {
-  const idx = await load();
-  return idx.spots[spotId] ?? null;
+  await migrateToMMKV();
+  return loadSync().spots[spotId] ?? null;
 }
 
 export async function clearCapture(spotId: string): Promise<void> {
-  const idx = await load();
-  if (idx.spots[spotId]) {
-    delete idx.spots[spotId];
-    await persist(idx);
-  }
+  await migrateToMMKV();
+  const idx = loadSync();
+  if (!idx.spots[spotId]) return;
+  const nextSpots = { ...idx.spots };
+  delete nextSpots[spotId];
+  persist({ spots: nextSpots });
+}
+
+/** Test-only — drop the memoised index. */
+export function __resetCapturesCacheForTests(): void {
+  cache = null;
 }

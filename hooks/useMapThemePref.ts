@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { isMigrated } from '../libs/services/storage/app-storage';
 import {
-  DEFAULT_MAP_THEME,
   loadMapThemePref,
+  loadMapThemePrefSync,
   setMapThemePref,
   subscribeMapThemePref,
   type MapThemePref,
@@ -10,29 +11,44 @@ import {
 /**
  * React hook for the pilgrimage map theme override.
  *
- * Loads the persisted pref on mount and re-renders when any other surface
- * (the appearance settings screen, another mounted map) changes it via
- * `setMapThemePref`. Returning the setter directly from the hook keeps the
- * call site terse: `const [mapTheme, setMapTheme] = useMapThemePref();`.
+ * The persisted pref is read synchronously from MMKV to seed initial state, so
+ * a map screen can push the correct tile theme into its WebView on the first
+ * frame. It re-renders when any other surface (the appearance settings screen,
+ * another mounted map) changes it via `setMapThemePref`.
  *
- * `hydrated` flips true on first load — map screens use it to skip pushing
- * a stale default into the WebView while the real value is still loading.
+ * `hydrated` is true immediately on a warm launch (the seed is authoritative);
+ * it only starts false on the single launch after the AsyncStorage → MMKV
+ * migration, flipping true once the migrated value has been applied.
  */
 export function useMapThemePref(): {
   pref: MapThemePref;
   hydrated: boolean;
   setPref: (next: MapThemePref) => Promise<void>;
 } {
-  const [pref, setPref] = useState<MapThemePref>(DEFAULT_MAP_THEME);
-  const [hydrated, setHydrated] = useState(false);
+  const [bootstrap] = useState(() => ({
+    pref: loadMapThemePrefSync(),
+    migrated: isMigrated(),
+  }));
+  const [pref, setPref] = useState<MapThemePref>(bootstrap.pref);
+  const [hydrated, setHydrated] = useState(bootstrap.migrated);
 
   useEffect(() => {
     let mounted = true;
-    void loadMapThemePref().then((p) => {
-      if (!mounted) return;
-      setPref(p);
-      setHydrated(true);
-    });
+    // Warm launches are already correct from the synchronous seed; only the
+    // post-migration launch needs the async reconcile. If migration finished
+    // between the initializer and this effect, re-read once and mark hydrated.
+    if (isMigrated()) {
+      if (!bootstrap.migrated) {
+        setPref(loadMapThemePrefSync());
+        setHydrated(true);
+      }
+    } else {
+      void loadMapThemePref().then((p) => {
+        if (!mounted) return;
+        setPref(p);
+        setHydrated(true);
+      });
+    }
     const unsub = subscribeMapThemePref((next) => {
       if (!mounted) return;
       setPref(next);

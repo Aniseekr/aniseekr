@@ -1,15 +1,16 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { appStorage, __resetAppStorageForTests } from '../../../libs/services/storage/app-storage';
 
 import {
-  SPOT_INTENTS_STORAGE_KEY,
   loadSpotIntents,
+  loadSpotIntentsSync,
   saveSpotIntents,
   toggleSpotIntent,
 } from '../../../libs/services/pilgrimage/spot-intents';
 
-beforeEach(async () => {
-  await AsyncStorage.removeItem?.(SPOT_INTENTS_STORAGE_KEY);
+beforeEach(() => {
+  appStorage.clearAll();
+  __resetAppStorageForTests();
 });
 
 describe('pilgrimage spot intents', () => {
@@ -23,6 +24,12 @@ describe('pilgrimage spot intents', () => {
       a: { saved: true, planned: true },
       b: { planned: true },
     });
+  });
+
+  it('exposes the latest save through the synchronous read', async () => {
+    expect(loadSpotIntentsSync()).toEqual({});
+    await saveSpotIntents({ a: { saved: true } });
+    expect(loadSpotIntentsSync()).toEqual({ a: { saved: true } });
   });
 
   it('toggles one flag without removing the other flag', async () => {

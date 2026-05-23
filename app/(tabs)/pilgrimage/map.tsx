@@ -81,9 +81,10 @@ import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilg
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   loadVisitedSpots,
+  loadVisitedSpotsSync,
   type VisitedMap,
 } from '../../../libs/services/pilgrimage/visited-prefs';
-import { listCaptures } from '../../../libs/services/pilgrimage/captures';
+import { listCaptures, loadCapturesSync } from '../../../libs/services/pilgrimage/captures';
 import {
   appendIndexedEntries,
   buildKnownAnimeIdSet,
@@ -566,8 +567,13 @@ export default function PilgrimageMapScreen() {
   const userLocationRef = useRef<LatLng | null>(null);
   const [userHeading, setUserHeading] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [visited, setVisited] = useState<VisitedMap>({});
-  const [captureCount, setCaptureCount] = useState(0);
+  // Seed synchronously from MMKV so visited markers + the capture count are
+  // correct on the first frame; the effects below still reconcile after the
+  // one-time migration.
+  const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
+  const [captureCount, setCaptureCount] = useState(
+    () => Object.keys(loadCapturesSync()).length
+  );
 
   // Lazy-loaded entries from the offline index, keyed by bangumi id and
   // additive only (we never remove — the WebView dedups by id so duplicates

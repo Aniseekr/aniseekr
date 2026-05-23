@@ -1,32 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-}
+import { isMigrated, kvGet, kvSet, migrateToMMKV } from '../libs/services/storage/app-storage';
+import {
+  THEME_CUSTOM_ACCENT_KEY,
+  THEME_ID_KEY,
+  THEME_INCREASE_CONTRAST_KEY,
+  THEME_MODE_KEY,
+  THEME_RECENT_ACCENTS_KEY,
+  THEME_TINT_INTENSITY_KEY,
+} from '../libs/services/storage/keys';
 
-let AsyncStorage: AsyncStorageLike;
-try {
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
-} catch {
-  const memory = new Map<string, string>();
-  AsyncStorage = {
-    async getItem(key: string) {
-      return memory.get(key) ?? null;
-    },
-    async setItem(key: string, value: string) {
-      memory.set(key, value);
-    },
-  };
-}
-
-const STORAGE_KEY = '@aniseekr/theme';
-const CUSTOM_ACCENT_KEY = '@aniseekr/customAccent';
-const RECENT_ACCENTS_KEY = '@aniseekr/recentAccents';
-const THEME_MODE_KEY = '@aniseekr/themeMode';
-const TINT_INTENSITY_KEY = '@aniseekr/tintIntensity';
-const INCREASE_CONTRAST_KEY = '@aniseekr/increaseContrast';
 const MAX_RECENT_ACCENTS = 6;
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
@@ -411,62 +395,128 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+interface StoredTheme {
+  themeId: ThemeId;
+  customAccent: string | null;
+  recentAccents: string[];
+  themeMode: ThemeMode;
+  tintIntensity: TintIntensity;
+  increaseContrast: boolean;
+}
+
+/**
+ * Synchronously read the persisted theme from MMKV. Used to seed the provider
+ * state on the first frame so the app paints in the user's theme immediately —
+ * no flash of the default palette while an async read resolves.
+ */
+function readStoredTheme(): StoredTheme {
+  const result: StoredTheme = {
+    themeId: 'aniseeker',
+    customAccent: null,
+    recentAccents: [],
+    themeMode: 'dark',
+    tintIntensity: 'balanced',
+    increaseContrast: false,
+  };
+  try {
+    const storedTheme = kvGet(THEME_ID_KEY);
+    if (storedTheme && storedTheme in THEMES) result.themeId = storedTheme as ThemeId;
+
+    const storedAccent = kvGet(THEME_CUSTOM_ACCENT_KEY);
+    if (storedAccent) {
+      const norm = normalizeHex(storedAccent);
+      if (norm) result.customAccent = norm;
+    }
+
+    const storedRecent = kvGet(THEME_RECENT_ACCENTS_KEY);
+    if (storedRecent) {
+      try {
+        const parsed = JSON.parse(storedRecent) as unknown;
+        if (Array.isArray(parsed)) {
+          result.recentAccents = parsed
+            .map((v) => (typeof v === 'string' ? normalizeHex(v) : null))
+            .filter((v): v is string => !!v)
+            .slice(0, MAX_RECENT_ACCENTS);
+        }
+      } catch {
+        // ignore corrupt JSON
+      }
+    }
+
+    const storedMode = kvGet(THEME_MODE_KEY);
+    if (storedMode === 'light' || storedMode === 'dark' || storedMode === 'auto') {
+      result.themeMode = storedMode;
+    }
+
+    const storedTint = kvGet(THEME_TINT_INTENSITY_KEY);
+    if (storedTint === 'subtle' || storedTint === 'balanced' || storedTint === 'vivid') {
+      result.tintIntensity = storedTint;
+    }
+
+    const storedContrast = kvGet(THEME_INCREASE_CONTRAST_KEY);
+    if (storedContrast === 'true' || storedContrast === 'false') {
+      result.increaseContrast = storedContrast === 'true';
+    }
+  } catch {
+    // ignore — fall back to defaults
+  }
+  return result;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeId, setThemeId] = useState<ThemeId>('aniseeker');
-  const [customAccent, setCustomAccentState] = useState<string | null>(null);
-  const [recentAccents, setRecentAccentsState] = useState<string[]>([]);
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
-  const [tintIntensity, setTintIntensityState] = useState<TintIntensity>('balanced');
-  const [increaseContrast, setIncreaseContrastState] = useState<boolean>(false);
-  const [hydrated, setHydrated] = useState(false);
+  // Seed synchronously from MMKV so the very first paint is in the user's
+  // theme. On a warm launch this is the real persisted value; only the single
+  // launch right after the AsyncStorage → MMKV migration starts from defaults.
+  const [bootstrap] = useState(() => ({
+    stored: readStoredTheme(),
+    migrated: isMigrated(),
+  }));
+  const [themeId, setThemeId] = useState<ThemeId>(bootstrap.stored.themeId);
+  const [customAccent, setCustomAccentState] = useState<string | null>(
+    bootstrap.stored.customAccent
+  );
+  const [recentAccents, setRecentAccentsState] = useState<string[]>(
+    bootstrap.stored.recentAccents
+  );
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(bootstrap.stored.themeMode);
+  const [tintIntensity, setTintIntensityState] = useState<TintIntensity>(
+    bootstrap.stored.tintIntensity
+  );
+  const [increaseContrast, setIncreaseContrastState] = useState<boolean>(
+    bootstrap.stored.increaseContrast
+  );
+  const [hydrated, setHydrated] = useState(bootstrap.migrated);
   const systemScheme = useColorScheme();
 
+  // Migration-launch reconcile: a warm launch already has the real values from
+  // the synchronous seed, so the effect is a no-op there. Only the first launch
+  // after updating runs the AsyncStorage → MMKV copy, then re-applies the
+  // migrated values once.
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      AsyncStorage.getItem(STORAGE_KEY),
-      AsyncStorage.getItem(CUSTOM_ACCENT_KEY),
-      AsyncStorage.getItem(RECENT_ACCENTS_KEY),
-      AsyncStorage.getItem(THEME_MODE_KEY),
-      AsyncStorage.getItem(TINT_INTENSITY_KEY),
-      AsyncStorage.getItem(INCREASE_CONTRAST_KEY),
-    ])
-      .then(([storedTheme, storedAccent, storedRecent, storedMode, storedTint, storedContrast]) => {
-        if (!mounted) return;
-        if (storedTheme && storedTheme in THEMES) setThemeId(storedTheme as ThemeId);
-        if (storedAccent) {
-          const norm = normalizeHex(storedAccent);
-          if (norm) setCustomAccentState(norm);
-        }
-        if (storedRecent) {
-          try {
-            const parsed = JSON.parse(storedRecent) as unknown;
-            if (Array.isArray(parsed)) {
-              const cleaned = parsed
-                .map((v) => (typeof v === 'string' ? normalizeHex(v) : null))
-                .filter((v): v is string => !!v)
-                .slice(0, MAX_RECENT_ACCENTS);
-              setRecentAccentsState(cleaned);
-            }
-          } catch {
-            // ignore corrupt JSON
-          }
-        }
-        if (storedMode === 'light' || storedMode === 'dark' || storedMode === 'auto') {
-          setThemeModeState(storedMode);
-        }
-        if (storedTint === 'subtle' || storedTint === 'balanced' || storedTint === 'vivid') {
-          setTintIntensityState(storedTint);
-        }
-        if (storedContrast === 'true' || storedContrast === 'false') {
-          setIncreaseContrastState(storedContrast === 'true');
-        }
-      })
-      .catch(() => {
-        // ignore — fall back to default
-      })
+    const applyStoredTheme = () => {
+      if (!mounted) return;
+      const stored = readStoredTheme();
+      setThemeId(stored.themeId);
+      setCustomAccentState(stored.customAccent);
+      setRecentAccentsState(stored.recentAccents);
+      setThemeModeState(stored.themeMode);
+      setTintIntensityState(stored.tintIntensity);
+      setIncreaseContrastState(stored.increaseContrast);
+      setHydrated(true);
+    };
+
+    if (isMigrated()) {
+      if (!bootstrap.migrated) applyStoredTheme();
+      return () => {
+        mounted = false;
+      };
+    }
+
+    migrateToMMKV()
+      .catch(() => undefined)
       .finally(() => {
-        if (mounted) setHydrated(true);
+        applyStoredTheme();
       });
     return () => {
       mounted = false;
@@ -481,10 +531,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // otherwise the theme card swatch and the live accent get out of sync.
     setCustomAccentState(null);
     try {
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEY, id),
-        AsyncStorage.setItem(CUSTOM_ACCENT_KEY, ''),
-      ]);
+      kvSet(THEME_ID_KEY, id);
+      kvSet(THEME_CUSTOM_ACCENT_KEY, '');
     } catch {
       // best-effort persistence; in-memory fallback already updated
     }
@@ -494,7 +542,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (hex === null) {
       setCustomAccentState(null);
       try {
-        await AsyncStorage.setItem(CUSTOM_ACCENT_KEY, '');
+        kvSet(THEME_CUSTOM_ACCENT_KEY, '');
       } catch {
         // best-effort
       }
@@ -512,8 +560,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return nextRecent;
     });
     try {
-      await AsyncStorage.setItem(CUSTOM_ACCENT_KEY, normalized);
-      await AsyncStorage.setItem(RECENT_ACCENTS_KEY, JSON.stringify(nextRecent));
+      kvSet(THEME_CUSTOM_ACCENT_KEY, normalized);
+      kvSet(THEME_RECENT_ACCENTS_KEY, JSON.stringify(nextRecent));
     } catch {
       // best-effort
     }
@@ -522,7 +570,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setThemeMode = useCallback(async (mode: ThemeMode) => {
     setThemeModeState(mode);
     try {
-      await AsyncStorage.setItem(THEME_MODE_KEY, mode);
+      kvSet(THEME_MODE_KEY, mode);
     } catch {
       // best-effort
     }
@@ -531,7 +579,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTintIntensity = useCallback(async (t: TintIntensity) => {
     setTintIntensityState(t);
     try {
-      await AsyncStorage.setItem(TINT_INTENSITY_KEY, t);
+      kvSet(THEME_TINT_INTENSITY_KEY, t);
     } catch {
       // best-effort
     }
@@ -540,7 +588,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setIncreaseContrast = useCallback(async (v: boolean) => {
     setIncreaseContrastState(v);
     try {
-      await AsyncStorage.setItem(INCREASE_CONTRAST_KEY, v ? 'true' : 'false');
+      kvSet(THEME_INCREASE_CONTRAST_KEY, v ? 'true' : 'false');
     } catch {
       // best-effort
     }

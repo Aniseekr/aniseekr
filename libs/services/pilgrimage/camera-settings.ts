@@ -5,18 +5,19 @@
 // theme pref — so the camera screen can read/write without dragging unrelated
 // preference shapes into its render path. Defensive against corrupted JSON:
 // any missing or malformed field falls back to its default value.
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { kvGet, kvSet, migrateToMMKV } from '../storage/app-storage';
+import { CAMERA_SETTINGS_STORAGE_KEY } from '../storage/keys';
 import { Logger } from '../../utils/logger';
 import { isObject, safeJsonParse } from '../../utils/safe-json';
 import type { OverlayMode } from '../../../components/pilgrimage/camera/types';
 import type { EdgeIntensity } from './edge-overlay';
 import type { SubjectFocus } from './subject-overlay';
 
-// v4 reshapes the settings around VisionCamera's capture model: `skipProcessing`
-// is gone (VisionCamera has no equivalent), and `quality` now maps to a
-// QualityPrioritization (speed/balanced/quality) plus a numeric weight passed
-// to the photo output.
-export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
+// The storage key carries a `:v4` suffix: v4 reshaped the settings around
+// VisionCamera's capture model — `skipProcessing` is gone (VisionCamera has no
+// equivalent), and `quality` now maps to a QualityPrioritization
+// (speed/balanced/quality) plus a numeric weight passed to the photo output.
+export { CAMERA_SETTINGS_STORAGE_KEY };
 
 // User-facing capture modes. 'hdr' was retired when we replaced the fake
 // usePseudoHDR with a real exposure bracket + scene-aware 'auto' mode. Persisted
@@ -207,10 +208,10 @@ function pickValidSettings(value: Record<string, unknown>): Partial<CameraSettin
   return out;
 }
 
-export async function loadCameraSettings(): Promise<CameraSettings> {
+/** Synchronous read — safe to seed `useState` with on the camera launch path. */
+export function loadCameraSettingsSync(): CameraSettings {
   try {
-    const raw = await AsyncStorage.getItem(CAMERA_SETTINGS_STORAGE_KEY);
-    const parsed = safeJsonParse(raw, isObject);
+    const parsed = safeJsonParse(kvGet(CAMERA_SETTINGS_STORAGE_KEY), isObject);
     if (!parsed) return { ...DEFAULT_CAMERA_SETTINGS };
     return { ...DEFAULT_CAMERA_SETTINGS, ...pickValidSettings(parsed) };
   } catch (err) {
@@ -219,9 +220,15 @@ export async function loadCameraSettings(): Promise<CameraSettings> {
   }
 }
 
+/** Async read that first ensures the one-time AsyncStorage → MMKV migration. */
+export async function loadCameraSettings(): Promise<CameraSettings> {
+  await migrateToMMKV();
+  return loadCameraSettingsSync();
+}
+
 export async function saveCameraSettings(settings: CameraSettings): Promise<void> {
   try {
-    await AsyncStorage.setItem(CAMERA_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    kvSet(CAMERA_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (err) {
     Logger.warn('[CameraSettings] save failed', err);
   }

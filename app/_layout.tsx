@@ -27,6 +27,7 @@ import { authService } from '../libs/services/auth/auth-service';
 import { isOnboardingComplete } from '../libs/services/onboarding-service';
 import { dataSourceConfig } from '../libs/services/data-source-config';
 import { loadUserPrefs } from '../libs/services/user-prefs';
+import { migrateToMMKV } from '../libs/services/storage/app-storage';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
 import { CacheManager } from '../libs/services/cache/cache-manager';
@@ -38,6 +39,11 @@ export default function RootLayout() {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
+    // One-time AsyncStorage → MMKV migration. Kicked off first so the pref
+    // modules' async reconcile paths see migrated data. Idempotent — every
+    // other migrateToMMKV() caller shares this same in-flight promise.
+    void migrateToMMKV();
+
     // Critical-path: data fetches anywhere in the tree depend on this resolving,
     // so we kick it off immediately (still async — doesn't block the first paint).
     void dataSourceConfig.init().then(() => loadUserPrefs());

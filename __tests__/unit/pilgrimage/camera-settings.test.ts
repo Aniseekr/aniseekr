@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { beforeEach, describe, expect, it } from 'bun:test';
+import { appStorage, __resetAppStorageForTests } from '../../../libs/services/storage/app-storage';
 import {
   BRACKET_EV_STOPS,
   CAMERA_SETTINGS_STORAGE_KEY,
@@ -7,6 +7,7 @@ import {
   DEFAULT_CAMERA_SETTINGS,
   clampBracketEvStops,
   loadCameraSettings,
+  loadCameraSettingsSync,
   qualityToNumber,
   qualityToPrioritization,
   saveCameraSettings,
@@ -60,15 +61,13 @@ describe('clampBracketEvStops', () => {
 });
 
 describe('loadCameraSettings — v4 → auto migration', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
-  });
-  afterEach(async () => {
-    await AsyncStorage.clear();
+  beforeEach(() => {
+    appStorage.clearAll();
+    __resetAppStorageForTests();
   });
 
   it('migrates a persisted captureMode === "hdr" to "auto" without resetting other prefs', async () => {
-    await AsyncStorage.setItem(
+    appStorage.set(
       CAMERA_SETTINGS_STORAGE_KEY,
       JSON.stringify({
         ...DEFAULT_CAMERA_SETTINGS,
@@ -86,7 +85,7 @@ describe('loadCameraSettings — v4 → auto migration', () => {
 
   it('passes through "single" / "burst" / "auto" without change', async () => {
     for (const mode of ['single', 'burst', 'auto'] as const) {
-      await AsyncStorage.setItem(
+      appStorage.set(
         CAMERA_SETTINGS_STORAGE_KEY,
         JSON.stringify({ ...DEFAULT_CAMERA_SETTINGS, captureMode: mode })
       );
@@ -96,7 +95,7 @@ describe('loadCameraSettings — v4 → auto migration', () => {
   });
 
   it('falls back to the default mode when the persisted value is unrecognised garbage', async () => {
-    await AsyncStorage.setItem(
+    appStorage.set(
       CAMERA_SETTINGS_STORAGE_KEY,
       JSON.stringify({ ...DEFAULT_CAMERA_SETTINGS, captureMode: 'lasers' })
     );
@@ -108,5 +107,10 @@ describe('loadCameraSettings — v4 → auto migration', () => {
     await saveCameraSettings({ ...DEFAULT_CAMERA_SETTINGS, captureMode: 'auto' });
     const loaded = await loadCameraSettings();
     expect(loaded.captureMode).toBe('auto');
+  });
+
+  it('exposes the persisted settings through the synchronous read', async () => {
+    await saveCameraSettings({ ...DEFAULT_CAMERA_SETTINGS, mute: true });
+    expect(loadCameraSettingsSync().mute).toBe(true);
   });
 });

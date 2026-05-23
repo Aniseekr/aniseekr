@@ -8,19 +8,15 @@ import {
   normalizeStreamingPrefs,
 } from '../../libs/services/user-prefs';
 
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  clear(): Promise<void>;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const AsyncStorage = require('@react-native-async-storage/async-storage')
-  .default as AsyncStorageLike;
+import {
+  appStorage,
+  __resetAppStorageForTests,
+} from '../../libs/services/storage/app-storage';
 
 describe('UserPrefs: streaming platform preferences', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
+  beforeEach(() => {
+    appStorage.clearAll();
+    __resetAppStorageForTests();
   });
 
   it('SP-PREFS-001 defaults are sensible: empty enabled list, no primary, deep link allowed', () => {
@@ -97,7 +93,7 @@ describe('UserPrefs: streaming platform preferences', () => {
 
   it('SP-PREFS-008 legacy prefs JSON without streamingPlatforms migrates cleanly', async () => {
     // Simulate an older app version that wrote prefs without the new field.
-    await AsyncStorage.setItem(
+    appStorage.set(
       USER_PREFS_STORAGE_KEY,
       JSON.stringify({
         cardHeightPercent: 90,

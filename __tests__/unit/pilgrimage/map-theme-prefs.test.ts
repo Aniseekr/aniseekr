@@ -4,26 +4,23 @@
 // - resolveMapMode must collapse the user pref + global mode into the binary
 //   the tile picker expects, and 'auto' must defer to the global mode.
 // - Subscribers must fire on set so the 3 map screens repaint live.
+// - The synchronous read must reflect the latest persisted value so map
+//   screens can seed state on the first frame.
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
+import { appStorage, __resetAppStorageForTests } from '../../../libs/services/storage/app-storage';
 import {
   DEFAULT_MAP_THEME,
-  MAP_THEME_STORAGE_KEY,
-  __resetMapThemePrefCacheForTests,
   loadMapThemePref,
+  loadMapThemePrefSync,
   resolveMapMode,
   setMapThemePref,
   subscribeMapThemePref,
 } from '../../../libs/services/pilgrimage/map-theme-prefs';
 
-beforeEach(async () => {
-  __resetMapThemePrefCacheForTests();
-  await AsyncStorage.removeItem?.(MAP_THEME_STORAGE_KEY);
-});
-
-afterEach(() => {
-  __resetMapThemePrefCacheForTests();
+beforeEach(() => {
+  appStorage.clearAll();
+  __resetAppStorageForTests();
 });
 
 describe('DEFAULT_MAP_THEME', () => {
@@ -51,12 +48,17 @@ describe('resolveMapMode', () => {
 describe('loadMapThemePref / setMapThemePref', () => {
   it('persists the latest set value across loads', async () => {
     await setMapThemePref('dark');
-    __resetMapThemePrefCacheForTests();
     expect(await loadMapThemePref()).toBe('dark');
   });
 
   it('falls back to default when storage is empty', async () => {
     expect(await loadMapThemePref()).toBe(DEFAULT_MAP_THEME);
+  });
+
+  it('exposes the persisted value through the synchronous read', async () => {
+    expect(loadMapThemePrefSync()).toBe(DEFAULT_MAP_THEME);
+    await setMapThemePref('dark');
+    expect(loadMapThemePrefSync()).toBe('dark');
   });
 });
 

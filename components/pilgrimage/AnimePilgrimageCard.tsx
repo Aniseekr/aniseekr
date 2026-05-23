@@ -3,7 +3,6 @@
 // useTheme(); the per-anime brand colour (anime.color) still drives the
 // region badge, gradient tint and distance badge.
 
-import { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -30,6 +29,16 @@ export interface AnimePilgrimageCardProps {
   onPress?: (anime: AnitabiBangumi) => void;
 }
 
+const styleCache = new WeakMap<ThemePalette, ReturnType<typeof makeStyles>>();
+
+function getStyles(theme: ThemePalette): ReturnType<typeof makeStyles> {
+  const cached = styleCache.get(theme);
+  if (cached) return cached;
+  const styles = makeStyles(theme);
+  styleCache.set(theme, styles);
+  return styles;
+}
+
 export function AnimePilgrimageCard({
   anime,
   distance,
@@ -38,7 +47,7 @@ export function AnimePilgrimageCard({
   onPress,
 }: AnimePilgrimageCardProps) {
   const { theme } = useTheme();
-  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const styles = getStyles(theme);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

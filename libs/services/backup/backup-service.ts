@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { Logger } from '../../utils/logger';
+import { kvGet, kvRemove, kvSet, migrateToMMKV } from '../storage/app-storage';
 
 import {
   BACKUP_APP_ID,
@@ -388,17 +389,33 @@ async function writeFolderItem(
   );
 }
 
+// MMKV-backed adapter for the BackupService's storage dependency. The three
+// backed-up preference keys (user prefs, collection sort mode, bangumi prefs)
+// moved from AsyncStorage to MMKV, so backup/restore must read and write the
+// same store the pref modules now use — otherwise a snapshot would capture
+// stale or empty prefs. `getItem` waits out the one-time migration so a backup
+// taken very early in a session still sees the user's real values.
+const mmkvBackupStorage: BackupAsyncStorage = {
+  getItem: async (key) => {
+    await migrateToMMKV();
+    return kvGet(key);
+  },
+  setItem: async (key, value) => {
+    kvSet(key, value);
+  },
+  removeItem: async (key) => {
+    kvRemove(key);
+  },
+};
+
 // Default-construct a BackupService using the production dependencies. Imported
 // lazily so test files can avoid dragging in expo-sqlite when they only need
 // the BackupService class.
 export function createDefaultBackupService(): BackupService {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { LocalDB } = require('../../db') as typeof import('../../db');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const AsyncStorage = require('@react-native-async-storage/async-storage')
-    .default as BackupAsyncStorage;
   return new BackupService({
     getDb: () => LocalDB.getDatabase(),
-    getStorage: () => AsyncStorage,
+    getStorage: () => mmkvBackupStorage,
   });
 }

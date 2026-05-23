@@ -11,30 +11,10 @@ import {
   type StreamingPlatformId,
 } from './streaming/streaming-platforms';
 
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem?(key: string): Promise<void>;
-}
+import { kvGet, kvSet, migrateToMMKV } from './storage/app-storage';
+import { USER_PREFS_STORAGE_KEY } from './storage/keys';
 
-let AsyncStorage: AsyncStorageLike;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
-} catch {
-  const memoryStorage = new Map<string, string>();
-  AsyncStorage = {
-    getItem: async (k: string) => memoryStorage.get(k) ?? null,
-    setItem: async (k: string, v: string) => {
-      memoryStorage.set(k, v);
-    },
-    removeItem: async (k: string) => {
-      memoryStorage.delete(k);
-    },
-  };
-}
-
-export const USER_PREFS_STORAGE_KEY = 'aniseekr.user.prefs.v1';
+export { USER_PREFS_STORAGE_KEY };
 
 export type SwipeMode = 'plan' | 'like';
 export type SwipeContentMode = 'fill' | 'fit';
@@ -151,7 +131,8 @@ export function normalizeStreamingPrefs(input: unknown): StreamingPrefs {
 
 export async function loadUserPrefs(): Promise<UserPrefs> {
   try {
-    const raw = await AsyncStorage.getItem(USER_PREFS_STORAGE_KEY);
+    await migrateToMMKV();
+    const raw = kvGet(USER_PREFS_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_USER_PREFS };
     const parsed = JSON.parse(raw) as Partial<UserPrefs>;
     if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_USER_PREFS };
@@ -178,7 +159,7 @@ export async function loadUserPrefs(): Promise<UserPrefs> {
 
 export async function saveUserPrefs(prefs: UserPrefs): Promise<void> {
   try {
-    await AsyncStorage.setItem(USER_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+    kvSet(USER_PREFS_STORAGE_KEY, JSON.stringify(prefs));
     await syncAdultFlag(prefs.allowAdultContent);
   } catch (err) {
     Logger.warn('[UserPrefs] save failed', err);

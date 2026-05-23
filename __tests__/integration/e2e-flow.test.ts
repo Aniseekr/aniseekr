@@ -76,7 +76,7 @@ suite('AnimeRepository E2E', () => {
     expect(Array.isArray(aniListItems)).toBe(true);
 
     // Verify the AniList key landed in disk cache.
-    const aniKey = 'seasonal_anilist_2024_WINTER_1';
+    const aniKey = 'seasonal_anilist_2024_WINTER_1_r0';
     const cachedAniList = await CacheService.get(aniKey);
     // Empty seasonal results don't get cached — accept either populated
     // (typical) or null (anitabi-style empty for very stale season).
@@ -90,7 +90,7 @@ suite('AnimeRepository E2E', () => {
     expect(Array.isArray(malItems)).toBe(true);
 
     // The MAL cache key must NOT collide with AniList's.
-    const malKey = 'seasonal_myanimelist_2024_WINTER_1';
+    const malKey = 'seasonal_myanimelist_2024_WINTER_1_r0';
     expect(malKey).not.toBe(aniKey);
     // And both can co-exist (the old AniList entry is still queryable).
     if (malItems.length > 0) {

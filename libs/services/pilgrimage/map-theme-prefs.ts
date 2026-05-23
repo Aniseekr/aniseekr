@@ -10,12 +10,14 @@
 // all subscribe to changes here so toggling the pref repaints in place — no
 // WebView remount, no lost camera state, no tile-cache miss.
 //
-// Storage is its own AsyncStorage key (not folded into UserPrefs) so this
-// module is self-contained and the maps don't need to depend on broader prefs.
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Storage: a single MMKV key (see app-storage). The synchronous read lets the
+// map screens push the correct tile theme into the WebView on the first frame
+// instead of flashing the default and re-injecting after an async resolve.
+import { kvGet, kvSet, migrateToMMKV } from '../storage/app-storage';
+import { MAP_THEME_STORAGE_KEY } from '../storage/keys';
 import { Logger } from '../../utils/logger';
 
-export const MAP_THEME_STORAGE_KEY = 'aniseekr.pilgrimage.mapTheme.v1';
+export { MAP_THEME_STORAGE_KEY };
 
 /**
  * User-facing pilgrimage map theme override.
@@ -44,32 +46,38 @@ export function resolveMapMode(
 
 type Subscriber = (next: MapThemePref) => void;
 const subscribers = new Set<Subscriber>();
-let cachedPref: MapThemePref | null = null;
 
 function isMapThemePref(value: unknown): value is MapThemePref {
   return value === 'light' || value === 'dark' || value === 'auto';
 }
 
-export async function loadMapThemePref(): Promise<MapThemePref> {
-  if (cachedPref) return cachedPref;
+/**
+ * Synchronous read of the persisted map theme. Safe on the first-paint path —
+ * use it to seed a `useState` initializer so the map never flashes the default.
+ */
+export function loadMapThemePrefSync(): MapThemePref {
   try {
-    const raw = await AsyncStorage.getItem(MAP_THEME_STORAGE_KEY);
-    if (raw && isMapThemePref(raw)) {
-      cachedPref = raw;
-      return raw;
-    }
+    const raw = kvGet(MAP_THEME_STORAGE_KEY);
+    if (raw && isMapThemePref(raw)) return raw;
   } catch (err) {
     Logger.warn('[MapThemePref] load failed, using default', err);
   }
-  cachedPref = DEFAULT_MAP_THEME;
   return DEFAULT_MAP_THEME;
+}
+
+/**
+ * Async read that first ensures the one-time AsyncStorage → MMKV migration has
+ * run. Kept for the migration-launch reconcile; warm launches use the sync read.
+ */
+export async function loadMapThemePref(): Promise<MapThemePref> {
+  await migrateToMMKV();
+  return loadMapThemePrefSync();
 }
 
 export async function setMapThemePref(next: MapThemePref): Promise<void> {
   if (!isMapThemePref(next)) return;
-  cachedPref = next;
   try {
-    await AsyncStorage.setItem(MAP_THEME_STORAGE_KEY, next);
+    kvSet(MAP_THEME_STORAGE_KEY, next);
   } catch (err) {
     Logger.warn('[MapThemePref] save failed', err);
   }
@@ -87,9 +95,4 @@ export function subscribeMapThemePref(cb: Subscriber): () => void {
   return () => {
     subscribers.delete(cb);
   };
-}
-
-/** Test-only — clear the in-memory cache so tests start clean. */
-export function __resetMapThemePrefCacheForTests(): void {
-  cachedPref = null;
 }

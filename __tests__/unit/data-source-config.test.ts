@@ -5,20 +5,17 @@ import {
   ALLOW_R18_STORAGE_KEY,
   DEFAULT_BROWSE_SOURCE,
 } from '../../libs/services/data-source-config';
-
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  clear(): Promise<void>;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const AsyncStorage = require('@react-native-async-storage/async-storage')
-  .default as AsyncStorageLike;
+import {
+  appStorage,
+  kvGet,
+  kvSet,
+  __resetAppStorageForTests,
+} from '../../libs/services/storage/app-storage';
 
 describe('DataSourceConfig', () => {
-  beforeEach(async () => {
-    await AsyncStorage.clear();
+  beforeEach(() => {
+    appStorage.clearAll();
+    __resetAppStorageForTests();
     DataSourceConfig.__resetForTests();
   });
 
@@ -29,17 +26,16 @@ describe('DataSourceConfig', () => {
     expect(config.browseSource).toBe('anilist');
   });
 
-  it('DSCFG-002 setBrowseSource persists value via AsyncStorage', async () => {
+  it('DSCFG-002 setBrowseSource persists value via MMKV', async () => {
     const config = DataSourceConfig.getInstance();
     await config.init();
     await config.setBrowseSource('bangumi');
     expect(config.browseSource).toBe('bangumi');
-    const stored = await AsyncStorage.getItem(BROWSE_SOURCE_STORAGE_KEY);
-    expect(stored).toBe('bangumi');
+    expect(kvGet(BROWSE_SOURCE_STORAGE_KEY)).toBe('bangumi');
   });
 
   it('DSCFG-003 init reads stored browseSource', async () => {
-    await AsyncStorage.setItem(BROWSE_SOURCE_STORAGE_KEY, 'kitsu');
+    kvSet(BROWSE_SOURCE_STORAGE_KEY, 'kitsu');
     const config = DataSourceConfig.getInstance();
     await config.init();
     expect(config.browseSource).toBe('kitsu');
@@ -54,7 +50,7 @@ describe('DataSourceConfig', () => {
     // After persistence + reload it stays in sync.
     await config.setAllowR18Content(true);
     expect(config.allowR18Content).toBe(true);
-    expect(await AsyncStorage.getItem(ALLOW_R18_STORAGE_KEY)).toBe('true');
+    expect(kvGet(ALLOW_R18_STORAGE_KEY)).toBe('true');
 
     DataSourceConfig.__resetForTests();
     const reloaded = DataSourceConfig.getInstance();
@@ -69,6 +65,6 @@ describe('DataSourceConfig', () => {
     await expect(config.setBrowseSource('kavita')).rejects.toThrow(/does not support/i);
     expect(config.browseSource).toBe(DEFAULT_BROWSE_SOURCE);
     // Storage was never written.
-    expect(await AsyncStorage.getItem(BROWSE_SOURCE_STORAGE_KEY)).toBeNull();
+    expect(kvGet(BROWSE_SOURCE_STORAGE_KEY)).toBeNull();
   });
 });

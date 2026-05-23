@@ -9,15 +9,21 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
-import { listCaptures, type PilgrimageCapture } from '../libs/services/pilgrimage/captures';
+import {
+  listCaptures,
+  loadCapturesSync,
+  type PilgrimageCapture,
+} from '../libs/services/pilgrimage/captures';
 import {
   loadSpotIntents,
+  loadSpotIntentsSync,
   saveSpotIntents,
   type SpotIntentKind,
   type SpotIntentMap,
 } from '../libs/services/pilgrimage/spot-intents';
 import {
   loadVisitedSpots,
+  loadVisitedSpotsSync,
   saveVisitedSpots,
   type VisitedMap,
 } from '../libs/services/pilgrimage/visited-prefs';
@@ -54,9 +60,12 @@ export interface UsePilgrimageInteractionsResult {
 }
 
 export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
-  const [visited, setVisited] = useState<VisitedMap>({});
-  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>({});
-  const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>({});
+  // Seed synchronously from MMKV so visited / save / plan / capture markers are
+  // correct on the first frame instead of popping in after an async resolve.
+  const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
+  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
+  const [captures, setCaptures] =
+    useState<Record<string, PilgrimageCapture>>(loadCapturesSync);
 
   const refreshCaptures = useCallback(() => {
     listCaptures()

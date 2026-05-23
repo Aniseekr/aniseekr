@@ -1,39 +1,10 @@
 import type { PlatformType } from './auth/types';
 import { Logger } from '../utils/logger';
 
-/**
- * Async key/value storage shape we depend on. Mirrors the subset of the
- * `@react-native-async-storage/async-storage` API we actually use; importing
- * the real module via `require` so the package being uninstalled doesn't
- * break TypeScript builds in environments that don't ship it (CI, web).
- */
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem?(key: string): Promise<void>;
-}
+import { kvGet, kvSet, migrateToMMKV } from './storage/app-storage';
+import { ALLOW_R18_STORAGE_KEY, BROWSE_SOURCE_STORAGE_KEY } from './storage/keys';
 
-let AsyncStorage: AsyncStorageLike;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
-} catch {
-  // In environments without AsyncStorage (Node tests w/o the shim, web SSR)
-  // fall back to a Map-backed shim so callers continue to function.
-  const memoryStorage = new Map<string, string>();
-  AsyncStorage = {
-    getItem: async (k: string) => memoryStorage.get(k) ?? null,
-    setItem: async (k: string, v: string) => {
-      memoryStorage.set(k, v);
-    },
-    removeItem: async (k: string) => {
-      memoryStorage.delete(k);
-    },
-  };
-}
-
-export const BROWSE_SOURCE_STORAGE_KEY = 'aniseekr.browseSource';
-export const ALLOW_R18_STORAGE_KEY = 'aniseekr.allowR18Content';
+export { BROWSE_SOURCE_STORAGE_KEY, ALLOW_R18_STORAGE_KEY };
 export const DEFAULT_BROWSE_SOURCE: PlatformType = 'anilist';
 
 /**
@@ -92,15 +63,14 @@ export class DataSourceConfig {
   }
 
   /**
-   * Hydrate values from AsyncStorage. Idempotent — safe to call from app
-   * bootstrap and again from tests.
+   * Hydrate values from MMKV. Idempotent — safe to call from app bootstrap
+   * and again from tests.
    */
   async init(): Promise<void> {
     try {
-      const [browseRaw, r18Raw] = await Promise.all([
-        AsyncStorage.getItem(BROWSE_SOURCE_STORAGE_KEY),
-        AsyncStorage.getItem(ALLOW_R18_STORAGE_KEY),
-      ]);
+      await migrateToMMKV();
+      const browseRaw = kvGet(BROWSE_SOURCE_STORAGE_KEY);
+      const r18Raw = kvGet(ALLOW_R18_STORAGE_KEY);
 
       if (browseRaw && isSupportedBrowseSource(browseRaw as PlatformType)) {
         this._browseSource = browseRaw as PlatformType;
@@ -127,12 +97,12 @@ export class DataSourceConfig {
       throw new Error(`Platform ${platform} does not support browse mode`);
     }
     this._browseSource = platform;
-    await AsyncStorage.setItem(BROWSE_SOURCE_STORAGE_KEY, platform);
+    kvSet(BROWSE_SOURCE_STORAGE_KEY, platform);
   }
 
   async setAllowR18Content(allow: boolean): Promise<void> {
     this._allowR18Content = allow;
-    await AsyncStorage.setItem(ALLOW_R18_STORAGE_KEY, allow ? 'true' : 'false');
+    kvSet(ALLOW_R18_STORAGE_KEY, allow ? 'true' : 'false');
   }
 }
 

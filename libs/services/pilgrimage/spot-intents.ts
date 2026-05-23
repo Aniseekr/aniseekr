@@ -1,25 +1,14 @@
+// Local-only persistence for pilgrimage spot intents (saved / planned).
+// Schema: a single MMKV key holding a JSON `Record<spotId, SpotIntent>`.
+//
+// The synchronous read lets the map / spot list seed save & plan markers on
+// the first frame instead of popping them in after an async resolve.
+
+import { kvGet, kvSet, migrateToMMKV } from '../storage/app-storage';
+import { SPOT_INTENTS_STORAGE_KEY } from '../storage/keys';
 import { Logger } from '../../utils/logger';
 
-interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-}
-
-let AsyncStorage: AsyncStorageLike;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
-} catch {
-  const memory = new Map<string, string>();
-  AsyncStorage = {
-    getItem: async (key) => memory.get(key) ?? null,
-    setItem: async (key, value) => {
-      memory.set(key, value);
-    },
-  };
-}
-
-export const SPOT_INTENTS_STORAGE_KEY = 'aniseekr.pilgrimage.spot-intents.v1';
+export { SPOT_INTENTS_STORAGE_KEY };
 
 export type SpotIntentKind = 'saved' | 'planned';
 
@@ -30,9 +19,10 @@ export interface SpotIntent {
 
 export type SpotIntentMap = Record<string, SpotIntent>;
 
-export async function loadSpotIntents(): Promise<SpotIntentMap> {
+/** Synchronous read — safe to seed `useState` with on the first-paint path. */
+export function loadSpotIntentsSync(): SpotIntentMap {
   try {
-    const raw = await AsyncStorage.getItem(SPOT_INTENTS_STORAGE_KEY);
+    const raw = kvGet(SPOT_INTENTS_STORAGE_KEY);
     if (!raw) return {};
     return sanitizeSpotIntents(JSON.parse(raw) as unknown);
   } catch (err) {
@@ -41,9 +31,15 @@ export async function loadSpotIntents(): Promise<SpotIntentMap> {
   }
 }
 
+/** Async read that first ensures the one-time AsyncStorage → MMKV migration. */
+export async function loadSpotIntents(): Promise<SpotIntentMap> {
+  await migrateToMMKV();
+  return loadSpotIntentsSync();
+}
+
 export async function saveSpotIntents(map: SpotIntentMap): Promise<void> {
   try {
-    await AsyncStorage.setItem(SPOT_INTENTS_STORAGE_KEY, JSON.stringify(sanitizeSpotIntents(map)));
+    kvSet(SPOT_INTENTS_STORAGE_KEY, JSON.stringify(sanitizeSpotIntents(map)));
   } catch (err) {
     Logger.warn('[SpotIntents] save failed', err);
   }

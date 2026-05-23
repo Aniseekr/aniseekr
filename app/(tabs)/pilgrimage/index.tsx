@@ -31,9 +31,14 @@ import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrima
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
 import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
-import { loadVisitedSpots, type VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
+import {
+  loadVisitedSpots,
+  loadVisitedSpotsSync,
+  type VisitedMap,
+} from '../../../libs/services/pilgrimage/visited-prefs';
 import {
   loadSpotIntents,
+  loadSpotIntentsSync,
   type SpotIntentMap,
 } from '../../../libs/services/pilgrimage/spot-intents';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
@@ -124,8 +129,10 @@ export default function PilgrimageHubScreen() {
   );
   const [collectionLoading, setCollectionLoading] = useState(!hasInitialCollection);
   const [featuredLoading, setFeaturedLoading] = useState(!hasInitialFeatured);
-  const [visited, setVisited] = useState<VisitedMap>(() => initialSnapshot?.visited ?? {});
-  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>({});
+  const [visited, setVisited] = useState<VisitedMap>(
+    () => initialSnapshot?.visited ?? loadVisitedSpotsSync()
+  );
+  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
   const [userLocation, setUserLocation] = useState<LatLng | null>(
     () => initialSnapshot?.userLocation ?? null
   );

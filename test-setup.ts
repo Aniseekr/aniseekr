@@ -5,6 +5,58 @@
 import { mock } from 'bun:test';
 import * as React from 'react';
 
+(globalThis as { __DEV__?: boolean }).__DEV__ = false;
+
+const animatedPassthrough = (tag: string) =>
+  React.forwardRef((props: any, ref: any) => React.createElement(tag, { ...props, ref }));
+
+mock.module('react-native-reanimated', () => {
+  const Animated = {
+    View: animatedPassthrough('Animated.View'),
+    Text: animatedPassthrough('Animated.Text'),
+    ScrollView: animatedPassthrough('Animated.ScrollView'),
+    FlatList: animatedPassthrough('Animated.FlatList'),
+    Image: animatedPassthrough('Animated.Image'),
+    createAnimatedComponent: (component: unknown) => component,
+  };
+  const animationBuilder = {
+    duration: () => animationBuilder,
+    delay: () => animationBuilder,
+    springify: () => animationBuilder,
+    damping: () => animationBuilder,
+    stiffness: () => animationBuilder,
+  };
+  return {
+    default: Animated,
+    ...Animated,
+    Easing: {
+      out: (fn: unknown) => fn,
+      inOut: (fn: unknown) => fn,
+      cubic: (t: number) => t,
+      ease: (t: number) => t,
+    },
+    Extrapolation: { CLAMP: 'clamp' },
+    FadeIn: animationBuilder,
+    FadeInDown: animationBuilder,
+    FadeInUp: animationBuilder,
+    FadeOut: animationBuilder,
+    FadeOutDown: animationBuilder,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    makeMutable: <T,>(value: T) => ({ value }),
+    useAnimatedReaction: () => undefined,
+    useAnimatedScrollHandler: (handlers: unknown) => handlers,
+    useAnimatedStyle: (fn: () => unknown) => fn(),
+    useSharedValue: <T,>(value: T) => ({ value }),
+    withDelay: <T,>(_delayMs: number, value: T) => value,
+    withRepeat: <T,>(value: T) => value,
+    withSequence: <T,>(...values: T[]) => values[values.length - 1],
+    withSpring: <T,>(value: T) => value,
+    withTiming: <T,>(value: T) => value,
+    interpolate: (value: number) => value,
+    interpolateColor: (_value: number, _input: number[], output: string[]) => output[0],
+  };
+});
+
 // AsyncStorage in-memory shim
 const asyncStorageMemory = new Map<string, string>();
 mock.module('@react-native-async-storage/async-storage', () => ({
@@ -469,6 +521,7 @@ mock.module('react-native', () => {
     Image: passthrough('Image'),
     ActivityIndicator: passthrough('ActivityIndicator'),
     SafeAreaView: passthrough('SafeAreaView'),
+    TextInput: passthrough('TextInput'),
     Switch: passthrough('Switch'),
     StyleSheet,
     Linking,
@@ -477,6 +530,7 @@ mock.module('react-native', () => {
     TurboModuleRegistry,
     NativeModules,
     AppState,
+    findNodeHandle: () => null,
     useColorScheme: () => 'light',
     Alert: { alert: () => undefined },
     Dimensions: {
