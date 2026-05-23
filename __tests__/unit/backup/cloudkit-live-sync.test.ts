@@ -13,16 +13,33 @@ import { createEmptyBackup } from '../../../libs/services/backup/schema';
 
 import { makeFakeDb, makeFakeStorage } from './fakes';
 
-function makeFakeBridge(initial: CloudKitRecord[] = []): CloudKitBridgeLike & {
+import type { LegacySwiftDataSnapshot } from '../../../libs/services/backup/legacy-swiftdata';
+
+interface FakeBridgeOptions {
+  initialRecords?: CloudKitRecord[];
+  legacy?: LegacySwiftDataSnapshot;
+}
+
+function makeFakeBridge(opts: FakeBridgeOptions = {}): CloudKitBridgeLike & {
   _store: CloudKitRecord[];
   _writeCalls: number;
+  _legacy: LegacySwiftDataSnapshot | null;
+  _legacyMarked: boolean;
 } {
-  const store = [...initial];
+  const store = [...(opts.initialRecords ?? [])];
   let writeCalls = 0;
+  let legacy = opts.legacy ?? null;
+  let legacyMarked = false;
   return {
     _store: store,
     get _writeCalls() {
       return writeCalls;
+    },
+    get _legacy() {
+      return legacy;
+    },
+    get _legacyMarked() {
+      return legacyMarked;
     },
     isInstalled() {
       return true;
@@ -48,6 +65,16 @@ function makeFakeBridge(initial: CloudKitRecord[] = []): CloudKitBridgeLike & {
       const n = store.length;
       store.length = 0;
       return { deleted: n };
+    },
+    async fetchLegacySwiftDataStore() {
+      if (!legacy) {
+        return { hasStore: false, alreadyImported: legacyMarked };
+      }
+      return { ...legacy, alreadyImported: legacyMarked || legacy.alreadyImported };
+    },
+    async markLegacyStoreImported() {
+      legacyMarked = true;
+      if (legacy) legacy = { ...legacy, alreadyImported: true };
     },
   };
 }
@@ -159,5 +186,76 @@ describe('backup/cloudkit-live-sync', () => {
   it('LIVESYNC-006 push refuses to run when the bridge is unavailable', async () => {
     bridge.getAvailability = mock(async () => 'unavailable') as never;
     await expect(sync.push()).rejects.toThrow(/CloudKit not available/);
+  });
+
+  // ---------- Legacy aniseeker migration blob ----------
+
+  describe('legacy aniseeker migration blob', () => {
+    const SAMPLE_LEGACY: LegacySwiftDataSnapshot = {
+      hasStore: true,
+      alreadyImported: false,
+      storePath: 'UserDefaults:migration_v1_v2_data',
+      ratings: [
+        {
+          animeId: 21,
+          title: 'Bebop',
+          imageUrl: null,
+          ratingType: 'liked',
+          watchedEpisodes: 26,
+          totalEpisodes: 26,
+          createdAt: Date.UTC(2025, 5, 1),
+        },
+        {
+          animeId: 100,
+          title: 'Steins;Gate',
+          imageUrl: null,
+          ratingType: 'neutral',
+          watchedEpisodes: 24,
+          totalEpisodes: 24,
+          createdAt: Date.UTC(2025, 5, 1),
+        },
+      ],
+    };
+
+    it('LIVESYNC-LEG-001 hasPendingLegacyMigration is false when there is no store', async () => {
+      expect(await sync.hasPendingLegacyMigration()).toBe(false);
+    });
+
+    it('LIVESYNC-LEG-002 hasPendingLegacyMigration is true when the migration blob has rows', async () => {
+      bridge = makeFakeBridge({ legacy: SAMPLE_LEGACY });
+      sync = new CloudKitLiveSync({ bridge, backupService: svc });
+      expect(await sync.hasPendingLegacyMigration()).toBe(true);
+    });
+
+    it('LIVESYNC-LEG-003 dryRunLegacy returns a diff without writing anything', async () => {
+      bridge = makeFakeBridge({ legacy: SAMPLE_LEGACY });
+      sync = new CloudKitLiveSync({ bridge, backupService: svc });
+      const result = await sync.dryRunLegacy();
+      expect(result).not.toBeNull();
+      expect(result?.diff.hasChanges).toBe(true);
+      expect(result?.diff.userAnime.added).toBeGreaterThan(0);
+      // The DB must still be untouched — dry-run is read-only.
+      expect(db.tables.user_anime.size).toBe(0);
+      expect(bridge._legacyMarked).toBe(false);
+    });
+
+    it('LIVESYNC-LEG-004 pullLegacy restores migration rows AND marks them imported', async () => {
+      bridge = makeFakeBridge({ legacy: SAMPLE_LEGACY });
+      sync = new CloudKitLiveSync({ bridge, backupService: svc });
+      const summary = await sync.pullLegacy();
+      expect(summary?.userAnime).toBe(2);
+      expect(db.tables.user_anime.get('21')?.status).toBe('completed');
+      expect(db.tables.user_anime.get('100')?.status).toBe('completed');
+      expect(bridge._legacyMarked).toBe(true);
+      // Subsequent probe should report alreadyImported so the UI hides.
+      expect(await sync.hasPendingLegacyMigration()).toBe(false);
+    });
+
+    it('LIVESYNC-LEG-005 pullLegacy is a no-op on an empty/missing migration blob', async () => {
+      // No legacy passed → fetchLegacySwiftDataStore returns hasStore=false.
+      const summary = await sync.pullLegacy();
+      expect(summary).toBeNull();
+      expect(bridge._legacyMarked).toBe(false);
+    });
   });
 });

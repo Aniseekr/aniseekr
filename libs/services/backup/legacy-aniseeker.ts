@@ -53,13 +53,16 @@ export interface LegacyRatingMigrationData {
 }
 
 // Mirrors SchemaV2.UserRating (scoring only).
+// Date fields use LegacyTimestamp because the data may arrive as an ISO string
+// (hand-rolled JSON export) or as a Swift reference-date Double / ms-epoch
+// number (legacy migration blob / hand-rolled export).
 export interface LegacyUserRatingV2 {
   animeId: number;
   title: string;
   imageUrl: string | null;
   ratingType: LegacyRatingType;
   myScore?: number | null;
-  createdAt?: string;
+  createdAt?: LegacyTimestamp;
   syncSource?: string | null;
 }
 
@@ -82,8 +85,8 @@ export interface LegacyWatchedItemV2 {
   watchedEpisodes?: number;
   totalEpisodes?: number | null;
   isCompleted?: boolean;
-  startedDate?: string | null;
-  completedDate?: string | null;
+  startedDate?: LegacyTimestamp;
+  completedDate?: LegacyTimestamp;
   syncSource?: string | null;
 }
 
@@ -94,7 +97,7 @@ export interface LegacyWishlistItemV2 {
   imageUrl: string | null;
   priority?: number;
   notes?: string | null;
-  addedDate?: string | null;
+  addedDate?: LegacyTimestamp;
   syncSource?: string | null;
 }
 
@@ -108,7 +111,7 @@ export interface LegacyFolderV2 {
   folderType?: string | null;
   isShared?: boolean;
   isR18?: boolean;
-  createdAt?: string;
+  createdAt?: LegacyTimestamp;
   itemAnimeIds?: number[];
 }
 

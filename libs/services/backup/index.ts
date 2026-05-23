@@ -87,3 +87,11 @@ export {
   type CloudKitAvailability,
   type CloudKitBridgeLike,
 } from './cloudkit-live-sync';
+
+export {
+  countLegacySwiftDataSnapshot,
+  hasLegacyContent,
+  swiftDataSnapshotToEnvelope,
+  type LegacySwiftDataCounts,
+  type LegacySwiftDataSnapshot,
+} from './legacy-swiftdata';

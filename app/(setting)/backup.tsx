@@ -28,6 +28,7 @@ import {
   CloudBackup,
   CloudKitLiveSync,
   GOOGLE_DRIVE_APP_DATA_SCOPE,
+  countLegacySwiftDataSnapshot,
   createDefaultBackupService,
   generateBackupKey,
   importLegacyAniseekerExport,
@@ -36,6 +37,7 @@ import {
   type BackupEnvelopeV1,
   type CloudProviderId,
   type CloudScope,
+  type LegacySwiftDataSnapshot,
   type RestoreDiff,
   type RestoreSummary,
 } from '../../libs/services/backup';
@@ -121,10 +123,18 @@ export default function BackupScreen() {
   const [cloudkitAvailable, setCloudkitAvailable] = useState(false);
   const [showLegacyPaste, setShowLegacyPaste] = useState(false);
   const [legacyText, setLegacyText] = useState('');
+  const [legacySnapshot, setLegacySnapshot] = useState<LegacySwiftDataSnapshot | null>(null);
 
   const cloud = useMemo(() => safeMakeCloudBackup(), []);
   const backupService = useMemo(() => createDefaultBackupService(), []);
   const keyStore = useMemo(() => new BackupKeyStore({ storage: SecureStore }), []);
+  // One CloudKitLiveSync instance shared by all CloudKit + legacy migration
+  // handlers. backupService is stable from the memo above, so this only
+  // re-creates when the service itself changes (effectively never).
+  const liveSync = useMemo(
+    () => new CloudKitLiveSync({ bridge: cloudKitBridge, backupService }),
+    [backupService]
+  );
   const autoBackup = useMemo(
     () =>
       new AutoBackupScheduler({
@@ -161,6 +171,10 @@ export default function BackupScreen() {
     void cloudKitBridge.getAvailability().then((status) => {
       setCloudkitAvailable(status === 'ready');
     });
+    // Probe the legacy SwiftUI app's V1→V2 migration blob in UserDefaults.
+    // This is the old app's minimal recovery path: rating/watchlist metadata,
+    // not photos or image assets.
+    void liveSync.fetchLegacySnapshot().then(setLegacySnapshot);
 
     if (!cloud) {
       setAvailable(false);
@@ -186,7 +200,7 @@ export default function BackupScreen() {
         setPhase('idle');
       }
     })();
-  }, [cloud, keyStore, autoBackup]);
+  }, [cloud, keyStore, autoBackup, liveSync]);
 
   // Called by <GoogleDriveAuth> when a Google sign-in (or silent restore) yields
   // a fresh Drive access token. The native SDK owns session persistence.
@@ -381,12 +395,11 @@ export default function BackupScreen() {
   const onImportFromCloudKit = useCallback(async () => {
     try {
       setPhase('downloading');
-      const live = new CloudKitLiveSync({ bridge: cloudKitBridge, backupService });
-      if (!(await live.isAvailable())) {
+      if (!(await liveSync.isAvailable())) {
         Alert.alert('CloudKit unavailable', 'Make sure you are signed into iCloud on this device.');
         return;
       }
-      const summary = await live.pull();
+      const summary = await liveSync.pull();
       hapticsBridge.success();
       Alert.alert('CloudKit import complete', describeRestore(summary));
     } catch (err) {
@@ -395,17 +408,16 @@ export default function BackupScreen() {
     } finally {
       setPhase('idle');
     }
-  }, [backupService]);
+  }, [liveSync]);
 
   const onPushToCloudKit = useCallback(async () => {
     try {
       setPhase('syncing');
-      const live = new CloudKitLiveSync({ bridge: cloudKitBridge, backupService });
-      if (!(await live.isAvailable())) {
+      if (!(await liveSync.isAvailable())) {
         Alert.alert('CloudKit unavailable', 'Make sure you are signed into iCloud on this device.');
         return;
       }
-      const res = await live.push();
+      const res = await liveSync.push();
       hapticsBridge.success();
       Alert.alert('Pushed to CloudKit', `Wrote ${res.written} records (failed ${res.failed})`);
     } catch (err) {
@@ -414,7 +426,78 @@ export default function BackupScreen() {
     } finally {
       setPhase('idle');
     }
-  }, [backupService]);
+  }, [liveSync]);
+
+  // One-shot migration from the old SwiftUI app's V1→V2 recovery blob.
+  // Uses the same dry-run + diff confirmation pattern as `onRestoreFromCloud`
+  // so users see exactly what they're about to overwrite, then commits via
+  // `pullLegacy()` which also marks the store as imported (so the banner
+  // doesn't reappear on the next visit).
+  const onMigrateLegacy = useCallback(async () => {
+    try {
+      setPhase('downloading');
+      const result = await liveSync.dryRunLegacy();
+      if (!result) {
+        Alert.alert(
+          'Nothing to migrate',
+          'No legacy aniseeker migration data was found on this device.'
+        );
+        setLegacySnapshot((prev) => (prev ? { ...prev, alreadyImported: true } : prev));
+        return;
+      }
+      const { diff, snapshot } = result;
+      const counts = countLegacySwiftDataSnapshot(snapshot);
+      const diffSummary = formatDiff(diff);
+
+      Alert.alert(
+        diff.hasChanges ? 'Migrate from legacy aniseeker?' : 'Already up to date',
+        diff.hasChanges
+          ? `Found ${counts.total} items in your old aniseeker app (${describeLegacyCounts(counts)}).\n\nThis migration will:\n${diffSummary}\n\nLocal rows with the same id will be overwritten. Continue?`
+          : `Found ${counts.total} items, but they already match this device. Marking migration as done.`,
+        diff.hasChanges
+          ? [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Migrate',
+                style: 'default',
+                onPress: async () => {
+                  try {
+                    setPhase('restoring');
+                    const summary = await liveSync.pullLegacy();
+                    hapticsBridge.success();
+                    if (summary) {
+                      Alert.alert('Migration complete', describeRestore(summary));
+                    }
+                    // Refresh the snapshot so the banner disappears — bridge
+                    // has now persisted `alreadyImported` on the native side.
+                    setLegacySnapshot(await liveSync.fetchLegacySnapshot());
+                  } catch (err) {
+                    Logger.error('[Backup] legacy migration failed', err);
+                    Alert.alert('Migration failed', errorMessage(err));
+                  } finally {
+                    setPhase('idle');
+                  }
+                },
+              },
+            ]
+          : [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  // No-op migration still marks the flag so the banner hides.
+                  await liveSync.pullLegacy().catch(() => undefined);
+                  setLegacySnapshot(await liveSync.fetchLegacySnapshot());
+                },
+              },
+            ]
+      );
+    } catch (err) {
+      Logger.error('[Backup] legacy dry-run failed', err);
+      Alert.alert('Could not read legacy store', errorMessage(err));
+    } finally {
+      setPhase('idle');
+    }
+  }, [liveSync]);
 
   const onGoogleSignedOut = useCallback(() => {
     if (cloud) cloud.setGoogleAccessToken(null);
@@ -423,6 +506,20 @@ export default function BackupScreen() {
   }, [cloud]);
 
   const busy = phase !== 'idle' && phase !== 'checking';
+
+  // The legacy banner is the primary migration path for old aniseeker users.
+  // Show it when:
+  //   - We're on iOS with the bridge installed (snapshot present)
+  //   - The migration_v1_v2_data blob was detected
+  //   - It hasn't been imported via this app yet
+  //   - It has at least one row (empty stores aren't worth a banner)
+  const legacyPending = useMemo(() => {
+    if (!legacySnapshot || !legacySnapshot.hasStore) return null;
+    if (legacySnapshot.alreadyImported) return null;
+    const counts = countLegacySwiftDataSnapshot(legacySnapshot);
+    if (counts.total === 0) return null;
+    return counts;
+  }, [legacySnapshot]);
 
   // ---------- Render ----------
 
@@ -456,6 +553,28 @@ export default function BackupScreen() {
         </View>
         {phase === 'checking' ? <ActivityIndicator color={theme.text.secondary} /> : null}
       </View>
+
+      {legacyPending ? (
+        <SettingsSection title="從舊版 aniseeker 匯入">
+          <View style={{ padding: Spacing.sm + 2, gap: Spacing.sm }}>
+            <ThemedText variant="bodySmall" tone="secondary">
+              偵測到舊版 aniseeker 的遷移資料 ({legacyPending.total} 筆)。{'\n'}
+              {describeLegacyCounts(legacyPending)}
+            </ThemedText>
+            <ThemedText variant="caption" tone="tertiary">
+              這是舊版 SwiftUI app 留下的最小化評分 / 觀看進度資料。匯入時會先預覽差異,確認後才寫入,匯入過後不會再顯示這個區塊。
+            </ThemedText>
+            <ThemedButton
+              label={phase === 'downloading' || phase === 'restoring' ? '處理中…' : '匯入並覆蓋同 id 的資料'}
+              onPress={onMigrateLegacy}
+              size="lg"
+              fullWidth
+              disabled={busy}
+              haptic="success"
+            />
+          </View>
+        </SettingsSection>
+      ) : null}
 
       {Platform.OS === 'ios' ? (
         <SettingsSection title="Backup destination">
@@ -523,7 +642,7 @@ export default function BackupScreen() {
         <SettingsRow
           icon="archive"
           label="Restore from legacy aniseeker backup"
-          description="Paste exported JSON from the old SwiftUI app"
+          description="Paste migration JSON if you extracted it manually"
           onPress={() => setShowLegacyPaste((v) => !v)}
           rightSlot={
             <MaterialIcons
@@ -565,13 +684,13 @@ export default function BackupScreen() {
       </SettingsSection>
 
       {Platform.OS === 'ios' ? (
-        <SettingsSection title="CloudKit (legacy aniseeker bridge)">
+        <SettingsSection title="CloudKit sync (advanced)">
           <SettingsRow
             icon="sync-alt"
-            label="Import from CloudKit"
+            label="Pull from CloudKit"
             description={
               cloudkitAvailable
-                ? 'Pull old aniseeker data from your private iCloud container'
+                ? 'Only pulls folders the old app explicitly shared. For full restore, use the section above.'
                 : 'Not available — rebuild dev client with the bridge'
             }
             onPress={cloudkitAvailable ? onImportFromCloudKit : undefined}
@@ -805,6 +924,26 @@ function describeSnapshot(env: BackupEnvelopeV1): string {
     `${env.db.favorites.length} favorites`,
     `${env.db.ratings.length} ratings`,
     `${env.db.collectionFolders.length} folders`,
+  ].join(' · ');
+}
+
+function describeLegacyCounts(counts: {
+  ratingMigrationItems: number;
+  userRatings: number;
+  trackingItems: number;
+  watchedItems: number;
+  wishlistItems: number;
+  folders: number;
+}): string {
+  if (counts.ratingMigrationItems > 0) {
+    return `${counts.ratingMigrationItems} migration ratings`;
+  }
+  return [
+    `${counts.userRatings} ratings`,
+    `${counts.trackingItems} tracking`,
+    `${counts.watchedItems} watched`,
+    `${counts.wishlistItems} wishlist`,
+    `${counts.folders} folders`,
   ].join(' · ');
 }
 
