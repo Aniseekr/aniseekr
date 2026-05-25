@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  InteractionManager,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Photo, DeckItem } from '../../../components/rate/types';
 import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { isAdSlotEnabled } from '../../../libs/services/ads/ad-config';
+import { isRateNativeAdSuppressedSync } from '../../../libs/services/ads/rate-native-ad-session';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ModePill } from '../../../components/rate/ModePill';
 import { ModeSwitcherSheet, type ModeOption } from '../../../components/rate/ModeSwitcherSheet';
@@ -30,6 +24,7 @@ import {
   type SwipePrefs,
 } from '../../../libs/services/user-prefs';
 import { useTheme } from '../../../context/ThemeContext';
+import { useSubscription } from '../../../context/SubscriptionContext';
 import { readableTextOn, Skeleton } from '../../../components/themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { getDeck, putDeck, clearDeck } from '../../../libs/services/rate/deck-cache';
@@ -38,19 +33,24 @@ import { restartGenreDeck } from '../../../libs/services/rate/restart-genre-deck
 import { setOverride as setGenreCoverOverride } from '../../../libs/services/rate/genre-cover-override';
 import { isExhaustedSwipeDeck } from '../../../libs/services/rate/swipe-pagination';
 import { loadNextUsableSwipePage } from '../../../libs/services/rate/swipe-page-loader';
+import {
+  buildRatingDeck,
+  getUpcomingPhotoUrls,
+  removeAdCardsPreservingPhotoIndex,
+} from '../../../libs/services/rate/rating-deck';
 import { SWIPE_PERSISTENCE_DELAY_MS } from '../../../libs/services/rate/swipe-animation';
 import {
   persistSwipeJob,
   type SwipePersistenceJob,
 } from '../../../libs/services/rate/swipe-persistence';
 
-const AD_INTERVAL = 12;
 // Trigger and refill from remaining-card pressure, not source page length.
 // AniList pages are 20 upstream, but R18/seen/image filters can leave any
 // number of usable cards, including zero.
 const PREFETCH_THRESHOLD = 8;
 const LOAD_MORE_TARGET_PHOTOS = PREFETCH_THRESHOLD + 4;
 const FILTERED_EMPTY_PAGE_SKIP_LIMIT = 2;
+const PREFETCH_PHOTO_COUNT = 5;
 // Card sizing — the top padding stacks on top of the safe-area inset so the
 // card always clears the X + ModePill on notched devices (otherwise the
 // inline Tap-for-info chip sits behind the pill). The bottom only needs to
@@ -58,19 +58,6 @@ const FILTERED_EMPTY_PAGE_SKIP_LIMIT = 2;
 const CARD_HORIZONTAL_PADDING = 28;
 const CARD_TOP_GAP = 56;
 const CARD_PADDING_BOTTOM = 125;
-
-function buildDeck(photos: Photo[], includeAds: boolean): DeckItem[] {
-  if (!includeAds) return photos.map((photo) => ({ kind: 'photo', photo }));
-  const deck: DeckItem[] = [];
-  let adCounter = 0;
-  photos.forEach((photo, index) => {
-    deck.push({ kind: 'photo', photo });
-    if ((index + 1) % AD_INTERVAL === 0 && index < photos.length - 1) {
-      deck.push({ kind: 'ad', id: `ad-${adCounter++}` });
-    }
-  });
-  return deck;
-}
 
 function deriveRatingFromDirection(direction: 'left' | 'right', mode: SwipeMode): RatingType {
   if (direction === 'left') return 'skip';
@@ -162,6 +149,7 @@ export default function RatingScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ genreId?: string; genreName?: string; animeId?: string }>();
   const { theme } = useTheme();
+  const subscription = useSubscription();
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -187,7 +175,8 @@ export default function RatingScreen() {
   // Bumped on restart to force-remount the SwipeDeck so its internal topIndex
   // and outgoing-card list start clean.
   const [deckGeneration, setDeckGeneration] = useState(0);
-  const adsEnabled = isAdSlotEnabled('rate_native');
+  const adsEnabled =
+    !subscription.isPro && isAdSlotEnabled('rate_native') && !isRateNativeAdSuppressedSync();
 
   // IDs the user has already swiped past in any previous session. Mirrored from
   // SQLite once on mount; new swipes are pushed into both the local ref and the
@@ -269,10 +258,13 @@ export default function RatingScreen() {
             ) {
               await clearDeck(params.genreId);
             } else {
+              const cachedDeck = adsEnabled
+                ? { deck: snapshot.deck, currentIndex: snapshot.currentIndex }
+                : removeAdCardsPreservingPhotoIndex(snapshot.deck, snapshot.currentIndex);
               setPhotos(snapshot.photos);
-              setDeck(snapshot.deck);
-              setCurrentIndex(snapshot.currentIndex);
-              startIndexRef.current = snapshot.currentIndex;
+              setDeck(cachedDeck.deck);
+              setCurrentIndex(cachedDeck.currentIndex);
+              startIndexRef.current = cachedDeck.currentIndex;
               setCurrentPage(snapshot.currentPage);
               setHasMore(snapshot.hasMore);
               setLoading(false);
@@ -289,6 +281,9 @@ export default function RatingScreen() {
     return () => {
       cancelled = true;
     };
+    // Bootstrap is scoped to the requested deck. Runtime ad availability changes
+    // are handled by the normalization effect below without refetching content.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.genreId, params.animeId]);
 
   const loadPhotos = async () => {
@@ -332,7 +327,7 @@ export default function RatingScreen() {
         console.log('First photo URL:', validPhotos[0].url);
       }
       setPhotos(validPhotos);
-      setDeck(buildDeck(validPhotos, adsEnabled));
+      setDeck(buildRatingDeck(validPhotos, adsEnabled));
       setCurrentIndex(0);
       startIndexRef.current = 0;
       setCurrentPage(nextCurrentPage);
@@ -386,7 +381,7 @@ export default function RatingScreen() {
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
-      setDeck((prev) => [...prev, ...buildDeck(newPhotos, adsEnabled)]);
+      setDeck((prev) => [...prev, ...buildRatingDeck(newPhotos, adsEnabled)]);
       setCurrentPage(pageResult.currentPage);
       setHasMore(pageResult.hasMore);
     } catch (err) {
@@ -410,16 +405,24 @@ export default function RatingScreen() {
   // onTopChange → currentIndex, so the same value drives image preloading.
   useEffect(() => {
     if (deck.length === 0) return;
-    const nextPhotos = deck
-      .slice(currentIndex + 1, currentIndex + 6)
-      .map((item) => (item.kind === 'photo' ? item.photo.url : undefined))
-      .filter(Boolean) as string[];
+    const nextPhotos = getUpcomingPhotoUrls(deck, currentIndex, PREFETCH_PHOTO_COUNT);
     if (nextPhotos.length === 0) return;
     const task = InteractionManager.runAfterInteractions(() => {
       ImagePreloader.preload(nextPhotos);
     });
     return () => task.cancel();
   }, [currentIndex, deck]);
+
+  useEffect(() => {
+    if (adsEnabled) return;
+    if (!deck.some((item) => item.kind === 'ad')) return;
+
+    const normalized = removeAdCardsPreservingPhotoIndex(deck, currentIndex);
+    setDeck(normalized.deck);
+    setCurrentIndex(normalized.currentIndex);
+    startIndexRef.current = normalized.currentIndex;
+    setDeckGeneration((g) => g + 1);
+  }, [adsEnabled, currentIndex, deck]);
 
   // Persist the current deck snapshot any time the user moves through it. The
   // service debounces SQLite writes by 500ms, but the in-memory layer is
@@ -591,8 +594,7 @@ export default function RatingScreen() {
 
   const currentItem = deck[currentIndex];
   const currentPhoto = currentItem?.kind === 'photo' ? currentItem.photo : undefined;
-  const activeModeOption =
-    MODE_OPTIONS.find((m) => m.value === swipePrefs.mode) ?? MODE_OPTIONS[0];
+  const activeModeOption = MODE_OPTIONS.find((m) => m.value === swipePrefs.mode) ?? MODE_OPTIONS[0];
   const canRestartCurrentGenre = !!params.genreId && !params.animeId;
   const showEmptyRestart = canRestartCurrentGenre && restartableSeenIds.length > 0;
   const showDeck = !loading && deck.length > 0;
@@ -605,10 +607,7 @@ export default function RatingScreen() {
       <View style={[styles.headerContainer, { paddingTop: top + 10 }]}>
         <View style={styles.topBar}>
           <View style={styles.headerLeftCluster}>
-            <Pressable
-              onPress={handleClose}
-              style={styles.closeButton}
-              accessibilityLabel="Close">
+            <Pressable onPress={handleClose} style={styles.closeButton} accessibilityLabel="Close">
               <Ionicons name="close" size={20} color="#fff" />
             </Pressable>
             <ModePill
@@ -634,8 +633,7 @@ export default function RatingScreen() {
       {/* Card Stack (Full Screen) */}
       <View style={styles.cardStackContainer}>
         {loading ? (
-          <View
-            style={[styles.skeletonCardWrapper, { paddingTop: top + CARD_TOP_GAP }]}>
+          <View style={[styles.skeletonCardWrapper, { paddingTop: top + CARD_TOP_GAP }]}>
             <Skeleton.RatingCard />
           </View>
         ) : null}

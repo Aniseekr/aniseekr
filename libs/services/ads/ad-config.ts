@@ -23,15 +23,24 @@ export const NPA_REQUEST_OPTIONS = Object.freeze({
 const TEST_IDS: Partial<Record<AdSlot, string>> = {
   home_banner: 'ca-app-pub-3940256099942544/6300978111',
   detail_banner: 'ca-app-pub-3940256099942544/6300978111',
-  rate_native: 'ca-app-pub-3940256099942544/6300978111',
   interstitial: 'ca-app-pub-3940256099942544/1033173712',
   rewarded: 'ca-app-pub-3940256099942544/5224354917',
 };
 
+const NATIVE_TEST_IDS = {
+  android: 'ca-app-pub-3940256099942544/2247696110',
+  ios: 'ca-app-pub-3940256099942544/3986624511',
+} as const;
+
 export function getAdUnitId(slot: AdSlot): string | null {
   if (process.env.EXPO_PUBLIC_ADS_DISABLED === '1') return null;
   if (Platform.OS === 'web') return null;
-  if (__DEV__) return TEST_IDS[slot] ?? null;
+  if (__DEV__) {
+    if (slot === 'rate_native') {
+      return Platform.OS === 'ios' ? NATIVE_TEST_IDS.ios : NATIVE_TEST_IDS.android;
+    }
+    return TEST_IDS[slot] ?? null;
+  }
   return resolveProdId(slot);
 }
 
@@ -52,9 +61,8 @@ function resolveProdId(slot: AdSlot): string | null {
     case 'rate_native':
       return (
         (ios
-          ? (process.env.EXPO_PUBLIC_ADMOB_IOS_NATIVE ?? process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER)
-          : (process.env.EXPO_PUBLIC_ADMOB_ANDROID_NATIVE ??
-            process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER)) ?? null
+          ? process.env.EXPO_PUBLIC_ADMOB_IOS_NATIVE
+          : process.env.EXPO_PUBLIC_ADMOB_ANDROID_NATIVE) ?? null
       );
     case 'interstitial':
       return (

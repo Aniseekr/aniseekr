@@ -44,6 +44,7 @@ export const SYNC_PREFS_KEY = '@aniseekr/sync/prefs';
 export const SYNC_LAST_RUN_KEY = '@aniseekr/sync/lastRun';
 export const LANGUAGE_PRIORITY_KEY = '@aniseekr/title-language-priority';
 export const GACHA_USER_DATA_KEY = '@gacha_user_data';
+export const RATE_NATIVE_AD_SUPPRESS_UNTIL_KEY = '@aniseekr/ads/rate-native/suppressUntil';
 /** Prefix for one-shot collection tip-dismissal flags (`@aniseekr/${tip}`). */
 export const COLLECTION_TIP_KEY_PREFIX = '@aniseekr/';
 /** Prefix for swipe-action tip-dismissal flags (`@aniseekr/tip/${id}`). */
