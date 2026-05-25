@@ -7,6 +7,7 @@ import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing } from '../../constants/DesignSystem';
+import { FeatureFlags } from '../../constants/FeatureFlags';
 import {
   ACCENT_GRADIENTS,
   ACCENT_PRESETS,
@@ -476,7 +477,7 @@ function ThemeCard({
             style={{ color: palette.text.primary }}>
             {palette.name}
           </ThemedText>
-          {palette.isPremium ? (
+          {FeatureFlags.PREMIUM_ENABLED && palette.isPremium ? (
             <View
               style={[
                 styles.premiumPill,

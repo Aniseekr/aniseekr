@@ -16,6 +16,7 @@ import { router, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Radius, Spacing, Size } from '../../constants/DesignSystem';
+import { FeatureFlags } from '../../constants/FeatureFlags';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useTheme, type ThemeId, type ThemeMode } from '../../context/ThemeContext';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
@@ -502,7 +503,7 @@ export default function SettingsScreen() {
                   <ThemedText variant="titleLarge" weight="700" numberOfLines={1}>
                     {displayName}
                   </ThemedText>
-                  {isPro ? (
+                  {FeatureFlags.PREMIUM_ENABLED && isPro ? (
                     <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
                       <ThemedText
                         variant="captionSmall"
@@ -527,51 +528,53 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
 
-          {/* Premium hero */}
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              if (isPro) void openManageSubscription();
-              else setPaywallVisible(true);
-            }}
-            onLongPress={() => {
-              hapticsBridge.longPress();
-              setActiveSheet('premium');
-            }}
-            style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}
-            accessibilityRole="button"
-            accessibilityLabel={isPro ? 'Manage subscription' : 'Upgrade to Premium'}>
-            <LinearGradient
-              colors={[theme.accent, theme.accentDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.premiumHero}>
-              <View style={styles.premiumHeroLeft}>
-                <Ionicons name="sparkles" size={22} color={ctaFg} />
-                <View style={styles.premiumTextWrap}>
-                  <ThemedText
-                    variant="titleMedium"
-                    weight="700"
-                    style={{ color: ctaFg }}>
-                    {isPro ? 'Premium active' : 'Unlock Premium'}
-                  </ThemedText>
-                  <ThemedText
-                    variant="bodySmall"
-                    style={{ color: ctaFg, opacity: 0.85 }}>
-                    {isPro
-                      ? 'Manage your subscription and benefits'
-                      : 'No ads, all themes, unlimited sync'}
+          {/* Premium hero — hidden while FeatureFlags.PREMIUM_ENABLED is false */}
+          {FeatureFlags.PREMIUM_ENABLED ? (
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                if (isPro) void openManageSubscription();
+                else setPaywallVisible(true);
+              }}
+              onLongPress={() => {
+                hapticsBridge.longPress();
+                setActiveSheet('premium');
+              }}
+              style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}
+              accessibilityRole="button"
+              accessibilityLabel={isPro ? 'Manage subscription' : 'Upgrade to Premium'}>
+              <LinearGradient
+                colors={[theme.accent, theme.accentDark]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.premiumHero}>
+                <View style={styles.premiumHeroLeft}>
+                  <Ionicons name="sparkles" size={22} color={ctaFg} />
+                  <View style={styles.premiumTextWrap}>
+                    <ThemedText
+                      variant="titleMedium"
+                      weight="700"
+                      style={{ color: ctaFg }}>
+                      {isPro ? 'Premium active' : 'Unlock Premium'}
+                    </ThemedText>
+                    <ThemedText
+                      variant="bodySmall"
+                      style={{ color: ctaFg, opacity: 0.85 }}>
+                      {isPro
+                        ? 'Manage your subscription and benefits'
+                        : 'No ads, all themes, unlimited sync'}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View
+                  style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
+                  <ThemedText variant="titleSmall" weight="700">
+                    {isPro ? 'Manage' : 'Upgrade'}
                   </ThemedText>
                 </View>
-              </View>
-              <View
-                style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
-                <ThemedText variant="titleSmall" weight="700">
-                  {isPro ? 'Manage' : 'Upgrade'}
-                </ThemedText>
-              </View>
-            </LinearGradient>
-          </Pressable>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
 
           <SettingsSection title="ACCOUNT">
             <SettingsRow

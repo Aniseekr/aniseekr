@@ -13,6 +13,7 @@
  * `NSPrivacyTracking` and adding `NSUserTrackingUsageDescription`.
  */
 import { Platform } from 'react-native';
+import { FeatureFlags } from '../../../constants/FeatureFlags';
 
 export type AdSlot = 'home_banner' | 'detail_banner' | 'rate_native' | 'interstitial' | 'rewarded';
 
@@ -33,6 +34,7 @@ const NATIVE_TEST_IDS = {
 } as const;
 
 export function getAdUnitId(slot: AdSlot): string | null {
+  if (!FeatureFlags.ADS_ENABLED) return null;
   if (process.env.EXPO_PUBLIC_ADS_DISABLED === '1') return null;
   if (Platform.OS === 'web') return null;
   if (__DEV__) {

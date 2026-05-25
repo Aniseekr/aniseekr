@@ -14,6 +14,7 @@ import {
   SubscriptionOfferingPackage,
   SubscriptionState,
 } from '../libs/services/subscription/subscription-service';
+import { FeatureFlags } from '../constants/FeatureFlags';
 
 interface SubscriptionContextValue extends SubscriptionState {
   offerings: SubscriptionOffering[];
@@ -97,17 +98,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
 export function useSubscription(): SubscriptionContextValue {
   const ctx = useContext(SubscriptionContext);
-  if (!ctx) {
-    return {
-      ...ANONYMOUS_STATE,
-      offerings: [],
-      loading: false,
-      refresh: async () => undefined,
-      purchase: async () => ANONYMOUS_STATE,
-      restore: async () => ANONYMOUS_STATE,
-      identify: async () => undefined,
-      signOut: async () => undefined,
-    };
+  const base: SubscriptionContextValue = ctx ?? {
+    ...ANONYMOUS_STATE,
+    offerings: [],
+    loading: false,
+    refresh: async () => undefined,
+    purchase: async () => ANONYMOUS_STATE,
+    restore: async () => ANONYMOUS_STATE,
+    identify: async () => undefined,
+    signOut: async () => undefined,
+  };
+  // Free-version posture: treat everyone as Pro so isPro-gated features
+  // (premium themes, no-ads cascade) auto-unlock. See FeatureFlags.ts.
+  if (!FeatureFlags.PREMIUM_ENABLED) {
+    return { ...base, isPro: true };
   }
-  return ctx;
+  return base;
 }

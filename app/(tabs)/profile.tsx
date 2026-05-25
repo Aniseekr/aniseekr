@@ -28,6 +28,7 @@ import {
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Radius, Spacing } from '../../constants/DesignSystem';
+import { FeatureFlags } from '../../constants/FeatureFlags';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 const PLATFORM_INITIAL: Record<PlatformType, string> = {
@@ -238,7 +239,7 @@ export default function ProfileScreen() {
                 {isEditable ? (
                   <MaterialIcons name="edit" size={16} color={theme.text.tertiary} />
                 ) : null}
-                {isPro ? (
+                {FeatureFlags.PREMIUM_ENABLED && isPro ? (
                   <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
                     <FontAwesome5 name="crown" size={10} color={ctaFg} />
                     <ThemedText
@@ -358,45 +359,47 @@ export default function ProfileScreen() {
             </View>
           </Pressable>
 
-          {/* Premium CTA */}
-          <Pressable
-            onPress={handleOpenPremium}
-            style={({ pressed }) => [styles.premiumCta, pressed && { opacity: 0.92 }]}>
-            <LinearGradient
-              colors={[theme.accent, theme.accentDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.premiumCtaContent}>
-              <View style={styles.premiumCtaText}>
-                <View style={styles.premiumTitleRow}>
-                  <Ionicons name="sparkles" size={16} color={ctaFg} />
+          {/* Premium CTA — hidden while FeatureFlags.PREMIUM_ENABLED is false */}
+          {FeatureFlags.PREMIUM_ENABLED ? (
+            <Pressable
+              onPress={handleOpenPremium}
+              style={({ pressed }) => [styles.premiumCta, pressed && { opacity: 0.92 }]}>
+              <LinearGradient
+                colors={[theme.accent, theme.accentDark]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.premiumCtaContent}>
+                <View style={styles.premiumCtaText}>
+                  <View style={styles.premiumTitleRow}>
+                    <Ionicons name="sparkles" size={16} color={ctaFg} />
+                    <ThemedText
+                      variant="titleMedium"
+                      weight="700"
+                      style={[styles.premiumTitle, { color: ctaFg }]}>
+                      {isPro ? 'Premium active' : 'Unlock Premium'}
+                    </ThemedText>
+                  </View>
                   <ThemedText
-                    variant="titleMedium"
-                    weight="700"
-                    style={[styles.premiumTitle, { color: ctaFg }]}>
-                    {isPro ? 'Premium active' : 'Unlock Premium'}
+                    variant="bodySmall"
+                    style={[styles.premiumSubtitle, { color: ctaFg, opacity: 0.85 }]}>
+                    {isPro
+                      ? 'Manage your subscription and benefits'
+                      : 'No ads, all themes, unlimited sync'}
                   </ThemedText>
                 </View>
-                <ThemedText
-                  variant="bodySmall"
-                  style={[styles.premiumSubtitle, { color: ctaFg, opacity: 0.85 }]}>
-                  {isPro
-                    ? 'Manage your subscription and benefits'
-                    : 'No ads, all themes, unlimited sync'}
-                </ThemedText>
+                <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
+                  <ThemedText
+                    variant="titleSmall"
+                    weight="700"
+                    style={{ color: theme.text.primary }}>
+                    {isPro ? 'Manage' : 'Upgrade'}
+                  </ThemedText>
+                </View>
               </View>
-              <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
-                <ThemedText
-                  variant="titleSmall"
-                  weight="700"
-                  style={{ color: theme.text.primary }}>
-                  {isPro ? 'Manage' : 'Upgrade'}
-                </ThemedText>
-              </View>
-            </View>
-          </Pressable>
+            </Pressable>
+          ) : null}
 
           {/* Quick Shortcuts */}
           <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
