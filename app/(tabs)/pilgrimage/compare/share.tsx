@@ -32,12 +32,17 @@ import {
   type ShareTemplate,
 } from '../../../../components/pilgrimage/ShareCard';
 import { ShareComposerControls } from '../../../../components/pilgrimage/ShareComposerControls';
+import { CropSheet } from '../../../../components/pilgrimage/CropSheet';
 import {
   getExportDimensions,
   normalizeWatermarkText,
   type ExportResolution,
   type WatermarkPosition,
 } from '../../../../libs/services/pilgrimage/share-composer';
+import {
+  getFilterMatrix,
+  type FilterPresetId,
+} from '../../../../libs/services/pilgrimage/share-filters';
 import {
   buildShareCaption,
   saveShareImage,
@@ -88,6 +93,19 @@ export default function ShareComparisonScreen() {
     () => getExportDimensions(ratio, exportResolution),
     [ratio, exportResolution]
   );
+
+  // Filter + crop state (Track B). `croppedShotUri` overrides the route-param
+  // shot when the user applies a crop; resetting it falls back to the original.
+  const [filterPreset, setFilterPreset] = useState<FilterPresetId>('none');
+  const [filterIntensity, setFilterIntensity] = useState(0.7);
+  const [croppedShotUri, setCroppedShotUri] = useState<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+
+  const filterMatrix = useMemo(
+    () => (filterPreset === 'none' ? null : getFilterMatrix(filterPreset, filterIntensity)),
+    [filterPreset, filterIntensity]
+  );
+  const effectiveShotUri = croppedShotUri ?? shotUri;
 
   const cardRef = useRef<View>(null);
   const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
@@ -237,7 +255,7 @@ export default function ShareComparisonScreen() {
                 ratio={ratio}
                 width={cardWidth}
                 imageUrl={imageUrl}
-                shotUri={shotUri}
+                shotUri={effectiveShotUri}
                 sceneName={sceneName}
                 animeTitle={animeTitle}
                 episode={ep}
@@ -255,6 +273,7 @@ export default function ShareComparisonScreen() {
                 watermarkText={watermarkText}
                 watermarkPosition={watermarkPosition}
                 watermarkOpacity={watermarkOpacity}
+                shotFilterMatrix={filterMatrix}
               />
             </View>
           </View>
@@ -350,6 +369,12 @@ export default function ShareComparisonScreen() {
             onWatermarkOpacityChange={setWatermarkOpacity}
             exportResolution={exportResolution}
             onExportResolutionChange={setExportResolution}
+            filterPreset={filterPreset}
+            onFilterPresetChange={setFilterPreset}
+            filterIntensity={filterIntensity}
+            onFilterIntensityChange={setFilterIntensity}
+            onOpenCrop={() => setCropOpen(true)}
+            cropApplied={!!croppedShotUri}
           />
 
           <View style={styles.toggleGroup}>
@@ -443,6 +468,18 @@ export default function ShareComparisonScreen() {
           </View>
         ) : null}
       </SafeAreaView>
+
+      <CropSheet
+        visible={cropOpen}
+        sourceUri={shotUri}
+        referenceUri={imageUrl}
+        onCancel={() => setCropOpen(false)}
+        onApply={(uri) => {
+          setCroppedShotUri(uri === shotUri ? null : uri);
+          setCropOpen(false);
+          flashToast(uri === shotUri ? 'Crop reset' : 'Cropped');
+        }}
+      />
     </View>
   );
 }

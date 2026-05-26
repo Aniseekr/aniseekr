@@ -20,6 +20,7 @@ import {
   resolveImagePairOrder,
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
+import { FilteredImage } from './FilteredImage';
 
 export type ShareTemplate = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
 export type ShareRatio = '1:1' | '9:16' | '16:9';
@@ -57,6 +58,13 @@ export type ShareCardProps = {
   watermarkPosition?: WatermarkPosition;
   /** 0–1; the helper clamps anything outside that range. */
   watermarkOpacity?: number;
+  /**
+   * 4×5 Skia ColorMatrix applied to the user-shot cell only (#4 filter
+   * presets / #5 auto color match). Anime reference stays untouched so the
+   * comparison reads honestly. `null` / undefined / identity → expo-image
+   * fast path with no Skia overhead.
+   */
+  shotFilterMatrix?: number[] | null;
 };
 
 const RATIO_VALUES: Record<ShareRatio, number> = {
@@ -111,6 +119,7 @@ function ImagePair({
   badgeStyle = 'pill',
   borderRadius = 8,
   gap = 6,
+  shotFilterMatrix = null,
 }: {
   ratio: ShareRatio;
   imageUrl: string;
@@ -121,6 +130,7 @@ function ImagePair({
   badgeStyle?: 'pill' | 'square' | 'sticker';
   borderRadius?: number;
   gap?: number;
+  shotFilterMatrix?: number[] | null;
 }) {
   const isPortrait = ratio === '9:16';
   const order = resolveImagePairOrder(swapOrder);
@@ -143,6 +153,7 @@ function ImagePair({
         color={successColor}
         radius={borderRadius}
         style={badgeStyle}
+        filterMatrix={shotFilterMatrix}
       />
     ),
   };
@@ -202,12 +213,14 @@ function ImageCell({
   color,
   radius,
   style,
+  filterMatrix = null,
 }: {
   uri: string;
   badge: string;
   color: string;
   radius: number;
   style: 'pill' | 'square' | 'sticker';
+  filterMatrix?: number[] | null;
 }) {
   return (
     <View
@@ -218,7 +231,7 @@ function ImageCell({
         backgroundColor: '#0a0a0a',
         position: 'relative',
       }}>
-      <Image source={{ uri }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+      <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
       {style === 'sticker' ? (
         <View
           style={{
@@ -350,6 +363,7 @@ function PolaroidTemplate(props: TemplateProps) {
           badgeStyle="pill"
           borderRadius={4}
           gap={6}
+          shotFilterMatrix={props.shotFilterMatrix}
         />
       </View>
 
@@ -521,6 +535,7 @@ function ClassicTemplate(props: TemplateProps) {
           badgeStyle="pill"
           borderRadius={12}
           gap={8}
+          shotFilterMatrix={props.shotFilterMatrix}
         />
       </View>
 
@@ -614,6 +629,7 @@ function MinimalTemplate(props: TemplateProps) {
           badgeStyle="square"
           borderRadius={0}
           gap={2}
+          shotFilterMatrix={props.shotFilterMatrix}
         />
       </View>
       <LinearGradient
@@ -756,6 +772,7 @@ function ComicTemplate(props: TemplateProps) {
           badgeStyle="sticker"
           borderRadius={0}
           gap={3}
+          shotFilterMatrix={props.shotFilterMatrix}
         />
       </View>
 
@@ -894,7 +911,7 @@ function MangaTemplate(props: TemplateProps) {
     ),
     real: (
       <View key="real" style={{ flex: 1, position: 'relative' }}>
-        <Image source={{ uri: shotUri }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+        <FilteredImage uri={shotUri} matrix={props.shotFilterMatrix ?? null} contentFit="cover" />
         <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
         <View
           style={{

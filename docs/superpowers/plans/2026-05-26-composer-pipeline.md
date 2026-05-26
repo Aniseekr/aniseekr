@@ -75,10 +75,10 @@
 | 1 | **底色選項** | Background color picker for share card | ✅ Track A 完成 (2026-05-26)：`customBg` prop + 12 色 swatch palette + reset；自動 contrast watermark/caption ink | — | 低 | 0.5 週 |
 | 2 | **照片/截圖順序選項** | Reference vs user photo order (which on top) | ✅ Track A 完成 (2026-05-26)：`swapOrder` prop + `resolveImagePairOrder` 純函式；ANIME-first ↔ REAL-first chip | — | 低 | 0.5 天 |
 | 3 | **文字水印選項** | Custom text watermark on output | ✅ Track A 完成 (2026-05-26)：80 字上限、HTML 防注入 (`normalizeWatermarkText`)、5 種位置、opacity slider、自動 text-shadow | (Phase 2) 字體選擇、顏色 picker | 中 | 1 週 |
-| 4 | **照片濾鏡調整選項** | Color filter presets on user photo | ❌ 無：沒有用 Skia `ColorFilter.matrix()` | 預設 4-6 套濾鏡（電影感 / 柔光 / 動漫 / 高對比 / 暖色 / 冷色） + 自訂強度滑桿 | 中 | 1.5 週 |
-| 5 | **分析截圖自動調整** | Auto-apply reference's lighting/color to user photo | 🟡 半套：`frame-match.ts` 已分析動漫場景的 histogram + lighting，但結果只用來「打分」，沒拿去調整自拍 | 把分析結果轉成 `ColorMatrix`（match 動漫場景色溫/曝光），加「自動套用」按鈕 | 中高 | 2 週 |
+| 4 | **照片濾鏡調整選項** | Color filter presets on user photo | ✅ Track B 完成 (2026-05-26)：6 種預設 (`cinematic/soft/anime/contrast/warm/cool`) + intensity slider；`<FilteredImage/>` 自動切 Skia ColorMatrix 路徑、identity 走 expo-image fast path | — | 中 | 1.5 週 |
+| 5 | **分析截圖自動調整** | Auto-apply reference's lighting/color to user photo | 🟡 半套：`frame-match.ts` 已分析動漫場景的 histogram + lighting，但結果只用來「打分」，沒拿去調整自拍。`applyAutoColorMatrix()` helper 已就位 (Track B) — Track C 接到 UI | (Track C) 串接到 share 畫面 toggle，從 EXIF/分析快取讀 RGB mean | 中高 | 2 週 |
 | 6 | **濾鏡分辨率調整** | Export resolution control | ✅ Track A 完成 (2026-05-26)：`getExportDimensions(ratio, '720p'\|'1080p'\|'4k')` 推導出 captureRef pixel size；短邊基準 | — | 低中 | 0.5 週 |
-| 7 | **照片裁切選項** | Crop user photo (post-capture) | ❌ 無：preview 註解寫 `stage snapshot saves the whole frame — no crop` | 標準 crop UI（自由 / 1:1 / 9:16 / 16:9 / 動漫場景同比例） + `expo-image-manipulator` 已可用 | 中 | 1 週 |
+| 7 | **照片裁切選項** | Crop user photo (post-capture) | ✅ Track B 完成 (2026-05-26)：`<CropSheet/>` 全螢幕 modal + Pan gesture (Reanimated SharedValue) + rule-of-thirds grid + 5 aspect chips (Free/1:1/9:16/16:9/Match anime) + `expo-image-manipulator` apply | (Phase 2) Pinch zoom | 中 | 1 週 |
 | 8 | **透視拉伸選項** | Perspective warp to match reference | ❌ 無：`alignment-scoring` 只用來提示，不會 warp 圖 | 4 角拖拉 corner-pin 透視變換；自動候選用對齊 sensor 數據反推 | 高 | 2-3 週 |
 
 ### 圖示說明
@@ -183,11 +183,12 @@
 4. ✅ **#6 輸出解析度** — `getExportDimensions(ratio, '720p'|'1080p'|'4k')`；`captureRef({ width, height })` 渲染到目標 pixel size
 5. ✅ TDD — 17 個單元測試 (`__tests__/unit/pilgrimage/share-composer.test.ts`)；組件解耦：純函式在 `libs/services/pilgrimage/share-composer.ts`，UI chips/swatches/slider 在 `components/pilgrimage/ShareComposerControls.tsx`
 
-### Track B：照片後處理（中型，總計 ~2.5 週）
+### Track B：照片後處理（中型，總計 ~2.5 週）✅ Done (2026-05-26)
 > 目標：自拍照變得能調，不只是貼上去。
 
-5. **#4 濾鏡預設**（1.5 週）— Skia `ColorMatrix` presets：電影感/柔光/動漫風/高對比/暖/冷 + 強度滑桿
-6. **#7 裁切**（1 週）— 用 `expo-image-manipulator`（已安裝）+ 自由/1:1/9:16/16:9/動漫同比例
+5. ✅ **#4 濾鏡預設** — 7 個 preset（含 none）+ `getFilterMatrix(id, intensity)` + `blendColorMatrix` linear interp from identity；`<FilteredImage/>` 走 Skia Canvas + ColorMatrix declarative path（user 圖才套，anime ref 維持原樣）
+6. ✅ **#7 裁切** — `<CropSheet/>` Modal + Reanimated Pan gesture + `panToCropRegion()` 純函式（測試覆蓋邊界 clamp）+ `expo-image-manipulator` Apply；croppedShotUri 取代原 shotUri 給 ShareCard
+7. ✅ TDD — 22 個單元測試 (`__tests__/unit/pilgrimage/share-filters.test.ts`)：preset shape、intensity blend、auto color match clamp、center/pan crop region
 
 ### Track C：智能匹配（重型，總計 ~5 週）
 > 目標：分析資料不再只是裝飾，真的能用來改畫面。

@@ -20,6 +20,10 @@ import {
   type ExportResolution,
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
+import {
+  FILTER_PRESETS,
+  type FilterPresetId,
+} from '../../libs/services/pilgrimage/share-filters';
 
 // Curated palette: keeps callers from having to know hex codes. The first
 // entry is "reset to template default"; the rest cover warm/cool/neutral so
@@ -54,6 +58,12 @@ export type ShareComposerControlsProps = {
   onWatermarkOpacityChange: (next: number) => void;
   exportResolution: ExportResolution;
   onExportResolutionChange: (next: ExportResolution) => void;
+  filterPreset: FilterPresetId;
+  onFilterPresetChange: (next: FilterPresetId) => void;
+  filterIntensity: number;
+  onFilterIntensityChange: (next: number) => void;
+  onOpenCrop: () => void;
+  cropApplied: boolean;
 };
 
 const POSITION_LABELS: Record<WatermarkPosition, string> = {
@@ -80,6 +90,12 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
     onWatermarkOpacityChange,
     exportResolution,
     onExportResolutionChange,
+    filterPreset,
+    onFilterPresetChange,
+    filterIntensity,
+    onFilterIntensityChange,
+    onOpenCrop,
+    cropApplied,
   } = props;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accentFg = readableTextOn(accent);
@@ -158,6 +174,96 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
             );
           })}
         </View>
+      </View>
+
+      {/* --- Filter presets + Crop chip --- */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="color-filter-outline" size={14} color={theme.text.secondary} />
+          <ThemedText variant="captionSmall" tone="secondary" weight="600">
+            Filter
+          </ThemedText>
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              onOpenCrop();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Crop user photo"
+            style={({ pressed }) => [
+              styles.cropChip,
+              {
+                backgroundColor: cropApplied ? accent : theme.background.tertiary,
+                borderColor: cropApplied ? accent : theme.glassBorder,
+                opacity: pressed ? 0.85 : 1,
+                marginLeft: 'auto',
+              },
+            ]}>
+            <Ionicons
+              name="crop"
+              size={13}
+              color={cropApplied ? accentFg : theme.text.primary}
+            />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: cropApplied ? accentFg : theme.text.primary }}>
+              {cropApplied ? 'Cropped' : 'Crop'}
+            </ThemedText>
+          </Pressable>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}>
+          {FILTER_PRESETS.map((f) => {
+            const active = f.id === filterPreset;
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => {
+                  hapticsBridge.selection();
+                  onFilterPresetChange(f.id);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter ${f.label}`}
+                accessibilityState={{ selected: active }}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  {
+                    backgroundColor: active ? accent : theme.background.secondary,
+                    borderColor: active ? accent : theme.glassBorder,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <ThemedText
+                  variant="captionSmall"
+                  weight="700"
+                  style={{ color: active ? accentFg : theme.text.primary }}>
+                  {f.label}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        {filterPreset !== 'none' ? (
+          <View style={styles.opacityRow}>
+            <ThemedText variant="captionSmall" tone="secondary" weight="600">
+              {`${Math.round(filterIntensity * 100)}%`}
+            </ThemedText>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={1}
+              step={0.05}
+              value={filterIntensity}
+              minimumTrackTintColor={accent}
+              maximumTrackTintColor={theme.background.tertiary}
+              thumbTintColor={accent}
+              onValueChange={onFilterIntensityChange}
+            />
+          </View>
+        ) : null}
       </View>
 
       {/* --- Background color swatches --- */}
@@ -324,6 +430,25 @@ function makeStyles(theme: ThemePalette) {
     },
     section: {
       gap: 8,
+    },
+    filterRow: {
+      gap: 6,
+      paddingRight: 4,
+    },
+    filterChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    cropChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      borderWidth: 1,
     },
     sectionHeader: {
       flexDirection: 'row',
