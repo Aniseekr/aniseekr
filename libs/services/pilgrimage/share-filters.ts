@@ -214,12 +214,15 @@ export function centerCropRegion(srcW: number, srcH: number, aspect: number | nu
  * than the gesture handler.
  *
  * Assumes the image is displayed at the cover scale of `frame` — i.e. the
- * larger of (frame.w / image.w, frame.h / image.h).
+ * larger of (frame.w / image.w, frame.h / image.h). `zoom` (default 1) is
+ * the user's pinch multiplier on top of cover — zoom > 1 shrinks the crop
+ * window, zoom < 1 is disallowed (image would no longer fill the frame).
  */
 export function panToCropRegion(
   image: { w: number; h: number },
   frame: { w: number; h: number },
-  pan: { x: number; y: number }
+  pan: { x: number; y: number },
+  zoom: number = 1
 ): CropRegion {
   if (image.w <= 0 || image.h <= 0) {
     throw new Error('share-filters: image dimensions must be positive');
@@ -227,11 +230,15 @@ export function panToCropRegion(
   if (frame.w <= 0 || frame.h <= 0) {
     throw new Error('share-filters: frame dimensions must be positive');
   }
-  const scale = Math.max(frame.w / image.w, frame.h / image.h);
-  const cropW = Math.min(image.w, frame.w / scale);
-  const cropH = Math.min(image.h, frame.h / scale);
-  const rawX = image.w / 2 - pan.x / scale - cropW / 2;
-  const rawY = image.h / 2 - pan.y / scale - cropH / 2;
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error('share-filters: zoom must be a positive number');
+  }
+  const baseScale = Math.max(frame.w / image.w, frame.h / image.h);
+  const totalScale = baseScale * zoom;
+  const cropW = Math.min(image.w, frame.w / totalScale);
+  const cropH = Math.min(image.h, frame.h / totalScale);
+  const rawX = image.w / 2 - pan.x / totalScale - cropW / 2;
+  const rawY = image.h / 2 - pan.y / totalScale - cropH / 2;
   const originX = clamp(rawX, 0, image.w - cropW);
   const originY = clamp(rawY, 0, image.h - cropH);
   return { originX, originY, width: cropW, height: cropH };

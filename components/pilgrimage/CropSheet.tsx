@@ -74,8 +74,10 @@ export function CropSheet({
   // Reanimated state — never touches React (Rule 9).
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
+  const zoom = useSharedValue(1);
   const savedTx = useSharedValue(0);
   const savedTy = useSharedValue(0);
+  const savedZoom = useSharedValue(1);
 
   useEffect(() => {
     if (!visible || !sourceUri) return;
@@ -151,38 +153,64 @@ export function CropSheet({
     };
   }, [imageSize, frame]);
 
-  // Reset pan whenever the frame or image changes so the user never sees a
-  // stale offset that would clip outside bounds.
+  // Reset pan + zoom whenever the frame or image changes so the user never
+  // sees a stale offset that would clip outside bounds.
   useEffect(() => {
     tx.value = 0;
     ty.value = 0;
+    zoom.value = 1;
     savedTx.value = 0;
     savedTy.value = 0;
-  }, [aspect, imageSize, tx, ty, savedTx, savedTy]);
+    savedZoom.value = 1;
+  }, [aspect, imageSize, tx, ty, zoom, savedTx, savedTy, savedZoom]);
 
   const panMaxX = display?.panMaxX ?? 0;
   const panMaxY = display?.panMaxY ?? 0;
 
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .onUpdate((e) => {
-          'worklet';
-          tx.value = clampWorklet(savedTx.value + e.translationX, -panMaxX, panMaxX);
-          ty.value = clampWorklet(savedTy.value + e.translationY, -panMaxY, panMaxY);
-        })
-        .onEnd(() => {
-          'worklet';
-          savedTx.value = tx.value;
-          savedTy.value = ty.value;
-          tx.value = withTiming(savedTx.value, { duration: 80 });
-          ty.value = withTiming(savedTy.value, { duration: 80 });
-        }),
-    [panMaxX, panMaxY, tx, ty, savedTx, savedTy]
-  );
+  const composedGesture = useMemo(() => {
+    const pan = Gesture.Pan()
+      .onUpdate((e) => {
+        'worklet';
+        const maxX = panMaxX * zoom.value;
+        const maxY = panMaxY * zoom.value;
+        tx.value = clampWorklet(savedTx.value + e.translationX, -maxX, maxX);
+        ty.value = clampWorklet(savedTy.value + e.translationY, -maxY, maxY);
+      })
+      .onEnd(() => {
+        'worklet';
+        savedTx.value = tx.value;
+        savedTy.value = ty.value;
+        tx.value = withTiming(savedTx.value, { duration: 80 });
+        ty.value = withTiming(savedTy.value, { duration: 80 });
+      });
+
+    const pinch = Gesture.Pinch()
+      .onUpdate((e) => {
+        'worklet';
+        const next = savedZoom.value * e.scale;
+        zoom.value = clampWorklet(next, 1, 4);
+      })
+      .onEnd(() => {
+        'worklet';
+        savedZoom.value = zoom.value;
+        // Re-clamp pan after zoom changes so we don't show transparent edges.
+        const maxX = panMaxX * zoom.value;
+        const maxY = panMaxY * zoom.value;
+        tx.value = withTiming(clampWorklet(tx.value, -maxX, maxX), { duration: 80 });
+        ty.value = withTiming(clampWorklet(ty.value, -maxY, maxY), { duration: 80 });
+        savedTx.value = clampWorklet(tx.value, -maxX, maxX);
+        savedTy.value = clampWorklet(ty.value, -maxY, maxY);
+      });
+
+    return Gesture.Simultaneous(pan, pinch);
+  }, [panMaxX, panMaxY, tx, ty, zoom, savedTx, savedTy, savedZoom]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tx.value }, { translateY: ty.value }],
+    transform: [
+      { translateX: tx.value },
+      { translateY: ty.value },
+      { scale: zoom.value },
+    ],
   }));
 
   const handleApply = useCallback(async () => {
@@ -199,7 +227,8 @@ export function CropSheet({
       const region = panToCropRegion(
         { w: imageSize.w, h: imageSize.h },
         { w: frame.w, h: frame.h },
-        { x: tx.value, y: ty.value }
+        { x: tx.value, y: ty.value },
+        zoom.value
       );
       const result = await ImageManipulator.manipulateAsync(
         sourceUri,
@@ -212,7 +241,7 @@ export function CropSheet({
     } finally {
       setApplying(false);
     }
-  }, [imageSize, display, applying, targetAspect, frame, tx, ty, sourceUri, onApply]);
+  }, [imageSize, display, applying, targetAspect, frame, tx, ty, zoom, sourceUri, onApply]);
 
   return (
     <Modal
@@ -236,7 +265,7 @@ export function CropSheet({
         <View style={styles.viewport}>
           <View style={[styles.frame, { width: frame.w, height: frame.h }]}>
             {imageSize ? (
-              <GestureDetector gesture={panGesture}>
+              <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.imageWrap, animatedStyle]}>
                   <ExpoImage
                     source={{ uri: sourceUri }}

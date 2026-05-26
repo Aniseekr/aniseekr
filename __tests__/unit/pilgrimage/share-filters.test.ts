@@ -180,4 +180,26 @@ describe('share filters · pan-to-crop region', () => {
     expect(() => panToCropRegion({ w: 0, h: 100 }, { w: 100, h: 100 }, { x: 0, y: 0 })).toThrow();
     expect(() => panToCropRegion({ w: 100, h: 100 }, { w: 0, h: 100 }, { x: 0, y: 0 })).toThrow();
   });
+
+  it('zoom = 2 shrinks the crop window to half each side', () => {
+    const base = panToCropRegion({ w: 1080, h: 1920 }, { w: 360, h: 360 }, { x: 0, y: 0 }, 1);
+    const zoomed = panToCropRegion({ w: 1080, h: 1920 }, { w: 360, h: 360 }, { x: 0, y: 0 }, 2);
+    expect(zoomed.width).toBeCloseTo(base.width / 2, 1);
+    expect(zoomed.height).toBeCloseTo(base.height / 2, 1);
+  });
+
+  it('zoom defaults to 1 when omitted (back-compat)', () => {
+    const a = panToCropRegion({ w: 800, h: 800 }, { w: 200, h: 200 }, { x: 0, y: 0 });
+    const b = panToCropRegion({ w: 800, h: 800 }, { w: 200, h: 200 }, { x: 0, y: 0 }, 1);
+    expect(a).toEqual(b);
+  });
+
+  it('refuses zoom <= 0', () => {
+    expect(() =>
+      panToCropRegion({ w: 100, h: 100 }, { w: 50, h: 50 }, { x: 0, y: 0 }, 0)
+    ).toThrow();
+    expect(() =>
+      panToCropRegion({ w: 100, h: 100 }, { w: 50, h: 50 }, { x: 0, y: 0 }, -1)
+    ).toThrow();
+  });
 });

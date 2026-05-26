@@ -78,7 +78,7 @@
 | 4 | **照片濾鏡調整選項** | Color filter presets on user photo | ✅ Track B 完成 (2026-05-26)：6 種預設 (`cinematic/soft/anime/contrast/warm/cool`) + intensity slider；`<FilteredImage/>` 自動切 Skia ColorMatrix 路徑、identity 走 expo-image fast path | — | 中 | 1.5 週 |
 | 5 | **分析截圖自動調整** | Auto-apply reference's lighting/color to user photo | ✅ Track C 完成 (2026-05-26)：`loadAutoColorMatrix(refUri, shotUri)` 跑 Skia 64×64 downsample → `reducePixels` 拿 avgR/G/B → `applyAutoColorMatrix` 推 ColorMatrix；UI toggle 含 loading + 不可用態 | — | 中高 | 2 週 |
 | 6 | **濾鏡分辨率調整** | Export resolution control | ✅ Track A 完成 (2026-05-26)：`getExportDimensions(ratio, '720p'\|'1080p'\|'4k')` 推導出 captureRef pixel size；短邊基準 | — | 低中 | 0.5 週 |
-| 7 | **照片裁切選項** | Crop user photo (post-capture) | ✅ Track B 完成 (2026-05-26)：`<CropSheet/>` 全螢幕 modal + Pan gesture (Reanimated SharedValue) + rule-of-thirds grid + 5 aspect chips (Free/1:1/9:16/16:9/Match anime) + `expo-image-manipulator` apply | (Phase 2) Pinch zoom | 中 | 1 週 |
+| 7 | **照片裁切選項** | Crop user photo (post-capture) | ✅ Track B + Phase 2 完成：`<CropSheet/>` 全螢幕 modal + Pan + Pinch zoom (1×–4×, clamp pan to zoomed bounds) + rule-of-thirds grid + 5 aspect chips (Free/1:1/9:16/16:9/Match anime) + `expo-image-manipulator` apply | — | 中 | 1 週 |
 | 8 | **透視拉伸選項** | Perspective warp to match reference | ✅ Track C 完成 (Phase 1) (2026-05-26)：`computeHomography()` 8-DOF DLT solver + `tiltCorrectionTransform()` 從 capture sensor (tiltDeg / headingDeltaDeg) 推出 RN perspective transform；UI toggle (auto-from-sensor) | (Phase 2) 4 角手動 corner-pin gesture 編輯器 — 走 `homographyToCss()` apply 到 Skia | 高 | 2-3 週 |
 
 ### 圖示說明
