@@ -47,6 +47,7 @@ import type {
 } from '../../../../components/pilgrimage/camera/camera-engine';
 import CameraErrorBoundary from '../../../../components/pilgrimage/camera/CameraErrorBoundary';
 import { CameraStage } from '../../../../components/pilgrimage/camera/CameraStage';
+import { CompanionOverlay } from '../../../../components/companion/CompanionOverlay';
 import OverlayLayer from '../../../../components/pilgrimage/camera/OverlayLayer';
 import { FocusReticle } from '../../../../components/pilgrimage/camera/FocusReticle';
 import { LevelHorizon } from '../../../../components/pilgrimage/camera/LevelHorizon';
@@ -1347,6 +1348,12 @@ export default function CompareCaptureScreen() {
             afLocked={tapFocus.afLocked}
           />
         </View>
+
+        <CompanionOverlay
+          parentSize={{ width: winW, height: winH }}
+          themeColor={themeColor}
+          editMode={editMode}
+        />
 
         <CameraTopBar
           placeName={name}

@@ -198,7 +198,7 @@
 9. ✅ TDD — 12 個單元測試 (`__tests__/unit/pilgrimage/share-auto-match.test.ts`)：safe-band clamp、identity edge cases、DLT degenerate input、sensor zero-state
 
 ### Track D：角色疊圖 Companion（新功能線，可獨立進行）
-9. ✅ **Companion Phase 1 MVP** (2026-05-26) — SubjectLifter TS spec + JS fallback (native Nitro module pending separate task)；MMKV character library (`upsert/delete/subscribe` + 20-entry quota + JSON serializer with schema guard)；`<CharacterLayer/>` with Pan/Pinch/Rotation/Double-tap flip/Long-press swap；`<CharacterPickerSheet/>` (import via expo-image-picker → lift → store)；`/companion` standalone route (background picker + character + capture via view-shot)；12 unit tests for library reducer + lifter fallback contract. 待後續：(a) compare/[spotId] chip integration (Phase 1B)；(b) native subject-lifter Nitro module (HybridObject codegen)
+9. ✅ **Companion Phase 1 MVP + 1B compare integration** (2026-05-27) — SubjectLifter TS spec + JS fallback；MMKV character library + 20-entry quota；`<CharacterLayer/>` (Pan/Pinch/Rotation/Double-tap flip/Long-press swap)；`<CharacterPickerSheet/>`；`/companion` standalone route；`<CompanionOverlay/>` chip 已掛到 compare/[spotId] 做即時 positioning guide；12 單元測試。待後續：(a) Phase 1C 捕獲合成（Skia compositor 把 character bake 進 takePhoto 結果）；(b) native subject-lifter Nitro module
 10. **Companion Phase 2**（2–3 週）— 光照配色 + 假陰影
 11. **Companion Phase 3**（4–6 週，待 Phase 1+2 收 feedback 後決定）— 深度遮擋
 
