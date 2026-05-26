@@ -98,6 +98,9 @@ export type ShareComposerControlsProps = {
   autoWarpEnabled: boolean;
   autoWarpAvailable: boolean;
   onAutoWarpChange: (next: boolean) => void;
+  manualWarpApplied: boolean;
+  onOpenManualWarp: () => void;
+  onResetManualWarp: () => void;
 };
 
 const POSITION_LABELS: Record<WatermarkPosition, string> = {
@@ -141,6 +144,9 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
     autoWarpEnabled,
     autoWarpAvailable,
     onAutoWarpChange,
+    manualWarpApplied,
+    onOpenManualWarp,
+    onResetManualWarp,
   } = props;
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accentFg = readableTextOn(accent);
@@ -345,6 +351,62 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
           loading={false}
           onChange={onAutoWarpChange}
         />
+        <View style={[smartStyles.row, { borderBottomColor: 'transparent' }]}>
+          <View
+            style={[
+              smartStyles.icon,
+              { backgroundColor: `${accent}26`, borderColor: `${accent}55` },
+            ]}>
+            <Ionicons name="apps-outline" size={16} color={accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="bodyMedium" weight="600">
+              Manual warp
+            </ThemedText>
+            <ThemedText variant="captionSmall" tone="secondary">
+              {manualWarpApplied ? '4-corner warp applied' : 'Drag corners to align'}
+            </ThemedText>
+          </View>
+          {manualWarpApplied ? (
+            <Pressable
+              onPress={() => {
+                hapticsBridge.warning();
+                onResetManualWarp();
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Reset manual warp"
+              style={({ pressed }) => [
+                styles.cropChip,
+                {
+                  backgroundColor: theme.background.secondary,
+                  borderColor: theme.glassBorder,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <Ionicons name="close" size={13} color={theme.text.primary} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              onOpenManualWarp();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Open manual warp editor"
+            style={({ pressed }) => [
+              styles.cropChip,
+              {
+                backgroundColor: accent,
+                borderColor: accent,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
+              Edit
+            </ThemedText>
+          </Pressable>
+        </View>
       </View>
 
       {/* --- Background color swatches --- */}

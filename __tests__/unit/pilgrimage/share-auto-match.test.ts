@@ -12,7 +12,9 @@ import {
 import {
   IDENTITY_HOMOGRAPHY,
   computeHomography,
+  cornerPinHomography,
   homographyToCss,
+  homographyToMatrix4,
   tiltCorrectionTransform,
 } from '../../../libs/services/pilgrimage/share-perspective';
 
@@ -98,6 +100,32 @@ describe('share perspective · homography math (Phase 2 corner-pin)', () => {
     const css = homographyToCss(IDENTITY_HOMOGRAPHY);
     // Identity 3×3 → 4×4 identity → CSS matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1)
     expect(css).toBe('matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1)');
+  });
+
+  it('homographyToMatrix4 returns the same 16-element column-major array for native RN transform', () => {
+    const m = homographyToMatrix4(IDENTITY_HOMOGRAPHY);
+    expect(m).toEqual([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+  });
+
+  it('cornerPinHomography maps the unit rect onto user-dragged corners', () => {
+    const W = 100;
+    const H = 100;
+    // Push the top-right corner down-and-in by (10, 5)
+    const dragged = [
+      { x: 0, y: 0 },
+      { x: 90, y: 5 },
+      { x: 100, y: 100 },
+      { x: 0, y: 100 },
+    ];
+    const m = cornerPinHomography(W, H, dragged);
+    expect(m).not.toBeNull();
+    // Mapping origin should pin to origin (identity column tx=0, ty=0).
+    expect(m![2]).toBeCloseTo(0, 5);
+    expect(m![5]).toBeCloseTo(0, 5);
+  });
+
+  it('cornerPinHomography returns null if any dragged corner is missing', () => {
+    expect(cornerPinHomography(100, 100, [{ x: 0, y: 0 }])).toBeNull();
   });
 });
 

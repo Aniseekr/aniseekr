@@ -113,6 +113,43 @@ export function homographyToCss(h: Homography | readonly number[]): string {
   return `matrix3d(${m.map(formatNum).join(',')})`;
 }
 
+/**
+ * Lift a 3×3 homography to a 16-element column-major Matrix4. RN's native
+ * `transform: [{ matrix: ... }]` accepts this shape directly — used by the
+ * manual corner-pin editor to warp a `<View>` (and any image children).
+ */
+export function homographyToMatrix4(h: Homography | readonly number[]): number[] {
+  const [h11, h12, h13, h21, h22, h23, h31, h32, h33] = h;
+  return [
+    h11, h21, 0, h31,
+    h12, h22, 0, h32,
+    0,   0,   1, 0,
+    h13, h23, 0, h33,
+  ];
+}
+
+/**
+ * Convenience: given a `width × height` source rect and four user-dragged
+ * destination corners (in the same coordinate frame as the source rect),
+ * return the homography that warps the source onto the destination.
+ * Returns `null` when fewer than four corners are supplied or the corners
+ * are degenerate.
+ */
+export function cornerPinHomography(
+  width: number,
+  height: number,
+  dragged: Pt[]
+): Homography | null {
+  if (dragged.length !== 4) return null;
+  const src: Pt[] = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height },
+  ];
+  return computeHomography(src, dragged);
+}
+
 function formatNum(n: number): string {
   if (Math.abs(n) < 1e-10) return '0';
   // Avoid scientific notation in the CSS string.
@@ -132,6 +169,7 @@ export type RNPerspectiveTransform = (
   | { perspective: number }
   | { rotateX: string }
   | { rotateY: string }
+  | { matrix: number[] }
 )[];
 
 const MAX_TILT_CORRECTION_DEG = 15;

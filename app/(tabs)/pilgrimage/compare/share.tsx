@@ -33,6 +33,7 @@ import {
 } from '../../../../components/pilgrimage/ShareCard';
 import { ShareComposerControls } from '../../../../components/pilgrimage/ShareComposerControls';
 import { CropSheet } from '../../../../components/pilgrimage/CropSheet';
+import { CornerPinSheet } from '../../../../components/pilgrimage/CornerPinSheet';
 import {
   getExportDimensions,
   normalizeWatermarkText,
@@ -144,18 +145,19 @@ export default function ShareComparisonScreen() {
     };
   }, [autoMatchEnabled, imageUrl, effectiveShotUri]);
 
-  // Track C #8 — auto perspective from capture sensors.
+  // Track C #8 — auto perspective from capture sensors + manual 4-corner warp.
   const tiltDeg = getNumberParam(params, 'tiltDeg');
   const headingDeltaDeg = getNumberParam(params, 'headingDeltaDeg');
   const autoWarpAvailable = tiltDeg !== null && headingDeltaDeg !== null;
   const [autoWarpEnabled, setAutoWarpEnabled] = useState(false);
-  const perspectiveTransform: RNPerspectiveTransform = useMemo(
-    () =>
-      autoWarpEnabled
-        ? tiltCorrectionTransform({ tiltDeg, headingDeltaDeg })
-        : [],
-    [autoWarpEnabled, tiltDeg, headingDeltaDeg]
-  );
+  const [manualWarpMatrix, setManualWarpMatrix] = useState<number[] | null>(null);
+  const [warpOpen, setWarpOpen] = useState(false);
+  const perspectiveTransform: RNPerspectiveTransform = useMemo(() => {
+    // Manual warp wins when present — it's an explicit user override.
+    if (manualWarpMatrix) return [{ matrix: manualWarpMatrix }];
+    if (autoWarpEnabled) return tiltCorrectionTransform({ tiltDeg, headingDeltaDeg });
+    return [];
+  }, [manualWarpMatrix, autoWarpEnabled, tiltDeg, headingDeltaDeg]);
 
   // Final matrix priority: auto match (when ready) overrides preset filter.
   const filterMatrix = autoMatchEnabled && autoMatchMatrix ? autoMatchMatrix : presetMatrix;
@@ -442,6 +444,9 @@ export default function ShareComparisonScreen() {
             autoWarpEnabled={autoWarpEnabled}
             autoWarpAvailable={autoWarpAvailable}
             onAutoWarpChange={setAutoWarpEnabled}
+            manualWarpApplied={!!manualWarpMatrix}
+            onOpenManualWarp={() => setWarpOpen(true)}
+            onResetManualWarp={() => setManualWarpMatrix(null)}
           />
 
           <View style={styles.toggleGroup}>
@@ -545,6 +550,17 @@ export default function ShareComparisonScreen() {
           setCroppedShotUri(uri === shotUri ? null : uri);
           setCropOpen(false);
           flashToast(uri === shotUri ? 'Crop reset' : 'Cropped');
+        }}
+      />
+
+      <CornerPinSheet
+        visible={warpOpen}
+        sourceUri={effectiveShotUri}
+        onCancel={() => setWarpOpen(false)}
+        onApply={(matrix) => {
+          setManualWarpMatrix(matrix);
+          setWarpOpen(false);
+          flashToast(matrix ? 'Warp applied' : 'Warp reset');
         }}
       />
     </View>
