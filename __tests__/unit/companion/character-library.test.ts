@@ -12,6 +12,12 @@ import {
   type CharacterEntry,
 } from '../../../libs/services/companion/character-library';
 import { jsSubjectLifter } from '../../../libs/services/companion/subject-lifter';
+import {
+  DEFAULT_SHADOW,
+  IDENTITY_CHARACTER_TINT,
+  deriveCharacterTint,
+  getShadowEllipse,
+} from '../../../libs/services/companion/character-lighting';
 
 function mkChar(id: string, overrides: Partial<CharacterEntry> = {}): CharacterEntry {
   return {
@@ -97,6 +103,58 @@ describe('character library · serialization', () => {
     const back = parseLibraryFromJson(partial);
     expect(back).toHaveLength(1);
     expect(back[0].id).toBe('ok');
+  });
+});
+
+describe('character lighting · Phase 2', () => {
+  it('IDENTITY_CHARACTER_TINT is the no-op 4×5 matrix', () => {
+    expect(IDENTITY_CHARACTER_TINT).toHaveLength(20);
+    expect(IDENTITY_CHARACTER_TINT[0]).toBe(1);
+    expect(IDENTITY_CHARACTER_TINT[6]).toBe(1);
+    expect(IDENTITY_CHARACTER_TINT[12]).toBe(1);
+  });
+
+  it('deriveCharacterTint returns identity when bg or char analysis is null', () => {
+    expect(deriveCharacterTint(null, { avgR: 100, avgG: 100, avgB: 100 })).toEqual(
+      IDENTITY_CHARACTER_TINT
+    );
+    expect(deriveCharacterTint({ avgR: 100, avgG: 100, avgB: 100 }, null)).toEqual(
+      IDENTITY_CHARACTER_TINT
+    );
+  });
+
+  it('deriveCharacterTint pulls the character toward the bg palette but stays gentle (≤ 1.5×)', () => {
+    const m = deriveCharacterTint(
+      { avgR: 200, avgG: 150, avgB: 100 },
+      { avgR: 100, avgG: 100, avgB: 100 }
+    );
+    // Even though raw ratio would be 2×, the lerp toward identity keeps it tame.
+    expect(m[0]).toBeLessThanOrEqual(1.5);
+    expect(m[0]).toBeGreaterThan(1.0);
+  });
+
+  it('deriveCharacterTint intensity 0 collapses to identity', () => {
+    const m = deriveCharacterTint(
+      { avgR: 200, avgG: 100, avgB: 50 },
+      { avgR: 50, avgG: 100, avgB: 200 },
+      0
+    );
+    expect(m).toEqual(IDENTITY_CHARACTER_TINT);
+  });
+
+  it('DEFAULT_SHADOW has sane initial intensity + offset', () => {
+    expect(DEFAULT_SHADOW.intensity).toBeGreaterThan(0);
+    expect(DEFAULT_SHADOW.intensity).toBeLessThanOrEqual(1);
+    expect(DEFAULT_SHADOW.softness).toBeGreaterThanOrEqual(0);
+  });
+
+  it('getShadowEllipse computes cx/cy/rx/ry in character-local coords', () => {
+    const e = getShadowEllipse(120, 240, DEFAULT_SHADOW);
+    // Foot shadow horizontally centred near the bottom of the character.
+    expect(e.cx).toBeCloseTo(60, 1);
+    expect(e.cy).toBeGreaterThan(180); // below mid-line
+    expect(e.rx).toBeGreaterThan(0);
+    expect(e.ry).toBeGreaterThan(0);
   });
 });
 

@@ -19,9 +19,15 @@
 
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
+import { Canvas, Group, Oval, BlurMask } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { FilteredImage } from '../pilgrimage/FilteredImage';
+import {
+  DEFAULT_SHADOW,
+  getShadowEllipse,
+  type ShadowDescriptor,
+} from '../../libs/services/companion/character-lighting';
 
 export type CharacterLayerProps = {
   cutoutUri: string;
@@ -34,6 +40,10 @@ export type CharacterLayerProps = {
   onLongPress?: () => void;
   /** When false, the layer ignores all gestures (capture-ready mode). */
   editMode?: boolean;
+  /** Phase 2 — Skia ColorMatrix applied to the cutout for lighting match. */
+  tintMatrix?: number[] | null;
+  /** Phase 2 — drop shadow descriptor; pass null to disable. */
+  shadow?: ShadowDescriptor | null;
 };
 
 const MIN_SCALE = 0.2;
@@ -47,6 +57,8 @@ export function CharacterLayer({
   initialHeightFraction = 0.6,
   onLongPress,
   editMode = true,
+  tintMatrix = null,
+  shadow = DEFAULT_SHADOW,
 }: CharacterLayerProps) {
   const aspect = intrinsicW > 0 && intrinsicH > 0 ? intrinsicW / intrinsicH : 0.75;
   const initialH = Math.max(120, parentSize.height * initialHeightFraction);
@@ -129,6 +141,7 @@ export function CharacterLayer({
     ],
   }));
 
+  const ellipse = shadow ? getShadowEllipse(initialW, initialH, shadow) : null;
   const layer = (
     <Animated.View
       style={[
@@ -141,11 +154,27 @@ export function CharacterLayer({
         },
         animatedStyle,
       ]}>
-      <Image
-        source={{ uri: cutoutUri }}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="contain"
-      />
+      {ellipse ? (
+        <Canvas
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFillObject,
+            // Extend the canvas a touch so the blur doesn't clip at edges.
+            { width: initialW, height: initialH + ellipse.blur * 2 },
+          ]}>
+          <Group>
+            <Oval
+              x={ellipse.cx - ellipse.rx}
+              y={ellipse.cy - ellipse.ry}
+              width={ellipse.rx * 2}
+              height={ellipse.ry * 2}
+              color={`rgba(0,0,0,${ellipse.alpha})`}>
+              <BlurMask blur={ellipse.blur} style="normal" />
+            </Oval>
+          </Group>
+        </Canvas>
+      ) : null}
+      <FilteredImage uri={cutoutUri} matrix={tintMatrix} contentFit="contain" />
     </Animated.View>
   );
 

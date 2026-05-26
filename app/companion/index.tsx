@@ -6,7 +6,7 @@
 // camera roll. The compare-screen integration (overlay chip on the camera
 // HUD) is a Phase 1B follow-up.
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -23,6 +23,12 @@ import { CharacterPickerSheet } from '../../components/companion/CharacterPicker
 import { CharacterLayer } from '../../components/companion/CharacterLayer';
 import type { CharacterEntry } from '../../libs/services/companion/character-library';
 import { subjectLifter } from '../../libs/services/companion/subject-lifter';
+import {
+  DEFAULT_SHADOW,
+  deriveCharacterTint,
+  IDENTITY_CHARACTER_TINT,
+} from '../../libs/services/companion/character-lighting';
+import { analyzeImage } from '../../libs/services/pilgrimage/scene-analysis-skia';
 
 export default function CompanionScreen() {
   const router = useRouter();
@@ -37,7 +43,27 @@ export default function CompanionScreen() {
   const [character, setCharacter] = useState<CharacterEntry | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [tintEnabled, setTintEnabled] = useState(true);
+  const [shadowEnabled, setShadowEnabled] = useState(true);
+  const [tintMatrix, setTintMatrix] = useState<number[] | null>(null);
   const stageRef = useRef<View>(null);
+
+  // Phase 2 — derive character tint from the bg whenever either changes.
+  useEffect(() => {
+    if (!bgUri || !character || !tintEnabled) {
+      setTintMatrix(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([analyzeImage(bgUri), analyzeImage(character.cutoutUri)]).then(([bg, ch]) => {
+      if (cancelled) return;
+      const m = deriveCharacterTint(bg, ch);
+      setTintMatrix(m === IDENTITY_CHARACTER_TINT ? null : m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bgUri, character, tintEnabled]);
 
   const stageW = winW - Spacing.md * 2;
   const stageH = Math.min(winH * 0.6, stageW * 1.4);
@@ -157,9 +183,70 @@ export default function CompanionScreen() {
                 intrinsicH={character.intrinsicH}
                 parentSize={{ width: stageW, height: stageH }}
                 onLongPress={() => setPickerOpen(true)}
+                tintMatrix={tintMatrix}
+                shadow={shadowEnabled ? DEFAULT_SHADOW : null}
               />
             ) : null}
           </View>
+        </View>
+
+        <View style={styles.lightingRow}>
+          <Pressable
+            onPress={() => {
+              hapticsBridge.selection();
+              setTintEnabled((v) => !v);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle character lighting match"
+            accessibilityState={{ selected: tintEnabled }}
+            style={({ pressed }) => [
+              styles.lightingChip,
+              {
+                backgroundColor: tintEnabled ? accent : theme.background.secondary,
+                borderColor: tintEnabled ? accent : theme.glassBorder,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}>
+            <Ionicons
+              name="color-wand-outline"
+              size={14}
+              color={tintEnabled ? accentFg : theme.text.primary}
+            />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: tintEnabled ? accentFg : theme.text.primary }}>
+              Tint
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              hapticsBridge.selection();
+              setShadowEnabled((v) => !v);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle character shadow"
+            accessibilityState={{ selected: shadowEnabled }}
+            style={({ pressed }) => [
+              styles.lightingChip,
+              {
+                backgroundColor: shadowEnabled ? accent : theme.background.secondary,
+                borderColor: shadowEnabled ? accent : theme.glassBorder,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}>
+            <Ionicons
+              name="ellipse"
+              size={12}
+              color={shadowEnabled ? accentFg : theme.text.primary}
+            />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: shadowEnabled ? accentFg : theme.text.primary }}>
+              Shadow
+            </ThemedText>
+          </Pressable>
         </View>
 
         <View style={[styles.footer, { paddingBottom: bottomPad(insets) }]}>
@@ -269,6 +356,22 @@ function makeStyles(theme: ThemePalette) {
       gap: Spacing.sm,
       paddingHorizontal: Spacing.md,
       paddingTop: Spacing.sm,
+    },
+    lightingRow: {
+      flexDirection: 'row',
+      gap: 8,
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
+    },
+    lightingChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
     },
     footerBtn: {
       flex: 1,
