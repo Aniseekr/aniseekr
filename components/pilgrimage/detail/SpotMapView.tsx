@@ -4,7 +4,15 @@
 // flips can be sent as `__updateVisited(ids)` instead of re-serializing the
 // full marker payload.
 
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  memo,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -49,17 +57,18 @@ interface MapMarkerPayload {
   markerMode: MapMarkerMode;
 }
 
+export interface SpotMapViewHandle {
+  /** Pan the camera to a target location (used by the locate FAB). */
+  recenter: (lat: number, lng: number, zoom?: number, opts?: { animate?: boolean }) => void;
+  /** Push device heading (or null to clear) into the WebView's user marker. */
+  setHeading: (deg: number | null) => void;
+}
+
 export interface SpotMapViewProps {
   spots: readonly AnitabiPoint[];
   visited: VisitedMap;
   ringColor: string;
   userLocation: LatLng | null;
-  /**
-   * Compass heading in degrees (0 = true north, clockwise) used to rotate
-   * the Google-Maps-style heading cone on the user dot. `null` clears the
-   * cone — never show a fake direction.
-   */
-  userHeading?: number | null;
   centerGeo: readonly [number, number] | null;
   centerZoom: number;
   markerMode: MapMarkerMode;
@@ -80,6 +89,8 @@ export interface SpotMapViewProps {
   controlsBottomOffset?: number;
   onSpotPress: (spot: AnitabiPoint) => void;
   onClusterPick: (spots: readonly AnitabiPoint[]) => void;
+  /** Notified the moment the user drags the map (drops follow/compass). */
+  onUserPan?: () => void;
   theme: ThemePalette;
   style?: StyleProp<ViewStyle>;
 }
@@ -239,19 +250,13 @@ ${MAP_BASE_BODY}
   var initialZoom = initial.center.zoom;
   var lastBounds = null;
 
-  window.__bindMap(map, function recenter() {
-    if (initial.user) {
-      var did = window.__fitNearby(map, initial.user, null, {
-        zoom: 15,
-        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
-      });
-      if (did) return;
-    }
-    if (lastBounds) {
-      try { map.flyToBounds(lastBounds, { padding: [40, 40], maxZoom: 15, duration: 0.4 }); return; } catch (e) {}
-    }
-    map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
-  });
+  // Native LocateFab drives recentre via window.__recenter; passing only the
+  // map installs the shared userPanned dragstart listener from MAP_BASE_JS.
+  window.__bindMap(map);
+  // initialCenter/initialZoom/lastBounds remain for potential later imperative
+  // handlers; voided here so the JS shape stays stable without unused-var
+  // warnings.
+  void initialCenter; void initialZoom; void lastBounds;
 
   (function() {
     var controls = document.getElementById('map-controls');
@@ -393,23 +398,26 @@ ${MAP_BASE_BODY}
 </html>`;
 }
 
-function SpotMapViewImpl({
-  spots,
-  visited,
-  ringColor,
-  userLocation,
-  userHeading,
-  centerGeo,
-  centerZoom,
-  markerMode,
-  offlineOnly,
-  focusSpotId,
-  controlsBottomOffset = 16,
-  onSpotPress,
-  onClusterPick,
-  theme,
-  style,
-}: SpotMapViewProps) {
+const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function SpotMapViewImpl(
+  {
+    spots,
+    visited,
+    ringColor,
+    userLocation,
+    centerGeo,
+    centerZoom,
+    markerMode,
+    offlineOnly,
+    focusSpotId,
+    controlsBottomOffset = 16,
+    onSpotPress,
+    onClusterPick,
+    onUserPan,
+    theme,
+    style,
+  }: SpotMapViewProps,
+  ref
+) {
   const { effectiveMode } = useTheme();
   const { pref: mapThemePref } = useMapThemePref();
   const mapMode = resolveMapMode(mapThemePref, effectiveMode);
@@ -592,17 +600,33 @@ function SpotMapViewImpl({
     `);
   }, [controlsBottomOffset, ready]);
 
-  // Push the compass heading. Hub map and detail map share the same WebView
-  // hook (__updateHeading) so the cone behaves identically across screens.
-  useEffect(() => {
-    if (!ready || !webviewRef.current) return;
-    const payload =
-      userHeading == null || !Number.isFinite(userHeading) ? 'null' : String(userHeading);
-    webviewRef.current.injectJavaScript(`
-      try { window.__updateHeading && window.__updateHeading(${payload}); } catch(e) {}
-      true;
-    `);
-  }, [userHeading, ready]);
+  // Imperative recentre / heading API. Driven by the locate-FAB hook so
+  // location ticks + 60 Hz magnetometer ticks bypass React state entirely
+  // (CLAUDE.md Rule 9). The handle is a no-op while the WebView hasn't
+  // reported `ready` — early calls are dropped rather than queued.
+  useImperativeHandle(
+    ref,
+    () => ({
+      recenter: (lat, lng, zoom, opts) => {
+        if (!ready || !webviewRef.current) return;
+        const z = typeof zoom === 'number' ? zoom : 'undefined';
+        const animate = opts?.animate === false ? 'false' : 'true';
+        webviewRef.current.injectJavaScript(`
+          try { window.__recenter && window.__recenter(${lat}, ${lng}, ${z}, { animate: ${animate} }); } catch(e) {}
+          true;
+        `);
+      },
+      setHeading: (deg) => {
+        if (!ready || !webviewRef.current) return;
+        const payload = deg === null || !Number.isFinite(deg) ? 'null' : String(deg);
+        webviewRef.current.injectJavaScript(`
+          try { window.__updateHeading && window.__updateHeading(${payload}); } catch(e) {}
+          true;
+        `);
+      },
+    }),
+    [ready]
+  );
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -618,6 +642,10 @@ function SpotMapViewImpl({
       if (data.type === 'spotPress' && data.id) {
         const spot = spotsById.current.get(data.id);
         if (spot) onSpotPress(spot);
+        return;
+      }
+      if (data.type === 'userPanned') {
+        onUserPan?.();
         return;
       }
       if (data.type === 'clusterPress' && Array.isArray(data.ids)) {
@@ -662,7 +690,7 @@ function SpotMapViewImpl({
       />
     </View>
   );
-}
+});
 
 function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
   return (
@@ -670,7 +698,6 @@ function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
     prev.visited === next.visited &&
     prev.ringColor === next.ringColor &&
     prev.userLocation === next.userLocation &&
-    prev.userHeading === next.userHeading &&
     prev.centerGeo === next.centerGeo &&
     prev.centerZoom === next.centerZoom &&
     prev.markerMode === next.markerMode &&
@@ -679,6 +706,7 @@ function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
     prev.controlsBottomOffset === next.controlsBottomOffset &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onClusterPick === next.onClusterPick &&
+    prev.onUserPan === next.onUserPan &&
     prev.theme === next.theme &&
     prev.style === next.style
   );

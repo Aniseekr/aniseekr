@@ -21,7 +21,16 @@
 // Route params:
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Dimensions,
   Platform,
@@ -44,6 +53,13 @@ import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrima
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
 import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
+import {
+  LOCATE_FAB_COMPASS_ZOOM,
+  LOCATE_FAB_ZOOM,
+  useUserLocationTracking,
+} from '../../../libs/services/pilgrimage/use-user-location-tracking';
+import { LocateFab } from '../../../components/pilgrimage/LocateFab';
+import { LocationPermissionSheet } from '../../../components/pilgrimage/LocationPermissionSheet';
 import {
   ANIME_TOURISM_88_REGIONS,
   get88EntriesWithCoords,
@@ -103,6 +119,7 @@ import {
 } from '../../../components/pilgrimage/PilgrimageHubSheet';
 import { RoundHeaderButton } from '../../../components/pilgrimage/detail/RoundHeaderButton';
 import { FilterPill } from '../../../components/pilgrimage/detail/FilterPill';
+import { useT } from '../../../libs/i18n';
 
 interface HubMapMarker {
   /** Unique within a marker set: "bgm:<id>" for Anitabi-centroid markers, "88:<entryId>" for Tourism 88 city pins. */
@@ -382,16 +399,11 @@ ${MAP_BASE_BODY}
     applyUserHeading();
   };
 
-  window.__bindMap(map, function recenter() {
-    window.__post({ type: 'locatePress' });
-    if (initial.user) {
-      var did = window.__fitNearby(map, initial.user, null, {
-        zoom: ${MAP_LOCATE_ZOOM},
-        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
-      });
-      if (did) return;
-    }
-  });
+  // The recenter button now lives outside the WebView; __bindMap is called
+  // with just the map (__recenter + __updateHeading from MAP_BASE_JS handle
+  // the native FAB commands). Keeping the call here installs the shared
+  // userPanned dragstart listener.
+  window.__bindMap(map);
 
   var clusterLayer = window.__makeClusterGroup({ ringColor: initial.ringColor, disableAt: 12 });
   clusterLayer.addTo(map);
@@ -579,6 +591,7 @@ function mergeAnimeList(
 export default function PilgrimageMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const params = useLocalSearchParams();
   const initialMode = useMemo(
     () => resolvePilgrimageMapInitialMode(params.mode),
@@ -620,11 +633,26 @@ export default function PilgrimageMapScreen() {
   const [collectionIds, setCollectionIds] = useState<Set<number>>(
     () => new Set((initialSnapshot?.collectionAnimes ?? []).map((anime) => anime.id))
   );
-  const [userLocation, setUserLocation] = useState<LatLng | null>(
-    () => initialSnapshot?.userLocation ?? null
-  );
-  const userLocationRef = useRef<LatLng | null>(initialSnapshot?.userLocation ?? null);
-  const [userHeading, setUserHeading] = useState<number | null>(null);
+  // The locate FAB and the WebView's user-marker share a single hook so the
+  // dot, the cone, the recentre, and the permission sheet all stay in sync.
+  // Snapshot-seeded `initialLocation` keeps the dot visible on warm starts.
+  const mapHandleRef = useRef<HubMapBackgroundHandle>(null);
+  const tracking = useUserLocationTracking({
+    initialLocation: initialSnapshot?.userLocation ?? null,
+    onFollowLocation: (loc, fs) => {
+      mapHandleRef.current?.recenter(
+        loc.latitude,
+        loc.longitude,
+        fs === 'compass' ? LOCATE_FAB_COMPASS_ZOOM : LOCATE_FAB_ZOOM,
+        { animate: true }
+      );
+    },
+    onHeadingChange: (deg) => {
+      mapHandleRef.current?.setHeading(deg);
+    },
+  });
+  const userLocation = tracking.location;
+  const userLocationRef = useRef<LatLng | null>(userLocation);
   const [loading, setLoading] = useState(initialAnimes.length === 0);
   // Seed synchronously from MMKV so visited markers + the capture count are
   // correct on the first frame; the effects below still reconcile after the
@@ -750,12 +778,10 @@ export default function PilgrimageMapScreen() {
   // the render path now that reads are sync — drop it to avoid an extra
   // re-render that re-rendered the WebView marker layer for no reason.
 
-  const updateUserLocation = useCallback((loc: LatLng) => {
-    if (sameLatLng(userLocationRef.current, loc)) return false;
-    userLocationRef.current = loc;
-    setUserLocation(loc);
-    return true;
-  }, []);
+  // Keep the imperative ref aligned with the hook's location so callers that
+  // depend on it (mergeNearbyIndexed below) see the latest fix without
+  // reading React state at sync time.
+  userLocationRef.current = userLocation;
 
   const appendExtraIndexed = useCallback((entries: readonly AnitabiIndexEntry[]) => {
     if (entries.length === 0) return;
@@ -777,35 +803,12 @@ export default function PilgrimageMapScreen() {
     [appendExtraIndexed]
   );
 
+  // Whenever the tracking hook surfaces a new location, refresh the
+  // nearby-anime overlay so the lazy-loaded index keeps pace with the user.
   useEffect(() => {
-    let cancelled = false;
-    locationService
-      .getCurrentLocation()
-      .then((loc) => {
-        if (!cancelled && loc) {
-          updateUserLocation(loc);
-          mergeNearbyIndexed(loc);
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [mergeNearbyIndexed, updateUserLocation]);
-
-  // Compass heading for the user-location cone. Always-on while this screen
-  // is mounted; rounded + thresholded so small wrist movements don't spam
-  // the WebView bridge with sub-degree jitter.
-  useEffect(() => {
-    let last = Number.NaN;
-    const unsubscribe = locationService.subscribeToHeading((deg) => {
-      const rounded = Math.round(deg);
-      if (Number.isFinite(last) && Math.abs(rounded - last) < 3) return;
-      last = rounded;
-      setUserHeading((prev) => (prev === rounded ? prev : rounded));
-    });
-    return unsubscribe;
-  }, []);
+    if (!userLocation) return;
+    mergeNearbyIndexed(userLocation);
+  }, [userLocation, mergeNearbyIndexed]);
 
   const handleBoundsChange = useCallback(
     (bounds: BoundingBox) => {
@@ -1041,18 +1044,6 @@ export default function PilgrimageMapScreen() {
     setFlyTick((t) => t + 1);
   }, []);
 
-  const handleLocatePress = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
-    locationService
-      .getCurrentLocation()
-      .then((loc) => {
-        if (!loc) return;
-        updateUserLocation(loc);
-        mergeNearbyIndexed(loc);
-      })
-      .catch(() => undefined);
-  }, [mergeNearbyIndexed, updateUserLocation]);
-
   // The actual drill-down. Same handler whether the user tapped a marker, the
   // focused card, or a list row. returnTo=map so the detail screen's back
   // button returns to *this* hub map view rather than the tab root.
@@ -1161,17 +1152,17 @@ export default function PilgrimageMapScreen() {
         <>
           {/* Layer 1 — full-bleed Leaflet map. */}
           <HubMapBackground
+            ref={mapHandleRef}
             markers={markers}
             replaceKey={refitNonce}
             userLocation={userLocation}
-            userHeading={userHeading}
             ringColor={themeColor}
             theme={theme}
             focusBangumiId={focusBangumiId}
             flyBoundsRequest={flyBoundsRequest}
             onAnimePress={handleMarkerPress}
             onBoundsChange={handleBoundsChange}
-            onLocatePress={handleLocatePress}
+            onUserPan={tracking.onUserPan}
           />
 
           {/* Layer 2 — floating top overlay (back / album + search + region chips). */}
@@ -1180,7 +1171,7 @@ export default function PilgrimageMapScreen() {
               <RoundHeaderButton
                 icon="chevron-back"
                 onPress={handleBack}
-                accessibilityLabel="Back"
+                accessibilityLabel={t('common.back')}
                 tint={theme.text.primary}
                 theme={theme}
               />
@@ -1188,7 +1179,7 @@ export default function PilgrimageMapScreen() {
                 <RoundHeaderButton
                   icon="albums-outline"
                   onPress={handleOpenAlbum}
-                  accessibilityLabel="Open pilgrimage album"
+                  accessibilityLabel={t('pilgrimage.map.openAlbumA11y')}
                   tint={themeColor}
                   theme={theme}
                 />
@@ -1200,14 +1191,14 @@ export default function PilgrimageMapScreen() {
               <TextInput
                 value={searchQuery}
                 onChangeText={handleSearchChange}
-                placeholder="Search anime or city"
+                placeholder={t('pilgrimage.map.searchPlaceholder')}
                 placeholderTextColor={theme.text.tertiary}
                 returnKeyType="search"
                 autoCorrect={false}
                 autoCapitalize="none"
                 selectionColor={themeColor}
                 clearButtonMode="never"
-                accessibilityLabel="Search anime"
+                accessibilityLabel={t('pilgrimage.map.searchA11y')}
                 style={[styles.searchInput, { color: theme.text.primary }]}
               />
               {searchQuery.length > 0 ? (
@@ -1215,7 +1206,7 @@ export default function PilgrimageMapScreen() {
                   onPress={handleSearchClear}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel="Clear search"
+                  accessibilityLabel={t('pilgrimage.map.clearSearchA11y')}
                   style={({ pressed }) => [styles.searchClearBtn, pressed && { opacity: 0.7 }]}>
                   <Ionicons name="close-circle" size={18} color={theme.text.tertiary} />
                 </Pressable>
@@ -1240,7 +1231,7 @@ export default function PilgrimageMapScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipRow}>
               <FilterPill
-                label="All"
+                label={t('pilgrimage.map.filter.all')}
                 active={hubFilter === 'all'}
                 badge={filterCounts.all}
                 themeColor={themeColor}
@@ -1249,7 +1240,7 @@ export default function PilgrimageMapScreen() {
                 onPress={() => handlePickFilter('all')}
               />
               <FilterPill
-                label="In collection"
+                label={t('pilgrimage.map.filter.collection')}
                 active={hubFilter === 'collection'}
                 badge={filterCounts.collection}
                 themeColor={themeColor}
@@ -1259,7 +1250,7 @@ export default function PilgrimageMapScreen() {
                 onPress={() => handlePickFilter('collection')}
               />
               <FilterPill
-                label="★ 88"
+                label={t('pilgrimage.map.filter.official88')}
                 active={hubFilter === 'official88'}
                 badge={filterCounts.official88}
                 themeColor={themeColor}
@@ -1272,7 +1263,7 @@ export default function PilgrimageMapScreen() {
               <View style={styles.viewModeBar}>
                 <LayoutToggleSegment
                   icon="reorder-three"
-                  label="Rows"
+                  label={t('pilgrimage.map.layout.rows')}
                   count={filteredEntries.length}
                   active={listLayout === 'rows'}
                   themeColor={themeColor}
@@ -1283,7 +1274,7 @@ export default function PilgrimageMapScreen() {
                 />
                 <LayoutToggleSegment
                   icon="apps"
-                  label="Grid"
+                  label={t('pilgrimage.map.layout.grid')}
                   count={filteredEntries.length}
                   active={listLayout === 'grid'}
                   themeColor={themeColor}
@@ -1295,6 +1286,17 @@ export default function PilgrimageMapScreen() {
               </View>
             </View>
           </Animated.View>
+
+          {/* Locate FAB — anchors to the sheet so it never sits behind the
+              handle, and drives idle / following / compass via the hook. */}
+          <LocateFab
+            state={tracking.state}
+            onPress={tracking.cycleState}
+            sheetAnimatedPosition={sheetPosition}
+            screenHeight={screenHeight}
+            bottomInset={sheetPeekOffset}
+            loading={tracking.isRequestingPermission}
+          />
 
           {/* Layer 5 — persistent pull-up sheet with focused-anime card,
               hub stats and the nearby anime list. */}
@@ -1316,6 +1318,14 @@ export default function PilgrimageMapScreen() {
           />
         </>
       )}
+
+      {/* Permanently-denied permission sheet. Lives outside the loading
+          branch so dismissing it during a re-render doesn't unmount it
+          mid-animation. */}
+      <LocationPermissionSheet
+        visible={tracking.permissionSheetVisible}
+        onDismiss={tracking.dismissPermissionSheet}
+      />
     </View>
   );
 }
@@ -1381,8 +1391,6 @@ interface HubMapBackgroundProps {
   /** Bump when the marker set transitions to a different filter view; triggers a clear+rebuild. */
   replaceKey: string;
   userLocation: LatLng | null;
-  /** Device compass heading in degrees (0 = north, clockwise), or null when unknown. */
-  userHeading: number | null;
   ringColor: string;
   theme: ThemePalette;
   focusBangumiId: number | null;
@@ -1390,23 +1398,32 @@ interface HubMapBackgroundProps {
   flyBoundsRequest: { key: string; bounds: RegionBounds } | null;
   onAnimePress: (bangumiId: number) => void;
   onBoundsChange: (bounds: BoundingBox) => void;
-  onLocatePress: () => void;
+  /** Notified the moment the user drags the map (Leaflet `dragstart`). The
+   *  consumer drops out of follow/compass on this signal. */
+  onUserPan: () => void;
 }
 
-function HubMapBackground({
+export interface HubMapBackgroundHandle {
+  /** Fly the camera to a target location (used by the locate FAB). */
+  recenter: (lat: number, lng: number, zoom?: number, opts?: { animate?: boolean }) => void;
+  /** Push the device heading (or null to clear the cone) into the WebView. */
+  setHeading: (deg: number | null) => void;
+}
+
+const HubMapBackground = forwardRef<HubMapBackgroundHandle, HubMapBackgroundProps>(function HubMapBackground({
   markers,
   replaceKey,
   userLocation,
-  userHeading,
   ringColor,
   theme,
   focusBangumiId,
   flyBoundsRequest,
   onAnimePress,
   onBoundsChange,
-  onLocatePress,
-}: HubMapBackgroundProps) {
+  onUserPan,
+}: HubMapBackgroundProps, ref) {
   const { effectiveMode } = useTheme();
+  const t = useT();
   const { pref: mapThemePref } = useMapThemePref();
   const mapMode = resolveMapMode(mapThemePref, effectiveMode);
   const webviewRef = useRef<WebView>(null);
@@ -1479,15 +1496,32 @@ function HubMapBackground({
     `);
   }, [userLocation, ready]);
 
-  // Push compass heading so the user dot can show a Google-Maps-style cone.
-  useEffect(() => {
-    if (!ready || !webviewRef.current) return;
-    const payload = userHeading === null ? 'null' : String(userHeading);
-    webviewRef.current.injectJavaScript(`
-      try { window.__updateHeading && window.__updateHeading(${payload}); } catch(e) {}
-      true;
-    `);
-  }, [userHeading, ready]);
+  // Imperative recenter / heading API for the parent screen. The locate FAB
+  // calls these from the tracking hook so neither location ticks nor 60 Hz
+  // magnetometer ticks have to flow through React state (CLAUDE.md Rule 9).
+  useImperativeHandle(
+    ref,
+    () => ({
+      recenter: (lat, lng, zoom, opts) => {
+        if (!ready || !webviewRef.current) return;
+        const z = typeof zoom === 'number' ? zoom : 'undefined';
+        const animate = opts?.animate === false ? 'false' : 'true';
+        webviewRef.current.injectJavaScript(`
+          try { window.__recenter && window.__recenter(${lat}, ${lng}, ${z}, { animate: ${animate} }); } catch(e) {}
+          true;
+        `);
+      },
+      setHeading: (deg) => {
+        if (!ready || !webviewRef.current) return;
+        const payload = deg === null || !Number.isFinite(deg) ? 'null' : String(deg);
+        webviewRef.current.injectJavaScript(`
+          try { window.__updateHeading && window.__updateHeading(${payload}); } catch(e) {}
+          true;
+        `);
+      },
+    }),
+    [ready]
+  );
 
   useEffect(() => {
     if (!ready || !webviewRef.current || focusBangumiId === null) return;
@@ -1529,8 +1563,8 @@ function HubMapBackground({
         onAnimePress(data.id);
         return;
       }
-      if (data.type === 'locatePress') {
-        onLocatePress();
+      if (data.type === 'userPanned') {
+        onUserPan();
         return;
       }
       if (
@@ -1564,14 +1598,15 @@ function HubMapBackground({
         <View style={[StyleSheet.absoluteFill, styles.loadingBox]}>
           <Ionicons name="map-outline" size={32} color={theme.text.secondary} />
           <ThemedText variant="bodyMedium" tone="secondary" align="center">
-            Couldn&apos;t load the map.
+            {t('pilgrimage.map.mapLoadError')}
           </ThemedText>
         </View>
       )}
       startInLoadingState
     />
   );
-}
+});
+HubMapBackground.displayName = 'HubMapBackground';
 
 // Region chip strip — embedded inside the floating top overlay (so it sits
 // just under the search pill). Camera-only: tapping a region flies the map.
@@ -1589,6 +1624,7 @@ function RegionChipStrip({
   onPickRegion,
   onResetToJapan,
 }: RegionChipStripProps) {
+  const t = useT();
   const chipStyles = useMemo(() => makeChipStyles(theme), [theme]);
   const wholeJapanActive = focusedRegion === null;
   return (
@@ -1599,7 +1635,7 @@ function RegionChipStrip({
       <Pressable
         onPress={onResetToJapan}
         accessibilityRole="button"
-        accessibilityLabel="View whole Japan"
+        accessibilityLabel={t('pilgrimage.map.wholeJapanA11y')}
         accessibilityState={{ selected: wholeJapanActive }}
         style={({ pressed }) => [
           chipStyles.chip,
@@ -1613,7 +1649,7 @@ function RegionChipStrip({
             chipStyles.chipLabel,
             wholeJapanActive ? { color: theme.background.primary } : null,
           ]}>
-          All Japan
+          {t('pilgrimage.map.allJapan')}
         </ThemedText>
       </Pressable>
       {ANIME_TOURISM_88_REGIONS.map((r) => {

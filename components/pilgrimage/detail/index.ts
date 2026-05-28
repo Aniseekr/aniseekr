@@ -26,7 +26,7 @@ export type { RoundHeaderButtonProps } from './RoundHeaderButton';
 export { SpotClusterPicker } from './SpotClusterPicker';
 export type { SpotClusterPickerProps } from './SpotClusterPicker';
 export { SpotMapView } from './SpotMapView';
-export type { SpotMapViewProps } from './SpotMapView';
+export type { SpotMapViewHandle, SpotMapViewProps } from './SpotMapView';
 export { SpotSheet } from './SpotSheet';
 export type { SpotSheetProps } from './SpotSheet';
 export { PilgrimageList } from './PilgrimageList';

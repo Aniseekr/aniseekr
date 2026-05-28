@@ -261,18 +261,10 @@ ${MAP_BASE_BODY}
     L.marker([initial.user.lat, initial.user.lng], { icon: userIcon, interactive: false, keyboard: false }).addTo(map);
   }
 
-  var initialZoom = initial.center.zoom;
-  var initialCenter = L.latLng(initial.center.lat, initial.center.lng);
-  window.__bindMap(map, function recenter() {
-    if (initial.user) {
-      var did = window.__fitNearby(map, initial.user, null, {
-        zoom: 14,
-        home: { lat: initial.center.lat, lng: initial.center.lng, zoom: initial.center.zoom },
-      });
-      if (did) return;
-    }
-    map.flyTo(initialCenter, initialZoom, { duration: 0.4 });
-  });
+  // Native LocateFab now owns recentre; __bindMap installs the shared
+  // userPanned dragstart emitter from MAP_BASE_JS.
+  window.__bindMap(map);
+  void initial; // kept for back-compat references in the snippet above.
 
   var markerLayer = window.__makeClusterGroup({ ringColor: initial.themeAccent, disableAt: 10 });
   markerLayer.addTo(map);
