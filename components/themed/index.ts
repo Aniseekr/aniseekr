@@ -18,6 +18,7 @@ export {
   type ThemedTextVariant,
   type ThemedTextTone,
 } from './ThemedText';
+export { TranslatedText, type TranslatedTextProps } from './TranslatedText';
 export {
   ThemedSurface,
   type ThemedSurfaceProps,
