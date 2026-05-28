@@ -42,6 +42,7 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
+import { useT } from '../../../libs/i18n';
 
 type AlbumEntry = PilgrimageAlbumEntry;
 
@@ -86,15 +87,20 @@ const REGION_ORDER: AnimeTourism88Region[] = [
   'kyushu_okinawa',
 ];
 
-function formatRelative(timestamp: number, now: number): string {
+function formatRelative(
+  timestamp: number,
+  now: number,
+  t: ReturnType<typeof useT>
+): string {
   const delta = Math.max(0, now - timestamp);
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (delta < hour) return 'Just now';
-  if (delta < day) return `${Math.floor(delta / hour)}h ago`;
-  if (delta < 7 * day) return `${Math.floor(delta / day)}d ago`;
-  if (delta < 30 * day) return `${Math.floor(delta / (7 * day))}w ago`;
+  if (delta < hour) return t('pilgrimage.album.justNow');
+  if (delta < day) return t('pilgrimage.album.hoursAgo', { count: Math.floor(delta / hour) });
+  if (delta < 7 * day) return t('pilgrimage.album.daysAgo', { count: Math.floor(delta / day) });
+  if (delta < 30 * day)
+    return t('pilgrimage.album.weeksAgo', { count: Math.floor(delta / (7 * day)) });
   return new Date(timestamp).toLocaleDateString();
 }
 
@@ -102,6 +108,7 @@ export default function PilgrimageAlbumScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accentFg = readableTextOn(theme.accent);
   const { animeId: animeIdParam } = useLocalSearchParams<{ animeId?: string }>();
@@ -347,15 +354,18 @@ export default function PilgrimageAlbumScreen() {
   const isDetail = !!selectedAnimeId;
   const headerSubtitle = isDetail
     ? selectedFolder
-      ? `${selectedFolder.entries.length} captures · ${selectedFolder.visitedSpots} spots`
-      : 'Loading folder…'
-    : 'Folders by anime';
+      ? t('pilgrimage.album.detailSubtitle', {
+          captures: selectedFolder.entries.length,
+          spots: selectedFolder.visitedSpots,
+        })
+      : t('pilgrimage.album.loadingFolder')
+    : t('pilgrimage.album.foldersByAnime');
 
   const headerTitle = isDetail
     ? selectedFolder
       ? getPilgrimageAnimeTitles(selectedFolder.anime).primary
-      : 'Album'
-    : 'Pilgrimage Album';
+      : t('pilgrimage.album.albumFallback')
+    : t('pilgrimage.album.title');
 
   return (
     <View style={styles.root}>
@@ -366,7 +376,7 @@ export default function PilgrimageAlbumScreen() {
             onPress={handleBack}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
@@ -390,7 +400,11 @@ export default function PilgrimageAlbumScreen() {
             onPress={handleAddNew}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel={isDetail ? 'Add photo to this folder' : 'Start new pilgrimage'}
+            accessibilityLabel={
+              isDetail
+                ? t('pilgrimage.album.addPhotoA11y')
+                : t('pilgrimage.album.startPilgrimageA11y')
+            }
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons
               name={isDetail ? 'images-outline' : 'add'}
@@ -408,26 +422,26 @@ export default function PilgrimageAlbumScreen() {
             <StatCard
               icon="location"
               iconColor={theme.status.info}
-              label="Visited"
+              label={t('pilgrimage.album.statVisited')}
               value={String(stats.visited)}
-              subtitle="spots"
+              subtitle={t('pilgrimage.album.statSpots')}
               theme={theme}
             />
             <StatCard
               icon="camera"
               iconColor={theme.secondary}
-              label="Photos"
+              label={t('pilgrimage.album.statPhotos')}
               value={String(stats.photos)}
-              subtitle="captures"
+              subtitle={t('pilgrimage.album.statCaptures')}
               theme={theme}
             />
             <StatCard
               icon="checkmark-circle"
               iconColor={theme.status.success}
-              label="Avg Match"
+              label={t('pilgrimage.album.statAvgMatch')}
               value={stats.avgMatch !== null ? `${stats.avgMatch}` : '—'}
               valueSuffix={stats.avgMatch !== null ? '%' : undefined}
-              subtitle="average"
+              subtitle={t('pilgrimage.album.statAverage')}
               valueColor={stats.avgMatch !== null ? theme.status.success : theme.text.tertiary}
               theme={theme}
             />
@@ -439,7 +453,7 @@ export default function PilgrimageAlbumScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsRow}>
               <Chip
-                label="All"
+                label={t('pilgrimage.album.chipAll')}
                 count={folders.length}
                 active={regionFilter === 'all'}
                 onPress={() => {
@@ -495,8 +509,10 @@ export default function PilgrimageAlbumScreen() {
                     </ThemedText>
                     {selectedFolder.region ? (
                       <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 2 }}>
-                        {REGION_LABELS[selectedFolder.region]} · {selectedFolder.entries.length}{' '}
-                        captures
+                        {REGION_LABELS[selectedFolder.region]} ·{' '}
+                        {t('pilgrimage.album.capturesShort', {
+                          count: selectedFolder.entries.length,
+                        })}
                       </ThemedText>
                     ) : null}
                   </View>
@@ -546,20 +562,22 @@ export default function PilgrimageAlbumScreen() {
             ) : (
               <EmptyState
                 theme={theme}
-                title="No captures in this folder"
-                body="Take a comparison photo on a spot in this anime to fill the folder."
+                title={t('pilgrimage.album.emptyFolderTitle')}
+                body={t('pilgrimage.album.emptyFolderBody')}
               />
             )
           ) : filteredFolders.length === 0 ? (
             <EmptyState
               theme={theme}
               title={
-                folders.length === 0 ? 'No pilgrimage folders yet' : `No folders in this region`
+                folders.length === 0
+                  ? t('pilgrimage.album.emptyTitle')
+                  : t('pilgrimage.album.emptyRegionTitle')
               }
               body={
                 folders.length === 0
-                  ? 'Frame an anime scene at its real-world location to start your first folder.'
-                  : 'Try another region tag — or tap All to see every anime you’ve visited.'
+                  ? t('pilgrimage.album.emptyBody')
+                  : t('pilgrimage.album.emptyRegionBody')
               }
             />
           ) : (
@@ -576,7 +594,7 @@ export default function PilgrimageAlbumScreen() {
           <Pressable
             onPress={handleAddNew}
             accessibilityRole="button"
-            accessibilityLabel="Start new pilgrimage"
+            accessibilityLabel={t('pilgrimage.album.startPilgrimageA11y')}
             style={({ pressed }) => [
               styles.fabBtn,
               {
@@ -593,7 +611,7 @@ export default function PilgrimageAlbumScreen() {
                 variant="captionSmall"
                 weight="700"
                 style={{ color: accentFg, fontSize: 13 }}>
-                Add Pilgrimage
+                {t('pilgrimage.album.addPilgrimage')}
               </ThemedText>
               <ThemedText
                 variant="captionSmall"
@@ -603,7 +621,7 @@ export default function PilgrimageAlbumScreen() {
                   fontSize: 9,
                   letterSpacing: 0.3,
                 }}>
-                Start capture
+                {t('pilgrimage.album.startCapture')}
               </ThemedText>
             </View>
           </Pressable>
@@ -772,17 +790,24 @@ function FolderCard({
   now: number;
   onPress: () => void;
 }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const titles = getPilgrimageAnimeTitles(folder.anime);
   const regionLabel = folder.region ? REGION_LABELS[folder.region] : null;
-  const subtitle = `${folder.visitedSpots}${
-    folder.totalSpots > 0 ? `/${folder.totalSpots}` : ''
-  } spots · ${folder.entries.length} ${folder.entries.length === 1 ? 'photo' : 'photos'}`;
+  const spotPart =
+    folder.totalSpots > 0
+      ? t('pilgrimage.album.folderSpotsRatio', {
+          visited: folder.visitedSpots,
+          total: folder.totalSpots,
+        })
+      : t('pilgrimage.album.folderSpotsCount', { count: folder.visitedSpots });
+  const photoPart = t('pilgrimage.album.folderPhotosCount', { count: folder.entries.length });
+  const subtitle = `${spotPart} · ${photoPart}`;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Open folder ${titles.primary}`}
+      accessibilityLabel={t('pilgrimage.album.openFolderA11y', { title: titles.primary })}
       style={({ pressed }) => [
         styles.folderCard,
         {
@@ -848,7 +873,7 @@ function FolderCard({
         </View>
         <View style={styles.folderFootRow}>
           <ThemedText variant="captionSmall" tone="tertiary" style={{ fontSize: 10 }}>
-            {formatRelative(folder.lastCapturedAt, now)}
+            {formatRelative(folder.lastCapturedAt, now, t)}
           </ThemedText>
           <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
         </View>
@@ -868,6 +893,7 @@ function CompareCard({
   heightVariant: number;
   onPress: () => void;
 }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   // Two-image stack with light masonry variation. Heights apply to both
   // panels so the divider sits at a predictable point.
@@ -879,7 +905,7 @@ function CompareCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Compare ${spotTitles.primary}`}
+      accessibilityLabel={t('pilgrimage.album.compareA11y', { title: spotTitles.primary })}
       style={({ pressed }) => [
         styles.compareCard,
         {
@@ -898,7 +924,7 @@ function CompareCard({
           />
           <View style={styles.cornerTag}>
             <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
-              SCENE
+              {t('pilgrimage.album.tagScene')}
             </ThemedText>
           </View>
         </View>
@@ -912,7 +938,9 @@ function CompareCard({
           />
           <View style={[styles.cornerTag, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
             <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
-              {entry.capture.source === 'library' ? 'LIBRARY' : 'YOURS'}
+              {entry.capture.source === 'library'
+                ? t('pilgrimage.album.tagLibrary')
+                : t('pilgrimage.album.tagYours')}
             </ThemedText>
           </View>
         </View>
@@ -950,7 +978,7 @@ function CompareCard({
             variant="captionSmall"
             weight="600"
             style={{ color: theme.accent, fontSize: 9 }}>
-            EP {entry.spot.ep}
+            {t('pilgrimage.album.epLabel', { ep: entry.spot.ep })}
           </ThemedText>
         </View>
         {entry.capture.userLocation ? (

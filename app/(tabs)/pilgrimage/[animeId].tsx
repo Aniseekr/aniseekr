@@ -17,7 +17,7 @@
 // `components/pilgrimage/detail/`. We do not add new top-level `useState`s
 // here without first asking whether the value belongs in a hook or a child.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   InteractionManager,
@@ -60,7 +60,13 @@ import {
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
-import { usePilgrimageUserLocation } from '../../../hooks/usePilgrimageUserLocation';
+import {
+  LOCATE_FAB_COMPASS_ZOOM,
+  LOCATE_FAB_ZOOM,
+  useUserLocationTracking,
+} from '../../../libs/services/pilgrimage/use-user-location-tracking';
+import { LocateFab } from '../../../components/pilgrimage/LocateFab';
+import { LocationPermissionSheet } from '../../../components/pilgrimage/LocationPermissionSheet';
 import { usePilgrimageInteractions } from '../../../hooks/usePilgrimageInteractions';
 import { usePilgrimageDerivedSpots } from '../../../hooks/usePilgrimageDerivedSpots';
 import { usePilgrimageSpotSheet } from '../../../hooks/usePilgrimageSpotSheet';
@@ -81,7 +87,9 @@ import {
   hasValidGeo,
   makePilgrimageDetailStyles,
   type FilterCyclePillState,
+  type SpotMapViewHandle,
 } from '../../../components/pilgrimage/detail';
+import { useT } from '../../../libs/i18n';
 
 // Sheet snap heights as fractions of the screen — kept in lockstep with the
 // snap-points array in PilgrimageDetailSheet. We use them to position the
@@ -94,6 +102,7 @@ export default function PilgrimageDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   // Frame-1 chrome seed (title / poster / themeColor) carried in by the
   // lister so we can paint hero + accent before any I/O resolves
   // (CLAUDE.md Rule 10). When the real data arrives it replaces the seed.
@@ -148,7 +157,24 @@ export default function PilgrimageDetailScreen() {
   );
   const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
 
-  const { location: userLocation, heading: userHeading } = usePilgrimageUserLocation();
+  // Tracking hook drives the locate FAB + the WebView's user dot + cone. The
+  // ref points at SpotMapView so location ticks and heading deltas push
+  // straight to the WebView without going through React state (Rule 9).
+  const spotMapRef = useRef<SpotMapViewHandle>(null);
+  const tracking = useUserLocationTracking({
+    onFollowLocation: (loc, fs) => {
+      spotMapRef.current?.recenter(
+        loc.latitude,
+        loc.longitude,
+        fs === 'compass' ? LOCATE_FAB_COMPASS_ZOOM : LOCATE_FAB_ZOOM,
+        { animate: true }
+      );
+    },
+    onHeadingChange: (deg) => {
+      spotMapRef.current?.setHeading(deg);
+    },
+  });
+  const userLocation = tracking.location;
   const interactions = usePilgrimageInteractions();
   const {
     visited,
@@ -306,14 +332,18 @@ export default function PilgrimageDetailScreen() {
     Haptics.selectionAsync().catch(() => undefined);
     const url = buildBrowseUrl(browseSource, anime.id) ?? '';
     Share.share({
-      message: `${animeTitles?.primary ?? 'Pilgrimage'} · ${spotStats.spotCount} scenes${url ? `\n${url}` : ''}`,
+      message: t('pilgrimage.detail.shareMessage', {
+        title: animeTitles?.primary ?? t('pilgrimage.detail.title'),
+        count: spotStats.spotCount,
+        urlLine: url ? `\n${url}` : '',
+      }),
     }).catch(() => undefined);
-  }, [anime, animeTitles?.primary, browseSource, spotStats.spotCount]);
+  }, [anime, animeTitles?.primary, browseSource, spotStats.spotCount, t]);
 
   const browseLabel = useMemo(() => {
     const platform = isSupportedBrowseSource(browseSource) ? browseSource : 'bangumi';
-    return PLATFORM_CONFIGS[platform as PlatformType]?.displayName ?? 'Browse';
-  }, [browseSource]);
+    return PLATFORM_CONFIGS[platform as PlatformType]?.displayName ?? t('pilgrimage.detail.browseFallback');
+  }, [browseSource, t]);
 
   const buildCompareParams = useCallback(
     (spot: AnitabiPoint) => {
@@ -404,8 +434,8 @@ export default function PilgrimageDetailScreen() {
   }, [setView]);
 
   const emptyMessage = normalizedSpotSearchQuery
-    ? 'No spots match this search.'
-    : 'No scenes match this filter.';
+    ? t('pilgrimage.detail.emptySearch')
+    : t('pilgrimage.detail.emptyFilter');
 
   // Build the ordered list of filter states the cycle pill walks through.
   // Always include all / unvisited / visited; conditionally extend with
@@ -413,14 +443,22 @@ export default function PilgrimageDetailScreen() {
   // selection is one of them, so the cycle can return through it).
   const filterCycleStates = useMemo<readonly FilterCyclePillState[]>(() => {
     const states: FilterCyclePillState[] = [
-      { filter: 'all', label: 'All', badge: groupedCounts.all },
-      { filter: 'unvisited', label: 'Unvisited', badge: groupedCounts.unvisited },
-      { filter: 'visited', label: 'Visited', badge: groupedCounts.visited },
+      { filter: 'all', label: t('pilgrimage.detail.filter.all'), badge: groupedCounts.all },
+      {
+        filter: 'unvisited',
+        label: t('pilgrimage.detail.filter.unvisited'),
+        badge: groupedCounts.unvisited,
+      },
+      {
+        filter: 'visited',
+        label: t('pilgrimage.detail.filter.visited'),
+        badge: groupedCounts.visited,
+      },
     ];
     if (groupedCounts.planned > 0 || spotFilter === 'planned') {
       states.push({
         filter: 'planned',
-        label: 'Planned',
+        label: t('pilgrimage.detail.filter.planned'),
         badge: groupedCounts.planned,
         icon: 'flag',
       });
@@ -428,7 +466,7 @@ export default function PilgrimageDetailScreen() {
     if (groupedCounts.saved > 0 || spotFilter === 'saved') {
       states.push({
         filter: 'saved',
-        label: 'Saved',
+        label: t('pilgrimage.detail.filter.saved'),
         badge: groupedCounts.saved,
         icon: 'bookmark',
       });
@@ -436,7 +474,7 @@ export default function PilgrimageDetailScreen() {
     if (groupedCounts.photos > 0 || spotFilter === 'photos') {
       states.push({
         filter: 'photos',
-        label: 'Photos',
+        label: t('pilgrimage.detail.filter.photos'),
         badge: groupedCounts.photos,
         icon: 'camera',
       });
@@ -450,6 +488,7 @@ export default function PilgrimageDetailScreen() {
     groupedCounts.saved,
     groupedCounts.photos,
     spotFilter,
+    t,
   ]);
 
   // The bottom sheet writes its top-edge Y (from the top of the screen) into
@@ -507,7 +546,7 @@ export default function PilgrimageDetailScreen() {
         ) : error ? (
           <SafeAreaView style={styles.errorContainer}>
             <ThemedText variant="titleMedium" weight="700" align="center">
-              Couldn&apos;t load pilgrimage
+              {t('pilgrimage.detail.errorTitle')}
             </ThemedText>
             <ThemedText variant="bodyMedium" tone="secondary" align="center">
               {error}
@@ -519,7 +558,7 @@ export default function PilgrimageDetailScreen() {
                 variant="bodyMedium"
                 weight="700"
                 style={{ color: readableTextOn(theme.accent) }}>
-                Go back
+                {t('pilgrimage.detail.goBack')}
               </ThemedText>
             </Pressable>
           </SafeAreaView>
@@ -529,11 +568,11 @@ export default function PilgrimageDetailScreen() {
             <View style={styles.mapBackground}>
               {hasMap ? (
                 <SpotMapView
+                  ref={spotMapRef}
                   spots={filteredPoints}
                   visited={visited}
                   ringColor={themeColor}
                   userLocation={userLocation}
-                  userHeading={userHeading}
                   centerGeo={anime?.geo ?? null}
                   centerZoom={anime?.zoom ?? 12}
                   markerMode={mapMarkerMode}
@@ -543,6 +582,7 @@ export default function PilgrimageDetailScreen() {
                   theme={theme}
                   onSpotPress={openSpot}
                   onClusterPick={openCluster}
+                  onUserPan={tracking.onUserPan}
                   style={styles.mapBackgroundInner}
                 />
               ) : (
@@ -563,7 +603,7 @@ export default function PilgrimageDetailScreen() {
                   <RoundHeaderButton
                     icon="chevron-back"
                     onPress={handleBack}
-                    accessibilityLabel="Back"
+                    accessibilityLabel={t('common.back')}
                     tint={theme.text.primary}
                     theme={theme}
                   />
@@ -583,14 +623,14 @@ export default function PilgrimageDetailScreen() {
                   <RoundHeaderButton
                     icon="images-outline"
                     onPress={handleOpenAlbum}
-                    accessibilityLabel="Open pilgrimage album"
+                    accessibilityLabel={t('pilgrimage.detail.openAlbumA11y')}
                     tint={themeColor}
                     theme={theme}
                   />
                   <RoundHeaderButton
                     icon="share-outline"
                     onPress={handleShare}
-                    accessibilityLabel="Share"
+                    accessibilityLabel={t('pilgrimage.detail.shareA11y')}
                     tint={theme.text.primary}
                     theme={theme}
                   />
@@ -603,14 +643,14 @@ export default function PilgrimageDetailScreen() {
                   <TextInput
                     value={spotSearchQuery}
                     onChangeText={handleSearchChange}
-                    placeholder="Search spot or EP"
+                    placeholder={t('pilgrimage.detail.searchPlaceholder')}
                     placeholderTextColor={theme.text.tertiary}
                     returnKeyType="search"
                     autoCorrect={false}
                     autoCapitalize="none"
                     selectionColor={themeColor}
                     clearButtonMode="never"
-                    accessibilityLabel="Search pilgrimage spots or episodes"
+                    accessibilityLabel={t('pilgrimage.detail.searchA11y')}
                     style={[styles.searchInput, { color: theme.text.primary }]}
                   />
                   {normalizedSpotSearchQuery ? (
@@ -618,7 +658,7 @@ export default function PilgrimageDetailScreen() {
                       onPress={handleSearchClear}
                       hitSlop={8}
                       accessibilityRole="button"
-                      accessibilityLabel="Clear search"
+                      accessibilityLabel={t('pilgrimage.detail.clearSearchA11y')}
                       style={({ pressed }) => [
                         styles.searchClearBtn,
                         pressed && { opacity: 0.7 },
@@ -643,7 +683,9 @@ export default function PilgrimageDetailScreen() {
                   themeColorFg={themeColorFg}
                   theme={theme}
                   accessibilityLabel={
-                    mapMarkerMode === 'photo' ? 'Use dot map markers' : 'Use photo map markers'
+                    mapMarkerMode === 'photo'
+                      ? t('pilgrimage.detail.useDotMarkersA11y')
+                      : t('pilgrimage.detail.usePhotoMarkersA11y')
                   }
                   onPress={handleMarkerModeToggle}
                 />
@@ -653,7 +695,7 @@ export default function PilgrimageDetailScreen() {
                   themeColor={themeColor}
                   themeColorFg={themeColorFg}
                   theme={theme}
-                  accessibilityLabel="Use cached map tiles only"
+                  accessibilityLabel={t('pilgrimage.detail.useCachedTilesA11y')}
                   onPress={handleOfflineToggle}
                 />
               </View>
@@ -681,7 +723,7 @@ export default function PilgrimageDetailScreen() {
                   <View style={styles.viewModeBar}>
                     <ViewModeSegment
                       icon="apps"
-                      label="Grid"
+                      label={t('pilgrimage.detail.viewMode.grid')}
                       count={filteredGroupedSpots.length}
                       active={activeViewPreset === 'grid'}
                       themeColor={themeColor}
@@ -692,7 +734,7 @@ export default function PilgrimageDetailScreen() {
                     />
                     <ViewModeSegment
                       icon="reorder-three"
-                      label="Rows"
+                      label={t('pilgrimage.detail.viewMode.rows')}
                       count={filteredGroupedSpots.length}
                       active={activeViewPreset === 'rows'}
                       themeColor={themeColor}
@@ -703,7 +745,7 @@ export default function PilgrimageDetailScreen() {
                     />
                     <ViewModeSegment
                       icon="map"
-                      label="Map"
+                      label={t('pilgrimage.detail.viewMode.map')}
                       count={filteredMappablePointCount}
                       active={activeViewPreset === 'map'}
                       themeColor={themeColor}
@@ -738,7 +780,7 @@ export default function PilgrimageDetailScreen() {
               visited={visited}
               captures={captures}
               spotIntents={spotIntents}
-              emptyMessage={isEmpty ? 'No pilgrimage data yet for this anime.' : emptyMessage}
+              emptyMessage={isEmpty ? t('pilgrimage.detail.emptyNoData') : emptyMessage}
               animatedPosition={sheetPosition}
               onSheetIndexChange={handleSheetIndexChange}
               onOpenBrowse={handleOpenBrowse}
@@ -750,8 +792,30 @@ export default function PilgrimageDetailScreen() {
               distanceForGroup={distanceForGroup}
               hasIntentForGroup={hasIntentForGroup}
             />
+
+            {/* Locate FAB — only meaningful when a real map is mounted. The
+                FAB anchors to the bottom sheet so it never hides behind the
+                drag handle, and fades out at the full snap when the sheet
+                covers the scene grid. */}
+            {hasMap && viewMode === 'map' ? (
+              <LocateFab
+                state={tracking.state}
+                onPress={tracking.cycleState}
+                sheetAnimatedPosition={sheetPosition}
+                screenHeight={screenHeight}
+                bottomInset={sheetPeekOffset}
+                loading={tracking.isRequestingPermission}
+              />
+            ) : null}
           </>
         )}
+
+        {/* Permission sheet (permanent denial) — lives outside the loading
+            branch so it survives a state flip mid-animation. */}
+        <LocationPermissionSheet
+          visible={tracking.permissionSheetVisible}
+          onDismiss={tracking.dismissPermissionSheet}
+        />
 
         {/* Spot sheet + cluster picker stack on top of everything when open. */}
         <SpotSheet

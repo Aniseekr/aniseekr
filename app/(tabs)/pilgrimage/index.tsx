@@ -62,6 +62,7 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import { useT } from '../../../libs/i18n';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -80,11 +81,13 @@ interface AnimeCard {
 // Tiered radii — most users are not standing in Japan, so a hard 50km cap
 // makes the "nearby" hero permanently empty. We fan out and label each tier
 // honestly instead of pretending everything is "near".
-const NEARBY_TIERS_KM: readonly { km: number; label: string }[] = [
-  { km: 30, label: 'walking · 30 km' },
-  { km: 100, label: 'day trip · 100 km' },
-  { km: 500, label: 'in region · 500 km' },
-  { km: 5000, label: 'in Japan' },
+// `labelKey` resolves at render via t() so the hero respects the user's app
+// language.
+const NEARBY_TIERS_KM: readonly { km: number; labelKey: string }[] = [
+  { km: 30, labelKey: 'tabs.pilgrimageScreen.tier.walking' },
+  { km: 100, labelKey: 'tabs.pilgrimageScreen.tier.dayTrip' },
+  { km: 500, labelKey: 'tabs.pilgrimageScreen.tier.inRegion' },
+  { km: 5000, labelKey: 'tabs.pilgrimageScreen.tier.inJapan' },
 ];
 const FEATURED_SPOT_LIMIT = 6;
 const POPULAR_LIMIT = 14;
@@ -123,6 +126,7 @@ export default function PilgrimageHubScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accentFg = readableTextOn(theme.accent);
+  const t = useT();
   const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
   const hasInitialCollection = hasSnapshotSlice(initialSnapshot, 'collectionAnimes');
   const hasInitialFeatured = hasSnapshotSlice(initialSnapshot, 'featuredAnimes');
@@ -248,7 +252,7 @@ export default function PilgrimageHubScreen() {
             // Only show the network error when we had no seeded fallback AND
             // every request failed; otherwise the user already sees cards.
             if (!anySuccess && !hasInitialFeatured && featuredAnimes.length === 0) {
-              setError('Failed to load');
+              setError(t('tabs.pilgrimageScreen.errorLoadFailed'));
             } else {
               setError(null);
             }
@@ -363,10 +367,10 @@ export default function PilgrimageHubScreen() {
     if (sorted.length === 0) return { tierLabel: null, list: [] };
     for (const tier of NEARBY_TIERS_KM) {
       const within = sorted.filter((c) => (c.distanceKm ?? Infinity) <= tier.km);
-      if (within.length > 0) return { tierLabel: tier.label, list: within };
+      if (within.length > 0) return { tierLabel: t(tier.labelKey), list: within };
     }
-    return { tierLabel: 'closest', list: sorted.slice(0, 5) };
-  }, [animeCards, userLocation]);
+    return { tierLabel: t('tabs.pilgrimageScreen.tier.inJapan'), list: sorted.slice(0, 5) };
+  }, [animeCards, userLocation, t]);
 
   const nearbyAnime = nearby.list;
   const nearestAnime = nearbyAnime[0] ?? null;
@@ -476,14 +480,14 @@ export default function PilgrimageHubScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.headerBar}>
           <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
-            Pilgrimage
+            {t('tabs.pilgrimageScreen.title')}
           </ThemedText>
           <View style={styles.headerRight}>
             <Pressable
               onPress={handleOpenAlbum}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="My pilgrimage album"
+              accessibilityLabel={t('tabs.pilgrimageScreen.myAlbumA11y')}
               style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
               <Ionicons name="albums-outline" size={18} color={theme.text.primary} />
             </Pressable>
@@ -491,7 +495,7 @@ export default function PilgrimageHubScreen() {
               onPress={handleSearch}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Search"
+              accessibilityLabel={t('tabs.pilgrimageScreen.searchA11y')}
               style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
               <Ionicons name="search" size={18} color={theme.text.primary} />
             </Pressable>
@@ -507,12 +511,12 @@ export default function PilgrimageHubScreen() {
               variant="captionSmall"
               weight="700"
               style={[styles.introCaps, { color: theme.accent }]}>
-              PLAN YOUR DAY
+              {t('tabs.pilgrimageScreen.intro.caps')}
             </ThemedText>
             <ThemedText variant="bodySmall" style={styles.introBody}>
               {collectionAnimes.length > 0
-                ? 'Anime from your collection, plus picks near you.'
-                : 'Choose an anime and find walkable spots near you.'}
+                ? t('tabs.pilgrimageScreen.intro.body.withCollection')
+                : t('tabs.pilgrimageScreen.intro.body.empty')}
             </ThemedText>
           </View>
 
@@ -556,8 +560,12 @@ export default function PilgrimageHubScreen() {
           {popularList.length > 0 ? (
             <View style={styles.section}>
               <SectionHeader
-                title={collectionAnimes.length > 0 ? 'Your Animes & More' : 'Popular Animes'}
-                cta="See all"
+                title={
+                  collectionAnimes.length > 0
+                    ? t('tabs.pilgrimageScreen.section.yourAnimesAndMore')
+                    : t('tabs.pilgrimageScreen.section.popularAnimes')
+                }
+                cta={t('tabs.pilgrimageScreen.section.seeAll')}
                 onCta={handleSeeAllAnimes}
                 theme={theme}
               />
@@ -585,8 +593,8 @@ export default function PilgrimageHubScreen() {
           {featuredSpots.length > 0 ? (
             <View style={styles.section}>
               <SectionHeader
-                title="Featured Spots"
-                cta="View map"
+                title={t('tabs.pilgrimageScreen.section.featuredSpots')}
+                cta={t('tabs.pilgrimageScreen.section.viewMap')}
                 onCta={handleHeroPress}
                 theme={theme}
               />
@@ -631,12 +639,13 @@ function NearbyHero({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const fgPin = readableTextOn(theme.accent);
   const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
+  const t = useT();
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Open pilgrimage map"
+      accessibilityLabel={t('tabs.pilgrimageScreen.hero.labelAccessibility')}
       style={({ pressed }) => [styles.heroCard, pressed && { opacity: 0.92 }]}>
       <View style={styles.heroGrid} pointerEvents="none">
         {[60, 130, 200, 270, 330].map((x) => (
@@ -717,20 +726,29 @@ function NearbyHero({
           </View>
           <ThemedText variant="bodySmall" weight="700">
             {hasLocation && nearbyCount > 0 && tierLabel
-              ? `${nearbyCount} ${nearbyCount === 1 ? 'anime' : 'animes'} · ${tierLabel}`
-              : 'Pilgrimage Map'}
+              ? t('tabs.pilgrimageScreen.hero.countLabel', {
+                  count: String(nearbyCount),
+                  animeWord: nearbyCount === 1
+                    ? t('tabs.pilgrimageScreen.wordAnime')
+                    : t('tabs.pilgrimageScreen.wordAnimes'),
+                  tier: tierLabel,
+                })
+              : t('tabs.pilgrimageScreen.hero.title')}
           </ThemedText>
         </View>
         <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
           {hasLocation
             ? nearestAnime
-              ? `Closest: ${nearestTitles?.primary ?? 'Unknown Title'}${
-                  nearestAnime.distanceKm !== undefined
-                    ? ` · ${formatKm(nearestAnime.distanceKm)} away`
-                    : ''
-                }`
-              : 'No mapped anime yet — tap to open the map'
-            : 'Tap to browse pilgrimage spots across Japan'}
+              ? nearestAnime.distanceKm !== undefined
+                ? t('tabs.pilgrimageScreen.hero.closestWithDistance', {
+                    title: nearestTitles?.primary ?? '—',
+                    distance: formatKm(nearestAnime.distanceKm),
+                  })
+                : t('tabs.pilgrimageScreen.hero.closest', {
+                    title: nearestTitles?.primary ?? '—',
+                  })
+              : t('tabs.pilgrimageScreen.hero.noMappedAnime')
+            : t('tabs.pilgrimageScreen.hero.withoutLocation')}
         </ThemedText>
       </View>
     </Pressable>

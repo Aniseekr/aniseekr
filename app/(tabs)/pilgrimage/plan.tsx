@@ -29,6 +29,7 @@ import {
 } from '../../../libs/services/pilgrimage/visited-prefs';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
+import { useT } from '../../../libs/i18n';
 
 type TripCandidate = {
   anime: AnitabiBangumi;
@@ -36,22 +37,23 @@ type TripCandidate = {
   walkingHours: number;
 };
 
-const PLAN_PRESETS: readonly {
+const PLAN_PRESET_DEFS: readonly {
   id: string;
-  label: string;
-  subtitle: string;
+  labelKey: string;
+  subtitleKey: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { id: 'quick', label: 'Quick Walk', subtitle: '~3 spots · half-day', icon: 'walk' },
-  { id: 'full', label: 'Full Day', subtitle: '5–7 spots · 8 hrs', icon: 'sunny' },
-  { id: 'weekend', label: 'Weekend', subtitle: '2 days · multi-city', icon: 'calendar' },
-  { id: 'ai', label: 'AI Plan', subtitle: 'Tailor to your watchlist', icon: 'sparkles' },
+  { id: 'quick', labelKey: 'pilgrimage.plan.preset.quickLabel', subtitleKey: 'pilgrimage.plan.preset.quickSubtitle', icon: 'walk' },
+  { id: 'full', labelKey: 'pilgrimage.plan.preset.fullLabel', subtitleKey: 'pilgrimage.plan.preset.fullSubtitle', icon: 'sunny' },
+  { id: 'weekend', labelKey: 'pilgrimage.plan.preset.weekendLabel', subtitleKey: 'pilgrimage.plan.preset.weekendSubtitle', icon: 'calendar' },
+  { id: 'ai', labelKey: 'pilgrimage.plan.preset.aiLabel', subtitleKey: 'pilgrimage.plan.preset.aiSubtitle', icon: 'sparkles' },
 ];
 
 export default function PilgrimagePlanScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // Seed candidates synchronously from the bundled offline index so the
@@ -201,23 +203,23 @@ export default function PilgrimagePlanScreen() {
           onPress={handleBack}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('common.back')}
           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.78 }]}>
           <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
         </Pressable>
         <View style={styles.headerText}>
           <ThemedText variant="titleMedium" weight="700" style={{ letterSpacing: 0.5 }}>
-            Trip Planner
+            {t('pilgrimage.plan.title')}
           </ThemedText>
           <ThemedText variant="captionSmall" tone="tertiary" weight="500">
-            Plan your walking route
+            {t('pilgrimage.plan.subtitle')}
           </ThemedText>
         </View>
         <Pressable
           onPress={() => Haptics.selectionAsync().catch(() => undefined)}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="More options"
+          accessibilityLabel={t('pilgrimage.plan.moreOptionsA11y')}
           style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.78 }]}>
           <Ionicons name="ellipsis-horizontal" size={18} color={theme.text.primary} />
         </Pressable>
@@ -243,21 +245,21 @@ export default function PilgrimagePlanScreen() {
           <StatTile
             icon="map"
             value={String(stats.destinations)}
-            label="Destinations"
+            label={t('pilgrimage.plan.statDestinations')}
             tint={theme.accent}
             theme={theme}
           />
           <StatTile
             icon="bookmark"
             value={String(stats.collected)}
-            label="Saved"
+            label={t('pilgrimage.plan.statSaved')}
             tint={theme.secondary}
             theme={theme}
           />
           <StatTile
             icon="checkmark-circle"
             value={String(stats.visited)}
-            label="Spots Visited"
+            label={t('pilgrimage.plan.statVisited')}
             tint={theme.status.success}
             theme={theme}
           />
@@ -266,18 +268,18 @@ export default function PilgrimagePlanScreen() {
         <View style={styles.presetSection}>
           <View style={styles.sectionHeader}>
             <ThemedText variant="titleMedium" weight="700">
-              Quick Presets
+              {t('pilgrimage.plan.quickPresets')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="tertiary">
-              Tap to start a plan
+              {t('pilgrimage.plan.quickPresetsHint')}
             </ThemedText>
           </View>
           <View style={styles.presetGrid}>
-            {PLAN_PRESETS.map((p) => (
+            {PLAN_PRESET_DEFS.map((p) => (
               <PresetTile
                 key={p.id}
-                label={p.label}
-                subtitle={p.subtitle}
+                label={t(p.labelKey)}
+                subtitle={t(p.subtitleKey)}
                 icon={p.icon}
                 theme={theme}
                 onPress={() => handlePresetPress(p.id)}
@@ -299,7 +301,7 @@ export default function PilgrimagePlanScreen() {
             <View style={{ flex: 1 }}>
               <View style={styles.sectionTitleRow}>
                 <ThemedText variant="titleMedium" weight="700">
-                  Suggested Trips
+                  {t('pilgrimage.plan.suggestedTitle')}
                 </ThemedText>
                 {suggested.length > 0 ? (
                   <View
@@ -317,12 +319,12 @@ export default function PilgrimagePlanScreen() {
                 ) : null}
               </View>
               <ThemedText variant="captionSmall" tone="tertiary" style={{ marginTop: 2 }}>
-                Curated 1-day plans inspired by featured anime
+                {t('pilgrimage.plan.suggestedSubtitle')}
               </ThemedText>
             </View>
             <Pressable onPress={() => router.push('/pilgrimage')} hitSlop={6}>
               <ThemedText variant="bodySmall" weight="700" style={{ color: theme.accent }}>
-                See all
+                {t('pilgrimage.plan.seeAll')}
               </ThemedText>
             </Pressable>
           </View>
@@ -331,10 +333,10 @@ export default function PilgrimagePlanScreen() {
             <View style={styles.emptyCard}>
               <MaterialIcons name="explore-off" size={36} color={theme.text.tertiary} />
               <ThemedText variant="bodyMedium" weight="700" align="center" style={{ marginTop: 6 }}>
-                No suggested trips yet
+                {t('pilgrimage.plan.suggestedEmptyTitle')}
               </ThemedText>
               <ThemedText variant="captionSmall" tone="secondary" align="center">
-                Curated trip ideas will appear once pilgrimage data finishes loading.
+                {t('pilgrimage.plan.suggestedEmptyBody')}
               </ThemedText>
             </View>
           ) : (
@@ -362,6 +364,7 @@ interface FeaturedTripCardProps {
 }
 
 function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { anime, estimatedDays, walkingHours } = candidate;
   const tint = cityToColor(anime.city, anime.color || theme.accent);
@@ -370,7 +373,7 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Featured trip: ${anime.title}`}
+      accessibilityLabel={t('pilgrimage.plan.featuredTripA11y', { title: anime.title })}
       style={({ pressed }) => [styles.featuredCard, pressed && { opacity: 0.92 }]}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.secondary }]} />
       {anime.cover ? (
@@ -398,11 +401,11 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
             variant="captionSmall"
             weight="700"
             style={{ color: theme.accent, letterSpacing: 0.6 }}>
-            FEATURED TRIP
+            {t('pilgrimage.plan.featuredBadge')}
           </ThemedText>
         </View>
         <ThemedText variant="bodySmall" tone="secondary" weight="600" numberOfLines={1}>
-          {anime.city || 'Featured destination'}
+          {anime.city || t('pilgrimage.plan.featuredDestinationFallback')}
           {anime.cn ? ` · ${anime.cn}` : ''}
         </ThemedText>
         <ThemedText
@@ -410,25 +413,28 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
           weight="800"
           numberOfLines={2}
           style={{ marginTop: 2 }}>
-          {anime.title || 'Untitled'} · {estimatedDays}-Day
+          {t('pilgrimage.plan.featuredTitleLine', {
+            title: anime.title || t('pilgrimage.plan.untitled'),
+            days: estimatedDays,
+          })}
         </ThemedText>
         <View style={styles.featuredMetaRow}>
           <View style={styles.featuredChip}>
             <Ionicons name="calendar" size={11} color={theme.text.primary} />
             <ThemedText variant="captionSmall" weight="600">
-              {estimatedDays} day
+              {t('pilgrimage.plan.daysShort', { count: estimatedDays })}
             </ThemedText>
           </View>
           <View style={styles.featuredChip}>
             <Ionicons name="location" size={11} color={theme.text.primary} />
             <ThemedText variant="captionSmall" weight="600">
-              {anime.pointsLength} spots
+              {t('pilgrimage.plan.spotsShort', { count: anime.pointsLength ?? 0 })}
             </ThemedText>
           </View>
           <View style={styles.featuredChip}>
             <Ionicons name="walk" size={11} color={theme.text.primary} />
             <ThemedText variant="captionSmall" weight="600">
-              ~{walkingHours}h
+              {t('pilgrimage.plan.walkHoursShort', { hours: walkingHours })}
             </ThemedText>
           </View>
         </View>
@@ -441,7 +447,7 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
               pressed && { opacity: 0.85 },
             ]}>
             <ThemedText variant="bodySmall" weight="700" style={{ color: tintFg }}>
-              Continue
+              {t('common.continue')}
             </ThemedText>
             <Ionicons name="arrow-forward" size={14} color={tintFg} />
           </Pressable>
@@ -518,6 +524,7 @@ function PresetTile({ label, subtitle, icon, theme, onPress }: PresetTileProps) 
 }
 
 function BuildOwnBanner({ theme, onPress }: { theme: ThemePalette; onPress: () => void }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   // Use the theme's signature accent + secondary as the banner gradient so it
   // refreshes per theme switch instead of staying purple.
@@ -525,7 +532,7 @@ function BuildOwnBanner({ theme, onPress }: { theme: ThemePalette; onPress: () =
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Build your own 1-day plan"
+      accessibilityLabel={t('pilgrimage.plan.buildOwnA11y')}
       style={({ pressed }) => [styles.buildBanner, pressed && { opacity: 0.92 }]}>
       <LinearGradient
         colors={[theme.accentDark, theme.accent, theme.secondary]}
@@ -538,13 +545,13 @@ function BuildOwnBanner({ theme, onPress }: { theme: ThemePalette; onPress: () =
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <ThemedText variant="bodyMedium" weight="800" style={{ color: '#FFF' }}>
-          Build Your Own 1-Day Plan
+          {t('pilgrimage.plan.buildOwnTitle')}
         </ThemedText>
         <ThemedText
           variant="captionSmall"
           numberOfLines={2}
           style={{ color: 'rgba(255,255,255,0.78)', marginTop: 3 }}>
-          Pick a neighborhood, anime, and route — we&apos;ll optimize the order.
+          {t('pilgrimage.plan.buildOwnBody')}
         </ThemedText>
       </View>
       <Ionicons name="chevron-forward" size={16} color="#FFF" />
@@ -559,6 +566,7 @@ interface SuggestedTripRowProps {
 }
 
 function SuggestedTripRow({ candidate, theme, onPress }: SuggestedTripRowProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const { anime, estimatedDays, walkingHours } = candidate;
   const tint = cityToColor(anime.city, anime.color || theme.accent);
@@ -590,7 +598,7 @@ function SuggestedTripRow({ candidate, theme, onPress }: SuggestedTripRowProps) 
             tone="secondary"
             weight="700"
             style={{ letterSpacing: 0.3, textTransform: 'uppercase' }}>
-            {anime.city || 'Multiple areas'}
+            {anime.city || t('pilgrimage.plan.multipleAreas')}
           </ThemedText>
         </View>
         <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
@@ -598,19 +606,19 @@ function SuggestedTripRow({ candidate, theme, onPress }: SuggestedTripRowProps) 
         </ThemedText>
         <View style={styles.suggestedMetaRow}>
           <ThemedText variant="captionSmall" tone="tertiary" weight="600">
-            {estimatedDays}d
+            {t('pilgrimage.plan.daysSuffix', { count: estimatedDays })}
           </ThemedText>
           <ThemedText variant="captionSmall" tone="tertiary">
             ·
           </ThemedText>
           <ThemedText variant="captionSmall" tone="tertiary" weight="600">
-            {anime.pointsLength} spots
+            {t('pilgrimage.plan.spotsShort', { count: anime.pointsLength ?? 0 })}
           </ThemedText>
           <ThemedText variant="captionSmall" tone="tertiary">
             ·
           </ThemedText>
           <ThemedText variant="captionSmall" tone="tertiary" weight="600">
-            ~{walkingHours}h walk
+            {t('pilgrimage.plan.walkHoursLong', { hours: walkingHours })}
           </ThemedText>
         </View>
       </View>
