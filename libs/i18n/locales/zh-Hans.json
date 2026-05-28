@@ -1,0 +1,168 @@
+{
+  "$comment": "简体中文（Mainland）。缺键时先经 zh-Hant 通过 OpenCC 简化 fallback，再到英文。只在词汇真的不同（视频 vs 影片、软件 vs 软体）时才覆盖，否则可以省略让 OpenCC 处理。",
+
+  "common": {
+    "continue": "继续",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "back": "返回",
+    "close": "关闭",
+    "done": "完成",
+    "skip": "跳过",
+    "next": "下一步",
+    "previous": "上一步",
+    "confirm": "确认",
+    "edit": "编辑",
+    "reset": "重置",
+    "loading": "加载中…",
+    "error": "出错了",
+    "retry": "重试",
+    "unavailable": "不可用",
+    "settings": "设置",
+    "on": "开启",
+    "off": "关闭",
+    "default": "默认",
+    "yes": "是",
+    "no": "否",
+    "ok": "好",
+    "refreshing": "刷新中…",
+    "search": "搜索",
+    "notNow": "暂不",
+    "enabled": "已启用",
+    "disabled": "已停用",
+    "comingSoon": "即将推出"
+  },
+
+  "language": {
+    "screenTitle": "语言",
+    "screenSubtitle": "界面语言和动画数据显示方式",
+    "section": {
+      "app": "应用语言",
+      "data": "动画数据语言"
+    },
+    "appLanguageTitle": "应用语言",
+    "appLanguageSubtitle": "选择界面显示语言",
+    "systemDefault": "跟随系统",
+    "english": "English",
+    "traditionalChinese": "繁體中文",
+    "simplifiedChinese": "简体中文",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "titlePriority": "标题优先级",
+    "titlePriorityDesc": "按此顺序尝试每部动画的标题语言",
+    "vocabLanguage": "类型与标签语言",
+    "vocabLanguageDesc": "默认跟随应用语言。可在此处覆盖为混合语言。",
+    "vocabAuto": "自动（跟随应用语言）",
+    "autotranslateSynopsis": "自动翻译简介",
+    "autotranslateSynopsisDesc": "缺少官方翻译时，使用设备本地翻译生成简介",
+    "showOriginal": "始终显示原文",
+    "showOriginalDesc": "在译文下方显示原文。长按任意译文也可临时切换。",
+    "helpTranslateTitle": "帮助翻译 Aniseekr",
+    "helpTranslateBody": "Aniseekr 是开源项目，翻译由社区贡献。请参考 CONTRIBUTING.md 了解如何新增或改进语言。"
+  },
+
+  "onboarding": {
+    "skip": "跳过",
+    "skipA11y": "跳过引导",
+    "welcome": {
+      "tagline": "发现、评分、收藏，全部存在你的设备上。",
+      "subtitle": "不需要账号。",
+      "cta": "继续"
+    },
+    "browseSource": {
+      "title": "选择浏览来源",
+      "body": "Aniseekr 会从你选择的平台获取热门、新番和搜索结果。之后可在「设置」中更改。",
+      "cta": "继续"
+    },
+    "notifications": {
+      "title": "要开启播出提醒吗？",
+      "body": "我们可以在你追的番开播前几分钟提醒你。完全本地处理，没有第三方参与。",
+      "allowed": "已允许通知",
+      "maybeLater": "暂不",
+      "allow": "允许",
+      "asking": "请求中…"
+    },
+    "adult": {
+      "title": "显示 R18 内容吗？",
+      "body": "关闭时，成人分级条目会在列表和搜索中隐藏。之后可在「设置」中切换。",
+      "toggleTitle": "显示成人内容",
+      "toggleSubtitle": "默认：关闭",
+      "cta": "继续"
+    },
+    "done": {
+      "title": "一切就绪",
+      "body": "开始评分、收藏、探索吧。",
+      "cta": "开始使用",
+      "busy": "加载中…"
+    }
+  },
+
+  "settings": {
+    "title": "设置",
+    "longPressHint": "长按条目可打开快速操作",
+    "account": "账号",
+    "appearanceSubtitle": "主题、强调色、对比度",
+    "language": "语言",
+    "languageSubtitle": "界面语言和动画数据",
+    "dataSource": "数据源",
+    "browseSource": "浏览来源",
+    "notifications": "通知",
+    "privacy": "隐私",
+    "cache": "缓存",
+    "backup": "备份与恢复",
+    "backupShort": "备份",
+    "syncHub": "同步中心",
+    "achievements": "成就",
+    "connectedPlatforms": "已关联平台",
+    "watchPlatforms": "观看平台",
+    "reminders": "提醒",
+    "attribution": "致谢",
+    "terms": "条款",
+    "termsLong": "服务条款",
+    "privacyLong": "隐私政策",
+    "about": "关于",
+    "version": "版本 {version}",
+    "signIn": "登录",
+    "signOut": "登出",
+    "manageSubscription": "管理订阅",
+    "sections": {
+      "account": "账号",
+      "contentSync": "内容与同步",
+      "appearance": "外观",
+      "preferences": "偏好",
+      "notificationsAbout": "通知与关于"
+    },
+    "prefs": {
+      "allowR18": "允许 R18 内容",
+      "allowR18Desc": "在季番和搜索中显示 18+ 条目",
+      "includeGames": "包含游戏",
+      "includeGamesDesc": "在 Bangumi 日历显示视频游戏",
+      "showScore": "突出评分",
+      "showScoreDesc": "在卡片标题栏显示评分"
+    }
+  },
+
+  "titleLanguage": {
+    "intro": "标题将以你优先级最高、且该作品提供的语言显示。点击箭头可调整顺序。",
+    "english": "English",
+    "romaji": "Romaji",
+    "japanese": "日本語",
+    "chinese": "繁體中文",
+    "resetA11y": "重置为默认顺序"
+  },
+
+  "translation": {
+    "machineBadge": "机翻",
+    "showOriginalA11y": "显示原文",
+    "hideOriginalA11y": "隐藏原文"
+  },
+
+  "tabs": {
+    "rate": "首页",
+    "collection": "收藏",
+    "pilgrimage": "圣地巡礼",
+    "bangumi": "Bangumi",
+    "profile": "我的"
+  }
+}

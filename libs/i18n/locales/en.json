@@ -1,0 +1,1104 @@
+{
+  "$comment": "Canonical English catalog. Edit this first when adding keys. All other locales mirror this shape. Use {name} for interpolation. Do not translate brand names: Aniseekr, AniList, MyAnimeList, Bangumi, Kitsu, Simkl.",
+
+  "common": {
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "back": "Back",
+    "close": "Close",
+    "done": "Done",
+    "skip": "Skip",
+    "next": "Next",
+    "previous": "Previous",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "reset": "Reset",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "unavailable": "Unavailable",
+    "settings": "Settings",
+    "on": "On",
+    "off": "Off",
+    "default": "Default",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "refreshing": "Refreshing…",
+    "search": "Search",
+    "notNow": "Not now",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "comingSoon": "Coming soon"
+  },
+
+  "language": {
+    "screenTitle": "Language",
+    "screenSubtitle": "App chrome and how anime data is shown",
+    "section": {
+      "app": "App language",
+      "data": "Anime data language"
+    },
+    "appLanguageTitle": "App language",
+    "appLanguageSubtitle": "Choose the language for app UI",
+    "systemDefault": "System default",
+    "english": "English",
+    "traditionalChinese": "繁體中文",
+    "simplifiedChinese": "简体中文",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "titlePriority": "Title priority",
+    "titlePriorityDesc": "Order in which title languages are tried for each anime",
+    "vocabLanguage": "Genre & tag language",
+    "vocabLanguageDesc": "Defaults to App language. Override to mix languages.",
+    "vocabAuto": "Auto (follow App language)",
+    "autotranslateSynopsis": "Auto-translate synopsis",
+    "autotranslateSynopsisDesc": "Translate descriptions on device when no localized version exists",
+    "showOriginal": "Always show original",
+    "showOriginalDesc": "Display original text below the translation. Long-press any translated string to toggle on the fly.",
+    "helpTranslateTitle": "Help translate Aniseekr",
+    "helpTranslateBody": "Aniseekr is open source — translations are community contributions. See CONTRIBUTING.md for how to add or improve a language."
+  },
+
+  "onboarding": {
+    "skip": "Skip",
+    "skipA11y": "Skip onboarding",
+    "welcome": {
+      "tagline": "Discover, rate, collect. Locally on your device.",
+      "subtitle": "No account needed.",
+      "cta": "Continue"
+    },
+    "browseSource": {
+      "title": "Pick your browse source",
+      "body": "Aniseekr pulls top, seasonal, and search results from the platform you choose. You can change this later in Settings.",
+      "cta": "Continue"
+    },
+    "notifications": {
+      "title": "Get airing reminders?",
+      "body": "We can ping you a few minutes before tracked shows go live. Stays local — no third party involved.",
+      "allowed": "Notifications allowed",
+      "maybeLater": "Maybe later",
+      "allow": "Allow",
+      "asking": "Asking…"
+    },
+    "adult": {
+      "title": "Show R18 entries?",
+      "body": "When off, adult-rated entries are hidden across lists and search. You can flip this any time from Settings.",
+      "toggleTitle": "Show adult content",
+      "toggleSubtitle": "Default: off",
+      "cta": "Continue"
+    },
+    "done": {
+      "title": "You're ready",
+      "body": "Start rating, collecting, and exploring.",
+      "cta": "Get started",
+      "busy": "Loading…"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "longPressHint": "Long-press a row for quick actions",
+    "account": "Account",
+    "appearanceSubtitle": "Theme, accent, contrast",
+    "language": "Language",
+    "languageSubtitle": "App chrome and anime data",
+    "dataSource": "Data source",
+    "browseSource": "Browse source",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "cache": "Cache",
+    "backup": "Backup & Restore",
+    "backupShort": "Backup",
+    "syncHub": "Sync hub",
+    "achievements": "Achievements",
+    "connectedPlatforms": "Connected platforms",
+    "watchPlatforms": "Watch platforms",
+    "reminders": "Reminders",
+    "attribution": "Attribution",
+    "terms": "Terms",
+    "termsLong": "Terms of service",
+    "privacyLong": "Privacy policy",
+    "about": "About",
+    "version": "Version {version}",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "manageSubscription": "Manage subscription",
+    "sections": {
+      "account": "ACCOUNT",
+      "contentSync": "CONTENT & SYNC",
+      "appearance": "APPEARANCE",
+      "preferences": "PREFERENCES",
+      "notificationsAbout": "NOTIFICATIONS & ABOUT"
+    },
+    "prefs": {
+      "allowR18": "Allow R18 content",
+      "allowR18Desc": "Show 18+ entries in seasonal lists and search",
+      "includeGames": "Include games",
+      "includeGamesDesc": "Show video games in Bangumi calendar",
+      "showScore": "Show score prominently",
+      "showScoreDesc": "Display rating in card header"
+    },
+    "accentColor": {
+      "apply": "Apply",
+      "section": {
+        "gradients": "GRADIENT ACCENTS",
+        "presets": "PRESET ACCENTS",
+        "recent": "RECENT"
+      },
+      "subtitle": "Choose an accent color used across buttons, tabs, and highlights throughout Aniseekr.",
+      "title": "Accent Color"
+    },
+    "accountScreen": {
+      "connect": "Connect",
+      "connected": "Connected",
+      "disconnect": "Disconnect",
+      "disconnectAll": "Disconnect everything from this device",
+      "disconnectAllDesc": "Signs out of every platform and erases all stored OAuth tokens locally",
+      "footnote": "Aniseekr has no server-side account — your library lives only on this device. Disconnecting a platform removes its OAuth token and the cached library it pulled. To fully delete data on each platform, revoke access in that platform's account settings. To erase every local cache, screenshot, preference and SQLite store as well, delete the app from your device.",
+      "intro": "Connect platforms to sync your library, ratings and progress across Aniseekr and other clients.",
+      "notConnected": "Not connected",
+      "refreshTokens": "Refresh tokens",
+      "refreshTokensDesc": "Re-pull authentication state from secure storage",
+      "section": {
+        "actions": "Account actions",
+        "platforms": "Platforms"
+      }
+    },
+    "advanced": {
+      "beta": "BETA",
+      "cameraDiagnostics": "Camera diagnostics",
+      "cameraDiagnosticsDesc": "Hardware capabilities + cohort classification for bug reports",
+      "importWizardDesc": "Bulk-import from MAL or AniList exports",
+      "languageDesc": "App language, title priority, and translation",
+      "otakuDnaDesc": "Insights derived from your library",
+      "section": {
+        "diagnostics": "Diagnostics",
+        "sync": "Sync"
+      },
+      "subtitle": "Beta and diagnostic features",
+      "syncHubDesc": "Cross-platform syncing preferences",
+      "title": "Advanced"
+    },
+    "appearance": {
+      "cardHeight": "Card height",
+      "cardHeightDesc": "Adjusts Bangumi calendar and Rate cards.",
+      "customHex": "Custom hex…",
+      "increaseContrast": "Increase contrast",
+      "increaseContrastDesc": "Sharper text and borders",
+      "livePreview": "Live preview",
+      "livePreviewDesc": "Accent and surface tints update as you tap.",
+      "mapHint": "Pilgrimage map theme. Defaults to light — most maps look better that way.",
+      "mode": {
+        "auto": "Auto",
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "premium": "Premium",
+      "resetToDefault": "Reset to theme default",
+      "sample": "Sample",
+      "section": {
+        "accent": "ACCENT",
+        "advanced": "ADVANCED",
+        "density": "DENSITY",
+        "map": "MAP",
+        "mode": "MODE",
+        "recent": "RECENT",
+        "theme": "THEME"
+      },
+      "seeLivePreview": "See live preview",
+      "tint": {
+        "balanced": "Balanced",
+        "subtle": "Subtle",
+        "vivid": "Vivid"
+      },
+      "tintIntensity": "Tint intensity",
+      "tintSubtitle": {
+        "balanced": "Default accent intensity",
+        "subtle": "Calmer accent backgrounds",
+        "vivid": "Stronger pops of color"
+      }
+    },
+    "attributionScreen": {
+      "footer": "Trademarks belong to their respective owners. Aniseekr is not affiliated with any of the services listed above.",
+      "intro": "Aniseekr aggregates information from these excellent sources. Tap any entry to open the project page.",
+      "section": {
+        "animeData": "Anime data",
+        "libraries": "Open-source libraries",
+        "maps": "Maps & geodata"
+      },
+      "source": {
+        "anilist": "Primary anime metadata, scoring, and seasonal listings",
+        "anitabi": "Real-world anime pilgrimage spots",
+        "annict": "Japanese seasonal tracking",
+        "bangumi": "Chinese-community anime database & scoring",
+        "carto": "Voyager / Positron / Dark Matter raster tiles for the pilgrimage map",
+        "jikan": "Open MAL REST mirror for cross-platform fallback",
+        "kitsu": "Anime catalog and streaming aggregation",
+        "myanimelist": "Cross-platform ratings and community lists",
+        "osm": "Map data © OpenStreetMap contributors, available under the ODbL"
+      },
+      "subtitle": "The data and tools we stand on"
+    },
+    "backupScreen": {
+      "autoBackup": "Auto-backup",
+      "autoBackupDesc": "Run automatically every {hours}h when the app goes to background",
+      "backupNow": "Backup now",
+      "cloudkitPull": "Pull from CloudKit",
+      "cloudkitPullDesc": "Only pulls folders the old app explicitly shared. For full restore, use the section above.",
+      "cloudkitPush": "Push current data to CloudKit",
+      "cloudkitPushDesc": "So the old SwiftUI app on another device sees the same data",
+      "cloudkitUnavailable": "Not available — rebuild dev client with the bridge",
+      "encrypt": "Encrypt backup file",
+      "encryptDesc": "AES-256-GCM with a device key. Required to restore on the same device.",
+      "encryptedTag": "🔒 encrypted (AES-256-GCM)",
+      "google": {
+        "signIn": "Sign in with Google",
+        "signInPrompt": "Sign in to enable Google Drive backup.",
+        "signOut": "Sign out of Google",
+        "signedIn": "Signed in. Backup file lives in the hidden app-data folder of your Google Drive.",
+        "signingIn": "Signing in…"
+      },
+      "googleDriveDesc": "Cross-platform — restorable on Android too",
+      "googleNotConfigured": "Set EXPO_PUBLIC_GOOGLE_DRIVE_WEB_CLIENT_ID in .env to enable Google Drive backup.",
+      "icloudDesc": "Native to iPhone — no sign-in needed",
+      "legacy": {
+        "detected": "Legacy aniseeker migration data detected ({total} items).",
+        "explainer": "This is the minimal ratings / watch progress data left by the old SwiftUI app. The import previews the diff first; once imported this section will not appear again.",
+        "importCta": "Import and overwrite rows with the same id",
+        "processing": "Processing…",
+        "title": "Import from legacy aniseeker"
+      },
+      "relative": {
+        "days": "{count}d ago",
+        "hours": "{count}h ago",
+        "justNow": "just now",
+        "minutes": "{count}m ago"
+      },
+      "restoreFromCloud": "Restore from cloud",
+      "restoreFromCloudDesc": "Preview changes before applying",
+      "restoreLegacy": "Restore from legacy aniseeker backup",
+      "restoreLegacyCta": "Restore legacy backup",
+      "restoreLegacyDesc": "Paste migration JSON if you extracted it manually",
+      "restoring": "Restoring…",
+      "scope": {
+        "driveAppData": "Stored in Drive's app-data folder (hidden, app-private)",
+        "driveRoot": "Stored in your Drive root (visible in drive.google.com)",
+        "icloudDocuments": "Stored in iCloud Drive · Aniseekr (visible in Files.app)",
+        "icloudPrivate": "Stored in the app-private iCloud container (hidden)",
+        "other": "Scope: {scope}"
+      },
+      "section": {
+        "backup": "Backup",
+        "cloudkit": "CloudKit sync (advanced)",
+        "destination": "Backup destination",
+        "restore": "Restore"
+      },
+      "status": {
+        "checking": "Checking…",
+        "googleSignInPrompt": "Sign in with Google below",
+        "icloudUnavailable": "iCloud not available — check Settings → Apple ID",
+        "lastBackup": "Last backup {when}",
+        "noBackup": "No backup yet"
+      },
+      "subtitle": "iCloud · Google Drive · CloudKit",
+      "uploading": "Uploading…"
+    },
+    "cacheScreen": {
+      "cacheDir": "Cache directory",
+      "cacheDirDesc": "Images, temporary files, and preloaded data",
+      "clear": "Clear",
+      "clearAll": "Clear all caches",
+      "deviceStorage": "Available device storage",
+      "docDir": "Document directory",
+      "docDirDesc": "User data; never cleared by cache actions",
+      "empty": "Empty",
+      "entries": "{count} entries",
+      "expired": "{count} expired",
+      "pruneExpired": "Prune expired entries",
+      "pruneExpiredDesc": "Only clears TTL-based cache entries that are already expired",
+      "recalculate": "Recalculate usage",
+      "section": {
+        "actions": "Actions",
+        "buckets": "Cache Buckets",
+        "overview": "Storage Overview"
+      },
+      "subtitle": "Manage offline data and storage usage"
+    },
+    "customColor": {
+      "applyCta": "Apply Custom Color",
+      "hue": "Hue",
+      "lightness": "Lightness",
+      "recentEmpty": "Apply a color to see it here.",
+      "saturation": "Saturation",
+      "saveA11y": "Save custom color",
+      "section": {
+        "recent": "RECENTLY USED",
+        "values": "VALUES"
+      },
+      "title": "Custom Color"
+    },
+    "dataSourceScreen": {
+      "active": "Active source",
+      "description": "Select the platform used to power discovery and seasonal browsing. This does not change which platforms sync your library.",
+      "switchFailed": "Switch failed: {message}",
+      "tapToUse": "Tap to use",
+      "title": "Browse Source"
+    },
+    "importWizard": {
+      "mode": {
+        "merge": {
+          "desc": "Keep existing scores; add anything missing",
+          "label": "Merge"
+        },
+        "overwrite": {
+          "desc": "Replace local data with the imported file",
+          "label": "Overwrite"
+        },
+        "skip": {
+          "desc": "Only import series not already in your library",
+          "label": "Skip duplicates"
+        }
+      },
+      "note": "Importing copies the file into the local cache, validates each row, and writes new entries via the collection service. You can cancel mid-flight without affecting your current library.",
+      "source": {
+        "anilist": {
+          "desc": "Use the official \"Export user data\" download",
+          "name": "AniList JSON"
+        },
+        "csv": {
+          "desc": "Generic CSV with title / score / status columns",
+          "name": "CSV file"
+        },
+        "kitsu": {
+          "desc": "JSON export from your Kitsu account settings",
+          "name": "Kitsu library"
+        },
+        "mal": {
+          "desc": "Standard MAL export, includes scores and notes",
+          "name": "MyAnimeList XML"
+        }
+      },
+      "startCta": "Start import",
+      "step": {
+        "confirm": "Confirm",
+        "mode": "Mode",
+        "source": "Source"
+      },
+      "subtitle": "Bring your existing library across",
+      "summary": {
+        "backup": "Backup before import",
+        "mode": "Conflict mode",
+        "source": "Source"
+      },
+      "title": "Import wizard"
+    },
+    "notificationsScreen": {
+      "achievementAlerts": "Achievement unlocks",
+      "achievementAlertsDesc": "Local pings when you earn a badge",
+      "androidFootnote": "Android schedules reminders via the local AlarmManager. They run even if the app is closed, but battery optimisations may delay them by a few minutes on some devices.",
+      "banner": {
+        "allow": "Allow",
+        "body": "Allow notifications so we can remind you when episodes drop.",
+        "title": "Notifications are off"
+      },
+      "cancelAll": "Cancel all reminders",
+      "dailyDigest": "Daily digest",
+      "dailyDigestDesc": "Morning recap of upcoming episodes",
+      "emptyState": "No scheduled reminders",
+      "episodeReminders": "Episode reminders",
+      "episodeRemindersDesc": "Notify me before each new episode",
+      "group": {
+        "later": "Later",
+        "thisWeek": "Later this week",
+        "today": "Today",
+        "tomorrow": "Tomorrow"
+      },
+      "leadMinutes": "{mins} minutes before",
+      "openSystemSettings": "Open system settings",
+      "pending": "Pending",
+      "section": {
+        "leadTime": "Reminder lead time",
+        "manage": "Manage",
+        "scheduled": "Scheduled reminders",
+        "scheduledWithCount": "Scheduled reminders ({count})",
+        "whatToSend": "What to send"
+      },
+      "subtitle": "{count} scheduled · {status}"
+    },
+    "otakuDna": {
+      "title": "Otaku DNA"
+    },
+    "privacyScreen": {
+      "lead": "Aniseekr is built on the principle that your library belongs to you.",
+      "section": {
+        "advertising": {
+          "body": "We show AdMob ads in some surfaces. We do not present an App Tracking Transparency (ATT) prompt, so AdMob operates without IDFA — ads are non-personalized and attribution uses Apple's privacy-preserving SKAdNetwork. Google may still collect device-level signals; see Google's privacy policy: https://policies.google.com/privacy.",
+          "title": "Advertising (Google AdMob)"
+        },
+        "analytics": {
+          "body": "We use Microsoft Clarity to understand how users interact with the app — taps, scroll depth, screen views, anonymized session recordings. Sensitive text fields are masked; OAuth tokens and PII are never recorded. Microsoft processes the data under its own privacy statement.",
+          "title": "Usage analytics (Microsoft Clarity)"
+        },
+        "camera": {
+          "body": "The pilgrimage comparison flow uses the camera to capture a scene and, with your permission, saves it to your Photos library so you can share it later. We do not upload photos. EXIF (including GPS, if present) is stripped before saving comparison shots.",
+          "title": "Camera & photos"
+        },
+        "children": {
+          "body": "Aniseekr is not directed at children under 13. We do not knowingly collect personal information from them. If you believe a child has provided data, contact us and we will remove it.",
+          "title": "Children's privacy"
+        },
+        "contact": {
+          "body": "Questions about this policy: gm@aniseekr.moe",
+          "title": "Contact"
+        },
+        "control": {
+          "body": "You can clear caches, delete folders, disconnect platforms, or revoke camera / photo / location / notification permissions at any time in iOS / Android settings. Uninstalling the app removes all locally stored data. Cleared data cannot be recovered.",
+          "title": "Your data, your control"
+        },
+        "crash": {
+          "body": "Crash logs surface only as on-device console output and never leave your phone unless you choose to share them.",
+          "title": "Crash reports"
+        },
+        "location": {
+          "body": "Pilgrimage features use your location only while you have the screen open to filter nearby anime spots. Coordinates stay on the device — they are never sent to our servers. Always-on background location is not requested.",
+          "title": "Location"
+        },
+        "notifications": {
+          "body": "Episode and achievement reminders are scheduled locally by iOS / Android — we do not push them from a server. We may register an Apple Push (APNs) or FCM token so the OS can deliver them, but the payload is generated on your device. Disabling notifications system-wide stops all reminders immediately.",
+          "title": "Notifications"
+        },
+        "storeLocal": {
+          "body": "Aniseekr keeps your folders, ratings, theme choices, notification preferences, and OAuth tokens (in Keychain / EncryptedSharedPreferences) on your device. We do not run a backend, so nothing is uploaded to our servers.",
+          "title": "What we store locally"
+        },
+        "thirdParty": {
+          "body": "When you connect AniList, MyAnimeList, Bangumi, Annict, Shikimori, Simkl, or Kitsu, requests go directly between your device and that platform. We do not proxy or log those requests. Disconnecting an account in Settings stops all syncing.",
+          "title": "Third-party platforms"
+        }
+      },
+      "subtitle": "What happens to your data",
+      "updated": "Last updated: May 2026"
+    },
+    "syncHubScreen": {
+      "backgroundSync": "Background sync",
+      "backgroundSyncDesc": "Periodic updates when the app is open",
+      "beta": "BETA",
+      "cloudBackup": "Cloud backup",
+      "cloudBackupDesc": "iCloud · Google Drive — full library snapshot",
+      "conflict": {
+        "local": {
+          "desc": "Local edits always overwrite remote",
+          "label": "Prefer this device"
+        },
+        "newest": {
+          "desc": "Pick whichever side has the latest update timestamp",
+          "label": "Newest wins"
+        },
+        "remote": {
+          "desc": "Remote always overwrites local",
+          "label": "Prefer remote"
+        }
+      },
+      "forceResync": "Force resync from remote",
+      "forceResyncDesc": "Wipes local cache and re-pulls everything",
+      "lastSync": "Last sync {when}",
+      "manageInAccount": "Manage in Account",
+      "noSync": "No sync yet",
+      "relative": {
+        "days": "{count}d ago",
+        "hours": "{count}h ago",
+        "justNow": "just now",
+        "minutes": "{count}m ago"
+      },
+      "section": {
+        "behaviour": "Behaviour",
+        "conflict": "Conflict resolution",
+        "linked": "Linked services"
+      },
+      "statusBody": "Sync runs in the background when your library changes.",
+      "subtitle": "Cross-platform syncing",
+      "syncNow": "Sync now",
+      "wifiOnly": "Wi-Fi only",
+      "wifiOnlyDesc": "Pause syncing on cellular networks"
+    },
+    "termsScreen": {
+      "effective": "Effective date: May 2026",
+      "lead": "By using Aniseekr you agree to the following terms.",
+      "section": {
+        "acceptableUse": {
+          "body": "Aniseekr is provided for personal, non-commercial use. Do not abuse the bundled API integrations or attempt to bypass platform-level rate limits.",
+          "title": "Acceptable use"
+        },
+        "ads": {
+          "body": "Some surfaces may display ads from third-party networks. We are not responsible for ad content; your interactions with ads are subject to the advertiser's terms.",
+          "title": "Advertisements"
+        },
+        "changes": {
+          "body": "We may update these terms occasionally. The effective date below reflects the most recent revision; please re-read this page after major updates.",
+          "title": "Changes"
+        },
+        "content": {
+          "body": "Anime metadata, screenshots, and scoring information remain the property of their respective platforms. Aniseekr displays this content for personal reference only.",
+          "title": "Content"
+        },
+        "credentials": {
+          "body": "You are responsible for OAuth tokens stored on your device. Logging out removes them from local secure storage; revoking access on the third-party site is recommended for full removal.",
+          "title": "Account credentials"
+        },
+        "noWarranty": {
+          "body": "The app is provided \"as is\". While we strive for accuracy, third-party data sources may be unavailable or out of date.",
+          "title": "No warranty"
+        },
+        "subscriptions": {
+          "body": "Aniseekr Pro offers the following in-app purchases through Apple:\n\n• Aniseekr Pro Monthly — auto-renewing subscription, billed every month.\n• Aniseekr Pro Annual — auto-renewing subscription, billed every year.\n• Aniseekr Pro Lifetime — one-time purchase, never renews.\n\nPayment and billing: Payment is charged to your Apple ID at confirmation of purchase. Auto-renewing subscriptions automatically renew at the same price unless cancelled at least 24 hours before the end of the current period. Your Apple ID will be charged for the next period within 24 hours of the period end. The current price is shown in the paywall before you confirm.\n\nManaging and cancelling: You can review, manage, or cancel any subscription at any time in your Apple ID account settings (Settings → [your name] → Subscriptions on iOS). Cancellation takes effect at the end of the current period; you keep Pro features until then.\n\nRefunds: Purchases are handled by Apple and are subject to Apple's standard refund policy. We cannot issue refunds directly; please contact Apple Support to request one.\n\nRestoring purchases: Tap \"Restore purchases\" on the paywall to restore an existing entitlement on a new device or after reinstalling.",
+          "title": "Subscriptions and in-app purchases"
+        }
+      },
+      "subtitle": "Ground rules for using Aniseekr"
+    },
+    "watchPlatformsScreen": {
+      "footnote": "Your picks live on this device only — there's no Aniseekr server holding them.",
+      "intro": "Pick where you actually watch — those platforms show up first on every anime, and we'll deep-link straight into the app when it's installed.",
+      "openInApp": "Open in app when installed",
+      "openInAppDesc": "Try the platform's app via deep-link before falling back to the web URL.",
+      "section": {
+        "platforms": "Platforms",
+        "preferences": "Preferences"
+      },
+      "streamingService": "Streaming service",
+      "subtitle": {
+        "count": "{count} enabled",
+        "none": "No platforms picked yet",
+        "withPrimary": "{count} enabled · Primary: {primary}"
+      }
+    }
+  },
+
+  "titleLanguage": {
+    "intro": "Titles will be shown in the highest-priority language available for each anime. Tap the arrows to reorder.",
+    "english": "English",
+    "romaji": "Romaji",
+    "japanese": "日本語",
+    "chinese": "繁體中文",
+    "resetA11y": "Reset to default order"
+  },
+
+  "translation": {
+    "machineBadge": "machine-translated",
+    "showOriginalA11y": "Show original text",
+    "hideOriginalA11y": "Hide original text"
+  },
+
+  "tabs": {
+    "rate": "Home",
+    "collection": "Collection",
+    "pilgrimage": "Pilgrimage",
+    "bangumi": "Bangumi",
+    "profile": "Profile",
+    "bangumiScreen": {
+      "errorLoadFailed": "Couldn't load this season. Pull to retry.",
+      "movieAndSpecialsSubtitle": "{count} releases this season",
+      "movieAndSpecialsTitle": "Movies & specials",
+      "retry": "Retry",
+      "snackbar": {
+        "addedToWishlist": "Added \"{title}\" to Wishlist",
+        "couldntAddToWishlist": "Couldn't add to Wishlist",
+        "noUpcomingEpisode": "No upcoming episode scheduled for \"{title}\"",
+        "reminderCancelled": "Reminder cancelled",
+        "reminderSet": "Reminder set for \"{title}\"",
+        "undo": "Undo"
+      }
+    },
+    "collectionFolderScreen": {
+      "anime": "anime",
+      "back": "Back",
+      "backToList": "Back to list view",
+      "countAnime": "{count} anime",
+      "emptyBody": "Add anime to this folder from the rating screen.",
+      "emptyTitle": "No items in this folder",
+      "folder": "Folder",
+      "loading": "Loading…",
+      "swipeToLike": "Swipe to like",
+      "swipeToTriage": "Swipe to triage · {count}",
+      "unknownTitle": "Unknown Title"
+    },
+    "collectionScreen": {
+      "categoryAll": "All",
+      "categoryDone": "Done",
+      "categoryPlanned": "Planned",
+      "categoryWatching": "Watching",
+      "emptyAnimeBody": {
+        "all": "Rate or import anime to start building your library.",
+        "category": "Nothing marked as {category} yet."
+      },
+      "emptyAnimeTitle": "No anime here yet",
+      "emptyFolderBody": {
+        "all": "Create a folder to organize the anime you love.",
+        "category": "Anime with this status will appear here."
+      },
+      "emptyFolderTitle": {
+        "all": "No folders yet",
+        "category": "No {category} folders"
+      },
+      "folderCount": {
+        "one": "{count} folder",
+        "other": "{count} folders"
+      },
+      "libraryStats": "Library stats",
+      "myFolders": "My Folders",
+      "newFolder": "New folder",
+      "recentAnime": "Recent anime",
+      "recentAnimeForCategory": "{category} anime",
+      "seeAllCount": "See all {count}",
+      "share": {
+        "addAtLeastOne": "Add at least one anime",
+        "couldNotRender": "Could not render poster",
+        "dialogTitle": "Share {template}",
+        "myTemplateOnAniseekr": "My {template} on Aniseekr",
+        "pickTemplate": "Pick a template first",
+        "rendererNotReady": "Renderer not ready"
+      },
+      "sort": {
+        "count": "Count",
+        "newest": "Newest",
+        "oldest": "Oldest",
+        "rarity": "Rarity"
+      },
+      "untitled": "Untitled"
+    },
+    "pilgrimageScreen": {
+      "errorLoadFailed": "Failed to load",
+      "hero": {
+        "closest": "Closest: {title}",
+        "closestWithDistance": "Closest: {title} · {distance} away",
+        "countLabel": "{count} {animeWord} · {tier}",
+        "labelAccessibility": "Open pilgrimage map",
+        "noMappedAnime": "No mapped anime yet — tap to open the map",
+        "title": "Pilgrimage Map",
+        "withoutLocation": "Tap to browse pilgrimage spots across Japan"
+      },
+      "intro": {
+        "body": {
+          "empty": "Choose an anime and find walkable spots near you.",
+          "withCollection": "Anime from your collection, plus picks near you."
+        },
+        "caps": "PLAN YOUR DAY"
+      },
+      "myAlbumA11y": "My pilgrimage album",
+      "searchA11y": "Search",
+      "section": {
+        "featuredSpots": "Featured Spots",
+        "popularAnimes": "Popular Animes",
+        "seeAll": "See all",
+        "viewMap": "View map",
+        "yourAnimesAndMore": "Your Animes & More"
+      },
+      "tier": {
+        "dayTrip": "day trip · 100 km",
+        "inJapan": "in Japan",
+        "inRegion": "in region · 500 km",
+        "walking": "walking · 30 km"
+      },
+      "title": "Pilgrimage",
+      "wordAnime": "anime",
+      "wordAnimes": "animes"
+    },
+    "profileScreen": {
+      "anonName": "Anime fan",
+      "settings": "Settings",
+      "settingsSubtitle": "Preferences, account, more",
+      "statLabel": {
+        "cards": "Cards",
+        "liked": "Liked",
+        "rated": "Rated"
+      },
+      "statsHero": {
+        "subtitle": "Persona, year in review, hall of fame",
+        "title": "View full stats"
+      },
+      "premium": {
+        "active": "Premium active",
+        "manage": "Manage",
+        "manageSubtitle": "Manage your subscription and benefits",
+        "unlock": "Unlock Premium",
+        "unlockSubtitle": "No ads, all themes, unlimited sync",
+        "upgrade": "Upgrade"
+      },
+      "title": "Profile"
+    },
+    "rateScreen": {
+      "mode": {
+        "discovery": "Discovery",
+        "seasonal": "Seasonal",
+        "trend": "Trend"
+      },
+      "subtitle": {
+        "discovery": "Explore Genres",
+        "tracking": "My Feed",
+        "trend": "Top Charts"
+      },
+      "trend": {
+        "bookmarkA11y": "Bookmark",
+        "heroTrendingBadge": "TRENDING #1",
+        "hotBadge": "HOT",
+        "loadingTrends": "Loading trends…",
+        "noPilgrimages": "No pilgrimages available yet.",
+        "openA11y": "Open detail",
+        "openLabel": "Open",
+        "pilgrimagesA11y": "See all pilgrimages",
+        "pilgrimagesSubtitle": "Real-world anime locations to visit",
+        "pilgrimagesTitle": "Trending Pilgrimages",
+        "rangeAllTime": "All Time",
+        "rangeWeek": "This Week",
+        "seeAll": "See all",
+        "seeAllAnimeA11y": "See all trending anime",
+        "spotsLabel": "{count} spots",
+        "subtitleAllTime": "Highest popularity across all seasons",
+        "subtitleWeek": "What everyone is watching right now",
+        "titleAllTime": "Top {count} All Time",
+        "titleWeek": "Top {count} This Week"
+      }
+    },
+    "ratingScreen": {
+      "addToPlanA11y": "Add to Plan to Watch",
+      "allCaughtUp": "You're all caught up",
+      "closeA11y": "Close",
+      "goBack": "Go Back",
+      "loadingMore": "Loading more…",
+      "mode": {
+        "like": "Like",
+        "plan": "Plan"
+      },
+      "noPhotos": "No photos available",
+      "preferencesA11y": "Rating preferences",
+      "restart": "Restart",
+      "restartConfirm": {
+        "body": "Cards you swiped in {genre} will come back from the start. Your collection, favorites, and tracking status stay unchanged.",
+        "cancel": "Cancel",
+        "deckA11y": "Restart deck",
+        "fallbackGenre": "this genre",
+        "restart": "Restart",
+        "title": "Restart this genre?"
+      },
+      "skipA11y": "Skip"
+    }
+  },
+
+  "anime": {
+    "detail": {
+      "addFavorite": "Add to favorites",
+      "addToCollection": "Add to collection",
+      "addToCollectionHint": "Long press to add to your last-used folder",
+      "cancelReminder": "Cancel episode reminder",
+      "configure": "Configure ›",
+      "configureWatchA11y": "Configure watch platforms",
+      "endingThemes": "Ending Themes",
+      "info": {
+        "duration": "Duration",
+        "durationMins": "{mins} mins",
+        "episodes": "Episodes",
+        "format": "Format",
+        "startDate": "Start Date",
+        "status": "Status",
+        "studios": "Studios"
+      },
+      "information": "Information",
+      "noDescription": "No description available.",
+      "openEntryA11y": "Open {title}",
+      "openingThemes": "Opening Themes",
+      "openPlatformA11y": "Open {platform}",
+      "pilgrimage": "Pilgrimage",
+      "platformRatings": "Platform Ratings",
+      "relatedEntries": "Related Entries",
+      "removeFavorite": "Remove from favorites",
+      "scoreDistribution": "Score Distribution",
+      "searchLabel": "search",
+      "searchOnServiceA11y": "Search on {service}",
+      "searchPlatformA11y": "Search {platform}",
+      "setReminder": "Set episode reminder",
+      "shareAnime": "Share anime",
+      "shareMessage": "{title} — {url}",
+      "staff": "Staff",
+      "status": {
+        "completed": "Completed",
+        "dropped": "Dropped",
+        "onHold": "On Hold",
+        "planToWatch": "Plan to Watch",
+        "watching": "Watching"
+      },
+      "statusDistribution": "Status Distribution",
+      "statusUnknown": "Unknown",
+      "synopsis": "Synopsis",
+      "tags": "Tags",
+      "usersCount": "{count} users",
+      "watchNow": "Watch Now",
+      "watchOn": "Watch on {platform}",
+      "watchOnSection": "Watch on",
+      "watchOpenAniListA11y": "Open AniList page (no streaming platform configured)"
+    }
+  },
+
+  "search": {
+    "bookmark": {
+      "added": "Added \"{title}\" to your list",
+      "addedPilgrimage": "Added \"{title}\" to your pilgrimages",
+      "addFailed": "Couldn't add to your list",
+      "removed": "Removed \"{title}\" from your list",
+      "removeFailed": "Couldn't remove"
+    },
+    "bookmarkAddA11y": "Save to your list",
+    "bookmarkRemoveA11y": "Remove from your list",
+    "clear": "Clear",
+    "clearA11y": "Clear",
+    "discoverDescription": "Search across all your connected platforms — AniList, MAL, Bangumi, Kitsu and more.",
+    "discoverTitle": "Discover anime",
+    "dismissA11y": "Dismiss",
+    "errorGeneric": "Search failed",
+    "errorTitle": "Search failed",
+    "filter": {
+      "all": "All",
+      "movie": "Movie",
+      "recent": "Recent",
+      "tv": "TV"
+    },
+    "hasPilgrimageSpotsA11y": "Has pilgrimage spots",
+    "noMatchesDescription": "Nothing for \"{query}\" with the current filters. Try a different keyword or change the filter.",
+    "noMatchesTitle": "No matches",
+    "pilgrimage": {
+      "noMapping": "No pilgrimage mapping for \"{title}\".",
+      "resolveFailed": "Could not resolve this title."
+    },
+    "placeholder": {
+      "default": "Search anime, characters, studios…",
+      "pilgrimage": "Search anime for pilgrimage…"
+    },
+    "recent": "Recent",
+    "recentTermA11y": "Search {term}",
+    "resultCount": "{count} results",
+    "resultPilgrimageA11y": "{title}, pilgrimage available",
+    "sort": {
+      "newest": "Newest",
+      "relevance": "Relevance",
+      "score": "Score"
+    },
+    "sortByA11y": "Sort by",
+    "spotsCount": "{count} spots"
+  },
+
+  "trending": {
+    "errorLoadFailed": "Failed to load trending anime.",
+    "rangeAllTime": "All Time",
+    "rangeWeek": "This Week",
+    "rankA11y": "Rank {rank}, {title}",
+    "subtitleAllTime": "Top 50 all time",
+    "subtitleWeek": "Top 50 this week",
+    "title": "Trending"
+  },
+
+  "collectionStats": {
+    "hub": {
+      "title": "Statistics"
+    },
+    "hallOfFame": {
+      "earnedCounter": "{earned} of {total} · {ratio}%",
+      "earnedOn": "Earned {date}",
+      "emptyBody": "Earn your first achievement by rating or syncing anime.",
+      "emptyTitle": "No achievements yet",
+      "inProgress": "IN PROGRESS",
+      "legendary": "LEGENDARY",
+      "noTrophies": "No trophies yet — your earned ones will appear here.",
+      "rareMedallions": "RARE MEDALLIONS",
+      "shareMessage": "Unlocked \"{title}\" — {description}",
+      "title": "Hall of Fame"
+    },
+    "persona": {
+      "axesCount": "{count} axes",
+      "dimensionsTitle": "Personality dimensions",
+      "emptyBody": "Add and rate at least 3 anime to reveal your viewing archetype.",
+      "emptyTitle": "Persona not ready",
+      "rarityLabel": "RARE {rarity}%",
+      "shareMessage": "My Aniseekr persona: {title} ({match}% match)",
+      "statMatch": "MATCH",
+      "statSince": "SINCE",
+      "statViewed": "VIEWED",
+      "title": "Anime Persona",
+      "typeLabel": "PERSONA TYPE {index} / {total}"
+    },
+    "topFavorites": {
+      "allTimeBadge": "#1 ALL-TIME",
+      "emptyBody": "Rate at least one anime to crown a #1.",
+      "emptyTitle": "No favorites yet",
+      "metric": {
+        "episodes": "{count} eps",
+        "rating": "RATING",
+        "remembered": "REMEMBERED"
+      },
+      "ratingLabel": "Rating {rating}",
+      "restTitle": "The rest of my top {count}",
+      "shareMessage": "My #1 favorite: {title}{score}",
+      "subtitle": "{count} all-time picks",
+      "title": "My Top Favorites",
+      "untitled": "Untitled"
+    },
+    "topPicks": {
+      "emptyBody": "Rate a few anime — your top 10 will line up here automatically.",
+      "emptyTitle": "Rate to unlock",
+      "shareHeading": "My Top 10 Picks",
+      "subtitle": "A personal guide to anime worth your time",
+      "title": "Top 10 Picks",
+      "titleOwned": "My Top 10 Picks",
+      "untitled": "Untitled",
+      "updatedPrefix": "UPDATED"
+    },
+    "yearInReview": {
+      "daysShort": "{count}d",
+      "emptyBody": "Once you complete anime this year, your recap will appear here.",
+      "emptyTitle": "Nothing finished in {year} yet",
+      "epsShort": "{count} eps",
+      "eyebrow": "# YEAR IN REVIEW",
+      "heroSubtitle": "A year of stories, scores, and late nights.",
+      "heroTitle": "Your {year} in Anime",
+      "monthlyTitle": "Hours by month",
+      "scoreLabel": "· score {score}",
+      "shareMessage": "My {year} in Anime — {shows} shows, {hours}h watched.",
+      "statHours": "Hours",
+      "statLongestStreak": "Longest streak",
+      "statShows": "Shows",
+      "title": "Year in Review",
+      "topAnimeBadge": "#1 TOP ANIME",
+      "untitled": "Untitled"
+    }
+  },
+
+  "pilgrimage": {
+    "album": {
+      "addPhotoA11y": "Add photo to this folder",
+      "addPilgrimage": "Add Pilgrimage",
+      "albumFallback": "Album",
+      "capturesShort": "{count} captures",
+      "chipAll": "All",
+      "compareA11y": "Compare {title}",
+      "daysAgo": "{count}d ago",
+      "detailSubtitle": "{captures} captures · {spots} spots",
+      "emptyBody": "Frame an anime scene at its real-world location to start your first folder.",
+      "emptyFolderBody": "Take a comparison photo on a spot in this anime to fill the folder.",
+      "emptyFolderTitle": "No captures in this folder",
+      "emptyRegionBody": "Try another region tag — or tap All to see every anime you've visited.",
+      "emptyRegionTitle": "No folders in this region",
+      "emptyTitle": "No pilgrimage folders yet",
+      "epLabel": "EP {ep}",
+      "folderPhotosCount": "{count} photos",
+      "foldersByAnime": "Folders by anime",
+      "folderSpotsCount": "{count} spots",
+      "folderSpotsRatio": "{visited}/{total} spots",
+      "hoursAgo": "{count}h ago",
+      "justNow": "Just now",
+      "loadingFolder": "Loading folder…",
+      "openFolderA11y": "Open folder {title}",
+      "startCapture": "Start capture",
+      "startPilgrimageA11y": "Start new pilgrimage",
+      "statAverage": "average",
+      "statAvgMatch": "Avg Match",
+      "statCaptures": "captures",
+      "statPhotos": "Photos",
+      "statSpots": "spots",
+      "statVisited": "Visited",
+      "tagLibrary": "LIBRARY",
+      "tagScene": "SCENE",
+      "tagYours": "YOURS",
+      "title": "Pilgrimage Album",
+      "weeksAgo": "{count}w ago"
+    },
+    "detail": {
+      "browseFallback": "Browse",
+      "clearSearchA11y": "Clear search",
+      "emptyFilter": "No scenes match this filter.",
+      "emptyNoData": "No pilgrimage data yet for this anime.",
+      "emptySearch": "No spots match this search.",
+      "errorTitle": "Couldn't load pilgrimage",
+      "filter": {
+        "all": "All",
+        "photos": "Photos",
+        "planned": "Planned",
+        "saved": "Saved",
+        "unvisited": "Unvisited",
+        "visited": "Visited"
+      },
+      "goBack": "Go back",
+      "openAlbumA11y": "Open pilgrimage album",
+      "searchA11y": "Search pilgrimage spots or episodes",
+      "searchPlaceholder": "Search spot or EP",
+      "shareA11y": "Share",
+      "shareMessage": "{title} · {count} scenes{urlLine}",
+      "title": "Pilgrimage",
+      "useCachedTilesA11y": "Use cached map tiles only",
+      "useDotMarkersA11y": "Use dot map markers",
+      "usePhotoMarkersA11y": "Use photo map markers",
+      "viewMode": {
+        "grid": "Grid",
+        "map": "Map",
+        "rows": "Rows"
+      }
+    },
+    "map": {
+      "allJapan": "All Japan",
+      "clearSearchA11y": "Clear search",
+      "filter": {
+        "all": "All",
+        "collection": "In collection",
+        "official88": "★ 88"
+      },
+      "layout": {
+        "grid": "Grid",
+        "rows": "Rows"
+      },
+      "mapLoadError": "Couldn't load the map.",
+      "openAlbumA11y": "Open pilgrimage album",
+      "searchA11y": "Search anime",
+      "searchPlaceholder": "Search anime or city",
+      "wholeJapanA11y": "View whole Japan"
+    },
+    "plan": {
+      "buildOwnA11y": "Build your own 1-day plan",
+      "buildOwnBody": "Pick a neighborhood, anime, and route — we'll optimize the order.",
+      "buildOwnTitle": "Build Your Own 1-Day Plan",
+      "daysShort": "{count} day",
+      "daysSuffix": "{count}d",
+      "featuredBadge": "FEATURED TRIP",
+      "featuredDestinationFallback": "Featured destination",
+      "featuredTitleLine": "{title} · {days}-Day",
+      "featuredTripA11y": "Featured trip: {title}",
+      "moreOptionsA11y": "More options",
+      "multipleAreas": "Multiple areas",
+      "preset": {
+        "aiLabel": "AI Plan",
+        "aiSubtitle": "Tailor to your watchlist",
+        "fullLabel": "Full Day",
+        "fullSubtitle": "5–7 spots · 8 hrs",
+        "quickLabel": "Quick Walk",
+        "quickSubtitle": "~3 spots · half-day",
+        "weekendLabel": "Weekend",
+        "weekendSubtitle": "2 days · multi-city"
+      },
+      "quickPresets": "Quick Presets",
+      "quickPresetsHint": "Tap to start a plan",
+      "seeAll": "See all",
+      "spotsShort": "{count} spots",
+      "statDestinations": "Destinations",
+      "statSaved": "Saved",
+      "statVisited": "Spots Visited",
+      "subtitle": "Plan your walking route",
+      "suggestedEmptyBody": "Curated trip ideas will appear once pilgrimage data finishes loading.",
+      "suggestedEmptyTitle": "No suggested trips yet",
+      "suggestedSubtitle": "Curated 1-day plans inspired by featured anime",
+      "suggestedTitle": "Suggested Trips",
+      "title": "Trip Planner",
+      "untitled": "Untitled",
+      "walkHoursLong": "~{hours}h walk",
+      "walkHoursShort": "~{hours}h"
+    }
+  }
+}

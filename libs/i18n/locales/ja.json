@@ -1,0 +1,55 @@
+{
+  "$comment": "日本語 — 部分翻訳。未翻訳のキーは英語にフォールバックします。",
+
+  "common": {
+    "continue": "続ける",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "back": "戻る",
+    "close": "閉じる",
+    "done": "完了",
+    "skip": "スキップ",
+    "next": "次へ",
+    "previous": "戻る",
+    "confirm": "確認",
+    "edit": "編集",
+    "reset": "リセット",
+    "loading": "読み込み中…",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "unavailable": "利用不可",
+    "settings": "設定",
+    "on": "オン",
+    "off": "オフ",
+    "default": "デフォルト",
+    "yes": "はい",
+    "no": "いいえ",
+    "ok": "OK",
+    "refreshing": "更新中…",
+    "search": "検索",
+    "notNow": "後で",
+    "enabled": "有効",
+    "disabled": "無効",
+    "comingSoon": "近日公開"
+  },
+
+  "language": {
+    "screenTitle": "言語",
+    "appLanguageTitle": "アプリの言語",
+    "systemDefault": "システムに従う",
+    "english": "English",
+    "traditionalChinese": "繁體中文",
+    "simplifiedChinese": "简体中文",
+    "japanese": "日本語",
+    "korean": "한국어"
+  },
+
+  "tabs": {
+    "rate": "ホーム",
+    "collection": "コレクション",
+    "pilgrimage": "聖地巡礼",
+    "bangumi": "Bangumi",
+    "profile": "プロフィール"
+  }
+}

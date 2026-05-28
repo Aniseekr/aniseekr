@@ -1,0 +1,1104 @@
+{
+  "$comment": "繁體中文（Taiwan）。鏡像 en.json 的鍵結構，缺鍵自動 fallback 到英文。不翻譯品牌名 (Aniseekr / AniList / Bangumi / MAL)。",
+
+  "common": {
+    "continue": "繼續",
+    "cancel": "取消",
+    "save": "儲存",
+    "delete": "刪除",
+    "back": "返回",
+    "close": "關閉",
+    "done": "完成",
+    "skip": "略過",
+    "next": "下一步",
+    "previous": "上一步",
+    "confirm": "確認",
+    "edit": "編輯",
+    "reset": "重設",
+    "loading": "載入中…",
+    "error": "發生錯誤",
+    "retry": "重試",
+    "unavailable": "無法使用",
+    "settings": "設定",
+    "on": "開啟",
+    "off": "關閉",
+    "default": "預設",
+    "yes": "是",
+    "no": "否",
+    "ok": "好",
+    "refreshing": "更新中…",
+    "search": "搜尋",
+    "notNow": "稍後再說",
+    "enabled": "已啟用",
+    "disabled": "已停用",
+    "comingSoon": "即將推出"
+  },
+
+  "language": {
+    "screenTitle": "語言",
+    "screenSubtitle": "介面語言與動畫資料顯示方式",
+    "section": {
+      "app": "應用語言",
+      "data": "動畫資料語言"
+    },
+    "appLanguageTitle": "應用語言",
+    "appLanguageSubtitle": "選擇介面顯示語言",
+    "systemDefault": "跟隨系統",
+    "english": "English",
+    "traditionalChinese": "繁體中文",
+    "simplifiedChinese": "简体中文",
+    "japanese": "日本語",
+    "korean": "한국어",
+    "titlePriority": "標題優先順序",
+    "titlePriorityDesc": "依此順序嘗試每部動畫的標題語言",
+    "vocabLanguage": "類型與標籤語言",
+    "vocabLanguageDesc": "預設跟隨應用語言。可在此覆寫為混搭語言。",
+    "vocabAuto": "自動（跟隨應用語言）",
+    "autotranslateSynopsis": "自動翻譯簡介",
+    "autotranslateSynopsisDesc": "缺少官方翻譯時，使用本機翻譯轉換簡介",
+    "showOriginal": "常駐顯示原文",
+    "showOriginalDesc": "在翻譯下方顯示原文。長按任何翻譯文字也可臨時切換顯示。",
+    "helpTranslateTitle": "幫忙翻譯 Aniseekr",
+    "helpTranslateBody": "Aniseekr 是開源專案，翻譯由社群貢獻。請參考 CONTRIBUTING.md 了解如何新增或改善語言。"
+  },
+
+  "onboarding": {
+    "skip": "略過",
+    "skipA11y": "略過導覽",
+    "welcome": {
+      "tagline": "探索、評分、收藏，全部存在你的裝置上。",
+      "subtitle": "不需要帳號。",
+      "cta": "繼續"
+    },
+    "browseSource": {
+      "title": "選擇瀏覽來源",
+      "body": "Aniseekr 會從你選擇的平台撈取熱門、季番與搜尋結果。日後可在「設定」中變更。",
+      "cta": "繼續"
+    },
+    "notifications": {
+      "title": "要開啟播出提醒嗎？",
+      "body": "我們可以在追蹤的作品開播前幾分鐘通知你。完全本機處理，沒有第三方介入。",
+      "allowed": "已允許通知",
+      "maybeLater": "稍後再說",
+      "allow": "允許",
+      "asking": "請求中…"
+    },
+    "adult": {
+      "title": "顯示 R18 內容嗎？",
+      "body": "關閉時，成人分級作品會在列表與搜尋中隱藏。日後可在「設定」中切換。",
+      "toggleTitle": "顯示成人內容",
+      "toggleSubtitle": "預設：關閉",
+      "cta": "繼續"
+    },
+    "done": {
+      "title": "一切就緒",
+      "body": "開始評分、收藏、探索吧。",
+      "cta": "開始使用",
+      "busy": "載入中…"
+    }
+  },
+
+  "settings": {
+    "title": "設定",
+    "longPressHint": "長按項目可開啟快速操作",
+    "account": "帳號",
+    "appearanceSubtitle": "主題、強調色、對比",
+    "language": "語言",
+    "languageSubtitle": "介面語言與動畫資料",
+    "dataSource": "資料來源",
+    "browseSource": "瀏覽來源",
+    "notifications": "通知",
+    "privacy": "隱私",
+    "cache": "快取",
+    "backup": "備份與還原",
+    "backupShort": "備份",
+    "syncHub": "同步中心",
+    "achievements": "成就",
+    "connectedPlatforms": "已連結平台",
+    "watchPlatforms": "觀看平台",
+    "reminders": "提醒",
+    "attribution": "致謝",
+    "terms": "條款",
+    "termsLong": "服務條款",
+    "privacyLong": "隱私權政策",
+    "about": "關於",
+    "version": "版本 {version}",
+    "signIn": "登入",
+    "signOut": "登出",
+    "manageSubscription": "管理訂閱",
+    "sections": {
+      "account": "帳號",
+      "contentSync": "內容與同步",
+      "appearance": "外觀",
+      "preferences": "偏好",
+      "notificationsAbout": "通知與關於"
+    },
+    "prefs": {
+      "allowR18": "允許 R18 內容",
+      "allowR18Desc": "在季番與搜尋中顯示 18+ 作品",
+      "includeGames": "包含遊戲",
+      "includeGamesDesc": "在 Bangumi 日曆顯示電子遊戲",
+      "showScore": "突顯評分",
+      "showScoreDesc": "在卡片標題列顯示評分"
+    },
+    "accentColor": {
+      "apply": "套用",
+      "section": {
+        "gradients": "漸層強調色",
+        "presets": "預設強調色",
+        "recent": "最近使用"
+      },
+      "subtitle": "選擇 Aniseekr 在按鈕、分頁與高亮處使用的強調色。",
+      "title": "強調色"
+    },
+    "accountScreen": {
+      "connect": "連結",
+      "connected": "已連結",
+      "disconnect": "中斷",
+      "disconnectAll": "在此裝置上中斷所有平台",
+      "disconnectAllDesc": "登出所有平台,並清除本機儲存的所有 OAuth 權杖",
+      "footnote": "Aniseekr 沒有伺服器端帳號,你的資料只存在這台裝置上。中斷平台連結會刪除該平台的 OAuth 權杖與本機快取。如要徹底刪除該平台上的資料,請到該平台的帳戶設定取消授權。如要連同所有本機快取、截圖、偏好與 SQLite 一併清除,請直接從裝置上移除本 App。",
+      "intro": "連結平台後,Aniseekr 會在裝置間同步你的資料庫、評分與觀看進度。",
+      "notConnected": "未連結",
+      "refreshTokens": "重新整理權杖",
+      "refreshTokensDesc": "從安全儲存重新讀取認證狀態",
+      "section": {
+        "actions": "帳號操作",
+        "platforms": "平台"
+      }
+    },
+    "advanced": {
+      "beta": "BETA",
+      "cameraDiagnostics": "相機診斷",
+      "cameraDiagnosticsDesc": "硬體能力與分類資訊,用於回報問題",
+      "importWizardDesc": "從 MAL 或 AniList 匯出檔批次匯入",
+      "languageDesc": "應用語言、標題優先順序與翻譯",
+      "otakuDnaDesc": "從你的資料庫衍生的洞察",
+      "section": {
+        "diagnostics": "診斷",
+        "sync": "同步"
+      },
+      "subtitle": "Beta 與診斷功能",
+      "syncHubDesc": "跨平台同步偏好設定",
+      "title": "進階"
+    },
+    "appearance": {
+      "cardHeight": "卡片高度",
+      "cardHeightDesc": "調整 Bangumi 日曆與評分卡片大小。",
+      "customHex": "自訂十六進位…",
+      "increaseContrast": "增強對比",
+      "increaseContrastDesc": "更銳利的文字與邊框",
+      "livePreview": "即時預覽",
+      "livePreviewDesc": "點選時強調色與表面色會即時更新。",
+      "mapHint": "聖地巡禮地圖主題。預設為亮色──多數地圖在亮色下較好看。",
+      "mode": {
+        "auto": "自動",
+        "dark": "深色",
+        "light": "淺色"
+      },
+      "premium": "Premium",
+      "resetToDefault": "重設為主題預設",
+      "sample": "示例",
+      "section": {
+        "accent": "強調色",
+        "advanced": "進階",
+        "density": "密度",
+        "map": "地圖",
+        "mode": "模式",
+        "recent": "最近使用",
+        "theme": "主題"
+      },
+      "seeLivePreview": "查看即時預覽",
+      "tint": {
+        "balanced": "平衡",
+        "subtle": "柔和",
+        "vivid": "鮮明"
+      },
+      "tintIntensity": "強調色強度",
+      "tintSubtitle": {
+        "balanced": "預設強調色強度",
+        "subtle": "較柔和的強調色背景",
+        "vivid": "更鮮明的色彩表現"
+      }
+    },
+    "attributionScreen": {
+      "footer": "商標屬於各自所有者。Aniseekr 與以上服務並無關聯。",
+      "intro": "Aniseekr 整合以下優秀來源的資料。點任一項即可開啟專案頁面。",
+      "section": {
+        "animeData": "動畫資料",
+        "libraries": "開源套件",
+        "maps": "地圖與地理資料"
+      },
+      "source": {
+        "anilist": "主要的動畫詮釋資料、評分與季番列表",
+        "anitabi": "真實世界的動畫聖地座標",
+        "annict": "日本季番追蹤",
+        "bangumi": "華文社群的動畫資料庫與評分",
+        "carto": "聖地巡禮地圖的 Voyager / Positron / Dark Matter 圖磚",
+        "jikan": "MAL 的開放 REST 鏡像,作為跨平台後備",
+        "kitsu": "動畫目錄與串流彙整",
+        "myanimelist": "跨平台評分與社群列表",
+        "osm": "地圖資料 © OpenStreetMap 貢獻者,採 ODbL 授權"
+      },
+      "subtitle": "我們仰賴的資料與工具"
+    },
+    "backupScreen": {
+      "autoBackup": "自動備份",
+      "autoBackupDesc": "App 進入背景時每 {hours} 小時自動執行一次",
+      "backupNow": "立即備份",
+      "cloudkitPull": "從 CloudKit 拉取",
+      "cloudkitPullDesc": "僅拉取舊版 App 明確共享的資料夾。完整還原請使用上方區塊。",
+      "cloudkitPush": "推送目前資料到 CloudKit",
+      "cloudkitPushDesc": "讓另一台裝置上的舊版 SwiftUI app 看到相同資料",
+      "cloudkitUnavailable": "目前無法使用 — 請重新建置 dev client 並包含 bridge",
+      "encrypt": "加密備份檔",
+      "encryptDesc": "以裝置金鑰進行 AES-256-GCM 加密。需在同一台裝置才能還原。",
+      "encryptedTag": "🔒 已加密 (AES-256-GCM)",
+      "google": {
+        "signIn": "以 Google 登入",
+        "signInPrompt": "登入以啟用 Google Drive 備份。",
+        "signOut": "登出 Google",
+        "signedIn": "已登入。備份檔存放在 Google Drive 的隱藏 app-data 資料夾中。",
+        "signingIn": "登入中…"
+      },
+      "googleDriveDesc": "跨平台──Android 也可還原",
+      "googleNotConfigured": "請在 .env 設定 EXPO_PUBLIC_GOOGLE_DRIVE_WEB_CLIENT_ID 來啟用 Google Drive 備份。",
+      "icloudDesc": "iPhone 原生支援──無需登入",
+      "legacy": {
+        "detected": "偵測到舊版 aniseeker 的遷移資料 ({total} 筆)。",
+        "explainer": "這是舊版 SwiftUI app 留下的最小化評分 / 觀看進度資料。匯入時會先預覽差異,確認後才寫入,匯入過後不會再顯示這個區塊。",
+        "importCta": "匯入並覆蓋同 id 的資料",
+        "processing": "處理中…",
+        "title": "從舊版 aniseeker 匯入"
+      },
+      "relative": {
+        "days": "{count} 天前",
+        "hours": "{count} 小時前",
+        "justNow": "剛剛",
+        "minutes": "{count} 分鐘前"
+      },
+      "restoreFromCloud": "從雲端還原",
+      "restoreFromCloudDesc": "套用前先預覽差異",
+      "restoreLegacy": "從舊版 aniseeker 備份還原",
+      "restoreLegacyCta": "還原舊版備份",
+      "restoreLegacyDesc": "若有手動取出遷移 JSON,可在此貼上",
+      "restoring": "還原中…",
+      "scope": {
+        "driveAppData": "存放於 Drive 的 app-data 資料夾(隱藏,App 私有)",
+        "driveRoot": "存放於 Drive 根目錄(可在 drive.google.com 看到)",
+        "icloudDocuments": "存放於 iCloud Drive · Aniseekr(可在「檔案」App 看到)",
+        "icloudPrivate": "存放於 App 私有的 iCloud 容器(隱藏)",
+        "other": "範圍:{scope}"
+      },
+      "section": {
+        "backup": "備份",
+        "cloudkit": "CloudKit 同步(進階)",
+        "destination": "備份目的地",
+        "restore": "還原"
+      },
+      "status": {
+        "checking": "檢查中…",
+        "googleSignInPrompt": "請在下方以 Google 登入",
+        "icloudUnavailable": "iCloud 無法使用──請到「設定 → Apple ID」確認",
+        "lastBackup": "上次備份 {when}",
+        "noBackup": "尚未備份"
+      },
+      "subtitle": "iCloud · Google Drive · CloudKit",
+      "uploading": "上傳中…"
+    },
+    "cacheScreen": {
+      "cacheDir": "快取目錄",
+      "cacheDirDesc": "圖片、暫存檔與預載資料",
+      "clear": "清除",
+      "clearAll": "清除所有快取",
+      "deviceStorage": "裝置可用空間",
+      "docDir": "文件目錄",
+      "docDirDesc": "使用者資料;不會被快取操作清除",
+      "empty": "空白",
+      "entries": "{count} 筆",
+      "expired": "{count} 筆已過期",
+      "pruneExpired": "清理已過期項目",
+      "pruneExpiredDesc": "只清除已超過 TTL 的快取項目",
+      "recalculate": "重新計算用量",
+      "section": {
+        "actions": "操作",
+        "buckets": "快取分區",
+        "overview": "儲存概覽"
+      },
+      "subtitle": "管理離線資料與儲存用量"
+    },
+    "customColor": {
+      "applyCta": "套用自訂顏色",
+      "hue": "色相",
+      "lightness": "亮度",
+      "recentEmpty": "套用顏色後會出現在這裡。",
+      "saturation": "飽和度",
+      "saveA11y": "儲存自訂顏色",
+      "section": {
+        "recent": "最近使用",
+        "values": "色值"
+      },
+      "title": "自訂顏色"
+    },
+    "dataSourceScreen": {
+      "active": "目前使用",
+      "description": "選擇用於探索與季番瀏覽的平台。此設定不會變更同步資料庫的平台。",
+      "switchFailed": "切換失敗:{message}",
+      "tapToUse": "點選使用",
+      "title": "瀏覽來源"
+    },
+    "importWizard": {
+      "mode": {
+        "merge": {
+          "desc": "保留既有評分,僅補上缺漏",
+          "label": "合併"
+        },
+        "overwrite": {
+          "desc": "以匯入檔覆蓋本機資料",
+          "label": "覆蓋"
+        },
+        "skip": {
+          "desc": "只匯入本機沒有的作品",
+          "label": "略過重複"
+        }
+      },
+      "note": "匯入會將檔案複製到本機快取、逐筆驗證,並透過收藏服務寫入新項目。中途取消不會影響你目前的資料庫。",
+      "source": {
+        "anilist": {
+          "desc": "請使用官方的「Export user data」下載檔",
+          "name": "AniList JSON"
+        },
+        "csv": {
+          "desc": "包含標題 / 評分 / 狀態欄位的通用 CSV",
+          "name": "CSV 檔"
+        },
+        "kitsu": {
+          "desc": "從 Kitsu 帳號設定匯出的 JSON",
+          "name": "Kitsu 資料庫"
+        },
+        "mal": {
+          "desc": "標準 MAL 匯出檔,包含評分與備註",
+          "name": "MyAnimeList XML"
+        }
+      },
+      "startCta": "開始匯入",
+      "step": {
+        "confirm": "確認",
+        "mode": "模式",
+        "source": "來源"
+      },
+      "subtitle": "把既有的資料庫帶進來",
+      "summary": {
+        "backup": "匯入前先備份",
+        "mode": "衝突模式",
+        "source": "來源"
+      },
+      "title": "匯入精靈"
+    },
+    "notificationsScreen": {
+      "achievementAlerts": "成就解鎖",
+      "achievementAlertsDesc": "獲得徽章時的本機提示",
+      "androidFootnote": "Android 透過本機 AlarmManager 排程提醒。即使 App 已關閉也會執行,但部分裝置的省電機制可能會延遲幾分鐘。",
+      "banner": {
+        "allow": "允許",
+        "body": "允許通知,我們才能在新集數開播前提醒你。",
+        "title": "通知未開啟"
+      },
+      "cancelAll": "取消所有提醒",
+      "dailyDigest": "每日摘要",
+      "dailyDigestDesc": "早晨彙整即將播出的集數",
+      "emptyState": "沒有已排程的提醒",
+      "episodeReminders": "新集數提醒",
+      "episodeRemindersDesc": "新集數開播前提醒我",
+      "group": {
+        "later": "稍後",
+        "thisWeek": "本週稍後",
+        "today": "今天",
+        "tomorrow": "明天"
+      },
+      "leadMinutes": "提早 {mins} 分鐘",
+      "openSystemSettings": "開啟系統設定",
+      "pending": "待排程",
+      "section": {
+        "leadTime": "提醒提前時間",
+        "manage": "管理",
+        "scheduled": "已排程的提醒",
+        "scheduledWithCount": "已排程的提醒({count})",
+        "whatToSend": "通知內容"
+      },
+      "subtitle": "{count} 項已排程 · {status}"
+    },
+    "otakuDna": {
+      "title": "御宅 DNA"
+    },
+    "privacyScreen": {
+      "lead": "Aniseekr 的核心信念是:你的資料庫屬於你自己。",
+      "section": {
+        "advertising": {
+          "body": "我們在部分版面顯示 AdMob 廣告。我們不會跳出 ATT(App Tracking Transparency)請求,因此 AdMob 在沒有 IDFA 的情況下運作──廣告為非個人化,歸因採用 Apple 隱私保護的 SKAdNetwork。Google 仍可能蒐集裝置層級訊號,詳見 Google 隱私權政策:https://policies.google.com/privacy。",
+          "title": "廣告(Google AdMob)"
+        },
+        "analytics": {
+          "body": "我們使用 Microsoft Clarity 來了解使用者如何使用 App──點擊、捲動深度、畫面瀏覽、匿名化的會話錄影。敏感欄位會被遮罩;OAuth 權杖與個資不會被錄製。Microsoft 依其自身的隱私聲明處理這些資料。",
+          "title": "使用分析(Microsoft Clarity)"
+        },
+        "camera": {
+          "body": "聖地巡禮對比流程會使用相機拍攝場景,並在取得你的同意後存進相簿以便分享。我們不會上傳照片。對比照在儲存前會清除 EXIF(含 GPS,如有)。",
+          "title": "相機與相簿"
+        },
+        "children": {
+          "body": "Aniseekr 並非為 13 歲以下兒童設計。我們不會有意蒐集兒童的個人資訊。若你發現有兒童提供了資料,請聯絡我們,我們會立即刪除。",
+          "title": "兒童隱私"
+        },
+        "contact": {
+          "body": "對本政策有任何問題:gm@aniseekr.moe",
+          "title": "聯絡方式"
+        },
+        "control": {
+          "body": "你可以隨時在 iOS / Android 設定中清除快取、刪除資料夾、中斷平台連結,或撤銷相機 / 相簿 / 位置 / 通知權限。移除 App 會清除所有本機資料,清除後無法復原。",
+          "title": "你的資料,由你掌握"
+        },
+        "crash": {
+          "body": "當機紀錄僅以裝置端 console 輸出呈現,除非你主動分享,否則不會離開你的手機。",
+          "title": "當機回報"
+        },
+        "location": {
+          "body": "聖地巡禮功能僅在你開啟畫面時使用位置,以過濾附近的動畫景點。座標只保留在裝置上,絕不會傳送到我們的伺服器。我們不會請求常駐背景位置。",
+          "title": "位置"
+        },
+        "notifications": {
+          "body": "新集數與成就提醒由 iOS / Android 在本機排程──我們不會從伺服器推送。我們可能會註冊 Apple Push (APNs) 或 FCM 權杖,讓系統能投遞通知,但內容是由你的裝置產生。在系統層級關閉通知會立即停止所有提醒。",
+          "title": "通知"
+        },
+        "storeLocal": {
+          "body": "Aniseekr 把你的資料夾、評分、主題選擇、通知偏好與 OAuth 權杖(存放於 Keychain / EncryptedSharedPreferences)留在你的裝置上。我們沒有後端,因此這些資料不會被上傳到我們的伺服器。",
+          "title": "本機儲存的內容"
+        },
+        "thirdParty": {
+          "body": "連結 AniList、MyAnimeList、Bangumi、Annict、Shikimori、Simkl 或 Kitsu 時,請求會直接在你的裝置與該平台之間進行。我們不會代理或記錄這些請求。在「設定」中中斷連結即可停止所有同步。",
+          "title": "第三方平台"
+        }
+      },
+      "subtitle": "你的資料會怎麼處理",
+      "updated": "最後更新:2026 年 5 月"
+    },
+    "syncHubScreen": {
+      "backgroundSync": "背景同步",
+      "backgroundSyncDesc": "App 開啟時定期更新",
+      "beta": "BETA",
+      "cloudBackup": "雲端備份",
+      "cloudBackupDesc": "iCloud · Google Drive──完整資料庫快照",
+      "conflict": {
+        "local": {
+          "desc": "本機編輯會覆蓋遠端",
+          "label": "以本裝置為準"
+        },
+        "newest": {
+          "desc": "以最新更新時間的一方為準",
+          "label": "最新者勝出"
+        },
+        "remote": {
+          "desc": "遠端永遠覆蓋本機",
+          "label": "以遠端為準"
+        }
+      },
+      "forceResync": "從遠端強制重新同步",
+      "forceResyncDesc": "清除本機快取並重新拉取所有資料",
+      "lastSync": "上次同步 {when}",
+      "manageInAccount": "在「帳號」中管理",
+      "noSync": "尚未同步",
+      "relative": {
+        "days": "{count} 天前",
+        "hours": "{count} 小時前",
+        "justNow": "剛剛",
+        "minutes": "{count} 分鐘前"
+      },
+      "section": {
+        "behaviour": "行為",
+        "conflict": "衝突處理",
+        "linked": "連結的服務"
+      },
+      "statusBody": "資料庫變動時,同步會在背景執行。",
+      "subtitle": "跨平台同步",
+      "syncNow": "立即同步",
+      "wifiOnly": "僅限 Wi-Fi",
+      "wifiOnlyDesc": "在行動網路下暫停同步"
+    },
+    "termsScreen": {
+      "effective": "生效日期:2026 年 5 月",
+      "lead": "使用 Aniseekr 即表示你同意以下條款。",
+      "section": {
+        "acceptableUse": {
+          "body": "Aniseekr 僅供個人、非商業用途。請勿濫用內建的 API 整合,或試圖繞過平台層級的速率限制。",
+          "title": "可接受的使用方式"
+        },
+        "ads": {
+          "body": "部分版面可能顯示第三方廣告。我們不負責廣告內容;你與廣告的互動受廣告主自身條款規範。",
+          "title": "廣告"
+        },
+        "changes": {
+          "body": "我們可能會不定期更新這些條款。下方的生效日期反映最近一次修訂;重大更新後請再次閱讀本頁。",
+          "title": "變更"
+        },
+        "content": {
+          "body": "動畫詮釋資料、截圖與評分仍屬於各自平台的所有人。Aniseekr 僅供你個人參考之用。",
+          "title": "內容"
+        },
+        "credentials": {
+          "body": "你需自行負責存放在裝置上的 OAuth 權杖。登出會從本機安全儲存中移除權杖;為完整移除,建議到第三方網站撤銷授權。",
+          "title": "帳號憑證"
+        },
+        "noWarranty": {
+          "body": "本 App 依「現狀」提供。雖然我們力求準確,但第三方資料來源可能會無法使用或過時。",
+          "title": "免責聲明"
+        },
+        "subscriptions": {
+          "body": "Aniseekr Pro 透過 Apple 提供以下應用內購買:\n\n• Aniseekr Pro 月費版──自動續訂訂閱,每月扣款。\n• Aniseekr Pro 年費版──自動續訂訂閱,每年扣款。\n• Aniseekr Pro 終身版──一次性購買,不會續訂。\n\n付款與帳務:確認購買時,款項會向你的 Apple ID 收取。除非在當期結束至少 24 小時前取消,自動續訂訂閱將以相同價格續訂;Apple ID 會在當期結束後 24 小時內被收取下一期費用。確認購買前,付費頁會顯示當前價格。\n\n管理與取消:你可以隨時在 Apple ID 的帳戶設定中(iOS 為「設定 →〔你的名字〕→ 訂閱」)查看、管理或取消任何訂閱。取消會在當期結束時生效;在此之前你仍可使用 Pro 功能。\n\n退款:購買由 Apple 處理,受 Apple 標準退款政策規範。我們無法直接退款;請聯絡 Apple Support 申請。\n\n還原購買:在付費頁點選「還原購買」,即可在新裝置或重新安裝後還原既有的權益。",
+          "title": "訂閱與應用內購買"
+        }
+      },
+      "subtitle": "使用 Aniseekr 的基本規範"
+    },
+    "watchPlatformsScreen": {
+      "footnote": "你的選擇只存在這台裝置上──Aniseekr 沒有伺服器幫你保存。",
+      "intro": "選擇你實際會看的平台──那些平台會優先出現在每部動畫,且若有安裝對應 App,會直接深層連結進去。",
+      "openInApp": "已安裝時優先開啟 App",
+      "openInAppDesc": "先嘗試以深層連結開啟平台 App,失敗時才退回網頁 URL。",
+      "section": {
+        "platforms": "平台",
+        "preferences": "偏好"
+      },
+      "streamingService": "串流服務",
+      "subtitle": {
+        "count": "已啟用 {count} 個",
+        "none": "尚未選擇任何平台",
+        "withPrimary": "已啟用 {count} 個 · 主要:{primary}"
+      }
+    }
+  },
+
+  "titleLanguage": {
+    "intro": "標題會以你優先順序最高、且該作品有提供的語言顯示。點箭頭可調整順序。",
+    "english": "English",
+    "romaji": "Romaji",
+    "japanese": "日本語",
+    "chinese": "繁體中文",
+    "resetA11y": "重設為預設順序"
+  },
+
+  "translation": {
+    "machineBadge": "機翻",
+    "showOriginalA11y": "顯示原文",
+    "hideOriginalA11y": "隱藏原文"
+  },
+
+  "tabs": {
+    "rate": "首頁",
+    "collection": "收藏",
+    "pilgrimage": "聖地巡禮",
+    "bangumi": "Bangumi",
+    "profile": "個人",
+    "bangumiScreen": {
+      "errorLoadFailed": "本季載入失敗。下拉重新整理。",
+      "movieAndSpecialsSubtitle": "本季共 {count} 部上映",
+      "movieAndSpecialsTitle": "電影與特別篇",
+      "retry": "重試",
+      "snackbar": {
+        "addedToWishlist": "已將「{title}」加入想看清單",
+        "couldntAddToWishlist": "無法加入想看清單",
+        "noUpcomingEpisode": "「{title}」沒有即將播出的集數",
+        "reminderCancelled": "已取消提醒",
+        "reminderSet": "已為「{title}」設定提醒",
+        "undo": "復原"
+      }
+    },
+    "collectionFolderScreen": {
+      "anime": "部",
+      "back": "返回",
+      "backToList": "回到清單檢視",
+      "countAnime": "{count} 部動畫",
+      "emptyBody": "可從評分畫面把動畫加入這個資料夾。",
+      "emptyTitle": "這個資料夾還沒有內容",
+      "folder": "資料夾",
+      "loading": "載入中…",
+      "swipeToLike": "滑動表達喜好",
+      "swipeToTriage": "滑動分類 · {count}",
+      "unknownTitle": "未知標題"
+    },
+    "collectionScreen": {
+      "categoryAll": "全部",
+      "categoryDone": "已看完",
+      "categoryPlanned": "想看",
+      "categoryWatching": "觀看中",
+      "emptyAnimeBody": {
+        "all": "評分或匯入動畫，開始建立你的資料庫。",
+        "category": "尚未有任何標記為「{category}」的作品。"
+      },
+      "emptyAnimeTitle": "這裡還沒有動畫",
+      "emptyFolderBody": {
+        "all": "建立資料夾，整理你喜愛的動畫。",
+        "category": "符合此狀態的動畫會出現在這裡。"
+      },
+      "emptyFolderTitle": {
+        "all": "尚未建立資料夾",
+        "category": "沒有 {category} 資料夾"
+      },
+      "folderCount": {
+        "one": "{count} 個資料夾",
+        "other": "{count} 個資料夾"
+      },
+      "libraryStats": "資料庫統計",
+      "myFolders": "我的資料夾",
+      "newFolder": "新增資料夾",
+      "recentAnime": "最近的動畫",
+      "recentAnimeForCategory": "{category} 動畫",
+      "seeAllCount": "查看全部 {count} 部",
+      "share": {
+        "addAtLeastOne": "至少加入一部動畫",
+        "couldNotRender": "無法繪製海報",
+        "dialogTitle": "分享 {template}",
+        "myTemplateOnAniseekr": "我在 Aniseekr 的 {template}",
+        "pickTemplate": "請先選一個版型",
+        "rendererNotReady": "渲染器尚未就緒"
+      },
+      "sort": {
+        "count": "數量",
+        "newest": "最新",
+        "oldest": "最舊",
+        "rarity": "稀有度"
+      },
+      "untitled": "未命名"
+    },
+    "pilgrimageScreen": {
+      "errorLoadFailed": "載入失敗",
+      "hero": {
+        "closest": "最近：{title}",
+        "closestWithDistance": "最近：{title} · 距離 {distance}",
+        "countLabel": "{count} {animeWord} · {tier}",
+        "labelAccessibility": "開啟聖地地圖",
+        "noMappedAnime": "尚未有對應動畫——點擊開啟地圖",
+        "title": "聖地地圖",
+        "withoutLocation": "點擊瀏覽日本各地的聖地"
+      },
+      "intro": {
+        "body": {
+          "empty": "選一部動畫，找出你附近可步行抵達的場景。",
+          "withCollection": "來自你收藏的動畫，加上附近的精選。"
+        },
+        "caps": "規劃今天行程"
+      },
+      "myAlbumA11y": "我的聖地相簿",
+      "searchA11y": "搜尋",
+      "section": {
+        "featuredSpots": "精選景點",
+        "popularAnimes": "熱門動畫",
+        "seeAll": "查看全部",
+        "viewMap": "查看地圖",
+        "yourAnimesAndMore": "你的動畫與更多"
+      },
+      "tier": {
+        "dayTrip": "一日遊 · 100 公里",
+        "inJapan": "日本境內",
+        "inRegion": "同區 · 500 公里",
+        "walking": "步行範圍 · 30 公里"
+      },
+      "title": "聖地巡禮",
+      "wordAnime": "部動畫",
+      "wordAnimes": "部動畫"
+    },
+    "profileScreen": {
+      "anonName": "動畫迷",
+      "settings": "設定",
+      "settingsSubtitle": "偏好、帳號、其他",
+      "statLabel": {
+        "cards": "卡片",
+        "liked": "喜愛",
+        "rated": "已評分"
+      },
+      "statsHero": {
+        "subtitle": "個人風格、年度回顧、名人堂",
+        "title": "查看完整統計"
+      },
+      "premium": {
+        "active": "Premium 已啟用",
+        "manage": "管理",
+        "manageSubtitle": "管理你的訂閱與權益",
+        "unlock": "解鎖 Premium",
+        "unlockSubtitle": "去除廣告、所有主題、無限同步",
+        "upgrade": "升級"
+      },
+      "title": "個人"
+    },
+    "rateScreen": {
+      "mode": {
+        "discovery": "探索",
+        "seasonal": "季番",
+        "trend": "趨勢"
+      },
+      "subtitle": {
+        "discovery": "探索類型",
+        "tracking": "我的清單",
+        "trend": "排行榜"
+      },
+      "trend": {
+        "bookmarkA11y": "收藏",
+        "heroTrendingBadge": "趨勢 #1",
+        "hotBadge": "熱門",
+        "loadingTrends": "趨勢載入中…",
+        "noPilgrimages": "目前沒有可瀏覽的聖地。",
+        "openA11y": "開啟詳情",
+        "openLabel": "開啟",
+        "pilgrimagesA11y": "查看全部聖地",
+        "pilgrimagesSubtitle": "可實地造訪的動畫場景",
+        "pilgrimagesTitle": "熱門聖地",
+        "rangeAllTime": "歷年",
+        "rangeWeek": "本週",
+        "seeAll": "查看全部",
+        "seeAllAnimeA11y": "查看全部熱門動畫",
+        "spotsLabel": "{count} 個景點",
+        "subtitleAllTime": "歷年最受歡迎",
+        "subtitleWeek": "現在大家都在看",
+        "titleAllTime": "歷年 Top {count}",
+        "titleWeek": "本週 Top {count}"
+      }
+    },
+    "ratingScreen": {
+      "addToPlanA11y": "加入想看清單",
+      "allCaughtUp": "都看完了",
+      "closeA11y": "關閉",
+      "goBack": "返回",
+      "loadingMore": "載入更多…",
+      "mode": {
+        "like": "喜歡",
+        "plan": "想看"
+      },
+      "noPhotos": "沒有可顯示的圖片",
+      "preferencesA11y": "評分偏好",
+      "restart": "重新開始",
+      "restartConfirm": {
+        "body": "你在「{genre}」滑掉的卡片會從頭回來。收藏、最愛與追蹤狀態不會改變。",
+        "cancel": "取消",
+        "deckA11y": "重置牌組",
+        "fallbackGenre": "這個類型",
+        "restart": "重新開始",
+        "title": "重新開始這個類型？"
+      },
+      "skipA11y": "略過"
+    }
+  },
+
+  "anime": {
+    "detail": {
+      "addFavorite": "加入最愛",
+      "addToCollection": "加入收藏",
+      "addToCollectionHint": "長按以加入上次使用的資料夾",
+      "cancelReminder": "取消集數提醒",
+      "configure": "設定 ›",
+      "configureWatchA11y": "設定觀看平台",
+      "endingThemes": "片尾曲",
+      "info": {
+        "duration": "時長",
+        "durationMins": "{mins} 分鐘",
+        "episodes": "集數",
+        "format": "類型",
+        "startDate": "開始日期",
+        "status": "狀態",
+        "studios": "製作公司"
+      },
+      "information": "作品資訊",
+      "noDescription": "目前沒有簡介。",
+      "openEntryA11y": "開啟 {title}",
+      "openingThemes": "片頭曲",
+      "openPlatformA11y": "開啟 {platform}",
+      "pilgrimage": "聖地巡禮",
+      "platformRatings": "各平台評分",
+      "relatedEntries": "相關作品",
+      "removeFavorite": "從最愛移除",
+      "scoreDistribution": "評分分佈",
+      "searchLabel": "搜尋",
+      "searchOnServiceA11y": "在 {service} 搜尋",
+      "searchPlatformA11y": "搜尋 {platform}",
+      "setReminder": "設定集數提醒",
+      "shareAnime": "分享作品",
+      "shareMessage": "{title} — {url}",
+      "staff": "製作團隊",
+      "status": {
+        "completed": "已看完",
+        "dropped": "棄追",
+        "onHold": "暫停",
+        "planToWatch": "想看清單",
+        "watching": "觀看中"
+      },
+      "statusDistribution": "狀態分佈",
+      "statusUnknown": "未知",
+      "synopsis": "簡介",
+      "tags": "標籤",
+      "usersCount": "{count} 位使用者",
+      "watchNow": "立即觀看",
+      "watchOn": "在 {platform} 觀看",
+      "watchOnSection": "觀看平台",
+      "watchOpenAniListA11y": "開啟 AniList 頁面（尚未設定串流平台）"
+    }
+  },
+
+  "search": {
+    "bookmark": {
+      "added": "已將「{title}」加入清單",
+      "addedPilgrimage": "已將「{title}」加入巡禮清單",
+      "addFailed": "無法加入清單",
+      "removed": "已從清單移除「{title}」",
+      "removeFailed": "無法移除"
+    },
+    "bookmarkAddA11y": "加入清單",
+    "bookmarkRemoveA11y": "從清單移除",
+    "clear": "清除",
+    "clearA11y": "清除",
+    "discoverDescription": "跨平台搜尋你所連結的服務 — AniList、MAL、Bangumi、Kitsu 等等。",
+    "discoverTitle": "探索動畫",
+    "dismissA11y": "關閉",
+    "errorGeneric": "搜尋失敗",
+    "errorTitle": "搜尋失敗",
+    "filter": {
+      "all": "全部",
+      "movie": "電影",
+      "recent": "近期",
+      "tv": "TV"
+    },
+    "hasPilgrimageSpotsA11y": "包含巡禮地點",
+    "noMatchesDescription": "目前篩選下沒有「{query}」的結果,試試其他關鍵字或更換篩選。",
+    "noMatchesTitle": "沒有結果",
+    "pilgrimage": {
+      "noMapping": "「{title}」沒有對應的巡禮資料。",
+      "resolveFailed": "無法解析這部作品。"
+    },
+    "placeholder": {
+      "default": "搜尋動畫、角色、製作公司…",
+      "pilgrimage": "搜尋要巡禮的動畫…"
+    },
+    "recent": "最近搜尋",
+    "recentTermA11y": "搜尋 {term}",
+    "resultCount": "{count} 筆結果",
+    "resultPilgrimageA11y": "{title},有巡禮地點",
+    "sort": {
+      "newest": "最新",
+      "relevance": "相關度",
+      "score": "評分"
+    },
+    "sortByA11y": "排序方式",
+    "spotsCount": "{count} 個地點"
+  },
+
+  "trending": {
+    "errorLoadFailed": "無法載入熱門作品。",
+    "rangeAllTime": "歷年",
+    "rangeWeek": "本週",
+    "rankA11y": "第 {rank} 名,{title}",
+    "subtitleAllTime": "歷年前 50",
+    "subtitleWeek": "本週前 50",
+    "title": "熱門"
+  },
+
+  "collectionStats": {
+    "hub": {
+      "title": "統計"
+    },
+    "hallOfFame": {
+      "earnedCounter": "{earned} / {total} · {ratio}%",
+      "earnedOn": "取得於 {date}",
+      "emptyBody": "透過評分或同步動畫來取得第一個成就吧。",
+      "emptyTitle": "尚未取得成就",
+      "inProgress": "進行中",
+      "legendary": "傳奇",
+      "noTrophies": "尚未獲得任何獎盃 — 取得後會顯示在這裡。",
+      "rareMedallions": "稀有勳章",
+      "shareMessage": "解鎖「{title}」 — {description}",
+      "title": "名人堂"
+    },
+    "persona": {
+      "axesCount": "{count} 個維度",
+      "dimensionsTitle": "個性向度",
+      "emptyBody": "加入並評分至少 3 部動畫,即可揭曉你的觀眾類型。",
+      "emptyTitle": "觀眾類型尚未準備好",
+      "rarityLabel": "稀有度 {rarity}%",
+      "shareMessage": "我的 Aniseekr 觀眾類型:{title}（{match}% 相符）",
+      "statMatch": "相符度",
+      "statSince": "開始於",
+      "statViewed": "觀看",
+      "title": "觀眾類型",
+      "typeLabel": "類型 {index} / {total}"
+    },
+    "topFavorites": {
+      "allTimeBadge": "#1 歷年最愛",
+      "emptyBody": "至少評分一部作品,就能誕生你的 #1。",
+      "emptyTitle": "尚未有最愛",
+      "metric": {
+        "episodes": "{count} 集",
+        "rating": "評分",
+        "remembered": "記住的集數"
+      },
+      "ratingLabel": "評分 {rating}",
+      "restTitle": "我最愛的其餘 {count} 部",
+      "shareMessage": "我的 #1 最愛:{title}{score}",
+      "subtitle": "{count} 部歷年精選",
+      "title": "最愛排行",
+      "untitled": "未命名"
+    },
+    "topPicks": {
+      "emptyBody": "評分幾部動畫吧 — 你的前 10 名會自動出現在這裡。",
+      "emptyTitle": "評分以解鎖",
+      "shareHeading": "我的精選前 10",
+      "subtitle": "值得一看的動畫推薦",
+      "title": "精選前 10",
+      "titleOwned": "我的精選前 10",
+      "untitled": "未命名",
+      "updatedPrefix": "最後更新"
+    },
+    "yearInReview": {
+      "daysShort": "{count} 天",
+      "emptyBody": "今年完成的動畫會在這裡集結成回顧。",
+      "emptyTitle": "{year} 年尚未看完任何作品",
+      "epsShort": "{count} 集",
+      "eyebrow": "# 年度回顧",
+      "heroSubtitle": "故事、評分,以及那些追番的夜晚。",
+      "heroTitle": "你的 {year} 動畫年",
+      "monthlyTitle": "每月觀看時數",
+      "scoreLabel": "· 評分 {score}",
+      "shareMessage": "我的 {year} 動畫年 — {shows} 部作品,{hours} 小時。",
+      "statHours": "小時",
+      "statLongestStreak": "最長連續",
+      "statShows": "作品",
+      "title": "年度回顧",
+      "topAnimeBadge": "#1 年度最佳",
+      "untitled": "未命名"
+    }
+  },
+
+  "pilgrimage": {
+    "album": {
+      "addPhotoA11y": "在此資料夾新增照片",
+      "addPilgrimage": "新增巡禮",
+      "albumFallback": "相簿",
+      "capturesShort": "{count} 張拍攝",
+      "chipAll": "全部",
+      "compareA11y": "比對 {title}",
+      "daysAgo": "{count} 天前",
+      "detailSubtitle": "{captures} 張拍攝 · {spots} 個地點",
+      "emptyBody": "在動畫場景的真實地點拍下照片,即可建立第一個資料夾。",
+      "emptyFolderBody": "拍下這部動畫地點的對照照片,即可填滿資料夾。",
+      "emptyFolderTitle": "這個資料夾還沒有拍攝",
+      "emptyRegionBody": "試試其他區域 — 或點選「全部」查看所有造訪過的動畫。",
+      "emptyRegionTitle": "此區域尚無資料夾",
+      "emptyTitle": "還沒有巡禮資料夾",
+      "epLabel": "第 {ep} 集",
+      "folderPhotosCount": "{count} 張照片",
+      "foldersByAnime": "依動畫分類",
+      "folderSpotsCount": "{count} 個地點",
+      "folderSpotsRatio": "{visited}/{total} 個地點",
+      "hoursAgo": "{count} 小時前",
+      "justNow": "剛剛",
+      "loadingFolder": "載入資料夾中…",
+      "openFolderA11y": "開啟資料夾 {title}",
+      "startCapture": "開始拍攝",
+      "startPilgrimageA11y": "開始新的巡禮",
+      "statAverage": "平均",
+      "statAvgMatch": "平均相符度",
+      "statCaptures": "張拍攝",
+      "statPhotos": "照片",
+      "statSpots": "個地點",
+      "statVisited": "已造訪",
+      "tagLibrary": "相簿",
+      "tagScene": "場景",
+      "tagYours": "你的",
+      "title": "巡禮相簿",
+      "weeksAgo": "{count} 週前"
+    },
+    "detail": {
+      "browseFallback": "瀏覽",
+      "clearSearchA11y": "清除搜尋",
+      "emptyFilter": "沒有符合此篩選的場景。",
+      "emptyNoData": "這部動畫尚無巡禮資料。",
+      "emptySearch": "沒有符合的搜尋結果。",
+      "errorTitle": "無法載入巡禮",
+      "filter": {
+        "all": "全部",
+        "photos": "照片",
+        "planned": "計畫",
+        "saved": "收藏",
+        "unvisited": "未造訪",
+        "visited": "已造訪"
+      },
+      "goBack": "返回",
+      "openAlbumA11y": "開啟巡禮相簿",
+      "searchA11y": "搜尋巡禮地點或集數",
+      "searchPlaceholder": "搜尋地點或集數",
+      "shareA11y": "分享",
+      "shareMessage": "{title} · {count} 個場景{urlLine}",
+      "title": "聖地巡禮",
+      "useCachedTilesA11y": "只使用快取地圖圖磚",
+      "useDotMarkersA11y": "使用圓點地圖標記",
+      "usePhotoMarkersA11y": "使用照片地圖標記",
+      "viewMode": {
+        "grid": "格狀",
+        "map": "地圖",
+        "rows": "列表"
+      }
+    },
+    "map": {
+      "allJapan": "全日本",
+      "clearSearchA11y": "清除搜尋",
+      "filter": {
+        "all": "全部",
+        "collection": "收藏中",
+        "official88": "★ 88"
+      },
+      "layout": {
+        "grid": "格狀",
+        "rows": "列表"
+      },
+      "mapLoadError": "無法載入地圖。",
+      "openAlbumA11y": "開啟巡禮相簿",
+      "searchA11y": "搜尋動畫",
+      "searchPlaceholder": "搜尋動畫或城市",
+      "wholeJapanA11y": "查看全日本"
+    },
+    "plan": {
+      "buildOwnA11y": "自訂一日行程",
+      "buildOwnBody": "選擇區域、動畫與路線 — 我們會為你最佳化順序。",
+      "buildOwnTitle": "自訂一日行程",
+      "daysShort": "{count} 天",
+      "daysSuffix": "{count} 天",
+      "featuredBadge": "精選行程",
+      "featuredDestinationFallback": "精選目的地",
+      "featuredTitleLine": "{title} · {days} 日遊",
+      "featuredTripA11y": "精選行程:{title}",
+      "moreOptionsA11y": "更多選項",
+      "multipleAreas": "多個地點",
+      "preset": {
+        "aiLabel": "AI 規劃",
+        "aiSubtitle": "依你的清單客製",
+        "fullLabel": "全日",
+        "fullSubtitle": "5–7 地 · 8 小時",
+        "quickLabel": "快走",
+        "quickSubtitle": "約 3 地 · 半日",
+        "weekendLabel": "週末",
+        "weekendSubtitle": "2 天 · 多城市"
+      },
+      "quickPresets": "快速範本",
+      "quickPresetsHint": "點選開始規劃",
+      "seeAll": "全部",
+      "spotsShort": "{count} 個地點",
+      "statDestinations": "目的地",
+      "statSaved": "已收藏",
+      "statVisited": "造訪地點",
+      "subtitle": "規劃你的步行路線",
+      "suggestedEmptyBody": "巡禮資料載入後,精選行程會出現在這裡。",
+      "suggestedEmptyTitle": "尚無推薦行程",
+      "suggestedSubtitle": "受精選動畫啟發的一日行程",
+      "suggestedTitle": "推薦行程",
+      "title": "行程規劃",
+      "untitled": "未命名",
+      "walkHoursLong": "約 {hours} 小時步行",
+      "walkHoursShort": "約 {hours} 小時"
+    }
+  }
+}

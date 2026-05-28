@@ -1,0 +1,55 @@
+{
+  "$comment": "한국어 — 부분 번역. 미번역 키는 영어로 폴백됩니다.",
+
+  "common": {
+    "continue": "계속",
+    "cancel": "취소",
+    "save": "저장",
+    "delete": "삭제",
+    "back": "뒤로",
+    "close": "닫기",
+    "done": "완료",
+    "skip": "건너뛰기",
+    "next": "다음",
+    "previous": "이전",
+    "confirm": "확인",
+    "edit": "편집",
+    "reset": "초기화",
+    "loading": "로딩 중…",
+    "error": "오류가 발생했습니다",
+    "retry": "다시 시도",
+    "unavailable": "사용 불가",
+    "settings": "설정",
+    "on": "켬",
+    "off": "끔",
+    "default": "기본",
+    "yes": "예",
+    "no": "아니요",
+    "ok": "확인",
+    "refreshing": "새로고침 중…",
+    "search": "검색",
+    "notNow": "나중에",
+    "enabled": "활성화됨",
+    "disabled": "비활성화됨",
+    "comingSoon": "곧 출시"
+  },
+
+  "language": {
+    "screenTitle": "언어",
+    "appLanguageTitle": "앱 언어",
+    "systemDefault": "시스템 기본값",
+    "english": "English",
+    "traditionalChinese": "繁體中文",
+    "simplifiedChinese": "简体中文",
+    "japanese": "日本語",
+    "korean": "한국어"
+  },
+
+  "tabs": {
+    "rate": "홈",
+    "collection": "컬렉션",
+    "pilgrimage": "성지순례",
+    "bangumi": "Bangumi",
+    "profile": "프로필"
+  }
+}
