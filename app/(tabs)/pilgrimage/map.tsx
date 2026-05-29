@@ -26,7 +26,6 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import {
@@ -39,7 +38,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
@@ -62,12 +61,11 @@ import {
 import { getNumberParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import {
-  HubMapWebView,
   OFFICIAL_88_GOLD,
   type HubMapMarker,
-  type HubMapWebViewHandle,
   type RegionBounds,
 } from '../../../components/pilgrimage/HubMapWebView';
+import { useMapHost } from '../../../components/pilgrimage/MapHost';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import { getPilgrimageHubSnapshot } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
@@ -171,19 +169,24 @@ export default function PilgrimageMapScreen() {
   const themeColor = theme.accent;
   const themeColorFg = readableTextOn(themeColor);
 
+  // The single shared Leaflet WebView lives in the pilgrimage layout
+  // (MapHostProvider). This screen claims it on focus and drives it through
+  // host.update/recenter/setHeading instead of rendering its own instance —
+  // so the 200KB parse is paid once per session (CLAUDE.md Rule 10).
+  const host = useMapHost();
+
   // The locate FAB and the WebView's user-marker share a single hook so the
   // dot, the cone, the recentre, and the permission sheet all stay in sync.
   // Snapshot-seeded `initialLocation` keeps the dot visible on warm starts.
   // Read once at mount — the data hook reads the same module snapshot for its
   // own seed; this narrow read just feeds the tracking dot.
-  const mapHandleRef = useRef<HubMapWebViewHandle>(null);
   const [initialUserLocation] = useState<LatLng | null>(
     () => getPilgrimageHubSnapshot()?.userLocation ?? null
   );
   const tracking = useUserLocationTracking({
     initialLocation: initialUserLocation,
     onFollowLocation: (loc, fs) => {
-      mapHandleRef.current?.recenter(
+      host.recenter(
         loc.latitude,
         loc.longitude,
         fs === 'compass' ? LOCATE_FAB_COMPASS_ZOOM : LOCATE_FAB_ZOOM,
@@ -191,7 +194,7 @@ export default function PilgrimageMapScreen() {
       );
     },
     onHeadingChange: (deg) => {
-      mapHandleRef.current?.setHeading(deg);
+      host.setHeading(deg);
     },
   });
   const userLocation = tracking.location;
@@ -531,9 +534,69 @@ export default function PilgrimageMapScreen() {
   // (Currently unused — kept for an eventual "long-press = preview" path.)
   void sheetIndex;
 
+  // ─── Drive the shared map host (CLAUDE.md Rule 10) ──────────────────────
+  // Claim the layout's persistent WebView on focus with the current snapshot,
+  // release on blur (WebView stays mounted). Handler identities are stable
+  // useCallbacks, so claim wires them once; the separate update effect below
+  // keeps the data/camera in sync without re-claiming (avoids an update loop —
+  // claim is focus-driven, update is dependency-driven).
+  useFocusEffect(
+    useCallback(() => {
+      host.claim({
+        markers,
+        replaceKey: refitNonce,
+        userLocation,
+        ringColor: themeColor,
+        theme,
+        focusBangumiId,
+        flyBoundsRequest,
+        onAnimePress: handleMarkerPress,
+        onBoundsChange: handleBoundsChange,
+        onUserPan: tracking.onUserPan,
+      });
+      return () => host.release();
+      // Claim only on focus/blur + handler-identity change. The config values
+      // are pushed by the update effect below, so they are intentionally not
+      // deps here (re-claiming on every marker/camera change would thrash).
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [host, handleMarkerPress, handleBoundsChange, tracking.onUserPan])
+  );
+
+  // Push derived config into the host whenever it changes while focused. The
+  // host ignores updates once released, so a blurred screen can't repaint it.
+  useEffect(() => {
+    host.update({
+      markers,
+      replaceKey: refitNonce,
+      userLocation,
+      ringColor: themeColor,
+      theme,
+      focusBangumiId,
+      flyBoundsRequest,
+    });
+  }, [
+    host,
+    markers,
+    refitNonce,
+    userLocation,
+    themeColor,
+    theme,
+    focusBangumiId,
+    flyBoundsRequest,
+  ]);
+
   return (
-    <View style={styles.root}>
-      <Stack.Screen options={{ headerShown: false }} />
+    // box-none so taps on empty map area fall through to the shared host
+    // WebView rendered behind this screen by MapHostProvider; the overlays
+    // (search pill, region chips, bottom chrome, FABs, sheet) stay real hit
+    // targets. The transparent contentStyle lets the host show through.
+    <View style={styles.root} pointerEvents="box-none">
+      <Stack.Screen
+        options={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
 
       {loading ? (
         <View style={styles.loadingBox}>
@@ -541,20 +604,9 @@ export default function PilgrimageMapScreen() {
         </View>
       ) : (
         <>
-          {/* Layer 1 — full-bleed Leaflet map. */}
-          <HubMapWebView
-            ref={mapHandleRef}
-            markers={markers}
-            replaceKey={refitNonce}
-            userLocation={userLocation}
-            ringColor={themeColor}
-            theme={theme}
-            focusBangumiId={focusBangumiId}
-            flyBoundsRequest={flyBoundsRequest}
-            onAnimePress={handleMarkerPress}
-            onBoundsChange={handleBoundsChange}
-            onUserPan={tracking.onUserPan}
-          />
+          {/* Layer 1 — the full-bleed Leaflet map is the shared host WebView
+              rendered behind this screen (see MapHostProvider). This screen
+              claims + drives it via useMapHost instead of mounting its own. */}
 
           {/* Layer 2 — floating top overlay (back / album + search + region chips). */}
           <View style={styles.topOverlay} pointerEvents="box-none">
@@ -870,13 +922,18 @@ function makeChipStyles(theme: ThemePalette) {
 
 function makeStyles(theme: ThemePalette, topInset: number) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.background.primary },
+    // Transparent so the shared host WebView (rendered behind this screen by
+    // MapHostProvider) shows through. Combined with pointerEvents="box-none"
+    // on the root View, empty-map taps reach the host. The loading skeleton
+    // keeps an opaque bg so the pre-warming host doesn't flash through.
+    root: { flex: 1, backgroundColor: 'transparent' },
     loadingBox: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
       padding: 20,
+      backgroundColor: theme.background.primary,
     },
 
     // Floating top overlay (back/album row + search + region chips).
