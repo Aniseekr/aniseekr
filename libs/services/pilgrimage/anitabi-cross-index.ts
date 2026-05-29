@@ -14,8 +14,6 @@
 // active. Callers don't need to know whether they're seeing the bundled or
 // runtime payload; the only difference is coverage.
 
-import data from './anitabi-cross-index.data.json';
-
 /**
  * One resolved row. `matchType` tracks how confident we are in the AniList
  * link — the UI may treat `top1_fallback` results more conservatively if we
@@ -60,10 +58,15 @@ interface CrossIndexFile {
   seedSize?: number;
 }
 
-let FILE = data as unknown as CrossIndexFile;
+let FILE: CrossIndexFile | null = null;
 let byBangumi = new Map<number, AnitabiCrossIndexEntry>();
 let byAnilist = new Map<number, AnitabiCrossIndexEntry>();
 let byMal = new Map<number, AnitabiCrossIndexEntry>();
+// True once FILE/maps reflect a real payload — either the bundled cold-start
+// seed (built lazily on first query) or a runtime-hydrated payload. Guards the
+// lazy fallback so a runtime hydration that lands before any query is never
+// overwritten, and the 40KB bundled JSON is never parsed in that case.
+let built = false;
 
 function rebuildIndices(file: CrossIndexFile): void {
   const nextByBangumi = new Map<number, AnitabiCrossIndexEntry>();
@@ -84,15 +87,31 @@ function rebuildIndices(file: CrossIndexFile): void {
   byBangumi = nextByBangumi;
   byAnilist = nextByAnilist;
   byMal = nextByMal;
+  built = true;
 }
 
-// Build initial maps from bundled cold-start payload.
-rebuildIndices(FILE);
+/**
+ * Lazy + memoized cold-start build. Parses the 40KB bundled JSON and builds
+ * the lookup maps only on the FIRST query that arrives before runtime
+ * hydration — deferring that parse off the module-eval JS thread. If
+ * `hydrateFromRuntime` already ran, this is a no-op and the bundled JSON is
+ * never required at all.
+ */
+function ensureBuilt(): CrossIndexFile {
+  if (built && FILE) return FILE;
+  // require (sync) so the public lookup APIs stay sync on first call. Bun
+  // returns the parsed object directly; bun:test mock.module wraps it in
+  // `{ default }`.
+  const mod = require('./anitabi-cross-index.data.json');
+  rebuildIndices((mod?.default ?? mod) as CrossIndexFile);
+  return FILE as CrossIndexFile;
+}
 
 /**
  * Replace the in-memory cross-index with a freshly-downloaded payload. Called
  * by anitabi-data-service after `_layout.tsx` startup hydration. Existing
- * sync callers automatically see the new entries on their next call.
+ * sync callers automatically see the new entries on their next call. Marks the
+ * index built so the bundled cold-start fallback is never parsed afterward.
  */
 export function hydrateFromRuntime(file: CrossIndexFile): void {
   if (!file || !Array.isArray(file.entries)) return;
@@ -101,26 +120,29 @@ export function hydrateFromRuntime(file: CrossIndexFile): void {
 
 /** Generated-at timestamp of the shipped cross-index (epoch ms). */
 export function getCrossIndexGeneratedAt(): number {
-  return FILE.generatedAt;
+  return ensureBuilt().generatedAt;
 }
 
 /** Number of rows in the shipped cross-index. */
 export function getCrossIndexSize(): number {
-  return FILE.entries.length;
+  return ensureBuilt().entries.length;
 }
 
 export function lookupByBangumiId(bangumiId: number): AnitabiCrossIndexEntry | null {
   if (!Number.isFinite(bangumiId) || bangumiId <= 0) return null;
+  ensureBuilt();
   return byBangumi.get(bangumiId) ?? null;
 }
 
 export function lookupByAnilistId(anilistId: number): AnitabiCrossIndexEntry | null {
   if (!Number.isFinite(anilistId) || anilistId <= 0) return null;
+  ensureBuilt();
   return byAnilist.get(anilistId) ?? null;
 }
 
 export function lookupByMalId(malId: number): AnitabiCrossIndexEntry | null {
   if (!Number.isFinite(malId) || malId <= 0) return null;
+  ensureBuilt();
   return byMal.get(malId) ?? null;
 }
 

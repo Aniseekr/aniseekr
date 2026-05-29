@@ -12,7 +12,6 @@
 // active. Callers don't need to know whether they're seeing the bundled or
 // runtime payload; the only difference is coverage.
 
-import indexJson from './anitabi-index.data.json';
 import { normalizeAnitabiImageUrl } from './anitabi-image';
 
 export interface AnitabiIndexEntry {
@@ -59,11 +58,18 @@ interface IndexFile {
   fallbackUsed?: boolean;
 }
 
-// Mutable so anitabi-data-service can replace it after runtime fetch.
-let INDEX = normalizeIndexFile(indexJson as unknown as IndexFile);
-let INDEX_BY_ID = buildIdMap(INDEX.entries);
+// Mutable so anitabi-data-service can replace it after runtime fetch. Left
+// null until first access so the bundled JSON parse + normalize is deferred
+// off module-eval; see ensureBuilt().
+let INDEX: IndexFile | null = null;
+let INDEX_BY_ID = new Map<number, AnitabiIndexEntry>();
 let indexVersion = 0;
 const listeners = new Set<() => void>();
+// True once INDEX reflects a real payload — the lazily-built bundled seed or a
+// runtime-hydrated payload. Guards the cold-start fallback so a hydration that
+// lands before any query is never overwritten, and the bundled JSON is never
+// parsed in that case.
+let built = false;
 
 function buildIdMap(entries: readonly AnitabiIndexEntry[]): Map<number, AnitabiIndexEntry> {
   const map = new Map<number, AnitabiIndexEntry>();
@@ -72,14 +78,37 @@ function buildIdMap(entries: readonly AnitabiIndexEntry[]): Map<number, AnitabiI
 }
 
 /**
+ * Lazy + memoized cold-start build. Parses the 32KB bundled JSON and runs
+ * normalizeIndexFile / buildIdMap only on the FIRST query that arrives before
+ * runtime hydration — deferring that work off the module-eval JS thread. If
+ * `hydrateFromRuntime` already ran, this is a no-op and the bundled JSON is
+ * never required at all. Unlike hydration, the cold-start build does NOT bump
+ * indexVersion or notify listeners (it mirrors the previous eval-time build,
+ * which was silent).
+ */
+function ensureBuilt(): IndexFile {
+  if (built && INDEX) return INDEX;
+  // require (sync) so the public query/lookup APIs stay sync on first call.
+  // Bun returns the parsed object directly; bun:test mock.module wraps it in
+  // `{ default }`.
+  const mod = require('./anitabi-index.data.json');
+  INDEX = normalizeIndexFile((mod?.default ?? mod) as IndexFile);
+  INDEX_BY_ID = buildIdMap(INDEX.entries);
+  built = true;
+  return INDEX;
+}
+
+/**
  * Replace the in-memory index with a freshly-downloaded payload. Called by
  * anitabi-data-service after `_layout.tsx` startup hydration. Existing sync
- * callers automatically see the new entries on their next call.
+ * callers automatically see the new entries on their next call. Marks the
+ * index built so the bundled cold-start fallback is never parsed afterward.
  */
 export function hydrateFromRuntime(file: IndexFile): void {
   if (!file || !Array.isArray(file.entries)) return;
   INDEX = normalizeIndexFile(file);
   INDEX_BY_ID = buildIdMap(INDEX.entries);
+  built = true;
   indexVersion += 1;
   for (const listener of listeners) listener();
 }
@@ -124,7 +153,7 @@ const EARTH_RADIUS_KM = 6371;
  * the raw list. Do NOT mutate.
  */
 export function getAllIndexed(): readonly AnitabiIndexEntry[] {
-  return INDEX.entries;
+  return ensureBuilt().entries;
 }
 
 /**
@@ -134,12 +163,13 @@ export function getAllIndexed(): readonly AnitabiIndexEntry[] {
  * frame 1 instead of after ~30 round trips.
  */
 export function getIndexedById(bangumiId: number): AnitabiIndexEntry | null {
+  ensureBuilt();
   return INDEX_BY_ID.get(bangumiId) ?? null;
 }
 
 /** Build timestamp of the shipped index (epoch ms). */
 export function getIndexGeneratedAt(): number {
-  return INDEX.generatedAt;
+  return ensureBuilt().generatedAt;
 }
 
 /**
@@ -156,7 +186,7 @@ export function getAnimeInBounds(
   const limit = sanitiseLimit(options.limit);
 
   const out: AnitabiIndexEntry[] = [];
-  for (const entry of INDEX.entries) {
+  for (const entry of ensureBuilt().entries) {
     if (exclude.has(entry.id)) continue;
     if (!pointInBounds(entry.lat, entry.lng, bounds)) continue;
     out.push(entry);
@@ -180,7 +210,7 @@ export function getAnimeNear(
   const limit = sanitiseLimit(options.limit);
 
   const matches: Array<AnitabiIndexEntry & { distanceKm: number }> = [];
-  for (const entry of INDEX.entries) {
+  for (const entry of ensureBuilt().entries) {
     if (exclude.has(entry.id)) continue;
     const distanceKm = haversineKm(query.lat, query.lng, entry.lat, entry.lng);
     if (distanceKm > query.radiusKm) continue;

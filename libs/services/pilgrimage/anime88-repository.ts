@@ -8,7 +8,6 @@
 //
 // Regenerate with: `bun run scripts/build-anime-tourism-88.ts`.
 
-import dataJson from './anime-tourism-88.data.json';
 import { getCityCentroid } from './jp-city-centroids';
 
 export const ANIME_TOURISM_88_REGIONS = [
@@ -65,7 +64,20 @@ interface DataFile {
   entries: AnimeTourism88Entry[];
 }
 
-const DATA = dataJson as unknown as DataFile;
+// Lazy + memoized: the 64KB Anime Tourism 88 JSON is required and parsed only
+// on first access, not at module-eval time, to keep this ~64KB parse off the
+// cold-start JS thread.
+let _data: DataFile | null = null;
+
+function getData(): DataFile {
+  if (_data) return _data;
+  // require (sync) so every exported lookup below stays sync on first call.
+  // Bun returns the parsed object directly; bun:test mock.module wraps it in
+  // `{ default }`.
+  const mod = require('./anime-tourism-88.data.json');
+  _data = (mod?.default ?? mod) as DataFile;
+  return _data;
+}
 
 export interface UniqueAnime88Entry {
   bangumiId: number;
@@ -81,17 +93,17 @@ export interface UniqueAnime88Entry {
 
 /** All 88 rows, in the canonical 1..N order. Do NOT mutate. */
 export function getAll88Entries(): readonly AnimeTourism88Entry[] {
-  return DATA.entries;
+  return getData().entries;
 }
 
 /** Year of the bundled selection (e.g. 2025). */
 export function get88EditionYear(): number {
-  return DATA.year;
+  return getData().year;
 }
 
 /** Total row count (anime × city pairs). */
 export function get88EntryCount(): number {
-  return DATA.entries.length;
+  return getData().entries.length;
 }
 
 /** All rows for a single anime. Empty array if the anime is not in the 88 list. */
@@ -99,20 +111,20 @@ export function get88EntriesByBangumiId(
   bangumiId: number | null | undefined
 ): AnimeTourism88Entry[] {
   if (typeof bangumiId !== 'number' || !Number.isFinite(bangumiId)) return [];
-  return DATA.entries.filter((e) => e.externalIds.bangumi === bangumiId);
+  return getData().entries.filter((e) => e.externalIds.bangumi === bangumiId);
 }
 
 /** Rows whose region matches. Region ids are the 7-group taxonomy. */
 export function get88EntriesByRegion(
   region: AnimeTourism88Region
 ): AnimeTourism88Entry[] {
-  return DATA.entries.filter((e) => e.region === region);
+  return getData().entries.filter((e) => e.region === region);
 }
 
 /** Whether an anime (by Bangumi id) is part of the current 88 selection. */
 export function is88(bangumiId: number | null | undefined): boolean {
   if (typeof bangumiId !== 'number' || !Number.isFinite(bangumiId)) return false;
-  return DATA.entries.some((e) => e.externalIds.bangumi === bangumiId);
+  return getData().entries.some((e) => e.externalIds.bangumi === bangumiId);
 }
 
 export interface AnimeTourism88EntryWithCoords extends AnimeTourism88Entry {
@@ -128,7 +140,7 @@ export interface AnimeTourism88EntryWithCoords extends AnimeTourism88Entry {
  */
 export function get88EntriesWithCoords(): AnimeTourism88EntryWithCoords[] {
   const out: AnimeTourism88EntryWithCoords[] = [];
-  for (const entry of DATA.entries) {
+  for (const entry of getData().entries) {
     const centroid = getCityCentroid(entry.prefecture, entry.city);
     if (!centroid) continue;
     out.push({ ...entry, lat: centroid.lat, lng: centroid.lng });
@@ -146,7 +158,7 @@ export function get88EntriesWithCoords(): AnimeTourism88EntryWithCoords[] {
  */
 export function getUnique88Anime(): UniqueAnime88Entry[] {
   const seen = new Map<number, UniqueAnime88Entry>();
-  for (const entry of DATA.entries) {
+  for (const entry of getData().entries) {
     const bangumiId = entry.externalIds.bangumi;
     if (typeof bangumiId !== 'number') continue;
     const popularity = typeof entry.anilistPopularity === 'number' ? entry.anilistPopularity : null;
