@@ -480,6 +480,10 @@ export const HubMapWebView = forwardRef<HubMapWebViewHandle, HubMapWebViewProps>
     // bridge effect below — re-rendering would wipe tile cache + camera state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Android react-native-webview reloads HTML when a fresh `source` map is sent
+  // over the native bridge. Keep the source object stable across host re-renders
+  // so marker/theme/location updates stay on the injectJavaScript path.
+  const webViewSource = useMemo(() => ({ html, baseUrl: MAP_BASE_URL }), [html]);
 
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
@@ -617,7 +621,7 @@ export const HubMapWebView = forwardRef<HubMapWebViewHandle, HubMapWebViewProps>
     <WebView
       ref={webviewRef}
       originWhitelist={['*']}
-      source={{ html, baseUrl: MAP_BASE_URL }}
+      source={webViewSource}
       javaScriptEnabled
       domStorageEnabled
       cacheEnabled
