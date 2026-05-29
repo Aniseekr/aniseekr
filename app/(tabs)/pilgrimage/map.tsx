@@ -49,9 +49,6 @@ import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { ThemedText, Skeleton, readableTextOn } from '../../../components/themed';
-import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
-import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
-import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
 import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
 import {
   LOCATE_FAB_COMPASS_ZOOM,
@@ -87,31 +84,13 @@ import { resolveMapMode } from '../../../libs/services/pilgrimage/map-theme-pref
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { getNumberParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import {
-  getAnimeInBounds,
-  type AnitabiIndexEntry,
-  type BoundingBox,
-} from '../../../libs/services/pilgrimage/anitabi-index';
-import { getNearbyMapEntries, MAP_LOCATE_ZOOM } from '../../../libs/services/pilgrimage/map-nearby';
+import { type BoundingBox } from '../../../libs/services/pilgrimage/anitabi-index';
+import { MAP_LOCATE_ZOOM } from '../../../libs/services/pilgrimage/map-nearby';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import { getPilgrimageHubSnapshot } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
-import {
-  loadVisitedSpotsSync,
-  type VisitedMap,
-} from '../../../libs/services/pilgrimage/visited-prefs';
-import { loadCapturesSync } from '../../../libs/services/pilgrimage/captures';
-import {
-  appendIndexedEntriesExcludingKnownAnimes,
-  buildKnownAnimeIdSet,
-  buildSeededPilgrimageAnimes,
-  sameLatLng,
-  seedPilgrimageAnimeFromIndex,
-} from '../../../libs/services/pilgrimage/pilgrimage-screen-state';
-import {
-  resolvePilgrimageMapInitialMode,
-  shouldLoadPilgrimageMapBounds,
-} from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
+import { resolvePilgrimageMapInitialMode } from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
+import { usePilgrimageHubData } from '../../../hooks/usePilgrimageHubData';
 import {
   PilgrimageHubSheet,
   type HubAnimeEntry,
@@ -554,11 +533,6 @@ ${MAP_BASE_BODY}
 </html>`;
 }
 
-const COLLECTION_BACKFILL_TARGET = 16;
-const FEATURED_PILGRIMAGE_IDS = FEATURED_PILGRIMAGE_ANIME.map(
-  ({ bangumiId }) => bangumiId
-);
-
 // Sheet snap peek fraction — kept in lockstep with PilgrimageHubSheet's snap
 // array. Used as a fallback chrome offset if the sheet's animatedPosition
 // hasn't been written yet.
@@ -566,27 +540,6 @@ const SHEET_PEEK_FRACTION = 0.16;
 const VIEW_MODE_TOGGLE_HEIGHT = 52;
 
 type HubFilter = 'all' | 'collection' | 'official88';
-
-function buildInitialMapSeedIds(focusBangumiId: number | null): number[] {
-  if (focusBangumiId === null) return FEATURED_PILGRIMAGE_IDS;
-  return [focusBangumiId, ...FEATURED_PILGRIMAGE_IDS];
-}
-
-function mergeAnimeList(
-  current: readonly AnitabiBangumi[],
-  incoming: readonly AnitabiBangumi[]
-): AnitabiBangumi[] {
-  if (incoming.length === 0) return current as AnitabiBangumi[];
-  const merged = new Map(current.map((anime) => [anime.id, anime] as const));
-  let changed = false;
-  for (const anime of incoming) {
-    if (merged.get(anime.id) === anime) continue;
-    merged.set(anime.id, anime);
-    changed = true;
-  }
-  if (!changed) return current as AnitabiBangumi[];
-  return [...merged.values()].sort((a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0));
-}
 
 export default function PilgrimageMapScreen() {
   const insets = useSafeAreaInsets();
@@ -602,43 +555,18 @@ export default function PilgrimageMapScreen() {
   const styles = useMemo(() => makeStyles(theme, insets.top), [theme, insets.top]);
   const themeColor = theme.accent;
   const themeColorFg = readableTextOn(themeColor);
-  const initialSeedAnimes = useMemo(
-    () => buildSeededPilgrimageAnimes(buildInitialMapSeedIds(focusBangumiIdParam)),
-    [focusBangumiIdParam]
-  );
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
-  const hasInitialCollection = Object.prototype.hasOwnProperty.call(
-    initialSnapshot ?? {},
-    'collectionAnimes'
-  );
-  const hasInitialFeatured = Object.prototype.hasOwnProperty.call(
-    initialSnapshot ?? {},
-    'featuredAnimes'
-  );
-  const initialAnimes = useMemo(
-    () =>
-      mergeAnimeList(initialSeedAnimes, [
-        ...(initialSnapshot?.collectionAnimes ?? []),
-        ...(initialSnapshot?.featuredAnimes ?? []),
-      ]),
-    [initialSeedAnimes, initialSnapshot]
-  );
 
-  // ─── Data state ─────────────────────────────────────────────────────────
-  // Collection + featured-backfilled animes are the canonical "known" set.
-  // Bounds-driven lazy loading appends entries from the offline anitabi index
-  // as the user pans, so the on-map markers + sheet list grow with the view.
-  const [animes, setAnimes] = useState<AnitabiBangumi[]>(() => initialAnimes);
-  const animesRef = useRef<AnitabiBangumi[]>(initialAnimes);
-  const [collectionIds, setCollectionIds] = useState<Set<number>>(
-    () => new Set((initialSnapshot?.collectionAnimes ?? []).map((anime) => anime.id))
-  );
   // The locate FAB and the WebView's user-marker share a single hook so the
   // dot, the cone, the recentre, and the permission sheet all stay in sync.
   // Snapshot-seeded `initialLocation` keeps the dot visible on warm starts.
+  // Read once at mount — the data hook reads the same module snapshot for its
+  // own seed; this narrow read just feeds the tracking dot.
   const mapHandleRef = useRef<HubMapBackgroundHandle>(null);
+  const [initialUserLocation] = useState<LatLng | null>(
+    () => getPilgrimageHubSnapshot()?.userLocation ?? null
+  );
   const tracking = useUserLocationTracking({
-    initialLocation: initialSnapshot?.userLocation ?? null,
+    initialLocation: initialUserLocation,
     onFollowLocation: (loc, fs) => {
       mapHandleRef.current?.recenter(
         loc.latitude,
@@ -652,23 +580,20 @@ export default function PilgrimageMapScreen() {
     },
   });
   const userLocation = tracking.location;
-  const userLocationRef = useRef<LatLng | null>(userLocation);
-  const [loading, setLoading] = useState(initialAnimes.length === 0);
-  // Seed synchronously from MMKV so visited markers + the capture count are
-  // correct on the first frame; the effects below still reconcile after the
-  // one-time migration.
-  const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
-  const [captureCount, setCaptureCount] = useState(
-    () => Object.keys(loadCapturesSync()).length
-  );
 
-  // Lazy-loaded entries from the offline index, keyed by bangumi id and
-  // additive only (we never remove — the WebView dedups by id so duplicates
-  // are cheap, and pan-back-and-forth wants the markers to stay put).
-  const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(
-    () => new Map()
-  );
-  const extraIndexedRef = useRef(extraIndexed);
+  // ─── Data cluster (collection + featured + lazy index, MMKV-seeded) ──────
+  // Lifted into usePilgrimageHubData so this screen stays a view orchestrator
+  // (CLAUDE.md Rule 9). The hook owns the snapshot/index seed, the loading
+  // transitions, the bounds-/location-driven lazy loading, and the synchronous
+  // visited/capture seeding; it consumes the live userLocation we feed in.
+  const {
+    knownAnimes,
+    collectionIds,
+    loading,
+    visited,
+    captureCount,
+    handleBoundsChange,
+  } = usePilgrimageHubData({ focusBangumiId: focusBangumiIdParam, userLocation });
 
   // ─── View state (parent-owned) ──────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -682,144 +607,7 @@ export default function PilgrimageMapScreen() {
   // bangumi id (not the index) so the swap behaviour survives list re-sorts.
   const [focusedAnimeId, setFocusedAnimeId] = useState<number | null>(focusBangumiIdParam);
 
-  animesRef.current = animes;
-
-  // ─── Data loading ───────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    let flushTimer: ReturnType<typeof setTimeout> | null = null;
-    const pendingFeatured: AnitabiBangumi[] = [];
-
-    const mergeAnimes = (incoming: readonly AnitabiBangumi[]) => {
-      if (incoming.length === 0) return;
-      setAnimes((current) => mergeAnimeList(current, incoming));
-    };
-
-    const commitFeatured = () => {
-      flushTimer = null;
-      if (cancelled || pendingFeatured.length === 0) return;
-      const batch = pendingFeatured.splice(0);
-      mergeAnimes(batch);
-    };
-
-    const scheduleFeaturedCommit = () => {
-      if (flushTimer !== null) return;
-      flushTimer = setTimeout(commitFeatured, 200);
-    };
-
-    const hydrateFeatured = () => {
-      let remaining = FEATURED_PILGRIMAGE_IDS.length;
-      for (const bangumiId of FEATURED_PILGRIMAGE_IDS) {
-        pilgrimageRepository
-          .getSpotsByBangumiId(bangumiId)
-          .then((anime) => {
-            if (cancelled || !anime) return;
-            pendingFeatured.push(anime);
-            scheduleFeaturedCommit();
-          })
-          .catch((err) => {
-            if (!cancelled) {
-              console.warn('[PilgrimageMap] featured fetch failed:', bangumiId, err);
-            }
-          })
-          .finally(() => {
-            if (cancelled) return;
-            remaining -= 1;
-            if (remaining === 0) {
-              if (flushTimer !== null) {
-                clearTimeout(flushTimer);
-                flushTimer = null;
-              }
-              commitFeatured();
-            }
-          });
-      }
-    };
-
-    (async () => {
-      let collectionCount = initialSnapshot?.collectionAnimes?.length ?? 0;
-      if (!hasInitialCollection) {
-        const collected = new Set<number>();
-        try {
-          const entries = await collectionPilgrimageService.getEntries();
-          if (cancelled) return;
-          const collectionAnimes: AnitabiBangumi[] = [];
-          for (const e of entries) {
-            if (e.anime && !collected.has(e.anime.id)) {
-              collectionAnimes.push(e.anime);
-              collected.add(e.anime.id);
-            }
-          }
-          collectionCount = collectionAnimes.length;
-          setCollectionIds(collected);
-          mergeAnimes(collectionAnimes);
-        } catch (err) {
-          console.warn('[PilgrimageMap] collection load failed:', err);
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      } else {
-        if (!cancelled) setLoading(false);
-      }
-
-      if (!cancelled && !hasInitialFeatured && collectionCount < COLLECTION_BACKFILL_TARGET) {
-        hydrateFeatured();
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (flushTimer !== null) clearTimeout(flushTimer);
-    };
-  }, [hasInitialCollection, hasInitialFeatured, initialSnapshot]);
-
-  // `visited` and `captureCount` are seeded synchronously from MMKV in the
-  // useState initializers above. The previous async reconcile was a no-op on
-  // the render path now that reads are sync — drop it to avoid an extra
-  // re-render that re-rendered the WebView marker layer for no reason.
-
-  // Keep the imperative ref aligned with the hook's location so callers that
-  // depend on it (mergeNearbyIndexed below) see the latest fix without
-  // reading React state at sync time.
-  userLocationRef.current = userLocation;
-
-  const appendExtraIndexed = useCallback((entries: readonly AnitabiIndexEntry[]) => {
-    if (entries.length === 0) return;
-    const next = appendIndexedEntriesExcludingKnownAnimes(
-      extraIndexedRef.current,
-      entries,
-      animesRef.current
-    );
-    if (next === extraIndexedRef.current) return;
-    extraIndexedRef.current = next;
-    setExtraIndexed(next);
-  }, []);
-
-  const mergeNearbyIndexed = useCallback(
-    (loc: LatLng) => {
-      const seen = buildKnownAnimeIdSet(animesRef.current, extraIndexedRef.current);
-      appendExtraIndexed(getNearbyMapEntries(loc, { exclude: seen }));
-    },
-    [appendExtraIndexed]
-  );
-
-  // Whenever the tracking hook surfaces a new location, refresh the
-  // nearby-anime overlay so the lazy-loaded index keeps pace with the user.
-  useEffect(() => {
-    if (!userLocation) return;
-    mergeNearbyIndexed(userLocation);
-  }, [userLocation, mergeNearbyIndexed]);
-
-  const handleBoundsChange = useCallback(
-    (bounds: BoundingBox) => {
-      if (!shouldLoadPilgrimageMapBounds(bounds)) return;
-      const seen = buildKnownAnimeIdSet(animesRef.current, extraIndexedRef.current);
-      appendExtraIndexed(getAnimeInBounds(bounds, { exclude: seen, limit: 40 }));
-    },
-    [appendExtraIndexed]
-  );
-
-  // ─── Derived: full list of known anime (collection + featured + lazy) ──
+  // ─── Derived: 88-selection lookup ──────────────────────────────────────
   const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
 
   // Map from 88-entry bangumi id → eightyEightId so we can flag 88-selected
@@ -832,18 +620,6 @@ export default function PilgrimageMapScreen() {
     }
     return map;
   }, [all88WithCoords]);
-
-  const knownAnimes = useMemo<AnitabiBangumi[]>(() => {
-    const merged = new Map<number, AnitabiBangumi>();
-    for (const a of animes) merged.set(a.id, a);
-    // Index-derived entries lack litePoints, but carry enough to render on
-    // the map + a placeholder row. We synthesise a minimal AnitabiBangumi.
-    for (const entry of extraIndexed.values()) {
-      if (merged.has(entry.id)) continue;
-      merged.set(entry.id, seedPilgrimageAnimeFromIndex(entry));
-    }
-    return [...merged.values()];
-  }, [animes, extraIndexed]);
 
   // Build hub entries: collection / 88 / distance / visited counts.
   // The list is sorted by:
