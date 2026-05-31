@@ -102,3 +102,15 @@ and subscribe to `subscribeMapThemePref` + `subscribeMapStyleOverride` so the st
    - Route the flag **inside `MapHost`**: render `<MapSurface … leafletFallback={<HubMapWebView ref={leafletHandleRef}/>}>` and point `hostRef` at `MapSurface`. **`map.tsx` needs ZERO changes** (keeps calling `host.claim/update/recenter`).
    - markers: `config.markers.map(hubMarkerToMapMarker)` (1:1).
    - riskiest: (a) the native view must receive pinch/pan/tap in the portal-above-navigator layer (the touch issue that bit the shared host before); (b) the engine doesn't yet emit `onBoundsChange`, so the bounds-driven lazy anime loader stops — wire both before flipping the hub.
+
+### Wiring status (2026-05-31)
+
+Done under a strict "leaflet path byte-verbatim under an `engine` guard, MapLibre purely additive" contract, multi-agent + per-surface leaflet-preservation verification:
+
+| Surface | Status | Notes |
+|---|---|---|
+| **SpotMapView** | ✅ **wired** (`e0a5244`) | Live spot-detail map. Early-return MapLibre branch; existing Leaflet `return` + handle bodies byte-identical (only the handle's `if (engine==='maplibre') …else…` guard + a behavior-neutral `[ready]→[ready,engine]` dep). Verified `leafletPreserved=true` (high). |
+| **PilgrimageMapView** | ✅ **wired** (`6532fbb`) | Purely additive. **Currently has no live mount** (only its `cityToColor` is imported), so it's inert until something renders it. `inCollection` overlay dropped (no `MapMarker` field). |
+| **Hub (MapHost)** | ⏸️ **deferred** | The blind wiring added always-on hooks/subscriptions to the kept-alive portal singleton → changed the leaflet path (`leafletPreserved=false`) → **reverted**, not shipped. This is the touch-sensitive portal that broke before; do it on-device with the leaflet branch byte-verbatim, validating gestures + the bounds lazy-loader. `map.tsx` stays unchanged (route the flag inside `MapHost`). |
+
+`@maplibre/maplibre-react-native` is mocked in `test-setup.ts` (`334c4f8`) so tests importing a wired surface stay green under `bun test`. Engine flag still defaults to `'leaflet'`, so all three surfaces render exactly as today until the on-device spike flips it. Still device-gated: per-kind marker rendering, `onBoundsChange`, multi-id `onClusterPress`, hub wiring → then delete Leaflet (P4).
