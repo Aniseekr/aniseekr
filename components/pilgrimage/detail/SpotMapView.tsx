@@ -44,6 +44,16 @@ import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import type { MapMarkerMode } from '../../../hooks/usePilgrimageDetailView';
 import { hasValidGeo } from './_helpers';
+import { MapSurface, type MapMarker, type MapSurfaceHandle } from '../map';
+import { sceneMarkerToMapMarker } from '../../../libs/services/pilgrimage/map-engine/normalize';
+import {
+  loadMapStyleOverrideSync,
+  resolveMapStyleUrl,
+} from '../../../libs/services/pilgrimage/map-source-prefs';
+import {
+  loadMapEngineSync,
+  subscribeMapEngine,
+} from '../../../libs/services/pilgrimage/map-engine-prefs';
 
 interface MapMarkerPayload {
   id: string;
@@ -421,6 +431,15 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
   const { effectiveMode } = useTheme();
   const { pref: mapThemePref } = useMapThemePref();
   const mapMode = resolveMapMode(mapThemePref, effectiveMode);
+  // Rollout flag (defaults to 'leaflet' via loadMapEngineSync). When it is
+  // 'leaflet' every path below is byte-identical to the shipping Leaflet
+  // surface; the MapLibre branch is purely additive. Subscribe so a flip
+  // repaints in place.
+  const [engine, setEngine] = useState(loadMapEngineSync);
+  useEffect(() => subscribeMapEngine(setEngine), []);
+  // Drives recenter/setHeading when engine === 'maplibre' (delegates through
+  // MapSurface to the live MapLibre camera handle).
+  const maplibreRef = useRef<MapSurfaceHandle>(null);
   const webviewRef = useRef<WebView>(null);
   const spotsById = useRef(new Map<string, AnitabiPoint>());
   const previousMarkerSignatureRef = useRef<string | null>(null);
@@ -436,9 +455,7 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
     const fallback = hasCenter
       ? { lat: centerGeo![0], lng: centerGeo![1], zoom: desiredZoom }
       : { lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng, zoom: 13 };
-    const user = userLocation
-      ? { lat: userLocation.latitude, lng: userLocation.longitude }
-      : null;
+    const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
     const tileStyle: TileStyleId = resolveTileStyle(mapMode);
     const themeVars: MapThemeVars = buildMapThemeVars({
       effectiveMode: mapMode,
@@ -524,6 +541,28 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
     return ids.join(',');
   }, [markerStructural, visited]);
 
+  // MapLibre-only: convert the SAME markerStructural + visited map the leaflet
+  // bridge uses into engine-neutral markers via sceneMarkerToMapMarker. Returns
+  // [] while engine !== 'maplibre' so it adds zero work to the leaflet path.
+  // (`spotsById` is populated by the markerStructural memo above and is reused
+  // here for the onMarkerPress / onClusterPress lookups.)
+  const maplibreMarkers = useMemo<MapMarker[]>(() => {
+    if (engine !== 'maplibre') return [];
+    return markerStructural.map((m) =>
+      sceneMarkerToMapMarker({
+        id: m.id,
+        lat: m.lat,
+        lng: m.lng,
+        title: m.title,
+        image: m.image,
+        ep: m.ep,
+        ringColor: m.ringColor,
+        visited: visited[m.id] === true,
+        markerMode: m.markerMode === 'dot' ? 'dot' : 'bubble',
+      })
+    );
+  }, [engine, markerStructural, visited]);
+
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
     const structuralChanged = previousMarkerSignatureRef.current !== markerSignature;
@@ -608,6 +647,10 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
     ref,
     () => ({
       recenter: (lat, lng, zoom, opts) => {
+        if (engine === 'maplibre') {
+          maplibreRef.current?.recenter(lat, lng, zoom, opts);
+          return;
+        }
         if (!ready || !webviewRef.current) return;
         const z = typeof zoom === 'number' ? zoom : 'undefined';
         const animate = opts?.animate === false ? 'false' : 'true';
@@ -617,6 +660,10 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
         `);
       },
       setHeading: (deg) => {
+        if (engine === 'maplibre') {
+          maplibreRef.current?.setHeading(deg);
+          return;
+        }
         if (!ready || !webviewRef.current) return;
         const payload = deg === null || !Number.isFinite(deg) ? 'null' : String(deg);
         webviewRef.current.injectJavaScript(`
@@ -625,7 +672,7 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
         `);
       },
     }),
-    [ready]
+    [ready, engine]
   );
 
   const handleMessage = (event: WebViewMessageEvent) => {
@@ -660,6 +707,46 @@ const SpotMapViewImpl = forwardRef<SpotMapViewHandle, SpotMapViewProps>(function
       // ignore
     }
   };
+
+  // MapLibre branch — purely additive, reached only when the rollout flag is
+  // flipped to 'maplibre'. The leaflet `return` below is left byte-identical.
+  if (engine === 'maplibre') {
+    const styleUrl = resolveMapStyleUrl(mapMode, loadMapStyleOverrideSync());
+    // Mirror the leaflet first-paint `html` memo: user dot from userLocation
+    // (no geo guard there), center only when centerGeo is valid.
+    const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
+    const center =
+      centerGeo && hasValidGeo(centerGeo) ? { lat: centerGeo[0], lng: centerGeo[1] } : undefined;
+    return (
+      <View style={[styles.container, style]} testID="pilgrimage-spot-map">
+        <MapSurface
+          engine="maplibre"
+          ref={maplibreRef}
+          markers={maplibreMarkers}
+          styleUrl={styleUrl}
+          user={user}
+          center={center}
+          zoom={centerZoom}
+          markerMode={markerMode === 'dot' ? 'dot' : 'bubble'}
+          offlineOnly={offlineOnly}
+          controlsBottomOffset={controlsBottomOffset}
+          onMarkerPress={(m) => {
+            const spot = spotsById.current.get(m.id);
+            if (spot) onSpotPress(spot);
+          }}
+          onClusterPress={(markers) => {
+            const picked: AnitabiPoint[] = [];
+            for (const m of markers) {
+              const s = spotsById.current.get(m.id);
+              if (s) picked.push(s);
+            }
+            if (picked.length > 0) onClusterPick(picked);
+          }}
+          onPanned={onUserPan}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, style]} testID="pilgrimage-spot-map">
