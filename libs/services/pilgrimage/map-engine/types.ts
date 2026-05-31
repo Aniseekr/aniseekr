@@ -107,10 +107,9 @@ export interface MapSurfaceHandle {
   updateVisited?: (ids: readonly string[]) => void;
 }
 
-/** Engine-neutral props every surface accepts. */
+/** Engine-neutral props every surface accepts. (The `engine` selector lives on
+ *  `MapSurfaceComponentProps`, not here — these props are engine-agnostic.) */
 export interface MapSurfaceProps {
-  /** Resolved by the caller (defaults handled by the MapSurface dispatcher). */
-  engine?: MapEngineId;
   markers: readonly MapMarker[];
   routes?: readonly MapRoute[];
   waypoints?: readonly MapWaypoint[];

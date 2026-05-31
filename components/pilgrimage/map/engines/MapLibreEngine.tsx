@@ -83,7 +83,10 @@ export const MapLibreEngine = forwardRef<MapSurfaceHandle, MapSurfaceProps>(func
           // own easeTo/flyTo. ViewStateChangeEvent carries the interaction flag.
           if (e.nativeEvent.userInteraction) onPanned?.();
         }}>
-        <Camera ref={cameraRef} center={initialCenter} zoom={zoom} />
+        {/* initialViewState applies ONCE on load; every later move goes through
+            the imperative handle (easeTo/flyTo) so marker/user re-renders never
+            re-issue a setStop that snaps the viewport back (Rule 9). */}
+        <Camera ref={cameraRef} initialViewState={{ center: initialCenter, zoom }} />
         <GeoJSONSource
           id={MARKER_SOURCE_ID}
           data={shape}
