@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.14",
+    "@gorhom/portal": "1.0.14",
     "@noble/ciphers": "^2.2.0",
     "@noble/hashes": "^2.2.0",
     "@react-native-community/slider": "5.0.1",

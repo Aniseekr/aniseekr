@@ -38,6 +38,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Portal } from '@gorhom/portal';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
@@ -65,7 +66,7 @@ import {
   type HubMapMarker,
   type RegionBounds,
 } from '../../../components/pilgrimage/HubMapWebView';
-import { useMapHost } from '../../../components/pilgrimage/MapHost';
+import { MAP_PORTAL_HOST, useMapHost } from '../../../components/pilgrimage/MapHost';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import { getPilgrimageHubSnapshot } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
@@ -586,17 +587,25 @@ export default function PilgrimageMapScreen() {
   ]);
 
   return (
-    // box-none so taps on empty map area fall through to the shared host
-    // WebView rendered behind this screen by MapHostProvider; the overlays
-    // (search pill, region chips, bottom chrome, FABs, sheet) stay real hit
-    // targets. The transparent contentStyle lets the host show through.
-    <View style={styles.root} pointerEvents="box-none">
+    <>
+      {/* Screen options register against the navigator (NOT portaled). The map
+          screen paints nothing itself — its UI is teleported into MapHost's top
+          layer, the only place the kept-alive WebView both shows AND receives
+          gestures (a WebView parented behind the native-stack navigator can't
+          get touches — that's what broke pinch-zoom). */}
       <Stack.Screen
         options={{
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
         }}
       />
+      {/* Teleport the overlays into MapHost's top layer so they share ONE
+          box-none touch layer with the kept-alive WebView, above the navigator.
+          box-none lets empty-map taps fall through these overlays to the map;
+          search pill / region chips / bottom chrome / FABs / sheet stay real
+          hit targets. */}
+      <Portal hostName={MAP_PORTAL_HOST}>
+        <View style={styles.root} pointerEvents="box-none">
 
       {loading ? (
         <View style={styles.loadingBox}>
@@ -604,9 +613,10 @@ export default function PilgrimageMapScreen() {
         </View>
       ) : (
         <>
-          {/* Layer 1 — the full-bleed Leaflet map is the shared host WebView
-              rendered behind this screen (see MapHostProvider). This screen
-              claims + drives it via useMapHost instead of mounting its own. */}
+          {/* Layer 1 — the full-bleed Leaflet map is the shared host WebView,
+              which sits at the BOTTOM of MapHost's top layer (beneath these
+              portaled overlays). This screen claims + drives it via useMapHost
+              instead of mounting its own. */}
 
           {/* Layer 2 — floating top overlay (back / album + search + region chips). */}
           <View style={styles.topOverlay} pointerEvents="box-none">
@@ -769,7 +779,9 @@ export default function PilgrimageMapScreen() {
         visible={tracking.permissionSheetVisible}
         onDismiss={tracking.dismissPermissionSheet}
       />
-    </View>
+        </View>
+      </Portal>
+    </>
   );
 }
 

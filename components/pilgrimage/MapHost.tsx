@@ -2,17 +2,30 @@
 // stack so the ~200KB Leaflet parse + tile init is paid ONCE per session
 // instead of on every hub-map navigation (CLAUDE.md Rule 10 — cold-open feel).
 //
-// HubMapWebView's `html` is `useMemo([])`, so the WebView never remounts on
-// prop change; every update flows through its own injectJavaScript effects.
-// We exploit that here: this provider renders the single instance as the
-// BOTTOM layer of the pilgrimage layout (absoluteFill, before children, so the
-// stack's screens paint above it). The hub map screen "claims" the host on
-// focus and drives it via `update(...)`; on blur it "releases" but the WebView
-// stays mounted, so re-entering the hub re-paints instantly with no reload.
+// LAYERING (load-bearing — getting it wrong kills map gestures):
+// a kept-alive WebView parented BEHIND a native-stack navigator cannot receive
+// touches. react-native-screens screens are real native containers that capture
+// gestures before React Native's `box-none` fall-through can route a touch to a
+// WebView living OUTSIDE the navigator. An earlier cut mounted the WebView as
+// the bottom layer (before children); the hub map could not be pinched/panned.
+// So the WebView and the claiming screen's overlays must live together in ONE
+// layer ABOVE the navigator, joined by a portal:
 //
-// The provider re-renders only when the config object identity changes (claim /
-// update / release). Because HubMapWebView re-injects rather than remounts,
-// those re-renders never throw away the tile cache or camera state.
+//   <PortalProvider>
+//     {children}                          ← navigator (other pilgrimage screens)
+//     <View top-layer, gated by `active`>
+//       <HubMapWebView/>                  ← bottom of the layer (the map surface)
+//       <PortalHost name={MAP_PORTAL_HOST}/>  ← claiming screen's overlays land here
+//     </View>
+//   </PortalProvider>
+//
+// The hub map screen claims the host on focus and teleports its overlays into
+// MAP_PORTAL_HOST via <Portal>; on blur it releases and the top layer goes
+// opacity:0 + pointerEvents:none so the other pilgrimage screens show through —
+// but the WebView stays MOUNTED, so re-entering the hub re-paints instantly.
+// HubMapWebView's `html` is `useMemo([])`, so it never remounts on prop change;
+// every marker/theme/camera change flows through injectJavaScript, so these
+// re-renders never throw away the tile cache or camera state.
 
 import {
   createContext,
@@ -23,6 +36,7 @@ import {
   useState,
 } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { PortalHost, PortalProvider } from '@gorhom/portal';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { type LatLng } from '../../libs/services/pilgrimage/location-service';
 import { type BoundingBox } from '../../libs/services/pilgrimage/anitabi-index';
@@ -32,6 +46,11 @@ import {
   type HubMapWebViewHandle,
   type RegionBounds,
 } from './HubMapWebView';
+
+// Portal host id — the claiming screen teleports its overlays here (via
+// <Portal hostName={MAP_PORTAL_HOST}>) so they render in the SAME layer as the
+// kept-alive WebView, above the navigator. See the layering note at the top.
+export const MAP_PORTAL_HOST = 'pilgrimage-map';
 
 // The prop-shaped half of HubMapWebView's inputs (everything that is data, not
 // a callback). The claiming screen owns these and pushes them via claim/update.
@@ -181,25 +200,44 @@ export function MapHostProvider({ children }: { children: React.ReactNode }) {
   const { config } = state;
 
   return (
-    <MapHostContext.Provider value={value}>
-      {/* BOTTOM layer: rendered before children so the stack's screens stack
-          above it. While unclaimed it still pre-warms tiles with app theme. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="auto">
-        <HubMapWebView
-          ref={hostRef}
-          markers={config.markers}
-          replaceKey={config.replaceKey}
-          userLocation={config.userLocation}
-          ringColor={config.ringColor}
-          theme={config.theme}
-          focusBangumiId={config.focusBangumiId}
-          flyBoundsRequest={config.flyBoundsRequest}
-          onAnimePress={onAnimePress}
-          onBoundsChange={onBoundsChange}
-          onUserPan={onUserPan}
-        />
-      </View>
-      {children}
-    </MapHostContext.Provider>
+    <PortalProvider>
+      <MapHostContext.Provider value={value}>
+        {/* BOTTOM layer = the navigator. Non-map pilgrimage screens (index,
+            detail, album) paint here and stay fully interactive because the top
+            layer below is pointerEvents:none while unclaimed. */}
+        {children}
+        {/* TOP layer, ABOVE the navigator — the only place the kept-alive
+            WebView both shows AND receives gestures (see the layering note at
+            the top of this file). Gated by `active`: while unclaimed it is
+            invisible + non-interactive so the navigator shows through, but the
+            WebView stays MOUNTED so Leaflet is parsed once per session. */}
+        <View
+          style={[StyleSheet.absoluteFill, { opacity: state.active ? 1 : 0 }]}
+          pointerEvents={state.active ? 'box-none' : 'none'}>
+          {/* WebView at the bottom of the top layer (auto = the hit target for
+              empty-map taps). The parent View gates visibility/interactivity;
+              this stays a plain always-auto holder. */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="auto">
+            <HubMapWebView
+              ref={hostRef}
+              markers={config.markers}
+              replaceKey={config.replaceKey}
+              userLocation={config.userLocation}
+              ringColor={config.ringColor}
+              theme={config.theme}
+              focusBangumiId={config.focusBangumiId}
+              flyBoundsRequest={config.flyBoundsRequest}
+              onAnimePress={onAnimePress}
+              onBoundsChange={onBoundsChange}
+              onUserPan={onUserPan}
+            />
+          </View>
+          {/* Claiming screen's overlays teleport here — rendered AFTER the
+              WebView so they sit on top of it, in the SAME box-none layer, so
+              empty-map taps fall through the overlays to the map beneath. */}
+          <PortalHost name={MAP_PORTAL_HOST} />
+        </View>
+      </MapHostContext.Provider>
+    </PortalProvider>
   );
 }
