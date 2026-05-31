@@ -52,6 +52,20 @@ import { resolveMapMode } from '../../libs/services/pilgrimage/map-theme-prefs';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 import { cityToColor } from '../../libs/services/pilgrimage/region-color';
 import { useMapThemePref } from '../../hooks/useMapThemePref';
+// MapLibre rollout (engine flag defaults to 'leaflet'). Everything below is
+// additive and only reached in the `engine === 'maplibre'` branch — the
+// Leaflet WebView render path is unchanged.
+import { MapSurface, type MapSurfaceHandle } from './map';
+import {
+  loadMapEngineSync,
+  subscribeMapEngine,
+} from '../../libs/services/pilgrimage/map-engine-prefs';
+import { hubMarkerToMapMarker } from '../../libs/services/pilgrimage/map-engine/normalize';
+import type { HubMapMarker } from './HubMapWebView';
+import {
+  loadMapStyleOverrideSync,
+  resolveMapStyleUrl,
+} from '../../libs/services/pilgrimage/map-source-prefs';
 
 export { cityToColor };
 
@@ -340,6 +354,12 @@ export function PilgrimageMapView({
   const animeById = useRef(new Map<string, AnitabiBangumi>());
   const [ready, setReady] = useState(false);
   const [clusterItems, setClusterItems] = useState<AnitabiBangumi[] | null>(null);
+  // Rollout flag — defaults to 'leaflet' (loadMapEngineSync). When it stays
+  // 'leaflet' the existing WebView render path runs verbatim; subscribers
+  // repaint in place if the flag is flipped.
+  const [engine, setEngine] = useState(loadMapEngineSync);
+  useEffect(() => subscribeMapEngine(setEngine), []);
+  const maplibreRef = useRef<MapSurfaceHandle>(null);
 
   const html = useMemo(() => {
     // Start at Tokyo Station so the map always has useful context even when
@@ -396,6 +416,37 @@ export function PilgrimageMapView({
     () => buildMarkers(animeList, animeById.current, theme.accent),
     [animeList, theme.accent]
   );
+
+  // Neutral markers for the MapLibre surface. Built only on the maplibre path
+  // (empty otherwise) by constructing a HubMapMarker per anime and running the
+  // shared `hubMarkerToMapMarker` converter. Ring colour mirrors the Leaflet
+  // `buildMarkers` (city → region colour, else anime/theme accent). Back-resolved
+  // to the AnitabiBangumi through `animeById` (same index the WebView path uses);
+  // `inCollection` has no MapMarker field yet, so it's dropped on this path.
+  const maplibreMarkers = useMemo(() => {
+    if (engine !== 'maplibre') return [];
+    const out = [];
+    for (const { anime } of animeList) {
+      if (!isValidGeo(anime.geo)) continue;
+      const [lat, lng] = anime.geo;
+      const ringColor = anime.city
+        ? cityToColor(anime.city, anime.color || theme.accent)
+        : anime.color || theme.accent;
+      const hub: HubMapMarker = {
+        markerId: String(anime.id),
+        bangumiId: anime.id,
+        lat,
+        lng,
+        cover: anime.cover || '',
+        title: anime.title || anime.cn || '',
+        city: anime.city || '',
+        pointsLength: anime.pointsLength,
+        ringColor,
+      };
+      out.push(hubMarkerToMapMarker(hub));
+    }
+    return out;
+  }, [engine, animeList, theme.accent]);
 
   useEffect(() => {
     if (!ready || !webviewRef.current) return;
@@ -465,31 +516,48 @@ export function PilgrimageMapView({
 
   return (
     <View style={[styles.container, style]} testID="pilgrimage-map">
-      <WebView
-        ref={webviewRef}
-        originWhitelist={['*']}
-        source={{ html, baseUrl: MAP_BASE_URL }}
-        javaScriptEnabled
-        domStorageEnabled
-        cacheEnabled
-        cacheMode={Platform.OS === 'android' ? 'LOAD_DEFAULT' : undefined}
-        allowsInlineMediaPlayback
-        androidLayerType="hardware"
-        onMessage={handleMessage}
-        style={styles.webview}
-        renderError={() => (
-          <View style={styles.fallback}>
-            <Ionicons name="map-outline" size={32} color={theme.text.secondary} />
-            <ThemedText variant="titleMedium" weight="600" style={{ marginTop: 8 }}>
-              Map unavailable
-            </ThemedText>
-            <ThemedText variant="bodySmall" tone="secondary" align="center">
-              Couldn&apos;t load the map. Check your connection and try again.
-            </ThemedText>
-          </View>
-        )}
-        startInLoadingState
-      />
+      {engine === 'maplibre' ? (
+        <MapSurface
+          engine="maplibre"
+          ref={maplibreRef}
+          markers={maplibreMarkers}
+          styleUrl={resolveMapStyleUrl(mapMode, loadMapStyleOverrideSync())}
+          user={userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null}
+          center={{ lat: TOKYO_STATION.lat, lng: TOKYO_STATION.lng }}
+          zoom={TOKYO_STATION.zoom}
+          controlsBottomOffset={controlsBottomOffset}
+          onMarkerPress={(m) => {
+            const anime = animeById.current.get(m.id);
+            if (anime) onMarkerPress?.(anime);
+          }}
+        />
+      ) : (
+        <WebView
+          ref={webviewRef}
+          originWhitelist={['*']}
+          source={{ html, baseUrl: MAP_BASE_URL }}
+          javaScriptEnabled
+          domStorageEnabled
+          cacheEnabled
+          cacheMode={Platform.OS === 'android' ? 'LOAD_DEFAULT' : undefined}
+          allowsInlineMediaPlayback
+          androidLayerType="hardware"
+          onMessage={handleMessage}
+          style={styles.webview}
+          renderError={() => (
+            <View style={styles.fallback}>
+              <Ionicons name="map-outline" size={32} color={theme.text.secondary} />
+              <ThemedText variant="titleMedium" weight="600" style={{ marginTop: 8 }}>
+                Map unavailable
+              </ThemedText>
+              <ThemedText variant="bodySmall" tone="secondary" align="center">
+                Couldn&apos;t load the map. Check your connection and try again.
+              </ThemedText>
+            </View>
+          )}
+          startInLoadingState
+        />
+      )}
       <ClusterPickerSheet
         items={clusterItems}
         theme={theme}
@@ -565,12 +633,7 @@ function ClusterPickerRow({ anime, theme, onPress }: ClusterPickerRowProps) {
       accessibilityLabel={`Open ${anime.title}`}>
       <View style={[styles.thumbWrap, { borderColor: ring }]}>
         {cover ? (
-          <Image
-            source={{ uri: cover }}
-            style={styles.thumb}
-            contentFit="cover"
-            transition={120}
-          />
+          <Image source={{ uri: cover }} style={styles.thumb} contentFit="cover" transition={120} />
         ) : (
           <View style={[styles.thumb, { backgroundColor: theme.background.tertiary }]} />
         )}
@@ -580,11 +643,20 @@ function ClusterPickerRow({ anime, theme, onPress }: ClusterPickerRowProps) {
           {anime.title || anime.cn || 'Untitled'}
         </ThemedText>
         {anime.cn && anime.cn !== anime.title ? (
-          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1} style={{ marginTop: 1 }}>
+          <ThemedText
+            variant="bodySmall"
+            tone="secondary"
+            numberOfLines={1}
+            style={{ marginTop: 1 }}>
             {anime.cn}
           </ThemedText>
         ) : null}
-        <ThemedText variant="captionSmall" tone="tertiary" weight="500" numberOfLines={1} style={{ marginTop: 3 }}>
+        <ThemedText
+          variant="captionSmall"
+          tone="tertiary"
+          weight="500"
+          numberOfLines={1}
+          style={{ marginTop: 3 }}>
           {meta}
         </ThemedText>
       </View>
