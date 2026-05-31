@@ -9,8 +9,9 @@
 // Scope of this spike: prove the map renders with our source, shows markers,
 // the user puck, and that the imperative handle drives the camera. The full
 // per-kind rendering (anime balloons, gold 88 pins, spot bubble/dot, visited
-// flips, cluster picker) is deliberately deferred to post-spike — markers here
-// render as colour-coded circles via a clustered GeoJSON source.
+// flips, cluster picker), plus onBoundsChange + multi-id onClusterPress, are
+// deliberately deferred to post-spike — markers here render as colour-coded
+// circles via a clustered GeoJSON source.
 import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
@@ -28,24 +29,13 @@ import type {
   MapSurfaceHandle,
   MapSurfaceProps,
 } from '../../../../libs/services/pilgrimage/map-engine/types';
+import { markersToFeatureCollection } from '../../../../libs/services/pilgrimage/map-engine/feature-collection';
 import { resolveMapStyleUrl } from '../../../../libs/services/pilgrimage/map-source-prefs';
+import { ON_DARK } from '../../../themed/contrast';
 
 const MARKER_SOURCE_ID = 'pilgrimage-markers';
 /** Whole-Japan overview as [lng, lat] (MapLibre uses lng-first coordinates). */
 const DEFAULT_CENTER: [number, number] = [138.0, 36.5];
-
-/** Neutral markers → a GeoJSON FeatureCollection the source/layer can render. */
-function toFeatureCollection(markers: readonly MapMarker[]): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: markers.map((m) => ({
-      type: 'Feature',
-      id: m.id,
-      properties: { id: m.id, kind: m.kind, color: m.color, visited: m.visited ? 1 : 0 },
-      geometry: { type: 'Point', coordinates: [m.lng, m.lat] },
-    })),
-  };
-}
 
 export const MapLibreEngine = forwardRef<MapSurfaceHandle, MapSurfaceProps>(function MapLibreEngine(
   { markers, user, center, zoom = 5, styleUrl, onMarkerPress, onPanned },
@@ -59,7 +49,7 @@ export const MapLibreEngine = forwardRef<MapSurfaceHandle, MapSurfaceProps>(func
     markers.forEach((m) => map.set(m.id, m));
     return map;
   }, [markers]);
-  const shape = useMemo(() => toFeatureCollection(markers), [markers]);
+  const shape = useMemo(() => markersToFeatureCollection(markers), [markers]);
   const styleURL = styleUrl ?? resolveMapStyleUrl('light', null);
   const initialCenter: [number, number] = center ? [center.lng, center.lat] : DEFAULT_CENTER;
 
@@ -88,7 +78,11 @@ export const MapLibreEngine = forwardRef<MapSurfaceHandle, MapSurfaceProps>(func
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         mapStyle={styleURL}
-        onRegionWillChange={() => onPanned?.()}>
+        onRegionWillChange={(e) => {
+          // Only a genuine user drag/pinch should drop follow/compass — not our
+          // own easeTo/flyTo. ViewStateChangeEvent carries the interaction flag.
+          if (e.nativeEvent.userInteraction) onPanned?.();
+        }}>
         <Camera ref={cameraRef} center={initialCenter} zoom={zoom} />
         <GeoJSONSource
           id={MARKER_SOURCE_ID}
@@ -103,11 +97,14 @@ export const MapLibreEngine = forwardRef<MapSurfaceHandle, MapSurfaceProps>(func
           <Layer
             id={`${MARKER_SOURCE_ID}-circle`}
             type="circle"
+            // `style` (camelCase) is v11's convenience form — it works + typechecks.
+            // v12 will require `paint`/`layout` with kebab-case style-spec keys
+            // ('circle-radius', …); migrate during the post-spike per-kind rework.
             style={{
               circleRadius: 7,
               circleColor: ['get', 'color'],
               circleStrokeWidth: 2,
-              circleStrokeColor: '#FFFFFF',
+              circleStrokeColor: ON_DARK,
             }}
           />
         </GeoJSONSource>
