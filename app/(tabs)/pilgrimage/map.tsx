@@ -61,11 +61,8 @@ import {
 } from '../../../libs/services/pilgrimage/anime88-repository';
 import { getNumberParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import {
-  OFFICIAL_88_GOLD,
-  type HubMapMarker,
-  type RegionBounds,
-} from '../../../components/pilgrimage/HubMapWebView';
+import type { HubMapMarker, RegionBounds } from '../../../libs/services/pilgrimage/map-engine/hub-marker';
+import { OFFICIAL_88_GOLD } from '../../../libs/services/pilgrimage/region-color';
 import { MAP_PORTAL_HOST, useMapHost } from '../../../components/pilgrimage/MapHost';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';

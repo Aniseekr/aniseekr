@@ -1,31 +1,26 @@
-// Map host — keeps exactly ONE <HubMapWebView/> alive for the whole pilgrimage
-// stack so the ~200KB Leaflet parse + tile init is paid ONCE per session
-// instead of on every hub-map navigation (CLAUDE.md Rule 10 — cold-open feel).
+// Map host — keeps exactly ONE hub <MapSurface/> (the MapLibre map) alive for
+// the whole pilgrimage stack so re-entering the hub re-paints instantly with a
+// warm camera + tile cache instead of cold-mounting the native map each time
+// (CLAUDE.md Rule 10 — cold-open feel).
 //
-// LAYERING (load-bearing — getting it wrong kills map gestures):
-// a kept-alive WebView parented BEHIND a native-stack navigator cannot receive
-// touches. react-native-screens screens are real native containers that capture
-// gestures before React Native's `box-none` fall-through can route a touch to a
-// WebView living OUTSIDE the navigator. An earlier cut mounted the WebView as
-// the bottom layer (before children); the hub map could not be pinched/panned.
-// So the WebView and the claiming screen's overlays must live together in ONE
-// layer ABOVE the navigator, joined by a portal:
+// LAYERING: the map and the claiming screen's overlays live together in ONE
+// layer ABOVE the navigator, joined by a portal, so the map is the interactive
+// top layer (a surface parented behind react-native-screens can be starved of
+// gestures) and the claiming screen's controls sit in the same box-none layer:
 //
 //   <PortalProvider>
 //     {children}                          ← navigator (other pilgrimage screens)
 //     <View top-layer, gated by `active`>
-//       <HubMapWebView/>                  ← bottom of the layer (the map surface)
+//       <MapSurface/>                      ← the map surface
 //       <PortalHost name={MAP_PORTAL_HOST}/>  ← claiming screen's overlays land here
 //     </View>
 //   </PortalProvider>
 //
-// The hub map screen claims the host on focus and teleports its overlays into
-// MAP_PORTAL_HOST via <Portal>; on blur it releases and the top layer goes
-// opacity:0 + pointerEvents:none so the other pilgrimage screens show through —
-// but the WebView stays MOUNTED, so re-entering the hub re-paints instantly.
-// HubMapWebView's `html` is `useMemo([])`, so it never remounts on prop change;
-// every marker/theme/camera change flows through injectJavaScript, so these
-// re-renders never throw away the tile cache or camera state.
+// The hub screen claims the host on focus (teleporting its overlays into
+// MAP_PORTAL_HOST via <Portal>) and releases on blur; the top layer then goes
+// opacity:0 + pointerEvents:none so other pilgrimage screens show through, while
+// the map stays MOUNTED so re-entry is instant. Marker/theme/camera changes flow
+// through props + the imperative handle, never remounting the map.
 
 import {
   createContext,
@@ -41,12 +36,10 @@ import { PortalHost, PortalProvider } from '@gorhom/portal';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { type LatLng } from '../../libs/services/pilgrimage/location-service';
 import { type BoundingBox } from '../../libs/services/pilgrimage/anitabi-index';
-import {
-  HubMapWebView,
-  type HubMapMarker,
-  type HubMapWebViewHandle,
-  type RegionBounds,
-} from './HubMapWebView';
+import type {
+  HubMapMarker,
+  RegionBounds,
+} from '../../libs/services/pilgrimage/map-engine/hub-marker';
 import { MapSurface, type MapSurfaceHandle } from './map';
 import { hubMarkerToMapMarker } from '../../libs/services/pilgrimage/map-engine/normalize';
 import {
@@ -56,10 +49,6 @@ import {
 } from '../../libs/services/pilgrimage/map-source-prefs';
 import { resolveMapMode } from '../../libs/services/pilgrimage/map-theme-prefs';
 import { useMapThemePref } from '../../hooks/useMapThemePref';
-import {
-  loadMapEngineSync,
-  subscribeMapEngine,
-} from '../../libs/services/pilgrimage/map-engine-prefs';
 import { CLUSTER_DISABLE_AT } from '../../libs/services/pilgrimage/map-engine/cluster-style';
 
 // Portal host id — the claiming screen teleports its overlays here (via
@@ -125,23 +114,14 @@ export function MapHostProvider({ children }: { children: React.ReactNode }) {
   const { theme: appTheme, effectiveMode } = useTheme();
   const { pref: mapThemePref } = useMapThemePref();
 
-  // Engine rollout flag (default 'leaflet'). While 'leaflet', MapSurface renders
-  // the HubMapWebView fallback below byte-for-byte; flipping to 'maplibre' routes
-  // the same config through the native engine. map.tsx is unaware either way.
-  const [engine, setEngine] = useState(loadMapEngineSync);
-  useEffect(() => subscribeMapEngine(setEngine), []);
-
   // Resolved MapLibre style URL (D7 seam) — mirrors each surface's resolution so
-  // the native hub honours the user's map-theme pref + source override.
+  // the hub honours the user's map-theme pref + source override.
   const [styleOverride, setStyleOverride] = useState(loadMapStyleOverrideSync);
   useEffect(() => subscribeMapStyleOverride(setStyleOverride), []);
   const styleUrl = resolveMapStyleUrl(resolveMapMode(mapThemePref, effectiveMode), styleOverride);
 
-  // hostRef points at MapSurface (the delegating handle) so claim/recenter/
-  // setHeading reach whichever engine is live; leafletHandleRef is the
-  // HubMapWebView's own handle, which MapSurface delegates to while 'leaflet'.
+  // claim/recenter/setHeading drive the live MapSurface camera handle.
   const hostRef = useRef<MapSurfaceHandle>(null);
-  const leafletHandleRef = useRef<HubMapWebViewHandle>(null);
 
   // active=false → unclaimed (empty markers, app theme). We keep config in a
   // single state object so a claim/update is one setState and one re-render;
@@ -237,19 +217,17 @@ export function MapHostProvider({ children }: { children: React.ReactNode }) {
     [config.markers]
   );
 
-  // MapLibre: focus the camera on the selected anime; fly to a chosen region.
-  // No-ops while 'leaflet' (the WebView drives its own focusBangumiId /
-  // flyBoundsRequest props; the delegating handle has no focus/fitBounds there).
+  // Focus the camera on the selected anime; fly to a chosen region.
   useEffect(() => {
-    if (engine !== 'maplibre' || config.focusBangumiId == null) return;
+    if (config.focusBangumiId == null) return;
     const m = config.markers.find((mk) => mk.bangumiId === config.focusBangumiId);
     if (m) hostRef.current?.focus?.({ lat: m.lat, lng: m.lng, zoom: 11 });
-  }, [engine, config.focusBangumiId, config.markers]);
+  }, [config.focusBangumiId, config.markers]);
 
   useEffect(() => {
-    if (engine !== 'maplibre' || !config.flyBoundsRequest) return;
+    if (!config.flyBoundsRequest) return;
     hostRef.current?.fitBounds?.(config.flyBoundsRequest.bounds);
-  }, [engine, config.flyBoundsRequest]);
+  }, [config.flyBoundsRequest]);
 
   return (
     <PortalProvider>
@@ -272,23 +250,7 @@ export function MapHostProvider({ children }: { children: React.ReactNode }) {
           <View style={StyleSheet.absoluteFill} pointerEvents="auto">
             <MapSurface
               ref={hostRef}
-              engine={engine}
-              leafletRef={leafletHandleRef}
-              leafletFallback={
-                <HubMapWebView
-                  ref={leafletHandleRef}
-                  markers={config.markers}
-                  replaceKey={config.replaceKey}
-                  userLocation={config.userLocation}
-                  ringColor={config.ringColor}
-                  theme={config.theme}
-                  focusBangumiId={config.focusBangumiId}
-                  flyBoundsRequest={config.flyBoundsRequest}
-                  onAnimePress={onAnimePress}
-                  onBoundsChange={onBoundsChange}
-                  onUserPan={onUserPan}
-                />
-              }
+              engine="maplibre"
               markers={maplibreMarkers}
               styleUrl={styleUrl}
               user={
