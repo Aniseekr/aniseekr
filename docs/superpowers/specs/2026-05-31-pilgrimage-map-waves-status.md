@@ -56,3 +56,25 @@ The companion spec's *switchable two-engine* proposal was **dropped**. Decision:
 > **🟡 Open question for the user:** does the `perf/pilgrimage-map-cold-open` keep-alive work (W5-B, Device-verify B, pre-warm C) still earn its place as an **interim** cold-open win *before* MapLibre lands, or is it superseded by the migration? Decide this before investing more in Device-verify B / pre-warm C.
 
 **Gating risk for the migration:** `@maplibre/maplibre-react-native` v11 on **Expo 54 / RN 0.81 / New Arch** — confirmed compatible (v11 is New-Arch-only; needs config plugin + dev-client/prebuild, already satisfied via AdMob). Still prove it renders + acceptable binary size with a minimal spike on the smallest surface (`SpotMapView`) **before** building the abstraction around it.
+
+---
+
+## ✅ Implementation progress (2026-05-31, branch `feat/pilgrimage-maplibre-migration`)
+
+Verifiable foundation landed via TDD — every commit is `tsc --noEmit` + lint + `bun test` green:
+
+| Commit | What |
+|---|---|
+| `chore(pilgrimage)` | removed orphan `react-native-maps` (0 imports) |
+| `feat(pilgrimage)` | remote-configurable tile source URL, default OpenFreeMap (spec D7 seam) — `map-source-prefs.ts`, 9 tests |
+| `feat(pilgrimage)` | engine-neutral data model `map-engine/types.ts` + marker normalization `normalize.ts` — 5 tests |
+| `chore(pilgrimage)` | installed `@maplibre/maplibre-react-native@11.3.0` + config plugin in `app.json` |
+| `feat(pilgrimage)` | MapLibre engine + `MapSurface` dispatcher + **leaflet-default** rollout flag (D11) — `map-engine-prefs.ts`, 4 tests |
+
+**State:** the MapLibre engine (`components/pilgrimage/map/engines/MapLibreEngine.tsx`) is **type-correct against the real installed v11 API** (`Map`/`Camera`/`GeoJSONSource`+`Layer`/`UserLocation`, `data` prop, `nativeEvent.features`, `[lng,lat]` order) and **flag-gated OFF** (`loadMapEngineSync()` defaults to `'leaflet'`). The shipping app, `MapHost.tsx`, and the Leaflet WebView path are **untouched**. `OfflineManager` is confirmed present in v11 (validates the "MapLibre offlines natively" premise).
+
+**Device-gated remainder** (cannot be verified headlessly — this is the P1 spike):
+1. Prebuild a dev client; flip the flag to `'maplibre'` on `SpotMapView` and confirm it renders (OpenFreeMap style, markers, user puck, camera) + acceptable binary-size delta.
+2. Confirm/fix the OpenFreeMap style slugs in `map-source-prefs.ts` (`positron`/`dark`) against OFM's live catalog — the D7 override means this needs no app release.
+3. Wire the 3 surfaces onto `<MapSurface engine={flag} leafletFallback={…existing…} markers={…via normalize.ts…}>` (smallest-first), per the per-surface plan from the constraints workflow.
+4. Post-validation: port full per-kind marker rendering (anime balloons, gold 88 pins, spot bubble/dot, visited flips, cluster picker) from the placeholder circles; then delete the Leaflet path (spec P4).
