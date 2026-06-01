@@ -1,5 +1,5 @@
 import React, { createContext, use, useCallback, useMemo, useState } from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
 import {
@@ -15,7 +15,7 @@ const MAX_RECENT_ACCENTS = 6;
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type TintIntensity = 'subtle' | 'balanced' | 'vivid';
-export const TINT_INTENSITY_VALUES: Record<TintIntensity, number> = {
+const TINT_INTENSITY_VALUES: Record<TintIntensity, number> = {
   subtle: 0.25,
   balanced: 0.5,
   vivid: 0.85,
@@ -300,7 +300,7 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
   },
 };
 
-export const THEME_LIST: ThemePalette[] = Object.values(THEMES);
+const THEME_LIST: ThemePalette[] = Object.values(THEMES);
 
 // Light-mode surfaces per theme — accent / accentLight / accentDark / secondary
 // / status stay shared with the dark palette, so the theme still has a single
@@ -655,21 +655,4 @@ export function useTheme(): ThemeContextValue {
     };
   }
   return ctx;
-}
-
-// Helper for styles created at module scope where context isn't accessible
-export const defaultPalette = THEMES.aniseeker;
-
-// Optional platform-aware shadow helper bound to current accent
-export function accentGlow(color: string) {
-  return Platform.select({
-    ios: {
-      shadowColor: color,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.5,
-      shadowRadius: 12,
-    },
-    android: { elevation: 10 },
-    default: {},
-  });
 }

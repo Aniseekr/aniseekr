@@ -40,7 +40,7 @@ const STATUS_PRIORITY: Record<AnimeStatus, number> = {
   planned: 1,
 };
 
-export class ConflictResolutionService {
+class ConflictResolutionService {
   private static instance: ConflictResolutionService;
 
   static getInstance(): ConflictResolutionService {

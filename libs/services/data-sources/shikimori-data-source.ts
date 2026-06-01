@@ -333,10 +333,3 @@ export class ShikimoriDataSource implements AnimeDataSource {
     return defaultStatsStub().fetchStatistics(_id);
   }
 }
-
-export const __test__ = {
-  buildShikimoriItem,
-  parseShikimoriScore,
-  stripShikimoriDescription,
-  pickShikimoriFormat,
-};

@@ -685,8 +685,6 @@ export function CameraStage({
   );
 }
 
-export default CameraStage;
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
