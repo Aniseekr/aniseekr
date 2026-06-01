@@ -1134,6 +1134,26 @@
     "openA11y": "開啟 {name}",
     "deleteAngleA11y": "刪除這個角度",
     "albumSectionTitle": "我的角色",
-    "albumSectionManage": "管理"
+    "albumSectionManage": "管理",
+    "composer": {
+      "title": "角色合成",
+      "ready": "去背就緒",
+      "notReady": "尚未支援去背",
+      "pickBackground": "選擇背景",
+      "pickBackgroundA11y": "選擇背景圖片",
+      "background": "背景",
+      "change": "更換",
+      "changeBackgroundA11y": "更換背景",
+      "tint": "色調",
+      "tintA11y": "切換角色光線匹配",
+      "shadow": "陰影",
+      "shadowA11y": "切換角色陰影",
+      "pickCharacter": "選擇角色",
+      "swapCharacter": "更換角色",
+      "saveA11y": "儲存合成",
+      "saved": "已儲存到相簿",
+      "captureFailed": "合成失敗",
+      "mediaDenied": "沒有相簿儲存權限"
+    }
   }
 }

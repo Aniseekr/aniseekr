@@ -1134,6 +1134,26 @@
     "openA11y": "Open {name}",
     "deleteAngleA11y": "Delete this angle",
     "albumSectionTitle": "My characters",
-    "albumSectionManage": "Manage"
+    "albumSectionManage": "Manage",
+    "composer": {
+      "title": "Companion",
+      "ready": "Auto cut-out ready",
+      "notReady": "No background removal yet",
+      "pickBackground": "Pick a background",
+      "pickBackgroundA11y": "Pick a background image",
+      "background": "Background",
+      "change": "Change",
+      "changeBackgroundA11y": "Change background",
+      "tint": "Tint",
+      "tintA11y": "Toggle character lighting match",
+      "shadow": "Shadow",
+      "shadowA11y": "Toggle character shadow",
+      "pickCharacter": "Pick character",
+      "swapCharacter": "Swap character",
+      "saveA11y": "Save composition",
+      "saved": "Saved to camera roll",
+      "captureFailed": "Capture failed",
+      "mediaDenied": "Media access denied"
+    }
   }
 }

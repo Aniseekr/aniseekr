@@ -15,10 +15,11 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText, readableTextOn } from '../../components/themed';
+import { ThemedText, ThemedButton, readableTextOn } from '../../components/themed';
 import { Radius, Spacing, bottomPad } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { useT } from '../../libs/i18n';
 import { CharacterPickerSheet } from '../../components/companion/CharacterPickerSheet';
 import { CharacterLayer } from '../../components/companion/CharacterLayer';
 import type { CharacterEntry } from '../../libs/services/companion/character-library';
@@ -34,6 +35,7 @@ export default function CompanionScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { width: winW, height: winH } = useWindowDimensions();
   const styles = makeStyles(theme);
   const accent = theme.accent;
@@ -49,8 +51,11 @@ export default function CompanionScreen() {
   const stageRef = useRef<View>(null);
 
   // Phase 2 — derive character tint from the bg whenever either changes.
+  // Only for real cut-outs: a non-去背 entry is a full rectangular image, so
+  // colour-matching it to the background is meaningless (and its mean isn't a
+  // subject mean). Cut-outs only.
   useEffect(() => {
-    if (!bgUri || !character || !tintEnabled) {
+    if (!bgUri || !character || !tintEnabled || character.hasAlpha !== true) {
       setTintMatrix(null);
       return;
     }
@@ -76,7 +81,7 @@ export default function CompanionScreen() {
   const handlePickBackground = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      flashToast('Photo library access denied');
+      flashToast(t('companion.permissionDenied'));
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -86,7 +91,7 @@ export default function CompanionScreen() {
     });
     if (picked.canceled || picked.assets.length === 0) return;
     setBgUri(picked.assets[0].uri);
-  }, [flashToast]);
+  }, [flashToast, t]);
 
   const handleCapture = useCallback(async () => {
     if (!stageRef.current) return;
@@ -94,21 +99,20 @@ export default function CompanionScreen() {
     try {
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (!perm.granted) {
-        flashToast('Media access denied');
+        flashToast(t('companion.composer.mediaDenied'));
         return;
       }
       const uri = await captureRef(stageRef.current, {
         format: 'png',
-        quality: 0.95,
         result: 'tmpfile',
       });
       await MediaLibrary.saveToLibraryAsync(uri);
-      flashToast('Saved to camera roll');
+      flashToast(t('companion.composer.saved'));
     } catch (err) {
       console.warn('companion capture failed', err);
-      flashToast('Capture failed');
+      flashToast(t('companion.composer.captureFailed'));
     }
-  }, [flashToast]);
+  }, [flashToast, t]);
 
   return (
     <View style={styles.root}>
@@ -119,16 +123,18 @@ export default function CompanionScreen() {
             onPress={() => router.back()}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
-              Companion
+              {t('companion.composer.title')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary">
-              {subjectLifter.isSupported() ? 'Auto cutout ready' : 'No background removal yet'}
+              {subjectLifter.isSupported()
+                ? t('companion.composer.ready')
+                : t('companion.composer.notReady')}
             </ThemedText>
           </View>
           <Pressable
@@ -136,7 +142,7 @@ export default function CompanionScreen() {
             hitSlop={14}
             disabled={!bgUri || !character}
             accessibilityRole="button"
-            accessibilityLabel="Save composition"
+            accessibilityLabel={t('companion.composer.saveA11y')}
             style={({ pressed }) => [
               styles.headerBtn,
               { opacity: !bgUri || !character ? 0.4 : pressed ? 0.6 : 1 },
@@ -168,11 +174,11 @@ export default function CompanionScreen() {
               <Pressable
                 onPress={handlePickBackground}
                 accessibilityRole="button"
-                accessibilityLabel="Pick a background image"
+                accessibilityLabel={t('companion.composer.pickBackgroundA11y')}
                 style={styles.bgPlaceholder}>
                 <Ionicons name="image-outline" size={36} color={theme.text.secondary} />
                 <ThemedText variant="bodyMedium" tone="secondary" weight="600">
-                  Pick a background
+                  {t('companion.composer.pickBackground')}
                 </ThemedText>
               </Pressable>
             )}
@@ -197,7 +203,7 @@ export default function CompanionScreen() {
               setTintEnabled((v) => !v);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Toggle character lighting match"
+            accessibilityLabel={t('companion.composer.tintA11y')}
             accessibilityState={{ selected: tintEnabled }}
             style={({ pressed }) => [
               styles.lightingChip,
@@ -216,7 +222,7 @@ export default function CompanionScreen() {
               variant="captionSmall"
               weight="700"
               style={{ color: tintEnabled ? accentFg : theme.text.primary }}>
-              Tint
+              {t('companion.composer.tint')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -225,7 +231,7 @@ export default function CompanionScreen() {
               setShadowEnabled((v) => !v);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Toggle character shadow"
+            accessibilityLabel={t('companion.composer.shadowA11y')}
             accessibilityState={{ selected: shadowEnabled }}
             style={({ pressed }) => [
               styles.lightingChip,
@@ -244,46 +250,34 @@ export default function CompanionScreen() {
               variant="captionSmall"
               weight="700"
               style={{ color: shadowEnabled ? accentFg : theme.text.primary }}>
-              Shadow
+              {t('companion.composer.shadow')}
             </ThemedText>
           </Pressable>
         </View>
 
         <View style={[styles.footer, { paddingBottom: bottomPad(insets) }]}>
-          <Pressable
-            onPress={handlePickBackground}
-            accessibilityRole="button"
-            accessibilityLabel="Change background"
-            style={({ pressed }) => [
-              styles.footerBtn,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}>
-            <Ionicons name="image" size={18} color={theme.text.primary} />
-            <ThemedText variant="bodySmall" weight="700">
-              {bgUri ? 'Change' : 'Background'}
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={() => setPickerOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Pick character"
-            style={({ pressed }) => [
-              styles.footerBtn,
-              {
-                backgroundColor: accent,
-                borderColor: accent,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}>
-            <Ionicons name="person-add" size={18} color={accentFg} />
-            <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
-              {character ? 'Swap character' : 'Pick character'}
-            </ThemedText>
-          </Pressable>
+          <View style={styles.footerBtn}>
+            <ThemedButton
+              variant="secondary"
+              label={bgUri ? t('companion.composer.change') : t('companion.composer.background')}
+              icon={<Ionicons name="image" size={18} color={theme.text.primary} />}
+              accessibilityLabel={t('companion.composer.changeBackgroundA11y')}
+              onPress={handlePickBackground}
+              fullWidth
+            />
+          </View>
+          <View style={styles.footerBtn}>
+            <ThemedButton
+              label={
+                character
+                  ? t('companion.composer.swapCharacter')
+                  : t('companion.composer.pickCharacter')
+              }
+              icon={<Ionicons name="person-add" size={18} color={accentFg} />}
+              onPress={() => setPickerOpen(true)}
+              fullWidth
+            />
+          </View>
         </View>
 
         {toast ? (
@@ -375,13 +369,6 @@ function makeStyles(theme: ThemePalette) {
     },
     footerBtn: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 14,
-      borderRadius: 999,
-      borderWidth: 1,
     },
     toastWrap: {
       position: 'absolute',
@@ -397,4 +384,3 @@ function makeStyles(theme: ThemePalette) {
     },
   });
 }
-
