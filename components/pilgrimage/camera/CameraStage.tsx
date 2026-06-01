@@ -230,12 +230,12 @@ export function CameraStage({
   // front/back flip) or its caps change.
   const deviceInfo = useMemo<CameraDeviceInfo | null>(() => {
     if (!device) return null;
-    const physicalLensTypes: EnginePhysicalLensType[] = [];
-    if (isPhysicalLensType(device.type)) physicalLensTypes.push(device.type);
+    const physicalLensTypeSet = new Set<EnginePhysicalLensType>();
+    if (isPhysicalLensType(device.type)) physicalLensTypeSet.add(device.type);
     const physicalFocalLengths: number[] = [];
     for (const child of device.physicalDevices) {
-      if (isPhysicalLensType(child.type) && !physicalLensTypes.includes(child.type)) {
-        physicalLensTypes.push(child.type);
+      if (isPhysicalLensType(child.type) && !physicalLensTypeSet.has(child.type)) {
+        physicalLensTypeSet.add(child.type);
       }
       if (
         typeof child.focalLength === 'number' &&
@@ -250,7 +250,7 @@ export function CameraStage({
       minZoom: device.minZoom,
       maxZoom: device.maxZoom,
       neutralZoom: 1,
-      physicalLensTypes,
+      physicalLensTypes: [...physicalLensTypeSet],
       zoomLensSwitchFactors: [...device.zoomLensSwitchFactors],
       physicalFocalLengths,
       // Real count from VisionCamera — `device.physicalDevices.length` mirrors
