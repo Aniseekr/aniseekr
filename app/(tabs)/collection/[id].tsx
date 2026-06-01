@@ -66,6 +66,23 @@ function ProgressBar({
   );
 }
 
+const normalizeStatus = (raw: string): AnimeProgress['status'] => {
+  const v = (raw || '').toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+  if (
+    v === 'watching' ||
+    v === 'completed' ||
+    v === 'on_hold' ||
+    v === 'dropped' ||
+    v === 'planning' ||
+    v === 'rewatching'
+  ) {
+    return v as AnimeProgress['status'];
+  }
+  if (v === 'plan_to_watch' || v === 'plan') return 'planning';
+  if (v === 'paused') return 'on_hold';
+  return 'planning';
+};
+
 export default function FolderDetailScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
   const insets = useSafeAreaInsets();
@@ -429,23 +446,6 @@ export default function FolderDetailScreen() {
       />
     </Pressable>
   );
-
-  const normalizeStatus = (raw: string): AnimeProgress['status'] => {
-    const v = (raw || '').toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
-    if (
-      v === 'watching' ||
-      v === 'completed' ||
-      v === 'on_hold' ||
-      v === 'dropped' ||
-      v === 'planning' ||
-      v === 'rewatching'
-    ) {
-      return v as AnimeProgress['status'];
-    }
-    if (v === 'plan_to_watch' || v === 'plan') return 'planning';
-    if (v === 'paused') return 'on_hold';
-    return 'planning';
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>

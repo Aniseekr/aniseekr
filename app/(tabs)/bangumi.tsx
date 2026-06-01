@@ -546,10 +546,7 @@ export default function BangumiScreen() {
     }
   }, [selectedSeason]);
 
-  const seasonDisplayName = useMemo(
-    () => `${selectedYear} ${selectedSeason.charAt(0).toUpperCase() + selectedSeason.slice(1)}`,
-    [selectedSeason, selectedYear]
-  );
+  const seasonDisplayName = `${selectedYear} ${selectedSeason.charAt(0).toUpperCase() + selectedSeason.slice(1)}`;
 
   const totalCount = useMemo(
     () => groupedAnime.reduce((acc, g) => acc + g.anime.length, 0),

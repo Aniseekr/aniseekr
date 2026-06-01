@@ -1151,12 +1151,13 @@ function ScreenToneBackground() {
   );
 }
 
+const SPEED_LINE_POSITIONS = [0.15, 0.32, 0.52, 0.7, 0.88];
+
 function SpeedLines({ side }: { side: 'left' | 'right' | 'top' | 'bottom' }) {
   const isVertical = side === 'left' || side === 'right';
-  const positions = [0.15, 0.32, 0.52, 0.7, 0.88];
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      {positions.map((p) => {
+      {SPEED_LINE_POSITIONS.map((p) => {
         const style = isVertical
           ? {
               position: 'absolute' as const,
