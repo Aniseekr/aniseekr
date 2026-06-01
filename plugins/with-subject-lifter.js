@@ -29,7 +29,7 @@ const OBJC_NAME = 'AniseekrSubjectLifter.m';
 const IOS_SUBDIR = 'SubjectLifter';
 const MODULE_NAME = 'AniseekrSubjectLifter';
 const ANDROID_SUBDIR = 'subjectlifter';
-const MLKIT_DEP = 'com.google.mlkit:subject-segmentation:16.0.0-beta1';
+const MLKIT_DEP = 'com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1';
 
 function loadTemplate(name, replacements = {}) {
   const templatePath = path.join(__dirname, 'templates', name);

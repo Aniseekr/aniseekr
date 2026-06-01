@@ -220,7 +220,6 @@ export default function CompareCaptureScreen() {
     aspect,
     overlayMode,
     edgeIntensity,
-    subjectFocus,
     subjectCombine,
     overlayOpacity,
     editMode,
@@ -501,7 +500,6 @@ export default function CompareCaptureScreen() {
     hiResImageUrl,
     themeColor,
     edgeIntensity,
-    subjectFocus,
   });
   const subjectReady = overlayMode === 'subject' && hiResImageUrl.length > 0;
 
@@ -817,7 +815,6 @@ export default function CompareCaptureScreen() {
         previewWidth: winW,
         previewHeight: winH,
         opacity: overlayOpacity,
-        focus: subjectFocus,
         transform: getOverlayTransformSnapshot(),
         quality: qualityToNumber(settings.quality),
         exif,
@@ -837,7 +834,6 @@ export default function CompareCaptureScreen() {
       winW,
       winH,
       overlayOpacity,
-      subjectFocus,
       getOverlayTransformSnapshot,
       settings.quality,
     ]
@@ -1339,7 +1335,6 @@ export default function CompareCaptureScreen() {
       visible={overlayVisible}
       mode={overlayMode}
       edgeIntensity={edgeIntensity}
-      subjectFocus={subjectFocus}
       subjectCombine={subjectCombine}
       characterSelected={character !== null}
       opacity={overlayOpacity}
@@ -1357,7 +1352,6 @@ export default function CompareCaptureScreen() {
         });
       }}
       onSelectEdgeIntensity={(i) => setHud({ edgeIntensity: i })}
-      onSelectSubjectFocus={(f) => setHud({ subjectFocus: f })}
       onToggleSubjectCombine={() => setHud((h) => ({ subjectCombine: !h.subjectCombine }))}
       onOpenCharacterPicker={() => setCharacterPickerOpen(true)}
       onChangeOpacity={(o) => setHud({ overlayOpacity: o })}
