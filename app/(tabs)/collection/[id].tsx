@@ -1,10 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  FlatList,
-  StyleSheet,
-  Pressable,
-} from 'react-native';
+import { View, FlatList, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -78,7 +73,7 @@ export default function FolderDetailScreen() {
   const { theme } = useTheme();
   const t = useT();
   // Rule 10: seed from the sync snapshot so the grid is on screen frame 1.
-  const initialItems = id ? folderSnapshotCache.get(id) ?? [] : [];
+  const initialItems = id ? (folderSnapshotCache.get(id) ?? []) : [];
   const [items, setItems] = useState<FolderItem[]>(initialItems);
   const [loading, setLoading] = useState(initialItems.length === 0);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
@@ -250,8 +245,7 @@ export default function FolderDetailScreen() {
       // Best-effort source: fall back to the user's primary platform so the
       // sync layer has at least one anchor to resolve cross-platform ids.
       const primary = UserRepository.getPrimaryPlatformSync();
-      const source =
-        primary && primary !== '__default__' ? (primary as PlatformType) : undefined;
+      const source = primary && primary !== '__default__' ? (primary as PlatformType) : undefined;
 
       await trackingService.upsertTracking({
         animeId,
@@ -297,20 +291,17 @@ export default function FolderDetailScreen() {
     }
   };
 
-  const handleHaventWatched = useCallback(
-    async (item: FolderItem) => {
-      try {
-        await trackingService.updateStatus(item.id, 'planned', {
-          title: item.title,
-          imageUrl: item.image_url,
-        });
-        hapticsBridge.selection();
-      } catch (error) {
-        console.error('Failed to mark as planning:', error);
-      }
-    },
-    []
-  );
+  const handleHaventWatched = useCallback(async (item: FolderItem) => {
+    try {
+      await trackingService.updateStatus(item.id, 'planned', {
+        title: item.title,
+        imageUrl: item.image_url,
+      });
+      hapticsBridge.selection();
+    } catch (error) {
+      console.error('Failed to mark as planning:', error);
+    }
+  }, []);
 
   const handleLike = useCallback(async (item: FolderItem) => {
     try {
@@ -395,21 +386,14 @@ export default function FolderDetailScreen() {
           {item.score > 0 ? (
             <View style={styles.scoreChip}>
               <MaterialIcons name="star" size={11} color={theme.accent} />
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                style={{ color: theme.accent }}>
+              <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
                 {(item.score / 10).toFixed(1)}
               </ThemedText>
             </View>
           ) : null}
         </View>
         <ProgressBar
-          progress={
-            item.total_episodes > 0
-              ? Math.min(1, item.progress / item.total_episodes)
-              : 0
-          }
+          progress={item.total_episodes > 0 ? Math.min(1, item.progress / item.total_episodes) : 0}
           indeterminate={item.total_episodes === 0 && item.progress > 0}
           color={theme.accent}
           trackColor={theme.background.tertiary}
@@ -467,10 +451,7 @@ export default function FolderDetailScreen() {
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <View
-        style={[
-          styles.bgGlow,
-          { backgroundColor: `${theme.accent}1A` },
-        ]}
+        style={[styles.bgGlow, { backgroundColor: `${theme.accent}1A` }]}
         pointerEvents="none"
       />
 
@@ -515,10 +496,8 @@ export default function FolderDetailScreen() {
           style={({ pressed }) => [
             styles.headerBtn,
             {
-              backgroundColor:
-                viewMode === 'swipe' ? theme.accent : theme.background.secondary,
-              borderColor:
-                viewMode === 'swipe' ? theme.accent : theme.glassBorder,
+              backgroundColor: viewMode === 'swipe' ? theme.accent : theme.background.secondary,
+              borderColor: viewMode === 'swipe' ? theme.accent : theme.glassBorder,
               opacity: items.length === 0 && viewMode === 'list' ? 0.45 : 1,
             },
             pressed && { opacity: 0.78 },
@@ -532,12 +511,18 @@ export default function FolderDetailScreen() {
       </View>
 
       {loading ? (
-        <Skeleton.PosterGrid count={9} columns={3} aspectRatio={1.4} gap={12} style={{ padding: 16 }} />
+        <Skeleton.PosterGrid
+          count={9}
+          columns={3}
+          aspectRatio={1.4}
+          gap={12}
+          style={{ padding: 16 }}
+        />
       ) : viewMode === 'swipe' ? (
         <View style={[styles.swipeWrap, { paddingBottom: insets.bottom + 140 }]}>
           <FolderSwipeDeck
+            key={id}
             items={items}
-            resetKey={id}
             onHaventWatched={handleHaventWatched}
             onLike={handleLike}
             onOpenDetail={(item) => setEditingItem(item as FolderItem)}
@@ -548,15 +533,16 @@ export default function FolderDetailScreen() {
           data={items}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 140 },
-          ]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 140 }]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <MaterialIcons name="folder-open" size={48} color={theme.text.tertiary} />
-              <ThemedText variant="titleMedium" weight="700" align="center" style={{ marginTop: 12 }}>
+              <ThemedText
+                variant="titleMedium"
+                weight="700"
+                align="center"
+                style={{ marginTop: 12 }}>
                 {t('tabs.collectionFolderScreen.emptyTitle')}
               </ThemedText>
               <ThemedText variant="bodySmall" tone="secondary" align="center">
