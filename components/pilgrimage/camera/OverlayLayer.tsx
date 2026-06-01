@@ -56,13 +56,17 @@ export default function OverlayLayer({
     />
   );
 
-  // WHY: when editMode === false the entire layer must be INVISIBLE to touch
-  // (pointerEvents="none") so pinch/pan falls THROUGH to the CameraStage below
-  // for camera zoom. When editMode === true the wrapper is 'box-none' so the
-  // inner GestureDetector can capture pinch/pan/rotate bound to overlay transforms.
+  // WHY: when the layer is non-interactive the entire layer must be INVISIBLE to
+  // touch (pointerEvents="none") so pinch/pan falls THROUGH to the CameraStage
+  // below for camera zoom. It is interactive only when editMode is on AND the
+  // overlay is actually visible (opacity > 0) — otherwise an Off/hidden overlay
+  // would leave a full-screen GestureDetector that silently swallows camera
+  // pinch-zoom. When interactive the wrapper is 'box-none' so the inner
+  // GestureDetector can capture pinch/pan/rotate bound to overlay transforms.
+  const interactive = editMode && opacity > 0;
   return (
-    <View style={styles.root} pointerEvents={editMode ? 'box-none' : 'none'}>
-      {editMode ? (
+    <View style={styles.root} pointerEvents={interactive ? 'box-none' : 'none'}>
+      {interactive ? (
         <GestureDetector gesture={composedGesture}>
           <Animated.View style={[styles.overlayWrap, animatedStyle]} pointerEvents="auto">
             {content}
