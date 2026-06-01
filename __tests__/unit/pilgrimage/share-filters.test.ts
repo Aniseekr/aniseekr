@@ -9,6 +9,7 @@ import {
   applyAutoColorMatrix,
   blendColorMatrix,
   centerCropRegion,
+  cropPanLimit,
   getFilterMatrix,
   panToCropRegion,
   resolveCropAspect,
@@ -51,12 +52,7 @@ describe('share filters · intensity blend', () => {
   });
 
   it('intensity 0.5 returns the linear midpoint between identity and target', () => {
-    const target = [
-      1.2, 0, 0, 0, 0,
-      0, 1.2, 0, 0, 0,
-      0, 0, 1.2, 0, 0,
-      0, 0, 0, 1, 0,
-    ];
+    const target = [1.2, 0, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 0, 1.2, 0, 0, 0, 0, 0, 1, 0];
     const mid = blendColorMatrix(target, 0.5);
     // (1 + 1.2) / 2 = 1.1 on the diagonal
     expect(mid[0]).toBeCloseTo(1.1, 5);
@@ -201,5 +197,21 @@ describe('share filters · pan-to-crop region', () => {
     expect(() =>
       panToCropRegion({ w: 100, h: 100 }, { w: 50, h: 50 }, { x: 0, y: 0 }, -1)
     ).toThrow();
+  });
+});
+
+describe('share filters · crop pan limit', () => {
+  it('grows the pan range with zoom (uses zoomed display, not base*zoom)', () => {
+    // 1080×1920 in a 360×360 frame → cover scale 1/3 → display 360×640.
+    // X is the cover-limiting axis (display 360 == frame 360): no slack at 1×…
+    expect(cropPanLimit(360, 360, 1)).toBe(0);
+    // …but 2× creates real slack the old `base*zoom` (= 0) wrongly suppressed.
+    expect(cropPanLimit(360, 360, 2)).toBe(180);
+    // Y axis at 2×: (640*2 - 360)/2 = 460.
+    expect(cropPanLimit(640, 360, 2)).toBe(460);
+  });
+
+  it('never returns negative slack', () => {
+    expect(cropPanLimit(300, 360, 1)).toBe(0);
   });
 });

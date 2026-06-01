@@ -9,14 +9,7 @@
 
 // ----- ColorMatrix presets (#4) -----
 
-export type FilterPresetId =
-  | 'none'
-  | 'cinematic'
-  | 'soft'
-  | 'anime'
-  | 'contrast'
-  | 'warm'
-  | 'cool';
+export type FilterPresetId = 'none' | 'cinematic' | 'soft' | 'anime' | 'contrast' | 'warm' | 'cool';
 
 export type FilterPreset = {
   id: FilterPresetId;
@@ -30,56 +23,29 @@ export type FilterPreset = {
  * (offset) so the matrix can shift channels as well as scale them.
  */
 export const IDENTITY_COLOR_MATRIX: number[] = [
-  1, 0, 0, 0, 0,
-  0, 1, 0, 0, 0,
-  0, 0, 1, 0, 0,
-  0, 0, 0, 1, 0,
+  1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
 ];
 
 // Matrices were tuned by hand against a 24-patch macbeth-style swatch under
 // daylight. Stay light-handed — at intensity 1 they should look "applied"
 // but never crush highlights or shadows past usable.
 const CINEMATIC_MATRIX = [
-  1.10, 0.05, -0.05, 0, -8,
-  -0.02, 1.05, 0.02, 0, -4,
-  -0.05, 0.05, 1.10, 0, 6,
-  0, 0, 0, 1, 0,
+  1.1, 0.05, -0.05, 0, -8, -0.02, 1.05, 0.02, 0, -4, -0.05, 0.05, 1.1, 0, 6, 0, 0, 0, 1, 0,
 ];
 
 const SOFT_MATRIX = [
-  0.95, 0.02, 0.02, 0, 12,
-  0.02, 0.95, 0.02, 0, 12,
-  0.02, 0.02, 0.95, 0, 12,
-  0, 0, 0, 1, 0,
+  0.95, 0.02, 0.02, 0, 12, 0.02, 0.95, 0.02, 0, 12, 0.02, 0.02, 0.95, 0, 12, 0, 0, 0, 1, 0,
 ];
 
 const ANIME_MATRIX = [
-  1.15, -0.05, -0.05, 0, 4,
-  -0.05, 1.15, -0.05, 0, 4,
-  -0.05, -0.05, 1.20, 0, 6,
-  0, 0, 0, 1, 0,
+  1.15, -0.05, -0.05, 0, 4, -0.05, 1.15, -0.05, 0, 4, -0.05, -0.05, 1.2, 0, 6, 0, 0, 0, 1, 0,
 ];
 
-const CONTRAST_MATRIX = [
-  1.30, 0, 0, 0, -32,
-  0, 1.30, 0, 0, -32,
-  0, 0, 1.30, 0, -32,
-  0, 0, 0, 1, 0,
-];
+const CONTRAST_MATRIX = [1.3, 0, 0, 0, -32, 0, 1.3, 0, 0, -32, 0, 0, 1.3, 0, -32, 0, 0, 0, 1, 0];
 
-const WARM_MATRIX = [
-  1.10, 0, 0, 0, 6,
-  0, 1.02, 0, 0, 2,
-  0, 0, 0.90, 0, -6,
-  0, 0, 0, 1, 0,
-];
+const WARM_MATRIX = [1.1, 0, 0, 0, 6, 0, 1.02, 0, 0, 2, 0, 0, 0.9, 0, -6, 0, 0, 0, 1, 0];
 
-const COOL_MATRIX = [
-  0.90, 0, 0, 0, -6,
-  0, 0.98, 0, 0, 0,
-  0, 0, 1.12, 0, 8,
-  0, 0, 0, 1, 0,
-];
+const COOL_MATRIX = [0.9, 0, 0, 0, -6, 0, 0.98, 0, 0, 0, 0, 0, 1.12, 0, 8, 0, 0, 0, 1, 0];
 
 export const FILTER_PRESETS: FilterPreset[] = [
   { id: 'none', label: 'Original', hint: 'No filter', matrix: IDENTITY_COLOR_MATRIX },
@@ -143,12 +109,7 @@ export function applyAutoColorMatrix(
   const r = clamp(safeGain(ref.r, user.r), AUTO_GAIN_MIN, AUTO_GAIN_MAX);
   const g = clamp(safeGain(ref.g, user.g), AUTO_GAIN_MIN, AUTO_GAIN_MAX);
   const b = clamp(safeGain(ref.b, user.b), AUTO_GAIN_MIN, AUTO_GAIN_MAX);
-  return [
-    r, 0, 0, 0, 0,
-    0, g, 0, 0, 0,
-    0, 0, b, 0, 0,
-    0, 0, 0, 1, 0,
-  ];
+  return [r, 0, 0, 0, 0, 0, g, 0, 0, 0, 0, 0, b, 0, 0, 0, 0, 0, 1, 0];
 }
 
 function safeGain(refValue: number, userValue: number): number {
@@ -173,11 +134,7 @@ export type CropRegion = {
  * untouched. `matchReference` returns null if the reference dimensions are
  * missing so the caller can fall back gracefully (no hidden default).
  */
-export function resolveCropAspect(
-  id: CropAspectId,
-  refW: number,
-  refH: number
-): number | null {
+export function resolveCropAspect(id: CropAspectId, refW: number, refH: number): number | null {
   if (id === 'free') return null;
   if (id === 'square') return 1;
   if (id === 'portrait') return 9 / 16;
@@ -242,4 +199,17 @@ export function panToCropRegion(
   const originX = clamp(rawX, 0, image.w - cropW);
   const originY = clamp(rawY, 0, image.h - cropH);
   return { originX, originY, width: cropW, height: cropH };
+}
+
+/**
+ * Max pan offset (per side, in display px) for a cover-scaled image zoomed by
+ * `zoom` inside a fixed crop frame: half the overflow of the zoomed image past
+ * the frame. The CropSheet gesture worklet inlines this exact formula — keep
+ * them in sync (a Reanimated worklet can't call this plain JS fn directly).
+ * NOTE: the limit must scale the *zoomed display size*, never `baseLimit*zoom`
+ * — the frame is fixed across zoom, so the latter collapses pan to 0 on the
+ * cover-limiting axis once zoomed in.
+ */
+export function cropPanLimit(displayDim: number, frameDim: number, zoom: number): number {
+  return Math.max(0, (displayDim * zoom - frameDim) / 2);
 }
