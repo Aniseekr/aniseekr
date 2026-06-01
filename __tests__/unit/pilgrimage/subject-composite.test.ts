@@ -68,6 +68,35 @@ describe('subject composite capture planning', () => {
     });
   });
 
+  it('maps through the cover crop (uniform scale) when screen aspect ≠ capture aspect', () => {
+    // Portrait 1:2 preview over a 4:3 photo: the preview is cover-cropped, so
+    // the visible photo region is 1500×3000 (centred), and the overlay must be
+    // scaled by the single uniform k=1.5 — NOT the old per-axis 4000/1000=4 on X.
+    const plan = resolveSubjectCompositePlan({
+      photoWidth: 4000,
+      photoHeight: 3000,
+      previewWidth: 1000,
+      previewHeight: 2000,
+      subjectWidth: 600,
+      subjectHeight: 600,
+      opacity: 1,
+      transform: {
+        scale: 1,
+        translateX: 100,
+        translateY: 40,
+        rotationRad: 0,
+        flipScaleX: 1,
+      },
+    });
+
+    expect(plan).not.toBeNull();
+    // k = min(4000/1000, 3000/2000) = 1.5 → square subject fits the 1500-wide
+    // visible region, centred in the full 4000×3000 photo.
+    expect(plan?.dstRect).toEqual({ x: 1250, y: 750, width: 1500, height: 1500 });
+    expect(plan?.translateX).toBe(150); // 100 * 1.5 (uniform), not 100 * 4
+    expect(plan?.translateY).toBe(60); // 40 * 1.5
+  });
+
   it('rejects invalid dimensions instead of inventing a placement', () => {
     expect(
       resolveSubjectCompositePlan({

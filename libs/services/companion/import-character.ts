@@ -40,17 +40,27 @@ export async function importCharacterFromLibrary(opts: ImportOptions = {}): Prom
 
   let cutoutUri = asset.uri;
   let hasAlpha = false;
+  let liftedW = 0;
+  let liftedH = 0;
   try {
     const lifted = await subjectLifter.lift(asset.uri);
     cutoutUri = lifted.uri;
     hasAlpha = lifted.hasAlpha;
+    liftedW = lifted.width;
+    liftedH = lifted.height;
   } catch {
     // Segmentation failed / no subject / no native module — keep the original.
     cutoutUri = asset.uri;
     hasAlpha = false;
   }
 
-  const { width, height } = await measure(cutoutUri, asset);
+  // The native cut-out is cropped to the subject extent (iOS), so its aspect
+  // differs from the source asset — prefer the lifted dims when去背 actually
+  // ran. Only the JS fallback (hasAlpha:false, dims 0) needs a measure().
+  const { width, height } =
+    hasAlpha && liftedW > 0 && liftedH > 0
+      ? { width: liftedW, height: liftedH }
+      : await measure(cutoutUri, asset);
   const entry: CharacterEntry = {
     id: `char_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     displayName: opts.displayName ?? asset.fileName?.replace(/\.[^.]+$/, '') ?? 'Character',
