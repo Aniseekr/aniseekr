@@ -14,7 +14,15 @@
 //
 // The parent (`compare/[spotId].tsx`) keeps doing its own composition of
 // onCameraReady / lens-info refresh / picture-size probing.
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
 import { Image as RNImage, Platform, StyleSheet, View } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import Animated, {
@@ -153,34 +161,33 @@ export interface CameraStageProps {
    * the old hard-cut overlay.
    */
   freezeFrameUri?: string | null;
+  ref?: Ref<CameraEngineHandle>;
 }
 
-export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(function CameraStage(
-  {
-    facing,
-    zoomShared,
-    exposureShared,
-    preferHdr,
-    enableTorch,
-    mirrorSelfie,
-    active = true,
-    resolutionTier,
-    aspect,
-    qualityPrioritization,
-    quality,
-    enableShutterSound = true,
-    pinchGesture,
-    tapGesture,
-    onCameraReady,
-    onMountError,
-    onDeviceInfo,
-    showWarmup,
-    frameOutput,
-    device: deviceProp,
-    freezeFrameUri,
-  },
-  ref
-) {
+export function CameraStage({
+  facing,
+  zoomShared,
+  exposureShared,
+  preferHdr,
+  enableTorch,
+  mirrorSelfie,
+  active = true,
+  resolutionTier,
+  aspect,
+  qualityPrioritization,
+  quality,
+  enableShutterSound = true,
+  pinchGesture,
+  tapGesture,
+  onCameraReady,
+  onMountError,
+  onDeviceInfo,
+  showWarmup,
+  frameOutput,
+  device: deviceProp,
+  freezeFrameUri,
+  ref,
+}: CameraStageProps) {
   const { theme } = useTheme();
   const cameraRef = useRef<CameraRef>(null);
   const enableShutterSoundRef = useRef(enableShutterSound);
@@ -230,7 +237,11 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
       if (isPhysicalLensType(child.type) && !physicalLensTypes.includes(child.type)) {
         physicalLensTypes.push(child.type);
       }
-      if (typeof child.focalLength === 'number' && Number.isFinite(child.focalLength) && child.focalLength > 0) {
+      if (
+        typeof child.focalLength === 'number' &&
+        Number.isFinite(child.focalLength) &&
+        child.focalLength > 0
+      ) {
         physicalFocalLengths.push(child.focalLength);
       }
     }
@@ -664,13 +675,15 @@ export const CameraStage = forwardRef<CameraEngineHandle, CameraStageProps>(func
             />
             {/* Faint accent pulse at the center. Uses theme.accent so brand
                 identity carries through even during the transition. */}
-            <Animated.View style={[styles.pulseDot, { backgroundColor: theme.accent }, pulseAnimatedStyle]} />
+            <Animated.View
+              style={[styles.pulseDot, { backgroundColor: theme.accent }, pulseAnimatedStyle]}
+            />
           </Animated.View>
         </View>
       </GestureDetector>
     </View>
   );
-});
+}
 
 export default CameraStage;
 

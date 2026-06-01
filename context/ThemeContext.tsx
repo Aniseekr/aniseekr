@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, use, useCallback, useMemo, useState } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
@@ -44,7 +44,9 @@ function adjustHex(hex: string, percent: number): string {
   const f = percent / 100;
   const adj = (c: number) => (f >= 0 ? c + (255 - c) * f : c + c * f);
   const toHex = (c: number) =>
-    Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
+    Math.max(0, Math.min(255, Math.round(c)))
+      .toString(16)
+      .padStart(2, '0');
   return `#${toHex(adj(r))}${toHex(adj(g))}${toHex(adj(b))}`.toUpperCase();
 }
 
@@ -631,7 +633,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
+  const ctx = use(ThemeContext);
   if (!ctx) {
     // Safe default for components rendered outside provider (e.g., tests)
     return {
