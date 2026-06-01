@@ -7,8 +7,8 @@
 // side-by-side) is driven by the ratio so every template stays useful in
 // every ratio.
 
-import type { Ref } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState, type Ref } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -24,7 +24,11 @@ import {
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
 import { FilteredImage } from './FilteredImage';
-import type { RNPerspectiveTransform } from '../../libs/services/pilgrimage/share-perspective';
+import {
+  cornerFractionsToMatrix4,
+  type Pt,
+  type RNPerspectiveTransform,
+} from '../../libs/services/pilgrimage/share-perspective';
 
 export type ShareTemplate = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
 export type ShareRatio = '1:1' | '9:16' | '16:9';
@@ -79,6 +83,11 @@ export type ShareCardProps = {
    * undefined → no transform.
    */
   shotPerspectiveTransform?: RNPerspectiveTransform;
+  /**
+   * Manual corner-pin warp as [0..1] corner fractions (order tl, tr, br, bl).
+   * Rebuilt into a matrix at each cell's measured size (resolution-independent).
+   */
+  shotManualWarpCorners?: readonly Pt[] | null;
   ref?: Ref<View>;
 };
 
@@ -147,6 +156,7 @@ function ImagePair({
   gap = 6,
   shotFilterMatrix = null,
   shotPerspectiveTransform,
+  shotManualWarpCorners,
 }: {
   ratio: ShareRatio;
   imageUrl: string;
@@ -159,6 +169,7 @@ function ImagePair({
   gap?: number;
   shotFilterMatrix?: number[] | null;
   shotPerspectiveTransform?: RNPerspectiveTransform;
+  shotManualWarpCorners?: readonly Pt[] | null;
 }) {
   const isPortrait = ratio === '9:16';
   const order = resolveImagePairOrder(swapOrder);
@@ -183,6 +194,7 @@ function ImagePair({
         style={badgeStyle}
         filterMatrix={shotFilterMatrix}
         perspectiveTransform={shotPerspectiveTransform}
+        manualWarpCorners={shotManualWarpCorners}
       />
     ),
   };
@@ -245,6 +257,54 @@ function WatermarkOverlay({
   );
 }
 
+/**
+ * Renders the user shot with the optional perspective warp. The manual
+ * corner-pin (`manualWarpCorners`, [0..1] fractions) is rebuilt into a matrix at
+ * THIS cell's measured size so it stays WYSIWYG regardless of the cell's
+ * resolution; the auto tilt/heading warp (`autoTransform`) is already
+ * resolution-independent (degrees) and used as the fallback. Manual wins.
+ */
+function PerspectiveImage({
+  uri,
+  filterMatrix = null,
+  manualWarpCorners,
+  autoTransform,
+}: {
+  uri: string;
+  filterMatrix?: number[] | null;
+  manualWarpCorners?: readonly Pt[] | null;
+  autoTransform?: RNPerspectiveTransform;
+}) {
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setSize((prev) =>
+      prev && prev.w === width && prev.h === height ? prev : { w: width, h: height }
+    );
+  }, []);
+
+  const transform = useMemo<RNPerspectiveTransform | undefined>(() => {
+    if (manualWarpCorners && manualWarpCorners.length === 4 && size) {
+      const m = cornerFractionsToMatrix4(size.w, size.h, manualWarpCorners);
+      return m ? [{ matrix: m }] : undefined;
+    }
+    return autoTransform && autoTransform.length > 0 ? autoTransform : undefined;
+  }, [manualWarpCorners, size, autoTransform]);
+
+  const needsMeasure = !!(manualWarpCorners && manualWarpCorners.length === 4);
+  return (
+    <View style={StyleSheet.absoluteFillObject} onLayout={needsMeasure ? onLayout : undefined}>
+      {transform ? (
+        <View style={[StyleSheet.absoluteFillObject, { transform }]}>
+          <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
+        </View>
+      ) : (
+        <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
+      )}
+    </View>
+  );
+}
+
 function ImageCell({
   uri,
   badge,
@@ -253,6 +313,7 @@ function ImageCell({
   style,
   filterMatrix = null,
   perspectiveTransform,
+  manualWarpCorners,
 }: {
   uri: string;
   badge: string;
@@ -261,8 +322,8 @@ function ImageCell({
   style: 'pill' | 'square' | 'sticker';
   filterMatrix?: number[] | null;
   perspectiveTransform?: RNPerspectiveTransform;
+  manualWarpCorners?: readonly Pt[] | null;
 }) {
-  const hasTransform = perspectiveTransform && perspectiveTransform.length > 0;
   return (
     <View
       style={{
@@ -272,17 +333,12 @@ function ImageCell({
         backgroundColor: '#0a0a0a',
         position: 'relative',
       }}>
-      {hasTransform ? (
-        <View
-          style={[
-            StyleSheet.absoluteFillObject,
-            { transform: perspectiveTransform as RNPerspectiveTransform },
-          ]}>
-          <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
-        </View>
-      ) : (
-        <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
-      )}
+      <PerspectiveImage
+        uri={uri}
+        filterMatrix={filterMatrix}
+        manualWarpCorners={manualWarpCorners}
+        autoTransform={perspectiveTransform}
+      />
       {style === 'sticker' ? (
         <View
           style={{
@@ -416,6 +472,7 @@ function PolaroidTemplate(props: TemplateProps) {
           gap={6}
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
+          shotManualWarpCorners={props.shotManualWarpCorners}
         />
       </View>
 
@@ -589,6 +646,7 @@ function ClassicTemplate(props: TemplateProps) {
           gap={8}
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
+          shotManualWarpCorners={props.shotManualWarpCorners}
         />
       </View>
 
@@ -686,6 +744,7 @@ function MinimalTemplate(props: TemplateProps) {
           gap={2}
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
+          shotManualWarpCorners={props.shotManualWarpCorners}
         />
       </View>
       <LinearGradient
@@ -830,6 +889,7 @@ function ComicTemplate(props: TemplateProps) {
           gap={3}
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
+          shotManualWarpCorners={props.shotManualWarpCorners}
         />
       </View>
 
@@ -972,21 +1032,12 @@ function MangaTemplate(props: TemplateProps) {
     ),
     real: (
       <View key="real" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {props.shotPerspectiveTransform && props.shotPerspectiveTransform.length > 0 ? (
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              { transform: props.shotPerspectiveTransform as RNPerspectiveTransform },
-            ]}>
-            <FilteredImage
-              uri={shotUri}
-              matrix={props.shotFilterMatrix ?? null}
-              contentFit="cover"
-            />
-          </View>
-        ) : (
-          <FilteredImage uri={shotUri} matrix={props.shotFilterMatrix ?? null} contentFit="cover" />
-        )}
+        <PerspectiveImage
+          uri={shotUri}
+          filterMatrix={props.shotFilterMatrix ?? null}
+          manualWarpCorners={props.shotManualWarpCorners}
+          autoTransform={props.shotPerspectiveTransform}
+        />
         <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
         <View
           style={{

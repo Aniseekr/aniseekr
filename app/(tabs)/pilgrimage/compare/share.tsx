@@ -49,6 +49,7 @@ import {
 import { loadAutoColorMatrix } from '../../../../libs/services/pilgrimage/share-auto-match';
 import {
   tiltCorrectionTransform,
+  type Pt,
   type RNPerspectiveTransform,
 } from '../../../../libs/services/pilgrimage/share-perspective';
 import {
@@ -156,14 +157,17 @@ export default function ShareComparisonScreen() {
   const headingDeltaDeg = getNumberParam(params, 'headingDeltaDeg');
   const autoWarpAvailable = tiltDeg !== null && headingDeltaDeg !== null;
   const [autoWarpEnabled, setAutoWarpEnabled] = useState(false);
-  const [manualWarpMatrix, setManualWarpMatrix] = useState<number[] | null>(null);
+  // Manual corner-pin is stored as resolution-independent [0..1] corner
+  // fractions; ShareCard rebuilds the matrix at each cell's measured size so
+  // the warp matches the editor regardless of the card cell's pixel size.
+  const [manualWarpCorners, setManualWarpCorners] = useState<Pt[] | null>(null);
   const [warpOpen, setWarpOpen] = useState(false);
+  // Auto (tilt/heading) warp only — manual corner-pin wins downstream in the
+  // cell (it needs the cell size, which lives in ShareCard).
   const perspectiveTransform: RNPerspectiveTransform = useMemo(() => {
-    // Manual warp wins when present — it's an explicit user override.
-    if (manualWarpMatrix) return [{ matrix: manualWarpMatrix }];
     if (autoWarpEnabled) return tiltCorrectionTransform({ tiltDeg, headingDeltaDeg });
     return [];
-  }, [manualWarpMatrix, autoWarpEnabled, tiltDeg, headingDeltaDeg]);
+  }, [autoWarpEnabled, tiltDeg, headingDeltaDeg]);
 
   // Final matrix priority: auto match (when ready) overrides preset filter.
   const filterMatrix = autoMatchEnabled && autoMatchMatrix ? autoMatchMatrix : presetMatrix;
@@ -338,6 +342,7 @@ export default function ShareComparisonScreen() {
                 watermarkFont={watermarkFont}
                 shotFilterMatrix={filterMatrix}
                 shotPerspectiveTransform={perspectiveTransform}
+                shotManualWarpCorners={manualWarpCorners}
               />
             </View>
           </View>
@@ -450,9 +455,9 @@ export default function ShareComparisonScreen() {
             autoWarpEnabled={autoWarpEnabled}
             autoWarpAvailable={autoWarpAvailable}
             onAutoWarpChange={setAutoWarpEnabled}
-            manualWarpApplied={!!manualWarpMatrix}
+            manualWarpApplied={!!manualWarpCorners}
             onOpenManualWarp={() => setWarpOpen(true)}
-            onResetManualWarp={() => setManualWarpMatrix(null)}
+            onResetManualWarp={() => setManualWarpCorners(null)}
           />
 
           <View style={styles.toggleGroup}>
@@ -563,10 +568,10 @@ export default function ShareComparisonScreen() {
         visible={warpOpen}
         sourceUri={effectiveShotUri}
         onCancel={() => setWarpOpen(false)}
-        onApply={(matrix) => {
-          setManualWarpMatrix(matrix);
+        onApply={(corners) => {
+          setManualWarpCorners(corners);
           setWarpOpen(false);
-          flashToast(matrix ? 'Warp applied' : 'Warp reset');
+          flashToast(corners ? 'Warp applied' : 'Warp reset');
         }}
       />
     </View>

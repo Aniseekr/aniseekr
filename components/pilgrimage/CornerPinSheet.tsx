@@ -33,23 +33,24 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import {
   cornerPinHomography,
   homographyToMatrix4,
+  type Pt,
 } from '../../libs/services/pilgrimage/share-perspective';
 
 export type CornerPinSheetProps = {
   visible: boolean;
   sourceUri: string;
   onCancel: () => void;
-  onApply: (matrix: number[] | null) => void;
+  /**
+   * Resolution-independent corner fractions ([0..1] of the frame, order
+   * tl, tr, br, bl), or null for "no warp". The consumer rebuilds the matrix at
+   * its own cell size so the warp matches this editor regardless of pixel size.
+   */
+  onApply: (corners: Pt[] | null) => void;
 };
 
 const HANDLE_RADIUS = 16;
 
-export function CornerPinSheet({
-  visible,
-  sourceUri,
-  onCancel,
-  onApply,
-}: CornerPinSheetProps) {
+export function CornerPinSheet({ visible, sourceUri, onCancel, onApply }: CornerPinSheetProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
@@ -195,8 +196,10 @@ export function CornerPinSheet({
     return { transform: [{ matrix: homographyToMatrix4(m) }] };
   });
 
-  // Mirror the live matrix back into JS state so Apply() can return it.
-  const [liveMatrix, setLiveMatrix] = useState<number[] | null>(null);
+  // Mirror the live corner FRACTIONS back into JS state so Apply() returns a
+  // resolution-independent warp (the consumer rebuilds the matrix at its size).
+  // Still solve the homography here only to reject a degenerate drag.
+  const [liveCorners, setLiveCorners] = useState<Pt[] | null>(null);
   useAnimatedReaction(
     () => ({
       tl: { x: tlx.value, y: tly.value },
@@ -205,9 +208,14 @@ export function CornerPinSheet({
       bl: { x: blx.value, y: bly.value },
     }),
     (cur) => {
-      const h = cornerPinHomography(frame.w, frame.h, [cur.tl, cur.tr, cur.br, cur.bl]);
-      if (h) runOnJS(setLiveMatrix)(homographyToMatrix4(h));
-      else runOnJS(setLiveMatrix)(null);
+      const corners = [cur.tl, cur.tr, cur.br, cur.bl];
+      const h = cornerPinHomography(frame.w, frame.h, corners);
+      if (h && frame.w > 0 && frame.h > 0) {
+        const fractions = corners.map((c) => ({ x: c.x / frame.w, y: c.y / frame.h }));
+        runOnJS(setLiveCorners)(fractions);
+      } else {
+        runOnJS(setLiveCorners)(null);
+      }
     },
     [frame.w, frame.h]
   );
@@ -226,8 +234,8 @@ export function CornerPinSheet({
 
   const handleApply = useCallback(() => {
     hapticsBridge.success();
-    onApply(liveMatrix);
-  }, [liveMatrix, onApply]);
+    onApply(liveCorners);
+  }, [liveCorners, onApply]);
 
   const handles = [
     { id: 'tl', xv: tlx, yv: tly, gesture: tlGesture },
@@ -294,10 +302,7 @@ function CornerHandle({
   accent: string;
 }) {
   const animated = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: xv.value - HANDLE_RADIUS },
-      { translateY: yv.value - HANDLE_RADIUS },
-    ],
+    transform: [{ translateX: xv.value - HANDLE_RADIUS }, { translateY: yv.value - HANDLE_RADIUS }],
   }));
   return (
     <GestureDetector gesture={gesture}>
