@@ -90,16 +90,19 @@ export async function compositeCharacterIntoPhoto(
 
     // Reconstruct the layer's base rect the way CharacterLayer does: centred,
     // height = max(120, previewH * fraction) in preview px, width via aspect.
+    // Fallback aspect MUST match CharacterLayer.tsx (0.75) so preview and bake
+    // never diverge; in practice import-character always supplies real dims.
     const aspect =
-      input.intrinsicW > 0 && input.intrinsicH > 0
-        ? input.intrinsicW / input.intrinsicH
-        : srcW / srcH;
+      input.intrinsicW > 0 && input.intrinsicH > 0 ? input.intrinsicW / input.intrinsicH : 0.75;
     const heightFraction = input.initialHeightFraction ?? DEFAULT_HEIGHT_FRACTION;
     const baseHeightPreview = Math.max(MIN_LAYER_HEIGHT, input.previewHeight * heightFraction);
 
-    const sx = width / input.previewWidth;
-    const sy = height / input.previewHeight;
-    const baseHeightPhoto = baseHeightPreview * sy;
+    // Cover mapping (see subject-composite-plan.ts): the preview fills the
+    // screen "cover", so map preview→photo with a single uniform factor k and a
+    // photo-centred placement — never independent per-axis ratios, which drift
+    // when the screen aspect differs from the capture aspect.
+    const k = Math.min(width / input.previewWidth, height / input.previewHeight);
+    const baseHeightPhoto = baseHeightPreview * k;
     const baseWidthPhoto = baseHeightPhoto * aspect;
 
     const dstRect = {
@@ -117,8 +120,8 @@ export async function compositeCharacterIntoPhoto(
 
     const centerX = width / 2;
     const centerY = height / 2;
-    const translateX = input.transform.translateX * sx;
-    const translateY = input.transform.translateY * sy;
+    const translateX = input.transform.translateX * k;
+    const translateY = input.transform.translateY * k;
     const scale = validPositive(input.transform.scale) ? input.transform.scale : 1;
     const rotationDeg = (input.transform.rotation * 180) / Math.PI;
     const flipScaleX = input.transform.flipX === -1 ? -1 : 1;

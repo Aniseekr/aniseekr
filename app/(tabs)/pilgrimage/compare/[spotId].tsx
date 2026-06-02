@@ -895,24 +895,20 @@ export default function CompareCaptureScreen() {
         });
         if (!photo?.uri) return null;
         // VisionCamera writes raw bytes — embed our EXIF (anime title, scene,
-        // GPS, heading, tilt) onto the JPEG ourselves. Failure is logged and
-        // ignored; the photo survives without metadata rather than disappear.
-        //
-        // Kick the embed off in parallel with the optional Skia composite
-        // instead of awaiting it serially. piexif-ts rewrites the whole JPEG
-        // on the JS thread (~300–500ms for a 4K shot), and that used to sit
-        // squarely on the critical path between shutter and preview push. In
-        // the default edge-overlay mode the composite is a no-op, so the
-        // `await embedPromise` below is what dominates — but in subject-
-        // composite mode this lets the Skia work and the EXIF rewrite
-        // overlap, cutting the worst-case shutter→preview latency.
-        const embedPromise = embedCaptureMetadata(photo.uri, additionalExif);
+        // GPS, heading, tilt) onto the JPEG ourselves. The subject/character
+        // compositors already embed the SAME EXIF into their own output files,
+        // so we only embed the original in-place when NO composite ran. Doing
+        // the in-place piexif rewrite in parallel with a compositor reading the
+        // same file races a delete-during-read on the JPEG (the rewrite deletes
+        // and recreates photo.uri while Skia is decoding it).
         const subjectOutput = await maybeCompositeSubjectShot(
           { uri: photo.uri, width: photo.width, height: photo.height },
           additionalExif
         );
         const output = await maybeCompositeCharacterShot(subjectOutput, additionalExif);
-        await embedPromise;
+        if (output.uri === photo.uri) {
+          await embedCaptureMetadata(photo.uri, additionalExif);
+        }
         tapFocus.releaseLock();
         // Lens-gate banner: when the capture was taken on the standalone
         // ultra-wide (or telephoto) we surface a short toast so the user
@@ -970,13 +966,17 @@ export default function CompareCaptureScreen() {
       // expo-camera path (which embedded EXIF natively at capture time).
       // The other five alternates stay un-tagged in temp; if a later flow
       // ever surfaces one, it can be re-tagged on demand.
-      const embedPromise = embedCaptureMetadata(result.uris[idx], additionalExif);
+      const bestUri = result.uris[idx];
       const subjectOutput = await maybeCompositeSubjectShot(
-        { uri: result.uris[idx], width: result.widths[idx], height: result.heights[idx] },
+        { uri: bestUri, width: result.widths[idx], height: result.heights[idx] },
         additionalExif
       );
       const output = await maybeCompositeCharacterShot(subjectOutput, additionalExif);
-      await embedPromise;
+      // Only embed in-place when no composite ran (compositors embed their own
+      // output); avoids racing the JPEG rewrite against the compositor's read.
+      if (output.uri === bestUri) {
+        await embedCaptureMetadata(bestUri, additionalExif);
+      }
       const burstUris = [...result.uris];
       burstUris[idx] = output.uri;
       return recordShot({
@@ -1011,17 +1011,18 @@ export default function CompareCaptureScreen() {
       if (!result) return null;
       tapFocus.releaseLock();
       const additionalExif = buildExifNow();
-      // Same parallel-embed pattern as runSingle — the bracket already
-      // produced exactly one URI (the HDR-composited or fallback frame), so
-      // there is only ever one piexif rewrite to do; run it alongside the
-      // optional subject composite instead of in front of it.
-      const embedPromise = embedCaptureMetadata(result.uri, additionalExif);
+      // Same EXIF rule as runSingle: the compositors embed metadata into their
+      // own output, so only embed the bracket frame in-place when no composite
+      // ran — never in parallel with a compositor reading the same file.
+      const bracketUri = result.uri;
       const subjectOutput = await maybeCompositeSubjectShot(
-        { uri: result.uri, width: result.width, height: result.height },
+        { uri: bracketUri, width: result.width, height: result.height },
         additionalExif
       );
       const output = await maybeCompositeCharacterShot(subjectOutput, additionalExif);
-      await embedPromise;
+      if (output.uri === bracketUri) {
+        await embedCaptureMetadata(bracketUri, additionalExif);
+      }
       return recordShot({
         uri: output.uri,
         width: output.width,

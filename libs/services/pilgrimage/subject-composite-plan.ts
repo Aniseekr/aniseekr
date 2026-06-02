@@ -82,15 +82,41 @@ export function shouldCompositeSubjectOverlay(input: SubjectCompositeGateInput):
 export function resolveSubjectCompositePlan(
   input: SubjectCompositePlanInput
 ): SubjectCompositePlan | null {
-  const dstRect = fitContainRect(
-    input.subjectWidth,
-    input.subjectHeight,
-    input.photoWidth,
-    input.photoHeight
-  );
-  if (!dstRect || !validPositive(input.previewWidth) || !validPositive(input.previewHeight)) {
+  if (
+    !validPositive(input.photoWidth) ||
+    !validPositive(input.photoHeight) ||
+    !validPositive(input.previewWidth) ||
+    !validPositive(input.previewHeight) ||
+    !validPositive(input.subjectWidth) ||
+    !validPositive(input.subjectHeight)
+  ) {
     return null;
   }
+
+  // VisionCamera renders the live preview "cover": the photo is scaled to FILL
+  // the winW×winH preview (overflow cropped), centered. So the visible photo
+  // region is (previewW×previewH) scaled by a single uniform factor
+  // k = min(photoW/previewW, photoH/previewH), centered in the photo. Mapping the
+  // overlay through that SAME transform (uniform k, not independent per-axis
+  // ratios) is what makes the baked placement match what the user saw — any
+  // pan/scale/rotate away from centre used to drift on the non-limiting axis.
+  const k = Math.min(
+    input.photoWidth / input.previewWidth,
+    input.photoHeight / input.previewHeight
+  );
+  const visibleW = input.previewWidth * k;
+  const visibleH = input.previewHeight * k;
+  const fit = fitContainRect(input.subjectWidth, input.subjectHeight, visibleW, visibleH);
+  if (!fit) return null;
+
+  // The visible region is centred in the photo and fitContainRect centres the
+  // subject within it, so the net dstRect is photo-centred.
+  const dstRect = {
+    x: roundLayout((input.photoWidth - fit.width) / 2),
+    y: roundLayout((input.photoHeight - fit.height) / 2),
+    width: fit.width,
+    height: fit.height,
+  };
 
   const scale = validPositive(input.transform.scale) ? input.transform.scale : 1;
   return {
@@ -98,8 +124,8 @@ export function resolveSubjectCompositePlan(
     dstRect,
     centerX: input.photoWidth / 2,
     centerY: input.photoHeight / 2,
-    translateX: input.transform.translateX * (input.photoWidth / input.previewWidth),
-    translateY: input.transform.translateY * (input.photoHeight / input.previewHeight),
+    translateX: input.transform.translateX * k,
+    translateY: input.transform.translateY * k,
     scale,
     rotationDeg: roundLayout((input.transform.rotationRad * 180) / Math.PI),
     flipScaleX: input.transform.flipScaleX,

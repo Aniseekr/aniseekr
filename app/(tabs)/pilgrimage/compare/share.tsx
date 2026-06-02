@@ -49,6 +49,7 @@ import {
 import { loadAutoColorMatrix } from '../../../../libs/services/pilgrimage/share-auto-match';
 import {
   tiltCorrectionTransform,
+  type Pt,
   type RNPerspectiveTransform,
 } from '../../../../libs/services/pilgrimage/share-perspective';
 import {
@@ -132,7 +133,11 @@ export default function ShareComparisonScreen() {
     loadAutoColorMatrix(imageUrl, effectiveShotUri)
       .then((res) => {
         if (cancelled) return;
-        setAutoMatchMatrix(res.matrix === IDENTITY_COLOR_MATRIX ? null : res.matrix);
+        // Compare by VALUE — applyAutoColorMatrix returns a fresh identity array
+        // on no-data, so a reference check would never null out and an identity
+        // matrix would silently override the user's chosen preset filter.
+        const isIdentity = res.matrix.every((v, i) => v === IDENTITY_COLOR_MATRIX[i]);
+        setAutoMatchMatrix(isIdentity ? null : res.matrix);
       })
       .catch(() => {
         if (!cancelled) setAutoMatchMatrix(null);
@@ -146,18 +151,23 @@ export default function ShareComparisonScreen() {
   }, [autoMatchEnabled, imageUrl, effectiveShotUri]);
 
   // Track C #8 — auto perspective from capture sensors + manual 4-corner warp.
-  const tiltDeg = getNumberParam(params, 'tiltDeg');
+  // `tilt`/`headingDeltaDeg` are forwarded by preview.tsx from the shot's sensor
+  // snapshot; the toggle stays disabled until both are present.
+  const tiltDeg = getNumberParam(params, 'tilt');
   const headingDeltaDeg = getNumberParam(params, 'headingDeltaDeg');
   const autoWarpAvailable = tiltDeg !== null && headingDeltaDeg !== null;
   const [autoWarpEnabled, setAutoWarpEnabled] = useState(false);
-  const [manualWarpMatrix, setManualWarpMatrix] = useState<number[] | null>(null);
+  // Manual corner-pin is stored as resolution-independent [0..1] corner
+  // fractions; ShareCard rebuilds the matrix at each cell's measured size so
+  // the warp matches the editor regardless of the card cell's pixel size.
+  const [manualWarpCorners, setManualWarpCorners] = useState<Pt[] | null>(null);
   const [warpOpen, setWarpOpen] = useState(false);
+  // Auto (tilt/heading) warp only — manual corner-pin wins downstream in the
+  // cell (it needs the cell size, which lives in ShareCard).
   const perspectiveTransform: RNPerspectiveTransform = useMemo(() => {
-    // Manual warp wins when present — it's an explicit user override.
-    if (manualWarpMatrix) return [{ matrix: manualWarpMatrix }];
     if (autoWarpEnabled) return tiltCorrectionTransform({ tiltDeg, headingDeltaDeg });
     return [];
-  }, [manualWarpMatrix, autoWarpEnabled, tiltDeg, headingDeltaDeg]);
+  }, [autoWarpEnabled, tiltDeg, headingDeltaDeg]);
 
   // Final matrix priority: auto match (when ready) overrides preset filter.
   const filterMatrix = autoMatchEnabled && autoMatchMatrix ? autoMatchMatrix : presetMatrix;
@@ -332,6 +342,7 @@ export default function ShareComparisonScreen() {
                 watermarkFont={watermarkFont}
                 shotFilterMatrix={filterMatrix}
                 shotPerspectiveTransform={perspectiveTransform}
+                shotManualWarpCorners={manualWarpCorners}
               />
             </View>
           </View>
@@ -444,9 +455,9 @@ export default function ShareComparisonScreen() {
             autoWarpEnabled={autoWarpEnabled}
             autoWarpAvailable={autoWarpAvailable}
             onAutoWarpChange={setAutoWarpEnabled}
-            manualWarpApplied={!!manualWarpMatrix}
+            manualWarpApplied={!!manualWarpCorners}
             onOpenManualWarp={() => setWarpOpen(true)}
-            onResetManualWarp={() => setManualWarpMatrix(null)}
+            onResetManualWarp={() => setManualWarpCorners(null)}
           />
 
           <View style={styles.toggleGroup}>
@@ -557,10 +568,10 @@ export default function ShareComparisonScreen() {
         visible={warpOpen}
         sourceUri={effectiveShotUri}
         onCancel={() => setWarpOpen(false)}
-        onApply={(matrix) => {
-          setManualWarpMatrix(matrix);
+        onApply={(corners) => {
+          setManualWarpCorners(corners);
           setWarpOpen(false);
-          flashToast(matrix ? 'Warp applied' : 'Warp reset');
+          flashToast(corners ? 'Warp applied' : 'Warp reset');
         }}
       />
     </View>

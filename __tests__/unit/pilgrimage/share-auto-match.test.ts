@@ -12,6 +12,7 @@ import {
 import {
   IDENTITY_HOMOGRAPHY,
   computeHomography,
+  cornerFractionsToMatrix4,
   cornerPinHomography,
   homographyToCss,
   homographyToMatrix4,
@@ -126,6 +127,41 @@ describe('share perspective · homography math (Phase 2 corner-pin)', () => {
 
   it('cornerPinHomography returns null if any dragged corner is missing', () => {
     expect(cornerPinHomography(100, 100, [{ x: 0, y: 0 }])).toBeNull();
+  });
+
+  it('cornerFractionsToMatrix4 is resolution-independent: same fractional drag → proportional matrix at any cell size', () => {
+    // Pull the top-right corner in by 10% of width and down 5% of height.
+    const fractions = [
+      { x: 0, y: 0 },
+      { x: 0.9, y: 0.05 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ];
+    const small = cornerFractionsToMatrix4(100, 100, fractions);
+    const large = cornerFractionsToMatrix4(400, 400, fractions);
+    expect(small).not.toBeNull();
+    expect(large).not.toBeNull();
+    // The matrix built directly at 400px from the same fractions must equal the
+    // homography from the equivalent pixel drag — i.e. it scales with the cell.
+    const pixelDragAt400 = cornerPinHomography(400, 400, [
+      { x: 0, y: 0 },
+      { x: 360, y: 20 },
+      { x: 400, y: 400 },
+      { x: 0, y: 400 },
+    ]);
+    expect(large).toEqual(homographyToMatrix4(pixelDragAt400!));
+    // Old bug: a matrix baked at 100px applied to a 400px cell would NOT match.
+    expect(large).not.toEqual(small);
+  });
+
+  it('cornerFractionsToMatrix4 rejects a non-positive cell size', () => {
+    const fractions = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ];
+    expect(cornerFractionsToMatrix4(0, 100, fractions)).toBeNull();
   });
 });
 

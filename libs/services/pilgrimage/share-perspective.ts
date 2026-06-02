@@ -16,9 +16,15 @@
 export type Pt = { x: number; y: number };
 
 export type Homography = readonly [
-  number, number, number,
-  number, number, number,
-  number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ];
 
 export const IDENTITY_HOMOGRAPHY: Homography = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -46,9 +52,15 @@ export function computeHomography(src: Pt[], dst: Pt[]): Homography | null {
   if (!solved) return null;
   // solved = [h11, h12, h13, h21, h22, h23, h31, h32]; h33 = 1.
   return [
-    solved[0], solved[1], solved[2],
-    solved[3], solved[4], solved[5],
-    solved[6], solved[7], 1,
+    solved[0],
+    solved[1],
+    solved[2],
+    solved[3],
+    solved[4],
+    solved[5],
+    solved[6],
+    solved[7],
+    1,
   ];
 }
 
@@ -104,12 +116,7 @@ export function homographyToCss(h: Homography | readonly number[]): string {
   //  col1 = [h12, h22, 0, h32]
   //  col2 = [0,   0,   1, 0  ]
   //  col3 = [h13, h23, 0, h33]
-  const m = [
-    h11, h21, 0, h31,
-    h12, h22, 0, h32,
-    0,   0,   1, 0,
-    h13, h23, 0, h33,
-  ];
+  const m = [h11, h21, 0, h31, h12, h22, 0, h32, 0, 0, 1, 0, h13, h23, 0, h33];
   return `matrix3d(${m.map(formatNum).join(',')})`;
 }
 
@@ -120,12 +127,7 @@ export function homographyToCss(h: Homography | readonly number[]): string {
  */
 export function homographyToMatrix4(h: Homography | readonly number[]): number[] {
   const [h11, h12, h13, h21, h22, h23, h31, h32, h33] = h;
-  return [
-    h11, h21, 0, h31,
-    h12, h22, 0, h32,
-    0,   0,   1, 0,
-    h13, h23, 0, h33,
-  ];
+  return [h11, h21, 0, h31, h12, h22, 0, h32, 0, 0, 1, 0, h13, h23, 0, h33];
 }
 
 /**
@@ -148,6 +150,26 @@ export function cornerPinHomography(
     { x: 0, y: height },
   ];
   return computeHomography(src, dragged);
+}
+
+/**
+ * Build the RN Matrix4 for a manual corner-pin warp at a SPECIFIC cell size,
+ * from resolution-independent corner fractions (each ∈ [0..1] of the cell,
+ * order [tl, tr, br, bl]). Re-pixelising the drag at the consumer's measured
+ * size is what makes the warp match between the editor frame and a
+ * differently-sized share-card cell — baking editor-frame pixels into the
+ * matrix (the old path) warped wrong everywhere but the editor. Returns null
+ * for a non-positive size or a degenerate drag.
+ */
+export function cornerFractionsToMatrix4(
+  cellW: number,
+  cellH: number,
+  fractions: readonly Pt[]
+): number[] | null {
+  if (!(cellW > 0) || !(cellH > 0) || fractions.length !== 4) return null;
+  const dragged = fractions.map((f) => ({ x: f.x * cellW, y: f.y * cellH }));
+  const h = cornerPinHomography(cellW, cellH, dragged);
+  return h ? homographyToMatrix4(h) : null;
 }
 
 function formatNum(n: number): string {
@@ -198,9 +220,5 @@ export function tiltCorrectionTransform(reading: TiltSensorReading): RNPerspecti
   if (tiltDeg === 0 && headingDeltaDeg === 0) return [];
   const rx = clampDeg(-tiltDeg, MAX_TILT_CORRECTION_DEG);
   const ry = clampDeg(-headingDeltaDeg, MAX_TILT_CORRECTION_DEG);
-  return [
-    { perspective: PERSPECTIVE_DEPTH },
-    { rotateX: `${rx}deg` },
-    { rotateY: `${ry}deg` },
-  ];
+  return [{ perspective: PERSPECTIVE_DEPTH }, { rotateX: `${rx}deg` }, { rotateY: `${ry}deg` }];
 }

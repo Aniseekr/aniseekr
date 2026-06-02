@@ -20,11 +20,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import * as ImageManipulator from 'expo-image-manipulator';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../themed';
@@ -53,13 +49,7 @@ const ASPECTS: { id: CropAspectId; label: string; hint: string }[] = [
   { id: 'matchReference', label: 'Match', hint: 'Same as anime' },
 ];
 
-export function CropSheet({
-  visible,
-  sourceUri,
-  referenceUri,
-  onCancel,
-  onApply,
-}: CropSheetProps) {
+export function CropSheet({ visible, sourceUri, referenceUri, onCancel, onApply }: CropSheetProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
@@ -148,8 +138,6 @@ export function CropSheet({
       scale,
       width: imageSize.w * scale,
       height: imageSize.h * scale,
-      panMaxX: Math.max(0, (imageSize.w * scale - frame.w) / 2),
-      panMaxY: Math.max(0, (imageSize.h * scale - frame.h) / 2),
     };
   }, [imageSize, frame]);
 
@@ -164,15 +152,22 @@ export function CropSheet({
     savedZoom.value = 1;
   }, [aspect, imageSize, tx, ty, zoom, savedTx, savedTy, savedZoom]);
 
-  const panMaxX = display?.panMaxX ?? 0;
-  const panMaxY = display?.panMaxY ?? 0;
+  // Plain-number geometry captured for the worklets. The pan limit is the
+  // overflow of the *zoomed* image past the fixed frame each side:
+  //   (displayW * zoom - frame.w) / 2
+  // NOT panMax_base * zoom — the frame size is constant across zoom, so scaling
+  // the base limit collapses pan to 0 on the cover-limiting axis once zoomed.
+  const displayW = display?.width ?? 0;
+  const displayH = display?.height ?? 0;
+  const frameW = frame.w;
+  const frameH = frame.h;
 
   const composedGesture = useMemo(() => {
     const pan = Gesture.Pan()
       .onUpdate((e) => {
         'worklet';
-        const maxX = panMaxX * zoom.value;
-        const maxY = panMaxY * zoom.value;
+        const maxX = Math.max(0, (displayW * zoom.value - frameW) / 2);
+        const maxY = Math.max(0, (displayH * zoom.value - frameH) / 2);
         tx.value = clampWorklet(savedTx.value + e.translationX, -maxX, maxX);
         ty.value = clampWorklet(savedTy.value + e.translationY, -maxY, maxY);
       })
@@ -194,8 +189,8 @@ export function CropSheet({
         'worklet';
         savedZoom.value = zoom.value;
         // Re-clamp pan after zoom changes so we don't show transparent edges.
-        const maxX = panMaxX * zoom.value;
-        const maxY = panMaxY * zoom.value;
+        const maxX = Math.max(0, (displayW * zoom.value - frameW) / 2);
+        const maxY = Math.max(0, (displayH * zoom.value - frameH) / 2);
         tx.value = withTiming(clampWorklet(tx.value, -maxX, maxX), { duration: 80 });
         ty.value = withTiming(clampWorklet(ty.value, -maxY, maxY), { duration: 80 });
         savedTx.value = clampWorklet(tx.value, -maxX, maxX);
@@ -203,14 +198,10 @@ export function CropSheet({
       });
 
     return Gesture.Simultaneous(pan, pinch);
-  }, [panMaxX, panMaxY, tx, ty, zoom, savedTx, savedTy, savedZoom]);
+  }, [displayW, displayH, frameW, frameH, tx, ty, zoom, savedTx, savedTy, savedZoom]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: tx.value },
-      { translateY: ty.value },
-      { scale: zoom.value },
-    ],
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: zoom.value }],
   }));
 
   const handleApply = useCallback(async () => {
@@ -230,11 +221,10 @@ export function CropSheet({
         { x: tx.value, y: ty.value },
         zoom.value
       );
-      const result = await ImageManipulator.manipulateAsync(
-        sourceUri,
-        [{ crop: region }],
-        { format: ImageManipulator.SaveFormat.PNG, compress: 0.95 }
-      );
+      const result = await ImageManipulator.manipulateAsync(sourceUri, [{ crop: region }], {
+        format: ImageManipulator.SaveFormat.PNG,
+        compress: 0.95,
+      });
       onApply(result.uri);
     } catch (err) {
       console.warn('crop apply failed', err);
@@ -395,30 +385,10 @@ function CropGrid({ color }: { color: string }) {
   // Rule-of-thirds overlay — fixed inside the frame.
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      <View
-        style={[
-          styles.gridLineV,
-          { left: '33.333%', backgroundColor: `${color}55` },
-        ]}
-      />
-      <View
-        style={[
-          styles.gridLineV,
-          { left: '66.666%', backgroundColor: `${color}55` },
-        ]}
-      />
-      <View
-        style={[
-          styles.gridLineH,
-          { top: '33.333%', backgroundColor: `${color}55` },
-        ]}
-      />
-      <View
-        style={[
-          styles.gridLineH,
-          { top: '66.666%', backgroundColor: `${color}55` },
-        ]}
-      />
+      <View style={[styles.gridLineV, { left: '33.333%', backgroundColor: `${color}55` }]} />
+      <View style={[styles.gridLineV, { left: '66.666%', backgroundColor: `${color}55` }]} />
+      <View style={[styles.gridLineH, { top: '33.333%', backgroundColor: `${color}55` }]} />
+      <View style={[styles.gridLineH, { top: '66.666%', backgroundColor: `${color}55` }]} />
     </View>
   );
 }

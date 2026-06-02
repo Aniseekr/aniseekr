@@ -975,6 +975,39 @@
   },
 
   "pilgrimage": {
+    "share": {
+      "realFirst": "實景在前",
+      "animeFirst": "動漫在前",
+      "filter": "濾鏡",
+      "crop": "裁切",
+      "cropped": "已裁切",
+      "background": "背景",
+      "watermark": "浮水印",
+      "watermarkPlaceholder": "@你的帳號、旅程名稱…",
+      "autoColorMatch": "自動配色",
+      "autoColorMatchNeed": "需要兩張圖都載入",
+      "analysing": "分析中…",
+      "autoColorMatchDesc": "把實拍調成動漫色調",
+      "autoPerspective": "自動透視",
+      "autoPerspectiveDesc": "用拍攝感測器校正傾斜",
+      "autoPerspectiveNoData": "這張沒有感測器資料",
+      "manualWarp": "手動透視",
+      "manualWarpApplied": "已套用四角變形",
+      "manualWarpHint": "拖曳四角對齊",
+      "edit": "編輯",
+      "a11y": {
+        "swapOrder": "交換圖片順序",
+        "export": "匯出 {label}（{hint}）",
+        "cropPhoto": "裁切實拍照片",
+        "filter": "濾鏡 {label}",
+        "resetWarp": "重設手動透視",
+        "openWarp": "開啟手動透視編輯器",
+        "bgSwatch": "背景 {label}",
+        "watermarkPosition": "浮水印位置 {label}",
+        "watermarkFont": "浮水印字體 {label}",
+        "watermarkColor": "浮水印顏色 {label}"
+      }
+    },
     "album": {
       "addPhotoA11y": "在此資料夾新增照片",
       "addPilgrimage": "新增巡禮",
@@ -1121,6 +1154,7 @@
     "oneAngle": "1 個角度",
     "libraryFull": "相簿已滿（最多 {limit} 張），請先刪除一個角色。",
     "permissionDenied": "需要相簿存取權才能匯入。",
+    "importFailed": "匯入失敗",
     "notCutOut": "原圖",
     "cutoutBadge": "已去背",
     "cutoutUnavailableTitle": "匯入時未去背",
@@ -1134,6 +1168,26 @@
     "openA11y": "開啟 {name}",
     "deleteAngleA11y": "刪除這個角度",
     "albumSectionTitle": "我的角色",
-    "albumSectionManage": "管理"
+    "albumSectionManage": "管理",
+    "composer": {
+      "title": "角色合成",
+      "ready": "去背就緒",
+      "notReady": "尚未支援去背",
+      "pickBackground": "選擇背景",
+      "pickBackgroundA11y": "選擇背景圖片",
+      "background": "背景",
+      "change": "更換",
+      "changeBackgroundA11y": "更換背景",
+      "tint": "色調",
+      "tintA11y": "切換角色光線匹配",
+      "shadow": "陰影",
+      "shadowA11y": "切換角色陰影",
+      "pickCharacter": "選擇角色",
+      "swapCharacter": "更換角色",
+      "saveA11y": "儲存合成",
+      "saved": "已儲存到相簿",
+      "captureFailed": "合成失敗",
+      "mediaDenied": "沒有相簿儲存權限"
+    }
   }
 }
