@@ -164,7 +164,11 @@ export class NotificationService {
       await Notifications.setNotificationChannelAsync('episodes', {
         name: 'Episode reminders',
         importance: Notifications.AndroidImportance.HIGH,
-        sound: 'default',
+        // No explicit `sound`: an Android channel without one uses the system
+        // default notification sound. SDK 56's expo-notifications treats any
+        // `sound` string as a CUSTOM file that must be bundled via the config
+        // plugin `sounds` array, so the old `sound: 'default'` threw
+        // "Custom sound 'default' not found in native app".
       });
       await Notifications.setNotificationChannelAsync('achievements', {
         name: 'Achievements',
