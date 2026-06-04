@@ -27,8 +27,8 @@ describe('camera feature parity', () => {
     }
 
     const manifest = await Bun.file('package.json').json();
-    expect(manifest.dependencies['react-native-vision-camera-worklets']).toBe('5.0.10');
-    expect(manifest.dependencies['react-native-worklets']).toBe('0.7.4');
+    expect(manifest.dependencies['react-native-vision-camera-worklets']).toBe('5.0.11');
+    expect(manifest.dependencies['react-native-worklets']).toBe('0.8.3');
     expect(manifest.scripts.postinstall).toContain('patch-react-native-worklets');
 
     const workletsPatch = await Bun.file('scripts/patch-react-native-worklets.mjs').text();
