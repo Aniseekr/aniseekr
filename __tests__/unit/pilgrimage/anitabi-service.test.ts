@@ -147,22 +147,29 @@ describe('AnitabiService', () => {
 
     expect(first.length).toBe(1);
     expect(second).toBe(first);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const url = String((fetchSpy.mock.calls[0] as unknown[])[0]);
-    expect(url).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points`);
+    // getDetailedPoints fans out to BOTH /points (complete list) and
+    // /points/detail (originURL attribution); the second call is a memory hit.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const urls = fetchSpy.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(urls[0]).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points`);
+    expect(
+      urls.some((u: string) => u.startsWith(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points/detail`))
+    ).toBe(true);
   });
 
   it('PILG-006 getDetailedPoints persists to SQLite — survives a fresh instance', async () => {
     fetchSpy.mockImplementation(async () => fakeResponse(200, samplePointsResponse()));
     const svc1 = AnitabiService.resetForTests();
     await svc1.getDetailedPoints(SUBJECT_ID);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // cold call fans out to /points + /points/detail
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
 
     // New instance forgets in-memory cache; SQLite still has the row.
     const svc2 = AnitabiService.resetForTests();
     const points = await svc2.getDetailedPoints(SUBJECT_ID);
     expect(points.length).toBe(1);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // svc2 is served entirely from SQLite — no extra network calls.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it('PILG-007 getDetailedPoints dedupes concurrent calls — single network request', async () => {
@@ -181,7 +188,9 @@ describe('AnitabiService', () => {
     ]);
 
     expect(resA).toBe(resB);
-    expect(fetchCount).toBe(1);
+    // concurrent calls dedupe to ONE cold execution, which itself fans out to
+    // /points + /points/detail — so 2 network calls, not 4.
+    expect(fetchCount).toBe(2);
   });
 
   it('PILG-008 getDetailedPoints returns [] on 404 and remembers the miss', async () => {
@@ -193,7 +202,8 @@ describe('AnitabiService', () => {
 
     expect(first).toEqual([]);
     expect(second).toEqual([]);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // cold 404 still probes both endpoints; the miss is then cached in memory.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it('PILG-004 refetches once the SQLite row has passed its 7-day TTL', async () => {
