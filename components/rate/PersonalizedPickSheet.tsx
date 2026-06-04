@@ -144,7 +144,7 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
        */}
       <View style={styles.root}>
         <Pressable
-          style={[StyleSheet.absoluteFillObject, styles.backdrop]}
+          style={[StyleSheet.absoluteFill, styles.backdrop]}
           onPress={handleClose}
           accessibilityRole="button"
           accessibilityLabel="Dismiss"

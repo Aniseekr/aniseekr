@@ -35,7 +35,7 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
 
     // Map background — fills the screen behind every floating layer.
     mapBackground: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     mapBackgroundInner: {
       flex: 1,
@@ -43,7 +43,7 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
     mapScrim: {
       // Gentle scrim so the floating chrome reads against bright tiles
       // (e.g. light-mode street maps).
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.18)',
     },
 

@@ -120,11 +120,11 @@ const makeStyles = (theme: ThemePalette) =>
       marginBottom: Spacing.sm,
     },
     surface: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: theme.background.secondary,
     },
     surfaceBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: Radius.card,
       borderWidth: 1,
       borderColor: theme.glassBorder,

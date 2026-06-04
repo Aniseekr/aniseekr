@@ -288,7 +288,7 @@ function makeStyles(theme: ThemePalette) {
       height: '100%',
     },
     moreOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       // Scrim darkening the thumbnail behind the "+N" count — a photo
       // darkener, not a theme surface, so it stays a fixed black wash.
       backgroundColor: 'rgba(0, 0, 0, 0.6)',

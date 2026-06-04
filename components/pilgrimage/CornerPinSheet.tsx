@@ -265,7 +265,7 @@ export function CornerPinSheet({ visible, sourceUri, onCancel, onApply }: Corner
 
         <View style={styles.viewport}>
           <View style={[styles.frame, { width: frame.w, height: frame.h, borderColor: accent }]}>
-            <Animated.View style={[StyleSheet.absoluteFillObject, warpedStyle]}>
+            <Animated.View style={[StyleSheet.absoluteFill, warpedStyle]}>
               {sourceUri ? (
                 <ExpoImage
                   source={{ uri: sourceUri }}

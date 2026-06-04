@@ -181,7 +181,7 @@ export function CharacterLayer({
         <Canvas
           pointerEvents="none"
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             // Extend the canvas a touch so the blur doesn't clip at edges.
             { width: initialW, height: initialH + ellipse.blur * 2 },
           ]}>

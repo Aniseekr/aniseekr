@@ -391,7 +391,7 @@ const makeStyles = (theme: ThemePalette) =>
       opacity: 0.7,
     },
     cardImage: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     cardImagePlaceholder: {
       alignItems: 'center',

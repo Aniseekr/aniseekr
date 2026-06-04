@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   emptyContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,

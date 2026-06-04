@@ -495,7 +495,7 @@ export default function PilgrimageAlbumScreen() {
                       ]}>
                       <Image
                         source={{ uri: group.cover.thumbUri }}
-                        style={StyleSheet.absoluteFillObject}
+                        style={StyleSheet.absoluteFill}
                         contentFit="contain"
                       />
                     </View>

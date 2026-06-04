@@ -951,7 +951,7 @@ function FeaturedSpotRow({
       <View style={[styles.miniMap, { backgroundColor: theme.background.tertiary }]}>
         <LinearGradient
           colors={[`${theme.accent}1F`, 'rgba(0,0,0,0.0)']}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <View style={[styles.miniMapPin, { backgroundColor: theme.accent }]} />
       </View>
@@ -995,9 +995,9 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
-    heroGrid: { ...StyleSheet.absoluteFillObject },
+    heroGrid: { ...StyleSheet.absoluteFill },
     heroCoverArt: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       opacity: 0.18,
     },
     gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, opacity: 0.5 },

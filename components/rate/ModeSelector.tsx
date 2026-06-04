@@ -224,13 +224,13 @@ const makeStyles = (theme: ThemePalette) =>
       ...Shadow.subtle,
     },
     pillBackground: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       // 72% alpha overlay tinted by the theme's secondary surface so the pill
       // visibly belongs to the active palette (orange-warm vs. blue-cool, etc.)
       backgroundColor: `${theme.background.secondary}B8`,
     },
     pillBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },

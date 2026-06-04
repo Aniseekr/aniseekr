@@ -492,7 +492,7 @@ const makeStyles = (theme: ThemePalette) =>
       zIndex: 10,
     },
     cardImage: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     cardGradient: {
       position: 'absolute',

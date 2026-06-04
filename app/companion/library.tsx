@@ -327,7 +327,7 @@ function CharacterCard({
       <View style={[styles.cardThumb, { backgroundColor: theme.background.tertiary }]}>
         <ExpoImage
           source={{ uri: group.cover.thumbUri }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           contentFit="contain"
         />
         <View
@@ -418,7 +418,7 @@ function CharacterDetailSheet({
               <View style={[styles.angleTile, { backgroundColor: theme.background.tertiary }]}>
                 <ExpoImage
                   source={{ uri: variant.thumbUri }}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   contentFit="contain"
                 />
                 {variant.hasAlpha !== true ? (

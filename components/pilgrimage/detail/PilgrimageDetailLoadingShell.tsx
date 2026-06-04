@@ -256,7 +256,7 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       backgroundColor: theme.background.primary,
     },
     scrim: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.08)',
     },
     topOverlay: {

@@ -123,11 +123,11 @@ const makeStyles = (theme: ThemePalette) =>
       backgroundColor: 'rgba(15,15,18,0.92)',
     },
     sheetBackground: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: `${theme.background.secondary}D8`,
     },
     sheetBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: 28,
       borderWidth: 1,
       borderColor: theme.glassBorder,

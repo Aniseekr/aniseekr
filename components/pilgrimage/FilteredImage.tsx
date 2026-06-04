@@ -50,10 +50,10 @@ export function FilteredImage({ uri, matrix, contentFit = 'cover' }: FilteredIma
 
   if (skip || !image || !size) {
     return (
-      <View onLayout={onLayout} style={StyleSheet.absoluteFillObject}>
+      <View onLayout={onLayout} style={StyleSheet.absoluteFill}>
         <ExpoImage
           source={{ uri }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           contentFit={contentFit}
         />
       </View>
@@ -61,7 +61,7 @@ export function FilteredImage({ uri, matrix, contentFit = 'cover' }: FilteredIma
   }
 
   return (
-    <View onLayout={onLayout} style={StyleSheet.absoluteFillObject}>
+    <View onLayout={onLayout} style={StyleSheet.absoluteFill}>
       <Canvas style={{ width: size.w, height: size.h }}>
         <SkiaImage
           image={image}

@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(26,26,26,0.5)', // Semi-transparent
     alignItems: 'center',
     justifyContent: 'center',

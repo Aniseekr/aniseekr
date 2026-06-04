@@ -134,12 +134,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.secondary,
   },
   glassBorder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 1,
     borderColor: Colors.glass.border,
   },
   glassInnerBorder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },

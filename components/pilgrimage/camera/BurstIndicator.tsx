@@ -65,7 +65,7 @@ export default function BurstIndicator({ captured, total, themeColor }: BurstInd
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
