@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import type { ComposedGesture } from 'react-native-gesture-handler';
 import {
@@ -9,6 +9,7 @@ import {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import type { AnimatedStyle } from 'react-native-reanimated';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import type { OverlayTransformValues } from '../components/pilgrimage/camera/types';
 
@@ -18,7 +19,7 @@ interface UseOverlayTransformInput {
 
 interface UseOverlayTransformOutput {
   composedGesture: ComposedGesture;
-  animatedStyle: ViewStyle;
+  animatedStyle: StyleProp<AnimatedStyle<ViewStyle>>;
   transformed: boolean;
   rotationDisplayDeg: number;
   getSnapshot: () => OverlayTransformValues;

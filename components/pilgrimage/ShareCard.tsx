@@ -293,9 +293,9 @@ function PerspectiveImage({
 
   const needsMeasure = !!(manualWarpCorners && manualWarpCorners.length === 4);
   return (
-    <View style={StyleSheet.absoluteFillObject} onLayout={needsMeasure ? onLayout : undefined}>
+    <View style={StyleSheet.absoluteFill} onLayout={needsMeasure ? onLayout : undefined}>
       {transform ? (
-        <View style={[StyleSheet.absoluteFillObject, { transform }]}>
+        <View style={[StyleSheet.absoluteFill, { transform }]}>
           <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
         </View>
       ) : (
@@ -1006,7 +1006,7 @@ function MangaTemplate(props: TemplateProps) {
       <View key="anime" style={{ flex: 1, position: 'relative' }}>
         <Image
           source={{ uri: imageUrl }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           contentFit="cover"
         />
         <SpeedLines side={ratio === '9:16' ? 'top' : 'left'} />
@@ -1207,7 +1207,7 @@ const SPEED_LINE_POSITIONS = [0.15, 0.32, 0.52, 0.7, 0.88];
 function SpeedLines({ side }: { side: 'left' | 'right' | 'top' | 'bottom' }) {
   const isVertical = side === 'left' || side === 'right';
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       {SPEED_LINE_POSITIONS.map((p) => {
         const style = isVertical
           ? {

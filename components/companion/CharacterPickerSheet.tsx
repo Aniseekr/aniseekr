@@ -164,7 +164,7 @@ export function CharacterPickerSheet({
                   ]}>
                   <ExpoImage
                     source={{ uri: entry.thumbUri }}
-                    style={StyleSheet.absoluteFillObject}
+                    style={StyleSheet.absoluteFill}
                     contentFit="contain"
                   />
                   {entry.hasAlpha !== true ? (

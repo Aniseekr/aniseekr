@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
   },
   barBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 28,
     borderWidth: 1,
   },

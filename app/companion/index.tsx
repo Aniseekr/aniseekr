@@ -178,7 +178,7 @@ export default function CompanionScreen() {
             {bgUri ? (
               <ExpoImage
                 source={{ uri: bgUri }}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 contentFit="cover"
               />
             ) : (

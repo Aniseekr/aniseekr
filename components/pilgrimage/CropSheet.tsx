@@ -384,7 +384,7 @@ function CropHeader({
 function CropGrid({ color }: { color: string }) {
   // Rule-of-thirds overlay — fixed inside the frame.
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <View style={[styles.gridLineV, { left: '33.333%', backgroundColor: `${color}55` }]} />
       <View style={[styles.gridLineV, { left: '66.666%', backgroundColor: `${color}55` }]} />
       <View style={[styles.gridLineH, { top: '33.333%', backgroundColor: `${color}55` }]} />

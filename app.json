@@ -139,22 +139,26 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           },
           "android": {
             "minSdkVersion": 26
           }
         }
-      ]
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#0A1929"
+        }
+      ],
+      "expo-font"
     ],
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#0A1929"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],

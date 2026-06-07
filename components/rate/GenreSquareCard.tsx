@@ -80,11 +80,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.4)', // Darken whole image
   },
   content: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,

@@ -131,7 +131,7 @@ export function PlatformLogo({
           key={tier.uri}
           source={{ uri: tier.uri }}
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             tier.inset > 0
               ? {
                   top: tier.inset,

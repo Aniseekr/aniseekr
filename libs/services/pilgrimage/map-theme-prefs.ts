@@ -19,8 +19,8 @@ import { Logger } from '../../utils/logger';
 
 /**
  * User-facing pilgrimage map theme override.
- * - 'light': force CARTO Voyager (warm Google-Maps-Light look)
- * - 'dark': force CARTO Dark Matter (lifted toward Google-Maps-Dark slate)
+ * - 'light': warm Google-Maps-Light look
+ * - 'dark': lifted toward Google-Maps-Dark slate
  * - 'auto': follow the global app theme via effectiveMode
  */
 export type MapThemePref = 'light' | 'dark' | 'auto';

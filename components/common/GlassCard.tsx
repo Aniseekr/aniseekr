@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.glass.border,
   },
   innerBorder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',

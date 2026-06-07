@@ -188,10 +188,10 @@ function makeTileStyles(theme: ThemePalette) {
       position: 'relative',
     },
     image: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     baseMask: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.12)',
     },
     captionGradient: {

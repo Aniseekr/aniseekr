@@ -1798,7 +1798,7 @@ const styles = StyleSheet.create({
   },
   hidden: { display: 'none' },
   levelHorizonWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

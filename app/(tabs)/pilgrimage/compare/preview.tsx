@@ -853,7 +853,7 @@ export default function ComparePreviewScreen() {
                     source={{ uri: imageUrl }}
                     style={[
                       styles.fullImage,
-                      StyleSheet.absoluteFillObject,
+                      StyleSheet.absoluteFill,
                       { opacity: overlayOpacity },
                     ]}
                     contentFit="cover"

@@ -486,7 +486,7 @@ function makeSheetStyles(theme: ThemePalette) {
       backgroundColor: theme.background.tertiary,
     },
     sheetHeroGradient: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     heroText: {
       position: 'absolute',
@@ -525,7 +525,7 @@ function makeSheetStyles(theme: ThemePalette) {
       height: '100%',
     },
     sceneThumbScrim: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.14)',
     },
     sceneIndexPill: {

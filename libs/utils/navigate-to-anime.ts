@@ -6,7 +6,7 @@
 // path). Every list → detail call site in the app should go through here
 // instead of `router.push(`/anime/${id}`)`.
 
-import type { Router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { AnimeRepository } from '../repositories/anime-repository';
 
@@ -24,7 +24,7 @@ export interface AnimeNavSeed {
  * when already warm, so it is safe to call from press-in handlers.
  */
 export function pushAnimeDetail(
-  router: Pick<Router, 'push'>,
+  router: Pick<ReturnType<typeof useRouter>, 'push'>,
   seed: AnimeNavSeed,
   extra?: Record<string, string>
 ): void {

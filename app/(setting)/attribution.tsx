@@ -67,13 +67,7 @@ const MAP_SOURCES: Source[] = [
     url: 'https://www.openstreetmap.org/copyright',
     descKey: 'settings.attribution.source.osm',
     icon: 'place',
-  },
-  {
-    name: 'CARTO Basemaps',
-    url: 'https://carto.com/attributions',
-    descKey: 'settings.attribution.source.carto',
-    icon: 'place',
-  },
+  }
 ];
 
 const LIBRARIES = [

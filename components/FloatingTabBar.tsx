@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentProps } from 'react';
 import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Tabs } from 'expo-router';
+
+type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 import Animated, {
   Easing,
   interpolateColor,
@@ -301,13 +303,13 @@ const makeStyles = (theme: ThemePalette) =>
       }),
     },
     pillBackground: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       // 78% alpha overlay on the theme's secondary surface so the bar visibly
       // belongs to the active palette without losing the glass-blur effect.
       backgroundColor: `${theme.background.secondary}C7`,
     },
     pillBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: Radius.tabBar,
       borderWidth: 1,
       borderColor: theme.glassBorder,

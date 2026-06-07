@@ -166,7 +166,7 @@ export default function RootLayout() {
           <ThemeProvider>
             <I18nProvider>
               <SubscriptionProvider>
-                <StatusBar style="light" translucent={Platform.OS === 'android'} />
+                <StatusBar style="light" />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(setting)" />
