@@ -20,7 +20,7 @@ import { Logger } from '../../utils/logger';
 
 /**
  * Phase-1 default style URLs — OpenFreeMap public styles (OpenMapTiles schema).
- * `positron` ≈ CARTO-Voyager light look; the dark style ≈ Dark-Matter slate.
+ * `positron` ≈ warm Google-Maps-Light look; the dark style ≈ Dark-Matter slate.
  *
  * NOTE: confirm the exact OFM style slugs against OpenFreeMap's current catalog
  * during the P1 on-device spike. The D7 override below exists precisely so a
