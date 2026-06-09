@@ -1111,6 +1111,7 @@
       "title": "Title A–Z"
     },
     "plan": {
+      "aiComingSoon": "Coming soon",
       "buildOwnA11y": "Build your own 1-day plan",
       "buildOwnBody": "Pick a neighborhood, anime, and route — we'll optimize the order.",
       "buildOwnTitle": "Build Your Own 1-Day Plan",

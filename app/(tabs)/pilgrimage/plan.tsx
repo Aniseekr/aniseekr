@@ -42,11 +42,16 @@ const PLAN_PRESET_DEFS: readonly {
   labelKey: string;
   subtitleKey: string;
   icon: keyof typeof Ionicons.glyphMap;
+  // AI itinerary planning isn't built yet — the tile routed to the hub with a
+  // `preset` param that nothing reads, so it was a dead affordance (blank
+  // result). Flag it so the UI disables it with an honest "Coming soon" badge
+  // rather than navigating into nothing.
+  comingSoon?: boolean;
 }[] = [
   { id: 'quick', labelKey: 'pilgrimage.plan.preset.quickLabel', subtitleKey: 'pilgrimage.plan.preset.quickSubtitle', icon: 'walk' },
   { id: 'full', labelKey: 'pilgrimage.plan.preset.fullLabel', subtitleKey: 'pilgrimage.plan.preset.fullSubtitle', icon: 'sunny' },
   { id: 'weekend', labelKey: 'pilgrimage.plan.preset.weekendLabel', subtitleKey: 'pilgrimage.plan.preset.weekendSubtitle', icon: 'calendar' },
-  { id: 'ai', labelKey: 'pilgrimage.plan.preset.aiLabel', subtitleKey: 'pilgrimage.plan.preset.aiSubtitle', icon: 'sparkles' },
+  { id: 'ai', labelKey: 'pilgrimage.plan.preset.aiLabel', subtitleKey: 'pilgrimage.plan.preset.aiSubtitle', icon: 'sparkles', comingSoon: true },
 ];
 
 export default function PilgrimagePlanScreen() {
@@ -282,6 +287,8 @@ export default function PilgrimagePlanScreen() {
                 subtitle={t(p.subtitleKey)}
                 icon={p.icon}
                 theme={theme}
+                comingSoon={p.comingSoon}
+                comingSoonLabel={p.comingSoon ? t('pilgrimage.plan.aiComingSoon') : undefined}
                 onPress={() => handlePresetPress(p.id)}
               />
             ))}
@@ -487,17 +494,35 @@ interface PresetTileProps {
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
   theme: ThemePalette;
+  comingSoon?: boolean;
+  comingSoonLabel?: string;
   onPress: () => void;
 }
 
-function PresetTile({ label, subtitle, icon, theme, onPress }: PresetTileProps) {
+function PresetTile({
+  label,
+  subtitle,
+  icon,
+  theme,
+  comingSoon,
+  comingSoonLabel,
+  onPress,
+}: PresetTileProps) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <Pressable
-      onPress={onPress}
+      onPress={comingSoon ? undefined : onPress}
+      disabled={comingSoon}
       accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [styles.presetTile, pressed && { opacity: 0.85 }]}>
+      accessibilityLabel={
+        comingSoon && comingSoonLabel ? `${label} — ${comingSoonLabel}` : label
+      }
+      accessibilityState={{ disabled: !!comingSoon }}
+      style={({ pressed }) => [
+        styles.presetTile,
+        comingSoon && { opacity: 0.55 },
+        pressed && !comingSoon && { opacity: 0.85 },
+      ]}>
       <View
         style={[
           styles.presetIcon,
@@ -518,7 +543,15 @@ function PresetTile({ label, subtitle, icon, theme, onPress }: PresetTileProps) 
           {subtitle}
         </ThemedText>
       </View>
-      <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
+      {comingSoon && comingSoonLabel ? (
+        <View style={styles.comingSoonBadge}>
+          <ThemedText variant="captionSmall" weight="700" style={{ color: theme.text.secondary }}>
+            {comingSoonLabel}
+          </ThemedText>
+        </View>
+      ) : (
+        <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
+      )}
     </Pressable>
   );
 }
@@ -782,6 +815,14 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
+    },
+    comingSoonBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: Radius.full,
+      backgroundColor: theme.background.tertiary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
     },
     buildBanner: {
       marginHorizontal: Spacing.screenPadding,
