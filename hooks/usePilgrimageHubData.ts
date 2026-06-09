@@ -13,6 +13,7 @@
 // outputs exactly where the old local state used to live.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../libs/services/pilgrimage/collection-pilgrimage-service';
@@ -24,7 +25,10 @@ import {
   type BoundingBox,
 } from '../libs/services/pilgrimage/anitabi-index';
 import { getNearbyMapEntries } from '../libs/services/pilgrimage/map-nearby';
-import { getPilgrimageHubSnapshot } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
+import {
+  getPilgrimageHubSnapshot,
+  updatePilgrimageHubSnapshot,
+} from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { loadVisitedSpotsSync, type VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
 import { loadCapturesSync } from '../libs/services/pilgrimage/captures';
 import {
@@ -34,6 +38,11 @@ import {
   seedPilgrimageAnimeFromIndex,
 } from '../libs/services/pilgrimage/pilgrimage-screen-state';
 import { shouldLoadPilgrimageMapBounds } from '../libs/services/pilgrimage/pilgrimage-design-flow';
+import {
+  buildPilgrimageCollectionState,
+  mergePilgrimageAnimeList,
+  shouldRefreshPilgrimageCollectionOnFocus,
+} from '../libs/services/pilgrimage/pilgrimage-hub-collection-state';
 
 const COLLECTION_BACKFILL_TARGET = 16;
 const FEATURED_PILGRIMAGE_IDS = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId);
@@ -48,22 +57,6 @@ const FEATURED_FETCH_CONCURRENCY = 6;
 function buildInitialMapSeedIds(focusBangumiId: number | null): number[] {
   if (focusBangumiId === null) return FEATURED_PILGRIMAGE_IDS;
   return [focusBangumiId, ...FEATURED_PILGRIMAGE_IDS];
-}
-
-function mergeAnimeList(
-  current: readonly AnitabiBangumi[],
-  incoming: readonly AnitabiBangumi[]
-): AnitabiBangumi[] {
-  if (incoming.length === 0) return current as AnitabiBangumi[];
-  const merged = new Map(current.map((anime) => [anime.id, anime] as const));
-  let changed = false;
-  for (const anime of incoming) {
-    if (merged.get(anime.id) === anime) continue;
-    merged.set(anime.id, anime);
-    changed = true;
-  }
-  if (!changed) return current as AnitabiBangumi[];
-  return [...merged.values()].sort((a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0));
 }
 
 export interface UsePilgrimageHubDataParams {
@@ -113,7 +106,7 @@ export function usePilgrimageHubData({
   );
   const initialAnimes = useMemo(
     () =>
-      mergeAnimeList(initialSeedAnimes, [
+      mergePilgrimageAnimeList(initialSeedAnimes, [
         ...(initialSnapshot?.collectionAnimes ?? []),
         ...(initialSnapshot?.featuredAnimes ?? []),
       ]),
@@ -146,6 +139,20 @@ export function usePilgrimageHubData({
 
   animesRef.current = animes;
 
+  const refreshCollectionAnimes = useCallback(
+    async (isActive: () => boolean = () => true): Promise<number | null> => {
+      const entries = await collectionPilgrimageService.getEntries();
+      if (!isActive()) return null;
+      const { collectionAnimes, collectionIds: nextCollectionIds } =
+        buildPilgrimageCollectionState(entries);
+      setCollectionIds(nextCollectionIds);
+      setAnimes((current) => mergePilgrimageAnimeList(current, collectionAnimes));
+      updatePilgrimageHubSnapshot({ collectionAnimes });
+      return collectionAnimes.length;
+    },
+    []
+  );
+
   // ─── Data loading ───────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -154,7 +161,7 @@ export function usePilgrimageHubData({
 
     const mergeAnimes = (incoming: readonly AnitabiBangumi[]) => {
       if (incoming.length === 0) return;
-      setAnimes((current) => mergeAnimeList(current, incoming));
+      setAnimes((current) => mergePilgrimageAnimeList(current, incoming));
     };
 
     const commitFeatured = () => {
@@ -225,20 +232,9 @@ export function usePilgrimageHubData({
     (async () => {
       let collectionCount = initialSnapshot?.collectionAnimes?.length ?? 0;
       if (!hasInitialCollection) {
-        const collected = new Set<number>();
         try {
-          const entries = await collectionPilgrimageService.getEntries();
-          if (cancelled) return;
-          const collectionAnimes: AnitabiBangumi[] = [];
-          for (const e of entries) {
-            if (e.anime && !collected.has(e.anime.id)) {
-              collectionAnimes.push(e.anime);
-              collected.add(e.anime.id);
-            }
-          }
-          collectionCount = collectionAnimes.length;
-          setCollectionIds(collected);
-          mergeAnimes(collectionAnimes);
+          const nextCollectionCount = await refreshCollectionAnimes(() => !cancelled);
+          if (nextCollectionCount !== null) collectionCount = nextCollectionCount;
         } catch (err) {
           console.warn('[PilgrimageMap] collection load failed:', err);
         } finally {
@@ -257,7 +253,31 @@ export function usePilgrimageHubData({
       cancelled = true;
       if (flushTimer !== null) clearTimeout(flushTimer);
     };
-  }, [hasInitialCollection, hasInitialFeatured, initialSnapshot]);
+  }, [hasInitialCollection, hasInitialFeatured, initialSnapshot, refreshCollectionAnimes]);
+
+  const focusRefreshSeenRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      const hasSeenFocus = focusRefreshSeenRef.current;
+      focusRefreshSeenRef.current = true;
+      if (
+        !shouldRefreshPilgrimageCollectionOnFocus({
+          hasInitialCollection,
+          hasSeenFocus,
+        })
+      ) {
+        return;
+      }
+
+      let active = true;
+      refreshCollectionAnimes(() => active).catch((err) => {
+        if (active) console.warn('[PilgrimageMap] collection focus refresh failed:', err);
+      });
+      return () => {
+        active = false;
+      };
+    }, [hasInitialCollection, refreshCollectionAnimes])
+  );
 
   // `visited` and `captureCount` are seeded synchronously from MMKV in the
   // useState initializers above. The previous async reconcile was a no-op on
