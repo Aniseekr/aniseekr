@@ -21,7 +21,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';

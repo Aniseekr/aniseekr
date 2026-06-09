@@ -8,7 +8,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet, {
   BottomSheetBackdrop,

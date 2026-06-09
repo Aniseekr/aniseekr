@@ -13,7 +13,7 @@
 import React, { useCallback } from 'react';
 import { Linking, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
 import type { ThemedTextTone, ThemedTextVariant } from '../../themed/ThemedText';
 

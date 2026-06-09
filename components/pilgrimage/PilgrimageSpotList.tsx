@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import type { AnitabiPoint } from '../../libs/services/pilgrimage/types';

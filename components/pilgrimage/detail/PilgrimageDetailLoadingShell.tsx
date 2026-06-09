@@ -11,7 +11,7 @@
 import React, { memo, useMemo } from 'react';
 import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { ON_DARK, Skeleton, ThemedText } from '../../themed';

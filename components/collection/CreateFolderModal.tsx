@@ -12,7 +12,7 @@ import {
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { collectionService } from '../../libs/services/collection/collection-service';
 import { AnimatedPressable } from '../common/AnimatedPressable';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import type { IoniconsName } from '../../libs/utils/icon-types';

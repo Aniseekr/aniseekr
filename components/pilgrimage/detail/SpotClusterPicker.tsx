@@ -6,7 +6,7 @@
 import React, { memo, useCallback, useMemo } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';

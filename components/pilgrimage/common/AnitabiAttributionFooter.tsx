@@ -14,7 +14,7 @@
 
 import React, { useCallback } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedButton, ThemedText, readableTextOn } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { Spacing } from '../../../constants/DesignSystem';

@@ -4,7 +4,7 @@
 
 import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
