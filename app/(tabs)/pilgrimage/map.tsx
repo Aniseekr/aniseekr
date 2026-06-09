@@ -113,6 +113,21 @@ const REGION_BOUNDS: Record<AnimeTourism88Region, BBox> = {
   kyushu_okinawa: { south: 24.0, west: 122.9, north: 34.5, east: 132.0 },
 };
 
+// Smallest box enclosing every selected region — the camera fits this so a
+// multi-region selection frames all of them at once. Assumes a non-empty list.
+function unionRegionBounds(regions: readonly AnimeTourism88Region[]): BBox {
+  const first = REGION_BOUNDS[regions[0]];
+  let { south, west, north, east } = first;
+  for (let i = 1; i < regions.length; i += 1) {
+    const b = REGION_BOUNDS[regions[i]];
+    south = Math.min(south, b.south);
+    west = Math.min(west, b.west);
+    north = Math.max(north, b.north);
+    east = Math.max(east, b.east);
+  }
+  return { south, west, north, east };
+}
+
 // Whole-Japan bounding box — south of Yonaguni to north of Hokkaido.
 // Used when the user taps the "全日本" reset chip.
 const JAPAN_BOUNDS: BBox = {
@@ -282,7 +297,11 @@ export default function PilgrimageMapScreen() {
     return raw === 'collection' || raw === 'official88' ? raw : 'all';
   });
   const [listLayout, setListLayout] = useState<'grid' | 'rows'>('rows');
-  const [focusedRegion, setFocusedRegion] = useState<AnimeTourism88Region | null>(null);
+  // Multi-select region filter for the Tourism-88 view. Empty set = whole
+  // Japan; otherwise the 88 markers + camera narrow to the union of picks (US-04).
+  const [selectedRegions, setSelectedRegions] = useState<ReadonlySet<AnimeTourism88Region>>(
+    () => new Set()
+  );
   const [flyTick, setFlyTick] = useState(0);
   // Base-map load failure (offline + no cached tiles). `mapReloadKey` remounts
   // the GL surface so "Retry" actually re-attempts the style fetch.
@@ -451,20 +470,22 @@ export default function PilgrimageMapScreen() {
 
   const markers = useMemo<MapMarker[]>(() => {
     if (!official88Mode) return baseAnitabiMarkers;
-    const filtered = focusedRegion
-      ? all88WithCoords.filter((e) => e.region === focusedRegion)
-      : all88WithCoords;
+    const filtered =
+      selectedRegions.size > 0
+        ? all88WithCoords.filter((e) => selectedRegions.has(e.region))
+        : all88WithCoords;
     return build88Markers(filtered);
-  }, [official88Mode, focusedRegion, all88WithCoords, baseAnitabiMarkers]);
+  }, [official88Mode, selectedRegions, all88WithCoords, baseAnitabiMarkers]);
 
-  // Camera-fly request derived from focusedRegion + flyTick. Whole-Japan
-  // when no region is focused; the region's bounds otherwise. flyTick
+  // Camera-fly request derived from the selected regions + flyTick. Whole-Japan
+  // when none are selected; the union of their bounds otherwise. flyTick
   // guarantees a new identity per tap so the map effect re-runs on re-taps.
   const flyBoundsRequest = useMemo(() => {
     if (flyTick === 0) return null; // initial render: map opens at Japan overview
-    const bounds = focusedRegion ? REGION_BOUNDS[focusedRegion] : JAPAN_BOUNDS;
-    return { key: `${focusedRegion ?? 'jp'}#${flyTick}`, bounds };
-  }, [focusedRegion, flyTick]);
+    const regions = [...selectedRegions].sort();
+    const bounds = regions.length > 0 ? unionRegionBounds(regions) : JAPAN_BOUNDS;
+    return { key: `${regions.length > 0 ? regions.join('+') : 'jp'}#${flyTick}`, bounds };
+  }, [selectedRegions, flyTick]);
 
   // ─── Hub stats (top of sheet) ──────────────────────────────────────────
   const stats = useMemo<HubStats>(() => {
@@ -485,13 +506,18 @@ export default function PilgrimageMapScreen() {
   // ─── Handlers ──────────────────────────────────────────────────────────
   const handlePickRegion = useCallback((region: AnimeTourism88Region) => {
     Haptics.selectionAsync().catch(() => undefined);
-    setFocusedRegion((cur) => (cur === region ? null : region));
+    setSelectedRegions((cur) => {
+      const next = new Set(cur);
+      if (next.has(region)) next.delete(region);
+      else next.add(region);
+      return next;
+    });
     setFlyTick((t) => t + 1);
   }, []);
 
   const handleResetToJapan = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    setFocusedRegion(null);
+    setSelectedRegions((cur) => (cur.size === 0 ? cur : new Set()));
     setFlyTick((t) => t + 1);
   }, []);
 
@@ -784,7 +810,7 @@ export default function PilgrimageMapScreen() {
 
               <RegionChipStrip
                 theme={theme}
-                focusedRegion={focusedRegion}
+                selectedRegions={selectedRegions}
                 onPickRegion={handlePickRegion}
                 onResetToJapan={handleResetToJapan}
               />
@@ -971,20 +997,21 @@ function LayoutToggleSegment({
 // The "what to show" filter (collection / 88) is owned by the bottom chrome.
 interface RegionChipStripProps {
   theme: ThemePalette;
-  focusedRegion: AnimeTourism88Region | null;
+  selectedRegions: ReadonlySet<AnimeTourism88Region>;
   onPickRegion: (region: AnimeTourism88Region) => void;
   onResetToJapan: () => void;
 }
 
 function RegionChipStrip({
   theme,
-  focusedRegion,
+  selectedRegions,
   onPickRegion,
   onResetToJapan,
 }: RegionChipStripProps) {
   const t = useT();
   const chipStyles = useMemo(() => makeChipStyles(theme), [theme]);
-  const wholeJapanActive = focusedRegion === null;
+  const wholeJapanActive = selectedRegions.size === 0;
+  const accentFg = readableTextOn(theme.accent);
   return (
     <ScrollView
       horizontal
@@ -997,21 +1024,23 @@ function RegionChipStrip({
         accessibilityState={{ selected: wholeJapanActive }}
         style={({ pressed }) => [
           chipStyles.chip,
+          chipStyles.chipRow,
           wholeJapanActive ? { backgroundColor: theme.accent, borderColor: theme.accent } : null,
           pressed && { opacity: 0.85 },
         ]}>
         <ThemedText
           variant="captionSmall"
           weight="700"
-          style={[
-            chipStyles.chipLabel,
-            wholeJapanActive ? { color: theme.background.primary } : null,
-          ]}>
+          style={[chipStyles.chipLabel, wholeJapanActive ? { color: accentFg } : null]}>
           {t('pilgrimage.map.allJapan')}
         </ThemedText>
+        {/* When regions are picked, the All chip doubles as a clear-all (× ). */}
+        {!wholeJapanActive ? (
+          <Ionicons name="close-circle" size={13} color={theme.text.tertiary} />
+        ) : null}
       </Pressable>
       {ANIME_TOURISM_88_REGIONS.map((r) => {
-        const active = focusedRegion === r;
+        const active = selectedRegions.has(r);
         return (
           <Pressable
             key={r}
@@ -1026,7 +1055,7 @@ function RegionChipStrip({
             <ThemedText
               variant="captionSmall"
               weight="600"
-              style={[chipStyles.chipLabel, active ? { color: theme.background.primary } : null]}>
+              style={[chipStyles.chipLabel, active ? { color: accentFg } : null]}>
               {REGION_88_LABELS[r]}
             </ThemedText>
           </Pressable>
@@ -1050,6 +1079,11 @@ function makeChipStyles(theme: ThemePalette) {
       borderWidth: 1,
       borderColor: theme.glassBorder,
       backgroundColor: `${theme.background.primary}E6`,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
     },
     chipLabel: {
       ...Typography.captionSmall,
