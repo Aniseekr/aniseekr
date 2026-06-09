@@ -13,6 +13,7 @@
     "plugins": [
       "@maplibre/maplibre-react-native",
       "./plugins/with-vibration-bridge.js",
+      "./plugins/with-gradle-jvm-heap.js",
       "./plugins/with-clarity-proguard.js",
       "./plugins/with-storekit-config.js",
       "./plugins/with-cloudkit-bridge.js",
@@ -142,7 +143,9 @@
             "deploymentTarget": "16.4"
           },
           "android": {
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
