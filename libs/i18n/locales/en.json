@@ -692,6 +692,7 @@
       "searchA11y": "Search",
       "section": {
         "featuredSpots": "Featured Spots",
+        "myCollection": "My Collection",
         "popularAnimes": "Popular Animes",
         "seeAll": "See all",
         "viewMap": "View map",
@@ -1101,6 +1102,13 @@
       "viewModeAnime": "Scene locations",
       "viewModeMyLocation": "My location",
       "wholeJapanA11y": "View whole Japan"
+    },
+    "sort": {
+      "by": "Sort by",
+      "changeA11y": "Change sort order",
+      "nearest": "Nearest",
+      "spots": "Most spots",
+      "title": "Title A–Z"
     },
     "plan": {
       "buildOwnA11y": "Build your own 1-day plan",

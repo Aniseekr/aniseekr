@@ -45,7 +45,7 @@ import {
   type AnimeTourism88Region,
   type AnimeTourism88EntryWithCoords,
 } from '../../../libs/services/pilgrimage/anime88-repository';
-import { getNumberParam } from '../../../libs/utils/route-params';
+import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { OFFICIAL_88_GOLD } from '../../../libs/services/pilgrimage/region-color';
 import {
@@ -274,7 +274,12 @@ export default function PilgrimageMapScreen() {
   // ─── View state (parent-owned) ──────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const [hubFilter, setHubFilter] = useState<HubFilter>('all');
+  // Seed the filter from the route so the hub's "My Collection → See all" lands
+  // directly on the collection-filtered list (params: { filter: 'collection' }).
+  const [hubFilter, setHubFilter] = useState<HubFilter>(() => {
+    const raw = getStringParam(params, 'filter');
+    return raw === 'collection' || raw === 'official88' ? raw : 'all';
+  });
   const [listLayout, setListLayout] = useState<'grid' | 'rows'>('rows');
   const [focusedRegion, setFocusedRegion] = useState<AnimeTourism88Region | null>(null);
   const [flyTick, setFlyTick] = useState(0);

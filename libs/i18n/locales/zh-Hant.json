@@ -692,6 +692,7 @@
       "searchA11y": "搜尋",
       "section": {
         "featuredSpots": "精選景點",
+        "myCollection": "我的收藏",
         "popularAnimes": "熱門動畫",
         "seeAll": "查看全部",
         "viewMap": "查看地圖",
@@ -1101,6 +1102,13 @@
       "viewModeAnime": "場景位置",
       "viewModeMyLocation": "我的位置",
       "wholeJapanA11y": "查看全日本"
+    },
+    "sort": {
+      "by": "排序方式",
+      "changeA11y": "變更排序方式",
+      "nearest": "距離最近",
+      "spots": "景點最多",
+      "title": "標題 A–Z"
     },
     "plan": {
       "buildOwnA11y": "自訂一日行程",

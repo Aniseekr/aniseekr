@@ -18,10 +18,18 @@
 // Featured Spots rank real distance first. Planned landmarks and collection
 // entries get bounded boosts so intent matters without burying nearby spots.
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -55,6 +63,7 @@ import {
   subscribeAnitabiIndex,
 } from '../../../libs/services/pilgrimage/anitabi-index';
 import { buildSeededPilgrimageAnimes } from '../../../libs/services/pilgrimage/pilgrimage-screen-state';
+import { buildPilgrimageCollectionState } from '../../../libs/services/pilgrimage/pilgrimage-hub-collection-state';
 import {
   formatPilgrimageSubtitle,
   getPilgrimageAnimeTitles,
@@ -62,6 +71,14 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import {
+  DEFAULT_PILGRIMAGE_SORT_KEY,
+  resolveEffectivePilgrimageSortKey,
+  resolvePilgrimageSortKeys,
+  sortPilgrimageAnimes,
+  type PilgrimageSortKey,
+} from '../../../libs/services/pilgrimage/pilgrimage-collection-sort';
+import { PilgrimageSortPill } from '../../../components/pilgrimage/PilgrimageSortPill';
 import { useT } from '../../../libs/i18n';
 
 interface FeaturedSpot {
@@ -155,36 +172,71 @@ export default function PilgrimageHubScreen() {
     () => initialSnapshot?.userLocation ?? null
   );
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<PilgrimageSortKey>(DEFAULT_PILGRIMAGE_SORT_KEY);
 
   const loading = collectionLoading || featuredLoading;
 
-  useEffect(() => {
-    let cancelled = false;
-    setCollectionLoading(!hasInitialCollection);
-    collectionPilgrimageService
-      .getEntries()
-      .then((entries) => {
-        if (cancelled) return;
-        const animes = entries
-          .map((e) => e.anime)
-          .filter((a): a is AnitabiBangumi => !!a)
-          .sort((a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0));
+  const refreshCollectionAnimes = useCallback(
+    async ({
+      isActive = () => true,
+      clearOnError = false,
+    }: {
+      isActive?: () => boolean;
+      clearOnError?: boolean;
+    } = {}): Promise<number | null> => {
+      try {
+        const entries = await collectionPilgrimageService.getEntries();
+        if (!isActive()) return null;
+        const { collectionAnimes: animes } = buildPilgrimageCollectionState(entries);
         setCollectionAnimes(animes);
         updatePilgrimageHubSnapshot({ collectionAnimes: animes });
-        setCollectionLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
+        return animes.length;
+      } catch (err: unknown) {
+        if (!isActive()) return null;
         // Collection failures shouldn't block the hub — featured backfill is
         // enough to render something useful.
         console.warn('[PilgrimageHub] collection load failed:', err);
-        if (!hasInitialCollection) setCollectionAnimes([]);
-        setCollectionLoading(false);
+        if (clearOnError) setCollectionAnimes([]);
+        return null;
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve()
+      .then(() =>
+        refreshCollectionAnimes({
+          isActive: () => !cancelled,
+          clearOnError: !hasInitialCollection,
+        })
+      )
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setCollectionLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [hasInitialCollection]);
+  }, [hasInitialCollection, refreshCollectionAnimes]);
+
+  const focusRefreshSeenRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusRefreshSeenRef.current) {
+        focusRefreshSeenRef.current = true;
+        return;
+      }
+      let active = true;
+      refreshCollectionAnimes({
+        isActive: () => active,
+      }).catch(() => undefined);
+      return () => {
+        active = false;
+      };
+    }, [refreshCollectionAnimes])
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -328,6 +380,37 @@ export default function PilgrimageHubScreen() {
     return out;
   }, [collectionAnimes, featuredAnimes, userLocation]);
 
+  // ─── My Collection rail (sortable, collection-only) ─────────────────────
+  // The user's own anime get a first-class rail above the discovery rails so
+  // they aren't buried among featured/88 cards. Distance is computed from the
+  // real fix only (Rule 8) — undefined per-anime when there's no location.
+  const hasLocation = !!userLocation;
+  const availableSortKeys = useMemo(() => resolvePilgrimageSortKeys(hasLocation), [hasLocation]);
+  const effectiveSortKey = resolveEffectivePilgrimageSortKey(sortKey, hasLocation);
+
+  const collectionDistanceKm = useMemo(() => {
+    const m = new Map<number, number>();
+    if (!userLocation) return m;
+    for (const anime of collectionAnimes) {
+      if (!isValidGeo(anime.geo)) continue;
+      const d = locationService.getDistanceKm(userLocation, {
+        latitude: anime.geo[0],
+        longitude: anime.geo[1],
+      });
+      if (Number.isFinite(d)) m.set(anime.id, d);
+    }
+    return m;
+  }, [collectionAnimes, userLocation]);
+
+  const sortedCollectionAnimes = useMemo(
+    () =>
+      sortPilgrimageAnimes(collectionAnimes, effectiveSortKey, {
+        distanceKmOf: (a) => collectionDistanceKm.get(a.id),
+        getTitle: (a) => getPilgrimageAnimeTitles(a).primary,
+      }),
+    [collectionAnimes, effectiveSortKey, collectionDistanceKm]
+  );
+
   const allSpots = useMemo<FeaturedSpot[]>(() => {
     const list: FeaturedSpot[] = [];
     for (const card of animeCards) {
@@ -418,6 +501,13 @@ export default function PilgrimageHubScreen() {
     router.push({ pathname: '/pilgrimage/map', params: { mode: 'list' } });
   }, [router]);
 
+  // My Collection "See all" lands directly on the See-all list pre-filtered to
+  // the collection (map.tsx reads the `filter` param to seed its hub filter).
+  const handleSeeAllCollection = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push({ pathname: '/pilgrimage/map', params: { mode: 'list', filter: 'collection' } });
+  }, [router]);
+
   // True fullscreen has to leave the Tabs container — pushing to a sibling
   // route registered with `tabBarStyle: { display: 'none' }` is the only way
   // to actually hide the bottom dock. Back from there returns to the hub.
@@ -435,7 +525,14 @@ export default function PilgrimageHubScreen() {
     });
   }, [nearestAnime, router]);
 
-  const popularList = useMemo(() => animeCards.slice(0, POPULAR_LIMIT), [animeCards]);
+  // Popular rail is pure discovery: collection now has its own rail above, so
+  // exclude collected anime here to avoid showing them twice. When the
+  // collection is empty, animeCards carries no `fromCollection` entries, so
+  // this is the previous featured-only behaviour unchanged.
+  const popularList = useMemo(
+    () => animeCards.filter((card) => !card.fromCollection).slice(0, POPULAR_LIMIT),
+    [animeCards]
+  );
 
   // Anime Tourism 88 rail. Sorted once at module import; the cover map is
   // rebuilt from anitabi-index (drops to placeholder when an entry isn't in
@@ -559,6 +656,44 @@ export default function PilgrimageHubScreen() {
             </View>
           ) : null}
 
+          {sortedCollectionAnimes.length > 0 ? (
+            <View style={styles.section}>
+              <SectionHeader
+                title={t('tabs.pilgrimageScreen.section.myCollection')}
+                count={sortedCollectionAnimes.length}
+                cta={t('tabs.pilgrimageScreen.section.seeAll')}
+                onCta={handleSeeAllCollection}
+                theme={theme}
+                accessory={
+                  <PilgrimageSortPill
+                    sortKey={effectiveSortKey}
+                    availableKeys={availableSortKeys}
+                    theme={theme}
+                    onSelect={setSortKey}
+                  />
+                }
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.popularRow}>
+                {sortedCollectionAnimes.map((anime) => (
+                  <PopularCard
+                    key={anime.id}
+                    anime={anime}
+                    visited={visited}
+                    accent={theme.accent}
+                    accentFg={accentFg}
+                    theme={theme}
+                    fromCollection={false}
+                    distanceKm={collectionDistanceKm.get(anime.id)}
+                    onPress={() => handleAnimePress(anime)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
           <Tourism88Rail
             entries={tourism88Entries}
             collectionBangumiIds={collectionBangumiIds}
@@ -570,11 +705,7 @@ export default function PilgrimageHubScreen() {
           {popularList.length > 0 ? (
             <View style={styles.section}>
               <SectionHeader
-                title={
-                  collectionAnimes.length > 0
-                    ? t('tabs.pilgrimageScreen.section.yourAnimesAndMore')
-                    : t('tabs.pilgrimageScreen.section.popularAnimes')
-                }
+                title={t('tabs.pilgrimageScreen.section.popularAnimes')}
                 cta={t('tabs.pilgrimageScreen.section.seeAll')}
                 onCta={handleSeeAllAnimes}
                 theme={theme}
@@ -768,32 +899,46 @@ function NearbyHero({
 
 function SectionHeader({
   title,
+  count,
   cta,
   onCta,
+  accessory,
   theme,
 }: {
   title: string;
+  count?: number;
   cta?: string;
   onCta?: () => void;
+  accessory?: ReactNode;
   theme: ThemePalette;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.sectionHeader}>
-      <ThemedText variant="titleMedium" weight="700">
-        {title}
-      </ThemedText>
-      {cta && onCta ? (
-        <Pressable
-          onPress={onCta}
-          hitSlop={10}
-          style={({ pressed }) => [styles.sectionCta, pressed && { opacity: 0.6 }]}>
-          <ThemedText variant="captionSmall" weight="500" tone="secondary">
-            {cta}
+      <View style={styles.sectionHeaderLeft}>
+        <ThemedText variant="titleMedium" weight="700">
+          {title}
+        </ThemedText>
+        {count !== undefined ? (
+          <ThemedText variant="bodySmall" weight="600" tone="tertiary">
+            {count}
           </ThemedText>
-          <Ionicons name="chevron-forward" size={12} color={theme.text.tertiary} />
-        </Pressable>
-      ) : null}
+        ) : null}
+      </View>
+      <View style={styles.sectionHeaderRight}>
+        {accessory}
+        {cta && onCta ? (
+          <Pressable
+            onPress={onCta}
+            hitSlop={10}
+            style={({ pressed }) => [styles.sectionCta, pressed && { opacity: 0.6 }]}>
+            <ThemedText variant="captionSmall" weight="500" tone="secondary">
+              {cta}
+            </ThemedText>
+            <Ionicons name="chevron-forward" size={12} color={theme.text.tertiary} />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -1067,7 +1212,10 @@ function makeStyles(theme: ThemePalette) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      gap: 10,
     },
+    sectionHeaderLeft: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1 },
+    sectionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     sectionCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
     popularRow: { gap: 12, paddingRight: 4 },
     popularCard: {
