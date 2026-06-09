@@ -5,6 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText } from '../../themed';
 import { CAMERA_TOP_BAR_CONTENT_HEIGHT } from '../../../libs/services/pilgrimage/camera-ui';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
+import { AlignmentRing } from './AlignmentRing';
 import type { AlignmentScoreView } from './types';
 
 interface AlignmentHUDProps {
@@ -95,7 +96,17 @@ export default function AlignmentHUD({
                 borderColor: aligned ? theme.status.success : CameraChrome.border,
               },
             ]}>
-            <Ionicons name={aligned ? 'checkmark-circle' : 'navigate'} size={13} color="#fff" />
+            {aligned ? (
+              <Ionicons name="checkmark-circle" size={15} color="#fff" />
+            ) : (
+              // Tiered ring (red < 50, orange 50–79, green ≥ 80) so framing
+              // reads at a glance; the solid-green check replaces it once locked.
+              <AlignmentRing
+                progress={score.total ?? 0}
+                theme={theme}
+                trackColor="rgba(255,255,255,0.22)"
+              />
+            )}
             <ThemedText
               variant="captionSmall"
               weight="700"
