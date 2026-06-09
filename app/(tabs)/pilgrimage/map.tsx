@@ -47,10 +47,6 @@ import {
 } from '../../../libs/services/pilgrimage/anime88-repository';
 import { getNumberParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import type {
-  HubMapMarker,
-  RegionBounds,
-} from '../../../libs/services/pilgrimage/map-engine/hub-marker';
 import { OFFICIAL_88_GOLD } from '../../../libs/services/pilgrimage/region-color';
 import {
   MapSurface,
@@ -59,7 +55,6 @@ import {
   type MapSurfaceHandle,
   type Viewport,
 } from '../../../components/pilgrimage/map';
-import { hubMarkerToMapMarker } from '../../../libs/services/pilgrimage/map-engine/normalize';
 import { CLUSTER_DISABLE_AT } from '../../../libs/services/pilgrimage/map-engine/cluster-style';
 import {
   loadMapStyleOverrideSync,
@@ -106,8 +101,8 @@ const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
 // regional view (not a city zoom): a region tap should let the user see "the
 // whole Kanto / whole Kyushu" before they drill into a specific anime.
 // Tokyo Metro is the 23-ward area so it stays distinct from the wider Kanto.
-// RegionBounds is the MapSurface fitBounds payload shape.
-const REGION_BOUNDS: Record<AnimeTourism88Region, RegionBounds> = {
+// BBox is the MapSurface fitBounds payload shape.
+const REGION_BOUNDS: Record<AnimeTourism88Region, BBox> = {
   hokkaido_tohoku: { south: 37.0, west: 139.4, north: 45.6, east: 146.0 },
   kanto: { south: 35.0, west: 138.7, north: 37.0, east: 141.0 },
   tokyo: { south: 35.5, west: 139.3, north: 35.9, east: 140.0 },
@@ -119,29 +114,29 @@ const REGION_BOUNDS: Record<AnimeTourism88Region, RegionBounds> = {
 
 // Whole-Japan bounding box — south of Yonaguni to north of Hokkaido.
 // Used when the user taps the "全日本" reset chip.
-const JAPAN_BOUNDS: RegionBounds = {
+const JAPAN_BOUNDS: BBox = {
   south: 24.0,
   west: 122.9,
   north: 45.6,
   east: 146.0,
 };
 
-function build88Markers(entries: readonly AnimeTourism88EntryWithCoords[]): HubMapMarker[] {
-  const out: HubMapMarker[] = [];
+function build88Markers(entries: readonly AnimeTourism88EntryWithCoords[]): MapMarker[] {
+  const out: MapMarker[] = [];
   for (const e of entries) {
     const bangumi = e.externalIds.bangumi;
     if (typeof bangumi !== 'number') continue;
     out.push({
-      markerId: `88:${e.id}`,
+      id: `88:${e.id}`,
+      kind: 'city88',
       bangumiId: bangumi,
       lat: e.lat,
       lng: e.lng,
-      cover: '',
+      image: '',
       title: e.titleEn || e.titleJa,
       city: `${e.prefecture ?? ''}${e.city}`,
       pointsLength: 0,
-      ringColor: OFFICIAL_88_GOLD,
-      is88: true,
+      color: OFFICIAL_88_GOLD,
       eightyEightId: e.id,
     });
   }
@@ -422,37 +417,35 @@ export default function PilgrimageMapScreen() {
   // in the sheet list).
   const official88Mode = hubFilter === 'official88';
 
-  const baseAnitabiMarkers = useMemo<HubMapMarker[]>(() => {
-    const out: HubMapMarker[] = [];
+  const baseAnitabiMarkers = useMemo<MapMarker[]>(() => {
+    const out: MapMarker[] = [];
     for (const entry of filteredEntries) {
       const anime = entry.anime;
       if (!isValidGeo(anime.geo)) continue;
       const titles = getPilgrimageAnimeTitles(anime);
       out.push({
-        markerId: `bgm:${anime.id}`,
+        id: `bgm:${anime.id}`,
+        kind: 'anime',
         bangumiId: anime.id,
         lat: anime.geo[0],
         lng: anime.geo[1],
-        cover: anime.cover ?? '',
+        image: anime.cover ?? '',
         title: titles.primary,
         city: anime.city ?? '',
         pointsLength: anime.pointsLength ?? 0,
-        ringColor: anime.color || theme.accent,
+        color: anime.color || theme.accent,
       });
     }
     return out;
   }, [filteredEntries, theme.accent]);
 
-  const markers = useMemo<HubMapMarker[]>(() => {
+  const markers = useMemo<MapMarker[]>(() => {
     if (!official88Mode) return baseAnitabiMarkers;
     const filtered = focusedRegion
       ? all88WithCoords.filter((e) => e.region === focusedRegion)
       : all88WithCoords;
     return build88Markers(filtered);
   }, [official88Mode, focusedRegion, all88WithCoords, baseAnitabiMarkers]);
-
-  // Engine-neutral markers fed to the inline MapSurface (1:1 from HubMapMarker).
-  const maplibreMarkers = useMemo<MapMarker[]>(() => markers.map(hubMarkerToMapMarker), [markers]);
 
   // Camera-fly request derived from focusedRegion + flyTick. Whole-Japan
   // when no region is focused; the region's bounds otherwise. flyTick
@@ -682,7 +675,7 @@ export default function PilgrimageMapScreen() {
         <View style={StyleSheet.absoluteFill} pointerEvents="auto">
           <MapSurface
             ref={mapRef}
-            markers={maplibreMarkers}
+            markers={markers}
             styleUrl={styleUrl}
             user={userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null}
             center={initialView.center}

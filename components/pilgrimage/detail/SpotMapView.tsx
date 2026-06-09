@@ -1,8 +1,8 @@
 // SpotMapView — the on-location pilgrimage detail map (MapLibre Native).
 // Memo'd so a chip-strip selection (a root state change) doesn't churn the map.
 // Markers, clustering, visited flips, heading and offline are handled natively
-// by the engine behind MapSurface; this surface just normalizes the spots and
-// forwards the imperative recenter/heading driven by the locate-FAB hook.
+// by the engine behind MapSurface; this surface maps spots into the shared map
+// marker model and forwards the locate-FAB recenter/heading handle.
 
 import { memo, useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -16,7 +16,6 @@ import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs
 import type { MapMarkerMode } from '../../../hooks/usePilgrimageDetailView';
 import { hasValidGeo } from './_helpers';
 import { MapSurface, type MapMarker, type MapSurfaceHandle } from '../map';
-import { sceneMarkerToMapMarker } from '../../../libs/services/pilgrimage/map-engine/normalize';
 import { CLUSTER_DISABLE_AT } from '../../../libs/services/pilgrimage/map-engine/cluster-style';
 import {
   loadMapStyleOverrideSync,
@@ -95,19 +94,18 @@ function SpotMapViewImpl({
     for (const spot of spots) {
       if (!hasValidGeo(spot.geo)) continue;
       spotsById.current.set(spot.id, spot);
-      out.push(
-        sceneMarkerToMapMarker({
-          id: spot.id,
-          lat: spot.geo[0],
-          lng: spot.geo[1],
-          title: getPilgrimageSpotTitles(spot).primary,
-          image: spot.image ?? '',
-          ep: spot.ep,
-          ringColor,
-          visited: visited[spot.id] === true,
-          markerMode: markerMode === 'dot' ? 'dot' : 'bubble',
-        })
-      );
+      out.push({
+        id: spot.id,
+        lat: spot.geo[0],
+        lng: spot.geo[1],
+        kind: 'spot',
+        title: getPilgrimageSpotTitles(spot).primary,
+        image: spot.image ?? '',
+        color: ringColor,
+        visited: visited[spot.id] === true,
+        episode: spot.ep,
+        markerMode: markerMode === 'dot' ? 'dot' : 'bubble',
+      });
     }
     return out;
   }, [spots, ringColor, markerMode, visited]);
