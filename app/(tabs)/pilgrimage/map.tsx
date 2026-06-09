@@ -537,6 +537,11 @@ export default function PilgrimageMapScreen() {
     router.back();
   }, [router]);
 
+  const handleGoToCollection = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/collection');
+  }, [router]);
+
   const handleMapLoadError = useCallback(() => setMapLoadFailed(true), []);
   const handleMapLoadSuccess = useCallback(() => setMapLoadFailed(false), []);
   const handleMapRetry = useCallback(() => {
@@ -874,6 +879,8 @@ export default function PilgrimageMapScreen() {
               themeColorFg={themeColorFg}
               theme={theme}
               searchQuery={searchQuery}
+              filterMode={hubFilter}
+              onGoToCollection={handleGoToCollection}
               initialIndex={initialSheetIndex}
               animatedPosition={sheetPosition}
               onSheetIndexChange={handleSheetIndexChange}

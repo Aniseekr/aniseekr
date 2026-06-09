@@ -24,8 +24,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../constants/DesignSystem';
-import { ON_DARK, ThemedText, readableTextOn } from '../themed';
+import { ON_DARK, ThemedButton, ThemedText, readableTextOn } from '../themed';
 import type { ThemePalette } from '../../context/ThemeContext';
+import { useT } from '../../libs/i18n';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
 import {
   formatPilgrimageSubtitle,
@@ -69,6 +70,11 @@ export interface PilgrimageHubSheetProps {
   theme: ThemePalette;
   /** Used to render the empty state ("no match for X"). */
   searchQuery: string;
+  /** Active hub filter — drives a tailored empty state (e.g. an empty
+   *  collection gets a "Go to Collection" CTA instead of a generic message). */
+  filterMode?: 'all' | 'collection' | 'official88';
+  /** Tap the empty-collection CTA → navigate to the Collection tab. */
+  onGoToCollection?: () => void;
   /** Initial bottom-sheet snap index: 1 = map-first, 2 = list-first. */
   initialIndex?: number;
   /** Shared value the sheet writes its top-edge Y to, so parent chrome can anchor to the sheet's edge. */
@@ -95,6 +101,8 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     themeColorFg,
     theme,
     searchQuery,
+    filterMode = 'all',
+    onGoToCollection,
     initialIndex = 1,
     animatedPosition,
     onSheetIndexChange,
@@ -103,6 +111,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     onExpandRequest,
   } = props;
 
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => [...SHEET_SNAPS], []);
@@ -231,14 +240,34 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     </View>
   );
 
+  const hasQuery = searchQuery.trim().length > 0;
+  // An empty *collection* filter is a dead end without a way out — surface a
+  // "Go to Collection" CTA so the user can add anime, rather than a generic
+  // "no anime" message (US-05).
+  const showCollectionCta = filterMode === 'collection' && !hasQuery && !!onGoToCollection;
   const emptyNode = (
     <View style={styles.emptyCard}>
-      <MaterialIcons name="explore-off" size={32} color={theme.text.tertiary} />
+      <MaterialIcons
+        name={showCollectionCta ? 'bookmark-border' : 'explore-off'}
+        size={32}
+        color={theme.text.tertiary}
+      />
       <ThemedText variant="bodyMedium" tone="secondary" align="center">
-        {searchQuery.trim().length > 0
-          ? `No anime match "${searchQuery.trim()}".`
-          : 'No nearby anime yet. Try panning the map to a different region.'}
+        {hasQuery
+          ? t('pilgrimage.map.emptySearch', { query: searchQuery.trim() })
+          : showCollectionCta
+            ? t('pilgrimage.map.emptyCollection')
+            : t('pilgrimage.map.emptyNearby')}
       </ThemedText>
+      {showCollectionCta ? (
+        <ThemedButton
+          label={t('pilgrimage.map.goToCollection')}
+          size="sm"
+          variant="secondary"
+          onPress={onGoToCollection}
+          style={{ marginTop: Spacing.sm }}
+        />
+      ) : null}
     </View>
   );
 
@@ -280,6 +309,8 @@ function areEqual(prev: PilgrimageHubSheetProps, next: PilgrimageHubSheetProps):
     prev.themeColorFg === next.themeColorFg &&
     prev.theme === next.theme &&
     prev.searchQuery === next.searchQuery &&
+    prev.filterMode === next.filterMode &&
+    prev.onGoToCollection === next.onGoToCollection &&
     prev.initialIndex === next.initialIndex &&
     prev.animatedPosition === next.animatedPosition &&
     prev.onSheetIndexChange === next.onSheetIndexChange &&
