@@ -98,6 +98,8 @@ import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
 import { useExposureBracket } from '../../../../hooks/useExposureBracket';
 import { useSceneAnalyzer } from '../../../../hooks/useSceneAnalyzer';
+import { probeHdrFusionSupport } from '../../../../libs/services/pilgrimage/composite-hdr';
+import { useT } from '../../../../libs/i18n';
 import { useAutoCapture } from '../../../../hooks/useAutoCapture';
 import { useCaptureSession } from '../../../../hooks/useCaptureSession';
 import {
@@ -194,6 +196,7 @@ export default function CompareCaptureScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const params = useLocalSearchParams<CameraRouteParams>();
   const { spotId = '', imageUrl = '', name = 'Scene', ep, animeId, animeTitle = '' } = params;
   const themeColor = params.themeColor || theme.accent;
@@ -534,6 +537,15 @@ export default function CompareCaptureScreen() {
   // the live scene actually clips enough to benefit. Drives the capture-mode
   // toast and the 'hdr' shot label only; it does NOT gate the constraint.
   const realHdrTargeted = autoHdrSessionArmed && sceneAnalyzer.hdrRecommended;
+  // Probe the SkSL HDR-fusion shader once, off the first-paint path. With
+  // neither native PhotoHDR nor a working GPU shader, auto-mode HDR runs on the
+  // CPU fallback (real fusion, but basic) — surface that honestly so the
+  // "AUTO · HDR" badge never overstates what the hardware delivers (Rule 8).
+  const [hdrGpuSupported, setHdrGpuSupported] = useState<boolean | null>(null);
+  useEffect(() => {
+    setHdrGpuSupported(probeHdrFusionSupport());
+  }, []);
+  const hdrIsBasic = hdrGpuSupported === false && !(deviceInfo?.supportsPhotoHdr ?? false);
 
   const burst = useBurstCapture({
     engineRef: cameraRef,
@@ -1529,6 +1541,14 @@ export default function CompareCaptureScreen() {
               },
             ]}>
             <View
+              accessible
+              accessibilityLabel={
+                sceneAnalyzer.hdrRecommended && hdrIsBasic
+                  ? t('pilgrimage.camera.hdrBasicA11y')
+                  : sceneAnalyzer.hdrRecommended
+                    ? 'AUTO HDR'
+                    : 'AUTO'
+              }
               style={[
                 styles.autoModeBadge,
                 {
@@ -1536,6 +1556,9 @@ export default function CompareCaptureScreen() {
                   backgroundColor: sceneAnalyzer.hdrRecommended ? themeColor : 'rgba(0,0,0,0.55)',
                 },
               ]}>
+              {sceneAnalyzer.hdrRecommended && hdrIsBasic ? (
+                <Ionicons name="alert-circle" size={12} color={readableTextOn(themeColor)} />
+              ) : null}
               <ThemedText
                 variant="captionSmall"
                 weight="700"
@@ -1774,6 +1797,9 @@ const styles = StyleSheet.create({
   autoBadgeWrap: { position: 'absolute', alignItems: 'center', zIndex: 60 },
   autoModeBadgeWrap: { position: 'absolute', zIndex: 66 },
   autoModeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,

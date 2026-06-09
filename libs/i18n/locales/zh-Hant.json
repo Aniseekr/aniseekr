@@ -1047,6 +1047,9 @@
       "title": "巡禮相簿",
       "weeksAgo": "{count} 週前"
     },
+    "camera": {
+      "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）"
+    },
     "detail": {
       "browseFallback": "瀏覽",
       "clearSearchA11y": "清除搜尋",

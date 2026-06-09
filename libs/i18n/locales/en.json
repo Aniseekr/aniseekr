@@ -1047,6 +1047,9 @@
       "title": "Pilgrimage Album",
       "weeksAgo": "{count}w ago"
     },
+    "camera": {
+      "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)"
+    },
     "detail": {
       "browseFallback": "Browse",
       "clearSearchA11y": "Clear search",

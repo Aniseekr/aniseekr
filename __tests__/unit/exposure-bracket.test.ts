@@ -24,7 +24,7 @@ mock.module('../../libs/services/pilgrimage/composite-hdr', () => ({
   }) => {
     compositeCalls.push({ frameUris: input.frameUris, evStops: input.evStops });
     // Return a composite URI distinct from the mid frame so wasHdr === true.
-    return { uri: 'file://composite.jpg', width: 4000, height: 3000 };
+    return { uri: 'file://composite.jpg', width: 4000, height: 3000, path: 'gpu' };
   },
 }));
 

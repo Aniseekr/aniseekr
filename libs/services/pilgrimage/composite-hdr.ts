@@ -74,6 +74,21 @@ export interface CompositeHdrResult {
   uri: string;
   width: number;
   height: number;
+  // Which path actually produced this result — surfaced so the UI never claims
+  // full HDR when the device silently fell back (Rule 8).
+  //   'gpu'         — SkSL Mertens fusion (full quality)
+  //   'cpu'         — scalar weighted fallback (basic, but real fusion)
+  //   'passthrough' — decode/surface/encode failed; this is the mid frame, no HDR
+  path: 'gpu' | 'cpu' | 'passthrough';
+}
+
+/**
+ * Whether this device can run the SkSL HDR-fusion shader. Triggers (and caches)
+ * the one-time RuntimeEffect compile, so callers can show an honest "basic HDR"
+ * indicator up front instead of discovering the CPU fallback only after a shot.
+ */
+export function probeHdrFusionSupport(): boolean {
+  return getFusionEffect() !== null;
 }
 
 export const DEFAULT_EV_STOPS: [number, number, number] = [
@@ -339,7 +354,12 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
   const exif = input.exif;
   const midUri = frameUris[MID_INDEX];
 
-  async function withExif(uri: string, width: number, height: number): Promise<CompositeHdrResult> {
+  async function withExif(
+    uri: string,
+    width: number,
+    height: number,
+    path: CompositeHdrResult['path'] = 'passthrough'
+  ): Promise<CompositeHdrResult> {
     if (exif && typeof exif === 'object') {
       try {
         await embedExifIntoJpegFile(uri, exif);
@@ -347,7 +367,7 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
         console.warn('[compositeHdr] EXIF embed failed', embedError);
       }
     }
-    return { uri, width, height };
+    return { uri, width, height, path };
   }
 
   const decoded: (SkImage | null)[] = [null, null, null];
@@ -396,12 +416,14 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
       return withExif(midUri, 0, 0);
     }
 
+    let fusionPath: 'gpu' | 'cpu' = 'cpu';
     const effect = getFusionEffect();
     if (effect) {
       const drawn = drawShaderFusion(effect, surface, width, height, [underImg, midImg, overImg], alignment);
       if (drawn) {
         fusedPaint = drawn.paint;
         fusedShaders = drawn.shaders;
+        fusionPath = 'gpu';
       } else {
         console.warn('[compositeHdr] shader path unavailable, using CPU-weight fallback');
         cpuPaints = drawCpuFallback(surface, [underImg, midImg, overImg], alignment);
@@ -425,7 +447,7 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
     file.create();
     file.write(jpegBytes);
 
-    return withExif(file.uri, width, height);
+    return withExif(file.uri, width, height, fusionPath);
   } catch (error) {
     console.warn('[compositeHdr]', error);
     return withExif(midUri, 0, 0);
