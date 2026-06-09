@@ -4,7 +4,15 @@
 // platform-specific share intent (or the OS share sheet) delivers.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View, useWindowDimensions } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,11 +71,13 @@ import {
   type ShareIntentResult,
   type SharePlatform,
 } from '../../../../libs/services/pilgrimage/share-intents';
+import { useT } from '../../../../libs/i18n';
 
 export default function ShareComparisonScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const params = useLocalSearchParams();
   const { width: winW } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -271,10 +281,45 @@ export default function ShareComparisonScreen() {
         return;
       }
       const result = savedShare.result;
+      // Targeted app isn't installed — don't silently bounce to a generic
+      // sheet. Tell the user (photo is already saved + caption copied) and
+      // offer an explicit "share another way" path.
+      if (result.delivered === 'app-missing') {
+        const appName = result.platform === 'line' ? 'LINE' : 'Instagram';
+        Alert.alert(
+          t('pilgrimage.share.appMissingTitle', { app: appName }),
+          t('pilgrimage.share.appMissingBody', { app: appName }),
+          [
+            {
+              text: t('pilgrimage.share.shareAnotherWay'),
+              onPress: () => {
+                shareToSystem({ imageUri: savedShare.uri, caption })
+                  .then((r) => {
+                    const txt = describeShareResult(r);
+                    if (txt) flashToast(txt);
+                  })
+                  .catch(() => undefined);
+              },
+            },
+            { text: t('common.ok'), style: 'cancel' },
+          ]
+        );
+        return;
+      }
       const toastText = describeShareResult(result);
       if (toastText) flashToast(toastText);
     },
-    [ensureMediaPerm, captureCard, sceneName, animeTitle, ep, matchScore, locationText, flashToast]
+    [
+      ensureMediaPerm,
+      captureCard,
+      sceneName,
+      animeTitle,
+      ep,
+      matchScore,
+      locationText,
+      flashToast,
+      t,
+    ]
   );
 
   return (

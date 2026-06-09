@@ -1107,6 +1107,11 @@
       "loadFailed": "Some seasons couldn't load",
       "loadFailedRetryA11y": "Couldn't load all seasons — tap to retry"
     },
+    "share": {
+      "appMissingBody": "{app} isn't installed. Your photo is saved to Photos and the caption is copied.",
+      "appMissingTitle": "{app} not installed",
+      "shareAnotherWay": "Share another way"
+    },
     "sort": {
       "by": "Sort by",
       "changeA11y": "Change sort order",

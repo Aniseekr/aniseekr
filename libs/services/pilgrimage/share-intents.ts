@@ -54,9 +54,30 @@ export type ShareIntentInput = {
 
 export type ShareIntentResult = {
   platform: SharePlatform;
-  delivered: 'native' | 'web' | 'sheet' | 'failed';
+  // 'app-missing': the targeted app (Instagram/LINE) isn't installed, so the
+  // screen prompts the user instead of silently bouncing to a generic sheet.
+  delivered: 'native' | 'web' | 'sheet' | 'failed' | 'app-missing';
   captionCopied: boolean;
 };
+
+// URL schemes probed to tell whether a target app is installed. Requires the
+// scheme to be whitelisted under iOS `LSApplicationQueriesSchemes` (app.json) —
+// without it, canOpenURL always returns false and we'd falsely claim "not
+// installed". twitter/system have no specific app to probe (they go to the sheet).
+const APP_PROBE_SCHEMES: Partial<Record<SharePlatform, string>> = {
+  instagram: 'instagram://app',
+  line: 'line://',
+};
+
+async function isPlatformAppInstalled(platform: SharePlatform): Promise<boolean> {
+  const scheme = APP_PROBE_SCHEMES[platform];
+  if (!scheme) return true;
+  try {
+    return await Linking.canOpenURL(scheme);
+  } catch {
+    return false;
+  }
+}
 
 export type SavedImageShareResult<T> =
   | { status: 'shared'; uri: string; result: T }
@@ -150,6 +171,12 @@ async function fallbackShareSheet({
 
 export async function shareToInstagram(input: ShareIntentInput): Promise<ShareIntentResult> {
   const captionCopied = await copyCaption(input.caption);
+  // Instagram not installed → tell the user explicitly (and the screen offers
+  // "share another way") rather than silently opening a generic sheet they
+  // didn't ask for. Caption is already on the clipboard, image saved to Photos.
+  if (!(await isPlatformAppInstalled('instagram'))) {
+    return { platform: 'instagram', delivered: 'app-missing', captionCopied };
+  }
   // Opening the Stories camera so the user can pick the saved image from the
   // gallery roll. There is no public URL scheme that attaches a file directly.
   const opened =
@@ -167,6 +194,9 @@ export async function shareToTwitter(input: ShareIntentInput): Promise<ShareInte
 
 export async function shareToLine(input: ShareIntentInput): Promise<ShareIntentResult> {
   const captionCopied = await copyCaption(input.caption);
+  if (!(await isPlatformAppInstalled('line'))) {
+    return { platform: 'line', delivered: 'app-missing', captionCopied };
+  }
   const sheet = await fallbackShareSheet(input);
   return { platform: 'line', delivered: sheet, captionCopied };
 }

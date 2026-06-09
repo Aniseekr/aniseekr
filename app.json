@@ -166,6 +166,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "kidneyweakx.aniseeker",
       "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "instagram",
+          "instagram-stories",
+          "line"
+        ],
         "NSLocationWhenInUseUsageDescription": "AniSeekr uses your location to surface nearby anime pilgrimage spots.",
         "NSPhotoLibraryUsageDescription": "AniSeekr needs access to your photos so you can pick a profile picture.",
         "NSPhotoLibraryAddUsageDescription": "AniSeekr saves pilgrimage comparison photos to your library so you can share them later.",
