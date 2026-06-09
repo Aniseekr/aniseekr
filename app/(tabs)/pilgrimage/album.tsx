@@ -11,7 +11,7 @@
 // and no fake spot-specific data (placeholders fall back to generic copy).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -22,6 +22,7 @@ import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../components/themed';
 import { Shadow, Spacing } from '../../../constants/DesignSystem';
 import {
+  clearCapture,
   loadCapturesSync,
   type PilgrimageCapture,
 } from '../../../libs/services/pilgrimage/captures';
@@ -300,6 +301,39 @@ export default function PilgrimageAlbumScreen() {
       });
     },
     [router, theme.accent]
+  );
+
+  const handleDeleteEntry = useCallback(
+    (entry: AlbumEntry) => {
+      hapticsBridge.warning();
+      const spotTitles = getPilgrimageSpotTitles(entry.spot);
+      Alert.alert(
+        t('pilgrimage.album.deleteTitle'),
+        t('pilgrimage.album.deleteBody', { title: spotTitles.primary }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('pilgrimage.album.deleteConfirm'),
+            style: 'destructive',
+            onPress: () => {
+              const { spotId } = entry.capture;
+              // Optimistically drop it from the rendered set; clearCapture
+              // persists the removal to MMKV.
+              setCaptures((prev) => {
+                if (!(spotId in prev)) return prev;
+                const next = { ...prev };
+                delete next[spotId];
+                return next;
+              });
+              clearCapture(spotId).catch((err) => {
+                console.warn('[PilgrimageAlbum] delete failed:', err);
+              });
+            },
+          },
+        ]
+      );
+    },
+    [t]
   );
 
   const handleOpenFolder = useCallback((folder: FolderGroup) => {
@@ -638,6 +672,7 @@ export default function PilgrimageAlbumScreen() {
                         theme={theme}
                         heightVariant={i % 3}
                         onPress={() => handleEntryPress(entry)}
+                        onDelete={() => handleDeleteEntry(entry)}
                       />
                     ))}
                   </View>
@@ -649,6 +684,7 @@ export default function PilgrimageAlbumScreen() {
                         theme={theme}
                         heightVariant={(i + 1) % 3}
                         onPress={() => handleEntryPress(entry)}
+                        onDelete={() => handleDeleteEntry(entry)}
                       />
                     ))}
                   </View>
@@ -982,11 +1018,13 @@ function CompareCard({
   theme,
   heightVariant,
   onPress,
+  onDelete,
 }: {
   entry: AlbumEntry;
   theme: ThemePalette;
   heightVariant: number;
   onPress: () => void;
+  onDelete?: () => void;
 }) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -999,8 +1037,11 @@ function CompareCard({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onDelete}
+      delayLongPress={350}
       accessibilityRole="button"
       accessibilityLabel={t('pilgrimage.album.compareA11y', { title: spotTitles.primary })}
+      accessibilityHint={onDelete ? t('pilgrimage.album.deleteHint') : undefined}
       style={({ pressed }) => [
         styles.compareCard,
         {
