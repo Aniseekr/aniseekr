@@ -123,4 +123,10 @@ export interface MapSurfaceProps {
   /** Fired the moment the user drags/pinches (drops follow/compass). */
   onPanned?: () => void;
   onBoundsChange?: (box: BBox, viewport?: Viewport) => void;
+  /** Base map (style/tiles) failed to load — usually offline with no cached
+   *  tiles for the area. Lets the screen show an empty state + retry instead of
+   *  a silent blank map. */
+  onLoadError?: () => void;
+  /** Base map finished loading — clears any prior load-error state. */
+  onLoadSuccess?: () => void;
 }

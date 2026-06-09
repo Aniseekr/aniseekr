@@ -55,6 +55,7 @@ import {
   type MapSurfaceHandle,
   type Viewport,
 } from '../../../components/pilgrimage/map';
+import { MapOfflineOverlay } from '../../../components/pilgrimage/MapOfflineOverlay';
 import { CLUSTER_DISABLE_AT } from '../../../libs/services/pilgrimage/map-engine/cluster-style';
 import {
   loadMapStyleOverrideSync,
@@ -283,6 +284,10 @@ export default function PilgrimageMapScreen() {
   const [listLayout, setListLayout] = useState<'grid' | 'rows'>('rows');
   const [focusedRegion, setFocusedRegion] = useState<AnimeTourism88Region | null>(null);
   const [flyTick, setFlyTick] = useState(0);
+  // Base-map load failure (offline + no cached tiles). `mapReloadKey` remounts
+  // the GL surface so "Retry" actually re-attempts the style fetch.
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
+  const [mapReloadKey, setMapReloadKey] = useState(0);
 
   // Track which anime should be in the swap-able focused card. We persist the
   // bangumi id (not the index) so the swap behaviour survives list re-sorts.
@@ -532,6 +537,14 @@ export default function PilgrimageMapScreen() {
     router.back();
   }, [router]);
 
+  const handleMapLoadError = useCallback(() => setMapLoadFailed(true), []);
+  const handleMapLoadSuccess = useCallback(() => setMapLoadFailed(false), []);
+  const handleMapRetry = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setMapLoadFailed(false);
+    setMapReloadKey((k) => k + 1);
+  }, []);
+
   const handleOpenAlbum = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/pilgrimage/album');
@@ -679,6 +692,7 @@ export default function PilgrimageMapScreen() {
             layer bled through on back-navigation. */}
         <View style={StyleSheet.absoluteFill} pointerEvents="auto">
           <MapSurface
+            key={mapReloadKey}
             ref={mapRef}
             markers={markers}
             styleUrl={styleUrl}
@@ -691,8 +705,12 @@ export default function PilgrimageMapScreen() {
             }}
             onBoundsChange={handleMapBoundsChange}
             onPanned={onUserPan}
+            onLoadError={handleMapLoadError}
+            onLoadSuccess={handleMapLoadSuccess}
           />
         </View>
+
+        {mapLoadFailed ? <MapOfflineOverlay onRetry={handleMapRetry} /> : null}
 
         {loading ? (
           <View style={styles.loadingBox}>

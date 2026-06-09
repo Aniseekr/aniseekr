@@ -71,6 +71,8 @@ export function MapLibreEngine({
   onClusterPress,
   onPanned,
   onBoundsChange,
+  onLoadError,
+  onLoadSuccess,
   ref,
 }: MapSurfaceProps & { ref?: Ref<MapSurfaceHandle> }) {
   const cameraRef = useRef<CameraRef>(null);
@@ -180,7 +182,11 @@ export function MapLibreEngine({
           if (e.nativeEvent.userInteraction) onPanned?.();
         }}
         onRegionDidChange={scheduleViewportRefresh}
-        onDidFinishLoadingMap={() => void refreshViewport()}>
+        onDidFinishLoadingMap={() => {
+          onLoadSuccess?.();
+          void refreshViewport();
+        }}
+        onDidFailLoadingMap={() => onLoadError?.()}>
         {/* initialViewState applies once; later moves go through the handle so
             marker/user re-renders never snap the viewport back (Rule 9). */}
         <Camera ref={cameraRef} initialViewState={{ center: initialCenter, zoom }} />

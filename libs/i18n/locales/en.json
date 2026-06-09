@@ -1099,6 +1099,8 @@
       "locationPromptOpenSettings": "Open Settings",
       "locationPromptTitle": "Show scenes near you",
       "mapLoadError": "Couldn't load the map.",
+      "offlineBody": "You're offline or the connection dropped. Check your network and try again — areas you've already viewed still work offline.",
+      "offlineTitle": "Can't load the map",
       "openAlbumA11y": "Open pilgrimage album",
       "searchA11y": "Search anime",
       "searchPlaceholder": "Search anime or city",

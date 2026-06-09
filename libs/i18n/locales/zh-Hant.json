@@ -1099,6 +1099,8 @@
       "locationPromptOpenSettings": "開啟設定",
       "locationPromptTitle": "顯示你附近的場景",
       "mapLoadError": "無法載入地圖。",
+      "offlineBody": "你目前離線或連線中斷。請檢查網路後重試 — 已瀏覽過的區域仍可離線使用。",
+      "offlineTitle": "無法載入地圖",
       "openAlbumA11y": "開啟巡禮相簿",
       "searchA11y": "搜尋動畫",
       "searchPlaceholder": "搜尋動畫或城市",
