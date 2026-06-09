@@ -1,18 +1,17 @@
 // Engine-neutral data model + surface contract for the pilgrimage map.
 //
-// The three map surfaces (hub fullscreen, reusable detail map, spot detail map)
-// share this single vocabulary so screens stay decoupled from the concrete
-// MapLibre Native renderer. See the MapLibre migration spec §4-§5.
+// The map surfaces (hub fullscreen and spot-detail map) share this single
+// vocabulary so screens stay decoupled from the concrete MapLibre Native
+// renderer.
 //
-// Pure types only — no runtime, no engine import. Verified by `tsc`.
-import type * as React from 'react';
+// Pure types only — no runtime, no engine import.
 
 export interface LatLng {
   lat: number;
   lng: number;
 }
 
-/** Geographic bounding box (matches the existing `RegionBounds` field names). */
+/** Geographic bounding box used by map camera fit requests. */
 export interface BBox {
   north: number;
   south: number;
@@ -30,10 +29,8 @@ export type MapMarkerKind = 'anime' | 'spot' | 'city88';
 export type MapMarkerMode = 'bubble' | 'dot';
 
 /**
- * One marker, engine-neutral. A faithful superset of today's `HubMapMarker`
- * (anime balloons + Tourism-88 pins) and the spot-detail scene marker. Adapters
- * map this to/from their engine's native marker. Kind-specific fields are
- * optional and only set for the relevant `kind`.
+ * One marker consumed by MapSurface. Kind-specific fields are optional and only
+ * set for the relevant `kind`.
  */
 export interface MapMarker {
   /** Unique within a marker set (e.g. "bgm:<id>", "88:<entryId>", spot id). */
@@ -102,8 +99,7 @@ export interface MapSurfaceHandle {
   updateVisited?: (ids: readonly string[]) => void;
 }
 
-/** Engine-neutral props every surface accepts. (The `engine` selector lives on
- *  `MapSurfaceComponentProps`, not here — these props are engine-agnostic.) */
+/** Props every map surface accepts. */
 export interface MapSurfaceProps {
   markers: readonly MapMarker[];
   routes?: readonly MapRoute[];
@@ -114,7 +110,7 @@ export interface MapSurfaceProps {
   /** Default rendering for markers that don't carry their own `markerMode`. */
   markerMode?: MapMarkerMode;
   visitedIds?: readonly string[];
-  /** Zoom at which clustering stops (Leaflet `disableClusteringAtZoom`); per-surface. */
+  /** Zoom at which clustering stops; configured per surface. */
   clusterDisableAtZoom?: number;
   /** Style/source URL (resolved via `map-source-prefs.resolveMapStyleUrl`). */
   styleUrl?: string;
@@ -128,12 +124,3 @@ export interface MapSurfaceProps {
   onPanned?: () => void;
   onBoundsChange?: (box: BBox, viewport?: Viewport) => void;
 }
-
-/**
- * The contract each engine adapter satisfies: a forwardRef component taking
- * `MapSurfaceProps` and exposing a `MapSurfaceHandle`. (Declared structurally
- * here; adapters implement it as React components.)
- */
-export type MapEngineComponent = React.ForwardRefExoticComponent<
-  MapSurfaceProps & React.RefAttributes<MapSurfaceHandle>
->;

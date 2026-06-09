@@ -31,7 +31,7 @@ export interface AnitabiIndexEntry {
   lat: number;
   /** Longitude of the anime's pilgrimage centre. */
   lng: number;
-  /** Recommended Leaflet zoom level (rounded to 1 decimal). */
+  /** Recommended map zoom level (rounded to 1 decimal). */
   zoom: number;
   /** Total point count across the anime (`pointsLength` from `/lite`). */
   pointsLength: number;
@@ -124,7 +124,7 @@ export function subscribeAnitabiIndex(listener: () => void): () => void {
   };
 }
 
-/** Map bounding box (Leaflet-style: north > south, east > west except across antimeridian). */
+/** Map bounding box (north > south, east > west except across antimeridian). */
 export interface BoundingBox {
   north: number;
   south: number;

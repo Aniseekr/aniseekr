@@ -10,7 +10,7 @@ import { markersToFeatureCollection } from './feature-collection';
 import { CLUSTER_RADIUS_PX, dominantColor } from './cluster-style';
 import { bboxToBounds } from './viewport';
 
-/** Leaflet's default ring colour, used when a cluster has no colour tally. */
+/** Default marker colour, used when a cluster has no colour tally. */
 const FALLBACK_COLOR = '#FF9F0A';
 
 type LeafProps = { id: string; kind: string; color: string; visited: number };

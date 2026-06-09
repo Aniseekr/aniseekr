@@ -1,10 +1,9 @@
-// Per-kind marker visual spec, ported from the Leaflet divIcon HTML in
-// SpotMapView (spot bubble/dot, EP badge, visited flip) and HubMapWebView (anime
-// balloon + points badge, Tourism-88 gold pin + star + #id). Pure resolver so the
-// MapLibre NativeMapMarker renders identical geometry without a native render.
+// Per-kind marker visual spec for MapLibre's native marker views. Pure resolver
+// so NativeMapMarker can keep geometry, badges, and visited styling unit-tested
+// without a native render.
 import type { MapMarker, MapMarkerMode } from './types';
 
-/** Leaflet visited-state green (border/tail/badge turn this colour). */
+/** Visited-state green (border/tail/badge turn this colour). */
 export const VISITED_COLOR = '#34A853';
 
 export type MarkerShape = 'balloon' | 'dot' | 'gold88';
@@ -30,8 +29,7 @@ export interface MarkerVisual {
   showStar: boolean;
 }
 
-// iconSize/iconAnchor from the Leaflet markers ([48,57]@[24,57], [24,24]@[12,12],
-// [36,45]@[18,45]) → MapLibre string anchors.
+// Marker geometry constants mapped to MapLibre string anchors.
 const BALLOON = { width: 48, height: 57, anchor: 'bottom' as const };
 const DOT = { width: 24, height: 24, anchor: 'center' as const };
 const GOLD88 = { width: 36, height: 45, anchor: 'bottom' as const };

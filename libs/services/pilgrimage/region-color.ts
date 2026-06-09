@@ -22,7 +22,7 @@ const CITY_PALETTE: readonly string[] = [
 
 // Tourism-88 selection mark colour — picked for "official certification"
 // connotation (vs. theme.accent which can drift between user themes). Brand-pure
-// like the palette above. (Re-homed out of the deleted Leaflet HubMapWebView.)
+// like the palette above.
 export const OFFICIAL_88_GOLD = '#D4AF37';
 
 export function cityToColor(city: string | null | undefined, fallback: string): string {

@@ -1,20 +1,19 @@
-// Cluster visual rules for the MapLibre engine, ported verbatim from the Leaflet
-// `__makeClusterGroup` (libs/services/pilgrimage/leaflet-map.ts). Pure functions,
-// unit-tested, so the supercluster-backed bubbles match today's dot/numbered look
-// and tap behaviour. (supercluster clusters with a single pixel radius rather than
-// Leaflet's per-zoom curve, so CLUSTER_RADIUS_PX is one representative value; the
-// dot-vs-bubble + size + label rules below are the faithful, user-visible part.)
+// Cluster visual rules for the MapLibre engine. Pure functions, unit-tested, so
+// the supercluster-backed bubbles keep dot/numbered rendering and tap behaviour
+// stable. Supercluster clusters with one pixel radius, so CLUSTER_RADIUS_PX is a
+// representative value; the dot-vs-bubble + size + label rules are the visible
+// contract.
 
-/** Representative supercluster cluster radius in px (≈ Leaflet's 38–50 mid-zoom band). */
+/** Representative supercluster cluster radius in px. */
 export const CLUSTER_RADIUS_PX = 48;
 
 /** Clusters bigger than this open the picker sheet; bigger ones zoom in instead. */
 export const CLUSTER_PICKER_THRESHOLD = 12;
 
-/** `disableClusteringAtZoom` per surface (Leaflet defaults). */
+/** Zoom at which clustering stops per surface. */
 export const CLUSTER_DISABLE_AT = { spot: 16, hub: 12, hubSpot: 15, default: 14 } as const;
 
-/** supercluster `maxZoom` reproduces Leaflet's `disableClusteringAtZoom`. */
+/** supercluster `maxZoom` is one below the surface disable-at zoom. */
 export function clusterMaxZoom(disableAt: number): number {
   return disableAt - 1;
 }
