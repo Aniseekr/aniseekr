@@ -1103,6 +1103,10 @@
       "viewModeMyLocation": "My location",
       "wholeJapanA11y": "View whole Japan"
     },
+    "series": {
+      "loadFailed": "Some seasons couldn't load",
+      "loadFailedRetryA11y": "Couldn't load all seasons — tap to retry"
+    },
     "sort": {
       "by": "Sort by",
       "changeA11y": "Change sort order",

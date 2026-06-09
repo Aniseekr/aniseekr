@@ -35,6 +35,11 @@ export interface PilgrimageSeriesResult {
   entries: PilgrimageSeriesEntry[];
   availableEntries: PilgrimageSeriesEntry[];
   unavailableEntries: PilgrimageSeriesEntry[];
+  /** True when the Bangumi relations couldn't be fetched, so the series list
+   *  may be incomplete (e.g. only the seed season resolved). Surfaced as an
+   *  honest "couldn't load all seasons" warning instead of silently pretending
+   *  the work is single-season. */
+  degraded: boolean;
 }
 
 interface BangumiRelatedClient {
@@ -98,10 +103,12 @@ export async function resolvePilgrimageSeries(
     const anime = await anitabi.getAnimePilgrimage(seedId).catch(() => null);
     const fallbackSubject = subjectFromAnimeOrId(seedId, anime);
     const entry = buildSeriesEntry(fallbackSubject, '原作', anime, 0, 0);
-    return buildSeriesResult(seedId, [entry]);
+    // Couldn't even fetch the seed subject — definitely couldn't enumerate the
+    // series, so flag it degraded rather than presenting one season as the whole.
+    return buildSeriesResult(seedId, [entry], true);
   }
 
-  const candidates = await collectRelatedCandidates(seedSubject, {
+  const { candidates, rootRelationsFailed } = await collectRelatedCandidates(seedSubject, {
     bangumiClient,
     maxDepth,
     maxSubjects,
@@ -115,7 +122,7 @@ export async function resolvePilgrimageSeries(
     })
   );
 
-  return buildSeriesResult(seedId, anitabiEntries);
+  return buildSeriesResult(seedId, anitabiEntries, rootRelationsFailed);
 }
 
 export function shouldIncludeRelatedSubjectInSeries(
@@ -179,10 +186,11 @@ async function collectRelatedCandidates(
     maxDepth: number;
     maxSubjects: number;
   }
-): Promise<CandidateSubject[]> {
+): Promise<{ candidates: CandidateSubject[]; rootRelationsFailed: boolean }> {
   const seen = new Map<number, CandidateSubject>();
   seen.set(seed.id, { subject: seed, relation: '原作', depth: 0 });
   const queue: CandidateSubject[] = [{ subject: seed, relation: '原作', depth: 0 }];
+  let rootRelationsFailed = false;
 
   while (queue.length > 0 && seen.size < options.maxSubjects) {
     const current = queue.shift();
@@ -192,6 +200,10 @@ async function collectRelatedCandidates(
     try {
       related = await options.bangumiClient.getRelatedSubjects(current.subject.id);
     } catch {
+      // A failed fetch on the seed itself means we couldn't enumerate the
+      // series at all (no sequels/prequels discovered). Deeper-node failures
+      // still leave the primary series intact, so only the root counts.
+      if (current.subject.id === seed.id) rootRelationsFailed = true;
       continue;
     }
 
@@ -211,12 +223,13 @@ async function collectRelatedCandidates(
     }
   }
 
-  return [...seen.values()];
+  return { candidates: [...seen.values()], rootRelationsFailed };
 }
 
 function buildSeriesResult(
   seedId: number,
-  entries: PilgrimageSeriesEntry[]
+  entries: PilgrimageSeriesEntry[],
+  degraded = false
 ): PilgrimageSeriesResult {
   const availableEntries = entries.filter((entry) => entry.anime !== null);
   return {
@@ -224,6 +237,7 @@ function buildSeriesResult(
     entries,
     availableEntries,
     unavailableEntries: entries.filter((entry) => entry.anime === null),
+    degraded,
   };
 }
 

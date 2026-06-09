@@ -1103,6 +1103,10 @@
       "viewModeMyLocation": "我的位置",
       "wholeJapanA11y": "查看全日本"
     },
+    "series": {
+      "loadFailed": "部分系列季數無法載入",
+      "loadFailedRetryA11y": "無法載入完整系列 — 點擊重試"
+    },
     "sort": {
       "by": "排序方式",
       "changeA11y": "變更排序方式",

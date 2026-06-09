@@ -186,3 +186,78 @@ describe('pilgrimage related-series aggregation', () => {
     ]);
   });
 });
+
+describe('pilgrimage series degradation flag', () => {
+  it('is false on a clean multi-season resolve', async () => {
+    const seed = subject(186515, 'BanG Dream!');
+    const mygo = subject(428735, "BanG Dream! It's MyGO!!!!!");
+    const subjects = new Map<number, BangumiV0Subject>([
+      [seed.id, seed],
+      [mygo.id, mygo],
+    ]);
+    const series = await resolvePilgrimageSeries(seed.id, {
+      bangumiClient: {
+        getSubject: async (id) => subjects.get(Number(id))!,
+        getRelatedSubjects: async (id) =>
+          Number(id) === seed.id ? [related(mygo.id, mygo.name, '续集')] : [],
+      },
+      anitabi: { getAnimePilgrimage: async (id) => anime(id, subjects.get(id)!.name, 10) },
+      maxDepth: 1,
+    });
+    expect(series.degraded).toBe(false);
+    expect(series.entries).toHaveLength(2);
+  });
+
+  it('is true and falls back to the seed when getSubject throws (Bangumi down)', async () => {
+    const series = await resolvePilgrimageSeries(207195, {
+      bangumiClient: {
+        getSubject: async () => {
+          throw new Error('network');
+        },
+        getRelatedSubjects: async () => [],
+      },
+      anitabi: { getAnimePilgrimage: async (id) => anime(id, 'ゆるキャン△', 684) },
+    });
+    expect(series.degraded).toBe(true);
+    expect(series.entries).toHaveLength(1);
+    expect(series.availableEntries).toHaveLength(1);
+  });
+
+  it("is true when the seed's related-subjects fetch fails (incomplete series)", async () => {
+    const seed = subject(207195, 'ゆるキャン△');
+    const series = await resolvePilgrimageSeries(seed.id, {
+      bangumiClient: {
+        getSubject: async () => seed,
+        getRelatedSubjects: async () => {
+          throw new Error('rate limited');
+        },
+      },
+      anitabi: { getAnimePilgrimage: async (id) => anime(id, seed.name, 684) },
+    });
+    expect(series.degraded).toBe(true);
+    // Only the seed survives — the warning tells the user seasons may be missing.
+    expect(series.entries.map((e) => e.subject.id)).toEqual([seed.id]);
+  });
+
+  it('is false when only a deeper node fails (primary series intact)', async () => {
+    const seed = subject(186515, 'BanG Dream!');
+    const mygo = subject(428735, "It's MyGO!!!!!");
+    const subjects = new Map<number, BangumiV0Subject>([
+      [seed.id, seed],
+      [mygo.id, mygo],
+    ]);
+    const series = await resolvePilgrimageSeries(seed.id, {
+      bangumiClient: {
+        getSubject: async (id) => subjects.get(Number(id))!,
+        getRelatedSubjects: async (id) => {
+          if (Number(id) === seed.id) return [related(mygo.id, mygo.name, '续集')];
+          throw new Error('deep failure');
+        },
+      },
+      anitabi: { getAnimePilgrimage: async (id) => anime(id, subjects.get(id)!.name, 10) },
+      maxDepth: 2,
+    });
+    expect(series.degraded).toBe(false);
+    expect(series.entries.map((e) => e.subject.id)).toEqual([seed.id, mygo.id]);
+  });
+});

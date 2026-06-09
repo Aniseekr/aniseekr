@@ -122,10 +122,8 @@ export default function PilgrimageDetailScreen() {
   const resetSeriesSelection = useCallback(() => {
     setView({ seriesSelection: 'all' });
   }, [setView]);
-  const { seriesEntries, loading, error, browseSource } = usePilgrimageDetailData(
-    bangumiId,
-    resetSeriesSelection
-  );
+  const { seriesEntries, loading, error, seriesDegraded, browseSource, reload } =
+    usePilgrimageDetailData(bangumiId, resetSeriesSelection);
 
   const availableSeriesEntries = useMemo(
     () => seriesEntries.filter((entry) => entry.anime !== null),
@@ -410,6 +408,11 @@ export default function PilgrimageDetailScreen() {
     [setView]
   );
 
+  const handleSeriesRetry = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    reload();
+  }, [reload]);
+
   const handleSearchChange = useCallback(
     (text: string) => setView({ spotSearchQuery: text }),
     [setView]
@@ -619,6 +622,24 @@ export default function PilgrimageDetailScreen() {
                       theme={theme}
                       onSelect={handleSeriesSelect}
                     />
+                  ) : null}
+                  {anime && seriesDegraded ? (
+                    <Pressable
+                      onPress={handleSeriesRetry}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('pilgrimage.series.loadFailedRetryA11y')}
+                      style={({ pressed }) => [styles.seriesWarning, pressed && { opacity: 0.7 }]}>
+                      <Ionicons name="cloud-offline-outline" size={14} color={theme.text.secondary} />
+                      <ThemedText
+                        variant="captionSmall"
+                        weight="700"
+                        numberOfLines={1}
+                        style={{ color: theme.text.secondary, flexShrink: 1 }}>
+                        {t('pilgrimage.series.loadFailed')}
+                      </ThemedText>
+                      <Ionicons name="refresh" size={13} color={theme.text.tertiary} />
+                    </Pressable>
                   ) : null}
                 </View>
                 <View style={styles.headerRightGroup}>

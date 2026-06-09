@@ -73,6 +73,7 @@ describe('detailLoadReducer', () => {
       seriesEntries: [],
       loading: true,
       error: null,
+      seriesDegraded: false,
     });
   });
 
@@ -87,10 +88,21 @@ describe('detailLoadReducer', () => {
     const next = detailLoadReducer(INITIAL_DETAIL_LOAD_STATE, {
       type: 'series_loaded',
       entries: [e1],
+      degraded: false,
     });
     expect(next.seriesEntries).toEqual([e1]);
     expect(next.loading).toBe(false);
     expect(next.error).toBeNull();
+    expect(next.seriesDegraded).toBe(false);
+  });
+
+  it('series_loaded carries the degraded flag through to state', () => {
+    const next = detailLoadReducer(INITIAL_DETAIL_LOAD_STATE, {
+      type: 'series_loaded',
+      entries: [entry(101, 'S1', 1)],
+      degraded: true,
+    });
+    expect(next.seriesDegraded).toBe(true);
   });
 
   it('detailed_points_loaded patches only the matching subject', () => {
@@ -133,6 +145,7 @@ describe('detailLoadReducer', () => {
     const next = detailLoadReducer(previous, {
       type: 'series_full_loaded',
       entries: merged,
+      degraded: false,
     });
     expect(next.seriesEntries).toEqual(merged);
     expect(next.loading).toBe(false);
@@ -165,6 +178,7 @@ describe('detailLoadReducer', () => {
       seriesEntries: [],
       loading: true,
       error: null,
+      seriesDegraded: false,
     };
     const next = detailLoadReducer(previous, { type: 'loading' });
     expect(next).toBe(previous);
@@ -175,6 +189,7 @@ describe('detailLoadReducer', () => {
       seriesEntries: [],
       loading: false,
       error: 'Boom',
+      seriesDegraded: false,
     };
     const next = detailLoadReducer(previous, { type: 'error', message: 'Boom' });
     expect(next).toBe(previous);

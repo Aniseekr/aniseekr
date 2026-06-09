@@ -73,6 +73,23 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
       flexDirection: 'row',
       gap: Spacing.sm,
     },
+    // Inline "couldn't load all seasons" warning shown in the header when the
+    // Bangumi series relations fail to resolve (P0 #4). Tappable to retry.
+    seriesWarning: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingLeft: 10,
+      paddingRight: 8,
+      paddingVertical: 7,
+      minHeight: 36,
+      borderRadius: Radius.full,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      flexShrink: 1,
+      minWidth: 0,
+    },
 
     // Floating search field.
     searchPill: {

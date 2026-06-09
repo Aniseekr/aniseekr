@@ -3,7 +3,7 @@
 // toggle. Used to live as a `useReducer` + two `useEffect` inside the route
 // file; moving it here turns the route into a thin orchestrator.
 
-import { useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { dataSourceConfig } from '../libs/services/data-source-config';
 import type { PlatformType } from '../libs/services/auth/types';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
@@ -18,13 +18,17 @@ export interface DetailLoadState {
   seriesEntries: readonly PilgrimageSeriesEntry[];
   loading: boolean;
   error: string | null;
+  /** True when the Bangumi relations couldn't be fetched, so the series list
+   *  may be incomplete. Drives an honest in-header warning (vs. silently
+   *  showing one season as the whole work). */
+  seriesDegraded: boolean;
 }
 
 export type DetailLoadAction =
   | { type: 'loading' }
   | { type: 'invalid_id' }
   | { type: 'empty' }
-  | { type: 'series_loaded'; entries: readonly PilgrimageSeriesEntry[] }
+  | { type: 'series_loaded'; entries: readonly PilgrimageSeriesEntry[]; degraded: boolean }
   | {
       type: 'detailed_points_loaded';
       subjectId: number;
@@ -33,6 +37,7 @@ export type DetailLoadAction =
   | {
       type: 'series_full_loaded';
       entries: readonly PilgrimageSeriesEntry[];
+      degraded: boolean;
     }
   | { type: 'error'; message: string };
 
@@ -40,6 +45,7 @@ export const INITIAL_DETAIL_LOAD_STATE: DetailLoadState = {
   seriesEntries: [],
   loading: true,
   error: null,
+  seriesDegraded: false,
 };
 
 export function detailLoadReducer(
@@ -48,22 +54,26 @@ export function detailLoadReducer(
 ): DetailLoadState {
   switch (action.type) {
     case 'loading':
-      return state.loading && state.error === null
+      return state.loading && state.error === null && !state.seriesDegraded
         ? state
-        : { ...state, loading: true, error: null };
+        : { ...state, loading: true, error: null, seriesDegraded: false };
     case 'invalid_id':
       return state.error === 'Invalid anime id' && !state.loading
         ? state
-        : { ...state, loading: false, error: 'Invalid anime id' };
+        : { ...state, loading: false, error: 'Invalid anime id', seriesDegraded: false };
     case 'empty':
-      return state.seriesEntries.length === 0 && !state.loading && state.error === null
+      return state.seriesEntries.length === 0 &&
+        !state.loading &&
+        state.error === null &&
+        !state.seriesDegraded
         ? state
-        : { seriesEntries: [], loading: false, error: null };
+        : { seriesEntries: [], loading: false, error: null, seriesDegraded: false };
     case 'series_loaded':
       return {
         seriesEntries: action.entries,
         loading: false,
         error: null,
+        seriesDegraded: action.degraded,
       };
     case 'detailed_points_loaded':
       return {
@@ -79,6 +89,7 @@ export function detailLoadReducer(
         seriesEntries: action.entries,
         loading: false,
         error: null,
+        seriesDegraded: action.degraded,
       };
     case 'error':
       return state.error === action.message && !state.loading
@@ -93,7 +104,12 @@ export interface UsePilgrimageDetailDataResult {
   seriesEntries: readonly PilgrimageSeriesEntry[];
   loading: boolean;
   error: string | null;
+  /** Bangumi relations couldn't be fetched — the series list may be missing
+   *  seasons. Surface a warning + retry rather than failing silently. */
+  seriesDegraded: boolean;
   browseSource: PlatformType;
+  /** Re-run the series fetch (e.g. from the degradation warning's retry). */
+  reload: () => void;
 }
 
 /**
@@ -108,6 +124,10 @@ export function usePilgrimageDetailData(
 ): UsePilgrimageDetailDataResult {
   const [state, dispatch] = useReducer(detailLoadReducer, INITIAL_DETAIL_LOAD_STATE);
   const [browseSource, setBrowseSource] = useState<PlatformType>(dataSourceConfig.browseSource);
+  // Bumped by `reload()` to re-trigger the fetch effect (manual retry from the
+  // degradation warning, which the bangumiId-keyed effect wouldn't otherwise pick up).
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const reload = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +143,7 @@ export function usePilgrimageDetailData(
       .then(async (series) => {
         if (cancelled) return;
         if (series.availableEntries.length === 0) {
-          dispatch({ type: 'series_loaded', entries: series.entries });
+          dispatch({ type: 'series_loaded', entries: series.entries, degraded: series.degraded });
           if (series.entries.length > 0) return;
           dispatch({ type: 'empty' });
           return;
@@ -132,7 +152,7 @@ export function usePilgrimageDetailData(
         // parallel and dispatch ONE merged update when they all arrive. The
         // old design dispatched once per subject which thrashed the screen
         // root during first paint.
-        dispatch({ type: 'series_loaded', entries: series.entries });
+        dispatch({ type: 'series_loaded', entries: series.entries, degraded: series.degraded });
         const detailedByEntry = await Promise.all(
           series.availableEntries.map(async (entry) => {
             if (!entry.anime)
@@ -159,7 +179,7 @@ export function usePilgrimageDetailData(
           if (match && match.points) return { ...entry, points: match.points };
           return entry;
         });
-        dispatch({ type: 'series_full_loaded', entries: mergedEntries });
+        dispatch({ type: 'series_full_loaded', entries: mergedEntries, degraded: series.degraded });
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -170,7 +190,7 @@ export function usePilgrimageDetailData(
     return () => {
       cancelled = true;
     };
-  }, [bangumiId, onSeriesLoaded]);
+  }, [bangumiId, onSeriesLoaded, reloadNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,6 +211,8 @@ export function usePilgrimageDetailData(
     seriesEntries: state.seriesEntries,
     loading: state.loading,
     error: state.error,
+    seriesDegraded: state.seriesDegraded,
     browseSource,
+    reload,
   };
 }
