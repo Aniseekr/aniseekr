@@ -7,13 +7,14 @@
 // pilgrimageRepository) or `null` / an empty array. We render a clear
 // "Loading…" or "Unavailable" state instead of fake data.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -22,6 +23,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { toFullResImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
@@ -51,6 +53,14 @@ export default function SceneSwitcherSheet({
   loading = false,
 }: SceneSwitcherSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
+  const [query, setQuery] = useState('');
+
+  // Reset the search each time the sheet opens so a stale filter from a prior
+  // visit doesn't hide everything.
+  useEffect(() => {
+    if (!visible) setQuery('');
+  }, [visible]);
 
   // Surface the currently-selected spot first so the user can find their
   // place in long lists, then everything else in source order.
@@ -60,6 +70,19 @@ export default function SceneSwitcherSheet({
     const rest = spots.filter((s) => s.id !== currentSpotId);
     return current ? [current, ...rest] : rest;
   }, [spots, currentSpotId]);
+
+  // Keyboard filter over scene title / raw name / episode (US-13). Empty query
+  // shows everything; `orderedSpots == null` (still loading) stays null.
+  const filteredSpots = useMemo(() => {
+    if (!orderedSpots) return null;
+    const q = query.trim().toLowerCase();
+    if (!q) return orderedSpots;
+    return orderedSpots.filter((s) => {
+      const title = getPilgrimageSpotTitles(s).primary.toLowerCase();
+      const name = (s.name ?? '').toLowerCase();
+      return title.includes(q) || name.includes(q) || `ep ${s.ep}`.includes(q) || `${s.ep}` === q;
+    });
+  }, [orderedSpots, query]);
 
   const handlePick = (spot: AnitabiPoint) => {
     if (spot.id === currentSpotId) {
@@ -125,23 +148,53 @@ export default function SceneSwitcherSheet({
                   <Ionicons name="close" size={18} color={theme.text.primary} />
                 </Pressable>
               </View>
+              {orderedSpots && orderedSpots.length > 4 ? (
+                <View
+                  style={[
+                    styles.searchRow,
+                    { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
+                  ]}>
+                  <Ionicons name="search" size={15} color={theme.text.tertiary} />
+                  <TextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder={t('pilgrimage.sceneSwitcher.searchPlaceholder')}
+                    placeholderTextColor={theme.text.tertiary}
+                    returnKeyType="search"
+                    autoCorrect={false}
+                    style={[styles.searchInput, { color: theme.text.primary }]}
+                  />
+                  {query.length > 0 ? (
+                    <Pressable
+                      onPress={() => setQuery('')}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('pilgrimage.sceneSwitcher.clearSearchA11y')}>
+                      <Ionicons name="close-circle" size={16} color={theme.text.tertiary} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
 
-            {loading || orderedSpots == null ? (
+            {loading || filteredSpots == null ? (
               <View style={styles.loadingWrap}>
                 <ActivityIndicator color={themeColor} />
               </View>
-            ) : orderedSpots.length === 0 ? (
+            ) : filteredSpots.length === 0 ? (
               <View style={styles.loadingWrap}>
                 <ThemedText variant="bodySmall" tone="secondary" align="center">
-                  No other scenes available for this anime.
+                  {query.trim().length > 0
+                    ? t('pilgrimage.sceneSwitcher.noMatch')
+                    : 'No other scenes available for this anime.'}
                 </ThemedText>
               </View>
             ) : (
               <FlatList
                 horizontal
-                data={orderedSpots}
+                data={filteredSpots}
                 keyExtractor={(s) => s.id}
+                keyboardShouldPersistTaps="handled"
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
@@ -246,6 +299,21 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingBottom: 10,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
   },
   handle: {
     alignSelf: 'center',

@@ -1116,6 +1116,11 @@
       "viewModeMyLocation": "我的位置",
       "wholeJapanA11y": "查看全日本"
     },
+    "sceneSwitcher": {
+      "clearSearchA11y": "清除搜尋",
+      "noMatch": "沒有符合搜尋的場景。",
+      "searchPlaceholder": "搜尋場景"
+    },
     "series": {
       "loadFailed": "部分系列季數無法載入",
       "loadFailedRetryA11y": "無法載入完整系列 — 點擊重試"

@@ -1116,6 +1116,11 @@
       "viewModeMyLocation": "My location",
       "wholeJapanA11y": "View whole Japan"
     },
+    "sceneSwitcher": {
+      "clearSearchA11y": "Clear search",
+      "noMatch": "No scenes match your search.",
+      "searchPlaceholder": "Search scenes"
+    },
     "series": {
       "loadFailed": "Some seasons couldn't load",
       "loadFailedRetryA11y": "Couldn't load all seasons — tap to retry"
