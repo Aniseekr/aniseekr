@@ -20,8 +20,6 @@ Notable redistributed components and their upstream licenses:
   - Expo SDK                   (MIT)   Copyright (c) 650 Industries, Inc.
   - react-native-google-mobile-ads (Apache-2.0) Copyright (c) Invertase Limited
   - TypeScript                 (Apache-2.0) Copyright (c) Microsoft Corporation
-  - Leaflet                    (BSD-2-Clause) Copyright (c) Volodymyr Agafonkin
-  - Leaflet.markercluster      (MIT)
   - Reanimated                 (MIT)
   - react-native-vision-camera (MIT)   Copyright (c) Marc Rousavy
   - @noble/ciphers, @noble/hashes (MIT) Copyright (c) Paul Miller

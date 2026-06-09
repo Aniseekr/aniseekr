@@ -1,6 +1,5 @@
-// Pins the cluster visual rules ported verbatim from the Leaflet
-// `__makeClusterGroup` (libs/services/pilgrimage/leaflet-map.ts) so the MapLibre
-// engine's supercluster bubbles match today's dot/numbered look + tap behaviour.
+// Pins the cluster visual rules so the MapLibre engine's supercluster bubbles
+// keep the intended dot/numbered look + tap behaviour.
 import { describe, expect, it } from 'bun:test';
 import {
   CLUSTER_RADIUS_PX,
@@ -89,7 +88,7 @@ describe('clusterTapAction (n > pickerThreshold → zoom, else picker)', () => {
 });
 
 describe('constants', () => {
-  it('match the Leaflet defaults', () => {
+  it('match the map surface defaults', () => {
     expect(CLUSTER_PICKER_THRESHOLD).toBe(12);
     expect(CLUSTER_RADIUS_PX).toBe(48);
     expect(CLUSTER_DISABLE_AT.spot).toBe(16);

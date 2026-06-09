@@ -1,6 +1,6 @@
-// Pins the per-kind marker visual spec (size/anchor/badge/visited/star) ported
-// from the Leaflet divIcon HTML in SpotMapView + HubMapWebView, so the MapLibre
-// NativeMapMarker renders balloons / gold-88 pins / spot dots identically.
+// Pins the per-kind marker visual spec (size/anchor/badge/visited/star) so the
+// MapLibre NativeMapMarker renders balloons / gold-88 pins / spot dots
+// consistently.
 import { describe, expect, it } from 'bun:test';
 import type { MapMarker } from '../../../libs/services/pilgrimage/map-engine/types';
 import {
@@ -79,7 +79,7 @@ describe('resolveMarkerVisual — anime balloon', () => {
 });
 
 describe('VISITED_COLOR', () => {
-  it('mirrors the Leaflet visited green', () => {
+  it('keeps the visited green stable', () => {
     expect(VISITED_COLOR).toBe('#34A853');
   });
 });
