@@ -281,6 +281,14 @@ export function useUserLocationTracking(
           setInternal((prev) => (prev.permission === next ? prev : { ...prev, permission: next }));
           if (next === 'granted') {
             setInternal((prev) => ({ ...prev, followState: 'following' }));
+            locationService
+              .getCurrentLocation()
+              .then((loc) => {
+                if (!loc) return;
+                if (!sameLatLng(locationRef.current, loc)) setLocation(loc);
+                onFollowLocationRef.current?.(loc, 'following');
+              })
+              .catch(() => undefined);
           } else if (next === 'blocked' && !sheetShownThisSessionRef.current) {
             sheetShownThisSessionRef.current = true;
             setPermissionSheetVisible(true);

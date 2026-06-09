@@ -54,8 +54,10 @@ import type {
 import { OFFICIAL_88_GOLD } from '../../../libs/services/pilgrimage/region-color';
 import {
   MapSurface,
+  type BBox,
   type MapMarker,
   type MapSurfaceHandle,
+  type Viewport,
 } from '../../../components/pilgrimage/map';
 import { hubMarkerToMapMarker } from '../../../libs/services/pilgrimage/map-engine/normalize';
 import { CLUSTER_DISABLE_AT } from '../../../libs/services/pilgrimage/map-engine/cluster-style';
@@ -68,9 +70,17 @@ import { resolveMapMode } from '../../../libs/services/pilgrimage/map-theme-pref
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
-import { getPilgrimageHubSnapshot } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
+import {
+  getPilgrimageHubSnapshot,
+  updatePilgrimageHubSnapshot,
+} from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { resolvePilgrimageHubInitialView } from '../../../libs/services/pilgrimage/pilgrimage-hub-initial-view';
 import { resolvePilgrimageMapInitialMode } from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
+import {
+  loadPilgrimageMapViewModeSync,
+  setPilgrimageMapViewMode,
+  type PilgrimageMapViewMode,
+} from '../../../libs/services/pilgrimage/map-view-mode-prefs';
 import { usePilgrimageHubData } from '../../../hooks/usePilgrimageHubData';
 import {
   PilgrimageHubSheet,
@@ -179,12 +189,22 @@ export default function PilgrimageMapScreen() {
   const styleUrl = resolveMapStyleUrl(resolveMapMode(mapThemePref, effectiveMode), styleOverride);
 
   const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
+  const initialSnapshotHasUserLocation = Object.prototype.hasOwnProperty.call(
+    initialSnapshot ?? {},
+    'userLocation'
+  );
+  const [mapViewMode, setMapViewModeState] = useState<PilgrimageMapViewMode>(
+    loadPilgrimageMapViewModeSync
+  );
+  const autoPermissionPromptedRef = useRef(false);
 
   // The locate FAB and the map's user puck share a single hook so the dot, the
   // cone, the recentre, and the permission sheet all stay in sync. Snapshot-
   // seeded `initialLocation` keeps the dot visible on warm starts.
-  const [initialUserLocation] = useState<LatLng | null>(
-    () => initialSnapshot?.userLocation ?? null
+  const [initialUserLocation] = useState<LatLng | null>(() =>
+    initialSnapshotHasUserLocation
+      ? (initialSnapshot?.userLocation ?? null)
+      : locationService.getCached()
   );
   const tracking = useUserLocationTracking({
     initialLocation: initialUserLocation,
@@ -201,6 +221,21 @@ export default function PilgrimageMapScreen() {
     },
   });
   const userLocation = tracking.location;
+  const {
+    state: locateState,
+    permission: locatePermission,
+    isRequestingPermission,
+    permissionSheetVisible,
+    cycleState,
+    onUserPan,
+    dismissPermissionSheet,
+    requestPermissionSheet,
+  } = tracking;
+
+  useEffect(() => {
+    if (!userLocation) return;
+    updatePilgrimageHubSnapshot({ userLocation });
+  }, [userLocation]);
 
   // Frame-1 camera seed: align the native Camera's initialViewState with the
   // first focused card candidate so the map does not open at whole-Japan and
@@ -208,7 +243,14 @@ export default function PilgrimageMapScreen() {
   const [initialView] = useState(() =>
     resolvePilgrimageHubInitialView({
       focusBangumiId: focusBangumiIdParam,
-      snapshot: initialSnapshot,
+      snapshot:
+        initialUserLocation && !initialSnapshotHasUserLocation
+          ? {
+              ...(initialSnapshot ?? { updatedAt: Date.now() }),
+              userLocation: initialUserLocation,
+              userLocationUpdatedAt: Date.now(),
+            }
+          : initialSnapshot,
     })
   );
 
@@ -219,6 +261,20 @@ export default function PilgrimageMapScreen() {
   // visited/capture seeding; it consumes the live userLocation we feed in.
   const { knownAnimes, collectionIds, loading, visited, captureCount, handleBoundsChange } =
     usePilgrimageHubData({ focusBangumiId: focusBangumiIdParam, userLocation });
+
+  const handleMapBoundsChange = useCallback(
+    (bounds: BBox, viewport?: Viewport) => {
+      handleBoundsChange(bounds);
+      if (!viewport) return;
+      updatePilgrimageHubSnapshot({
+        mapViewport: {
+          center: { ...viewport.center },
+          zoom: viewport.zoom,
+        },
+      });
+    },
+    [handleBoundsChange]
+  );
 
   // ─── View state (parent-owned) ──────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -499,6 +555,49 @@ export default function PilgrimageMapScreen() {
     setListLayout(next);
   }, []);
 
+  const persistMapViewMode = useCallback((next: PilgrimageMapViewMode) => {
+    setMapViewModeState(next);
+    setPilgrimageMapViewMode(next).catch(() => undefined);
+  }, []);
+
+  const flyToFocusedAnime = useCallback(() => {
+    const anime = focusedAnime?.anime;
+    if (!anime || !isValidGeo(anime.geo)) return;
+    mapRef.current?.focus?.({ lat: anime.geo[0], lng: anime.geo[1], zoom: 11 });
+  }, [focusedAnime]);
+
+  const flyToUserLocation = useCallback(
+    (loc: LatLng | null = userLocation) => {
+      if (!loc) return false;
+      mapRef.current?.recenter(loc.latitude, loc.longitude, LOCATE_FAB_ZOOM, { animate: true });
+      return true;
+    },
+    [userLocation]
+  );
+
+  const handleSwitchMapViewMode = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    const next: PilgrimageMapViewMode = mapViewMode === 'myLocation' ? 'anime' : 'myLocation';
+    persistMapViewMode(next);
+    if (next === 'myLocation') {
+      if (!flyToUserLocation()) requestPermissionSheet();
+      return;
+    }
+    flyToFocusedAnime();
+  }, [
+    flyToFocusedAnime,
+    flyToUserLocation,
+    mapViewMode,
+    persistMapViewMode,
+    requestPermissionSheet,
+  ]);
+
+  const handleAllowLocationFromSheet = useCallback(() => {
+    dismissPermissionSheet();
+    persistMapViewMode('myLocation');
+    cycleState();
+  }, [cycleState, dismissPermissionSheet, persistMapViewMode]);
+
   // ─── Bottom-sheet anchor plumbing ──────────────────────────────────────
   const screenHeight = Dimensions.get('window').height;
   const sheetPosition = useSharedValue(screenHeight);
@@ -535,11 +634,27 @@ export default function PilgrimageMapScreen() {
   // Fly to the focused anime when it changes (swap / sheet-row preview) so the
   // sheet + map track together.
   useEffect(() => {
+    if (mapViewMode !== 'anime') return;
     const anime = focusedAnime?.anime;
     if (anime && isValidGeo(anime.geo)) {
       mapRef.current?.focus?.({ lat: anime.geo[0], lng: anime.geo[1], zoom: 11 });
     }
-  }, [focusedAnime]);
+  }, [focusedAnime, mapViewMode]);
+
+  useEffect(() => {
+    if (mapViewMode !== 'myLocation' || !userLocation) return;
+    flyToUserLocation(userLocation);
+  }, [flyToUserLocation, mapViewMode, userLocation]);
+
+  useEffect(() => {
+    if (loading || autoPermissionPromptedRef.current) return;
+    if (locatePermission === 'granted' || userLocation) return;
+    const timer = setTimeout(() => {
+      autoPermissionPromptedRef.current = true;
+      requestPermissionSheet();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [loading, locatePermission, requestPermissionSheet, userLocation]);
 
   // Fly to a region's bounds on a region-chip tap. `flyBoundsRequest` gets a
   // fresh identity per tap so re-taps re-run this.
@@ -576,8 +691,8 @@ export default function PilgrimageMapScreen() {
             onMarkerPress={(m) => {
               if (m.bangumiId != null) handleMarkerPress(m.bangumiId);
             }}
-            onBoundsChange={handleBoundsChange}
-            onPanned={tracking.onUserPan}
+            onBoundsChange={handleMapBoundsChange}
+            onPanned={onUserPan}
           />
         </View>
 
@@ -598,6 +713,17 @@ export default function PilgrimageMapScreen() {
                   theme={theme}
                 />
                 <View style={styles.headerRightGroup}>
+                  <RoundHeaderButton
+                    icon={mapViewMode === 'myLocation' ? 'film-outline' : 'location'}
+                    onPress={handleSwitchMapViewMode}
+                    accessibilityLabel={
+                      mapViewMode === 'myLocation'
+                        ? t('pilgrimage.map.viewModeAnime')
+                        : t('pilgrimage.map.viewModeMyLocation')
+                    }
+                    tint={themeColor}
+                    theme={theme}
+                  />
                   <RoundHeaderButton
                     icon="albums-outline"
                     onPress={handleOpenAlbum}
@@ -712,12 +838,12 @@ export default function PilgrimageMapScreen() {
             {/* Locate FAB — anchors to the sheet so it never sits behind the
               handle, and drives idle / following / compass via the hook. */}
             <LocateFab
-              state={tracking.state}
-              onPress={tracking.cycleState}
+              state={locateState}
+              onPress={cycleState}
               sheetAnimatedPosition={sheetPosition}
               screenHeight={screenHeight}
               bottomInset={sheetPeekOffset}
-              loading={tracking.isRequestingPermission}
+              loading={isRequestingPermission}
             />
 
             {/* Layer 5 — persistent pull-up sheet with focused-anime card,
@@ -745,8 +871,17 @@ export default function PilgrimageMapScreen() {
           branch so dismissing it during a re-render doesn't unmount it
           mid-animation. */}
         <LocationPermissionSheet
-          visible={tracking.permissionSheetVisible}
-          onDismiss={tracking.dismissPermissionSheet}
+          visible={permissionSheetVisible}
+          onDismiss={dismissPermissionSheet}
+          title={t('pilgrimage.map.locationPromptTitle')}
+          body={t('pilgrimage.map.locationPromptBody')}
+          primaryLabel={
+            locatePermission === 'blocked'
+              ? t('pilgrimage.map.locationPromptOpenSettings')
+              : t('pilgrimage.map.locationPromptAllow')
+          }
+          secondaryLabel={t('pilgrimage.map.locationPromptNotNow')}
+          onPrimaryPress={locatePermission === 'blocked' ? undefined : handleAllowLocationFromSheet}
         />
       </View>
     </>

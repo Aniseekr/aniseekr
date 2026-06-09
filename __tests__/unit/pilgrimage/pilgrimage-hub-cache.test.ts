@@ -67,4 +67,32 @@ describe('pilgrimage-hub-cache', () => {
     expect(Object.prototype.hasOwnProperty.call(snapshot, 'userLocation')).toBe(true);
     expect(snapshot?.userLocation).toBeNull();
   });
+
+  it('records location freshness independently from unrelated snapshot updates', () => {
+    let tick = 10_000;
+    __resetPilgrimageHubCacheForTests(() => tick);
+
+    updatePilgrimageHubSnapshot({ userLocation: { latitude: 35.68, longitude: 139.76 } });
+    tick = 30_000;
+    updatePilgrimageHubSnapshot({ featuredAnimes: [anime(2)] });
+
+    const snapshot = getPilgrimageHubSnapshot();
+    expect(snapshot?.updatedAt).toBe(30_000);
+    expect(snapshot?.userLocationUpdatedAt).toBe(10_000);
+  });
+
+  it('copies the remembered map viewport when saving and reading', () => {
+    const mapViewport = { center: { lat: 36.2, lng: 138.1 }, zoom: 12.5 };
+    updatePilgrimageHubSnapshot({ mapViewport });
+    mapViewport.center.lat = 0;
+    mapViewport.zoom = 0;
+
+    const snapshot = getPilgrimageHubSnapshot();
+    snapshot!.mapViewport!.center.lng = 0;
+
+    expect(getPilgrimageHubSnapshot()?.mapViewport).toEqual({
+      center: { lat: 36.2, lng: 138.1 },
+      zoom: 12.5,
+    });
+  });
 });

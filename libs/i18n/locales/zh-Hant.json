@@ -1089,10 +1089,17 @@
         "grid": "格狀",
         "rows": "列表"
       },
+      "locationPromptAllow": "允許位置存取",
+      "locationPromptBody": "允許位置存取後，地圖會直接顯示你附近的動畫場景。",
+      "locationPromptNotNow": "暫時不要",
+      "locationPromptOpenSettings": "開啟設定",
+      "locationPromptTitle": "顯示你附近的場景",
       "mapLoadError": "無法載入地圖。",
       "openAlbumA11y": "開啟巡禮相簿",
       "searchA11y": "搜尋動畫",
       "searchPlaceholder": "搜尋動畫或城市",
+      "viewModeAnime": "場景位置",
+      "viewModeMyLocation": "我的位置",
       "wholeJapanA11y": "查看全日本"
     },
     "plan": {

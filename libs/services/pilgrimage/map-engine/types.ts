@@ -126,7 +126,7 @@ export interface MapSurfaceProps {
   onClusterPress?: (markers: readonly MapMarker[]) => void;
   /** Fired the moment the user drags/pinches (drops follow/compass). */
   onPanned?: () => void;
-  onBoundsChange?: (box: BBox) => void;
+  onBoundsChange?: (box: BBox, viewport?: Viewport) => void;
 }
 
 /**

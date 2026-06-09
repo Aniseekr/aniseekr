@@ -32,6 +32,23 @@ const resolve = (input: Partial<PilgrimageHubInitialViewInput> = {}) =>
   });
 
 describe('resolvePilgrimageHubInitialView', () => {
+  it('uses a fresh Japan user location before a route focus anime', () => {
+    const focused = getAllIndexed()[0];
+    expect(focused).toBeDefined();
+
+    const view = resolve({
+      focusBangumiId: focused!.id,
+      now: 1_000_000,
+      snapshot: {
+        updatedAt: 1_000_000,
+        userLocationUpdatedAt: 960_000,
+        userLocation: { latitude: 35.7767, longitude: 138.4233 },
+      },
+    });
+
+    expect(view).toEqual({ center: { lat: 35.7767, lng: 138.4233 }, zoom: 15 });
+  });
+
   it('uses the route focus anime when it exists in the sync index', () => {
     const focused = getAllIndexed()[0];
     expect(focused).toBeDefined();
@@ -60,11 +77,14 @@ describe('resolvePilgrimageHubInitialView', () => {
     expect(view).toEqual({ center: { lat: 36.0, lng: 136.0 }, zoom: 11 });
   });
 
-  it('chooses the nearest snapshot anime when a Japan user location is already cached', () => {
+  it('uses a remembered session viewport before anime candidates when user location is stale', () => {
     const view = resolve({
+      now: 1_000_000,
       snapshot: {
         updatedAt: 1,
+        userLocationUpdatedAt: 100_000,
         userLocation: { latitude: 35.66, longitude: 139.7 },
+        mapViewport: { center: { lat: 36.2, lng: 138.1 }, zoom: 12.5 },
         featuredAnimes: [
           anime({ id: 1, geo: [34.98, 135.76], pointsLength: 500 }),
           anime({ id: 2, geo: [35.66, 139.7], pointsLength: 1 }),
@@ -72,7 +92,44 @@ describe('resolvePilgrimageHubInitialView', () => {
       },
     });
 
-    expect(view).toEqual({ center: { lat: 35.66, lng: 139.7 }, zoom: 11 });
+    expect(view).toEqual({ center: { lat: 36.2, lng: 138.1 }, zoom: 12.5 });
+  });
+
+  it('uses the centroid of visited scenes before anime seed locations', () => {
+    const view = resolve({
+      fallbackFeaturedIds: [],
+      snapshot: {
+        updatedAt: 1,
+        visited: { a: true, b: true },
+        featuredAnimes: [
+          anime({
+            id: 1,
+            geo: [35.0, 139.0],
+            pointsLength: 500,
+            litePoints: [
+              {
+                id: 'a',
+                name: 'A',
+                image: '',
+                ep: 1,
+                s: 0,
+                geo: [35.8, 138.4],
+              },
+              {
+                id: 'b',
+                name: 'B',
+                image: '',
+                ep: 1,
+                s: 0,
+                geo: [36.0, 138.6],
+              },
+            ],
+          }),
+        ],
+      },
+    });
+
+    expect(view).toEqual({ center: { lat: 35.9, lng: 138.5 }, zoom: 11 });
   });
 
   it('chooses the strongest snapshot anime when no user location is cached', () => {
@@ -90,20 +147,21 @@ describe('resolvePilgrimageHubInitialView', () => {
     expect(view).toEqual({ center: { lat: 36.0, lng: 136.0 }, zoom: 11 });
   });
 
-  it('uses a cached user location only when no anime candidate exists', () => {
+  it('uses a fresh cached user location before anime candidates', () => {
     const view = resolve({
-      fallbackFeaturedIds: [],
+      now: 1_000_000,
       snapshot: {
-        updatedAt: 1,
+        updatedAt: 1_000_000,
+        userLocationUpdatedAt: 990_000,
         userLocation: { latitude: 35.68, longitude: 139.76 },
-        featuredAnimes: [],
+        featuredAnimes: [anime({ id: 1, geo: [36.0, 136.0], pointsLength: 500 })],
       },
     });
 
-    expect(view).toEqual({ center: { lat: 35.68, lng: 139.76 }, zoom: 11 });
+    expect(view).toEqual({ center: { lat: 35.68, lng: 139.76 }, zoom: 15 });
   });
 
-  it('returns an empty view when there is no anime candidate and the cached user is outside Japan', () => {
+  it('returns the Japan overview when there is no usable candidate', () => {
     expect(
       resolve({
         fallbackFeaturedIds: [],
@@ -113,6 +171,6 @@ describe('resolvePilgrimageHubInitialView', () => {
           featuredAnimes: [],
         },
       })
-    ).toEqual({});
+    ).toEqual({ center: { lat: 36.5, lng: 138.0 }, zoom: 5 });
   });
 });

@@ -9,7 +9,14 @@ export interface PilgrimageHubSnapshot {
   featuredAnimes?: AnitabiBangumi[];
   visited?: VisitedMap;
   userLocation?: LatLng | null;
+  userLocationUpdatedAt?: number;
+  mapViewport?: PilgrimageHubMapViewport | null;
   updatedAt: number;
+}
+
+export interface PilgrimageHubMapViewport {
+  center: { lat: number; lng: number };
+  zoom: number;
 }
 
 type SnapshotPatch = Partial<Omit<PilgrimageHubSnapshot, 'updatedAt'>>;
@@ -39,6 +46,10 @@ export function updatePilgrimageHubSnapshot(patch: SnapshotPatch): void {
   }
   if (Object.prototype.hasOwnProperty.call(patch, 'userLocation')) {
     base.userLocation = patch.userLocation ? { ...patch.userLocation } : null;
+    base.userLocationUpdatedAt = now();
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, 'mapViewport')) {
+    base.mapViewport = patch.mapViewport ? cloneViewport(patch.mapViewport) : null;
   }
 
   base.updatedAt = now();
@@ -64,5 +75,18 @@ function cloneSnapshot(source: PilgrimageHubSnapshot): PilgrimageHubSnapshot {
   if (Object.prototype.hasOwnProperty.call(source, 'userLocation')) {
     copy.userLocation = source.userLocation ? { ...source.userLocation } : null;
   }
+  if (Object.prototype.hasOwnProperty.call(source, 'userLocationUpdatedAt')) {
+    copy.userLocationUpdatedAt = source.userLocationUpdatedAt;
+  }
+  if (Object.prototype.hasOwnProperty.call(source, 'mapViewport')) {
+    copy.mapViewport = source.mapViewport ? cloneViewport(source.mapViewport) : null;
+  }
   return copy;
+}
+
+function cloneViewport(source: PilgrimageHubMapViewport): PilgrimageHubMapViewport {
+  return {
+    center: { ...source.center },
+    zoom: source.zoom,
+  };
 }

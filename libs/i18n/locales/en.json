@@ -1089,10 +1089,17 @@
         "grid": "Grid",
         "rows": "Rows"
       },
+      "locationPromptAllow": "Allow location",
+      "locationPromptBody": "Allow location access to open the map around you and show nearby pilgrimage scenes immediately.",
+      "locationPromptNotNow": "Not now",
+      "locationPromptOpenSettings": "Open Settings",
+      "locationPromptTitle": "Show scenes near you",
       "mapLoadError": "Couldn't load the map.",
       "openAlbumA11y": "Open pilgrimage album",
       "searchA11y": "Search anime",
       "searchPlaceholder": "Search anime or city",
+      "viewModeAnime": "Scene locations",
+      "viewModeMyLocation": "My location",
       "wholeJapanA11y": "View whole Japan"
     },
     "plan": {

@@ -2,17 +2,20 @@ import { FEATURED_PILGRIMAGE_ANIME } from './featured-anime';
 import { getIndexedById } from './anitabi-index';
 import type { LatLng } from './location-service';
 import type { AnitabiBangumi } from './types';
-import type { PilgrimageHubSnapshot } from './pilgrimage-hub-cache';
+import type { PilgrimageHubMapViewport, PilgrimageHubSnapshot } from './pilgrimage-hub-cache';
 import { buildSeededPilgrimageAnimes } from './pilgrimage-screen-state';
 
 const HUB_FOCUS_ZOOM = 11;
+const HUB_USER_ZOOM = 15;
+const JAPAN_OVERVIEW_ZOOM = 5;
+const USER_LOCATION_FRESH_MS = 5 * 60 * 1000;
 const JAPAN_BOUNDS = {
   south: 24.0,
   west: 122.9,
   north: 45.6,
   east: 146.0,
 } as const;
-const EARTH_RADIUS_KM = 6371;
+const JAPAN_CENTER = { lat: 36.5, lng: 138.0 } as const;
 
 export interface PilgrimageHubInitialView {
   center?: { lat: number; lng: number };
@@ -23,13 +26,26 @@ export interface PilgrimageHubInitialViewInput {
   focusBangumiId: number | null;
   snapshot: PilgrimageHubSnapshot | null;
   fallbackFeaturedIds?: readonly number[];
+  now?: number;
 }
 
 export function resolvePilgrimageHubInitialView({
   focusBangumiId,
   snapshot,
   fallbackFeaturedIds = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId),
+  now = Date.now(),
 }: PilgrimageHubInitialViewInput): PilgrimageHubInitialView {
+  const freshUserLocation = getFreshUserLocation(snapshot, now);
+  if (freshUserLocation && pointInJapan(freshUserLocation)) {
+    return toView(freshUserLocation.latitude, freshUserLocation.longitude, HUB_USER_ZOOM);
+  }
+
+  const mapViewport = getValidViewport(snapshot?.mapViewport);
+  if (mapViewport) return mapViewport;
+
+  const visitedCenter = getVisitedSceneCenter(snapshot);
+  if (visitedCenter) return toView(visitedCenter.lat, visitedCenter.lng);
+
   if (focusBangumiId != null) {
     const focused = getIndexedById(focusBangumiId);
     if (focused && isFiniteGeo(focused.lat, focused.lng)) {
@@ -42,17 +58,12 @@ export function resolvePilgrimageHubInitialView({
   }
 
   const candidates = buildInitialAnimeCandidates(snapshot, fallbackFeaturedIds);
-  const userLocation = snapshot?.userLocation ?? null;
-  const selectedAnime = selectInitialAnime(candidates, userLocation);
+  const selectedAnime = selectInitialAnime(candidates);
   if (selectedAnime && isValidAnimeGeo(selectedAnime)) {
     return toView(selectedAnime.geo[0], selectedAnime.geo[1]);
   }
 
-  if (userLocation && pointInJapan(userLocation)) {
-    return toView(userLocation.latitude, userLocation.longitude);
-  }
-
-  return {};
+  return { center: JAPAN_CENTER, zoom: JAPAN_OVERVIEW_ZOOM };
 }
 
 function findSnapshotAnime(
@@ -85,24 +96,58 @@ function buildInitialAnimeCandidates(
   return [...merged.values()].filter(isValidAnimeGeo);
 }
 
-function selectInitialAnime(
-  candidates: readonly AnitabiBangumi[],
-  userLocation: LatLng | null
-): AnitabiBangumi | null {
+function selectInitialAnime(candidates: readonly AnitabiBangumi[]): AnitabiBangumi | null {
   if (candidates.length === 0) return null;
-  const hasUserLocationInJapan = userLocation != null && pointInJapan(userLocation);
   const ranked = [...candidates];
   ranked.sort((a, b) => {
-    if (hasUserLocationInJapan) {
-      const da = distanceKm(userLocation, { latitude: a.geo[0], longitude: a.geo[1] });
-      const db = distanceKm(userLocation, { latitude: b.geo[0], longitude: b.geo[1] });
-      if (Number.isFinite(da) && Number.isFinite(db) && da !== db) return da - db;
-      if (Number.isFinite(da)) return -1;
-      if (Number.isFinite(db)) return 1;
-    }
     return (b.pointsLength ?? 0) - (a.pointsLength ?? 0);
   });
   return ranked[0] ?? null;
+}
+
+function getFreshUserLocation(snapshot: PilgrimageHubSnapshot | null, now: number): LatLng | null {
+  const loc = snapshot?.userLocation ?? null;
+  if (!loc) return null;
+  const updatedAt = snapshot?.userLocationUpdatedAt ?? snapshot?.updatedAt;
+  if (typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) return null;
+  if (now - updatedAt > USER_LOCATION_FRESH_MS) return null;
+  return loc;
+}
+
+function getValidViewport(
+  viewport: PilgrimageHubMapViewport | null | undefined
+): PilgrimageHubInitialView | null {
+  if (!viewport) return null;
+  const { center, zoom } = viewport;
+  if (!center || !isFiniteGeo(center.lat, center.lng) || !Number.isFinite(zoom)) return null;
+  return { center: { lat: center.lat, lng: center.lng }, zoom };
+}
+
+function getVisitedSceneCenter(
+  snapshot: PilgrimageHubSnapshot | null
+): { lat: number; lng: number } | null {
+  const visited = snapshot?.visited;
+  if (!visited || Object.keys(visited).length === 0) return null;
+
+  const seen = new Set<string>();
+  let latSum = 0;
+  let lngSum = 0;
+  let count = 0;
+  const animes = [...(snapshot?.collectionAnimes ?? []), ...(snapshot?.featuredAnimes ?? [])];
+
+  for (const anime of animes) {
+    for (const point of anime.litePoints ?? []) {
+      if (seen.has(point.id) || visited[point.id] !== true) continue;
+      if (!isFiniteGeo(point.geo[0], point.geo[1])) continue;
+      seen.add(point.id);
+      latSum += point.geo[0];
+      lngSum += point.geo[1];
+      count += 1;
+    }
+  }
+
+  if (count === 0) return null;
+  return { lat: latSum / count, lng: lngSum / count };
 }
 
 function isValidAnimeGeo(anime: AnitabiBangumi): anime is AnitabiBangumi & {
@@ -124,27 +169,6 @@ function pointInJapan(loc: LatLng): boolean {
   );
 }
 
-function toView(lat: number, lng: number): PilgrimageHubInitialView {
-  return { center: { lat, lng }, zoom: HUB_FOCUS_ZOOM };
-}
-
-function distanceKm(a: LatLng, b: LatLng): number {
-  if (
-    !Number.isFinite(a.latitude) ||
-    !Number.isFinite(a.longitude) ||
-    !Number.isFinite(b.latitude) ||
-    !Number.isFinite(b.longitude)
-  ) {
-    return Number.NaN;
-  }
-  const dLat = toRadians(b.latitude - a.latitude);
-  const dLng = toRadians(b.longitude - a.longitude);
-  const lat1 = toRadians(a.latitude);
-  const lat2 = toRadians(b.latitude);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-function toRadians(deg: number): number {
-  return (deg * Math.PI) / 180;
+function toView(lat: number, lng: number, zoom: number = HUB_FOCUS_ZOOM): PilgrimageHubInitialView {
+  return { center: { lat, lng }, zoom };
 }

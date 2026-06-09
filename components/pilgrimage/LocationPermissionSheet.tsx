@@ -21,15 +21,30 @@ import { ThemedButton, ThemedSurface, ThemedText } from '../themed';
 export interface LocationPermissionSheetProps {
   visible: boolean;
   onDismiss: () => void;
+  title?: string;
+  body?: string;
+  primaryLabel?: string;
+  secondaryLabel?: string;
+  onPrimaryPress?: () => void;
 }
 
-function LocationPermissionSheetComponent({ visible, onDismiss }: LocationPermissionSheetProps) {
+function LocationPermissionSheetComponent({
+  visible,
+  onDismiss,
+  title = 'Location is off',
+  body = 'Turn on location for AniSeekr in Settings to see where you are on the pilgrimage map.',
+  primaryLabel = 'Open Settings',
+  secondaryLabel = 'Not now',
+  onPrimaryPress,
+}: LocationPermissionSheetProps) {
   const { theme } = useTheme();
 
   const handleOpenSettings = () => {
     Linking.openSettings().catch(() => undefined);
     onDismiss();
   };
+
+  const handlePrimaryPress = onPrimaryPress ?? handleOpenSettings;
 
   return (
     <Modal
@@ -39,7 +54,11 @@ function LocationPermissionSheetComponent({ visible, onDismiss }: LocationPermis
       onRequestClose={onDismiss}
       statusBarTranslucent>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} accessibilityLabel="Dismiss" />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onDismiss}
+          accessibilityLabel="Dismiss"
+        />
         <View style={styles.sheetWrap} pointerEvents="box-none">
           <ThemedSurface variant="elevated" padded style={styles.sheet}>
             <SafeAreaView edges={['bottom']}>
@@ -47,20 +66,20 @@ function LocationPermissionSheetComponent({ visible, onDismiss }: LocationPermis
                 <Ionicons name="location" size={22} color={theme.accent} />
               </View>
               <ThemedText variant="titleMedium" weight="700" align="center" style={styles.title}>
-                Location is off
+                {title}
               </ThemedText>
               <ThemedText variant="bodyMedium" tone="secondary" align="center" style={styles.body}>
-                Turn on location for AniSeekr in Settings to see where you are on the pilgrimage map.
+                {body}
               </ThemedText>
               <View style={styles.actions}>
                 <ThemedButton
-                  label="Open Settings"
-                  onPress={handleOpenSettings}
+                  label={primaryLabel}
+                  onPress={handlePrimaryPress}
                   size="lg"
                   fullWidth
                 />
                 <ThemedButton
-                  label="Not now"
+                  label={secondaryLabel}
                   onPress={onDismiss}
                   size="lg"
                   fullWidth

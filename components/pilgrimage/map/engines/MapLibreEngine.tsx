@@ -114,7 +114,13 @@ export function MapLibreEngine({
       const [z, bounds] = await Promise.all([map.getZoom(), map.getBounds()]);
       const box = boundsToBBox(bounds);
       setViewport({ zoom: z, bbox: box });
-      onBoundsChange?.(box);
+      onBoundsChange?.(box, {
+        center: {
+          lat: (box.north + box.south) / 2,
+          lng: (box.east + box.west) / 2,
+        },
+        zoom: z,
+      });
     } catch {
       // Map torn down between the event and the async read — ignore.
     }
