@@ -3,9 +3,9 @@
 //
 // Spec: spec/pilgrimage_spec.md §8 (Routes).
 //
-// Visual language: map-first. The Leaflet WebView fills the screen as the
-// primary surface; back/album/share buttons, the search field, the series
-// switcher and the filter chips float on top of the map. A persistent
+// Visual language: map-first. The native map fills the screen as the primary
+// surface; back/album/share buttons, the search field, the series switcher and
+// the filter chips float on top of the map. A persistent
 // pull-up `BottomSheet` hosts the anime info card, stats and scene grid.
 // Dragging it up focuses on scenes; dragging it down (or tapping Map)
 // focuses on the map. The view-mode toggle (Grid / Rows / Map) controls
@@ -147,19 +147,13 @@ export default function PilgrimageDetailScreen() {
 
   const themeColor = anime?.color || chromeSeed.themeColor || theme.accent;
   const themeColorFg = readableTextOn(themeColor);
-  const styles = useMemo(
-    () => makePilgrimageDetailStyles(theme, insets.top),
-    [theme, insets.top]
-  );
-  const animeTitles = useMemo(
-    () => (anime ? getPilgrimageAnimeTitles(anime) : null),
-    [anime]
-  );
+  const styles = useMemo(() => makePilgrimageDetailStyles(theme, insets.top), [theme, insets.top]);
+  const animeTitles = useMemo(() => (anime ? getPilgrimageAnimeTitles(anime) : null), [anime]);
   const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
 
-  // Tracking hook drives the locate FAB + the WebView's user dot + cone. The
-  // ref points at SpotMapView so location ticks and heading deltas push
-  // straight to the WebView without going through React state (Rule 9).
+  // Tracking hook drives the locate FAB + the map's user dot + cone. The ref
+  // points at SpotMapView so location ticks and heading deltas push straight to
+  // the map without going through React state (Rule 9).
   const spotMapRef = useRef<SpotMapViewHandle>(null);
   const tracking = useUserLocationTracking({
     onFollowLocation: (loc, fs) => {
@@ -264,7 +258,13 @@ export default function PilgrimageDetailScreen() {
       }
       return current && filteredPointIds.has(current) ? current : fallbackSelectedSpotId;
     });
-  }, [viewMode, filteredGroupedSpots.length, filteredPointIds, fallbackSelectedSpotId, setSelectedSpotId]);
+  }, [
+    viewMode,
+    filteredGroupedSpots.length,
+    filteredPointIds,
+    fallbackSelectedSpotId,
+    setSelectedSpotId,
+  ]);
 
   const posterUri = useMemo(() => {
     const posterSubjectId = anime?.id ?? bangumiId;
@@ -342,7 +342,10 @@ export default function PilgrimageDetailScreen() {
 
   const browseLabel = useMemo(() => {
     const platform = isSupportedBrowseSource(browseSource) ? browseSource : 'bangumi';
-    return PLATFORM_CONFIGS[platform as PlatformType]?.displayName ?? t('pilgrimage.detail.browseFallback');
+    return (
+      PLATFORM_CONFIGS[platform as PlatformType]?.displayName ??
+      t('pilgrimage.detail.browseFallback')
+    );
   }, [browseSource, t]);
 
   const buildCompareParams = useCallback(
@@ -417,7 +420,9 @@ export default function PilgrimageDetailScreen() {
   }, [setView]);
 
   const handleSpotFilterChange = useCallback(
-    (filter: import('../../../libs/services/pilgrimage/pilgrimage-detail-filter').PilgrimageSpotFilter) => {
+    (
+      filter: import('../../../libs/services/pilgrimage/pilgrimage-detail-filter').PilgrimageSpotFilter
+    ) => {
       Haptics.selectionAsync().catch(() => undefined);
       setView({ spotFilter: filter });
     },
@@ -586,10 +591,7 @@ export default function PilgrimageDetailScreen() {
                   style={styles.mapBackgroundInner}
                 />
               ) : (
-                <LinearGradient
-                  colors={theme.gradient}
-                  style={StyleSheet.absoluteFill}
-                />
+                <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
               )}
               <View style={styles.mapScrim} pointerEvents="none" />
             </View>
@@ -659,10 +661,7 @@ export default function PilgrimageDetailScreen() {
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel={t('pilgrimage.detail.clearSearchA11y')}
-                      style={({ pressed }) => [
-                        styles.searchClearBtn,
-                        pressed && { opacity: 0.7 },
-                      ]}>
+                      style={({ pressed }) => [styles.searchClearBtn, pressed && { opacity: 0.7 }]}>
                       <Ionicons name="close-circle" size={18} color={theme.text.tertiary} />
                     </Pressable>
                   ) : null}
@@ -891,9 +890,7 @@ function ViewModeSegment({
       accessibilityState={{ selected: active }}
       style={({ pressed }) => [
         styles.viewModeSegment,
-        active
-          ? { backgroundColor: themeColor }
-          : { backgroundColor: 'transparent' },
+        active ? { backgroundColor: themeColor } : { backgroundColor: 'transparent' },
         pressed && { opacity: 0.86 },
       ]}>
       <Ionicons name={icon} size={14} color={fg} />

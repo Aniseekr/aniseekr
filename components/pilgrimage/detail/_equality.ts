@@ -83,10 +83,7 @@ export interface SpotRowEqualityProps extends ThemedProps {
   onOpenMaps: (spot: AnitabiPoint) => void;
 }
 
-export function spotRowPropsEqual(
-  prev: SpotRowEqualityProps,
-  next: SpotRowEqualityProps
-): boolean {
+export function spotRowPropsEqual(prev: SpotRowEqualityProps, next: SpotRowEqualityProps): boolean {
   return (
     prev.spot.id === next.spot.id &&
     prev.spot.image === next.spot.image &&
@@ -228,7 +225,7 @@ export function statCellPropsEqual(
 // ------------------------------------------------------------------------
 // SpotMapView marker signature helpers (Phase 4 bridge optimization).
 // Splitting these here lets us unit-test the structural-vs-visited split
-// without spinning up a WebView.
+// without spinning up a native map.
 // ------------------------------------------------------------------------
 
 export interface MapMarkerStructural {
@@ -245,9 +242,7 @@ export interface MapMarkerStructural {
  * `__updateMarkers` JSON is only required when this changes; a visited-only
  * change uses the lighter `__updateVisited(ids)` path.
  */
-export function computeMarkerStructuralSignature(
-  markers: readonly MapMarkerStructural[]
-): string {
+export function computeMarkerStructuralSignature(markers: readonly MapMarkerStructural[]): string {
   let sig = '';
   for (const m of markers) {
     sig += `${m.id}|${m.ep}|${m.image}|${m.markerMode}|${m.ringColor};`;

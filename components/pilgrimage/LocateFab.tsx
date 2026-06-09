@@ -9,7 +9,7 @@
 //               continuously recentres on each GPS update.
 //   compass   — solid accent + a subtle accent glow + the directional arrow
 //               glyph. Magnetometer is live and the user-marker cone rotates
-//               with heading (see leaflet-map.ts MAP_BASE_CSS .user-heading).
+//               with heading.
 //
 // Sheet-aware positioning:
 //   When the caller passes `sheetAnimatedPosition` (the Reanimated shared
@@ -141,12 +141,7 @@ function LocateFabComponent({
   // to know the FAB is "active" and worth being interactive at all.
   return (
     <Animated.View
-      style={[
-        styles.container,
-        { right: rightInset },
-        animatedStyle,
-        style,
-      ]}
+      style={[styles.container, { right: rightInset }, animatedStyle, style]}
       pointerEvents="box-none"
       testID={testID}>
       <View style={[styles.shadow, glowStyle]}>
@@ -170,7 +165,7 @@ const styles = StyleSheet.create({
   },
   shadow: {
     borderRadius: FAB_SIZE / 2,
-    // Elevation/shadow stack — matches the in-WebView FAB feel.
+    // Elevation/shadow stack for the floating map FAB.
     ...((Shadow.medium ?? {}) as ViewStyle),
   },
 });

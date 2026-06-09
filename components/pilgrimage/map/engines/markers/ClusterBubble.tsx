@@ -1,7 +1,6 @@
-// Cluster bubble view for the MapLibre engine — the native equivalent of the
-// Leaflet `.ms-dot` / `.ms-cluster` icons. Dot vs numbered + sizing + label come
-// from the unit-tested cluster-style helpers; colour is the cluster's dominant
-// region colour (computed by the engine via supercluster's reduce).
+// Cluster bubble view for the MapLibre engine. Dot vs numbered + sizing + label
+// come from the unit-tested cluster-style helpers; colour is the cluster's
+// dominant region colour (computed by the engine via supercluster's reduce).
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 

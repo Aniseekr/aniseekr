@@ -25,10 +25,7 @@ import {
 } from '../libs/services/pilgrimage/anitabi-index';
 import { getNearbyMapEntries } from '../libs/services/pilgrimage/map-nearby';
 import { getPilgrimageHubSnapshot } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
-import {
-  loadVisitedSpotsSync,
-  type VisitedMap,
-} from '../libs/services/pilgrimage/visited-prefs';
+import { loadVisitedSpotsSync, type VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
 import { loadCapturesSync } from '../libs/services/pilgrimage/captures';
 import {
   appendIndexedEntriesExcludingKnownAnimes,
@@ -39,9 +36,7 @@ import {
 import { shouldLoadPilgrimageMapBounds } from '../libs/services/pilgrimage/pilgrimage-design-flow';
 
 const COLLECTION_BACKFILL_TARGET = 16;
-const FEATURED_PILGRIMAGE_IDS = FEATURED_PILGRIMAGE_ANIME.map(
-  ({ bangumiId }) => bangumiId
-);
+const FEATURED_PILGRIMAGE_IDS = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId);
 
 // Max featured `/lite` fetches in flight at once. The hub fires one request per
 // FEATURED_PILGRIMAGE_IDS entry on cold start; firing all ~29 at once is a
@@ -139,16 +134,12 @@ export function usePilgrimageHubData({
   // correct on the first frame; the effects below still reconcile after the
   // one-time migration.
   const [visited] = useState<VisitedMap>(loadVisitedSpotsSync);
-  const [captureCount] = useState(
-    () => Object.keys(loadCapturesSync()).length
-  );
+  const [captureCount] = useState(() => Object.keys(loadCapturesSync()).length);
 
   // Lazy-loaded entries from the offline index, keyed by bangumi id and
-  // additive only (we never remove — the WebView dedups by id so duplicates
-  // are cheap, and pan-back-and-forth wants the markers to stay put).
-  const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(
-    () => new Map()
-  );
+  // additive only (we never remove — marker IDs dedupe downstream, and
+  // pan-back-and-forth wants the markers to stay put).
+  const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(() => new Map());
   const extraIndexedRef = useRef(extraIndexed);
 
   const userLocationRef = useRef<LatLng | null>(userLocation);
@@ -271,7 +262,7 @@ export function usePilgrimageHubData({
   // `visited` and `captureCount` are seeded synchronously from MMKV in the
   // useState initializers above. The previous async reconcile was a no-op on
   // the render path now that reads are sync — drop it to avoid an extra
-  // re-render that re-rendered the WebView marker layer for no reason.
+  // re-render of the marker layer.
 
   // Keep the imperative ref aligned with the hook's location so callers that
   // depend on it (mergeNearbyIndexed below) see the latest fix without

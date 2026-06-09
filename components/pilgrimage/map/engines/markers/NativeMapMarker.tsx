@@ -1,8 +1,6 @@
-// Per-kind rich marker view for the MapLibre engine — the native equivalent of
-// the Leaflet divIcon HTML (SpotMapView spot bubble/dot + EP badge + visited
-// flip; HubMapWebView anime balloon + points badge; Tourism-88 gold pin + star +
-// #id). Geometry/badges come from the unit-tested `resolveMarkerVisual`; this
-// file is the presentational shell the engine drops inside a <Marker>.
+// Per-kind rich marker view for the MapLibre engine. Geometry and badges come
+// from the unit-tested `resolveMarkerVisual`; this file is the presentational
+// shell the engine drops inside a <Marker>.
 import { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -16,9 +14,8 @@ import {
   type MarkerVisual,
 } from '../../../../../libs/services/pilgrimage/map-engine/marker-style';
 
-// Fixed map-pin chrome (mirrors leaflet-map.ts MAP_BASE_CSS). These float over
-// the tiles, not over app surfaces, so — like the Leaflet markers — they use
-// fixed white chrome + a dark badge chip rather than theme surfaces.
+// Fixed map-pin chrome. These float over the tiles, not over app surfaces, so
+// they use fixed white chrome + a dark badge chip rather than theme surfaces.
 const CHROME = '#FFFFFF';
 const BADGE_BG = '#262A35';
 const BADGE_FG = '#FFFFFF';
@@ -46,7 +43,7 @@ function Badge({ visual }: { visual: MarkerVisual }) {
 }
 
 function badgePosition(visual: MarkerVisual) {
-  // EP/pts ride the top-left; the 88 id rides the bottom-right (Leaflet layout).
+  // EP/pts ride the top-left; the 88 id rides the bottom-right.
   return visual.badge?.kind === 'id88' ? styles.badgeBottomRight : styles.badgeTopLeft;
 }
 

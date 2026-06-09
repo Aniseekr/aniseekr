@@ -1,7 +1,5 @@
 // The map surface the pilgrimage screens render — a thin, stable handle over the
-// single MapLibre engine. The dual-engine rollout switch (engine flag + Leaflet
-// fallback + delegating handle) was removed once Leaflet was deleted; this
-// indirection just keeps the screens decoupled from the concrete engine.
+// single MapLibre engine. This keeps screens decoupled from the concrete renderer.
 import type { Ref } from 'react';
 
 import type {

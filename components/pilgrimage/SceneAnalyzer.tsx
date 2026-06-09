@@ -1,6 +1,6 @@
 // Skia-backed hook: decode a reference image natively, downscale to 64×64,
-// read RGBA bytes, and reduce them to a SceneAnalysis. No WebView, no JPEG
-// JS-decoder, no hash-seeded fallback — if decoding fails the caller gets
+// read RGBA bytes, and reduce them to a SceneAnalysis. No JPEG JS-decoder, no
+// hash-seeded fallback — if decoding fails the caller gets
 // { analysis: null, error: 'reason' } and the UI must show a real error state.
 
 import { useEffect, useState } from 'react';

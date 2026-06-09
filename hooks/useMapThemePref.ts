@@ -10,8 +10,8 @@ import {
  * React hook for the pilgrimage map theme override.
  *
  * The persisted pref is read synchronously from MMKV to seed initial state, so
- * a map screen can push the correct tile theme into its WebView on the first
- * frame. It re-renders when any other surface (the appearance settings screen,
+ * a map screen can resolve the correct style URL on the first frame. It
+ * re-renders when any other surface (the appearance settings screen,
  * another mounted map) changes it via `setMapThemePref`.
  *
  * `hydrated` is always true — MMKV is memory-mapped and the synchronous seed

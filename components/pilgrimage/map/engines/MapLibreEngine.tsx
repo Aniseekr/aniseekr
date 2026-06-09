@@ -1,21 +1,20 @@
-// MapLibre Native engine for the pilgrimage map (migration spec §4.2, D1/D3) —
-// the single runtime engine that replaces Leaflet across all surfaces.
+// MapLibre Native engine for the pilgrimage map.
 //
-// Renders full Leaflet parity from the engine-neutral model: per-kind rich
-// markers (anime balloon, Tourism-88 gold pin, spot bubble/dot, visited flip)
-// via view-based <Marker>s, JS clustering (supercluster) with dot/numbered
-// bubbles + multi-id cluster picker, a heading-cone user puck, plus the
-// imperative handle (recenter/focus/fitBounds/setHeading/updateVisited) and
-// onPanned/onBoundsChange. The parity *logic* lives in unit-tested helpers
-// (marker-style, cluster-style, viewport, use-clustered-markers); this file is
-// the native glue.
+// Renders per-kind rich markers (anime balloon, Tourism-88 gold pin, spot
+// bubble/dot, visited flip) via view-based <Marker>s, JS clustering
+// (supercluster) with dot/numbered bubbles + multi-id cluster picker, a
+// heading-cone user puck, plus the imperative handle
+// (recenter/focus/fitBounds/setHeading/updateVisited) and
+// onPanned/onBoundsChange. The visual and viewport logic lives in unit-tested
+// helpers (marker-style, cluster-style, viewport, use-clustered-markers); this
+// file is the native glue.
 //
 // STATUS: device-render is the one remaining gate — MapLibre is a native module
 // that cannot render headlessly (spec §15). Validate on a prebuilt dev client.
 //
-// Offline: MapLibre's automatic ambient cache reproduces Leaflet's
-// cache-as-you-browse; explicit `offlineOnly` / per-region `createPack` UX is
-// reserved (spec P3), so `offlineOnly` is accepted but not yet enforced here.
+// Offline: MapLibre's automatic ambient cache provides cache-as-you-browse;
+// explicit `offlineOnly` / per-region `createPack` UX is reserved, so
+// `offlineOnly` is accepted but not yet enforced here.
 import { useCallback, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {

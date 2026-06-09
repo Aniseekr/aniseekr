@@ -59,7 +59,7 @@ function PilgrimageDetailLoadingShellImpl({
 
   return (
     <View style={styles.root}>
-      {/* Themed gradient stands in for the Leaflet map until tiles arrive. */}
+      {/* Themed gradient stands in for the map until tiles arrive. */}
       <LinearGradient
         colors={gradientColors}
         locations={[0, 0.4, 1]}
@@ -192,9 +192,7 @@ function PilgrimageDetailLoadingShellImpl({
                 <Skeleton.Block width={36} height={10} style={{ marginTop: 4 }} />
               </View>
               {i < 3 ? (
-                <View
-                  style={[styles.statDivider, { backgroundColor: theme.glassBorder }]}
-                />
+                <View style={[styles.statDivider, { backgroundColor: theme.glassBorder }]} />
               ) : null}
             </React.Fragment>
           ))}
@@ -207,13 +205,7 @@ function PilgrimageDetailLoadingShellImpl({
         </View>
         <View style={styles.gridRow}>
           {Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton.Block
-              key={i}
-              width="48%"
-              height={158}
-              borderRadius={16}
-              intensity="low"
-            />
+            <Skeleton.Block key={i} width="48%" height={158} borderRadius={16} intensity="low" />
           ))}
         </View>
         <View style={[styles.gridRow, { marginTop: Spacing.sm }]}>

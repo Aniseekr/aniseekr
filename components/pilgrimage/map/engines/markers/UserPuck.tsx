@@ -1,7 +1,6 @@
-// User-location puck for the MapLibre engine — the native equivalent of the
-// Leaflet `.user-pulse` dot + `.user-heading` cone. Google-blue dot + white ring;
-// the directional cone shows only in compass mode (heading != null) and rotates
-// with the device heading the engine pushes via `setHeading`.
+// User-location puck for the MapLibre engine: Google-blue dot + white ring. The
+// directional cone shows only in compass mode (heading != null) and rotates with
+// the device heading the engine pushes via `setHeading`.
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -43,8 +42,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: USER_BLUE },
-  // Cone fans upward from the dot; rotated by heading. Approximates the Leaflet
-  // conic fan with a directional translucent triangle.
+  // Cone fans upward from the dot; rotated by heading.
   cone: { position: 'absolute', alignItems: 'center', justifyContent: 'flex-start' },
   coneTriangle: {
     width: 0,
