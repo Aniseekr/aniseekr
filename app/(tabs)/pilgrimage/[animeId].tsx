@@ -96,6 +96,12 @@ import { useT } from '../../../libs/i18n';
 // floating filter strip and view-mode toggle just above the sheet's peek.
 const SHEET_PEEK_FRACTION = 0.16;
 
+// The locate FAB shares the sheet's top edge with the floating chrome
+// (filter pill ≈36 + gap 8 + view-mode toggle + its 6px edge offset), so it
+// needs a gap tall enough to stack ABOVE that block — the wide 3-segment
+// toggle reaches the FAB's right-edge column on phone widths.
+const LOCATE_FAB_EDGE_GAP = VIEW_MODE_TOGGLE_HEIGHT + 36 + 8 + 6 + 10;
+
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
   const bangumiId = getNumberParam(params, 'animeId');
@@ -265,11 +271,20 @@ export default function PilgrimageDetailScreen() {
   ]);
 
   const posterUri = useMemo(() => {
+    // Prefer covers we already hold (anitabi CDN / the route-param seed) —
+    // they load under every UA. api.bgm.tv's image redirect 403s requests
+    // with an `okhttp/*` User-Agent, which is exactly what Android's image
+    // pipeline sends, so it blanked the poster on Android whenever it won.
+    // Keep it only as the last resort for a bare deep-link id where we have
+    // no cover at all (and the poster renders at 84×84, so the h160 anitabi
+    // thumbnail is plenty).
+    if (anime?.cover) return anime.cover;
+    if (chromeSeed.poster) return chromeSeed.poster;
     const posterSubjectId = anime?.id ?? bangumiId;
     if (typeof posterSubjectId === 'number' && posterSubjectId > 0) {
       return `https://api.bgm.tv/v0/subjects/${posterSubjectId}/image?type=large`;
     }
-    return anime?.cover ?? chromeSeed.poster ?? '';
+    return '';
   }, [bangumiId, anime?.id, anime?.cover, chromeSeed.poster]);
 
   const handleOpenMaps = useCallback((spot: AnitabiPoint) => {
@@ -814,16 +829,19 @@ export default function PilgrimageDetailScreen() {
             />
 
             {/* Locate FAB — only meaningful when a real map is mounted. The
-                FAB anchors to the bottom sheet so it never hides behind the
-                drag handle, and fades out at the full snap when the sheet
-                covers the scene grid. */}
-            {hasMap && viewMode === 'map' ? (
+                map is the full-bleed background in every view mode (grid/rows
+                just raise the sheet over it), so the FAB shows whenever the
+                map does. It anchors to the bottom sheet so it never hides
+                behind the drag handle, and fades itself out at the full snap
+                when the sheet covers the visible map. */}
+            {hasMap ? (
               <LocateFab
                 state={tracking.state}
                 onPress={tracking.cycleState}
                 sheetAnimatedPosition={sheetPosition}
                 screenHeight={screenHeight}
                 bottomInset={sheetPeekOffset}
+                edgeGap={LOCATE_FAB_EDGE_GAP}
                 loading={tracking.isRequestingPermission}
               />
             ) : null}

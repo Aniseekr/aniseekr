@@ -71,6 +71,13 @@ export interface LocateFabProps {
    * Defaults to a safe-area-friendly margin.
    */
   bottomInset?: number;
+  /**
+   * Gap between the sheet's top edge and the FAB. Defaults to just clearing
+   * the drag handle; pass a larger value when other chrome (filter pills,
+   * view-mode toggles) already rides the sheet edge so the FAB stacks above
+   * it instead of colliding.
+   */
+  edgeGap?: number;
   /** Horizontal offset from the right edge. Default 16. */
   rightInset?: number;
   /** Optional containing style override (e.g. raise above other overlays). */
@@ -86,6 +93,7 @@ function LocateFabComponent({
   sheetAnimatedPosition,
   screenHeight,
   bottomInset = Spacing.md,
+  edgeGap = FAB_HANDLE_GAP,
   rightInset = Spacing.screenPadding,
   style,
   loading = false,
@@ -123,7 +131,7 @@ function LocateFabComponent({
       return { bottom: bottomInset, opacity: 1, transform: [{ scale: 1 }] };
     }
     const sheetTop = sheetAnimatedPosition.value;
-    const fromSheet = screenHeight - sheetTop + FAB_HANDLE_GAP;
+    const fromSheet = screenHeight - sheetTop + edgeGap;
     const baseline = bottomInset;
     const bottom = Math.max(fromSheet, baseline);
     // Sheet covers most of the screen → fade FAB out.
@@ -134,7 +142,7 @@ function LocateFabComponent({
     // there's a tiny visual hint if the fade is in progress.
     const scale = interpolate(opacity, [0, 1], [0.94, 1], Extrapolation.CLAMP);
     return { bottom, opacity, transform: [{ scale }] };
-  }, [sheetAnimatedPosition, screenHeight, bottomInset]);
+  }, [sheetAnimatedPosition, screenHeight, bottomInset, edgeGap]);
 
   // pointerEvents toggles via the outer wrapper. We don't read the worklet
   // value here (would defeat the UI-thread win) — we trust `state` is enough
