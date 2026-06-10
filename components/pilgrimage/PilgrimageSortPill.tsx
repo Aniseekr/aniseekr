@@ -18,7 +18,7 @@ import {
   View,
   type View as RNView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Shadow, Spacing } from '../../constants/DesignSystem';
 import { ThemedText } from '../themed';
 import type { ThemePalette } from '../../context/ThemeContext';
