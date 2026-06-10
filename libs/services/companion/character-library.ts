@@ -27,6 +27,8 @@ export type CharacterEntry = {
   angleLabel?: string;
   /** True iff a real cutout (去背) was produced; false/absent = original as-is. */
   hasAlpha?: boolean;
+  /** Editing-resolution grayscale mask PNG (white = subject) for re-editing. */
+  maskUri?: string;
 };
 
 /** A character = one or more angle variants folded together for the album. */
@@ -184,7 +186,28 @@ export function parseLibraryFromJson(raw: string | null | undefined): CharacterE
     if (typeof candidate.groupId === 'string') entry.groupId = candidate.groupId;
     if (typeof candidate.angleLabel === 'string') entry.angleLabel = candidate.angleLabel;
     if (typeof candidate.hasAlpha === 'boolean') entry.hasAlpha = candidate.hasAlpha;
+    if (typeof candidate.maskUri === 'string') entry.maskUri = candidate.maskUri;
     out.push(entry);
   }
   return out;
+}
+
+/** Patch applied to an entry when the cutout editor saves. */
+export type CutoutPatch = Pick<
+  CharacterEntry,
+  'cutoutUri' | 'thumbUri' | 'intrinsicW' | 'intrinsicH' | 'hasAlpha'
+> &
+  Partial<Pick<CharacterEntry, 'maskUri' | 'sourceUri'>>;
+
+/** Replace cutout fields on one entry; same reference when the id is absent. */
+export function updateEntryCutout(
+  list: CharacterEntry[],
+  id: string,
+  patch: CutoutPatch
+): CharacterEntry[] {
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx < 0) return list;
+  const next = list.slice();
+  next[idx] = { ...next[idx], ...patch };
+  return next;
 }

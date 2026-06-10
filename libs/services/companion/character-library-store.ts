@@ -12,8 +12,10 @@ import {
   removeGroup,
   renameGroup,
   serializeLibraryToJson,
+  updateEntryCutout,
   type CharacterEntry,
   type CharacterGroup,
+  type CutoutPatch,
 } from './character-library';
 
 const STORAGE_KEY = 'aniseekr.companion.characters.v1';
@@ -83,6 +85,19 @@ export function renameCharacterGroup(groupId: string, name: string): void {
   if (next === cache) return;
   cache = next;
   persist();
+}
+
+export function getCharacterById(id: string): CharacterEntry | null {
+  return cache.find((c) => c.id === id) ?? null;
+}
+
+/** Apply a cutout-editor save to an existing entry. False when id is unknown. */
+export function updateCharacterCutout(id: string, patch: CutoutPatch): boolean {
+  const next = updateEntryCutout(cache, id, patch);
+  if (next === cache) return false;
+  cache = next;
+  persist();
+  return true;
 }
 
 export function subscribeCharacters(listener: Listener): () => void {
