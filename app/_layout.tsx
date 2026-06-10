@@ -32,6 +32,14 @@ import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-da
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
 import { resolveOnboardingGate } from '../libs/navigation/root-layout-navigation';
+import {
+  markFirstScreenInteractive,
+  markRootModuleEvaluated,
+} from '../libs/services/perf/startup-trace';
+
+// Stamp the cold-start timeline as soon as the root module finishes
+// evaluating — everything above this line is part of the bundle-eval cost.
+markRootModuleEvaluated();
 
 export default function RootLayout() {
   const router = useRouter();
@@ -54,6 +62,18 @@ export default function RootLayout() {
     });
     return unsubscribe;
   }, [navigationRef]);
+
+  // Cold-start TTI: stamp `firstScreenInteractive` one frame after the
+  // navigation container reports ready, so the measure includes the first
+  // route's initial paint. The service self-guards, so this is a no-op on
+  // warm resumes and later navigations.
+  useEffect(() => {
+    if (!rootNavigationReady) return;
+    const frame = requestAnimationFrame(() => markFirstScreenInteractive(pathname));
+    return () => cancelAnimationFrame(frame);
+    // pathname intentionally omitted — we only stamp the first interactive frame.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rootNavigationReady]);
 
   useEffect(() => {
     // `dataSourceConfig` is already seeded synchronously from MMKV in its
