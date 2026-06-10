@@ -26,15 +26,36 @@ export interface SubjectLifterResult {
   hasAlpha: boolean;
 }
 
+/**
+ * Output of `liftWithMask`. The mask is a grayscale PNG (white = subject) at
+ * exactly the same pixel size as the EXIF-normalized original; `sourceUri`
+ * points at that normalized original (equals the input when no rotation was
+ * applied). width/height are the normalized original's dimensions.
+ */
+export interface SubjectMaskResult {
+  maskUri: string;
+  sourceUri: string;
+  width: number;
+  height: number;
+  hasAlpha: boolean;
+}
+
 export interface SubjectLifter {
   isSupported(): boolean;
   lift(imageUri: string): Promise<SubjectLifterResult>;
+  liftWithMask(imageUri: string): Promise<SubjectMaskResult>;
 }
 
 interface NativeSubjectLifterModule {
   /** Exported constant — true iff this build can segment on-device. */
   isSupported?: boolean;
   lift(imageUri: string): Promise<SubjectLifterResult>;
+  liftWithMask?(imageUri: string): Promise<SubjectMaskResult>;
+}
+
+/** Mirrors the native bridge's rejection shape (`error.code`). */
+function codedError(code: string, message: string): Error & { code: string } {
+  return Object.assign(new Error(message), { code });
 }
 
 export const jsSubjectLifter: SubjectLifter = {
@@ -47,6 +68,10 @@ export const jsSubjectLifter: SubjectLifter = {
     // Image.getSize before persisting, so leave at 0 here — the store fills
     // them in from the caller's measurement.
     return { uri, width: 0, height: 0, hasAlpha: false };
+  },
+  async liftWithMask(): Promise<SubjectMaskResult> {
+    // No native segmentation — the cutout editor opens in manual mode instead.
+    throw codedError('no_native', 'subject-lifter: native module unavailable');
   },
 };
 
@@ -67,6 +92,18 @@ function tryLoadNative(): SubjectLifter | null {
         return Promise.reject(new Error('subject-lifter: imageUri must be a non-empty string'));
       }
       return native.lift(uri);
+    },
+    liftWithMask: (uri: string) => {
+      if (!uri || typeof uri !== 'string') {
+        return Promise.reject(new Error('subject-lifter: imageUri must be a non-empty string'));
+      }
+      if (typeof native.liftWithMask !== 'function') {
+        // App updated but the native binary predates liftWithMask (needs rebuild).
+        return Promise.reject(
+          codedError('no_native', 'subject-lifter: liftWithMask not in this build')
+        );
+      }
+      return native.liftWithMask(uri);
     },
   };
 }
