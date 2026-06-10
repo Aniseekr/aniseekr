@@ -62,7 +62,7 @@ import {
   resolveMapStyleUrl,
   subscribeMapStyleOverride,
 } from '../../../libs/services/pilgrimage/map-source-prefs';
-import { resolveMapMode } from '../../../libs/services/pilgrimage/map-theme-prefs';
+import { resolveMapModeWithClock } from '../../../libs/services/pilgrimage/map-theme-clock';
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
@@ -197,7 +197,11 @@ export default function PilgrimageMapScreen() {
   // Resolved MapLibre style URL (D7 seam) — repaints in place on theme/source change.
   const [styleOverride, setStyleOverride] = useState(loadMapStyleOverrideSync);
   useEffect(() => subscribeMapStyleOverride(setStyleOverride), []);
-  const styleUrl = resolveMapStyleUrl(resolveMapMode(mapThemePref, effectiveMode), styleOverride);
+  // 'auto' picks dark at night (18:00–06:00) as well as in a dark app theme.
+  const styleUrl = resolveMapStyleUrl(
+    resolveMapModeWithClock(mapThemePref, effectiveMode, new Date().getHours()),
+    styleOverride
+  );
 
   const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
   const initialSnapshotHasUserLocation = Object.prototype.hasOwnProperty.call(

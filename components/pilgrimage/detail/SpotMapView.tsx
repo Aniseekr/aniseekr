@@ -8,7 +8,7 @@ import { memo, useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
-import { resolveMapMode } from '../../../libs/services/pilgrimage/map-theme-prefs';
+import { resolveMapModeWithClock } from '../../../libs/services/pilgrimage/map-theme-clock';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { LatLng } from '../../../libs/services/pilgrimage/location-service';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
@@ -79,7 +79,8 @@ function SpotMapViewImpl({
 }: SpotMapViewProps) {
   const { effectiveMode } = useTheme();
   const { pref: mapThemePref } = useMapThemePref();
-  const mapMode = resolveMapMode(mapThemePref, effectiveMode);
+  // 'auto' picks dark at night (18:00–06:00) as well as in a dark app theme.
+  const mapMode = resolveMapModeWithClock(mapThemePref, effectiveMode, new Date().getHours());
   const styleUrl = resolveMapStyleUrl(mapMode, loadMapStyleOverrideSync());
 
   const maplibreRef = useRef<MapSurfaceHandle>(null);
