@@ -93,8 +93,7 @@ export default function CompanionLibraryScreen() {
         const sessionId = createEditorSession({
           mode: 'import',
           sourceUri: picked.uri,
-          displayName:
-            opts.displayName ?? displayNameFromFileName(picked.fileName) ?? 'Character',
+          displayName: opts.displayName ?? displayNameFromFileName(picked.fileName) ?? 'Character',
           ...(opts.groupId ? { groupId: opts.groupId } : {}),
         });
         // The detail sheet is an RN Modal, which would cover a pushed route.
@@ -107,34 +106,30 @@ export default function CompanionLibraryScreen() {
     [importing, flashToast, t, router]
   );
 
-  const editCutout = useCallback(
-    (characterId: string) => {
-      const sessionId = createEditorSession({ mode: 'edit', characterId });
-      setDetailId(null);
-      router.push({ pathname: '/companion/edit-cutout', params: { sessionId } });
-    },
-    [router]
-  );
+  const editCutout = (characterId: string) => {
+    const sessionId = createEditorSession({ mode: 'edit', characterId });
+    setDetailId(null);
+    router.push({ pathname: '/companion/edit-cutout', params: { sessionId } });
+  };
 
-  const confirmDeleteCharacter = useCallback(
-    (group: CharacterGroup) => {
-      Alert.alert(t('companion.deleteConfirmTitle'), t('companion.deleteConfirmBody'), [
-        { text: t('companion.cancel'), style: 'cancel' },
-        {
-          text: t('companion.delete'),
-          style: 'destructive',
-          onPress: () => {
-            hapticsBridge.warning();
-            deleteCharacterGroup(group.groupId);
-            setDetailId(null);
-          },
+  // Plain functions — React Compiler memoizes these; manual useCallback deps
+  // here made it bail out ("could not preserve existing memoization").
+  const confirmDeleteCharacter = (group: CharacterGroup) => {
+    Alert.alert(t('companion.deleteConfirmTitle'), t('companion.deleteConfirmBody'), [
+      { text: t('companion.cancel'), style: 'cancel' },
+      {
+        text: t('companion.delete'),
+        style: 'destructive',
+        onPress: () => {
+          hapticsBridge.warning();
+          deleteCharacterGroup(group.groupId);
+          setDetailId(null);
         },
-      ]);
-    },
-    [t]
-  );
+      },
+    ]);
+  };
 
-  const handleDeleteAngle = useCallback((id: string, group: CharacterGroup) => {
+  const handleDeleteAngle = (id: string, group: CharacterGroup) => {
     hapticsBridge.warning();
     // Removing the final angle deletes the character; close the sheet then.
     if (group.variants.length <= 1) {
@@ -143,13 +138,13 @@ export default function CompanionLibraryScreen() {
     } else {
       deleteCharacter(id);
     }
-  }, []);
+  };
 
-  const submitRename = useCallback(() => {
+  const submitRename = () => {
     if (!renaming) return;
     renameCharacterGroup(renaming.groupId, renaming.text);
     setRenaming(null);
-  }, [renaming]);
+  };
 
   return (
     <View style={styles.root}>

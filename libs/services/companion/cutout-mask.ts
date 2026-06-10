@@ -18,13 +18,7 @@ import {
 } from '@shopify/react-native-skia';
 import type { SkImage, SkPaint, SkPath, SkSurface } from '@shopify/react-native-skia';
 import { Directory, File, Paths } from 'expo-file-system';
-import {
-  alphaBBox,
-  scalePadBBox,
-  type EditOp,
-  type FilterOp,
-  type StrokeOp,
-} from './cutout-ops';
+import { alphaBBox, scalePadBBox, type EditOp, type FilterOp, type StrokeOp } from './cutout-ops';
 
 const MASK_WHITE = '#FFFFFF';
 const MASK_BLACK = '#000000';
