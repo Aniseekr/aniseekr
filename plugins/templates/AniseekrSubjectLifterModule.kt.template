@@ -20,6 +20,10 @@ import java.io.FileOutputStream
  * transparent PNG cutout to the app cache and resolves its uri + dimensions.
  * Never fabricates a mask: if segmentation produces no foreground, the promise
  * rejects with "no_subject" so the JS layer can offer "use as-is".
+ *
+ * `liftWithMask` additionally exposes the raw segmentation as a full-input-size
+ * grayscale mask PNG (white = subject) for the cutout editor, along with the
+ * EXIF-normalized source the mask aligns with.
  */
 class {{MODULE_NAME}}Module(private val ctx: ReactApplicationContext) :
   ReactContextBaseJavaModule(ctx) {
@@ -77,8 +81,87 @@ class {{MODULE_NAME}}Module(private val ctx: ReactApplicationContext) :
       }
   }
 
+  /**
+   * Returns a full-input-size grayscale mask PNG (white = subject) plus the
+   * EXIF-normalized source the mask aligns with. ML Kit's foreground
+   * confidence mask covers all detected subjects, matching iOS allInstances.
+   */
+  @ReactMethod
+  fun liftWithMask(imageUri: String, promise: Promise) {
+    val decoded = decodeOrientedTracked(imageUri)
+    if (decoded == null) {
+      promise.reject("decode_failed", "Could not decode image at $imageUri")
+      return
+    }
+    val (bitmap, wasRotated) = decoded
+
+    val options = SubjectSegmenterOptions.Builder()
+      .enableForegroundConfidenceMask()
+      .build()
+    val segmenter = SubjectSegmentation.getClient(options)
+    val input = InputImage.fromBitmap(bitmap, 0)
+
+    segmenter.process(input)
+      .addOnSuccessListener { result ->
+        val mask = result.foregroundConfidenceMask
+        if (mask == null) {
+          promise.reject("no_subject", "No subject detected in the image")
+          segmenter.close()
+          return@addOnSuccessListener
+        }
+        try {
+          val w = bitmap.width
+          val h = bitmap.height
+          val pixels = IntArray(w * h)
+          mask.rewind()
+          for (i in 0 until w * h) {
+            val v = (mask.get() * 255f).toInt().coerceIn(0, 255)
+            pixels[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+          }
+          val maskBitmap = Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888)
+          val maskFile = File(ctx.cacheDir, "subject-mask-${System.currentTimeMillis()}.png")
+          FileOutputStream(maskFile).use { stream ->
+            maskBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+          }
+          maskBitmap.recycle()
+
+          // Skia on the JS side ignores EXIF — hand it a normalized copy when
+          // the decode applied a rotation, so mask and pixels line up.
+          var sourceUriOut = imageUri
+          if (wasRotated) {
+            val srcFile = File(ctx.cacheDir, "subject-source-${System.currentTimeMillis()}.jpg")
+            FileOutputStream(srcFile).use { stream ->
+              bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+            }
+            sourceUriOut = "file://${srcFile.absolutePath}"
+          }
+
+          val map = Arguments.createMap().apply {
+            putString("maskUri", "file://${maskFile.absolutePath}")
+            putString("sourceUri", sourceUriOut)
+            putInt("width", w)
+            putInt("height", h)
+            putBoolean("hasAlpha", true)
+          }
+          promise.resolve(map)
+        } catch (e: Exception) {
+          promise.reject("write_failed", e.localizedMessage, e)
+        } finally {
+          segmenter.close()
+        }
+      }
+      .addOnFailureListener { e ->
+        segmenter.close()
+        promise.reject("lift_failed", e.localizedMessage, e)
+      }
+  }
+
   /** Decodes a file:// (or bare path) image, applying its EXIF rotation. */
-  private fun decodeOriented(imageUri: String): Bitmap? {
+  private fun decodeOriented(imageUri: String): Bitmap? =
+    decodeOrientedTracked(imageUri)?.first
+
+  /** Like decodeOriented, but also reports whether a rotation was applied. */
+  private fun decodeOrientedTracked(imageUri: String): Pair<Bitmap, Boolean>? {
     val path = when {
       imageUri.startsWith("file://") -> imageUri.removePrefix("file://")
       else -> imageUri
@@ -97,17 +180,17 @@ class {{MODULE_NAME}}Module(private val ctx: ReactApplicationContext) :
         else -> 0f
       }
       if (degrees == 0f) {
-        decoded
+        Pair(decoded, false)
       } else {
         val matrix = Matrix().apply { postRotate(degrees) }
         val rotated =
           Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
         // Free the un-rotated source so we don't leak a full-size bitmap.
         if (rotated != decoded) decoded.recycle()
-        rotated
+        Pair(rotated, true)
       }
     } catch (e: Exception) {
-      decoded
+      Pair(decoded, false)
     }
   }
 }
