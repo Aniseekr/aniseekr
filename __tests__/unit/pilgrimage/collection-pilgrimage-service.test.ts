@@ -26,6 +26,7 @@ const sampleBangumi = (overrides: Partial<AnitabiBangumi> = {}): AnitabiBangumi 
 
 interface FakeRow {
   anime_id: string;
+  title?: string | null;
   status: string | null;
   is_favorite: number;
 }
@@ -38,6 +39,21 @@ const buildFakeDb = (rows: FakeRow[]): typeof LocalDB => {
     init: async () => undefined,
     getDatabase: async () => fake as never,
   } as unknown as typeof LocalDB;
+};
+
+/** Map-backed stand-in for CacheService (ignores TTL — tests only assert writes). */
+const buildFakeCache = () => {
+  const store = new Map<string, unknown>();
+  const writes: Array<{ key: string; value: unknown; ttlMs?: number }> = [];
+  return {
+    store,
+    writes,
+    get: async <T>(key: string): Promise<T | null> => (store.get(key) as T) ?? null,
+    set: async (key: string, value: unknown, ttlMs?: number) => {
+      store.set(key, value);
+      writes.push({ key, value, ttlMs });
+    },
+  };
 };
 
 describe('CollectionPilgrimageService', () => {
@@ -184,5 +200,169 @@ describe('CollectionPilgrimageService', () => {
     expect(entries).toHaveLength(0);
     expect(mapSpy).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // ── L0 online title resolution ──────────────────────────────────────────
+  // Offline snapshots (cross-index + id_mappings) lag behind newly-aired
+  // anime; these tests cover the Bangumi-title-search fallback that lets a
+  // freshly-added show still reach the map.
+  describe('online title resolution (L0)', () => {
+    const MONO_BGM_ID = 502572;
+
+    const makeService = (overrides: {
+      rows: FakeRow[];
+      search?: (keyword: string) => Promise<{ data: object[] }>;
+      detail?: () => Promise<{ titleJapanese?: string | null } | null>;
+      cache?: ReturnType<typeof buildFakeCache>;
+    }) => {
+      const cache = overrides.cache ?? buildFakeCache();
+      const searchCalls: string[] = [];
+      const search = overrides.search ?? (async () => ({ data: [] }));
+      const service = new CollectionPilgrimageService({
+        db: buildFakeDb(overrides.rows),
+        mappingService: mapping,
+        anitabi,
+        sourcePlatform: 'anilist',
+        cache,
+        bangumiSearch: {
+          searchSubjects: async (keyword: string) => {
+            searchCalls.push(keyword);
+            return search(keyword) as never;
+          },
+        },
+        fetchUnifiedDetail: overrides.detail ?? (async () => null),
+      });
+      return { service, cache, searchCalls };
+    };
+
+    it('resolves an unmapped anime via Bangumi title search and surfaces it', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+      spyOn(anitabi, 'getAnimePilgrimage').mockImplementation(async (id: number) =>
+        id === MONO_BGM_ID ? sampleBangumi({ id: MONO_BGM_ID, title: 'mono' }) : null
+      );
+
+      const { service, cache, searchCalls } = makeService({
+        rows: [{ anime_id: '178825', title: 'mono', status: 'watching', is_favorite: 0 }],
+        search: async () => ({
+          data: [{ id: MONO_BGM_ID, type: 2, name: 'mono', name_cn: '' }],
+        }),
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].bangumiId).toBe(MONO_BGM_ID);
+      expect(entries[0].status).toBe('watching');
+      expect(searchCalls).toEqual(['mono']);
+      // Verdict persisted so the next refresh skips the search.
+      expect(cache.writes).toHaveLength(1);
+      expect(cache.writes[0].value).toEqual({ bangumiId: MONO_BGM_ID });
+    });
+
+    it('searches with the native Japanese title first when the detail fetch provides one', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+      spyOn(anitabi, 'getAnimePilgrimage').mockResolvedValue(sampleBangumi({ id: 7157 }));
+
+      const { service, searchCalls } = makeService({
+        rows: [
+          // Deliberately NOT a real AniList id — must miss the bundled L2
+          // cross-index so the test exercises the L0 path.
+          { anime_id: '999999881', title: 'Sousou no Frieren', status: 'watching', is_favorite: 0 },
+        ],
+        detail: async () => ({ titleJapanese: '葬送のフリーレン' }),
+        search: async (keyword) => ({
+          data:
+            keyword === '葬送のフリーレン'
+              ? [{ id: 7157, type: 2, name: '葬送のフリーレン', name_cn: '葬送的芙莉莲' }]
+              : [],
+        }),
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].bangumiId).toBe(7157);
+      expect(searchCalls[0]).toBe('葬送のフリーレン');
+    });
+
+    it('rejects candidates whose titles only partially match (no fuzzy fallback)', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+      const fetchSpy = spyOn(anitabi, 'getAnimePilgrimage');
+
+      const { service, cache } = makeService({
+        rows: [{ anime_id: '1', title: 'ゆるキャン△', status: 'watching', is_favorite: 0 }],
+        search: async () => ({
+          data: [{ id: 999, type: 2, name: 'ゆるキャン△ SEASON2', name_cn: '' }],
+        }),
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(0);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      // Miss is cached (shorter TTL) so refreshes don't re-search.
+      expect(cache.writes).toHaveLength(1);
+      expect(cache.writes[0].value).toEqual({ bangumiId: null });
+    });
+
+    it('short-circuits on a cached hit without searching', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+      spyOn(anitabi, 'getAnimePilgrimage').mockResolvedValue(
+        sampleBangumi({ id: MONO_BGM_ID, title: 'mono' })
+      );
+
+      const cache = buildFakeCache();
+      cache.store.set('pilgrimage_bgm_resolve_anilist_178825', { bangumiId: MONO_BGM_ID });
+      const { service, searchCalls } = makeService({
+        rows: [{ anime_id: '178825', title: 'mono', status: null, is_favorite: 1 }],
+        cache,
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].bangumiId).toBe(MONO_BGM_ID);
+      expect(searchCalls).toHaveLength(0);
+    });
+
+    it('short-circuits on a cached miss without searching', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+      const fetchSpy = spyOn(anitabi, 'getAnimePilgrimage');
+
+      const cache = buildFakeCache();
+      cache.store.set('pilgrimage_bgm_resolve_anilist_178825', { bangumiId: null });
+      const { service, searchCalls } = makeService({
+        rows: [{ anime_id: '178825', title: 'mono', status: null, is_favorite: 1 }],
+        cache,
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(0);
+      expect(searchCalls).toHaveLength(0);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not cache a verdict when the search fails (retries next refresh)', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+
+      const { service, cache } = makeService({
+        rows: [{ anime_id: '178825', title: 'mono', status: 'watching', is_favorite: 0 }],
+        search: async () => {
+          throw new Error('network down');
+        },
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(0);
+      expect(cache.writes).toHaveLength(0);
+    });
+
+    it('skips online resolution entirely for rows without a stored title', async () => {
+      spyOn(mapping, 'mapID').mockResolvedValue(null);
+
+      const { service, searchCalls } = makeService({
+        rows: [{ anime_id: '178825', status: 'watching', is_favorite: 0 }],
+      });
+
+      const entries = await service.getEntries();
+      expect(entries).toHaveLength(0);
+      expect(searchCalls).toHaveLength(0);
+    });
   });
 });

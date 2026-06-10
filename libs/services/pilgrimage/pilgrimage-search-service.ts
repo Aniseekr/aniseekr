@@ -6,6 +6,7 @@ import {
 import { getAllIndexed, type AnitabiIndexEntry } from './anitabi-index';
 import { lookupByBangumiId, type AnitabiCrossIndexEntry } from './anitabi-cross-index';
 import { normalizeAnitabiImageUrl } from './anitabi-image';
+import { normalizeTitleKey } from './bangumi-title-match';
 import { pilgrimageRepository } from './pilgrimage-repository';
 import type { AnitabiBangumi } from './types';
 
@@ -223,14 +224,9 @@ function resultFromAnitabi(
   };
 }
 
-function normalizeSearchKey(value: string): string {
-  return value
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/[『』「」《》【】()[\]（）]/g, '')
-    .replace(/[!！?？:：,，.。'’"“”・\-_–—\s　]+/g, '')
-    .trim();
-}
+// Normalization lives in bangumi-title-match so the collection resolver and
+// this search scorer agree on what "the same title" means.
+const normalizeSearchKey = normalizeTitleKey;
 
 function normalizeLimit(limit: number | undefined): number {
   if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0) {
