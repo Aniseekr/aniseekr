@@ -29,6 +29,20 @@ const COLD_START_SANITY_MS = 60_000;
 
 let coldStartSummary: StartupSummary | null = null;
 
+type ColdStartListener = (summary: StartupSummary) => void;
+let coldStartListener: ColdStartListener | null = null;
+
+/**
+ * Register the consumer interested in the cold-start summary (analytics).
+ * Fires immediately when the summary was already recorded, otherwise right
+ * after it is — callers don't need to care whether they initialized before
+ * or after the first interactive frame. Last registration wins.
+ */
+export function onColdStartReported(listener: ColdStartListener): void {
+  coldStartListener = listener;
+  if (coldStartSummary) listener(coldStartSummary);
+}
+
 /** Call once at the root layout's module scope. */
 export function markRootModuleEvaluated(): void {
   try {
@@ -57,6 +71,7 @@ export function markFirstScreenInteractive(route: string): void {
 
     coldStartSummary = summary;
     performance.measure('coldStartTTI', 'nativeLaunchStart', 'firstScreenInteractive');
+    coldStartListener?.(summary);
 
     if (__DEV__) {
       const lines = summary.milestones
