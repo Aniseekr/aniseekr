@@ -55,7 +55,9 @@ export default function EditCutoutScreen() {
   const [maskOverlay, setMaskOverlay] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [canvasBox, setCanvasBox] = useState({ w: 0, h: 0 });
-  const [done, setDone] = useState(false);
+  // Guards double-finish (e.g. save tap racing the discard alert); functional
+  // setState gives an atomic read-and-set without re-rendering on the value.
+  const [, setDone] = useState(false);
 
   // Opened without a session (deep link / hot reload) — nothing to edit.
   useEffect(() => {
@@ -212,6 +214,7 @@ export default function EditCutoutScreen() {
 
           {editable && editor.images && canvasBox.w > 0 ? (
             <CutoutEditorCanvas
+              key={`${editor.images.imgW}x${editor.images.imgH}-${canvasBox.w}x${canvasBox.h}`}
               original={editor.images.original}
               mask={editor.images.mask}
               imgW={editor.images.imgW}

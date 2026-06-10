@@ -1,32 +1,16 @@
-// Shared "import a character image" flow for the companion feature.
-//
-// One code path for both the in-camera picker sheet and the standalone
-// character album: pick from the photo library → run the subject lifter (去背)
-// → measure the cutout → build a CharacterEntry. Honest about failure: if
-// segmentation can't find a subject (or no native lifter is installed), the
-// original image is imported as-is with `hasAlpha: false` so the UI can badge
-// it "not cut out" rather than pretend (CLAUDE.md rule 8).
+// Shared "pick a character image" step for the companion feature. The lift
+// (去背) itself now happens inside the cutout editor screen, which the caller
+// opens with the picked uri — so this module is only the permission + picker
+// hop. See app/companion/edit-cutout.tsx and cutout-editor-session.ts.
 
-import { Image as RNImage } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { subjectLifter } from './subject-lifter';
-import type { CharacterEntry } from './character-library';
 
-export type ImportOutcome =
+export type PickedCharacterImage =
   | { status: 'cancelled' }
   | { status: 'denied' }
-  | { status: 'ok'; entry: CharacterEntry; cutout: boolean };
+  | { status: 'ok'; uri: string; fileName: string | null; width: number; height: number };
 
-export interface ImportOptions {
-  /** When adding an angle to an existing character, its shared groupId. */
-  groupId?: string;
-  /** Display name to apply (e.g. the existing character's name). */
-  displayName?: string;
-  /** Optional pose/angle label. */
-  angleLabel?: string;
-}
-
-export async function importCharacterFromLibrary(opts: ImportOptions = {}): Promise<ImportOutcome> {
+export async function pickCharacterImage(): Promise<PickedCharacterImage> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return { status: 'denied' };
 
@@ -37,58 +21,18 @@ export async function importCharacterFromLibrary(opts: ImportOptions = {}): Prom
   });
   if (picked.canceled || picked.assets.length === 0) return { status: 'cancelled' };
   const asset = picked.assets[0];
-
-  let cutoutUri = asset.uri;
-  let hasAlpha = false;
-  let liftedW = 0;
-  let liftedH = 0;
-  try {
-    const lifted = await subjectLifter.lift(asset.uri);
-    cutoutUri = lifted.uri;
-    hasAlpha = lifted.hasAlpha;
-    liftedW = lifted.width;
-    liftedH = lifted.height;
-  } catch {
-    // Segmentation failed / no subject / no native module — keep the original.
-    cutoutUri = asset.uri;
-    hasAlpha = false;
-  }
-
-  // The native cut-out is cropped to the subject extent (iOS), so its aspect
-  // differs from the source asset — prefer the lifted dims when去背 actually
-  // ran. Only the JS fallback (hasAlpha:false, dims 0) needs a measure().
-  const { width, height } =
-    hasAlpha && liftedW > 0 && liftedH > 0
-      ? { width: liftedW, height: liftedH }
-      : await measure(cutoutUri, asset);
-  const entry: CharacterEntry = {
-    id: `char_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    displayName: opts.displayName ?? asset.fileName?.replace(/\.[^.]+$/, '') ?? 'Character',
-    sourceUri: asset.uri,
-    cutoutUri,
-    thumbUri: cutoutUri,
-    intrinsicW: width,
-    intrinsicH: height,
-    createdAt: Date.now(),
-    hasAlpha,
-    ...(opts.groupId ? { groupId: opts.groupId } : {}),
-    ...(opts.angleLabel ? { angleLabel: opts.angleLabel } : {}),
+  return {
+    status: 'ok',
+    uri: asset.uri,
+    fileName: asset.fileName ?? null,
+    width: asset.width ?? 0,
+    height: asset.height ?? 0,
   };
-  return { status: 'ok', entry, cutout: hasAlpha };
 }
 
-async function measure(
-  uri: string,
-  asset: ImagePicker.ImagePickerAsset
-): Promise<{ width: number; height: number }> {
-  // The native lifter reports real cutout dims; the JS fallback returns the
-  // picked asset untouched, so its width/height are correct there too.
-  if (asset.width && asset.height) return { width: asset.width, height: asset.height };
-  return new Promise((resolve) => {
-    RNImage.getSize(
-      uri,
-      (w, h) => resolve({ width: w, height: h }),
-      () => resolve({ width: 512, height: 768 })
-    );
-  });
+/** "IMG_1234.HEIC" → "IMG_1234"; null when there's nothing usable. */
+export function displayNameFromFileName(fileName: string | null): string | null {
+  if (!fileName) return null;
+  const stem = fileName.replace(/\.[^.]+$/, '').trim();
+  return stem.length > 0 ? stem : null;
 }

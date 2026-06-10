@@ -27,10 +27,13 @@ import {
   getCharacterLimit,
   renameCharacterGroup,
   subscribeCharacters,
-  upsertCharacter,
 } from '../../libs/services/companion/character-library-store';
 import type { CharacterGroup } from '../../libs/services/companion/character-library';
-import { importCharacterFromLibrary } from '../../libs/services/companion/import-character';
+import { createEditorSession } from '../../libs/services/companion/cutout-editor-session';
+import {
+  displayNameFromFileName,
+  pickCharacterImage,
+} from '../../libs/services/companion/import-character';
 
 export default function CompanionLibraryScreen() {
   const router = useRouter();
@@ -81,24 +84,36 @@ export default function CompanionLibraryScreen() {
       if (importing) return;
       setImporting(true);
       try {
-        const outcome = await importCharacterFromLibrary(opts);
-        if (outcome.status === 'denied') {
+        const picked = await pickCharacterImage();
+        if (picked.status === 'denied') {
           flashToast(t('companion.permissionDenied'));
           return;
         }
-        if (outcome.status === 'cancelled') return;
-        const ok = upsertCharacter(outcome.entry);
-        if (!ok) {
-          flashToast(t('companion.libraryFull', { limit }));
-          return;
-        }
-        hapticsBridge.success();
-        if (!outcome.cutout) flashToast(t('companion.cutoutUnavailableBody'));
+        if (picked.status === 'cancelled') return;
+        const sessionId = createEditorSession({
+          mode: 'import',
+          sourceUri: picked.uri,
+          displayName:
+            opts.displayName ?? displayNameFromFileName(picked.fileName) ?? 'Character',
+          ...(opts.groupId ? { groupId: opts.groupId } : {}),
+        });
+        // The detail sheet is an RN Modal, which would cover a pushed route.
+        setDetailId(null);
+        router.push({ pathname: '/companion/edit-cutout', params: { sessionId } });
       } finally {
         setImporting(false);
       }
     },
-    [importing, limit, flashToast, t]
+    [importing, flashToast, t, router]
+  );
+
+  const editCutout = useCallback(
+    (characterId: string) => {
+      const sessionId = createEditorSession({ mode: 'edit', characterId });
+      setDetailId(null);
+      router.push({ pathname: '/companion/edit-cutout', params: { sessionId } });
+    },
+    [router]
   );
 
   const confirmDeleteCharacter = useCallback(
@@ -172,7 +187,7 @@ export default function CompanionLibraryScreen() {
               {t('companion.empty.body')}
             </ThemedText>
             <ThemedButton
-              label={importing ? t('companion.importing') : t('companion.empty.cta')}
+              label={t('companion.empty.cta')}
               icon={<Ionicons name="add" size={18} color={accentFg} />}
               onPress={() => runImport({})}
               disabled={importing}
@@ -202,7 +217,7 @@ export default function CompanionLibraryScreen() {
         {groups.length > 0 ? (
           <View style={[styles.fabWrap, { bottom: bottomPad(insets) + 16 }]}>
             <ThemedButton
-              label={importing ? t('companion.importing') : t('companion.import')}
+              label={t('companion.import')}
               icon={<Ionicons name="add" size={18} color={accentFg} />}
               onPress={() => runImport({})}
               disabled={importing || used >= limit}
@@ -245,6 +260,7 @@ export default function CompanionLibraryScreen() {
             onAddAngle={() =>
               runImport({ groupId: detailGroup.groupId, displayName: detailGroup.name })
             }
+            onEditAngle={editCutout}
             onRename={() => setRenaming({ groupId: detailGroup.groupId, text: detailGroup.name })}
             onDeleteAngle={(id) => handleDeleteAngle(id, detailGroup)}
             onDeleteCharacter={() => confirmDeleteCharacter(detailGroup)}
@@ -369,6 +385,7 @@ function CharacterDetailSheet({
   atLimit,
   onClose,
   onAddAngle,
+  onEditAngle,
   onRename,
   onDeleteAngle,
   onDeleteCharacter,
@@ -380,6 +397,7 @@ function CharacterDetailSheet({
   atLimit: boolean;
   onClose: () => void;
   onAddAngle: () => void;
+  onEditAngle: (id: string) => void;
   onRename: () => void;
   onDeleteAngle: (id: string) => void;
   onDeleteCharacter: () => void;
@@ -447,6 +465,21 @@ function CharacterDetailSheet({
                   },
                 ]}>
                 <Ionicons name="trash-outline" size={13} color={theme.text.secondary} />
+              </Pressable>
+              <Pressable
+                onPress={() => onEditAngle(variant.id)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('companion.cutout.edit')}
+                style={({ pressed }) => [
+                  styles.angleEdit,
+                  {
+                    backgroundColor: theme.background.tertiary,
+                    borderColor: theme.glassBorder,
+                    opacity: pressed ? 0.6 : 1,
+                  },
+                ]}>
+                <Ionicons name="color-wand-outline" size={13} color={theme.text.secondary} />
               </Pressable>
             </View>
           ))}
@@ -589,6 +622,17 @@ function makeStyles(theme: ThemePalette) {
       position: 'absolute',
       top: 4,
       right: 4,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+    },
+    angleEdit: {
+      position: 'absolute',
+      top: 4,
+      left: 4,
       width: 24,
       height: 24,
       borderRadius: 12,

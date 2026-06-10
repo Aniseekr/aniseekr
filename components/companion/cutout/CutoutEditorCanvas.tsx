@@ -10,7 +10,7 @@
 // The live stroke is an SkPath in a SharedValue mutated in worklets via
 // notifyChange; React only hears about the stroke once, on commit.
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Canvas,
   Circle,
@@ -47,6 +47,10 @@ const GHOST_OPACITY = 0.25;
 const MIN_ZOOM_FACTOR = 0.8; // × fit
 const MAX_ZOOM_FACTOR = 10; // × fit
 
+// NOTE: the parent must remount this component (via `key`) when imgW/imgH or
+// canvasW/canvasH change — the view transform SharedValues are initialized
+// from the contain-fit exactly once. Keying avoids an effect that reads AND
+// writes the same SharedValues (react-hooks/immutability).
 export interface CutoutEditorCanvasProps {
   original: SkImage;
   mask: SkImage;
@@ -81,29 +85,20 @@ export function CutoutEditorCanvas({
 }: CutoutEditorCanvasProps) {
   const { theme } = useTheme();
 
-  const scale = useSharedValue(1);
-  const offX = useSharedValue(0);
-  const offY = useSharedValue(0);
+  // Initialized once per mount; parent re-keys on geometry change.
+  const initialFit = fitContain(imgW, imgH, canvasW, canvasH);
+  const scale = useSharedValue(initialFit.scale);
+  const offX = useSharedValue(initialFit.offX);
+  const offY = useSharedValue(initialFit.offY);
   const startScale = useSharedValue(1);
   const startOffX = useSharedValue(0);
   const startOffY = useSharedValue(0);
-  const fitScale = useSharedValue(1);
+  const fitScale = useSharedValue(initialFit.scale);
 
   const livePath = useSharedValue<SkPath>(Skia.Path.Make());
   const livePoints = useSharedValue<StrokePoint[]>([]);
   const cursorX = useSharedValue(-1000);
   const cursorY = useSharedValue(-1000);
-
-  // Re-fit whenever geometry changes.
-  useEffect(() => {
-    const v = fitContain(imgW, imgH, canvasW, canvasH);
-    fitScale.value = v.scale;
-    scale.value = v.scale;
-    offX.value = v.offX;
-    offY.value = v.offY;
-    // SharedValues are stable refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imgW, imgH, canvasW, canvasH]);
 
   const checker = useMemo(
     () => makeCheckerImage(8, theme.background.secondary, theme.background.tertiary),

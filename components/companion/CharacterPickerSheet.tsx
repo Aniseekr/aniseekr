@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../themed';
@@ -20,10 +21,13 @@ import {
   getCharacterLimit,
   getCharacters,
   subscribeCharacters,
-  upsertCharacter,
 } from '../../libs/services/companion/character-library-store';
 import type { CharacterEntry } from '../../libs/services/companion/character-library';
-import { importCharacterFromLibrary } from '../../libs/services/companion/import-character';
+import { createEditorSession } from '../../libs/services/companion/cutout-editor-session';
+import {
+  displayNameFromFileName,
+  pickCharacterImage,
+} from '../../libs/services/companion/import-character';
 
 export type CharacterPickerSheetProps = {
   visible: boolean;
@@ -40,6 +44,7 @@ export function CharacterPickerSheet({
 }: CharacterPickerSheetProps) {
   const { theme } = useTheme();
   const t = useT();
+  const router = useRouter();
   const accent = theme.accent;
   const accentFg = readableTextOn(accent);
   const [list, setList] = useState<CharacterEntry[]>(() => getCharacters());
@@ -54,33 +59,31 @@ export function CharacterPickerSheet({
     setImporting(true);
     setError(null);
     try {
-      const outcome = await importCharacterFromLibrary();
-      if (outcome.status === 'denied') {
+      const picked = await pickCharacterImage();
+      if (picked.status === 'denied') {
         setError(t('companion.permissionDenied'));
         return;
       }
-      if (outcome.status === 'cancelled') return;
-      const ok = upsertCharacter(outcome.entry);
-      if (!ok) {
-        setError(t('companion.libraryFull', { limit }));
-        return;
-      }
-      hapticsBridge.success();
-      // No去背: the entry is already in the library (badged "Original"); keep the
-      // sheet open with the notice instead of auto-selecting + closing, which
-      // would discard the message the user needs to see.
-      if (!outcome.cutout) {
-        setError(t('companion.cutoutUnavailableBody'));
-        return;
-      }
-      onSelect(outcome.entry);
+      if (picked.status === 'cancelled') return;
+      const sessionId = createEditorSession({
+        mode: 'import',
+        sourceUri: picked.uri,
+        displayName: displayNameFromFileName(picked.fileName) ?? 'Character',
+        // Editor saved → behave like the old auto-select-and-continue flow.
+        onDone: (entry) => {
+          if (entry) onSelect(entry);
+        },
+      });
+      // This sheet is an RN Modal and would cover the pushed editor route.
+      onClose();
+      router.push({ pathname: '/companion/edit-cutout', params: { sessionId } });
     } catch (err) {
       console.warn('[companion] import failed', err);
       setError(t('companion.importFailed'));
     } finally {
       setImporting(false);
     }
-  }, [importing, limit, onSelect, t]);
+  }, [importing, onClose, onSelect, router, t]);
 
   const handleDelete = useCallback((id: string) => {
     hapticsBridge.warning();
@@ -137,7 +140,7 @@ export function CharacterPickerSheet({
             ]}>
             <Ionicons name="add" size={24} color={accentFg} />
             <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
-              {importing ? t('companion.importing') : t('companion.import')}
+              {t('companion.import')}
             </ThemedText>
           </Pressable>
 
