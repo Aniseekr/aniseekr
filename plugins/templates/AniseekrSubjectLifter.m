@@ -17,6 +17,10 @@ RCT_EXTERN_METHOD(lift:(NSString *)imageUri
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(liftWithMask:(NSString *)imageUri
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 + (BOOL)requiresMainQueueSetup { return NO; }
 
 @end
