@@ -51,6 +51,7 @@
     "korean": "한국어",
     "titlePriority": "標題優先順序",
     "titlePriorityDesc": "依此順序嘗試每部動畫的標題語言",
+    "titleFollowingApp": "目前跟隨 App 語言，使用箭頭調整即可自訂。",
     "vocabLanguage": "類型與標籤語言",
     "vocabLanguageDesc": "預設跟隨應用語言。可在此覆寫為混搭語言。",
     "vocabAuto": "自動（跟隨應用語言）",
@@ -582,8 +583,9 @@
     "english": "English",
     "romaji": "Romaji",
     "japanese": "日本語",
-    "chinese": "繁體中文",
-    "resetA11y": "重設為預設順序"
+    "chinese": "中文",
+    "russian": "Русский",
+    "resetA11y": "改回跟隨 App 語言"
   },
 
   "translation": {

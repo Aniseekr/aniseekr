@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { Photo } from './types';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -121,6 +122,17 @@ export function PhotoCard({
   // 🟢 Performance: Start true, only set false once. No complex state resets.
   // This component is keyed by ID in parent, so it remounts for new photos anyway.
   const [isLoading, setIsLoading] = useState(true);
+
+  const displayTitle = useAnimeDisplayTitle(
+    photo.title
+      ? {
+          id: photo.id,
+          title: photo.title,
+          titleEnglish: photo.enTitle,
+          titleJapanese: photo.jpTitle,
+        }
+      : null
+  );
 
   // 🔥 FIX 1: Always use local SharedValue to control card position
   // This ensures new cards always start from 0 on mount, avoiding inheritance of the previous card's offset (e.g. 500)
@@ -423,7 +435,7 @@ export function PhotoCard({
             <View style={styles.metaOverlay} pointerEvents="none">
               <View style={styles.metaTitleColumn}>
                 <Text style={styles.metaTitle} numberOfLines={2}>
-                  {photo.title}
+                  {displayTitle}
                 </Text>
                 {metaLine ? <Text style={styles.metaSubtitle}>{metaLine}</Text> : null}
               </View>

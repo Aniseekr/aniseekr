@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'bun:test';
 import { UnifiedAnimeItem } from '../../libs/models/unified-anime-item';
-import { getDisplayTitle } from '../../libs/utils/anime-localization-service';
+import {
+  getDisplayTitle,
+  resolveTitleByOrder,
+  titleForLanguage,
+} from '../../libs/utils/anime-localization-service';
 
 function makeItem(overrides: Partial<ConstructorParameters<typeof UnifiedAnimeItem>[0]> = {}) {
   return new UnifiedAnimeItem({ title: 'CanonicalTitle', ...overrides });
@@ -67,5 +71,46 @@ describe('AnimeLocalizationService', () => {
     expect(item.searchKeywords).toContain('cb');
     expect(item.searchKeywords).toContain('bebop');
     expect(item.searchKeywords).toContain('cowboy');
+  });
+});
+
+describe('resolveTitleByOrder', () => {
+  const bundle = {
+    title: 'Shingeki no Kyojin',
+    titleEnglish: 'Attack on Titan',
+    titleRomaji: 'Shingeki no Kyojin',
+    titleJapanese: '進撃の巨人',
+    titleChinese: '进击的巨人',
+    titleRussian: 'Атака титанов',
+  };
+
+  it('LOC-010 walks the priority order', () => {
+    expect(resolveTitleByOrder(bundle, ['english', 'chinese'], 'hant')).toBe('Attack on Titan');
+    expect(resolveTitleByOrder(bundle, ['russian', 'english'], 'hant')).toBe('Атака титанов');
+    expect(resolveTitleByOrder(bundle, ['japanese', 'english'], 'hant')).toBe('進撃の巨人');
+  });
+
+  it('LOC-011 chinese converts script on the fly', () => {
+    // Only Simplified on the bundle → zh-Hant users get OpenCC Traditional.
+    expect(resolveTitleByOrder(bundle, ['chinese'], 'hant')).toBe('進擊的巨人');
+    expect(resolveTitleByOrder(bundle, ['chinese'], 'hans')).toBe('进击的巨人');
+    // Only Traditional → zh-Hans users get OpenCC Simplified.
+    const tradOnly = { title: 'x', titleChineseTraditional: '工作細胞' };
+    expect(resolveTitleByOrder(tradOnly, ['chinese'], 'hans')).toBe('工作细胞');
+    expect(resolveTitleByOrder(tradOnly, ['chinese'], 'hant')).toBe('工作細胞');
+  });
+
+  it('LOC-012 skips missing languages and falls back to canonical title', () => {
+    const sparse = { title: 'Canonical', titleJapanese: 'ニッポン' };
+    expect(resolveTitleByOrder(sparse, ['chinese', 'russian', 'japanese'], 'hant')).toBe('ニッポン');
+    expect(resolveTitleByOrder(sparse, ['chinese', 'russian'], 'hant')).toBe('Canonical');
+    expect(resolveTitleByOrder(sparse, [], 'hant')).toBe('Canonical');
+  });
+
+  it('LOC-013 empty strings are treated as missing', () => {
+    const empty = { title: 'Canonical', titleEnglish: '', titleChinese: '' };
+    expect(titleForLanguage(empty, 'english', 'hant')).toBeNull();
+    expect(titleForLanguage(empty, 'chinese', 'hant')).toBeNull();
+    expect(resolveTitleByOrder(empty, ['english', 'chinese'], 'hant')).toBe('Canonical');
   });
 });

@@ -6,6 +6,7 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { ProgressiveImage } from '../common/ProgressiveImage';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 
 export interface RecentItem {
@@ -80,41 +81,55 @@ function RecentlyViewedSectionComponent({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}>
         {items.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => handlePress(item)}
-            style={({ pressed }) => [
-              styles.card,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}>
-            <ProgressiveImage
-              source={
-                item.imageUrl
-                  ? { uri: item.imageUrl }
-                  : { uri: 'https://placehold.co/120x160/1c1c1e/666?text=?' }
-              }
-              containerStyle={styles.thumb}
-              borderRadius={14}
-            />
-            <View style={styles.body}>
-              <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={2}>
-                {item.title}
-              </Text>
-              {item.episode ? (
-                <Text style={[styles.episode, { color: theme.accent }]}>Ep {item.episode}</Text>
-              ) : null}
-              <Text style={[styles.time, { color: theme.text.tertiary }]}>
-                {formatRelative(item.visitedAt)}
-              </Text>
-            </View>
-          </Pressable>
+          <RecentCard key={item.id} item={item} theme={theme} onPress={() => handlePress(item)} />
         ))}
       </ScrollView>
     </View>
+  );
+}
+
+function RecentCard({
+  item,
+  theme,
+  onPress,
+}: {
+  item: RecentItem;
+  theme: ReturnType<typeof useTheme>['theme'];
+  onPress: () => void;
+}) {
+  const displayTitle = useAnimeDisplayTitle({ id: item.id, title: item.title });
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: theme.glassBorder,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}>
+      <ProgressiveImage
+        source={
+          item.imageUrl
+            ? { uri: item.imageUrl }
+            : { uri: 'https://placehold.co/120x160/1c1c1e/666?text=?' }
+        }
+        containerStyle={styles.thumb}
+        borderRadius={14}
+      />
+      <View style={styles.body}>
+        <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={2}>
+          {displayTitle}
+        </Text>
+        {item.episode ? (
+          <Text style={[styles.episode, { color: theme.accent }]}>Ep {item.episode}</Text>
+        ) : null}
+        <Text style={[styles.time, { color: theme.text.tertiary }]}>
+          {formatRelative(item.visitedAt)}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 

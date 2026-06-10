@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedText } from '../themed';
 
@@ -49,41 +50,50 @@ function CollectionRecentRailComponent({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rail}>
         {items.map((item) => (
-          <Pressable
+          <RailCell
             key={item.id}
+            item={item}
+            theme={theme}
             onPress={() => {
               hapticsBridge.tap();
               onPressItem?.(item);
             }}
-            style={({ pressed }) => [styles.cell, { opacity: pressed ? 0.85 : 1 }]}>
-            <View
-              style={[
-                styles.cover,
-                { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
-              ]}>
-              {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={styles.coverImage}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={styles.coverFallback}>
-                  <MaterialIcons name="image" size={20} color={theme.text.tertiary} />
-                </View>
-              )}
-            </View>
-            <ThemedText
-              variant="captionSmall"
-              weight="600"
-              numberOfLines={2}
-              style={styles.title}>
-              {item.title}
-            </ThemedText>
-          </Pressable>
+          />
         ))}
       </ScrollView>
     </View>
+  );
+}
+
+function RailCell({
+  item,
+  theme,
+  onPress,
+}: {
+  item: RecentRailItem;
+  theme: ReturnType<typeof useTheme>['theme'];
+  onPress: () => void;
+}) {
+  const displayTitle = useAnimeDisplayTitle({ id: item.id, title: item.title });
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.cell, { opacity: pressed ? 0.85 : 1 }]}>
+      <View
+        style={[
+          styles.cover,
+          { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
+        ]}>
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.coverImage} contentFit="cover" />
+        ) : (
+          <View style={styles.coverFallback}>
+            <MaterialIcons name="image" size={20} color={theme.text.tertiary} />
+          </View>
+        )}
+      </View>
+      <ThemedText variant="captionSmall" weight="600" numberOfLines={2} style={styles.title}>
+        {displayTitle}
+      </ThemedText>
+    </Pressable>
   );
 }
 

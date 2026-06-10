@@ -4,6 +4,11 @@ export interface Anime {
   id: string;
   title: string;
   titleEnglish?: string;
+  titleRomaji?: string;
+  titleJapanese?: string;
+  titleChinese?: string;
+  titleChineseTraditional?: string;
+  titleRussian?: string;
   image: string;
   bannerImage?: string;
   rank?: number;

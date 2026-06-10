@@ -55,6 +55,7 @@ import {
   useIsAnimeScheduled,
 } from '../../modules/notifications/animeNotificationService';
 import { useT } from '../../libs/i18n';
+import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 
 type RatingEntry = { platform: PlatformType; data: PlatformRatingData };
 
@@ -147,6 +148,15 @@ export default function AnimeDetailScreen() {
     }
   }
   const [anime, setAnime] = useState<Anime | null>(initialAnimeRef.current);
+  const displayTitle = useAnimeDisplayTitle(anime);
+  // The canonical (pre-localization) title doubles as the "original" line
+  // under a localized hero title; when the hero already shows the canonical
+  // title, fall back to the native Japanese title so 原文 stays visible.
+  const originalTitle = anime
+    ? displayTitle !== anime.title
+      ? anime.title
+      : (anime.titleEnglish ?? anime.titleJapanese ?? null)
+    : null;
   // Cache hit means we have the full record; param-seed still needs a fetch but
   // the user already sees a hero, so we don't show a blocking skeleton.
   const hasFullRecord = !!(initialAnimeRef.current && (initialAnimeRef.current.description !== undefined || initialAnimeRef.current.episodes !== undefined));
@@ -464,13 +474,13 @@ export default function AnimeDetailScreen() {
     try {
       const url = `https://anilist.co/anime/${anime.id}`;
       await Share.share({
-        message: t('anime.detail.shareMessage', { title: anime.title, url }),
+        message: t('anime.detail.shareMessage', { title: displayTitle, url }),
         url,
       });
     } catch {
       // user dismissed
     }
-  }, [anime, t]);
+  }, [anime, displayTitle, t]);
 
   // Rule 10: only show the blocking skeleton when frame 1 has nothing — cache
   // hit or route-seeded chrome both render the real layout below.
@@ -565,11 +575,11 @@ export default function AnimeDetailScreen() {
             />
             <View className="flex-1 pb-2">
               <Text className="text-xl leading-tight font-bold text-white" numberOfLines={2}>
-                {anime.title}
+                {displayTitle}
               </Text>
-              {anime.titleEnglish ? (
+              {originalTitle ? (
                 <Text className="mt-1 text-xs text-zinc-400" numberOfLines={1}>
-                  {anime.titleEnglish}
+                  {originalTitle}
                 </Text>
               ) : null}
               <View className="mt-2 flex-row flex-wrap gap-2">

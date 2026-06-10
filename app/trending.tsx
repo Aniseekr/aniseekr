@@ -25,6 +25,7 @@ import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { FontFamily, Radius, Spacing, Typography } from '../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import { useT } from '../libs/i18n';
+import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
 
 type TrendRange = 'week' | 'all';
 
@@ -246,6 +247,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
   const { theme } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const displayTitle = useAnimeDisplayTitle(anime);
   const score = anime.score != null ? formatScore(anime.score) : null;
   const isTop3 = rank <= 3;
   return (
@@ -253,7 +255,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
       accessibilityRole="button"
-      accessibilityLabel={t('trending.rankA11y', { rank, title: anime.title })}>
+      accessibilityLabel={t('trending.rankA11y', { rank, title: displayTitle })}>
       <Text
         style={[
           styles.rankNumber,
@@ -271,7 +273,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
       />
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={2}>
-          {anime.title}
+          {displayTitle}
         </Text>
         <View style={styles.metaRow}>
           {anime.tags?.[0] ? (

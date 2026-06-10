@@ -15,7 +15,7 @@ Anime tracking app built with Expo Router + React Native. Local-first storage, m
 | `libs/services/` | Data layer (data sources, cache, user prefs, onboarding). |
 | `libs/i18n/` | JSON catalogs (`locales/*.json`) + curated dictionaries (`data/genres.json`). `useT()` → fixed UI strings. `useTranslatedGenre()` / `<TranslatedText>` → anime data. See `libs/i18n/README.md`. |
 | `modules/haptics/hapticsBridge.ts` | Haptic feedback bridge. |
-| `__tests__/unit/` | Bun unit tests. Run with `bun test`. |
+| `__tests__/unit/` | Bun unit tests. Run with `bun run test:unit` (needs the `--preload ./test-setup.ts` the script adds). |
 
 ## Theme system — how it works
 
@@ -277,10 +277,14 @@ The parity test (`__tests__/unit/i18n.test.ts`) fails the build when a locale ha
 
 ```bash
 bun install                       # install deps
-bun test                          # run unit tests
-bun test __tests__/unit/foo.test.ts  # single file
+bun run test:unit                 # run unit tests (wraps bun test --preload ./test-setup.ts)
+bun test --preload ./test-setup.ts __tests__/unit/foo.test.ts  # single file
 bunx tsc --noEmit                 # type check (no emit)
 ```
+
+> ⚠️ Raw `bun test` without `--preload ./test-setup.ts` skips every native-module
+> mock — react-native fails to parse, dozens of files error, and the full run
+> can spin for minutes. Always go through the package.json scripts.
 
 When changing `components/themed/*`, add or update tests under `__tests__/unit/themed-*.test.ts`. The contrast math has tests pinned to specific hex values — update both if you change the algorithm.
 

@@ -5,14 +5,13 @@
 // underlying storage stays split (each MMKV key owned by its own module) so
 // downstream consumers can subscribe to just the one they need.
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
-import { safeJsonParse } from '../../libs/utils/safe-json';
 import {
   LANGUAGE_IDS,
   useI18n,
@@ -28,45 +27,47 @@ import {
   setShowOriginal,
   setVocabLanguage,
 } from '../../libs/i18n/data-language-prefs';
-import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
-import { LANGUAGE_PRIORITY_KEY } from '../../libs/services/storage/keys';
+import {
+  clearTitleOrder,
+  getEffectiveTitleOrderSync,
+  getStoredTitleOrderRawSync,
+  setTitleOrder,
+  subscribeTitleOrder,
+  type TitleLanguageId,
+} from '../../libs/i18n/title-language';
 
-// --- title-priority types (kept identical to old language-priority.tsx) ---
+// --- title-priority display metadata ---
 
-type TitleLangId = 'english' | 'romaji' | 'japanese' | 'chinese';
-
-const TITLE_FLAGS: Record<TitleLangId, string> = {
+const TITLE_FLAGS: Record<TitleLanguageId, string> = {
   english: '🇬🇧',
   romaji: 'A',
   japanese: '🇯🇵',
   chinese: '🇹🇼',
+  russian: '🇷🇺',
 };
 
-const TITLE_NAME_KEY: Record<TitleLangId, TranslationKey> = {
+const TITLE_NAME_KEY: Record<TitleLanguageId, TranslationKey> = {
   english: 'titleLanguage.english',
   romaji: 'titleLanguage.romaji',
   japanese: 'titleLanguage.japanese',
   chinese: 'titleLanguage.chinese',
+  russian: 'titleLanguage.russian',
 };
-
-const DEFAULT_ORDER: TitleLangId[] = ['english', 'romaji', 'japanese', 'chinese'];
-
-const isTitleOrder = (value: unknown): value is TitleLangId[] =>
-  Array.isArray(value) &&
-  value.every((id): id is TitleLangId => typeof id === 'string' && id in TITLE_FLAGS);
-
-function readOrderSync(): TitleLangId[] {
-  return safeJsonParse(kvGet(LANGUAGE_PRIORITY_KEY), isTitleOrder) ?? DEFAULT_ORDER;
-}
 
 // --- screen ---
 
 export default function LanguageScreen() {
   const { theme } = useTheme();
-  const { preference, setPreference, languages, t } = useI18n();
+  const { preference, setPreference, language, languages, t } = useI18n();
+
+  // Title order lives in the title-language module so browse/detail screens
+  // can subscribe too; this screen mirrors it via useSyncExternalStore.
+  // No stored order → the list shows the order derived from the app language.
+  const storedTitleOrderRaw = useSyncExternalStore(subscribeTitleOrder, getStoredTitleOrderRawSync);
+  const hasCustomTitleOrder = storedTitleOrderRaw.length > 0;
+  const titleOrder = getEffectiveTitleOrderSync(language);
 
   // Anime data prefs — each owned by its own MMKV key, mirrored in local state.
-  const [titleOrder, setTitleOrder] = useState<TitleLangId[]>(readOrderSync);
   const [vocabLang, setVocabLangState] = useState<AppLanguagePreference>(getVocabLanguageSync);
   const [autotranslate, setAutotranslateState] = useState<boolean>(getAutotranslateSync);
   const [showOriginal, setShowOriginalState] = useState<boolean>(getShowOriginalSync);
@@ -99,13 +100,11 @@ export default function LanguageScreen() {
     [next[index], next[target]] = [next[target], next[index]];
     hapticsBridge.selection();
     setTitleOrder(next);
-    kvSet(LANGUAGE_PRIORITY_KEY, JSON.stringify(next));
   };
 
   const resetTitle = () => {
     hapticsBridge.warning();
-    setTitleOrder(DEFAULT_ORDER);
-    kvSet(LANGUAGE_PRIORITY_KEY, JSON.stringify(DEFAULT_ORDER));
+    clearTitleOrder();
   };
 
   const pickVocab = (id: AppLanguagePreference) => {
@@ -182,7 +181,9 @@ export default function LanguageScreen() {
       {/* 2a — Title priority */}
       <RowLabel
         title={t('language.titlePriority')}
-        subtitle={t('language.titlePriorityDesc')}
+        subtitle={
+          hasCustomTitleOrder ? t('language.titlePriorityDesc') : t('language.titleFollowingApp')
+        }
         color={theme.text.secondary}
         action={
           <Pressable

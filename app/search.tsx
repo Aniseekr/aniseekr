@@ -43,6 +43,7 @@ import { sameArrayBy } from '../libs/utils/state-array';
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
 import { SEARCH_RECENT_KEY } from '../libs/services/storage/keys';
 import { useT } from '../libs/i18n';
+import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
 
 const MAX_RECENT = 8;
 
@@ -85,6 +86,8 @@ function sameSearchResults(current: SearchAnime[], next: SearchAnime[]): boolean
     anime.id,
     anime.title,
     anime.titleEnglish,
+    anime.titleRomaji,
+    anime.titleJapanese,
     anime.secondaryTitle,
     anime.image,
     anime.bannerImage,
@@ -736,6 +739,11 @@ function ResultCard({
   onBookmarkPress,
 }: ResultCardProps) {
   const t = useT();
+  // Pilgrimage rows carry a Bangumi id and a title already localized by
+  // pilgrimage-localization — don't run them through the AniList-id pipeline.
+  const isPilgrimageRow = anime.pilgrimageSource !== undefined;
+  const localizedTitle = useAnimeDisplayTitle(isPilgrimageRow ? null : anime);
+  const displayTitle = isPilgrimageRow ? anime.title : localizedTitle || anime.title;
   const score = typeof anime.score === 'number' ? formatScore(anime.score) : null;
   const tags = anime.tags?.slice(0, 3) ?? [];
   return (
@@ -744,7 +752,7 @@ function ResultCard({
       disabled={pending}
       accessibilityRole="button"
       accessibilityLabel={
-        hasPilgrimage ? t('search.resultPilgrimageA11y', { title: anime.title }) : anime.title
+        hasPilgrimage ? t('search.resultPilgrimageA11y', { title: displayTitle }) : displayTitle
       }
       style={({ pressed }) => [
         styles.resultCard,
@@ -760,7 +768,7 @@ function ResultCard({
       <View style={styles.resultBody}>
         <View style={styles.resultTitleRow}>
           <Text style={styles.resultTitle} numberOfLines={2}>
-            {anime.title}
+            {displayTitle}
           </Text>
           {hasPilgrimage ? (
             <Ionicons

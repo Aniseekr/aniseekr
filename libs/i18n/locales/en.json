@@ -51,6 +51,7 @@
     "korean": "한국어",
     "titlePriority": "Title priority",
     "titlePriorityDesc": "Order in which title languages are tried for each anime",
+    "titleFollowingApp": "Following your App language. Reorder below to customize.",
     "vocabLanguage": "Genre & tag language",
     "vocabLanguageDesc": "Defaults to App language. Override to mix languages.",
     "vocabAuto": "Auto (follow App language)",
@@ -582,8 +583,9 @@
     "english": "English",
     "romaji": "Romaji",
     "japanese": "日本語",
-    "chinese": "繁體中文",
-    "resetA11y": "Reset to default order"
+    "chinese": "中文",
+    "russian": "Русский",
+    "resetA11y": "Follow App language"
   },
 
   "translation": {

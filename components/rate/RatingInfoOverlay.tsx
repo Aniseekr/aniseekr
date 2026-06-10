@@ -1,4 +1,5 @@
 import { Platform, View, Text, Pressable, StyleSheet } from 'react-native';
+import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { Photo } from './types';
 import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,6 +14,16 @@ type Props = {
 };
 
 export function RatingInfoOverlay({ photo, onClose, onMoreDetails }: Props) {
+  const displayTitle = useAnimeDisplayTitle(
+    photo?.title
+      ? {
+          id: photo.id,
+          title: photo.title,
+          titleEnglish: photo.enTitle,
+          titleJapanese: photo.jpTitle,
+        }
+      : null
+  );
   if (!photo) return null;
 
   const formattedScore = photo.score
@@ -37,9 +48,9 @@ export function RatingInfoOverlay({ photo, onClose, onMoreDetails }: Props) {
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
               <Text style={styles.title} numberOfLines={2}>
-                {photo.title || 'Unknown Title'}
+                {displayTitle || photo.title || 'Unknown Title'}
               </Text>
-              {photo.jpTitle && photo.jpTitle !== photo.title && (
+              {photo.jpTitle && photo.jpTitle !== (displayTitle || photo.title) && (
                 <Text style={styles.subtitle} numberOfLines={1}>
                   {photo.jpTitle}
                 </Text>

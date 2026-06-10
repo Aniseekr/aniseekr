@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { ThemedText, ON_DARK } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
@@ -40,61 +41,76 @@ function CollectionAnimeGridComponent({
       {rows.map((row, rowIndex) => (
         <View key={`row-${rowIndex}`} style={styles.row}>
           {row.map((item) => (
-            <Pressable
+            <AnimeGridCard
               key={item.id}
-              onPress={() => {
-                hapticsBridge.tap();
-                onPressItem?.(item);
-              }}
-              onLongPress={
-                onLongPressItem
-                  ? () => {
-                      hapticsBridge.longPress();
-                      onLongPressItem(item);
-                    }
-                  : undefined
-              }
-              style={({ pressed }) => [
-                styles.card,
-                {
-                  backgroundColor: theme.background.secondary,
-                  borderColor: theme.glassBorder,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}>
-              {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={StyleSheet.absoluteFill}
-                  resizeMode="cover"
-                />
-              ) : null}
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.85)']}
-                style={styles.gradient}
-                pointerEvents="none"
-              />
-              <View style={styles.textBlock}>
-                <ThemedText
-                  variant="bodySmall"
-                  weight="700"
-                  numberOfLines={2}
-                  style={styles.title}>
-                  {item.title}
-                </ThemedText>
-                <ThemedText
-                  variant="captionSmall"
-                  style={styles.episodes}
-                  numberOfLines={1}>
-                  Ep {item.progress} / {item.totalEpisodes ?? '?'}
-                </ThemedText>
-              </View>
-            </Pressable>
+              item={item}
+              theme={theme}
+              onPressItem={onPressItem}
+              onLongPressItem={onLongPressItem}
+            />
           ))}
           {row.length === 1 ? <View style={styles.cardSpacer} /> : null}
         </View>
       ))}
     </View>
+  );
+}
+
+function AnimeGridCard({
+  item,
+  theme,
+  onPressItem,
+  onLongPressItem,
+}: {
+  item: CollectionAnimeCardItem;
+  theme: ReturnType<typeof useTheme>['theme'];
+  onPressItem?: (item: CollectionAnimeCardItem) => void;
+  onLongPressItem?: (item: CollectionAnimeCardItem) => void;
+}) {
+  const displayTitle = useAnimeDisplayTitle({ id: item.id, title: item.title });
+  return (
+    <Pressable
+      onPress={() => {
+        hapticsBridge.tap();
+        onPressItem?.(item);
+      }}
+      onLongPress={
+        onLongPressItem
+          ? () => {
+              hapticsBridge.longPress();
+              onLongPressItem(item);
+            }
+          : undefined
+      }
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: theme.glassBorder,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}>
+      {item.imageUrl ? (
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      ) : null}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.85)']}
+        style={styles.gradient}
+        pointerEvents="none"
+      />
+      <View style={styles.textBlock}>
+        <ThemedText variant="bodySmall" weight="700" numberOfLines={2} style={styles.title}>
+          {displayTitle}
+        </ThemedText>
+        <ThemedText variant="captionSmall" style={styles.episodes} numberOfLines={1}>
+          Ep {item.progress} / {item.totalEpisodes ?? '?'}
+        </ThemedText>
+      </View>
+    </Pressable>
   );
 }
 

@@ -148,8 +148,9 @@
     "english": "English",
     "romaji": "Romaji",
     "japanese": "日本語",
-    "chinese": "繁體中文",
-    "resetA11y": "重置为默认顺序"
+    "chinese": "中文",
+    "russian": "Русский",
+    "resetA11y": "改回跟随 App 语言"
   },
 
   "translation": {
