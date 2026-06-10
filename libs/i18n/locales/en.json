@@ -1231,6 +1231,35 @@
       "saved": "Saved to camera roll",
       "captureFailed": "Capture failed",
       "mediaDenied": "Media access denied"
+    },
+    "cutout": {
+      "title": "Cutout editor",
+      "analyzing": "Detecting subject…",
+      "manualBanner": "No subject detected — paint over the character to keep it.",
+      "erase": "Erase",
+      "restore": "Restore",
+      "brushSize": "Brush size",
+      "hardness": "Hardness",
+      "feather": "Feather",
+      "smooth": "Smooth",
+      "shrink": "Shrink",
+      "expand": "Expand",
+      "undoA11y": "Undo",
+      "redoA11y": "Redo",
+      "compareA11y": "Hold to compare with the original",
+      "background": "Backdrop",
+      "maskView": "Mask",
+      "reset": "Reset",
+      "useOriginal": "Use original",
+      "save": "Done",
+      "saving": "Saving…",
+      "saveFailed": "Couldn't save the cutout",
+      "loadFailed": "Couldn't load this image",
+      "edit": "Edit cutout",
+      "discardTitle": "Discard changes?",
+      "discardBody": "Your unsaved adjustments will be lost.",
+      "discardKeep": "Keep editing",
+      "discardLeave": "Discard"
     }
   }
 }

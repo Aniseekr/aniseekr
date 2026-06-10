@@ -1231,6 +1231,35 @@
       "saved": "已儲存到相簿",
       "captureFailed": "合成失敗",
       "mediaDenied": "沒有相簿儲存權限"
+    },
+    "cutout": {
+      "title": "去背編輯",
+      "analyzing": "偵測主體中…",
+      "manualBanner": "未偵測到主體 — 用筆刷塗抹要保留的角色",
+      "erase": "擦除",
+      "restore": "還原",
+      "brushSize": "筆刷大小",
+      "hardness": "硬度",
+      "feather": "羽化",
+      "smooth": "平滑",
+      "shrink": "收縮",
+      "expand": "擴張",
+      "undoA11y": "復原",
+      "redoA11y": "重做",
+      "compareA11y": "按住對照原圖",
+      "background": "底色",
+      "maskView": "遮罩",
+      "reset": "重設",
+      "useOriginal": "使用原圖",
+      "save": "完成",
+      "saving": "儲存中…",
+      "saveFailed": "無法儲存去背結果",
+      "loadFailed": "無法載入這張圖片",
+      "edit": "編輯去背",
+      "discardTitle": "捨棄編輯？",
+      "discardBody": "尚未儲存的調整將會遺失。",
+      "discardKeep": "繼續編輯",
+      "discardLeave": "捨棄"
     }
   }
 }
