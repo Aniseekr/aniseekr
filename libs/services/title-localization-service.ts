@@ -44,8 +44,15 @@ const SOURCE_PLATFORM: Record<LocalizedTitleLanguage, PlatformType> = {
   russian: 'shikimori',
 };
 
+/**
+ * v2: v1 keys were poisoned by negative results written while the dataset
+ * had no bangumi_id at all (see 2026-06-12 spec). Bumping the prefix orphans
+ * them; CacheManager prune removes them after TTL.
+ */
+const CACHE_PREFIX = 'title_loc_v2_';
+
 function cacheKey(lang: LocalizedTitleLanguage, platform: PlatformType, id: string): string {
-  return `title_loc_${lang}_${platform}_${id}`;
+  return `${CACHE_PREFIX}${lang}_${platform}_${id}`;
 }
 
 async function fetchChineseTitle(bangumiId: string): Promise<string | null> {
@@ -63,8 +70,11 @@ async function fetchRussianTitle(shikimoriId: string): Promise<string | null> {
 }
 
 export interface TitleLocalizationDeps {
-  cache?: Pick<typeof CacheService, 'getSync' | 'get' | 'set'>;
-  idMapping?: Pick<typeof idMappingService, 'mapID'>;
+  cache?: Pick<typeof CacheService, 'getSync' | 'get' | 'set' | 'clearByPrefixWhereValue'>;
+  idMapping?: Pick<
+    typeof idMappingService,
+    'mapID' | 'getChineseTitleSource' | 'getLastUpdateTime'
+  >;
   fetchers?: Partial<Record<LocalizedTitleLanguage, (mappedId: string) => Promise<string | null>>>;
 }
 
@@ -80,6 +90,9 @@ export class TitleLocalizationService {
   private readonly failedAt = new Map<string, number>();
   private readonly queue: (() => Promise<void>)[] = [];
   private running = 0;
+
+  /** Once true, stays true — an import is never undone. */
+  private mappingReadyMemo = false;
 
   private readonly listeners = new Set<() => void>();
 
@@ -130,18 +143,18 @@ export class TitleLocalizationService {
           return;
         }
 
-        const mappedId = await this.idMapping.mapID(platform, id, SOURCE_PLATFORM[lang]);
-        if (mappedId == null) {
-          await this.cache.set(key, { v: null } satisfies CachedTitle, MISS_TTL_MS);
-          this.emit();
+        const resolved = await this.resolve(lang, platform, id);
+        if (resolved.kind === 'transient') {
+          // Mapping dataset not imported yet — this is "we can't know",
+          // never "known absent". Backoff, don't poison the cache.
+          this.failedAt.set(key, Date.now());
           return;
         }
 
-        const title = await this.fetchers[lang](String(mappedId));
         await this.cache.set(
           key,
-          { v: title } satisfies CachedTitle,
-          title ? HIT_TTL_MS : MISS_TTL_MS
+          { v: resolved.title } satisfies CachedTitle,
+          resolved.title ? HIT_TTL_MS : MISS_TTL_MS
         );
         this.emit();
       } catch (err) {
@@ -153,9 +166,62 @@ export class TitleLocalizationService {
     });
   }
 
+  private async isMappingReady(): Promise<boolean> {
+    if (this.mappingReadyMemo) return true;
+    const t = await this.idMapping.getLastUpdateTime();
+    if (t !== null) this.mappingReadyMemo = true;
+    return this.mappingReadyMemo;
+  }
+
+  /**
+   * Resolution outcome: 'done' carries the title (or a confirmed absence);
+   * 'transient' means we couldn't tell ("dataset not imported yet") and must
+   * NOT write a negative cache — backoff and retry later instead.
+   */
+  private async resolve(
+    lang: LocalizedTitleLanguage,
+    platform: PlatformType,
+    id: string
+  ): Promise<{ kind: 'done'; title: string | null } | { kind: 'transient' }> {
+    if (lang === 'chinese') {
+      // Single SELECT: locally-shipped name_cn (offline, preferred) plus the
+      // bangumi_id needed for the network fallback.
+      const src = await this.idMapping.getChineseTitleSource(platform, id);
+      if (src?.nameCn) return { kind: 'done', title: src.nameCn };
+      if (src?.bangumiId) {
+        return { kind: 'done', title: await this.fetchers.chinese(src.bangumiId) };
+      }
+      if (!(await this.isMappingReady())) return { kind: 'transient' };
+      return { kind: 'done', title: null };
+    }
+
+    const mappedId = await this.idMapping.mapID(platform, id, SOURCE_PLATFORM[lang]);
+    if (mappedId == null) {
+      if (!(await this.isMappingReady())) return { kind: 'transient' };
+      return { kind: 'done', title: null };
+    }
+    return { kind: 'done', title: await this.fetchers[lang](String(mappedId)) };
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Called after a successful mapping-data import (app/_layout.tsx). Negative
+   * entries were judged against the OLD dataset — drop them so the new data
+   * gets a chance; positive hits stay. Clears fetch backoffs and notifies
+   * subscribers so visible screens re-kick enrichment immediately.
+   */
+  async onMappingDataRefreshed(): Promise<void> {
+    this.mappingReadyMemo = true;
+    this.failedAt.clear();
+    await this.cache.clearByPrefixWhereValue(
+      CACHE_PREFIX,
+      JSON.stringify({ v: null } satisfies CachedTitle)
+    );
+    this.emit();
   }
 
   private emit(): void {
