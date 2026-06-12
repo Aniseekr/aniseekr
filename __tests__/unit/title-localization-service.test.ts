@@ -87,7 +87,7 @@ describe('TitleLocalizationService', () => {
 
   it('TLS-002 chinese falls back to the Bangumi fetcher via bangumi_id', async () => {
     const cache = makeFakeCache();
-    let fetchedWith: string | null = null;
+    const fetchedWith: string[] = [];
     const service = new TitleLocalizationService({
       cache,
       idMapping: makeIdMapping({
@@ -95,7 +95,7 @@ describe('TitleLocalizationService', () => {
       }),
       fetchers: {
         chinese: async (id) => {
-          fetchedWith = id;
+          fetchedWith.push(id);
           return '进击的巨人';
         },
       },
@@ -104,7 +104,7 @@ describe('TitleLocalizationService', () => {
     service.ensure('chinese', 'anilist', '16498');
     await settle();
 
-    expect(fetchedWith).toBe('23686');
+    expect(fetchedWith).toEqual(['23686']);
     expect(service.getSync('chinese', 'anilist', '16498')).toBe('进击的巨人');
   });
 
