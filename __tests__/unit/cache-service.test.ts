@@ -147,4 +147,22 @@ describe('CacheService', () => {
     const keys = await CacheService.allKeys();
     expect(new Set(keys)).toEqual(new Set(['a_1', 'b_2', 'c_3']));
   });
+
+  it('CACHE-017 clearByPrefixWhereValue deletes only prefix + exact-value matches', async () => {
+    await CacheService.set('title_loc_v2_chinese_anilist_1', { v: null }, 60_000);
+    await CacheService.set('title_loc_v2_chinese_anilist_2', { v: '進擊的巨人' }, 60_000);
+    await CacheService.set('other_key', { v: null }, 60_000);
+
+    const removed = await CacheService.clearByPrefixWhereValue(
+      'title_loc_v2_',
+      JSON.stringify({ v: null })
+    );
+
+    expect(removed).toBe(1);
+    expect(CacheService.getSync('title_loc_v2_chinese_anilist_1')).toBeNull();
+    expect(CacheService.getSync<{ v: string }>('title_loc_v2_chinese_anilist_2')?.v).toBe(
+      '進擊的巨人'
+    );
+    expect(CacheService.getSync<{ v: null }>('other_key')?.v).toBeNull();
+  });
 });

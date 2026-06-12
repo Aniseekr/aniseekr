@@ -339,6 +339,32 @@ export class CacheService {
     }
   }
 
+  /**
+   * Delete rows whose key begins with `prefix` AND whose serialized value
+   * equals `valueJson` exactly. Used by TitleLocalizationService to flush
+   * negative entries (`{"v":null}`) after a mapping-data refresh without
+   * touching positive hits. Returns the row count removed.
+   */
+  static async clearByPrefixWhereValue(prefix: string, valueJson: string): Promise<number> {
+    if (!prefix) return 0;
+    for (const [k, e] of Array.from(mem.entries())) {
+      if (k.startsWith(prefix) && JSON.stringify(e.value) === valueJson) mem.delete(k);
+    }
+    try {
+      const db = await openDb();
+      const escaped = prefix.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+      const result = await db.runAsync(
+        "DELETE FROM cache WHERE key LIKE ? ESCAPE '\\' AND value = ?",
+        `${escaped}%`,
+        valueJson
+      );
+      return result?.changes ?? 0;
+    } catch (error) {
+      console.warn('CacheService.clearByPrefixWhereValue error:', error);
+      return 0;
+    }
+  }
+
   /** Remove every row whose `timestamp + ttl < now`. Returns the row count removed. */
   static async prune(): Promise<number> {
     const now = Date.now();

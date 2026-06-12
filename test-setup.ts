@@ -366,6 +366,25 @@ class FakeDatabase {
         result.changes = removed;
         return result;
       }
+      // DELETE FROM cache WHERE key LIKE ? ESCAPE '\' AND value = ?
+      if (upper.includes('WHERE KEY LIKE') && upper.includes('AND VALUE = ?')) {
+        const raw = String(params[0] ?? '');
+        const valueJson = String(params[1] ?? '');
+        const literal = raw
+          .replace(/%$/, '')
+          .replace(/\\_/g, '_')
+          .replace(/\\%/g, '%')
+          .replace(/\\\\/g, '\\');
+        let removed = 0;
+        for (const [k, v] of [...this.cache.entries()]) {
+          if (k.startsWith(literal) && v.value === valueJson) {
+            this.cache.delete(k);
+            removed++;
+          }
+        }
+        result.changes = removed;
+        return result;
+      }
       // DELETE FROM cache WHERE key LIKE ? ESCAPE '\'
       if (upper.includes('WHERE KEY LIKE')) {
         const raw = String(params[0] ?? '');
