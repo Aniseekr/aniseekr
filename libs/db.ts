@@ -93,15 +93,28 @@ async function initializeOpenedDb(opened: SQLite.SQLiteDatabase): Promise<void> 
 }
 
 // SQLite has no `ADD COLUMN IF NOT EXISTS`, so we catch the duplicate-column
-// error and move on. Each entry is safe to attempt every boot.
+// error and move on. Each entry is safe to attempt every boot. `onApplied`
+// runs only when the ALTER actually executed (i.e. the column was just added
+// on an upgraded install) — never on fresh installs (DDL already has the
+// column → duplicate-column skip) and never on later boots.
 async function runColumnMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
-  const migrations: { sql: string }[] = [
+  const migrations: { sql: string; onApplied?: (db: SQLite.SQLiteDatabase) => Promise<void> }[] = [
     { sql: 'ALTER TABLE user_anime ADD COLUMN notes TEXT' },
     { sql: 'ALTER TABLE user_anime ADD COLUMN rewatch_count INTEGER DEFAULT 0' },
+    {
+      sql: 'ALTER TABLE id_mappings ADD COLUMN name_cn TEXT',
+      // The freshly-added column is empty until the next mapping download;
+      // resetting the freshness marker forces one refetch of the enriched
+      // dataset instead of waiting out the 14-day window.
+      onApplied: async (d) => {
+        await d.runAsync(`DELETE FROM id_mappings_meta WHERE key = 'lastUpdatedAt'`);
+      },
+    },
   ];
   for (const m of migrations) {
     try {
       await db.execAsync(m.sql);
+      await m.onApplied?.(db);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/duplicate column/i.test(msg)) continue;
@@ -283,7 +296,8 @@ const DDL = `
         livechart_id INTEGER,
         anime_planet_id TEXT,
         anisearch_id INTEGER,
-        notify_moe_id TEXT
+        notify_moe_id TEXT,
+        name_cn TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_mal_id ON id_mappings(mal_id);
       CREATE INDEX IF NOT EXISTS idx_anilist_id ON id_mappings(anilist_id);
