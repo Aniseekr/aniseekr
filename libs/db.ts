@@ -107,6 +107,8 @@ async function runColumnMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
       // resetting the freshness marker forces one refetch of the enriched
       // dataset instead of waiting out the 14-day window.
       onApplied: async (d) => {
+        // Lock-step: must match META_KEY_LAST_UPDATE in
+        // libs/services/sync/id-mapping-service.ts ('lastUpdatedAt').
         await d.runAsync(`DELETE FROM id_mappings_meta WHERE key = 'lastUpdatedAt'`);
       },
     },

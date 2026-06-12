@@ -18,6 +18,9 @@ const MAPPING_URL =
  */
 const FRESHNESS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
+// Lock-step: libs/db.ts's name_cn migration deletes this row by string
+// literal (importing it there would invert the db → services layering).
+// Renaming this value requires updating that literal in the same change.
 const META_KEY_LAST_UPDATE = 'lastUpdatedAt';
 
 interface AnimeMapping {
@@ -228,7 +231,8 @@ export class IDMappingService {
         mal_id: number | string | null;
       }>(`SELECT shikimori_id, mal_id FROM id_mappings WHERE ${fromCol} = ? LIMIT 1`, fromId);
       const v = row ? (row.shikimori_id ?? row.mal_id) : null;
-      return v == null || v === '' ? null : String(v);
+      // 0 is a "no entry" sentinel in some upstream lists, never a real ID.
+      return v == null || v === '' || v === 0 ? null : String(v);
     }
 
     if (fromPlatform === 'shikimori') {
@@ -329,8 +333,11 @@ export class IDMappingService {
     }
 
     const trimmed = typeof row.name_cn === 'string' ? row.name_cn.trim() : '';
+    // 0 is a "no entry" sentinel in some upstream lists, never a real ID.
     const rowBangumi =
-      row.bangumi_id != null && row.bangumi_id !== '' ? String(row.bangumi_id) : null;
+      row.bangumi_id != null && row.bangumi_id !== '' && row.bangumi_id !== 0
+        ? String(row.bangumi_id)
+        : null;
     return {
       nameCn: trimmed.length > 0 ? trimmed : null,
       bangumiId: manual ?? rowBangumi ?? selfId,

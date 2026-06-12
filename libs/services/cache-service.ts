@@ -343,7 +343,8 @@ export class CacheService {
    * Delete rows whose key begins with `prefix` AND whose serialized value
    * equals `valueJson` exactly. Used by TitleLocalizationService to flush
    * negative entries (`{"v":null}`) after a mapping-data refresh without
-   * touching positive hits. Returns the row count removed.
+   * touching positive hits. Returns the SQLite row count removed (mem-mirror
+   * evictions are not counted).
    */
   static async clearByPrefixWhereValue(prefix: string, valueJson: string): Promise<number> {
     if (!prefix) return 0;

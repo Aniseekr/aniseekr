@@ -267,4 +267,44 @@ describe('TitleLocalizationService', () => {
     await settle();
     expect(service.getSync('chinese', 'anilist', '154587')).toBe('葬送的芙莉蓮');
   });
+
+  it('TLS-010 an in-flight resolution cannot re-poison the cache after a refresh flush', async () => {
+    const cache = makeFakeCache();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let calls = 0;
+    const service = new TitleLocalizationService({
+      cache,
+      idMapping: makeIdMapping({
+        getChineseTitleSource: async () => {
+          calls += 1;
+          if (calls === 1) {
+            // Old dataset: stall mid-resolution, then report a miss.
+            await gate;
+            return null;
+          }
+          // New dataset (post-refresh): hit.
+          return { nameCn: '葬送的芙莉蓮', bangumiId: null };
+        },
+      }),
+    });
+
+    service.ensure('chinese', 'anilist', '154587');
+    await settle(); // task is now parked on the gate
+
+    await service.onMappingDataRefreshed(); // import lands while resolution is in flight
+    release();
+    await settle();
+
+    // The stale negative judged against the old dataset must be dropped,
+    // not written: cache stays empty and the key is immediately retryable.
+    expect(cache.store.size).toBe(0);
+    expect(service.getSync('chinese', 'anilist', '154587')).toBeUndefined();
+
+    service.ensure('chinese', 'anilist', '154587');
+    await settle();
+    expect(service.getSync('chinese', 'anilist', '154587')).toBe('葬送的芙莉蓮');
+  });
 });

@@ -94,6 +94,13 @@ export class TitleLocalizationService {
   /** Once true, stays true — an import is never undone. */
   private mappingReadyMemo = false;
 
+  /**
+   * Bumped by onMappingDataRefreshed. A resolution that started under an
+   * older generation may NOT write a negative result: it was judged against
+   * the dataset that the refresh just replaced.
+   */
+  private refreshGeneration = 0;
+
   private readonly listeners = new Set<() => void>();
 
   constructor(deps: TitleLocalizationDeps = {}) {
@@ -134,6 +141,7 @@ export class TitleLocalizationService {
 
     this.inflight.add(key);
     this.enqueue(async () => {
+      let staleNegativeDropped = false;
       try {
         // The persistent layer may have it even when the memory mirror is
         // cold (fresh launch) — `get` pulls it into the mirror for getSync.
@@ -143,11 +151,20 @@ export class TitleLocalizationService {
           return;
         }
 
+        const generation = this.refreshGeneration;
         const resolved = await this.resolve(lang, platform, id);
         if (resolved.kind === 'transient') {
           // Mapping dataset not imported yet — this is "we can't know",
           // never "known absent". Backoff, don't poison the cache.
           this.failedAt.set(key, Date.now());
+          return;
+        }
+
+        if (resolved.title === null && generation !== this.refreshGeneration) {
+          // The dataset was replaced while we were resolving — this negative
+          // was judged against stale data. Drop it and re-kick (below, once
+          // the inflight slot is free so the retry isn't deduped away).
+          staleNegativeDropped = true;
           return;
         }
 
@@ -163,6 +180,7 @@ export class TitleLocalizationService {
       } finally {
         this.inflight.delete(key);
       }
+      if (staleNegativeDropped) this.emit();
     });
   }
 
@@ -216,6 +234,7 @@ export class TitleLocalizationService {
    */
   async onMappingDataRefreshed(): Promise<void> {
     this.mappingReadyMemo = true;
+    this.refreshGeneration += 1;
     this.failedAt.clear();
     await this.cache.clearByPrefixWhereValue(
       CACHE_PREFIX,
