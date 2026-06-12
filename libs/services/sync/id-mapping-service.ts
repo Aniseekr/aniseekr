@@ -88,12 +88,13 @@ export class IDMappingService {
   /**
    * Download the upstream merged mapping list and replace the SQLite table
    * contents inside a single transaction. Short-circuits when the local copy
-   * is younger than `FRESHNESS_WINDOW_MS`.
+   * is younger than `FRESHNESS_WINDOW_MS`. Returns true when an import
+   * actually ran (callers use this to flush stale title caches).
    */
-  async updateMappings(): Promise<void> {
+  async updateMappings(): Promise<boolean> {
     const lastUpdate = await this.getLastUpdateTime();
     if (lastUpdate !== null && Date.now() - lastUpdate < FRESHNESS_WINDOW_MS) {
-      return;
+      return false;
     }
 
     const fs = FileSystem as unknown as {
@@ -117,6 +118,7 @@ export class IDMappingService {
     const mappings: AnimeMapping[] = JSON.parse(fileContent);
     await this.bulkInsert(mappings);
     await this.setLastUpdateTime(Date.now());
+    return true;
   }
 
   /**

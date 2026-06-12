@@ -28,6 +28,7 @@ import { authService } from '../libs/services/auth/auth-service';
 import { isOnboardingCompleteSync } from '../libs/services/onboarding-service';
 import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
+import { titleLocalizationService } from '../libs/services/title-localization-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
@@ -92,7 +93,14 @@ export default function RootLayout() {
       initClarity();
       void authService.initialize();
       void notificationService.initialize();
-      void idMappingService.updateMappings().catch((e) => console.warn('[updateMappings]', e));
+      void idMappingService
+        .updateMappings()
+        .then((imported) => {
+          // A real import means negative title-cache entries were judged
+          // against the old dataset — flush them so new data takes effect.
+          if (imported) void titleLocalizationService.onMappingDataRefreshed();
+        })
+        .catch((e) => console.warn('[updateMappings]', e));
       void hydrateAllPilgrimageData().catch((e) => console.warn('[hydratePilgrimage]', e));
       void CacheManager.getInstance()
         .pruneAll()

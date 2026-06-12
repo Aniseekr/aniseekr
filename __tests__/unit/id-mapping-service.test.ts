@@ -181,6 +181,17 @@ describe('IDMappingService', () => {
     spy.mockRestore();
   });
 
+  it('IDM-016 updateMappings reports whether an import actually ran', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    // Fresh meta row → freshness window not elapsed → short-circuit, no import.
+    const spy = spyOn(db, 'getFirstAsync').mockResolvedValue({
+      value: String(Date.now()),
+    } as never);
+    await expect(svc.updateMappings()).resolves.toBe(false);
+    spy.mockRestore();
+  });
+
   it('IDM-006 bulk insert wraps in a single exclusive transaction', async () => {
     const svc = IDMappingService.getInstance();
     const db = await LocalDB.getDatabase();
