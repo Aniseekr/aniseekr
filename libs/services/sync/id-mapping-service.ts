@@ -212,6 +212,32 @@ export class IDMappingService {
     if (!fromCol || !toCol) return null;
 
     const db = await LocalDB.getDatabase();
+
+    // Shikimori reuses MAL numeric IDs and our dataset doesn't carry a
+    // dedicated shikimori_id (see 2026-06-12 title-localization spec), so the
+    // alias lives here, once, for every caller.
+    if (toPlatform === 'shikimori') {
+      const row = await db.getFirstAsync<{
+        shikimori_id: number | string | null;
+        mal_id: number | string | null;
+      }>(`SELECT shikimori_id, mal_id FROM id_mappings WHERE ${fromCol} = ? LIMIT 1`, fromId);
+      const v = row ? (row.shikimori_id ?? row.mal_id) : null;
+      return v == null || v === '' ? null : String(v);
+    }
+
+    if (fromPlatform === 'shikimori') {
+      const direct = await db.getFirstAsync<Record<string, string | number>>(
+        `SELECT ${toCol} FROM id_mappings WHERE shikimori_id = ? LIMIT 1`,
+        fromId
+      );
+      if (direct) return direct[toCol] ?? null;
+      const viaMal = await db.getFirstAsync<Record<string, string | number>>(
+        `SELECT ${toCol} FROM id_mappings WHERE mal_id = ? LIMIT 1`,
+        fromId
+      );
+      return viaMal ? (viaMal[toCol] ?? null) : null;
+    }
+
     const result = await db.getFirstAsync<Record<string, string | number>>(
       `SELECT ${toCol} FROM id_mappings WHERE ${fromCol} = ? LIMIT 1`,
       fromId
@@ -262,6 +288,10 @@ export class IDMappingService {
       if (v !== null && v !== undefined && v !== '') {
         out[platform] = String(v);
       }
+    }
+    // Shikimori ≡ MAL alias (no dedicated shikimori_id in the dataset).
+    if (!out.shikimori && out.myanimelist) {
+      out.shikimori = out.myanimelist;
     }
     return out;
   }

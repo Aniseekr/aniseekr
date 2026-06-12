@@ -45,6 +45,61 @@ describe('IDMappingService', () => {
     expect(mapped).toBe('12189');
   });
 
+  it('IDM-007 maps to shikimori via mal_id when shikimori_id column is empty', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const spy = spyOn(db, 'getFirstAsync').mockResolvedValue({
+      shikimori_id: null,
+      mal_id: 5114,
+    } as never);
+    const mapped = await svc.mapID('anilist', 5114, 'shikimori');
+    expect(mapped).toBe('5114');
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it('IDM-008 explicit shikimori_id wins over the mal alias', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const spy = spyOn(db, 'getFirstAsync').mockResolvedValue({
+      shikimori_id: 999,
+      mal_id: 5114,
+    } as never);
+    const mapped = await svc.mapID('anilist', 5114, 'shikimori');
+    expect(mapped).toBe('999');
+    spy.mockRestore();
+  });
+
+  it('IDM-009 maps from shikimori by falling back to the mal_id column', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const spy = spyOn(db, 'getFirstAsync')
+      .mockResolvedValueOnce(null as never) // WHERE shikimori_id = ? → no row
+      .mockResolvedValueOnce({ anilist_id: 5114 } as never); // WHERE mal_id = ?
+    const mapped = await svc.mapID('shikimori', 5114, 'anilist');
+    expect(mapped).toBe(5114);
+    expect(spy).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
+  });
+
+  it('IDM-010 mapAllPlatforms aliases shikimori from mal_id', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const spy = spyOn(db, 'getFirstAsync').mockResolvedValue({
+      mal_id: 5114,
+      anilist_id: 5114,
+      kitsu_id: null,
+      bangumi_id: null,
+      shikimori_id: null,
+      simkl_id: null,
+      annict_id: null,
+    } as never);
+    const all = await svc.mapAllPlatforms('anilist', '5114');
+    expect(all.shikimori).toBe('5114');
+    expect(all.myanimelist).toBe('5114');
+    spy.mockRestore();
+  });
+
   it('IDM-006 bulk insert wraps in a single exclusive transaction', async () => {
     const svc = IDMappingService.getInstance();
     const db = await LocalDB.getDatabase();
