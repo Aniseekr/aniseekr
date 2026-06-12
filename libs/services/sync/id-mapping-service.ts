@@ -39,6 +39,8 @@ interface AnimeMapping {
   'notify.moe_id'?: string;
   notify_moe_id?: string;
   type?: string;
+  /** Official Chinese title joined from the Bangumi Archive dump (B1). */
+  name_cn?: string;
 }
 
 const PLATFORM_TO_COLUMN: Partial<Record<PlatformType | string, string>> = {
@@ -133,8 +135,9 @@ export class IDMappingService {
       const statement = await tx.prepareAsync(
         `INSERT INTO id_mappings (
           mal_id, anilist_id, kitsu_id, bangumi_id, shikimori_id, simkl_id, annict_id,
-          thetvdb_id, themoviedb_id, livechart_id, anime_planet_id, anisearch_id, notify_moe_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          thetvdb_id, themoviedb_id, livechart_id, anime_planet_id, anisearch_id, notify_moe_id,
+          name_cn
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
 
       try {
@@ -155,6 +158,7 @@ export class IDMappingService {
               m.anime_planet_id ?? m['anime-planet_id'] ?? null,
               m.anisearch_id ?? null,
               m.notify_moe_id ?? m['notify.moe_id'] ?? null,
+              m.name_cn ?? null,
             ]);
           }
         }
@@ -294,6 +298,41 @@ export class IDMappingService {
       out.shikimori = out.myanimelist;
     }
     return out;
+  }
+
+  /**
+   * One-SELECT source bundle for Chinese title resolution: the locally-shipped
+   * `name_cn` (preferred, offline) plus the `bangumi_id` fallback for a
+   * network fetch when the dump predates this anime. `null` = row absent.
+   */
+  async getChineseTitleSource(
+    platform: PlatformType | string,
+    id: number | string
+  ): Promise<{ nameCn: string | null; bangumiId: string | null } | null> {
+    const col = this.getColumnName(platform);
+    if (!col) return null;
+
+    const db = await LocalDB.getDatabase();
+    const row = await db.getFirstAsync<{
+      name_cn: string | null;
+      bangumi_id: number | string | null;
+    }>(`SELECT name_cn, bangumi_id FROM id_mappings WHERE ${col} = ? LIMIT 1`, id);
+
+    const manual = this.getManualMapping(platform, id, 'bangumi');
+    const selfId = platform === 'bangumi' ? String(id) : null;
+    if (!row) {
+      return manual !== null || selfId !== null
+        ? { nameCn: null, bangumiId: manual ?? selfId }
+        : null;
+    }
+
+    const trimmed = typeof row.name_cn === 'string' ? row.name_cn.trim() : '';
+    const rowBangumi =
+      row.bangumi_id != null && row.bangumi_id !== '' ? String(row.bangumi_id) : null;
+    return {
+      nameCn: trimmed.length > 0 ? trimmed : null,
+      bangumiId: manual ?? rowBangumi ?? selfId,
+    };
   }
 
   /**
