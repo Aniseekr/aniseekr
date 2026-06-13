@@ -2,7 +2,7 @@ import { RefObject } from 'react';
 import { Share, Platform, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
-import { getAppLanguageSync } from '../../libs/i18n';
+import { getAppLanguageSync } from '../../libs/i18n/app-language';
 import { Anime } from '../rate/types';
 
 interface DailyAnime {

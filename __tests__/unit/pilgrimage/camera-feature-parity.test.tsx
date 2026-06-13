@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'bun:test';
-import ShutterRow from '../../../components/pilgrimage/camera/ShutterRow';
+import { describe, expect, it, mock } from 'bun:test';
+import en from '../../../libs/i18n/locales/en.json';
 import {
   CAPTURE_MODE_HELP_TEXT,
   captureModeToastCopy,
@@ -9,6 +9,23 @@ import {
   pickResolvedPhotoDimensions,
 } from '../../../libs/services/pilgrimage/camera-engine-parity';
 import { findAll, render } from './render-helpers';
+
+// English catalog lookup — ShutterRow resolves its accessibility labels via
+// useT(), and en is the default test language.
+const tEn = (key: string): string =>
+  (key
+    .split('.')
+    .reduce<unknown>(
+      (node, part) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+      en
+    ) as string) ?? key;
+
+mock.module('../../../libs/i18n', () => ({
+  useT: () => tEn,
+}));
+
+const { default: ShutterRow } = await import('../../../components/pilgrimage/camera/ShutterRow');
 
 const noop = () => undefined;
 

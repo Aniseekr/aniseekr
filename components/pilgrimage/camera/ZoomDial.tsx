@@ -33,6 +33,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { ThemedText, readableTextOn } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
   DEFAULT_DETENT_STOPS,
@@ -183,6 +184,7 @@ export default function ZoomDial({
   onDragBelowMin,
   onDragAboveMax,
 }: ZoomDialProps) {
+  const t = useT();
   const stops = useMemo<FocalStop[]>(
     () => availableStops ?? (isFrontFacing ? FRONT_FACING_DETENT_STOPS : DEFAULT_DETENT_STOPS),
     [availableStops, isFrontFacing]
@@ -480,7 +482,7 @@ export default function ZoomDial({
             }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Auto lens"
+            accessibilityLabel={t('pilgrimageUi.autoLens')}
             accessibilityState={{ selected: virtualActive }}
             style={({ pressed }) => [
               styles.autoBtn,

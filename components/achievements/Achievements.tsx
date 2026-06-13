@@ -21,6 +21,7 @@ import {
   AchievementDefinition,
 } from '../../libs/services/achievements/definitions';
 import { AchievementWithProgress } from '../../libs/services/achievements/achievement-service';
+import { useT } from '../../libs/i18n';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -77,6 +78,7 @@ interface AchievementsGalleryProps {
 }
 
 export function AchievementsGallery({ achievements }: AchievementsGalleryProps) {
+  const t = useT();
   const [filter, setFilter] = useState<FilterValue>('all');
   const [selected, setSelected] = useState<AchievementWithProgress | null>(null);
 
@@ -84,12 +86,12 @@ export function AchievementsGallery({ achievements }: AchievementsGalleryProps) 
     const present = new Set<AchievementCategory>();
     achievements.forEach((a) => present.add(a.category));
     const ordered: AchievementCategory[] = ['rating', 'collection', 'sync', 'pilgrimage', 'social'];
-    const chips: FilterChip[] = [{ value: 'all', label: 'All' }];
+    const chips: FilterChip[] = [{ value: 'all', label: t('commonUi.all') }];
     ordered.forEach((cat) => {
       if (present.has(cat)) chips.push({ value: cat, label: FILTER_LABELS[cat] });
     });
     return chips;
-  }, [achievements]);
+  }, [achievements, t]);
 
   const filtered = useMemo(() => {
     const list =
@@ -241,6 +243,7 @@ function ProgressOverviewCard({
   coins,
   shards,
 }: ProgressOverviewCardProps) {
+  const t = useT();
   return (
     <GlassCard variant="frosted" style={styles.overviewCard}>
       <View style={styles.overviewBody}>
@@ -255,7 +258,7 @@ function ProgressOverviewCard({
             <MaterialIcons name="emoji-events" size={22} color="#fff" />
           </View>
           <View style={styles.overviewHeaderText}>
-            <Text style={styles.overviewTitle}>Achievements</Text>
+            <Text style={styles.overviewTitle}>{t('commonUi.achievements')}</Text>
             <Text style={styles.overviewSubtitle}>
               {unlocked} of {total} unlocked
             </Text>
@@ -293,14 +296,15 @@ function RewardPill({ icon, label }: { icon: IconName; label: string }) {
 }
 
 function EmptyHintCard() {
+  const t = useT();
   return (
     <GlassCard variant="frosted" style={styles.emptyCard}>
       <View style={styles.emptyIconWrap}>
         <MaterialIcons name="auto-awesome" size={20} color={Colors.primary} />
       </View>
       <View style={styles.emptyTextWrap}>
-        <Text style={styles.emptyTitle}>No badges yet</Text>
-        <Text style={styles.emptyBody}>Start rating anime to unlock your first badge.</Text>
+        <Text style={styles.emptyTitle}>{t('achievementsUi.noBadgesYet')}</Text>
+        <Text style={styles.emptyBody}>{t('achievementsUi.startRatingAnimeToUnlock')}</Text>
       </View>
     </GlassCard>
   );
@@ -313,6 +317,7 @@ interface DetailSheetProps {
 }
 
 function AchievementDetailSheet({ item, visible, onClose }: DetailSheetProps) {
+  const t = useT();
   const handleClose = () => {
     hapticsBridge.tap();
     onClose();
@@ -400,13 +405,13 @@ function AchievementDetailSheet({ item, visible, onClose }: DetailSheetProps) {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rewardCardLabel}>Reward</Text>
+              <Text style={styles.rewardCardLabel}>{t('achievementsUi.reward')}</Text>
               <Text style={styles.rewardCardValue}>{rewardText}</Text>
             </View>
           </View>
 
           <Pressable onPress={handleClose} style={styles.sheetCloseButton}>
-            <Text style={styles.sheetCloseText}>Close</Text>
+            <Text style={styles.sheetCloseText}>{t('common.close')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>

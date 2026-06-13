@@ -11,6 +11,7 @@ import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../../themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { useT } from '../../../libs/i18n';
 import { formatScore, humanizeStatus, seasonOf } from './shared';
 import type { Anime } from '../types';
 
@@ -35,6 +36,7 @@ function matchesGenre(anime: Anime, chip: string): boolean {
 
 function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
   const { theme } = useTheme();
+  const t = useT();
   const accentFg = readableTextOn(theme.accent);
   const [selectedGenre, setSelectedGenre] = useState('All');
 
@@ -104,7 +106,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
                   variant="captionSmall"
                   weight="700"
                   style={{ color: theme.accent }}>
-                  View calendar
+                  {t('rate.viewCalendar')}
                 </ThemedText>
                 <Ionicons name="arrow-forward" size={12} color={theme.accent} />
               </View>
@@ -152,7 +154,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
       {/* Section head */}
       <View style={styles.sectionHead}>
         <ThemedText variant="titleLarge" weight="700">
-          Latest Season
+          {t('rate.latestSeason')}
         </ThemedText>
         <View
           style={[
@@ -200,7 +202,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
             </View>
             <View style={styles.forYouText}>
               <ThemedText variant="bodySmall" weight="700">
-                Tuned to your taste
+                {t('rate.tunedToYourTaste')}
               </ThemedText>
               <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
                 {data.length} picks based on your watch history
@@ -236,8 +238,9 @@ const ShowcasePoster = memo(function ShowcasePoster({
   borderColor,
 }: ShowcasePosterProps) {
   const { theme } = useTheme();
+  const t = useT();
   const score = formatScore(anime.score);
-  const genre = anime.tags?.[0] ?? anime.mood ?? 'Anime';
+  const genre = anime.tags?.[0] ?? anime.mood ?? t('commonUi.anime');
   const meta = humanizeStatus(anime.status) ?? (anime.episodes ? `${anime.episodes} eps` : null);
   return (
     <Pressable

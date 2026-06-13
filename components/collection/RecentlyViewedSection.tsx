@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { ProgressiveImage } from '../common/ProgressiveImage';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -42,20 +43,22 @@ function formatRelative(date?: Date | string): string {
 
 function RecentlyViewedSectionComponent({
   items,
-  title = 'Recently viewed',
-  emptyHint = 'Your recent picks will appear here.',
+  title,
+  emptyHint,
   onItemPress,
 }: RecentlyViewedSectionProps) {
   const router = useRouter();
   const { theme } = useTheme();
+  const t = useT();
+  const sectionTitle = title ?? t('collectionUi.recentlyViewed2');
 
   if (!items || items.length === 0) {
     return (
       <View style={styles.section}>
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{sectionTitle}</Text>
         </View>
-        <Text style={[styles.empty, { color: theme.text.tertiary }]}>{emptyHint}</Text>
+        <Text style={[styles.empty, { color: theme.text.tertiary }]}>{emptyHint ?? t('collectionUi.yourRecentPicksWillAppear')}</Text>
       </View>
     );
   }
@@ -71,7 +74,7 @@ function RecentlyViewedSectionComponent({
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <MaterialIcons name="history" size={18} color={theme.accent} />
-          <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{sectionTitle}</Text>
         </View>
         <Text style={[styles.count, { color: theme.text.tertiary }]}>{items.length}</Text>
       </View>

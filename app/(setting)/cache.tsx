@@ -126,12 +126,12 @@ export default function CacheSettingsScreen() {
 
   const handleClearBucket = (bucket: CacheBucket) => {
     Alert.alert(
-      'Clear this cache?',
-      `${bucket.label} will be cleared. It will be downloaded or computed again when needed.`,
+      t('settingsUi.clearThisCacheBucketLabelTitle'),
+      t('settingsUi.clearThisCacheBucketLabelMessage', { label: bucket.label }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('collectionUi.clear'),
           style: 'destructive',
           onPress: () => void withBusy(() => bucket.clear()),
         },
@@ -140,32 +140,36 @@ export default function CacheSettingsScreen() {
   };
 
   const handleClearSubBucket = (child: CacheSubBucket) => {
-    Alert.alert('Clear this category?', `${child.label} will be cleared.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Clear',
-        style: 'destructive',
-        onPress: () => void withBusy(() => child.clear()),
-      },
-    ]);
+    Alert.alert(
+      t('settingsUi.clearThisCategoryChildLabelTitle'),
+      t('settingsUi.clearThisCategoryChildLabelMessage', { label: child.label }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('collectionUi.clear'),
+          style: 'destructive',
+          onPress: () => void withBusy(() => child.clear()),
+        },
+      ]
+    );
   };
 
   const handlePruneExpired = () =>
     withBusy(async () => {
       const result = await manager.pruneAll();
       if (result.totalRemoved === 0) {
-        Alert.alert('No expired entries', 'All TTL-based cache entries are still valid.');
+        Alert.alert(t('settingsUi.noExpiredEntriesAllTtlTitle'), t('settingsUi.noExpiredEntriesAllTtlMessage'));
       }
     });
 
   const handleClearAll = () => {
     Alert.alert(
-      'Clear all caches?',
-      'Image caches, API responses, request memory cache, and preloaded files will be removed. Collections, ratings, and pilgrimage records are not affected.',
+      t('settingsUi.clearAllCachesImageCachesTitle'),
+      t('settingsUi.clearAllCachesImageCachesMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear all',
+          text: t('bangumiTab.clearAll'),
           style: 'destructive',
           onPress: () => void withBusy(() => manager.clearAll()),
         },

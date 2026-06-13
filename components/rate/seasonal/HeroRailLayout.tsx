@@ -11,6 +11,7 @@ import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../../themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { useT } from '../../../libs/i18n';
 import { episodeBadge, formatScore, humanizeStatus, seasonOf } from './shared';
 import type { Anime } from '../types';
 
@@ -24,6 +25,7 @@ const POSTER_H = 168;
 
 function HeroRailLayoutComponent({ data, onSelect }: HeroRailLayoutProps) {
   const { theme } = useTheme();
+  const t = useT();
   const accentFg = readableTextOn(theme.accent);
 
   if (data.length === 0) {
@@ -107,7 +109,7 @@ function HeroRailLayoutComponent({ data, onSelect }: HeroRailLayoutProps) {
                   variant="bodySmall"
                   weight="700"
                   style={{ color: accentFg }}>
-                  Watch Now
+                  {t('commonUi.watchNow')}
                 </ThemedText>
               </View>
               <View
@@ -128,11 +130,11 @@ function HeroRailLayoutComponent({ data, onSelect }: HeroRailLayoutProps) {
       {/* Rail head */}
       <View style={styles.railHead}>
         <ThemedText variant="titleLarge" weight="700">
-          Now Airing
+          {t('rate.nowAiring')}
         </ThemedText>
         <View style={styles.seeAll}>
           <ThemedText variant="captionSmall" weight="600" tone="secondary">
-            See all
+            {t('commonUi.seeAll')}
           </ThemedText>
           <Ionicons name="chevron-forward" size={12} color={theme.text.secondary} />
         </View>

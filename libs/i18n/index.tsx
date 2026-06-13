@@ -8,10 +8,10 @@
 //   invalidate consumer callbacks.
 
 import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
-import { NativeModules, Platform } from 'react-native';
-import { kvGet, kvSet } from '../services/storage/app-storage';
+import { kvSet } from '../services/storage/app-storage';
 import { APP_LANGUAGE_KEY } from '../services/storage/keys';
-import { LANGUAGES, resolveSystemLanguage, translate } from './engine';
+import { LANGUAGES, translate } from './engine';
+import { getAppLanguageSync, readPreferenceSync, readSystemLanguage } from './app-language';
 import type {
   AppLanguagePreference,
   LanguageId,
@@ -19,34 +19,6 @@ import type {
   TranslationKey,
   TranslationValues,
 } from './types';
-
-function readSystemLanguage(): LanguageId {
-  if (Platform.OS === 'ios') {
-    const settings =
-      (NativeModules?.SettingsManager?.settings as
-        | { AppleLocale?: string; AppleLanguages?: string[] }
-        | undefined) ?? undefined;
-    const tag = settings?.AppleLocale ?? settings?.AppleLanguages?.[0];
-    return resolveSystemLanguage(tag);
-  }
-  if (Platform.OS === 'android') {
-    const tag = (NativeModules?.I18nManager?.localeIdentifier as string | undefined) ?? undefined;
-    return resolveSystemLanguage(tag);
-  }
-  if (typeof navigator !== 'undefined' && navigator.language) {
-    return resolveSystemLanguage(navigator.language);
-  }
-  return 'en';
-}
-
-function readPreferenceSync(): AppLanguagePreference {
-  const raw = kvGet(APP_LANGUAGE_KEY);
-  if (raw === 'auto') return 'auto';
-  if (raw === 'en' || raw === 'zh-Hant' || raw === 'zh-Hans' || raw === 'ja' || raw === 'ko') {
-    return raw;
-  }
-  return 'auto';
-}
 
 interface I18nContextValue {
   /** The resolved active language (system value if preference is `auto`). */
@@ -63,16 +35,10 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-/**
- * Sync, React-free read of the active app language — same resolution the
- * provider seeds from (stored preference, else system locale). For service
- * code and imperative call sites (share builders, capture pipelines) that
- * can't use `useI18n()`. NOT reactive: callers re-read per invocation.
- */
-export function getAppLanguageSync(): LanguageId {
-  const preference = readPreferenceSync();
-  return preference === 'auto' ? readSystemLanguage() : preference;
-}
+// Re-exported for component convenience (`import { getAppLanguageSync } from
+// '@/libs/i18n'`). Service / non-React code should import from
+// './app-language' directly to stay off the React module's import graph.
+export { getAppLanguageSync } from './app-language';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   // Seed from MMKV synchronously — first paint already speaks the right language.

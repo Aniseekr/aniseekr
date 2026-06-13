@@ -12,6 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 /**
  * Static layout values that don't depend on theme.
@@ -44,6 +45,7 @@ export function SettingsHeader({
   right?: ReactNode;
 }) {
   const { theme } = useTheme();
+  const t = useT();
   return (
     <View style={styles.header}>
       {onBack ? (
@@ -55,7 +57,7 @@ export function SettingsHeader({
           ]}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Back">
+          accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={22} color={theme.text.primary} />
         </Pressable>
       ) : null}

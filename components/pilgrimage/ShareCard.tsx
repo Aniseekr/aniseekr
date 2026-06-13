@@ -13,6 +13,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../themed';
+import { useT, type TranslationKey } from '../../libs/i18n';
 import type { ThemePalette } from '../../context/ThemeContext';
 import {
   getWatermarkAlignment,
@@ -999,6 +1000,7 @@ function MangaTemplate(props: TemplateProps) {
     swapOrder,
     canvasBg,
   } = props;
+  const t = useT();
   const successColor = theme.status.success;
   const order = resolveImagePairOrder(!!swapOrder);
   const cells = {
@@ -1025,7 +1027,7 @@ function MangaTemplate(props: TemplateProps) {
             variant="captionSmall"
             weight="700"
             style={{ color: '#000', letterSpacing: 1 }}>
-            Anime
+            {t('commonUi.anime')}
           </ThemedText>
         </View>
       </View>
@@ -1054,7 +1056,7 @@ function MangaTemplate(props: TemplateProps) {
             variant="captionSmall"
             weight="700"
             style={{ color: readableTextOn(successColor), letterSpacing: 1 }}>
-            Real
+            {t('pilgrimageUi.real')}
           </ThemedText>
         </View>
       </View>
@@ -1232,12 +1234,14 @@ function SpeedLines({ side }: { side: 'left' | 'right' | 'top' | 'bottom' }) {
   );
 }
 
-export const SHARE_TEMPLATES: { id: ShareTemplate; label: string; emoji: string }[] = [
-  { id: 'polaroid', label: 'Polaroid', emoji: '📷' },
-  { id: 'classic', label: 'Classic', emoji: '◆' },
-  { id: 'minimal', label: 'Minimal', emoji: '◻' },
-  { id: 'comic', label: 'Comic', emoji: '✦' },
-  { id: 'manga', label: 'Manga', emoji: '✎' },
+// `label` holds a TranslationKey resolved via t() at the render site (ids/emoji
+// unchanged) so the template picker localizes with the user's app language.
+export const SHARE_TEMPLATES: { id: ShareTemplate; label: TranslationKey; emoji: string }[] = [
+  { id: 'polaroid', label: 'pilgrimageUi.polaroid', emoji: '📷' },
+  { id: 'classic', label: 'pilgrimageUi.classic', emoji: '◆' },
+  { id: 'minimal', label: 'pilgrimageUi.minimal', emoji: '◻' },
+  { id: 'comic', label: 'pilgrimageUi.comic', emoji: '✦' },
+  { id: 'manga', label: 'pilgrimageUi.manga', emoji: '✎' },
 ];
 
 export const SHARE_RATIOS: { id: ShareRatio; label: string; hint: string }[] = [

@@ -4,6 +4,7 @@ import { FlatList, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Recommendation } from './types';
 import { GlassCard } from '../common/GlassCard';
+import { useT } from '../../libs/i18n';
 
 type Props = {
   data: Recommendation[];
@@ -55,13 +56,14 @@ function RecommendationItem({
 }
 
 function PersonalizedRecommendationComponent({ data, onSelect, onRefresh }: Props) {
+  const t = useT();
   return (
     <View className="gap-3">
       <View className="flex-row items-center justify-between px-1">
-        <Text className="text-lg font-semibold text-white">Personalized Picks</Text>
+        <Text className="text-lg font-semibold text-white">{t('rate.personalizedPicks')}</Text>
         {onRefresh ? (
           <Pressable onPress={onRefresh} className="rounded-full bg-white/10 px-3 py-1">
-            <Text className="text-xs text-white">Refresh</Text>
+            <Text className="text-xs text-white">{t('rate.refresh')}</Text>
           </Pressable>
         ) : null}
       </View>

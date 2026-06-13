@@ -2,11 +2,12 @@ import { memo } from 'react';
 import { Pressable, Text, View, Platform, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { MaterialIconsName } from '../../libs/utils/icon-types';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 type Option = {
   key: string;
   icon: MaterialIconsName;
-  label: string;
+  labelKey: TranslationKey;
   color: string;
 };
 
@@ -16,15 +17,16 @@ type Props = {
 };
 
 const options: Option[] = [
-  { key: 'genres', icon: 'local-offer', label: 'Genres', color: '#60a5fa' },
-  { key: 'mood', icon: 'favorite', label: 'Mood', color: '#c084fc' },
-  { key: 'duration', icon: 'schedule', label: 'Duration', color: '#4ade80' },
+  { key: 'genres', icon: 'local-offer', labelKey: 'rate.genres', color: '#60a5fa' },
+  { key: 'mood', icon: 'favorite', labelKey: 'rate.mood', color: '#c084fc' },
+  { key: 'duration', icon: 'schedule', labelKey: 'rate.duration', color: '#4ade80' },
 ];
 
 function TrackingSelectorComponent({ value, onChange }: Props) {
+  const t = useT();
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Find by</Text>
+      <Text style={styles.label}>{t('rate.findBy')}</Text>
       <View style={styles.optionsRow}>
         {options.map((option) => {
           const selected = option.key === value;
@@ -43,7 +45,7 @@ function TrackingSelectorComponent({ value, onChange }: Props) {
                 color={selected ? option.color : 'rgba(255, 255, 255, 0.6)'}
               />
               <Text style={[styles.optionText, selected && { color: option.color }]}>
-                {option.label}
+                {t(option.labelKey)}
               </Text>
             </Pressable>
           );

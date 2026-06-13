@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { useT } from '../../libs/i18n';
 
 type Props = {
   title: string;
@@ -33,6 +34,7 @@ function GenreCardComponent({
 }: Props) {
   const router = useRouter();
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handlePress = () => {
@@ -81,7 +83,7 @@ function GenreCardComponent({
             <Text style={styles.title} numberOfLines={2}>
               {title.toUpperCase()}
             </Text>
-            <Text style={styles.hint}>Tap to Explore</Text>
+            <Text style={styles.hint}>{t('rate.tapToExplore')}</Text>
           </View>
         ) : null}
       </View>

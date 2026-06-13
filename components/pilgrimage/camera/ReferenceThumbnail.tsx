@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 interface ReferenceThumbnailProps {
@@ -32,6 +33,7 @@ export default function ReferenceThumbnail({
   isLandscape,
   onPress,
 }: ReferenceThumbnailProps) {
+  const t = useT();
   const size = isLandscape ? SIZE.landscape : SIZE.portrait;
 
   const handlePress = () => {
@@ -43,7 +45,7 @@ export default function ReferenceThumbnail({
     <Pressable
       onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel="Switch anime reference scene"
+      accessibilityLabel={t('pilgrimageUi.switchAnimeReferenceScene')}
       style={({ pressed }) => [
         styles.root,
         { width: size.width, height: size.height },

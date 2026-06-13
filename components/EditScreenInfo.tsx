@@ -1,7 +1,9 @@
 import { Text, View } from 'react-native';
+import { useT } from '../libs/i18n';
 
 export const EditScreenInfo = ({ path }: { path: string }) => {
-  const title = 'Open up the code for this screen:';
+  const t = useT();
+  const title = t('misc.openUpTheCodeFor');
   const description =
     'Change any of the text, save the file, and your app will automatically update.';
 

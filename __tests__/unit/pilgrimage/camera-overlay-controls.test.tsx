@@ -1,6 +1,22 @@
 import { describe, expect, it, mock } from 'bun:test';
 import * as React from 'react';
+import en from '../../../libs/i18n/locales/en.json';
 import { findAll, render } from './render-helpers';
+
+// English catalog lookup — components resolve labels via useT(), and en is the
+// default test language.
+const tEn = (key: string): string =>
+  (key
+    .split('.')
+    .reduce<unknown>(
+      (node, part) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+      en
+    ) as string) ?? key;
+
+mock.module('../../../libs/i18n', () => ({
+  useT: () => tEn,
+}));
 
 mock.module('@react-native-community/slider', () => ({
   default: (props: Record<string, unknown>) => React.createElement('Slider', props),

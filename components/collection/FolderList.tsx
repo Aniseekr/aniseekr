@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AnimeTitleText } from '../themed';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 // Define types locally for now, could be shared
@@ -39,6 +40,7 @@ export function FolderList({
   onFolderPress,
   onEditFolder,
 }: FolderListProps) {
+  const t = useT();
   const renderFolderSection = (folder: CollectionFolder) => {
     const previews = folderPreviews[folder.id] || [];
 
@@ -164,7 +166,7 @@ export function FolderList({
               <View style={styles.emptyIconContainer}>
                 <MaterialIcons name="add" size={24} color={Colors.text.disabled} />
               </View>
-              <Text style={styles.emptyText}>Add to collection</Text>
+              <Text style={styles.emptyText}>{t('collectionUi.addToCollection')}</Text>
             </View>
           </Pressable>
         )}
@@ -176,7 +178,7 @@ export function FolderList({
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="folder-open" size={48} color={Colors.text.disabled} />
-        <Text style={styles.emptyStateText}>No folders</Text>
+        <Text style={styles.emptyStateText}>{t('collectionUi.noFolders')}</Text>
       </View>
     );
   }

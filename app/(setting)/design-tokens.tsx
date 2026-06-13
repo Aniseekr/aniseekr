@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 interface Clipboard {
   setStringAsync(value: string): Promise<unknown>;
@@ -51,17 +52,18 @@ const TOKENS: Token[] = [
   { name: 'Solidarity Lavender', variable: 'solidarity-lavender', hex: '#F5EDF8', category: 'brand' },
 ];
 
-const CATEGORIES: { id: Category; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'accent', label: 'Accent' },
-  { id: 'surface', label: 'Surface' },
-  { id: 'text', label: 'Text' },
-  { id: 'brand', label: 'Brand' },
+const CATEGORIES: { id: Category; labelKey: TranslationKey }[] = [
+  { id: 'all', labelKey: 'commonUi.all' },
+  { id: 'accent', labelKey: 'settingsUi.accent' },
+  { id: 'surface', labelKey: 'settingsUi.surface' },
+  { id: 'text', labelKey: 'settingsUi.text' },
+  { id: 'brand', labelKey: 'settingsUi.brand' },
 ];
 
 export default function DesignTokensScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accent = theme.accent;
@@ -109,12 +111,12 @@ export default function DesignTokensScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
           <ThemedText variant="titleLarge" weight="600">
-            Design Tokens
+            {t('settingsUi.designTokens')}
           </ThemedText>
           <View style={{ width: 24 }} />
         </View>
@@ -134,7 +136,7 @@ export default function DesignTokensScreen() {
                   setActive(c.id);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`Filter ${c.label}`}
+                accessibilityLabel={`Filter ${t(c.labelKey)}`}
                 accessibilityState={{ selected: isActive }}
                 style={({ pressed }) => [
                   styles.chip,
@@ -150,7 +152,7 @@ export default function DesignTokensScreen() {
                   variant="bodySmall"
                   weight="600"
                   style={{ color: isActive ? accentFg : theme.text.primary }}>
-                  {c.label}
+                  {t(c.labelKey)}
                 </ThemedText>
               </Pressable>
             );
@@ -224,7 +226,7 @@ export default function DesignTokensScreen() {
             </ThemedText>
           </View>
           <ThemedButton
-            label="Export"
+            label={t('settingsUi.export')}
             size="sm"
             onPress={() =>
               copy('All tokens', TOKENS.map((t) => `$${t.variable}: ${t.hex}`).join('\n'))

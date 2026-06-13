@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import type {
   FontAwesome5Name,
   IoniconsName,
@@ -43,36 +44,37 @@ interface CollectionStatsProps {
 }
 
 export function CollectionStats({ stats }: CollectionStatsProps) {
+  const t = useT();
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Overview</Text>
+      <Text style={styles.sectionTitle}>{t('profile.overview')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
         <AccountStatCard
-          title="Rated"
+          title={t('profile.rated')}
           value={stats.totalRated.toString()}
           icon="star"
           iconSet="Ionicons"
           color={Colors.warning}
         />
         <AccountStatCard
-          title="Liked"
+          title={t('profile.liked')}
           value={stats.likedCount.toString()}
           icon="heart"
           iconSet="Ionicons"
           color={Colors.error}
         />
         <AccountStatCard
-          title="Cards"
+          title={t('profile.cards')}
           value={stats.cardsCount.toString()}
           icon="collections"
           iconSet="MaterialIcons"
           color={Colors.info}
         />
         <AccountStatCard
-          title="Folders"
+          title={t('commonUi.folders')}
           value={stats.foldersCount.toString()}
           icon="folder"
           iconSet="Ionicons"

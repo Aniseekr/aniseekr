@@ -17,6 +17,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedButton, ThemedText, readableTextOn } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { Spacing } from '../../../constants/DesignSystem';
 import { buildAnitabiMapUrl, getAnitabiSiteUrl } from '../detail/_helpers';
 
@@ -30,6 +31,7 @@ export function AnitabiAttributionFooter({
   variant = 'default',
 }: AnitabiAttributionFooterProps) {
   const { theme } = useTheme();
+  const t = useT();
   const mapUrl =
     typeof bangumiId === 'number' && Number.isFinite(bangumiId) && bangumiId > 0
       ? buildAnitabiMapUrl(bangumiId)
@@ -61,7 +63,7 @@ export function AnitabiAttributionFooter({
           tone="accent"
           onPress={openMap}
           accessibilityRole="link"
-          accessibilityLabel="View full map on Anitabi"
+          accessibilityLabel={t('pilgrimageUi.viewFullMapOnAnitabi')}
           style={styles.footerLink}>
           {'View on Anitabi ›'}
         </ThemedText>
@@ -94,7 +96,7 @@ export function AnitabiAttributionFooter({
       <View style={styles.buttonRow}>
         <View style={styles.buttonHalf}>
           <ThemedButton
-            label="View on Anitabi"
+            label={t('pilgrimageUi.viewOnAnitabi')}
             onPress={openMap}
             size="md"
             variant="primary"
@@ -104,7 +106,7 @@ export function AnitabiAttributionFooter({
         </View>
         <View style={styles.buttonHalf}>
           <ThemedButton
-            label="Contribute a spot"
+            label={t('pilgrimageUi.contributeASpot')}
             onPress={openContribute}
             size="md"
             variant="secondary"
@@ -118,7 +120,7 @@ export function AnitabiAttributionFooter({
         tone="tertiary"
         onPress={openSite}
         accessibilityRole="link"
-        accessibilityLabel="Open Anitabi homepage"
+        accessibilityLabel={t('pilgrimageUi.openAnitabiHomepage')}
         style={styles.credit}>
         {'Data licensed CC BY-NC-SA 4.0 · anitabi.cn'}
       </ThemedText>

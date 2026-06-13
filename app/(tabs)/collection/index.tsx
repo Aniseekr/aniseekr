@@ -434,15 +434,15 @@ export default function CollectionScreen() {
   const overviewStats = useMemo(
     () => [
       {
-        label: 'Watching',
+        label: t('commonUi.watching'),
         value: categoryCounts.Watching ?? 0,
         color: theme.accent,
       },
-      { label: 'Done', value: categoryCounts.Done ?? 0 },
-      { label: 'Planned', value: categoryCounts.Planned ?? 0 },
-      { label: 'Dropped', value: categoryCounts.Dropped ?? 0 },
+      { label: t('common.done'), value: categoryCounts.Done ?? 0 },
+      { label: t('collectionUi.planned'), value: categoryCounts.Planned ?? 0 },
+      { label: t('commonUi.dropped'), value: categoryCounts.Dropped ?? 0 },
     ],
-    [categoryCounts, theme.accent]
+    [categoryCounts, theme.accent, t]
   );
 
   const totalCount = categoryCounts.All ?? 0;

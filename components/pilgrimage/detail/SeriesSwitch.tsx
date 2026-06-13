@@ -5,6 +5,7 @@ import React, { memo, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Radius } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type {
   PilgrimageSeriesEntry,
@@ -35,6 +36,7 @@ function SeriesSwitchChipImpl({
   theme,
   onPress,
 }: SeriesSwitchChipProps) {
+  const t = useT();
   const styles = useMemo(() => makeSeriesSwitchStyles(theme), [theme]);
   const fg = active ? themeColorFg : theme.text.primary;
   return (
@@ -68,7 +70,7 @@ function SeriesSwitchChipImpl({
         variant="captionSmall"
         numberOfLines={1}
         style={{ color: active ? themeColorFg : theme.text.tertiary }}>
-        {disabled ? 'No spots yet' : sublabel}
+        {disabled ? t('pilgrimageUi.noSpotsYet') : sublabel}
       </ThemedText>
     </Pressable>
   );
@@ -95,6 +97,7 @@ function SeriesSwitchRowImpl({
   theme,
   onSelect,
 }: SeriesSwitchRowProps) {
+  const t = useT();
   const styles = useMemo(() => makeSeriesSwitchStyles(theme), [theme]);
   const canSelectAll = availableCount > 1;
   // Per-entry stable handlers built once per render (cheap; memo on the parent
@@ -106,7 +109,7 @@ function SeriesSwitchRowImpl({
       contentContainerStyle={styles.row}>
       {canSelectAll ? (
         <SeriesSwitchChip
-          label="All"
+          label={t('commonUi.all')}
           sublabel={`${availableCount} titles`}
           active={selection === 'all'}
           disabled={false}

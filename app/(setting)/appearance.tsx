@@ -124,7 +124,7 @@ export default function AppearanceScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back to settings"
+            accessibilityLabel={t('settingsUi.backToSettings')}
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
             <ThemedText variant="bodyMedium" weight="500">
@@ -373,7 +373,7 @@ export default function AppearanceScreen() {
             onPress={() => router.push('/(setting)/theme-preview')}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel="Open live preview"
+            accessibilityLabel={t('settingsUi.openLivePreview')}
             style={({ pressed }) => [styles.previewLink, pressed && { opacity: 0.6 }]}>
             <Ionicons name="eye-outline" size={14} color={theme.text.tertiary} />
             <ThemedText variant="captionSmall" tone="tertiary" weight="500">

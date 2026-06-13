@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Colors, Spacing, Typography, FontFamily, Shadow } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 
 export interface PlatformInfo {
   id: string;
@@ -33,9 +34,10 @@ export function PlatformSwitcher({
   selected,
   onSelect,
 }: PlatformSwitcherProps) {
+  const t = useT();
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>Platforms</Text>
+      <Text style={styles.label}>{t('profile.platforms')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

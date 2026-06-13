@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
 
@@ -17,8 +18,9 @@ interface Props {
   centerLabel?: string;
 }
 
-export function StatusDonutCard({ title = 'By Status', slices, total, centerLabel }: Props) {
+export function StatusDonutCard({ title, slices, total, centerLabel }: Props) {
   const { theme } = useTheme();
+  const t = useT();
   const data = slices.filter((s) => s.value > 0);
   const sumValue = total ?? data.reduce((acc, s) => acc + s.value, 0);
 
@@ -32,12 +34,12 @@ export function StatusDonutCard({ title = 'By Status', slices, total, centerLabe
         },
       ]}>
       <ThemedText variant="titleMedium" weight="700">
-        {title}
+        {title ?? t('collectionUi.byStatus')}
       </ThemedText>
       <View style={styles.body}>
         {data.length === 0 ? (
           <ThemedText variant="bodySmall" tone="tertiary">
-            No data yet
+            {t('collectionUi.noDataYet')}
           </ThemedText>
         ) : (
           <>

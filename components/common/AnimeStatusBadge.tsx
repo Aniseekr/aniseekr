@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Typography } from '../../constants/DesignSystem';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 export type AnimeStatus =
   | 'watching'
@@ -17,15 +18,20 @@ interface AnimeStatusBadgeProps {
   style?: ViewStyle;
 }
 
-const STATUS_CONFIG: Record<AnimeStatus, { label: string; color: string; bg: string }> = {
-  watching: { label: 'Watching', color: '#fff', bg: '#0A84FF' },
-  completed: { label: 'Completed', color: '#fff', bg: '#30D158' },
-  on_hold: { label: 'On Hold', color: '#fff', bg: '#FF9F0A' },
-  dropped: { label: 'Dropped', color: '#fff', bg: '#FF453A' },
-  planning: { label: 'Plan to Watch', color: '#fff', bg: '#5E5CE6' },
-  rewatching: { label: 'Rewatching', color: '#fff', bg: '#BF5AF2' },
-  unknown: { label: 'Unknown', color: 'rgba(255,255,255,0.7)', bg: 'rgba(255,255,255,0.12)' },
-};
+const STATUS_CONFIG: Record<AnimeStatus, { labelKey: TranslationKey; color: string; bg: string }> =
+  {
+    watching: { labelKey: 'commonUi.watching', color: '#fff', bg: '#0A84FF' },
+    completed: { labelKey: 'commonUi.completed', color: '#fff', bg: '#30D158' },
+    on_hold: { labelKey: 'commonUi.onHold', color: '#fff', bg: '#FF9F0A' },
+    dropped: { labelKey: 'commonUi.dropped', color: '#fff', bg: '#FF453A' },
+    planning: { labelKey: 'commonUi.planToWatch', color: '#fff', bg: '#5E5CE6' },
+    rewatching: { labelKey: 'commonUi.rewatching', color: '#fff', bg: '#BF5AF2' },
+    unknown: {
+      labelKey: 'commonUi.unknown',
+      color: 'rgba(255,255,255,0.7)',
+      bg: 'rgba(255,255,255,0.12)',
+    },
+  };
 
 function normalize(status: string): AnimeStatus {
   const v = status.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
@@ -38,6 +44,7 @@ function normalize(status: string): AnimeStatus {
 }
 
 function AnimeStatusBadgeComponent({ status, size = 'md', style }: AnimeStatusBadgeProps) {
+  const t = useT();
   const config = STATUS_CONFIG[normalize(status)];
   const isSm = size === 'sm';
 
@@ -54,7 +61,7 @@ function AnimeStatusBadgeComponent({ status, size = 'md', style }: AnimeStatusBa
         style,
       ]}>
       <Text style={[isSm ? styles.labelSm : styles.label, { color: config.color }]}>
-        {config.label.toUpperCase()}
+        {t(config.labelKey).toUpperCase()}
       </Text>
     </View>
   );

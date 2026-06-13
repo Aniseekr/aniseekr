@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 
 export interface CountdownOverlayProps {
   remaining: number | null; // null = not shown
@@ -35,6 +36,7 @@ function CountdownOverlayInner({
   remaining: number;
   onCancel: () => void;
 }) {
+  const t = useT();
   const scale = useSharedValue(POP_FROM_SCALE);
   const opacity = useSharedValue(0);
 
@@ -60,7 +62,7 @@ function CountdownOverlayInner({
       <View style={styles.center} pointerEvents="none">
         <Animated.Text style={[styles.number, numberStyle]}>{remaining}</Animated.Text>
         <ThemedText variant="bodyMedium" style={styles.hint}>
-          Tap to cancel
+          {t('pilgrimageUi.tapToCancel')}
         </ThemedText>
       </View>
     </Pressable>

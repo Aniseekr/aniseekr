@@ -13,6 +13,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography, Radius } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import type {
@@ -37,6 +38,7 @@ function ShareListEditorComponent({
   onSave,
 }: ShareListEditorProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [entries, setEntries] = useState<ShareEntry[]>([]);
   const [query, setQuery] = useState('');
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -217,7 +219,7 @@ function ShareListEditorComponent({
             )}
             ListEmptyComponent={
               <Text style={[styles.empty, { color: theme.text.secondary }]}>
-                No picks yet. Tap “Add anime” below.
+                {t('collectionUi.noPicksYetTapAdd')}
               </Text>
             }
             style={styles.list}
@@ -241,7 +243,7 @@ function ShareListEditorComponent({
               ]}>
               <MaterialIcons name="add" size={18} color={theme.text.primary} />
               <Text style={[styles.footerButtonText, { color: theme.text.primary }]}>
-                Add anime
+                {t('collectionUi.addAnime')}
               </Text>
             </Pressable>
             <Pressable
@@ -256,7 +258,9 @@ function ShareListEditorComponent({
                 },
               ]}>
               <MaterialIcons name="check" size={18} color="#0E0A06" />
-              <Text style={[styles.footerButtonText, { color: '#0E0A06' }]}>Save</Text>
+              <Text style={[styles.footerButtonText, { color: '#0E0A06' }]}>
+                {t('common.save')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -277,7 +281,9 @@ function ShareListEditorComponent({
                   },
                 ]}>
                 <View style={styles.header}>
-                  <Text style={[styles.title, { color: theme.text.primary }]}>Pick anime</Text>
+                  <Text style={[styles.title, { color: theme.text.primary }]}>
+                    {t('collectionUi.pickAnime')}
+                  </Text>
                   <TouchableOpacity onPress={() => setPickerVisible(false)} hitSlop={8}>
                     <MaterialIcons name="close" size={24} color={theme.text.primary} />
                   </TouchableOpacity>
@@ -285,7 +291,7 @@ function ShareListEditorComponent({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search your collection"
+                  placeholder={t('collectionUi.searchYourCollection')}
                   placeholderTextColor={theme.text.tertiary}
                   style={[
                     styles.search,
@@ -347,7 +353,7 @@ function ShareListEditorComponent({
                   ItemSeparatorComponent={() => <View style={{ height: Spacing.xs }} />}
                   ListEmptyComponent={
                     <Text style={[styles.empty, { color: theme.text.secondary }]}>
-                      No matching anime in your collection.
+                      {t('collectionUi.noMatchingAnimeInYour')}
                     </Text>
                   }
                   contentContainerStyle={{ paddingBottom: Spacing.md }}

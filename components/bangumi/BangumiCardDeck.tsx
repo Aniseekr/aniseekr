@@ -26,6 +26,7 @@ import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignS
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { readableTextOn } from '../themed';
+import { useT } from '../../libs/i18n';
 import {
   OUTGOING_CARD_LIFETIME_MS,
   SWIPE_PERSISTENCE_DELAY_MS,
@@ -69,6 +70,7 @@ interface BangumiCardDeckProps {
 export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCardDeckProps) {
   const router = useRouter();
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [index, setIndex] = useState(0);
   const [outgoing, setOutgoing] = useState<BangumiOutgoingCard<Anime>[]>([]);
@@ -167,9 +169,9 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
         <View style={styles.emptyIconWrap}>
           <Ionicons name="checkmark-done" size={36} color={theme.accent} />
         </View>
-        <Text style={styles.emptyTitle}>{"You're all caught up"}</Text>
+        <Text style={styles.emptyTitle}>{t('bangumiTab.youReAllCaughtUp')}</Text>
         <Text style={styles.emptySubtitle}>
-          No more anime to triage in this view. Switch seasons or filters to find more.
+          {t('bangumiTab.noMoreAnimeToTriage')}
         </Text>
       </View>
     );
@@ -214,7 +216,7 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
         <View style={styles.actionRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Set reminder"
+            accessibilityLabel={t('bangumiTab.setReminder')}
             onPress={() => {
               hapticsBridge.selection();
               advance('left');
@@ -225,11 +227,13 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
               pressed && { opacity: 0.85 },
             ]}>
             <MaterialIcons name="notifications-active" size={18} color={theme.status.info} />
-            <Text style={[styles.actionLabel, { color: theme.status.info }]}>Remind</Text>
+            <Text style={[styles.actionLabel, { color: theme.status.info }]}>
+              {t('bangumiTab.remind')}
+            </Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add to plan"
+            accessibilityLabel={t('bangumiTab.addToPlan')}
             onPress={() => {
               hapticsBridge.success();
               advance('right');
@@ -240,7 +244,7 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
               pressed && { opacity: 0.9 },
             ]}>
             <MaterialIcons name="bookmark-add" size={18} color={planFg} />
-            <Text style={[styles.actionLabel, { color: planFg }]}>Plan</Text>
+            <Text style={[styles.actionLabel, { color: planFg }]}>{t('commonUi.plan')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -258,6 +262,7 @@ interface TopCardProps {
 }
 
 function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation }: TopCardProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -389,7 +394,9 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
           <View style={[styles.indicatorBubble, { borderColor: theme.status.info }]}>
             <MaterialIcons name="notifications-active" size={28} color={theme.status.info} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.status.info }]}>Remind</Text>
+          <Text style={[styles.indicatorLabel, { color: theme.status.info }]}>
+            {t('bangumiTab.remind')}
+          </Text>
         </Animated.View>
 
         <Animated.View
@@ -398,7 +405,7 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
           <View style={[styles.indicatorBubble, { borderColor: theme.accent }]}>
             <MaterialIcons name="bookmark-add" size={28} color={theme.accent} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>Plan</Text>
+          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>{t('commonUi.plan')}</Text>
         </Animated.View>
       </Animated.View>
     </GestureDetector>

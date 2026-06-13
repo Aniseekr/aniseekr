@@ -11,6 +11,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ThemedText } from '../themed';
+import { useT } from '../../libs/i18n';
 import type { NearbySpot } from '../../libs/services/pilgrimage/nearby-spots';
 
 interface NearbySpotsSheetProps {
@@ -39,6 +40,7 @@ export default function NearbySpotsSheet({
   onPickSpot,
 }: NearbySpotsSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [expanded, setExpanded] = useState(false);
 
@@ -70,7 +72,7 @@ export default function NearbySpotsSheet({
           <View style={styles.titleRow}>
             <View style={styles.titleCol}>
               <ThemedText variant="titleMedium" weight="800">
-                Spots near you
+                {t('pilgrimageUi.spotsNearYou')}
               </ThemedText>
               <ThemedText variant="captionSmall" tone="secondary">
                 {loading && count === 0

@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
+import { useT, type TranslationKey } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
   EDGE_INTENSITIES,
@@ -36,15 +37,16 @@ interface OverlayControlsBarProps {
 interface ModeMeta {
   id: ModeOption;
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  /** Translation key — resolved with `t()` at render. */
+  label: TranslationKey;
 }
 
 const MODES: ModeMeta[] = [
-  { id: 'off', icon: 'eye-off-outline', label: 'Off' },
-  { id: 'anime', icon: 'image-outline', label: 'Anime' },
-  { id: 'edge', icon: 'analytics-outline', label: 'Edge' },
-  { id: 'sketch', icon: 'pencil-outline', label: 'Sketch' },
-  { id: 'subject', icon: 'person-outline', label: 'Subject' },
+  { id: 'off', icon: 'eye-off-outline', label: 'common.off' },
+  { id: 'anime', icon: 'image-outline', label: 'commonUi.anime' },
+  { id: 'edge', icon: 'analytics-outline', label: 'pilgrimageUi.edge' },
+  { id: 'sketch', icon: 'pencil-outline', label: 'pilgrimageUi.sketch' },
+  { id: 'subject', icon: 'person-outline', label: 'pilgrimageUi.subject' },
 ];
 
 /**
@@ -71,6 +73,7 @@ export default function OverlayControlsBar({
   onToggleFlip,
   onToggleEdit,
 }: OverlayControlsBarProps) {
+  const t = useT();
   const activeId: ModeOption = visible ? mode : 'off';
 
   const handlePickMode = (id: ModeOption) => {
@@ -96,12 +99,13 @@ export default function OverlayControlsBar({
         {MODES.map((m) => {
           const active = m.id === activeId;
           const fg = active ? readableTextOn(themeColor) : CameraChrome.fg;
+          const label = t(m.label);
           return (
             <Pressable
               key={m.id}
               onPress={() => handlePickMode(m.id)}
               accessibilityRole="button"
-              accessibilityLabel={m.id === 'off' ? 'Hide overlay' : `Overlay mode ${m.label}`}
+              accessibilityLabel={m.id === 'off' ? 'Hide overlay' : `Overlay mode ${label}`}
               accessibilityState={{ selected: active }}
               style={({ pressed }) => [
                 styles.modePill,
@@ -114,7 +118,7 @@ export default function OverlayControlsBar({
                 weight="700"
                 numberOfLines={1}
                 style={{ color: fg }}>
-                {m.label}
+                {label}
               </ThemedText>
             </Pressable>
           );
@@ -141,7 +145,7 @@ export default function OverlayControlsBar({
               onToggleSubjectCombine();
             }}
             accessibilityRole="checkbox"
-            accessibilityLabel="Combine subject overlay into the captured photo"
+            accessibilityLabel={t('pilgrimageUi.combineSubjectOverlayIntoThe')}
             accessibilityState={{ checked: subjectCombine }}
             style={({ pressed }) => [
               styles.combinePill,
@@ -157,7 +161,7 @@ export default function OverlayControlsBar({
               variant="captionSmall"
               weight="700"
               style={{ color: subjectCombine ? readableTextOn(themeColor) : '#fff' }}>
-              Combine
+              {t('pilgrimageUi.combine')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -184,7 +188,7 @@ export default function OverlayControlsBar({
               weight="700"
               numberOfLines={1}
               style={{ color: characterSelected ? readableTextOn(themeColor) : '#fff' }}>
-              Character
+              {t('pilgrimageUi.character')}
             </ThemedText>
           </Pressable>
         </View>
@@ -195,7 +199,7 @@ export default function OverlayControlsBar({
         pointerEvents={visible ? 'auto' : 'none'}>
         <View style={styles.opacityPill}>
           <ThemedText variant="captionSmall" weight="600" style={styles.opacityLabel}>
-            Overlay
+            {t('pilgrimageUi.overlay')}
           </ThemedText>
           <Slider
             style={styles.slider}
@@ -206,7 +210,7 @@ export default function OverlayControlsBar({
             minimumTrackTintColor={themeColor}
             maximumTrackTintColor={CameraChrome.trackInactive}
             thumbTintColor="#fff"
-            accessibilityLabel="Overlay opacity"
+            accessibilityLabel={t('pilgrimageUi.overlayOpacity')}
           />
           <ThemedText variant="captionSmall" weight="700" style={styles.opacityValue}>
             {Math.round(opacity * 100)}%
@@ -224,7 +228,7 @@ export default function OverlayControlsBar({
           icon="swap-horizontal-outline"
           active={flipped}
           themeColor={themeColor}
-          accessibilityLabel="Flip overlay horizontally"
+          accessibilityLabel={t('pilgrimageUi.flipOverlayHorizontally')}
           onPress={handleFlip}
         />
       </View>

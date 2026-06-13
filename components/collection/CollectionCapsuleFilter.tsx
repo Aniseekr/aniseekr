@@ -2,6 +2,8 @@ import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
+import type { TranslationKey } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
@@ -16,18 +18,18 @@ export type CollectionFilterKey =
 
 interface FilterDefinition {
   key: CollectionFilterKey;
-  label: string;
+  labelKey: TranslationKey;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
 }
 
 export const COLLECTION_FILTERS: FilterDefinition[] = [
-  { key: 'all', label: 'All', icon: 'apps' },
-  { key: 'watching', label: 'Watching', icon: 'play-circle-filled' },
-  { key: 'completed', label: 'Completed', icon: 'check-circle' },
-  { key: 'wishlist', label: 'Wishlist', icon: 'bookmark' },
-  { key: 'favorites', label: 'Favorites', icon: 'favorite' },
-  { key: 'dropped', label: 'Dropped', icon: 'cancel' },
-  { key: 'unrated', label: 'Unrated', icon: 'star-border' },
+  { key: 'all', labelKey: 'commonUi.all', icon: 'apps' },
+  { key: 'watching', labelKey: 'commonUi.watching', icon: 'play-circle-filled' },
+  { key: 'completed', labelKey: 'commonUi.completed', icon: 'check-circle' },
+  { key: 'wishlist', labelKey: 'commonUi.wishlist', icon: 'bookmark' },
+  { key: 'favorites', labelKey: 'collectionUi.favorites', icon: 'favorite' },
+  { key: 'dropped', labelKey: 'commonUi.dropped', icon: 'cancel' },
+  { key: 'unrated', labelKey: 'collectionUi.unrated', icon: 'star-border' },
 ];
 
 interface CollectionCapsuleFilterProps {
@@ -44,6 +46,7 @@ function CollectionCapsuleFilterComponent({
   filters = COLLECTION_FILTERS,
 }: CollectionCapsuleFilterProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   return (
     <ScrollView
@@ -74,7 +77,7 @@ function CollectionCapsuleFilterComponent({
               color={active ? '#0E0A06' : theme.text.secondary}
             />
             <Text style={[styles.label, { color: active ? '#0E0A06' : theme.text.primary }]}>
-              {f.label}
+              {t(f.labelKey)}
             </Text>
             {typeof count === 'number' ? (
               <View

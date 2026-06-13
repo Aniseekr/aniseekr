@@ -225,7 +225,10 @@ export default function BackupScreen() {
         cloud.setProvider(next);
       } catch (err) {
         Logger.warn('[Backup] setProvider failed', err);
-        Alert.alert('Unavailable', `${providerLabel(next)} is not available on this device.`);
+        Alert.alert(
+          t('settingsUi.unavailableProviderlabelNextIsNotTitle'),
+          t('settingsUi.unavailableProviderlabelNextIsNotMessage', { provider: providerLabel(next) })
+        );
         return;
       }
       setProvider(next);
@@ -241,7 +244,7 @@ export default function BackupScreen() {
         setPhase('idle');
       }
     },
-    [cloud, provider]
+    [cloud, provider, t]
   );
 
   // AppState fallback for auto-backup: every time the app goes background +
@@ -262,7 +265,10 @@ export default function BackupScreen() {
 
   const onBackupNow = useCallback(async () => {
     if (!cloud) {
-      Alert.alert('Cloud module not available', 'Rebuild the development client to enable cloud backup.');
+      Alert.alert(
+        t('settingsUi.cloudModuleNotAvailableRebuildTitle'),
+        t('settingsUi.cloudModuleNotAvailableRebuildMessage')
+      );
       return;
     }
     try {
@@ -274,25 +280,28 @@ export default function BackupScreen() {
       kvSet(LAST_BACKUP_KEY, String(stamp));
       setLastBackupAt(new Date(stamp));
       hapticsBridge.success();
-      Alert.alert('Backup uploaded', describeSnapshot(snapshot));
+      Alert.alert(t('settingsUi.backupUploaded'), describeSnapshot(snapshot));
     } catch (err) {
       Logger.error('[Backup] upload failed', err);
-      Alert.alert('Backup failed', errorMessage(err));
+      Alert.alert(t('settingsUi.backupFailed'), errorMessage(err));
     } finally {
       setPhase('idle');
     }
-  }, [backupService, cloud]);
+  }, [backupService, cloud, t]);
 
   const onRestoreFromCloud = useCallback(async () => {
     if (!cloud) {
-      Alert.alert('Cloud module not available', 'Rebuild the development client to enable cloud backup.');
+      Alert.alert(
+        t('settingsUi.cloudModuleNotAvailableRebuildTitle'),
+        t('settingsUi.cloudModuleNotAvailableRebuildMessage')
+      );
       return;
     }
     try {
       setPhase('downloading');
       const env = await cloud.download();
       if (!env) {
-        Alert.alert('No cloud backup found', 'Tap "Backup now" first to create one.');
+        Alert.alert(t('settingsUi.noCloudBackupFoundTapTitle'), t('settingsUi.noCloudBackupFoundTapMessage'));
         return;
       }
       setPhase('restoring');
@@ -306,7 +315,7 @@ export default function BackupScreen() {
           : 'Cloud data already matches this device.',
         diff.hasChanges
           ? [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('common.cancel'), style: 'cancel' },
               {
                 text: 'Restore',
                 style: 'default',
@@ -315,30 +324,30 @@ export default function BackupScreen() {
                     setPhase('restoring');
                     const restoreSummary = await backupService.restoreSnapshot(env);
                     hapticsBridge.success();
-                    Alert.alert('Restore complete', describeRestore(restoreSummary));
+                    Alert.alert(t('settingsUi.restoreComplete'), describeRestore(restoreSummary));
                   } catch (err) {
                     Logger.error('[Backup] restore failed', err);
-                    Alert.alert('Restore failed', errorMessage(err));
+                    Alert.alert(t('commonUi.restoreFailed'), errorMessage(err));
                   } finally {
                     setPhase('idle');
                   }
                 },
               },
             ]
-          : [{ text: 'OK' }]
+          : [{ text: t('common.ok') }]
       );
     } catch (err) {
       Logger.error('[Backup] dry-run failed', err);
-      Alert.alert('Could not read cloud backup', errorMessage(err));
+      Alert.alert(t('settingsUi.couldNotReadCloudBackup'), errorMessage(err));
     } finally {
       if (phase === 'downloading') setPhase('idle');
     }
-  }, [backupService, cloud, phase]);
+  }, [backupService, cloud, phase, t]);
 
   const onRestoreLegacy = useCallback(async () => {
     const raw = legacyText.trim();
     if (!raw) {
-      Alert.alert('Paste your aniseeker backup JSON above first.');
+      Alert.alert(t('settingsUi.pasteYourAniseekerBackupJson'));
       return;
     }
     try {
@@ -355,16 +364,16 @@ export default function BackupScreen() {
       }
       const summary = await backupService.restoreSnapshot(env);
       hapticsBridge.success();
-      Alert.alert('Legacy restore complete', describeRestore(summary));
+      Alert.alert(t('settingsUi.legacyRestoreComplete'), describeRestore(summary));
       setShowLegacyPaste(false);
       setLegacyText('');
     } catch (err) {
       Logger.error('[Backup] legacy restore failed', err);
-      Alert.alert('Restore failed', errorMessage(err));
+      Alert.alert(t('commonUi.restoreFailed'), errorMessage(err));
     } finally {
       setPhase('idle');
     }
-  }, [backupService, legacyText]);
+  }, [backupService, legacyText, t]);
 
   const onToggleEncryption = useCallback(
     async (value: boolean) => {
@@ -380,10 +389,10 @@ export default function BackupScreen() {
           setEncryptionEnabled(false);
         }
       } catch (err) {
-        Alert.alert('Encryption toggle failed', errorMessage(err));
+        Alert.alert(t('settingsUi.encryptionToggleFailed'), errorMessage(err));
       }
     },
-    [cloud, keyStore]
+    [cloud, keyStore, t]
   );
 
   const onToggleAutoBackup = useCallback(
@@ -398,37 +407,46 @@ export default function BackupScreen() {
     try {
       setPhase('downloading');
       if (!(await liveSync.isAvailable())) {
-        Alert.alert('CloudKit unavailable', 'Make sure you are signed into iCloud on this device.');
+        Alert.alert(
+          t('settingsUi.cloudkitUnavailableMakeSureYouTitle'),
+          t('settingsUi.cloudkitUnavailableMakeSureYouMessage')
+        );
         return;
       }
       const summary = await liveSync.pull();
       hapticsBridge.success();
-      Alert.alert('CloudKit import complete', describeRestore(summary));
+      Alert.alert(t('settingsUi.cloudkitImportComplete'), describeRestore(summary));
     } catch (err) {
       Logger.error('[Backup] CloudKit import failed', err);
-      Alert.alert('Import failed', errorMessage(err));
+      Alert.alert(t('settingsUi.importFailed'), errorMessage(err));
     } finally {
       setPhase('idle');
     }
-  }, [liveSync]);
+  }, [liveSync, t]);
 
   const onPushToCloudKit = useCallback(async () => {
     try {
       setPhase('syncing');
       if (!(await liveSync.isAvailable())) {
-        Alert.alert('CloudKit unavailable', 'Make sure you are signed into iCloud on this device.');
+        Alert.alert(
+          t('settingsUi.cloudkitUnavailableMakeSureYouTitle'),
+          t('settingsUi.cloudkitUnavailableMakeSureYouMessage')
+        );
         return;
       }
       const res = await liveSync.push();
       hapticsBridge.success();
-      Alert.alert('Pushed to CloudKit', `Wrote ${res.written} records (failed ${res.failed})`);
+      Alert.alert(
+        t('settingsUi.pushedToCloudkitWroteResTitle'),
+        t('settingsUi.pushedToCloudkitWroteResMessage', { written: res.written, failed: res.failed })
+      );
     } catch (err) {
       Logger.error('[Backup] CloudKit push failed', err);
-      Alert.alert('Push failed', errorMessage(err));
+      Alert.alert(t('settingsUi.pushFailed'), errorMessage(err));
     } finally {
       setPhase('idle');
     }
-  }, [liveSync]);
+  }, [liveSync, t]);
 
   // One-shot migration from the old SwiftUI app's V1→V2 recovery blob.
   // Uses the same dry-run + diff confirmation pattern as `onRestoreFromCloud`
@@ -441,8 +459,8 @@ export default function BackupScreen() {
       const result = await liveSync.dryRunLegacy();
       if (!result) {
         Alert.alert(
-          'Nothing to migrate',
-          'No legacy aniseeker migration data was found on this device.'
+          t('settingsUi.nothingToMigrateNoLegacyTitle'),
+          t('settingsUi.nothingToMigrateNoLegacyMessage')
         );
         setLegacySnapshot((prev) => (prev ? { ...prev, alreadyImported: true } : prev));
         return;
@@ -458,7 +476,7 @@ export default function BackupScreen() {
           : `Found ${counts.total} items, but they already match this device. Marking migration as done.`,
         diff.hasChanges
           ? [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('common.cancel'), style: 'cancel' },
               {
                 text: 'Migrate',
                 style: 'default',
@@ -468,14 +486,14 @@ export default function BackupScreen() {
                     const summary = await liveSync.pullLegacy();
                     hapticsBridge.success();
                     if (summary) {
-                      Alert.alert('Migration complete', describeRestore(summary));
+                      Alert.alert(t('settingsUi.migrationComplete'), describeRestore(summary));
                     }
                     // Refresh the snapshot so the banner disappears — bridge
                     // has now persisted `alreadyImported` on the native side.
                     setLegacySnapshot(await liveSync.fetchLegacySnapshot());
                   } catch (err) {
                     Logger.error('[Backup] legacy migration failed', err);
-                    Alert.alert('Migration failed', errorMessage(err));
+                    Alert.alert(t('settingsUi.migrationFailed'), errorMessage(err));
                   } finally {
                     setPhase('idle');
                   }
@@ -484,7 +502,7 @@ export default function BackupScreen() {
             ]
           : [
               {
-                text: 'OK',
+                text: t('common.ok'),
                 onPress: async () => {
                   // No-op migration still marks the flag so the banner hides.
                   await liveSync.pullLegacy().catch(() => undefined);
@@ -495,11 +513,11 @@ export default function BackupScreen() {
       );
     } catch (err) {
       Logger.error('[Backup] legacy dry-run failed', err);
-      Alert.alert('Could not read legacy store', errorMessage(err));
+      Alert.alert(t('settingsUi.couldNotReadLegacyStore'), errorMessage(err));
     } finally {
       setPhase('idle');
     }
-  }, [liveSync]);
+  }, [liveSync, t]);
 
   const onGoogleSignedOut = useCallback(() => {
     if (cloud) cloud.setGoogleAccessToken(null);
@@ -594,7 +612,7 @@ export default function BackupScreen() {
           <Divider />
           <SettingsRow
             icon="add-to-drive"
-            label="Google Drive"
+            label={t('settingsUi.googleDrive')}
             description={t('settings.backupScreen.googleDriveDesc')}
             onPress={busy ? undefined : () => selectProvider('googledrive')}
             rightSlot={
@@ -708,7 +726,7 @@ export default function BackupScreen() {
       ) : null}
 
       {provider === 'googledrive' ? (
-        <SettingsSection title="Google Drive">
+        <SettingsSection title={t('settingsUi.googleDrive')}>
           {googleConfigured ? (
             <GoogleDriveAuth
               webClientId={GOOGLE_WEB_CLIENT_ID}
@@ -798,11 +816,11 @@ function GoogleDriveAuth({
       hapticsBridge.success();
     } catch (err) {
       Logger.error('[Backup] Google sign-in failed', err);
-      Alert.alert('Google sign-in failed', errorMessage(err));
+      Alert.alert(t('settingsUi.googleSignInFailed'), errorMessage(err));
     } finally {
       setWorking(false);
     }
-  }, [onAuthenticated]);
+  }, [onAuthenticated, t]);
 
   const signOut = useCallback(async () => {
     try {

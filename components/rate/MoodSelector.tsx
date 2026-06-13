@@ -10,6 +10,7 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { listItemEnter } from '../../libs/animations/presets';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.md * 2 - Spacing.sm) / 2;
@@ -26,67 +27,67 @@ export type MoodKey =
 
 interface MoodOption {
   key: MoodKey;
-  label: string;
+  labelKey: TranslationKey;
   emoji: string;
-  description: string;
+  descriptionKey: TranslationKey;
   gradient: [string, string];
 }
 
 export const MOOD_OPTIONS: MoodOption[] = [
   {
     key: 'cozy',
-    label: 'Cozy',
+    labelKey: 'rate.cozy',
     emoji: '🍵',
-    description: 'Slice of life',
+    descriptionKey: 'rate.sliceOfLife',
     gradient: ['#F59E0B', '#D97706'],
   },
   {
     key: 'thrilling',
-    label: 'Thrilling',
+    labelKey: 'rate.thrilling',
     emoji: '⚡',
-    description: 'On the edge',
+    descriptionKey: 'rate.onTheEdge',
     gradient: ['#EF4444', '#B91C1C'],
   },
   {
     key: 'romantic',
-    label: 'Romantic',
+    labelKey: 'rate.romantic',
     emoji: '💕',
-    description: 'Heart-fluttering',
+    descriptionKey: 'rate.heartFluttering',
     gradient: ['#EC4899', '#BE185D'],
   },
   {
     key: 'epic',
-    label: 'Epic',
+    labelKey: 'rate.epic',
     emoji: '🐉',
-    description: 'Grand adventure',
+    descriptionKey: 'rate.grandAdventure',
     gradient: ['#8B5CF6', '#6D28D9'],
   },
   {
     key: 'comedic',
-    label: 'Comedic',
+    labelKey: 'rate.comedic',
     emoji: '😂',
-    description: 'Laugh out loud',
+    descriptionKey: 'rate.laughOutLoud',
     gradient: ['#FBBF24', '#D97706'],
   },
   {
     key: 'mysterious',
-    label: 'Mysterious',
+    labelKey: 'rate.mysterious',
     emoji: '🔮',
-    description: 'Twists & turns',
+    descriptionKey: 'rate.twistsTurns',
     gradient: ['#6366F1', '#3730A3'],
   },
   {
     key: 'melancholic',
-    label: 'Melancholic',
+    labelKey: 'rate.melancholic',
     emoji: '🌧️',
-    description: 'Quietly moving',
+    descriptionKey: 'rate.quietlyMoving',
     gradient: ['#0EA5E9', '#0369A1'],
   },
   {
     key: 'inspiring',
-    label: 'Inspiring',
+    labelKey: 'rate.inspiring',
     emoji: '🌅',
-    description: 'Uplifting stories',
+    descriptionKey: 'rate.upliftingStories',
     gradient: ['#10B981', '#047857'],
   },
 ];
@@ -98,11 +99,12 @@ interface MoodSelectorProps {
 
 function MoodSelectorComponent({ value, onSelect }: MoodSelectorProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
-        How do you want to feel?
+        {t('rate.howDoYouWantTo')}
       </Text>
       <View style={styles.grid}>
         {MOOD_OPTIONS.map((mood, idx) => (
@@ -133,6 +135,7 @@ function MoodCard({
   onPress: () => void;
   index: number;
 }) {
+  const t = useT();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -158,8 +161,8 @@ function MoodCard({
           end={{ x: 1, y: 1 }}
           style={styles.card}>
           <Text style={styles.emoji}>{mood.emoji}</Text>
-          <Text style={styles.label}>{mood.label}</Text>
-          <Text style={styles.description}>{mood.description}</Text>
+          <Text style={styles.label}>{t(mood.labelKey)}</Text>
+          <Text style={styles.description}>{t(mood.descriptionKey)}</Text>
         </LinearGradient>
       </Pressable>
     </Animated.View>

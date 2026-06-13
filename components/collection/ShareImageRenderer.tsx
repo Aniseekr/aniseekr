@@ -2,7 +2,7 @@ import { useMemo, type Ref } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getAppLanguageSync } from '../../libs/i18n';
+import { getAppLanguageSync, useT } from '../../libs/i18n';
 import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
 import { Colors, FontFamily, Typography } from '../../constants/DesignSystem';
 import type {
@@ -28,9 +28,10 @@ interface ShareImageRendererProps {
 }
 
 function PosterFooter() {
+  const t = useT();
   return (
     <View style={styles.footer} pointerEvents="none">
-      <Text style={styles.footerText}>Made with Aniseekr</Text>
+      <Text style={styles.footerText}>{t('collectionUi.madeWithAniseekr')}</Text>
     </View>
   );
 }
@@ -56,9 +57,13 @@ function Cover({ uri, style }: { uri?: string; style?: any }) {
 }
 
 function Top10Body({ entries, username }: { entries: ShareEntry[]; username?: string }) {
+  const t = useT();
   return (
     <>
-      <HeaderBlock title="My Top 10 Anime" subtitle={username ? `by ${username}` : undefined} />
+      <HeaderBlock
+        title={t('collectionUi.myTop10Anime')}
+        subtitle={username ? `by ${username}` : undefined}
+      />
       <View style={styles.top10List}>
         {entries.slice(0, 10).map((entry, idx) => (
           <View key={`${entry.animeId}-${idx}`} style={styles.top10Row}>
@@ -93,6 +98,7 @@ function YearlyBestBody({
   username?: string;
   year?: number;
 }) {
+  const t = useT();
   const grouped = useMemo(() => {
     const map = new Map<number, ShareEntry[]>();
     entries.forEach((e) => {
@@ -107,7 +113,7 @@ function YearlyBestBody({
   return (
     <>
       <HeaderBlock
-        title="Yearly Best"
+        title={t('collectionUi.yearlyBest')}
         subtitle={username ? `by ${username}` : year ? `${year}` : undefined}
       />
       <View style={styles.yearlyGrid}>
@@ -141,10 +147,11 @@ function YearlyBestBody({
 }
 
 function StarterPackBody({ entries, username }: { entries: ShareEntry[]; username?: string }) {
+  const t = useT();
   return (
     <>
       <HeaderBlock
-        title="Starter Pack"
+        title={t('collectionUi.starterPack')}
         subtitle={username ? `curated by ${username}` : 'If you are new, watch these'}
       />
       <View style={styles.starterGrid}>
@@ -163,11 +170,12 @@ function StarterPackBody({ entries, username }: { entries: ShareEntry[]; usernam
 }
 
 function MasterpieceBody({ entries, username }: { entries: ShareEntry[]; username?: string }) {
+  const t = useT();
   const hero = entries[0];
   if (!hero) {
     return (
       <View style={styles.masterpieceEmpty} pointerEvents="none">
-        <Text style={styles.masterpieceEmptyText}>Pick a masterpiece</Text>
+        <Text style={styles.masterpieceEmptyText}>{t('collectionUi.pickAMasterpiece')}</Text>
       </View>
     );
   }
@@ -175,7 +183,7 @@ function MasterpieceBody({ entries, username }: { entries: ShareEntry[]; usernam
   return (
     <>
       <HeaderBlock
-        title="Masterpiece"
+        title={t('collectionUi.masterpiece')}
         subtitle={username ? `chosen by ${username}` : 'must-watch'}
       />
       <View style={styles.masterpieceWrap}>

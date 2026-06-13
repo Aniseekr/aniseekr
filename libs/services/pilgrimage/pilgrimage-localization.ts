@@ -1,4 +1,4 @@
-import { getAppLanguageSync } from '../../i18n';
+import { getAppLanguageSync } from '../../i18n/app-language';
 import { getEffectiveTitleOrderSync, type TitleLanguageId } from '../../i18n/title-language';
 import { chineseScriptFor } from '../../utils/anime-localization-service';
 import { toTraditional } from '../../utils/chinese-converter';

@@ -22,6 +22,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
+import { useT } from '../../libs/i18n';
 import { Photo } from './types';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -122,6 +123,7 @@ export function PhotoCard({
   // 🟢 Performance: Start true, only set false once. No complex state resets.
   // This component is keyed by ID in parent, so it remounts for new photos anyway.
   const [isLoading, setIsLoading] = useState(true);
+  const t = useT();
 
   const displayTitle = useAnimeDisplayTitle(
     photo.title
@@ -458,7 +460,7 @@ export function PhotoCard({
                   size={11}
                   color="rgba(255,255,255,0.85)"
                 />
-                <Text style={styles.tapHintChipText}>Tap for info</Text>
+                <Text style={styles.tapHintChipText}>{t('rate.tapForInfo')}</Text>
               </View>
             </View>
           ) : null}

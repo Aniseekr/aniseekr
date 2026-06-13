@@ -13,6 +13,7 @@ import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText } from '../../themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { useT, type TranslationKey } from '../../../libs/i18n';
 import {
   SEASONAL_LAYOUTS,
   type SeasonalLayout,
@@ -28,12 +29,17 @@ interface SeasonalViewProps {
 
 const LAYOUT_META: Record<
   SeasonalLayout,
-  { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }
+  {
+    /** Catalog key when available; `label` is the raw fallback for strings not yet in the catalog. */
+    labelKey?: TranslationKey;
+    label: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+  }
 > = {
-  carousel: { label: 'Carousel', icon: 'albums-outline' },
+  carousel: { labelKey: 'rate.carousel', label: 'Carousel', icon: 'albums-outline' },
   'hero-rail': { label: 'Hero + Rails', icon: 'reorder-three-outline' },
-  showcase: { label: 'Showcase', icon: 'grid-outline' },
-  spotlight: { label: 'Spotlight', icon: 'sparkles-outline' },
+  showcase: { labelKey: 'rate.showcase', label: 'Showcase', icon: 'grid-outline' },
+  spotlight: { labelKey: 'rate.spotlight', label: 'Spotlight', icon: 'sparkles-outline' },
 };
 
 function nextLayout(current: SeasonalLayout): SeasonalLayout {
@@ -49,7 +55,9 @@ function SeasonalViewComponent({
   onLayoutChange,
 }: SeasonalViewProps) {
   const { theme } = useTheme();
+  const t = useT();
   const meta = LAYOUT_META[layout];
+  const metaLabel = meta.labelKey ? t(meta.labelKey) : meta.label;
 
   const handleCycle = () => {
     hapticsBridge.selection();
@@ -78,7 +86,7 @@ function SeasonalViewComponent({
         <Pressable
           onPress={handleCycle}
           accessibilityRole="button"
-          accessibilityLabel={`Layout: ${meta.label}. Tap to switch.`}
+          accessibilityLabel={`Layout: ${metaLabel}. Tap to switch.`}
           style={({ pressed }) => [
             styles.switcher,
             {
@@ -89,7 +97,7 @@ function SeasonalViewComponent({
           ]}>
           <Ionicons name={meta.icon} size={14} color={theme.accent} />
           <ThemedText variant="captionSmall" weight="700">
-            {meta.label}
+            {metaLabel}
           </ThemedText>
           <Ionicons name="sync-outline" size={12} color={theme.text.secondary} />
         </Pressable>

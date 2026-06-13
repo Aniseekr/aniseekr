@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import type {
   FontAwesome5Name,
   IoniconsName,
@@ -44,29 +45,30 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ actions }: QuickActionsProps) {
+  const t = useT();
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <Text style={styles.sectionTitle}>{t('profile.quickActions')}</Text>
       <View style={styles.card}>
         <View style={styles.actionsRow}>
           <QuickActionButton
             icon="diamond"
             iconSet="Ionicons"
-            title="Premium"
+            title={t('profile.premium')}
             color={Colors.warning}
             onPress={actions.onPremium}
           />
           <QuickActionButton
             icon="sync"
             iconSet="Ionicons"
-            title="Sync"
+            title={t('profile.sync')}
             color={Colors.info}
             onPress={actions.onSync}
           />
           <QuickActionButton
             icon="settings-sharp"
             iconSet="Ionicons"
-            title="Settings"
+            title={t('common.settings')}
             color="#9ca3af"
             onPress={actions.onSettings}
           />
@@ -75,14 +77,14 @@ export function QuickActions({ actions }: QuickActionsProps) {
           <QuickActionButton
             icon="cloud-upload"
             iconSet="Ionicons"
-            title="Backup"
+            title={t('profile.backup')}
             color={Colors.accent}
             onPress={actions.onBackup}
           />
           <QuickActionButton
             icon="dna"
             iconSet="FontAwesome5"
-            title="Otaku DNA"
+            title={t('profile.otakuDna')}
             color={Colors.secondary}
             onPress={actions.onDNA}
           />

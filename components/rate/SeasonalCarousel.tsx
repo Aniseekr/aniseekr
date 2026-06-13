@@ -35,6 +35,7 @@ import {
 import { readableTextOn } from '../themed/contrast';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 const CARD_W = 283;
 const CARD_H = 430;
@@ -181,6 +182,7 @@ const SeasonalCardItem = memo(function SeasonalCardItem({
   onPress,
 }: CardItemProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const inputRange = [
     (index - 1) * ITEM_FULL,
@@ -232,13 +234,15 @@ const SeasonalCardItem = memo(function SeasonalCardItem({
             <Pressable
               onPress={onPress}
               accessibilityRole="button"
-              accessibilityLabel="Continue watching"
+              accessibilityLabel={t('rate.continueWatching')}
               style={({ pressed }) => [
                 styles.cta,
                 { backgroundColor: accent, opacity: pressed ? 0.88 : 1 },
               ]}>
               <Ionicons name="play" size={14} color={accentText} />
-              <Text style={[styles.ctaText, { color: accentText }]}>Continue Watching</Text>
+              <Text style={[styles.ctaText, { color: accentText }]}>
+                {t('rate.continueWatching2')}
+              </Text>
             </Pressable>
           </View>
         </View>

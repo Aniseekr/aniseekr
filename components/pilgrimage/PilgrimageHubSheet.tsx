@@ -199,7 +199,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         <StatCell
           icon="place"
           value={stats.totalScenes > 0 ? String(stats.totalScenes) : '—'}
-          label="Scenes"
+          label={t('pilgrimageUi.scenes')}
           color={themeColor}
           theme={theme}
         />
@@ -207,7 +207,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         <StatCell
           icon="check-circle-outline"
           value={String(stats.visitedCount)}
-          label="Visited"
+          label={t('pilgrimageUi.visited')}
           color={stats.visitedCount > 0 ? theme.status.success : themeColor}
           theme={theme}
         />
@@ -229,7 +229,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
           onPress={onExpandRequest}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Expand list"
+          accessibilityLabel={t('pilgrimageUi.expandList')}
           style={({ pressed }) => [styles.sectionCta, pressed && { opacity: 0.7 }]}>
           <ThemedText variant="captionSmall" weight="600" tone="secondary">
             {nearbyAnimes.length}
@@ -349,6 +349,7 @@ function FocusedAnimeCard({
   onPress,
   onSwap,
 }: FocusedAnimeCardProps) {
+  const t = useT();
   const anime = entry.anime;
   const distanceText = entry.distanceKm !== undefined ? formatDistanceKm(entry.distanceKm) : null;
   return (
@@ -440,7 +441,7 @@ function FocusedAnimeCard({
           onPress={onSwap}
           disabled={!canSwap}
           accessibilityRole="button"
-          accessibilityLabel="Switch focused anime"
+          accessibilityLabel={t('pilgrimageUi.switchFocusedAnime')}
           style={({ pressed }) => [
             styles.swapBtn,
             {
@@ -455,7 +456,7 @@ function FocusedAnimeCard({
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel="Open detail"
+          accessibilityLabel={t('pilgrimageUi.openDetail')}
           style={({ pressed }) => [
             styles.openBtn,
             { backgroundColor: themeColor },

@@ -72,11 +72,11 @@ type QuickSheetKind =
   | 'premium'
   | null;
 
-const THEME_MODE_LABEL: Record<ThemeMode, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  auto: 'Auto',
-};
+const THEME_MODE_LABEL_KEY = {
+  light: 'settingsUi.light',
+  dark: 'settingsUi.dark',
+  auto: 'commonUi.auto',
+} as const satisfies Record<ThemeMode, string>;
 
 const PRESET_ACCENTS: { hex: string; name: string }[] = [
   { hex: '#FF9F0A', name: 'Aniseekr Orange' },
@@ -165,16 +165,16 @@ export default function SettingsScreen() {
     if (enrolled) {
       const res = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to enable adult content',
-        cancelLabel: 'Cancel',
+        cancelLabel: t('common.cancel'),
       });
       if (res.success) await updatePref('allowAdultContent', true);
       return;
     }
     Alert.alert(
-      'Enable adult content?',
-      'Are you sure you want to enable adult content?',
+      t('settingsUi.enableAdultContentAreYouTitle'),
+      t('settingsUi.enableAdultContentAreYouMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Enable',
           style: 'destructive',
@@ -220,28 +220,28 @@ export default function SettingsScreen() {
     () => [
       {
         key: 'light',
-        label: 'Light',
+        label: t('settingsUi.light'),
         icon: 'sunny-outline',
         selected: themeMode === 'light',
         onPress: () => void setThemeMode('light'),
       },
       {
         key: 'dark',
-        label: 'Dark',
+        label: t('settingsUi.dark'),
         icon: 'moon-outline',
         selected: themeMode === 'dark',
         onPress: () => void setThemeMode('dark'),
       },
       {
         key: 'auto',
-        label: 'Auto',
-        description: 'Follow system appearance',
+        label: t('commonUi.auto'),
+        description: t('settingsUi.followSystemAppearance'),
         icon: 'contrast-outline',
         selected: themeMode === 'auto',
         onPress: () => void setThemeMode('auto'),
       },
     ],
-    [themeMode, setThemeMode],
+    [themeMode, setThemeMode, t],
   );
 
   const accentActions: QuickAction[] = useMemo(() => {
@@ -256,7 +256,7 @@ export default function SettingsScreen() {
     if (customAccent) {
       actions.push({
         key: 'reset',
-        label: 'Reset to theme default',
+        label: t('settingsUi.resetToThemeDefault'),
         icon: 'refresh-outline',
         onPress: () => void setCustomAccent(null),
       });
@@ -268,21 +268,21 @@ export default function SettingsScreen() {
       onPress: () => router.push('/(setting)/accent-color'),
     });
     return actions;
-  }, [activeAccentHex, customAccent, setCustomAccent]);
+  }, [activeAccentHex, customAccent, setCustomAccent, t]);
 
   const platformActions: QuickAction[] = useMemo(
     () => [
       {
         key: 'manage',
-        label: 'Manage platforms',
-        description: 'Connect or disconnect accounts',
+        label: t('settingsUi.managePlatforms'),
+        description: t('settingsUi.connectOrDisconnectAccounts'),
         icon: 'link-outline',
         onPress: () => router.push('/(setting)/account'),
       },
       {
         key: 'sync-now',
-        label: 'Sync now',
-        description: 'Pull the latest from connected sources',
+        label: t('settingsUi.syncNow'),
+        description: t('settingsUi.pullTheLatestFromConnected'),
         icon: 'refresh-circle-outline',
         onPress: () => {
           void UserRepository.syncAllPlatforms();
@@ -291,25 +291,25 @@ export default function SettingsScreen() {
       },
       {
         key: 'import',
-        label: 'Import wizard',
+        label: t('settingsUi.importWizard'),
         icon: 'cloud-upload-outline',
         onPress: () => router.push('/(setting)/import-wizard'),
       },
     ],
-    [],
+    [t],
   );
 
   const appearanceActions: QuickAction[] = useMemo(() => {
     const modeRows: QuickAction[] = (
       [
-        { key: 'light', label: 'Light', icon: 'sunny-outline' as const, mode: 'light' as ThemeMode },
-        { key: 'dark', label: 'Dark', icon: 'moon-outline' as const, mode: 'dark' as ThemeMode },
-        { key: 'auto', label: 'Auto', icon: 'contrast-outline' as const, mode: 'auto' as ThemeMode },
+        { key: 'light', label: t('settingsUi.light'), icon: 'sunny-outline' as const, mode: 'light' as ThemeMode },
+        { key: 'dark', label: t('settingsUi.dark'), icon: 'moon-outline' as const, mode: 'dark' as ThemeMode },
+        { key: 'auto', label: t('commonUi.auto'), icon: 'contrast-outline' as const, mode: 'auto' as ThemeMode },
       ]
     ).map((m) => ({
       key: `mode-${m.key}`,
       label: m.label,
-      description: m.key === 'auto' ? 'Follow system appearance' : 'Theme mode',
+      description: m.key === 'auto' ? t('settingsUi.followSystemAppearance') : t('settingsUi.themeMode'),
       icon: m.icon,
       selected: themeMode === m.mode,
       onPress: () => void setThemeMode(m.mode),
@@ -318,7 +318,7 @@ export default function SettingsScreen() {
     const accentRows: QuickAction[] = PRESET_ACCENTS.slice(0, 4).map((p) => ({
       key: `accent-${p.hex}`,
       label: p.name,
-      description: 'Accent color',
+      description: t('settingsUi.accentColor'),
       icon: 'ellipse',
       selected: activeAccentHex.toUpperCase() === p.hex.toUpperCase(),
       onPress: () => void setCustomAccent(p.hex),
@@ -336,7 +336,7 @@ export default function SettingsScreen() {
       },
       {
         key: 'open-appearance',
-        label: 'Open full appearance',
+        label: t('settingsUi.openFullAppearance'),
         icon: 'open-outline',
         onPress: () => router.push('/(setting)/appearance'),
       },
@@ -347,6 +347,7 @@ export default function SettingsScreen() {
     activeAccentHex,
     setCustomAccent,
     activeThemeName,
+    t,
   ]);
 
   const premiumActions: QuickAction[] = useMemo(() => {
@@ -354,7 +355,7 @@ export default function SettingsScreen() {
       return [
         {
           key: 'manage',
-          label: 'Manage subscription',
+          label: t('settingsUi.manageSubscription'),
           icon: 'card-outline',
           onPress: () => void openManageSubscription(),
         },
@@ -363,51 +364,51 @@ export default function SettingsScreen() {
     return [
       {
         key: 'upgrade',
-        label: 'Upgrade now',
-        description: 'Unlock themes, sync, no ads',
+        label: t('settingsUi.upgradeNow'),
+        description: t('settingsUi.unlockThemesSyncNoAds'),
         icon: 'sparkles-outline',
         onPress: () => setPaywallVisible(true),
       },
       {
         key: 'restore',
-        label: 'Restore purchases',
+        label: t('commonUi.restorePurchases'),
         icon: 'refresh-outline',
         onPress: () => {
           void subscription.restore?.();
         },
       },
     ];
-  }, [isPro, subscription]);
+  }, [isPro, subscription, t]);
 
   const sheetConfig = useMemo(() => {
     switch (activeSheet) {
       case 'appearance':
         return {
-          title: 'Appearance',
-          subtitle: `${activeThemeName} · ${THEME_MODE_LABEL[themeMode]}`,
+          title: t('settingsUi.appearance'),
+          subtitle: `${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`,
           actions: appearanceActions,
         };
       case 'theme':
         return {
-          title: 'Theme',
+          title: t('settingsUi.theme'),
           subtitle: 'Tap to switch · long-press a row anywhere to open quick actions',
           actions: themeActions,
         };
       case 'themeMode':
         return {
-          title: 'Theme mode',
-          subtitle: 'Choose how surfaces respond to system appearance',
+          title: t('settingsUi.themeMode'),
+          subtitle: t('settingsUi.chooseHowSurfacesRespondTo'),
           actions: themeModeActions,
         };
       case 'accent':
         return {
-          title: 'Accent color',
-          subtitle: 'Pick a preset or open the full picker',
+          title: t('settingsUi.accentColor'),
+          subtitle: t('settingsUi.pickAPresetOrOpen'),
           actions: accentActions,
         };
       case 'platforms':
         return {
-          title: 'Connected platforms',
+          title: t('settingsUi.connectedPlatforms'),
           subtitle: `${connectedCount} connected`,
           actions: platformActions,
         };
@@ -434,6 +435,7 @@ export default function SettingsScreen() {
     isPro,
     activeThemeName,
     themeMode,
+    t,
   ]);
 
   const handleSaveName = useCallback(async (name: string) => {
@@ -442,7 +444,7 @@ export default function SettingsScreen() {
     setUser(next);
   }, []);
 
-  const displayName = user?.username ?? 'Anime fan';
+  const displayName = user?.username ?? t('profile.animeFan');
   const avatarUri = user?.avatarUrl ?? '';
   const initials = displayName
     .split(/\s+/)
@@ -474,7 +476,7 @@ export default function SettingsScreen() {
             }}
             style={({ pressed }) => [pressed && { opacity: 0.92 }]}
             accessibilityRole="button"
-            accessibilityLabel="Edit profile name">
+            accessibilityLabel={t('settingsUi.editProfileName')}>
             <View
               style={[
                 styles.userCard,
@@ -524,7 +526,7 @@ export default function SettingsScreen() {
                   { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
                 ]}>
                 <ThemedText variant="captionSmall" weight="700">
-                  Edit
+                  {t('common.edit')}
                 </ThemedText>
               </View>
             </View>
@@ -626,7 +628,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="color-palette-outline"
               label={t('settings.appearance.title')}
-              description={`${activeThemeName} · ${THEME_MODE_LABEL[themeMode]}`}
+              description={`${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`}
               right={
                 <View
                   style={[
@@ -705,7 +707,7 @@ export default function SettingsScreen() {
             delayLongPress={500}
             style={styles.versionRow}
             accessibilityRole="button"
-            accessibilityLabel="App version. Tap to open advanced settings.">
+            accessibilityLabel={t('settingsUi.appVersionTapToOpen')}>
             <ThemedText
               variant="caption"
               tone="tertiary"

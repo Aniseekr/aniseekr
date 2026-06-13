@@ -55,7 +55,7 @@ export default function AccentColorScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back to settings"
+            accessibilityLabel={t('settingsUi.backToSettings')}
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
             <ThemedText variant="bodyMedium" weight="500">
@@ -70,7 +70,7 @@ export default function AccentColorScreen() {
             hitSlop={12}
             disabled={!customAccent}
             accessibilityRole="button"
-            accessibilityLabel="Reset accent color"
+            accessibilityLabel={t('settingsUi.resetAccentColor')}
             accessibilityState={{ disabled: !customAccent }}
             style={({ pressed }) => [
               styles.navReset,
@@ -139,7 +139,7 @@ export default function AccentColorScreen() {
               <Pressable
                 onPress={() => router.push('/(setting)/custom-color')}
                 accessibilityRole="button"
-                accessibilityLabel="Add custom color"
+                accessibilityLabel={t('settingsUi.addCustomColor')}
                 style={({ pressed }) => [
                   styles.addCustom,
                   {

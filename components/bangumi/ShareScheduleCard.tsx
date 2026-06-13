@@ -4,6 +4,7 @@ import { AnimeTitleText } from '../themed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Anime } from '../rate/types';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 
 interface DailyAnime {
   day: string;
@@ -47,6 +48,7 @@ export function ShareScheduleCard({
   totalCount,
   ref,
 }: ShareScheduleCardProps) {
+  const t = useT();
   const grouped = new Map<string, Anime[]>();
   groupedAnime.forEach((g) => grouped.set(g.day, g.anime));
 
@@ -81,7 +83,7 @@ export function ShareScheduleCard({
               </View>
               <View style={styles.columnBody}>
                 {items.length === 0 ? (
-                  <Text style={styles.empty}>No releases</Text>
+                  <Text style={styles.empty}>{t('bangumiTab.noReleases')}</Text>
                 ) : (
                   items.map((anime) => (
                     <View key={anime.id} style={styles.entry}>
@@ -105,7 +107,7 @@ export function ShareScheduleCard({
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Generated with Aniseekr</Text>
+        <Text style={styles.footerText}>{t('bangumiTab.generatedWithAniseekr')}</Text>
       </View>
     </View>
   );

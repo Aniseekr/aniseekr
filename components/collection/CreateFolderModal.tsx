@@ -14,6 +14,7 @@ import { collectionService } from '../../libs/services/collection/collection-ser
 import { AnimatedPressable } from '../common/AnimatedPressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { useT } from '../../libs/i18n';
 import { readableTextOn } from '../themed';
 import type { IoniconsName } from '../../libs/utils/icon-types';
 
@@ -55,6 +56,7 @@ export function CreateFolderModal({
   editing,
 }: CreateFolderModalProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('folder');
@@ -125,23 +127,23 @@ export function CreateFolderModal({
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
             <View style={styles.header}>
-              <Text style={styles.title}>{isEditMode ? 'Edit folder' : 'Create Folder'}</Text>
+              <Text style={styles.title}>{isEditMode ? t('collectionUi.editFolder') : t('collectionUi.createFolder')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={24} color={theme.text.primary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.form}>
-              <Text style={styles.label}>Name</Text>
+              <Text style={styles.label}>{t('collectionUi.name')}</Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Folder Name"
+                placeholder={t('collectionUi.folderName')}
                 placeholderTextColor={theme.text.tertiary}
               />
 
-              <Text style={styles.label}>Icon</Text>
+              <Text style={styles.label}>{t('commonUi.icon')}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -161,7 +163,7 @@ export function CreateFolderModal({
               </ScrollView>
 
               <View style={styles.switchRow}>
-                <Text style={styles.label}>Share with friends</Text>
+                <Text style={styles.label}>{t('collectionUi.shareWithFriends')}</Text>
                 <Switch
                   value={isShared}
                   onValueChange={setIsShared}
@@ -171,7 +173,7 @@ export function CreateFolderModal({
               </View>
 
               <View style={styles.switchRow}>
-                <Text style={styles.label}>Contains R18 content</Text>
+                <Text style={styles.label}>{t('collectionUi.containsR18Content')}</Text>
                 <Switch
                   value={isR18}
                   onValueChange={setIsR18}
@@ -188,7 +190,7 @@ export function CreateFolderModal({
                 onPress={handleSubmit}
                 disabled={!name.trim() || loading}>
                 <Text style={styles.createButtonText}>
-                  {isEditMode ? 'Save changes' : 'Create Folder'}
+                  {isEditMode ? t('collectionUi.saveChanges') : t('collectionUi.createFolder')}
                 </Text>
               </AnimatedPressable>
             </View>

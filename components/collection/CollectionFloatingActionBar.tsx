@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -47,6 +48,7 @@ function CollectionFloatingActionBarComponent({
   style,
 }: CollectionFloatingActionBarProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   return (
     <Animated.View
@@ -90,7 +92,7 @@ function CollectionFloatingActionBarComponent({
             {onCreateFolder ? (
               <ActionButton
                 icon="create-new-folder"
-                label="New folder"
+                label={t('collectionUi.newFolder')}
                 accent={theme.accent}
                 onPress={() => {
                   hapticsBridge.tap();
@@ -101,7 +103,7 @@ function CollectionFloatingActionBarComponent({
             {onQuickShare ? (
               <ActionButton
                 icon="ios-share"
-                label="Share"
+                label={t('commonUi.share')}
                 accent={theme.accent}
                 onPress={() => {
                   hapticsBridge.tap();
@@ -132,7 +134,7 @@ function CollectionFloatingActionBarComponent({
               {onCancelShare ? (
                 <ActionButton
                   icon="close"
-                  label="Cancel"
+                  label={t('common.cancel')}
                   accent={theme.text.secondary}
                   onPress={() => {
                     hapticsBridge.tap();
@@ -150,7 +152,7 @@ function CollectionFloatingActionBarComponent({
               {onConfirmShare ? (
                 <ActionButton
                   icon={capturing ? 'hourglass-empty' : 'ios-share'}
-                  label={capturing ? 'Rendering…' : 'Share'}
+                  label={capturing ? t('commonUi.rendering') : t('commonUi.share')}
                   accent="#0E0A06"
                   background={theme.accent}
                   onPress={() => {

@@ -17,6 +17,7 @@ import BottomSheet, {
 } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ON_DARK, ThemedText, readableTextOn } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
@@ -83,6 +84,7 @@ function SpotSheetImpl({
   onFrameShot,
   onSelectScene,
 }: SpotSheetProps) {
+  const t = useT();
   const styles = useMemo(() => makeSheetStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['62%', '92%'], []);
@@ -341,7 +343,7 @@ function SpotSheetImpl({
               variant="bodySmall"
               weight="700"
               style={{ color: saved ? theme.status.info : theme.text.secondary }}>
-              Save
+              {t('common.save')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -368,7 +370,7 @@ function SpotSheetImpl({
               variant="bodySmall"
               weight="700"
               style={{ color: planned ? theme.status.warning : theme.text.secondary }}>
-              Plan
+              {t('commonUi.plan')}
             </ThemedText>
           </Pressable>
         </View>
@@ -382,7 +384,7 @@ function SpotSheetImpl({
           ]}>
           <Ionicons name="camera" size={18} color={themeColorFg} />
           <ThemedText variant="bodyMedium" weight="800" style={{ color: themeColorFg }}>
-            Start AR Camera
+            {t('pilgrimageUi.startArCamera2')}
           </ThemedText>
         </Pressable>
 
@@ -395,7 +397,7 @@ function SpotSheetImpl({
           ]}>
           <Ionicons name="image-outline" size={18} color={theme.text.primary} />
           <ThemedText variant="bodyMedium" weight="700">
-            Photo Tips & Best Frame
+            {t('pilgrimageUi.photoTipsBestFrame')}
           </ThemedText>
         </Pressable>
 
@@ -410,18 +412,18 @@ function SpotSheetImpl({
             ]}>
             <Ionicons name="location-outline" size={15} color={theme.text.tertiary} />
             <ThemedText variant="bodySmall" weight="700" tone="secondary">
-              Open in Maps
+              {t('pilgrimageUi.openInMaps')}
             </ThemedText>
           </Pressable>
           <View style={[styles.linkDivider, { backgroundColor: theme.glassBorder }]} />
           <Pressable
             onPress={handleOpenAnitabi}
             accessibilityRole="link"
-            accessibilityLabel="Attribute and view on Anitabi"
+            accessibilityLabel={t('pilgrimageUi.attributeAndViewOnAnitabi')}
             style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.72 }]}>
             <Ionicons name="open-outline" size={15} color={theme.text.tertiary} />
             <ThemedText variant="bodySmall" weight="700" tone="secondary">
-              Attribute to Anitabi
+              {t('pilgrimageUi.attributeToAnitabi')}
             </ThemedText>
           </Pressable>
         </View>

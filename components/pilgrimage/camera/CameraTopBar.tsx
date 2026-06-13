@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText, readableTextOn } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
   CAMERA_TOP_BAR_CONTENT_HEIGHT,
@@ -49,6 +50,7 @@ export default function CameraTopBar({
   quickControlsExpanded = false,
   onToggleQuickControls,
 }: CameraTopBarProps) {
+  const t = useT();
   const hasQuickControls = quickControls != null && onToggleQuickControls != null;
   const showQuickControls = hasQuickControls && quickControlsExpanded;
   const scrimHeight =
@@ -80,7 +82,7 @@ export default function CameraTopBar({
           onPress={onClose}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Close camera"
+          accessibilityLabel={t('pilgrimageUi.closeCamera')}
           style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}>
           <Ionicons name="close" size={20} color="#fff" />
         </Pressable>

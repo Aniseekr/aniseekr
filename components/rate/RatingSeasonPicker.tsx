@@ -7,14 +7,15 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { sheetEnter } from '../../libs/animations/presets';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 export type Season = 'winter' | 'spring' | 'summer' | 'fall';
 
-const SEASONS: { key: Season; label: string; emoji: string; range: string }[] = [
-  { key: 'winter', label: 'Winter', emoji: '❄️', range: 'Jan – Mar' },
-  { key: 'spring', label: 'Spring', emoji: '🌸', range: 'Apr – Jun' },
-  { key: 'summer', label: 'Summer', emoji: '☀️', range: 'Jul – Sep' },
-  { key: 'fall', label: 'Fall', emoji: '🍂', range: 'Oct – Dec' },
+const SEASONS: { key: Season; labelKey: TranslationKey; emoji: string; range: string }[] = [
+  { key: 'winter', labelKey: 'rate.winter', emoji: '❄️', range: 'Jan – Mar' },
+  { key: 'spring', labelKey: 'rate.spring', emoji: '🌸', range: 'Apr – Jun' },
+  { key: 'summer', labelKey: 'rate.summer', emoji: '☀️', range: 'Jul – Sep' },
+  { key: 'fall', labelKey: 'rate.fall', emoji: '🍂', range: 'Oct – Dec' },
 ];
 
 interface RatingSeasonPickerProps {
@@ -37,6 +38,7 @@ function RatingSeasonPickerComponent({
   onConfirm,
 }: RatingSeasonPickerProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [selectedYear, setSelectedYear] = useState(year);
   const [selectedSeason, setSelectedSeason] = useState<Season>(season);
   const [view, setView] = useState<'list' | 'grid'>('grid');
@@ -52,6 +54,9 @@ function RatingSeasonPickerComponent({
     onConfirm(selectedYear, selectedSeason);
     onClose();
   };
+
+  const selectedSeasonOption = SEASONS.find((s) => s.key === selectedSeason);
+  const selectedSeasonLabel = selectedSeasonOption ? t(selectedSeasonOption.labelKey) : '';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -71,7 +76,9 @@ function RatingSeasonPickerComponent({
           ]}>
           <SafeAreaView edges={['bottom']}>
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>Pick season</Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>
+                {t('rate.pickSeason')}
+              </Text>
               <Pressable
                 onPress={() => {
                   hapticsBridge.selection();
@@ -86,7 +93,9 @@ function RatingSeasonPickerComponent({
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Season</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('rate.season')}
+            </Text>
             <View style={styles.seasonRow}>
               {SEASONS.map((s) => {
                 const active = s.key === selectedSeason;
@@ -113,7 +122,7 @@ function RatingSeasonPickerComponent({
                           color: active ? theme.accent : theme.text.primary,
                         },
                       ]}>
-                      {s.label}
+                      {t(s.labelKey)}
                     </Text>
                     <Text style={[styles.seasonRange, { color: theme.text.tertiary }]}>
                       {s.range}
@@ -123,7 +132,9 @@ function RatingSeasonPickerComponent({
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Year</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('rate.year')}
+            </Text>
             {view === 'grid' ? (
               <ScrollView style={{ maxHeight: 240 }}>
                 <View style={styles.yearGrid}>
@@ -195,7 +206,9 @@ function RatingSeasonPickerComponent({
                     opacity: pressed ? 0.7 : 1,
                   },
                 ]}>
-                <Text style={[styles.footerLabel, { color: theme.text.secondary }]}>Cancel</Text>
+                <Text style={[styles.footerLabel, { color: theme.text.secondary }]}>
+                  {t('common.cancel')}
+                </Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirm}
@@ -204,7 +217,7 @@ function RatingSeasonPickerComponent({
                   { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
                 ]}>
                 <Text style={styles.confirmLabel}>
-                  Confirm {SEASONS.find((s) => s.key === selectedSeason)?.label} {selectedYear}
+                  Confirm {selectedSeasonLabel} {selectedYear}
                 </Text>
               </Pressable>
             </View>

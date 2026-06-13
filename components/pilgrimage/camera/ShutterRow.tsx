@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { readableTextOn } from '../../themed/contrast';
+import { useT } from '../../../libs/i18n';
 import { CAMERA_LANDSCAPE_CLUSTER_RESERVE } from '../../../libs/services/pilgrimage/camera-ui';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
 import BurstIndicator from './BurstIndicator';
@@ -53,6 +54,7 @@ export default function ShutterRow({
   onLongPress,
   burst,
 }: ShutterRowProps) {
+  const t = useT();
   const burstActive = burst?.active === true;
   const shutterDisabled = capturing || burstActive;
   const shutterSize = isLandscape ? SHUTTER_SIZE_LANDSCAPE : SHUTTER_SIZE;
@@ -89,7 +91,7 @@ export default function ShutterRow({
       delayLongPress={handleShutterLongPress ? 250 : undefined}
       disabled={shutterDisabled}
       accessibilityRole="button"
-      accessibilityLabel="Take comparison photo"
+      accessibilityLabel={t('pilgrimageUi.takeComparisonPhoto')}
       style={({ pressed }) => [
         styles.shutterRing,
         { width: shutterSize, height: shutterSize, borderRadius: shutterSize / 2 },
@@ -125,7 +127,7 @@ export default function ShutterRow({
   const library = (
     <SideButton
       shape="square"
-      accessibilityLabel="Pick photo from library"
+      accessibilityLabel={t('pilgrimageUi.pickPhotoFromLibrary')}
       onPress={handleLibraryPress}>
       <Ionicons name="images-outline" size={20} color="#fff" />
     </SideButton>

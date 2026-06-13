@@ -3,6 +3,7 @@ import { Animated as RNAnimated, Pressable, StyleSheet, View } from 'react-nativ
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { CAMERA_TOP_BAR_CONTENT_HEIGHT } from '../../../libs/services/pilgrimage/camera-ui';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
 import { AlignmentRing } from './AlignmentRing';
@@ -65,6 +66,7 @@ export default function AlignmentHUD({
   onReset,
 }: AlignmentHUDProps) {
   const { theme } = useTheme();
+  const t = useT();
   const perfectOpacity = useRef(new RNAnimated.Value(showPerfectBanner ? 1 : 0)).current;
 
   useEffect(() => {
@@ -137,11 +139,11 @@ export default function AlignmentHUD({
               onPress={onReset}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Reset overlay position"
+              accessibilityLabel={t('pilgrimageUi.resetOverlayPosition')}
               style={({ pressed }) => [styles.resetChip, pressed && { opacity: 0.7 }]}>
               <Ionicons name="refresh" size={14} color="#fff" />
               <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                Reset
+                {t('common.reset')}
               </ThemedText>
             </Pressable>
           ) : null}

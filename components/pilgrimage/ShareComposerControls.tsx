@@ -18,7 +18,7 @@ import {
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../themed';
-import { useT } from '../../libs/i18n';
+import { useT, type TranslationKey } from '../../libs/i18n';
 import type { ThemePalette } from '../../context/ThemeContext';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -34,33 +34,34 @@ import {
 import { FILTER_PRESETS, type FilterPresetId } from '../../libs/services/pilgrimage/share-filters';
 
 // Watermark ink swatches. `null` means "auto" — derive from canvas contrast.
-const WATERMARK_COLORS: { id: string; hex: string | null; label: string }[] = [
-  { id: 'auto', hex: null, label: 'Auto' },
-  { id: 'white', hex: '#FFFFFF', label: 'White' },
-  { id: 'black', hex: '#0E0A06', label: 'Black' },
-  { id: 'gold', hex: '#FFB44C', label: 'Gold' },
-  { id: 'red', hex: '#FF4F5E', label: 'Red' },
-  { id: 'sky', hex: '#4FB6FF', label: 'Sky' },
-  { id: 'lime', hex: '#9BE34A', label: 'Lime' },
-  { id: 'magenta', hex: '#FF4F8F', label: 'Magenta' },
+// `label` holds a TranslationKey resolved via t() at render (ids/hex unchanged).
+const WATERMARK_COLORS: { id: string; hex: string | null; label: TranslationKey }[] = [
+  { id: 'auto', hex: null, label: 'commonUi.auto' },
+  { id: 'white', hex: '#FFFFFF', label: 'pilgrimageUi.white' },
+  { id: 'black', hex: '#0E0A06', label: 'pilgrimageUi.black' },
+  { id: 'gold', hex: '#FFB44C', label: 'pilgrimageUi.gold' },
+  { id: 'red', hex: '#FF4F5E', label: 'pilgrimageUi.red' },
+  { id: 'sky', hex: '#4FB6FF', label: 'pilgrimageUi.sky' },
+  { id: 'lime', hex: '#9BE34A', label: 'pilgrimageUi.lime' },
+  { id: 'magenta', hex: '#FF4F8F', label: 'pilgrimageUi.magenta' },
 ];
 
 // Curated palette: keeps callers from having to know hex codes. The first
 // entry is "reset to template default"; the rest cover warm/cool/neutral so
 // users find a fit for any template without a colour wheel.
-const BG_SWATCHES: { id: string; hex: string | null; label: string }[] = [
-  { id: 'reset', hex: null, label: 'Reset' },
-  { id: 'beige', hex: '#F5F1E8', label: 'Beige' },
-  { id: 'white', hex: '#FFFFFF', label: 'White' },
-  { id: 'black', hex: '#0E0A06', label: 'Black' },
-  { id: 'cream', hex: '#FFF5E1', label: 'Cream' },
-  { id: 'yellow', hex: '#FFE45C', label: 'Yellow' },
-  { id: 'peach', hex: '#FFCFA8', label: 'Peach' },
-  { id: 'pink', hex: '#FFB6D5', label: 'Pink' },
-  { id: 'sky', hex: '#B6D9FF', label: 'Sky' },
-  { id: 'mint', hex: '#B6FFD9', label: 'Mint' },
-  { id: 'lavender', hex: '#D9B6FF', label: 'Lavender' },
-  { id: 'navy', hex: '#1B2840', label: 'Navy' },
+const BG_SWATCHES: { id: string; hex: string | null; label: TranslationKey }[] = [
+  { id: 'reset', hex: null, label: 'common.reset' },
+  { id: 'beige', hex: '#F5F1E8', label: 'pilgrimageUi.beige' },
+  { id: 'white', hex: '#FFFFFF', label: 'pilgrimageUi.white' },
+  { id: 'black', hex: '#0E0A06', label: 'pilgrimageUi.black' },
+  { id: 'cream', hex: '#FFF5E1', label: 'pilgrimageUi.cream' },
+  { id: 'yellow', hex: '#FFE45C', label: 'pilgrimageUi.yellow' },
+  { id: 'peach', hex: '#FFCFA8', label: 'pilgrimageUi.peach' },
+  { id: 'pink', hex: '#FFB6D5', label: 'pilgrimageUi.pink' },
+  { id: 'sky', hex: '#B6D9FF', label: 'pilgrimageUi.sky' },
+  { id: 'mint', hex: '#B6FFD9', label: 'pilgrimageUi.mint' },
+  { id: 'lavender', hex: '#D9B6FF', label: 'pilgrimageUi.lavender' },
+  { id: 'navy', hex: '#1B2840', label: 'pilgrimageUi.navy' },
 ];
 
 export type ShareComposerControlsProps = {
@@ -428,7 +429,7 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
                 key={s.id}
                 onPress={() => handlePickColor(s.hex)}
                 accessibilityRole="button"
-                accessibilityLabel={t('pilgrimage.share.a11y.bgSwatch', { label: s.label })}
+                accessibilityLabel={t('pilgrimage.share.a11y.bgSwatch', { label: t(s.label) })}
                 accessibilityState={{ selected: active }}
                 style={({ pressed }) => [
                   styles.swatch,
@@ -585,7 +586,7 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={t('pilgrimage.share.a11y.watermarkColor', {
-                      label: c.label,
+                      label: t(c.label),
                     })}
                     accessibilityState={{ selected: active }}
                     style={({ pressed }) => [

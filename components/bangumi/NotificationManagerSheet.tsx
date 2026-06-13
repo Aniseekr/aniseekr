@@ -19,6 +19,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { EmptyStateView } from '../common/EmptyStateView';
 import { notificationService } from '../../libs/services/notifications/notification-service';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
+import { useT } from '../../libs/i18n';
 
 interface PendingNotification {
   identifier: string;
@@ -36,6 +37,7 @@ const TEST_REMINDER_DELAY_SECONDS = 5;
 
 function NotificationManagerSheetComponent({ visible, onClose }: NotificationManagerSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [pending, setPending] = useState<PendingNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -102,7 +104,7 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
       }
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Test reminder',
+          title: t('bangumiTab.testReminder'),
           body: `Fires ${TEST_REMINDER_DELAY_SECONDS}s after you tap — leave the app to see the banner.`,
           data: { kind: 'test_reminder' },
         },
@@ -122,7 +124,7 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
     } finally {
       setTesting(false);
     }
-  }, [testing, fetchPending]);
+  }, [testing, fetchPending, t]);
 
   const handleClearAll = async () => {
     hapticsBridge.warning();
@@ -156,7 +158,9 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>Reminders</Text>
+                <Text style={[styles.title, { color: theme.text.primary }]}>
+                  {t('bangumiTab.reminders')}
+                </Text>
                 <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
                   {pending.length} pending notification{pending.length === 1 ? '' : 's'}
                 </Text>
@@ -183,7 +187,7 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
                 <MaterialIcons name="notifications-active" size={18} color={theme.accent} />
               )}
               <Text style={[styles.testLabel, { color: theme.accent }]}>
-                {testing ? 'Scheduling…' : `Send test reminder (${TEST_REMINDER_DELAY_SECONDS}s)`}
+                {testing ? t('bangumiTab.scheduling') : `Send test reminder (${TEST_REMINDER_DELAY_SECONDS}s)`}
               </Text>
             </Pressable>
 
@@ -194,8 +198,8 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
             ) : pending.length === 0 ? (
               <EmptyStateView
                 icon="notifications-none"
-                title="No pending reminders"
-                description="Tap the bell on an episode to schedule a reminder."
+                title={t('bangumiTab.noPendingReminders')}
+                description={t('bangumiTab.tapTheBellOnAn')}
               />
             ) : (
               <>
@@ -254,7 +258,9 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
                     },
                   ]}>
                   <MaterialIcons name="delete-sweep" size={18} color={theme.status.error} />
-                  <Text style={[styles.clearAllLabel, { color: theme.status.error }]}>Clear all</Text>
+                  <Text style={[styles.clearAllLabel, { color: theme.status.error }]}>
+                    {t('bangumiTab.clearAll')}
+                  </Text>
                 </Pressable>
               </>
             )}

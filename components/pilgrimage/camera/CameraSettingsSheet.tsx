@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-na
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedSurface, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import {
@@ -66,6 +67,7 @@ export default function CameraSettingsSheet({
   onCaptureModeChange,
 }: CameraSettingsSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   const handleSelect = <K extends keyof CameraSettings>(key: K, value: CameraSettings[K]) => {
     if (settings[key] === value) return;
@@ -91,18 +93,18 @@ export default function CameraSettingsSheet({
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss camera settings"
+          accessibilityLabel={t('pilgrimageUi.dismissCameraSettings')}
         />
         <ThemedSurface variant="elevated" radius={0} style={styles.sheet}>
           <View style={styles.header}>
             <ThemedText variant="titleLarge" weight="700">
-              Camera settings
+              {t('pilgrimageUi.cameraSettings')}
             </ThemedText>
             <Pressable
               onPress={onClose}
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Close camera settings"
+              accessibilityLabel={t('pilgrimageUi.closeCameraSettings')}
               style={({ pressed }) => [
                 styles.closeBtn,
                 { borderColor: theme.glassBorder, backgroundColor: theme.background.tertiary },
@@ -116,7 +118,7 @@ export default function CameraSettingsSheet({
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}>
-            <SettingsSection title="Capture mode">
+            <SettingsSection title={t('pilgrimageUi.captureMode')}>
               <SegmentedRow
                 options={CAPTURE_MODES.map((m) => ({ value: m, label: CAPTURE_MODE_LABEL[m] }))}
                 value={captureMode}
@@ -130,7 +132,7 @@ export default function CameraSettingsSheet({
               </ThemedText>
             </SettingsSection>
 
-            <SettingsSection title="Aspect ratio">
+            <SettingsSection title={t('pilgrimageUi.aspectRatio')}>
               <SegmentedRow
                 options={ASPECT_RATIOS.map((a) => ({ value: a, label: ASPECT_LABEL[a] }))}
                 value={aspect}
@@ -141,7 +143,7 @@ export default function CameraSettingsSheet({
               />
             </SettingsSection>
 
-            <SettingsSection title="Resolution">
+            <SettingsSection title={t('pilgrimageUi.resolution')}>
               <SegmentedRow
                 options={RESOLUTION_TIERS.map((t) => ({ value: t, label: RESOLUTION_LABEL[t] }))}
                 value={settings.resolutionTier}
@@ -152,7 +154,7 @@ export default function CameraSettingsSheet({
               </ThemedText>
             </SettingsSection>
 
-            <SettingsSection title="Self-timer">
+            <SettingsSection title={t('pilgrimageUi.selfTimer')}>
               <SegmentedRow
                 options={COUNTDOWN_SECONDS.map((s) => ({ value: s, label: COUNTDOWN_LABEL[s] }))}
                 value={settings.countdownSeconds}
@@ -161,26 +163,26 @@ export default function CameraSettingsSheet({
             </SettingsSection>
 
             <SwitchRow
-              label="Silent shutter"
+              label={t('pilgrimageUi.silentShutter')}
               description={SILENT_SHUTTER_HELP_TEXT}
               value={settings.mute}
               onValueChange={(v) => handleSwitch('mute', v)}
             />
             <SwitchRow
-              label="Mirror front camera"
-              description="Flip selfie preview horizontally"
+              label={t('pilgrimageUi.mirrorFrontCamera')}
+              description={t('pilgrimageUi.flipSelfiePreviewHorizontally')}
               value={settings.mirror}
               onValueChange={(v) => handleSwitch('mirror', v)}
             />
             <SwitchRow
-              label="Animate shutter"
-              description="Show the shutter pulse on capture"
+              label={t('pilgrimageUi.animateShutter')}
+              description={t('pilgrimageUi.showTheShutterPulseOn')}
               value={settings.animateShutter}
               onValueChange={(v) => handleSwitch('animateShutter', v)}
             />
             <SwitchRow
-              label="Auto-capture when aligned"
-              description="Fire shutter automatically at 95% match (held for 1.5s)"
+              label={t('pilgrimageUi.autoCaptureWhenAligned')}
+              description={t('pilgrimageUi.fireShutterAutomaticallyAt95')}
               value={settings.autoCapture}
               onValueChange={(v) => handleSwitch('autoCapture', v)}
             />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useT } from '../../../libs/i18n';
 import { Spacing } from '../../../constants/DesignSystem';
 import { ThemedText, Skeleton } from '../../themed';
 import { EmptyStateView } from '../../common/EmptyStateView';
@@ -45,6 +46,7 @@ export function StatsOverview({
   onEmptyAction,
 }: Props) {
   const router = useRouter();
+  const t = useT();
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [monthly, setMonthly] = useState<ReturnType<typeof monthlyHours>>([]);
   const [achievements, setAchievements] = useState<AchievementWithProgress[]>([]);
@@ -64,7 +66,7 @@ export function StatsOverview({
         setMonthly(monthlyHours(rows));
         setAchievements(ach);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load stats');
+        if (!cancelled) setError(e instanceof Error ? e.message : t('collectionUi.failedToLoadStats'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -72,7 +74,7 @@ export function StatsOverview({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const year = new Date().getFullYear();
   const heroBadge = `Year in review · ${year}`;
@@ -88,13 +90,13 @@ export function StatsOverview({
   const donutSlices = useMemo(() => {
     if (!summary) return [];
     return [
-      { label: 'Watching', value: summary.watching, color: STATUS_COLORS.watching },
-      { label: 'Completed', value: summary.completed, color: STATUS_COLORS.completed },
-      { label: 'Plan', value: summary.planned, color: STATUS_COLORS.planned },
-      { label: 'On hold', value: summary.onHold, color: STATUS_COLORS.onHold },
-      { label: 'Dropped', value: summary.dropped, color: STATUS_COLORS.dropped },
+      { label: t('commonUi.watching'), value: summary.watching, color: STATUS_COLORS.watching },
+      { label: t('commonUi.completed'), value: summary.completed, color: STATUS_COLORS.completed },
+      { label: t('commonUi.plan'), value: summary.planned, color: STATUS_COLORS.planned },
+      { label: t('collectionUi.onHold'), value: summary.onHold, color: STATUS_COLORS.onHold },
+      { label: t('commonUi.dropped'), value: summary.dropped, color: STATUS_COLORS.dropped },
     ];
-  }, [summary]);
+  }, [summary, t]);
 
   const monthlyHasData = useMemo(() => monthly.some((b) => b.hours > 0), [monthly]);
 
@@ -102,8 +104,8 @@ export function StatsOverview({
     () => [
       {
         id: 'persona',
-        title: 'Anime Persona',
-        subtitle: 'Discover your viewing archetype',
+        title: t('collectionUi.animePersona'),
+        subtitle: t('collectionUi.discoverYourViewingArchetype'),
         icon: 'auto-awesome' as const,
         gradientFrom: '#7C5BFF',
         gradientTo: '#21D4FD',
@@ -113,8 +115,8 @@ export function StatsOverview({
       },
       {
         id: 'year-in-review',
-        title: 'Year in Review',
-        subtitle: 'Your watching year, recapped',
+        title: t('collectionUi.yearInReview'),
+        subtitle: t('collectionUi.yourWatchingYearRecapped'),
         icon: 'auto-stories' as const,
         gradientFrom: '#FF6CAB',
         gradientTo: '#FF8E1E',
@@ -123,8 +125,8 @@ export function StatsOverview({
       },
       {
         id: 'hall-of-fame',
-        title: 'Hall of Fame',
-        subtitle: 'Trophies, medallions, milestones',
+        title: t('collectionUi.hallOfFame'),
+        subtitle: t('collectionUi.trophiesMedallionsMilestones'),
         icon: 'emoji-events' as const,
         gradientFrom: '#F2994A',
         gradientTo: '#F2C94C',
@@ -133,8 +135,8 @@ export function StatsOverview({
       },
       {
         id: 'top-picks',
-        title: 'Top 10 Picks',
-        subtitle: 'Curated by your ratings',
+        title: t('collectionUi.top10Picks'),
+        subtitle: t('collectionUi.curatedByYourRatings'),
         icon: 'star-rate' as const,
         gradientFrom: '#0F2027',
         gradientTo: '#2C5364',
@@ -143,7 +145,7 @@ export function StatsOverview({
       },
       {
         id: 'top-favorites',
-        title: 'My Top Favorites',
+        title: t('collectionUi.myTopFavorites'),
         subtitle: 'Why your #1 still hits',
         icon: 'favorite' as const,
         gradientFrom: '#FF5C8A',
@@ -152,19 +154,19 @@ export function StatsOverview({
         minTotal: 1,
       },
     ],
-    []
+    [t]
   );
 
   if (loading) return <Skeleton.StatsDashboard />;
 
-  if (error) return <ErrorStateView title="Couldn't load stats" message={error} />;
+  if (error) return <ErrorStateView title={t('collectionUi.couldnTLoadStats')} message={error} />;
 
   if (!summary || summary.total === 0) {
     return (
       <EmptyStateView
         icon="bar-chart"
-        title="No stats yet"
-        description="Start adding anime to your folders to see your library breakdown."
+        title={t('collectionUi.noStatsYet')}
+        description={t('collectionUi.startAddingAnimeToYour')}
         actionLabel={emptyActionLabel ?? 'Browse anime'}
         onAction={onEmptyAction ?? (() => router.push('/(rate)'))}
       />
@@ -178,16 +180,16 @@ export function StatsOverview({
         highlight={heroHighlight}
         values={[
           {
-            label: 'Watch hours (est.)',
+            label: t('collectionUi.watchHoursEst'),
             value: summary.watchHoursEst > 0 ? String(summary.watchHoursEst) : '—',
             hidden: summary.episodesWatched === 0,
           },
           {
-            label: 'Anime',
+            label: t('commonUi.anime'),
             value: String(summary.total),
           },
           {
-            label: 'Avg score',
+            label: t('collectionUi.avgScore'),
             value: summary.avgScore > 0 ? summary.avgScore.toFixed(1) : '—',
             hidden: summary.rated === 0,
           },
@@ -211,10 +213,10 @@ export function StatsOverview({
 
       <View style={styles.exhibitSection}>
         <ThemedText variant="titleLarge" weight="700">
-          Exhibits
+          {t('collectionUi.exhibits')}
         </ThemedText>
         <ThemedText variant="bodySmall" tone="secondary">
-          Tap into any exhibit to dig deeper, or share it as a card.
+          {t('collectionUi.tapIntoAnyExhibitTo')}
         </ThemedText>
         <View style={styles.exhibitGrid}>
           {exhibits.flatMap((e) =>

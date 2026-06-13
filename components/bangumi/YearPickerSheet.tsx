@@ -7,6 +7,7 @@ import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 interface YearPickerSheetProps {
   visible: boolean;
@@ -30,6 +31,7 @@ function YearPickerSheetComponent({
   onNextYear,
 }: YearPickerSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -69,7 +71,9 @@ function YearPickerSheetComponent({
             <SafeAreaView edges={['bottom']}>
               <View style={styles.handle} />
               <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>Pick a year</Text>
+                <Text style={[styles.title, { color: theme.text.primary }]}>
+                  {t('bangumiTab.pickAYear')}
+                </Text>
                 <Pressable onPress={onClose} hitSlop={12}>
                   <MaterialIcons name="close" size={22} color={theme.text.secondary} />
                 </Pressable>
@@ -87,7 +91,7 @@ function YearPickerSheetComponent({
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Filter by year..."
+                  placeholder={t('bangumiTab.filterByYear')}
                   placeholderTextColor={theme.text.tertiary}
                   keyboardType="number-pad"
                   style={[styles.searchInput, { color: theme.text.primary }]}
@@ -125,7 +129,9 @@ function YearPickerSheetComponent({
                   );
                 })}
                 {filteredYears.length === 0 ? (
-                  <Text style={[styles.empty, { color: theme.text.tertiary }]}>No matches.</Text>
+                  <Text style={[styles.empty, { color: theme.text.tertiary }]}>
+                    {t('bangumiTab.noMatches')}
+                  </Text>
                 ) : null}
               </ScrollView>
 
@@ -148,7 +154,7 @@ function YearPickerSheetComponent({
                       ]}>
                       <MaterialIcons name="arrow-back" size={18} color={theme.text.primary} />
                       <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
-                        Previous year
+                        {t('bangumiTab.previousYear')}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -168,7 +174,7 @@ function YearPickerSheetComponent({
                         },
                       ]}>
                       <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
-                        Next year
+                        {t('bangumiTab.nextYear')}
                       </Text>
                       <MaterialIcons name="arrow-forward" size={18} color={theme.text.primary} />
                     </Pressable>

@@ -99,7 +99,7 @@ import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
 import { useExposureBracket } from '../../../../hooks/useExposureBracket';
 import { useSceneAnalyzer } from '../../../../hooks/useSceneAnalyzer';
 import { probeHdrFusionSupport } from '../../../../libs/services/pilgrimage/composite-hdr';
-import { useT } from '../../../../libs/i18n';
+import { useT, type TranslationKey } from '../../../../libs/i18n';
 import { useAutoCapture } from '../../../../hooks/useAutoCapture';
 import { useCaptureSession } from '../../../../hooks/useCaptureSession';
 import {
@@ -144,12 +144,19 @@ const FLASH_REAR_CYCLE: FlashMode[] = ['off', 'auto', 'on', 'torch'];
 const FLASH_FRONT_CYCLE: FlashMode[] = ['off', 'auto', 'on'];
 
 // Overlay mode switch toast copy — shown briefly when the user taps a mode pill.
-const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', CamSwitchToastValue> = {
-  off: { icon: 'eye-off-outline', label: 'Overlay Off' },
-  anime: { icon: 'image-outline', label: 'Anime', hint: 'Original scene overlay' },
-  edge: { icon: 'analytics-outline', label: 'Edge', hint: 'Edge detection overlay' },
-  sketch: { icon: 'pencil-outline', label: 'Sketch', hint: 'Sketch style overlay' },
-  subject: { icon: 'person-outline', label: 'Subject', hint: 'Subject extract overlay' },
+// `labelKey` is resolved to the toast `label` via t() at the spread site (the
+// `hint` strings are not yet in the i18n catalog and stay literal).
+type OverlayModeToastSeed = Omit<CamSwitchToastValue, 'label'> & { labelKey: TranslationKey };
+const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', OverlayModeToastSeed> = {
+  off: { icon: 'eye-off-outline', labelKey: 'pilgrimageUi.overlayOff' },
+  anime: { icon: 'image-outline', labelKey: 'commonUi.anime', hint: 'Original scene overlay' },
+  edge: { icon: 'analytics-outline', labelKey: 'pilgrimageUi.edge', hint: 'Edge detection overlay' },
+  sketch: { icon: 'pencil-outline', labelKey: 'pilgrimageUi.sketch', hint: 'Sketch style overlay' },
+  subject: {
+    icon: 'person-outline',
+    labelKey: 'pilgrimageUi.subject',
+    hint: 'Subject extract overlay',
+  },
 };
 
 // Capture mode is a top-bar icon button that cycles single → burst → auto; the
@@ -1179,12 +1186,16 @@ export default function CompareCaptureScreen() {
       const next = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (next.granted) return true;
     }
-    Alert.alert('Photo access needed', 'Allow photo library access to score an existing image.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
-    ]);
+    Alert.alert(
+      t('pilgrimageUi.photoAccessNeededAllowPhotoTitle'),
+      t('pilgrimageUi.photoAccessNeededAllowPhotoMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
+      ]
+    );
     return false;
-  }, []);
+  }, [t]);
 
   const handlePickLibraryImage = useCallback(async () => {
     autoCapture.cancel();
@@ -1226,7 +1237,10 @@ export default function CompareCaptureScreen() {
     } catch (err) {
       console.warn('[camera] library import failed', err);
       hapticsBridge.error();
-      Alert.alert('Could not import photo', 'Please try another image from your library.');
+      Alert.alert(
+        t('pilgrimageUi.couldNotImportPhotoPleaseTitle'),
+        t('pilgrimageUi.couldNotImportPhotoPleaseMessage')
+      );
     } finally {
       setCapturing(false);
     }
@@ -1241,6 +1255,7 @@ export default function CompareCaptureScreen() {
     sensors.tilt,
     captureSession,
     navigateToPreview,
+    t,
   ]);
 
   // Permission UI — `status === 'not-determined'` is the brief initial state
@@ -1258,14 +1273,14 @@ export default function CompareCaptureScreen() {
           <View style={styles.permContent}>
             <Ionicons name="camera-outline" size={48} color={theme.text.secondary} />
             <ThemedText variant="titleLarge" weight="700" align="center">
-              Camera access needed
+              {t('pilgrimageUi.cameraAccessNeeded')}
             </ThemedText>
             <ThemedText
               variant="bodyMedium"
               tone="secondary"
               align="center"
               style={{ marginBottom: 8 }}>
-              Allow camera so you can frame this scene against its anime reference.
+              {t('pilgrimageUi.allowCameraSoYouCan')}
             </ThemedText>
             <Pressable
               onPress={() => {
@@ -1286,7 +1301,7 @@ export default function CompareCaptureScreen() {
             </Pressable>
             <Pressable onPress={() => router.back()} hitSlop={12}>
               <ThemedText variant="bodyMedium" tone="secondary">
-                Not now
+                {t('common.notNow')}
               </ThemedText>
             </Pressable>
           </View>
@@ -1355,13 +1370,18 @@ export default function CompareCaptureScreen() {
       editMode={editMode}
       themeColor={themeColor}
       onSelectOff={() => {
-        setHud({ overlayVisible: false, switchToast: { ...OVERLAY_MODE_TOAST.off } });
+        const seed = OVERLAY_MODE_TOAST.off;
+        setHud({
+          overlayVisible: false,
+          switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+        });
       }}
       onSelectMode={(m) => {
+        const seed = OVERLAY_MODE_TOAST[m];
         setHud({
           overlayMode: m,
           overlayVisible: true,
-          switchToast: { ...OVERLAY_MODE_TOAST[m] },
+          switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
         });
       }}
       onSelectEdgeIntensity={(i) => setHud({ edgeIntensity: i })}
@@ -1467,7 +1487,7 @@ export default function CompareCaptureScreen() {
               />
               <CameraHeaderButton
                 icon="settings-outline"
-                accessibilityLabel="Camera settings"
+                accessibilityLabel={t('pilgrimageUi.cameraSettings')}
                 accessibilityState={{ expanded: settingsOpen }}
                 themeColor={themeColor}
                 active={settingsOpen}
@@ -1493,9 +1513,9 @@ export default function CompareCaptureScreen() {
               />
               <CameraChip
                 icon="information-circle-outline"
-                label="Guide"
+                label={t('pilgrimageUi.guide')}
                 themeColor={themeColor}
-                accessibilityLabel="Open framing guide"
+                accessibilityLabel={t('pilgrimageUi.openFramingGuide')}
                 onPress={handleOpenInfo}
               />
             </>

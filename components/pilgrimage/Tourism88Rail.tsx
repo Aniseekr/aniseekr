@@ -17,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Spacing, Radius, Shadow, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../themed';
+import { useT } from '../../libs/i18n';
 import type {
   AnimeTourism88Region,
   UniqueAnime88Entry,
@@ -52,6 +53,7 @@ export function Tourism88Rail({
   style,
 }: Tourism88RailProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   if (entries.length === 0) return null;
   return (
@@ -64,7 +66,7 @@ export function Tourism88Rail({
             </ThemedText>
           </View>
           <ThemedText variant="titleMedium" weight="700">
-            Anime Tourism 88
+            {t('pilgrimageUi.animeTourism88')}
           </ThemedText>
         </View>
         {onSeeAll ? (
@@ -73,7 +75,7 @@ export function Tourism88Rail({
             hitSlop={10}
             style={({ pressed }) => [styles.seeAll, pressed && { opacity: 0.6 }]}>
             <ThemedText variant="captionSmall" weight="500" tone="secondary">
-              See all
+              {t('commonUi.seeAll')}
             </ThemedText>
             <Ionicons name="chevron-forward" size={12} color={theme.text.tertiary} />
           </Pressable>

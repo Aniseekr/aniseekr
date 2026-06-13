@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { ON_DARK, Skeleton, ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import { RoundHeaderButton } from './RoundHeaderButton';
 
@@ -42,6 +43,7 @@ function PilgrimageDetailLoadingShellImpl({
   theme,
   onBack,
 }: PilgrimageDetailLoadingShellProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme, topInset), [theme, topInset]);
   // 58% mid-snap is where the sheet lands in list mode; the shell uses the
   // 16% peek so it matches map-mode entry (the user most often sees this).
@@ -74,7 +76,7 @@ function PilgrimageDetailLoadingShellImpl({
           <RoundHeaderButton
             icon="chevron-back"
             onPress={onBack}
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             tint={theme.text.primary}
             theme={theme}
           />
@@ -136,7 +138,7 @@ function PilgrimageDetailLoadingShellImpl({
                 weight="800"
                 numberOfLines={1}
                 style={{ color: ON_DARK }}>
-                Loading
+                {t('pilgrimageUi.loading')}
               </ThemedText>
             </View>
           </View>

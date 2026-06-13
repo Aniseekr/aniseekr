@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { roundExposureValue } from '../../../libs/services/pilgrimage/camera-ui';
 
 interface FocusExposureBarProps {
@@ -24,6 +25,7 @@ export default function FocusExposureBar({
   isLandscape,
   onChange,
 }: FocusExposureBarProps) {
+  const t = useT();
   return (
     <View
       pointerEvents="box-none"
@@ -52,7 +54,7 @@ export default function FocusExposureBar({
           minimumTrackTintColor={themeColor}
           maximumTrackTintColor="rgba(255,255,255,0.28)"
           thumbTintColor="#fff"
-          accessibilityLabel="Adjust locked focus exposure"
+          accessibilityLabel={t('pilgrimageUi.adjustLockedFocusExposure')}
           accessibilityValue={{ min: -2, max: 2, now: value }}
         />
         <ThemedText variant="caption" weight="700" align="right" style={styles.valueText}>

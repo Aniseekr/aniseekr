@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -128,6 +129,7 @@ function AddToCollectionSheetComponent({
   onChanged,
 }: AddToCollectionSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [folders, setFolders] = useState<CollectionFolder[]>([]);
@@ -298,7 +300,7 @@ function AddToCollectionSheetComponent({
           <View style={[styles.grabber, { backgroundColor: theme.text.tertiary, opacity: 0.4 }]} />
           <View style={styles.header}>
             <ThemedText variant="titleMedium" weight="700">
-              Add to collection
+              {t('collectionUi.addToCollection')}
             </ThemedText>
             <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>
               {anime?.title ?? ''}
@@ -311,7 +313,7 @@ function AddToCollectionSheetComponent({
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
-              <SectionLabel>Status</SectionLabel>
+              <SectionLabel>{t('commonUi.status')}</SectionLabel>
               {statusFolders.map((f) => {
                 const selected = STATUS_FOLDER_TO_DB[f.id] === currentStatus;
                 return (
@@ -327,7 +329,7 @@ function AddToCollectionSheetComponent({
 
               {favoritesFolder ? (
                 <>
-                  <SectionLabel>Favorites</SectionLabel>
+                  <SectionLabel>{t('collectionUi.favorites')}</SectionLabel>
                   <FolderRow
                     folder={favoritesFolder}
                     selected={isFav}
@@ -339,7 +341,7 @@ function AddToCollectionSheetComponent({
 
               {customFolders.length > 0 ? (
                 <>
-                  <SectionLabel>Custom</SectionLabel>
+                  <SectionLabel>{t('collectionUi.custom')}</SectionLabel>
                   {customFolders.map((f) => (
                     <FolderRow
                       key={f.id}

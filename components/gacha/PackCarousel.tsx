@@ -2,6 +2,7 @@ import { View, Text, Pressable, ActivityIndicator, Platform, StyleSheet } from '
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useT } from '../../libs/i18n';
 
 interface PackCarouselProps {
   onPull: () => void;
@@ -18,6 +19,7 @@ export function PackCarousel({
   pullCost,
   cardsPerPull,
 }: PackCarouselProps) {
+  const t = useT();
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -29,7 +31,7 @@ export function PackCarousel({
           <View style={styles.iconContainer}>
             <FontAwesome5 name="box-open" size={56} color="#fff" style={{ opacity: 0.9 }} />
           </View>
-          <Text style={styles.title}>Standard Signal</Text>
+          <Text style={styles.title}>{t('gacha.standardSignal')}</Text>
           <Text style={styles.subtitle}>
             CONTAINS <Text style={styles.subtitleHighlight}>{cardsPerPull}</Text> SIGNALS
           </Text>

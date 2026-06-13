@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../../themed';
+import { useT, type TranslationKey } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import {
   EDGE_INTENSITIES,
@@ -38,14 +39,15 @@ interface OverlayControlsProps {
 interface ModeMeta {
   id: OverlayMode;
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  /** Translation key — resolved with `t()` at render. */
+  label: TranslationKey;
 }
 
 const MODES: ModeMeta[] = [
-  { id: 'anime', icon: 'image-outline', label: 'Anime' },
-  { id: 'sketch', icon: 'pencil-outline', label: 'Sketch' },
-  { id: 'edge', icon: 'analytics-outline', label: 'Edge' },
-  { id: 'subject', icon: 'person-outline', label: 'Subject' },
+  { id: 'anime', icon: 'image-outline', label: 'commonUi.anime' },
+  { id: 'sketch', icon: 'pencil-outline', label: 'pilgrimageUi.sketch' },
+  { id: 'edge', icon: 'analytics-outline', label: 'pilgrimageUi.edge' },
+  { id: 'subject', icon: 'person-outline', label: 'pilgrimageUi.subject' },
 ];
 
 /**
@@ -70,6 +72,7 @@ export default function OverlayControls({
   onToggleFlip,
   onToggleEdit,
 }: OverlayControlsProps) {
+  const t = useT();
   const handleSelectMode = (next: OverlayMode) => {
     if (next === mode) return;
     hapticsBridge.selection();
@@ -104,12 +107,13 @@ export default function OverlayControls({
         {MODES.map((m) => {
           const active = m.id === mode;
           const fg = active ? readableTextOn(themeColor) : '#fff';
+          const label = t(m.label);
           return (
             <Pressable
               key={m.id}
               onPress={() => handleSelectMode(m.id)}
               accessibilityRole="button"
-              accessibilityLabel={`Overlay mode ${m.label}`}
+              accessibilityLabel={`Overlay mode ${label}`}
               accessibilityState={{ selected: active }}
               style={({ pressed }) => [
                 styles.modePill,
@@ -122,7 +126,7 @@ export default function OverlayControls({
                 weight="600"
                 numberOfLines={1}
                 style={{ color: fg }}>
-                {m.label}
+                {label}
               </ThemedText>
             </Pressable>
           );
@@ -191,7 +195,7 @@ export default function OverlayControls({
           <Pressable
             onPress={handleToggleSubjectCombine}
             accessibilityRole="checkbox"
-            accessibilityLabel="Combine subject overlay into captured photo"
+            accessibilityLabel={t('pilgrimageUi.combineSubjectOverlayIntoCaptured')}
             accessibilityState={{ checked: subjectCombine }}
             style={({ pressed }) => [
               styles.subjectCombineBtn,
@@ -204,7 +208,7 @@ export default function OverlayControls({
               color={subjectCombine ? themeColor : '#fff'}
             />
             <ThemedText variant="captionSmall" weight="700" style={styles.subjectCombineText}>
-              Combine with photo
+              {t('pilgrimageUi.combineWithPhoto')}
             </ThemedText>
           </Pressable>
         </View>
@@ -223,7 +227,7 @@ export default function OverlayControls({
           minimumTrackTintColor={themeColor}
           maximumTrackTintColor="rgba(255,255,255,0.25)"
           thumbTintColor="#fff"
-          accessibilityLabel="Overlay opacity"
+          accessibilityLabel={t('pilgrimageUi.overlayOpacity')}
         />
       </View>
 
@@ -254,7 +258,7 @@ export default function OverlayControls({
         <Pressable
           onPress={handleFlip}
           accessibilityRole="button"
-          accessibilityLabel="Flip overlay horizontally"
+          accessibilityLabel={t('pilgrimageUi.flipOverlayHorizontally')}
           accessibilityState={{ selected: flipped }}
           style={({ pressed }) => [
             styles.actionBtn,
@@ -270,7 +274,7 @@ export default function OverlayControls({
             variant="captionSmall"
             weight="600"
             style={{ color: flipped ? readableTextOn(themeColor) : '#fff' }}>
-            Flip
+            {t('pilgrimageUi.flip')}
           </ThemedText>
         </Pressable>
       </View>

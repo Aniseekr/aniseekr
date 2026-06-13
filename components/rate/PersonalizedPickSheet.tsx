@@ -19,6 +19,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Radius, Shadow, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 import {
   readableTextOn,
   ThemedButton,
@@ -44,6 +45,7 @@ const SHEET_SPRING_CONFIG = { damping: 20, stiffness: 220, mass: 0.9 };
 
 function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRefresh }: Props) {
   const { theme } = useTheme();
+  const t = useT();
   const translateY = useSharedValue(0);
   const hasThresholdHaptic = useSharedValue(false);
 
@@ -147,7 +149,7 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
           style={[StyleSheet.absoluteFill, styles.backdrop]}
           onPress={handleClose}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss"
+          accessibilityLabel={t('commonUi.dismiss')}
         />
         <GestureDetector gesture={pan}>
           <Animated.View entering={FadeInUp.duration(220)} style={[sheetStyle, styles.sheetWrap]}>
@@ -167,10 +169,10 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
                   </View>
                   <View>
                     <ThemedText variant="titleLarge" weight="700">
-                      For You
+                      {t('rate.forYou')}
                     </ThemedText>
                     <ThemedText variant="caption" tone="tertiary">
-                      Picked from your taste
+                      {t('rate.pickedFromYourTaste')}
                     </ThemedText>
                   </View>
                 </View>
@@ -178,7 +180,7 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
                   onPress={handleClose}
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t('common.close')}
                   style={({ pressed }) => [
                     styles.closeBtn,
                     {
@@ -214,6 +216,7 @@ function PickContent({
   onRefresh?: () => void;
 }) {
   const { theme } = useTheme();
+  const t = useT();
   const anime = data.anime;
   if (!anime) return null;
 
@@ -316,7 +319,7 @@ function PickContent({
 
       <Animated.View entering={FadeInUp.delay(220).duration(240)} style={styles.actionsRow}>
         <ThemedButton
-          label="Open Details"
+          label={t('rate.openDetails')}
           onPress={onSelect}
           size="lg"
           fullWidth
@@ -324,7 +327,7 @@ function PickContent({
         />
         {onRefresh ? (
           <ThemedButton
-            label="Show Another"
+            label={t('rate.showAnother')}
             onPress={onRefresh}
             variant="ghost"
             size="md"
@@ -337,6 +340,7 @@ function PickContent({
 }
 
 function LoadingState({ accent }: { accent: string }) {
+  const t = useT();
   return (
     <Animated.View entering={FadeIn.duration(180)} style={styles.stateContainer}>
       <View
@@ -351,7 +355,7 @@ function LoadingState({ accent }: { accent: string }) {
         Finding your next favorite…
       </ThemedText>
       <ThemedText variant="caption" tone="tertiary" align="center" style={{ marginTop: 4 }}>
-        Cross-referencing genres you’ve loved
+        {t('rate.crossReferencingGenresYouVe')}
       </ThemedText>
     </Animated.View>
   );
@@ -367,6 +371,7 @@ function ColdStartState({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
+  const t = useT();
   return (
     <Animated.View entering={FadeIn.duration(220)} style={styles.stateContainer}>
       <View
@@ -377,7 +382,7 @@ function ColdStartState({
         <Ionicons name="heart-outline" size={28} color={accent} />
       </View>
       <ThemedText variant="titleMedium" align="center">
-        Rate a few first
+        {t('rate.rateAFewFirst')}
       </ThemedText>
       <ThemedText
         variant="caption"
@@ -388,7 +393,7 @@ function ColdStartState({
       </ThemedText>
       <View style={{ marginTop: Spacing.lg }}>
         <ThemedButton
-          label="Start Discovering"
+          label={t('rate.startDiscovering')}
           onPress={onClose}
           size="md"
           accent={accent}
@@ -401,6 +406,7 @@ function ColdStartState({
 
 function NoMatchState({ onRefresh }: { onRefresh?: () => void }) {
   const { theme } = useTheme();
+  const t = useT();
   return (
     <Animated.View entering={FadeIn.duration(180)} style={styles.stateContainer}>
       <View
@@ -411,7 +417,7 @@ function NoMatchState({ onRefresh }: { onRefresh?: () => void }) {
         <Ionicons name="shuffle" size={26} color={theme.text.secondary} />
       </View>
       <ThemedText variant="titleMedium" align="center">
-        Nothing fresh that matches today
+        {t('rate.nothingFreshThatMatchesToday')}
       </ThemedText>
       <ThemedText
         variant="caption"
@@ -423,7 +429,7 @@ function NoMatchState({ onRefresh }: { onRefresh?: () => void }) {
       </ThemedText>
       {onRefresh ? (
         <View style={{ marginTop: Spacing.lg }}>
-          <ThemedButton label="Try Again" onPress={onRefresh} variant="secondary" size="md" />
+          <ThemedButton label={t('rate.tryAgain')} onPress={onRefresh} variant="secondary" size="md" />
         </View>
       ) : null}
     </Animated.View>
@@ -431,17 +437,18 @@ function NoMatchState({ onRefresh }: { onRefresh?: () => void }) {
 }
 
 function ErrorState({ onRefresh }: { onRefresh?: () => void }) {
+  const t = useT();
   return (
     <Animated.View entering={FadeIn.duration(180)} style={styles.stateContainer}>
       <ThemedText variant="titleMedium" align="center">
-        Couldn’t build a pick right now
+        {t('rate.couldnTBuildAPick')}
       </ThemedText>
       <ThemedText variant="caption" tone="tertiary" align="center" style={{ marginTop: 6 }}>
-        Try again in a moment.
+        {t('rate.tryAgainInAMoment')}
       </ThemedText>
       {onRefresh ? (
         <View style={{ marginTop: Spacing.lg }}>
-          <ThemedButton label="Try Again" onPress={onRefresh} variant="secondary" size="md" />
+          <ThemedButton label={t('rate.tryAgain')} onPress={onRefresh} variant="secondary" size="md" />
         </View>
       ) : null}
     </Animated.View>

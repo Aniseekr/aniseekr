@@ -17,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { ThemedButton, ThemedSurface, ThemedText } from '../themed';
+import { useT } from '../../libs/i18n';
 
 export interface LocationPermissionSheetProps {
   visible: boolean;
@@ -31,13 +32,16 @@ export interface LocationPermissionSheetProps {
 function LocationPermissionSheetComponent({
   visible,
   onDismiss,
-  title = 'Location is off',
+  title,
   body = 'Turn on location for AniSeekr in Settings to see where you are on the pilgrimage map.',
   primaryLabel = 'Open Settings',
-  secondaryLabel = 'Not now',
+  secondaryLabel,
   onPrimaryPress,
 }: LocationPermissionSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
+  const resolvedTitle = title ?? t('pilgrimageUi.locationIsOff');
+  const resolvedSecondaryLabel = secondaryLabel ?? t('common.notNow');
 
   const handleOpenSettings = () => {
     Linking.openSettings().catch(() => undefined);
@@ -57,7 +61,7 @@ function LocationPermissionSheetComponent({
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={onDismiss}
-          accessibilityLabel="Dismiss"
+          accessibilityLabel={t('commonUi.dismiss')}
         />
         <View style={styles.sheetWrap} pointerEvents="box-none">
           <ThemedSurface variant="elevated" padded style={styles.sheet}>
@@ -66,7 +70,7 @@ function LocationPermissionSheetComponent({
                 <Ionicons name="location" size={22} color={theme.accent} />
               </View>
               <ThemedText variant="titleMedium" weight="700" align="center" style={styles.title}>
-                {title}
+                {resolvedTitle}
               </ThemedText>
               <ThemedText variant="bodyMedium" tone="secondary" align="center" style={styles.body}>
                 {body}
@@ -79,7 +83,7 @@ function LocationPermissionSheetComponent({
                   fullWidth
                 />
                 <ThemedButton
-                  label={secondaryLabel}
+                  label={resolvedSecondaryLabel}
                   onPress={onDismiss}
                   size="lg"
                   fullWidth

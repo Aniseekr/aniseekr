@@ -16,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import type { AuthFormKind } from '../../libs/services/auth/auth-errors';
 import type { PlatformType } from '../../libs/services/auth/types';
+import { useT } from '../../libs/i18n';
 
 export interface PlatformAuthSheetProps {
   visible: boolean;
@@ -44,6 +45,7 @@ export function PlatformAuthSheet({
   onSubmit,
 }: PlatformAuthSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -94,7 +96,7 @@ export function PlatformAuthSheet({
       hapticsBridge.success();
     } catch (e) {
       hapticsBridge.error();
-      setError(e instanceof Error ? e.message : 'Connection failed');
+      setError(e instanceof Error ? e.message : t('misc.connectionFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -146,7 +148,7 @@ export function PlatformAuthSheet({
 
             {kind === 'password' ? (
               <>
-                <FieldLabel label={platform === 'kitsu' ? 'Email' : 'Username'} />
+                <FieldLabel label={platform === 'kitsu' ? t('commonUi.email') : t('commonUi.username')} />
                 <Input
                   value={username}
                   onChangeText={setUsername}
@@ -158,7 +160,7 @@ export function PlatformAuthSheet({
                   keyboardType={platform === 'kitsu' ? 'email-address' : 'default'}
                   textContentType={platform === 'kitsu' ? 'emailAddress' : 'username'}
                 />
-                <FieldLabel label="Password" />
+                <FieldLabel label={t('misc.password')} />
                 <Input
                   value={password}
                   onChangeText={setPassword}
@@ -175,7 +177,7 @@ export function PlatformAuthSheet({
               <>
                 {requiresServerUrl ? (
                   <>
-                    <FieldLabel label="Server URL" />
+                    <FieldLabel label={t('misc.serverUrl')} />
                     <Input
                       value={serverUrl}
                       onChangeText={setServerUrl}
@@ -186,7 +188,7 @@ export function PlatformAuthSheet({
                     />
                   </>
                 ) : null}
-                <FieldLabel label="API Key" />
+                <FieldLabel label={t('misc.apiKey')} />
                 <Input
                   value={apiKey}
                   onChangeText={setApiKey}
@@ -218,7 +220,7 @@ export function PlatformAuthSheet({
                     styles.submitLabel,
                     { color: canSubmit ? '#0E0A06' : theme.text.tertiary },
                   ]}>
-                  Connect
+                  {t('misc.connect')}
                 </Text>
               )}
             </Pressable>

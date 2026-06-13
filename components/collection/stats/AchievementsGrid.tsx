@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
 import type { AchievementWithProgress } from '../../../libs/services/achievements/achievement-service';
@@ -15,11 +16,12 @@ interface Props {
 
 export function AchievementsGrid({
   achievements,
-  title = 'Achievements',
+  title,
   maxItems = 6,
   onPressViewAll,
 }: Props) {
   const { theme } = useTheme();
+  const t = useT();
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const shown = achievements.slice(0, maxItems);
 
@@ -27,7 +29,7 @@ export function AchievementsGrid({
     <View style={styles.section}>
       <View style={styles.headerRow}>
         <ThemedText variant="titleLarge" weight="700">
-          {title}
+          {title ?? t('commonUi.achievements')}
         </ThemedText>
         <Pressable
           onPress={() => {
