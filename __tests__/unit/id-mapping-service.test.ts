@@ -162,6 +162,38 @@ describe('IDMappingService', () => {
     runSpy.mockRestore();
   });
 
+  it('IDM-017 bulkInsert with an empty array never swaps the live table', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const exclusiveSpy = spyOn(db, 'withExclusiveTransactionAsync');
+    const runSpy = spyOn(db, 'runAsync');
+    await svc.bulkInsert([]);
+    expect(exclusiveSpy).not.toHaveBeenCalled();
+    expect(runSpy).not.toHaveBeenCalled();
+    runSpy.mockRestore();
+    exclusiveSpy.mockRestore();
+  });
+
+  it('IDM-018 concurrent bulkInsert calls serialize instead of interleaving', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const order: string[] = [];
+    const spy = spyOn(db, 'withExclusiveTransactionAsync').mockImplementation((async (
+      fn: (tx: unknown) => Promise<void>
+    ) => {
+      order.push('swap-start');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await fn(db as never);
+      order.push('swap-end');
+    }) as never);
+    await Promise.all([
+      svc.bulkInsert([{ mal_id: 1 }]),
+      svc.bulkInsert([{ mal_id: 2 }]),
+    ]);
+    expect(order).toEqual(['swap-start', 'swap-end', 'swap-start', 'swap-end']);
+    spy.mockRestore();
+  });
+
   it('IDM-016 updateMappings reports whether an import actually ran', async () => {
     const svc = IDMappingService.getInstance();
     const db = await LocalDB.getDatabase();

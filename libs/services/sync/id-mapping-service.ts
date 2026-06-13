@@ -142,7 +142,20 @@ export class IDMappingService {
    *      and recreates the indexes (transactional DDL — a failed swap rolls
    *      back to the old table).
    */
+  /** Serializes overlapping bulkInsert calls — staging is a shared resource. */
+  private bulkInsertChain: Promise<void> = Promise.resolve();
+
   async bulkInsert(mappings: AnimeMapping[]): Promise<void> {
+    const run = this.bulkInsertChain.catch(() => {}).then(() => this.doBulkInsert(mappings));
+    this.bulkInsertChain = run.catch(() => {});
+    return run;
+  }
+
+  private async doBulkInsert(mappings: AnimeMapping[]): Promise<void> {
+    // An empty payload (corrupt download, truncated parse) must never replace
+    // a populated live table with nothing.
+    if (mappings.length === 0) return;
+
     const db = await LocalDB.getDatabase();
     const ROWS_PER_STATEMENT = 50;
     const ROWS_PER_TX = 5000;

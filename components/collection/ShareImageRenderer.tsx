@@ -2,12 +2,22 @@ import { useMemo, type Ref } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AnimeTitleText } from '../themed';
+import { getAppLanguageSync } from '../../libs/i18n';
+import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
 import { Colors, FontFamily, Typography } from '../../constants/DesignSystem';
 import type {
   ShareEntry,
   ShareTemplateBuild,
 } from '../../libs/services/collection/share-templates';
+
+
+// Posters are snapshotted to PNG the moment they mount — a hook-driven title
+// that re-renders after enrichment lands would miss the capture. Resolve
+// synchronously from the warm cache instead; cold misses fall back to the
+// stored title (a real value, per CLAUDE.md Rule 8).
+function shareTitle(entry: Pick<ShareEntry, 'animeId' | 'title'>): string {
+  return resolveDisplayTitleSync({ id: entry.animeId, title: entry.title }, getAppLanguageSync());
+}
 
 const POSTER_WIDTH = 1080;
 const POSTER_HEIGHT = 1920;
@@ -58,7 +68,7 @@ function Top10Body({ entries, username }: { entries: ShareEntry[]; username?: st
             <Cover uri={entry.coverUrl} style={styles.top10Cover} />
             <View style={styles.top10Meta}>
               <Text style={styles.top10Title} numberOfLines={2}>
-                <AnimeTitleText anime={{ id: entry.animeId, title: entry.title }} />
+                {shareTitle(entry)}
               </Text>
               {entry.year ? <Text style={styles.top10Year}>{entry.year}</Text> : null}
             </View>
@@ -119,7 +129,7 @@ function YearlyBestBody({
                   key={`${entry.animeId}-t-${idx}`}
                   style={styles.yearlyTitle}
                   numberOfLines={1}>
-                  {idx + 1}. <AnimeTitleText anime={{ id: entry.animeId, title: entry.title }} />
+                  {idx + 1}. {shareTitle(entry)}
                 </Text>
               ))}
             </View>
@@ -142,7 +152,7 @@ function StarterPackBody({ entries, username }: { entries: ShareEntry[]; usernam
           <View key={`${entry.animeId}-${idx}`} style={styles.starterCell}>
             <Cover uri={entry.coverUrl} style={styles.starterCover} />
             <Text style={styles.starterTitle} numberOfLines={2}>
-              <AnimeTitleText anime={{ id: entry.animeId, title: entry.title }} />
+              {shareTitle(entry)}
             </Text>
             {entry.tag ? <Text style={styles.starterTag}>{entry.tag}</Text> : null}
           </View>
@@ -176,7 +186,7 @@ function MasterpieceBody({ entries, username }: { entries: ShareEntry[]; usernam
           </View>
         </View>
         <Text style={styles.masterpieceTitle} numberOfLines={3}>
-          <AnimeTitleText anime={{ id: hero.animeId, title: hero.title }} />
+          {shareTitle(hero)}
         </Text>
         <View style={styles.masterpieceMetaRow}>
           {hero.year ? <Text style={styles.masterpieceMetaText}>{hero.year}</Text> : null}
