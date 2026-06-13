@@ -154,7 +154,9 @@
         {
           "image": "./assets/splash.png",
           "resizeMode": "cover",
-          "backgroundColor": "#0A1929"
+          "backgroundColor": "#0A1929",
+          "enableFullScreenImage_legacy": true,
+          "imageWidth": 288
         }
       ],
       "expo-font"
