@@ -6,28 +6,56 @@ import {
   formatPilgrimageSubtitle,
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { toTraditional } from '../../../libs/utils/chinese-converter';
+
+const KIMI_NO_NA_WA = {
+  id: 160209,
+  title: '君の名は。',
+  cn: '你的名字。',
+  titleEnglish: 'Your Name.',
+  titleRomaji: 'Kimi no Na wa.',
+};
 
 describe('PilgrimageLocalization', () => {
-  it('uses English first, Japanese second, and Chinese third', () => {
-    const titles = getPilgrimageAnimeTitles(
-      {
-        id: 160209,
-        title: '君の名は。',
-        cn: '你的名字。',
-        titleEnglish: 'Your Name.',
-        titleRomaji: 'Kimi no Na wa.',
-      },
-      { lookupCrossIndex: () => null }
-    );
+  it('follows the title-language priority for an English app language', () => {
+    const titles = getPilgrimageAnimeTitles(KIMI_NO_NA_WA, {
+      lookupCrossIndex: () => null,
+      appLanguage: 'en',
+    });
 
     expect(titles.primary).toBe('Your Name.');
-    expect(titles.secondary).toBe('君の名は。');
-    expect(titles.tertiary).toBe('你的名字。');
-    expect(formatPilgrimageSubtitle(titles)).toBe('君の名は。 · 你的名字。');
+    // Supporting titles follow the same priority order (romaji → japanese).
+    expect(titles.secondary).toBe('Kimi no Na wa.');
+    expect(titles.tertiary).toBe('君の名は。');
+    expect(formatPilgrimageSubtitle(titles)).toBe('Kimi no Na wa. · 君の名は。');
     expect(titles.original).toBe('君の名は。');
   });
 
-  it('falls back to the original Japanese title before Chinese', () => {
+  it('puts the Chinese title first for a zh-Hant app language, in Traditional script', () => {
+    const titles = getPilgrimageAnimeTitles(
+      {
+        id: 485936,
+        title: '響け！ユーフォニアム',
+        cn: '吹响！悠风号',
+        titleEnglish: 'Sound! Euphonium',
+      },
+      { lookupCrossIndex: () => null, appLanguage: 'zh-Hant' }
+    );
+
+    expect(titles.primary).toBe(toTraditional('吹响！悠风号'));
+    expect(titles.chinese).toBe(toTraditional('吹响！悠风号'));
+  });
+
+  it('keeps the Simplified script for a zh-Hans app language', () => {
+    const titles = getPilgrimageAnimeTitles(
+      { id: 485936, title: '響け！ユーフォニアム', cn: '吹响！悠风号' },
+      { lookupCrossIndex: () => null, appLanguage: 'zh-Hans' }
+    );
+
+    expect(titles.primary).toBe('吹响！悠风号');
+  });
+
+  it('falls back to the original Japanese title before Chinese for English UI', () => {
     const titles = getPilgrimageAnimeTitles(
       {
         id: 485936,
@@ -35,11 +63,12 @@ describe('PilgrimageLocalization', () => {
         cn: '吹响！悠风号',
         titleRomaji: 'Hibike! Euphonium',
       },
-      { lookupCrossIndex: () => null }
+      { lookupCrossIndex: () => null, appLanguage: 'en' }
     );
 
-    expect(titles.primary).toBe('響け！ユーフォニアム');
-    expect(titles.secondary).toBe('吹响！悠风号');
+    // en order: english → romaji → japanese → chinese
+    expect(titles.primary).toBe('Hibike! Euphonium');
+    expect(titles.secondary).toBe('響け！ユーフォニアム');
   });
 
   it('keeps spot titles source-correct when no English spot title exists', () => {

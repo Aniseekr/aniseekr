@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { Anime } from '../rate/types';
@@ -86,9 +87,11 @@ function SpecialContentSectionComponent({
               borderRadius={14}
             />
             <View style={styles.cardBody}>
-              <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={2}>
-                {item.title}
-              </Text>
+              <AnimeTitleText
+                anime={item}
+                style={[styles.cardTitle, { color: theme.text.primary }]}
+                numberOfLines={2}
+              />
               <View style={styles.metaRow}>
                 {item.format ? (
                   <View style={[styles.formatBadge, { backgroundColor: theme.accent + '24' }]}>

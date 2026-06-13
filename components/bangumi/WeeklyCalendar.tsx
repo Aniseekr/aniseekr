@@ -3,6 +3,7 @@
 // (orange accent for today, glass border otherwise).
 
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { Anime } from '../rate/types';
@@ -58,9 +59,7 @@ export function WeeklyCalendar({
                     style={styles.animeImage}
                     resizeMode="cover"
                   />
-                  <Text style={styles.animeTitle} numberOfLines={2}>
-                    {anime.title}
-                  </Text>
+                  <AnimeTitleText anime={anime} style={styles.animeTitle} numberOfLines={2} />
                 </Pressable>
               ))}
             </View>

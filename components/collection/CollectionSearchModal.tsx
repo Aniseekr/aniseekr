@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText } from '../themed';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
@@ -517,11 +518,11 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
                       <MaterialIcons name="play-circle-outline" size={18} color={theme.secondary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text
+                      <AnimeTitleText
+                        anime={anime}
                         style={[styles.rowTitle, { color: theme.text.primary }]}
-                        numberOfLines={1}>
-                        {anime.title}
-                      </Text>
+                        numberOfLines={1}
+                      />
                       <View style={styles.folderBadge}>
                         <MaterialIcons name="folder" size={12} color={theme.text.tertiary} />
                         <Text

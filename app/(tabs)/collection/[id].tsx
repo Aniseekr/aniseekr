@@ -23,6 +23,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useT } from '../../../libs/i18n';
+import { useAnimeDisplayTitle } from '../../../libs/i18n/use-display-title';
 
 interface FolderItem {
   id: string;
@@ -34,6 +35,17 @@ interface FolderItem {
   score: number;
   notes: string;
   rewatch_count: number;
+}
+
+// Hook-bearing row title: `renderItem` below is a plain closure, so the
+// display-title hook needs its own component boundary.
+function FolderItemTitle({ item }: { item: FolderItem }) {
+  const title = useAnimeDisplayTitle(item);
+  return (
+    <ThemedText variant="titleSmall" weight="700" numberOfLines={2}>
+      {title}
+    </ThemedText>
+  );
 }
 
 // Sync mirror so re-entering a folder paints frame 1 from memory instead of
@@ -388,9 +400,7 @@ export default function FolderDetailScreen() {
         </View>
       )}
       <View style={styles.itemContent}>
-        <ThemedText variant="titleSmall" weight="700" numberOfLines={2}>
-          {item.title}
-        </ThemedText>
+        <FolderItemTitle item={item} />
         <View style={styles.progressRow}>
           <ThemedText variant="captionSmall" tone="secondary" weight="600">
             {item.progress} / {item.total_episodes || '?'} EP

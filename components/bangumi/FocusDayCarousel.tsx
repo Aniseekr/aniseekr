@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AnimeTitleText } from '../themed';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -366,9 +367,7 @@ const FocusDayRow = memo(function FocusDayRow({
         transition={150}
       />
       <View style={styles.rowText}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {anime.title}
-        </Text>
+        <AnimeTitleText anime={anime} style={styles.rowTitle} numberOfLines={1} />
         <View style={styles.metaRow}>
           {anime.score ? (
             <View style={styles.scorePill}>

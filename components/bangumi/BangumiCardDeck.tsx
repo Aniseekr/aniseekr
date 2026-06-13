@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -366,9 +367,7 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
             pointerEvents="none"
           />
           <View style={styles.cardInfo} pointerEvents="none">
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {anime.title}
-            </Text>
+            <AnimeTitleText anime={anime} style={styles.cardTitle} numberOfLines={2} />
             <View style={styles.cardMetaRow}>
               {anime.score ? (
                 <View style={styles.scorePill}>

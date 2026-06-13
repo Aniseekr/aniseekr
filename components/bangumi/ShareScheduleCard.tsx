@@ -1,5 +1,6 @@
 import type { Ref } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Anime } from '../rate/types';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
@@ -93,9 +94,7 @@ export function ShareScheduleCard({
                       ) : (
                         <View style={[styles.cover, styles.coverFallback]} />
                       )}
-                      <Text style={styles.entryTitle} numberOfLines={2}>
-                        {anime.title}
-                      </Text>
+                      <AnimeTitleText anime={anime} style={styles.entryTitle} numberOfLines={2} />
                     </View>
                   ))
                 )}

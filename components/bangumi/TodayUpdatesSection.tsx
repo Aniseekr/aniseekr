@@ -4,6 +4,7 @@
 
 import { memo, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -88,9 +89,7 @@ function TodayUpdatesSectionComponent({
                 style={styles.card}>
                 <Image source={{ uri: anime.image }} style={styles.poster} resizeMode="cover" />
                 <View style={styles.cardText}>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {anime.title}
-                  </Text>
+                  <AnimeTitleText anime={anime} style={styles.cardTitle} numberOfLines={2} />
                   {anime.nextAiringEpisode ? (
                     <Text style={styles.cardTime}>
                       {formatAiringTime(anime.nextAiringEpisode.airingAt)}

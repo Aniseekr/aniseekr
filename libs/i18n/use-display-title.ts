@@ -38,7 +38,12 @@ import {
 
 export interface DisplayTitleSource extends AnimeTitleBundle {
   /** Platform ID; enables enrichment lookups. Omit for ID-less records. */
-  id?: string | null;
+  id?: string | number | null;
+}
+
+/** Normalize the optional id to the string form the enrichment layer keys on. */
+function enrichmentId(anime: DisplayTitleSource): string | null {
+  return anime.id == null || anime.id === '' ? null : String(anime.id);
 }
 
 const ENRICHABLE: ReadonlySet<TitleLanguageId> = new Set<TitleLanguageId>(['chinese', 'russian']);
@@ -48,7 +53,7 @@ function withEnrichment(
   anime: DisplayTitleSource,
   platform: PlatformType
 ): AnimeTitleBundle {
-  const id = anime.id;
+  const id = enrichmentId(anime);
   if (!id) return anime;
   let out: AnimeTitleBundle = anime;
   if (!anime.titleChinese && !anime.titleChineseTraditional) {
@@ -74,7 +79,7 @@ function kickEnrichment(
   order: readonly TitleLanguageId[],
   script: ChineseScript
 ): void {
-  const id = anime.id;
+  const id = enrichmentId(anime);
   if (!id) return;
   for (const lang of order) {
     if (titleForLanguage(anime, lang, script)) return;

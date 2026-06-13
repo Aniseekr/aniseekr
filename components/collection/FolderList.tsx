@@ -2,6 +2,7 @@ import { View, Text, Pressable, ScrollView, Platform, StyleSheet, Image } from '
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText } from '../themed';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
@@ -93,7 +94,7 @@ export function FolderList({
                 style={styles.heroGradient}
               />
               <View style={styles.heroContent}>
-                <Text style={styles.heroTitle}>{previews[0].title}</Text>
+                <AnimeTitleText anime={previews[0]} style={styles.heroTitle} />
                 <View style={styles.heroMeta}>
                   {previews[0].score != null && previews[0].score > 0 && (
                     <View style={styles.scoreRow}>
@@ -121,9 +122,7 @@ export function FolderList({
                     <View style={styles.animeImagePlaceholder} />
                   )}
                 </View>
-                <Text style={styles.animeTitle} numberOfLines={1}>
-                  {anime.title}
-                </Text>
+                <AnimeTitleText anime={anime} style={styles.animeTitle} numberOfLines={1} />
                 {anime.score != null && anime.score > 0 && (
                   <View style={styles.scoreRowSmall}>
                     <Text style={styles.starIcon}>⭐</Text>
@@ -151,9 +150,11 @@ export function FolderList({
                     <View style={styles.animeImagePlaceholder} />
                   )}
                 </View>
-                <Text style={styles.animeTitleHorizontal} numberOfLines={1}>
-                  {anime.title}
-                </Text>
+                <AnimeTitleText
+                  anime={anime}
+                  style={styles.animeTitleHorizontal}
+                  numberOfLines={1}
+                />
               </View>
             ))}
           </ScrollView>

@@ -8,6 +8,7 @@ import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText } from '../themed';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -269,9 +270,7 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
             pointerEvents="none"
           />
           <View style={styles.cardInfo} pointerEvents="none">
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
+            <AnimeTitleText anime={item} style={styles.cardTitle} numberOfLines={2} />
             <View style={styles.cardMetaRow}>
               <View style={styles.metaPill}>
                 <MaterialIcons name="play-circle-filled" size={11} color="#FFFFFF" />

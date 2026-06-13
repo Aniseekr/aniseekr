@@ -63,6 +63,17 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+/**
+ * Sync, React-free read of the active app language — same resolution the
+ * provider seeds from (stored preference, else system locale). For service
+ * code and imperative call sites (share builders, capture pipelines) that
+ * can't use `useI18n()`. NOT reactive: callers re-read per invocation.
+ */
+export function getAppLanguageSync(): LanguageId {
+  const preference = readPreferenceSync();
+  return preference === 'auto' ? readSystemLanguage() : preference;
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   // Seed from MMKV synchronously — first paint already speaks the right language.
   const [preference, setPreferenceState] = useState<AppLanguagePreference>(readPreferenceSync);

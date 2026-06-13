@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
@@ -138,9 +139,11 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
               <View style={styles.headerInfo}>
                 <Image source={{ uri: anime.image }} style={styles.cover} />
                 <View style={styles.headerText}>
-                  <Text style={[styles.title, { color: theme.text.primary }]} numberOfLines={2}>
-                    {anime.title}
-                  </Text>
+                  <AnimeTitleText
+                    anime={anime}
+                    style={[styles.title, { color: theme.text.primary }]}
+                    numberOfLines={2}
+                  />
                   {anime.studios?.[0] || seasonLabel ? (
                     <Text
                       style={[styles.subtitle, { color: theme.text.secondary }]}
