@@ -837,7 +837,12 @@ export default function ComparePreviewScreen() {
               {mode === 'stacked' ? (
                 <View style={styles.stackedFlow}>
                   <LabeledImage uri={imageUrl} label={t('commonUi.anime')} accent={themeColor} />
-                  <LabeledImage uri={shotUri} label={t('pilgrimageUi.yourShot')} accent={themeColor} />
+                  <LabeledImage
+                    uri={shotUri}
+                    label={t('pilgrimageUi.yourShot')}
+                    accent={themeColor}
+                    contentFit="contain"
+                  />
                 </View>
               ) : mode === 'sideBySide' ? (
                 <View style={styles.sideFlow}>
@@ -845,12 +850,18 @@ export default function ComparePreviewScreen() {
                     <LabeledImage uri={imageUrl} label={t('commonUi.anime')} accent={themeColor} compact />
                   </View>
                   <View style={styles.sideHalf}>
-                    <LabeledImage uri={shotUri} label={t('pilgrimageUi.yourShot')} accent={themeColor} compact />
+                    <LabeledImage
+                      uri={shotUri}
+                      label={t('pilgrimageUi.yourShot')}
+                      accent={themeColor}
+                      compact
+                      contentFit="contain"
+                    />
                   </View>
                 </View>
               ) : mode === 'overlay' ? (
                 <View style={styles.overlayFlow}>
-                  <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="cover" />
+                  <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                   <Image
                     source={{ uri: imageUrl }}
                     style={[
@@ -871,7 +882,7 @@ export default function ComparePreviewScreen() {
               ) : mode === 'slider' ? (
                 <GestureDetector gesture={sliderPan}>
                   <View style={styles.sliderFlow}>
-                    <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="cover" />
+                    <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                     <Animated.View style={[styles.sliderClip, sliderClipStyle]}>
                       {stagePx.width > 0 ? (
                         <Image
@@ -1334,15 +1345,17 @@ function LabeledImage({
   label,
   accent,
   compact,
+  contentFit = 'cover',
 }: {
   uri: string;
   label: string;
   accent: string;
   compact?: boolean;
+  contentFit?: 'cover' | 'contain';
 }) {
   return (
     <View style={[styles.labelWrap, compact && { flex: 1 }]}>
-      <Image source={{ uri }} style={styles.fullImage} contentFit="cover" />
+      <Image source={{ uri }} style={styles.fullImage} contentFit={contentFit} />
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']} style={styles.labelGradient} />
       <View style={[styles.labelBadge, { borderColor: accent }]}>
         <View style={[styles.labelDot, { backgroundColor: accent }]} />
