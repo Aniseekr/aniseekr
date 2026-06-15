@@ -29,6 +29,7 @@ import {
   buildCaptureSessionShotFromRoute,
   reconcileCapturePreviewSelection,
   resolveCapturePreviewFocus,
+  resolveRouteShotDimensions,
 } from '../../../../libs/services/pilgrimage/capture-preview-route';
 import {
   computeFrameMatch,
@@ -40,6 +41,7 @@ import { capturedOnWideAngle } from '../../../../libs/services/pilgrimage/captur
 import { sanitizeCaptureNote } from '../../../../libs/services/pilgrimage/capture-session';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
 import { buildShareRouteParams } from '../../../../libs/services/pilgrimage/share-route-params';
+import { resolveCapturedPhotoDimensions } from '../../../../libs/services/pilgrimage/camera-engine-parity';
 import { AnitabiOriginCredit } from '../../../../components/pilgrimage/common/AnitabiOriginCredit';
 
 function getRetakeTip(s: SensorSnapshot | null): string | null {
@@ -198,6 +200,34 @@ export default function ComparePreviewScreen() {
     granularPermissions: ['photo'],
   });
   const [stagePx, setStagePx] = useState({ width: 0, height: 0 });
+  // Route-only previews (deep link / album) may arrive with width/height = 0.
+  // Decode the true pixel dims once so full-mode sizing + the share ratio see
+  // the real orientation instead of falling back to 16:9 / landscape.
+  const [decodedShotDims, setDecodedShotDims] = useState<{ width: number; height: number } | null>(
+    null
+  );
+  useEffect(() => {
+    if (!routeOnlyPreview || !routeShot || !routeShot.uri) {
+      setDecodedShotDims(null);
+      return;
+    }
+    let cancelled = false;
+    void resolveRouteShotDimensions(
+      { width: routeShot.width, height: routeShot.height },
+      resolveCapturedPhotoDimensions,
+      routeShot.uri
+    )
+      .then((dims) => {
+        if (cancelled) return;
+        setDecodedShotDims(dims.width > 0 && dims.height > 0 ? dims : null);
+      })
+      .catch(() => {
+        if (!cancelled) setDecodedShotDims(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeOnlyPreview, routeShot]);
 
   // A new shot invalidates the "Saved" badge — the user took more photos.
   useEffect(() => {
@@ -498,8 +528,8 @@ export default function ComparePreviewScreen() {
       themeColor,
       spotLat,
       spotLng,
-      shotWidth: focusedShot.width,
-      shotHeight: focusedShot.height,
+      shotWidth: decodedShotDims?.width ?? focusedShot.width,
+      shotHeight: decodedShotDims?.height ?? focusedShot.height,
       tilt: focusedShot.tilt,
       headingDeltaDeg: focusedShot.headingDeltaDeg,
       matchScore: frameMatch?.total != null ? Math.round(frameMatch.total * 100) : null,
@@ -515,6 +545,7 @@ export default function ComparePreviewScreen() {
   }, [
     router,
     focusedShot,
+    decodedShotDims,
     spotId,
     imageUrl,
     sceneName,
@@ -827,8 +858,8 @@ export default function ComparePreviewScreen() {
                 mode === 'full' && {
                   height: resolveFullModeStageHeight(
                     stagePx.width,
-                    focusedShot?.width,
-                    focusedShot?.height
+                    decodedShotDims?.width ?? focusedShot?.width,
+                    decodedShotDims?.height ?? focusedShot?.height
                   ),
                 },
               ]}>
