@@ -1,3 +1,5 @@
+import type { OrientationSource } from 'react-native-vision-camera';
+
 export interface CameraHeaderInput {
   sceneName?: string | string[] | null;
   animeTitle?: string | string[] | null;
@@ -93,6 +95,13 @@ export function cameraOrientationLockIntent(
   mode: CameraOrientationMode
 ): CameraOrientationLockIntent {
   return mode === 'landscape' ? 'landscape' : 'unlock';
+}
+
+// AUTO  → capture follows the physical phone (stock-camera): 'device'.
+// LAND  → capture follows the landscape-locked interface (forced landscape): 'interface'.
+// `OrientationSource` is the vision-camera prop type ('interface' | 'device').
+export function cameraOrientationSource(mode: CameraOrientationMode): OrientationSource {
+  return mode === 'landscape' ? 'interface' : 'device';
 }
 
 // Keep CameraView remount policy out of this helper module. The old

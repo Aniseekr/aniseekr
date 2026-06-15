@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import type { OrientationSource } from 'react-native-vision-camera';
 import {
   ANDROID_GESTURE_NAV_MIN_INSET,
   cameraOrientationLockIntent,
+  cameraOrientationSource,
   CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
   CAMERA_LANDSCAPE_CLUSTER_RESERVE,
   CAMERA_SHUTTER_ROW_HEIGHT,
@@ -45,6 +47,14 @@ describe('camera UI helpers', () => {
   it('requests flexible landscape instead of pinning the camera to the right side', () => {
     expect(cameraOrientationLockIntent('auto')).toBe('unlock');
     expect(cameraOrientationLockIntent('landscape')).toBe('landscape');
+  });
+
+  it('maps AUTO to device-follows-phone and LAND to interface-follows-UI orientation sources', () => {
+    const autoSource: OrientationSource = cameraOrientationSource('auto');
+    const landscapeSource: OrientationSource = cameraOrientationSource('landscape');
+
+    expect(autoSource).toBe('device');
+    expect(landscapeSource).toBe('interface');
   });
 
   it('rounds AF exposure bar values to clamped one-decimal EV values', () => {
