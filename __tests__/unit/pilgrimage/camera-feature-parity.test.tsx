@@ -52,9 +52,15 @@ describe('camera feature parity', () => {
     expect(workletsPatch).toContain('React_Core/RCTMessageThread.h');
   });
 
-  it('drives photo orientation off the physical device so portrait shots stay portrait', async () => {
+  it('drives photo orientation off the orientationSource prop so portrait shots stay portrait', async () => {
+    // The capture orientation is no longer hardcoded on <Camera>; it is threaded
+    // from the AUTO/LAND chip via the `orientationSource` prop (AUTO → 'device'
+    // follows the physical phone, LAND → 'interface' follows the locked UI). The
+    // 'auto' → 'device' default itself is asserted in camera-ui.test.ts.
     const stageSource = await Bun.file('components/pilgrimage/camera/CameraStage.tsx').text();
-    expect(stageSource).toContain('orientationSource="device"');
+    expect(stageSource).toContain('orientationSource={orientationSource}');
+    // Neither orientation authority may be hardcoded as a string literal anymore.
+    expect(stageSource).not.toContain('orientationSource="device"');
     expect(stageSource).not.toContain('orientationSource="interface"');
   });
 

@@ -16,7 +16,6 @@ import { useCameraPermission } from 'react-native-vision-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
@@ -29,7 +28,6 @@ import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-
 import { getPilgrimageSpotTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
 import {
-  cameraOrientationLockIntent,
   CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
   resolveCameraBottomInset,
   resolveCameraActive,
@@ -94,6 +92,7 @@ import {
 import { useCameraHud } from '../../../../hooks/useCameraHud';
 import { useSceneSwitcherSpots } from '../../../../hooks/useSceneSwitcherSpots';
 import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
+import { useCameraOrientation } from '../../../../hooks/useCameraOrientation';
 import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
 import { useExposureBracket } from '../../../../hooks/useExposureBracket';
@@ -310,6 +309,11 @@ export default function CompareCaptureScreen() {
     onMountError,
     setActive: setCameraActive,
   } = lifecycle;
+  // AUTO is device-mode by design: the capture follows the physical phone
+  // while the HUD stays portrait. The hook also owns the ScreenOrientation
+  // lock lifecycle (apply lock-intent on chip change; restore PORTRAIT_UP on
+  // unmount) — previously two inline effects in this file.
+  const { orientationSource } = useCameraOrientation(orientationMode);
 
   // Cohort hint: derives `{ strategy, hasStandaloneUltraWide }` from the
   // full device list so the dial can route the 0.5 affordance correctly
@@ -637,27 +641,6 @@ export default function CompareCaptureScreen() {
     hapticsBridge.selection();
     setHud((h) => ({ editMode: !h.editMode }));
   }, [setHud]);
-
-  useEffect(() => {
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
-        () => undefined
-      );
-    };
-  }, []);
-
-  // Drive the OS orientation lock off the auto/land chip. VisionCamera realigns
-  // its own preview natively via `orientationSource="interface"`, so unlike
-  // expo-camera we no longer need the keyed-remount trick to clear a stale
-  // preview rotation.
-  useEffect(() => {
-    const lockIntent = cameraOrientationLockIntent(orientationMode);
-    const op =
-      lockIntent === 'landscape'
-        ? ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-        : ScreenOrientation.unlockAsync();
-    op.catch(() => undefined);
-  }, [orientationMode]);
 
   const handlePickSpot = useCallback(
     (spot: AnitabiPoint) => {
@@ -1410,6 +1393,7 @@ export default function CompareCaptureScreen() {
             active={cameraActive}
             resolutionTier={settings.resolutionTier}
             aspect={aspect}
+            orientationSource={orientationSource}
             qualityPrioritization={qualityToPrioritization(settings.quality)}
             quality={qualityToNumber(settings.quality)}
             enableShutterSound={!settings.mute}
