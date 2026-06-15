@@ -41,7 +41,7 @@ export default function FocusExposureBar({
         <View style={[styles.lockPill, { borderColor: themeColor }]}>
           <Ionicons name="scan-outline" size={14} color={themeColor} />
           <ThemedText variant="captionSmall" weight="700" style={styles.lockText}>
-            AF LOCK
+            {t('pilgrimageUi.afLock')}
           </ThemedText>
         </View>
         <Slider

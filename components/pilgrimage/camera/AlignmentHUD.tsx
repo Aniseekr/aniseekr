@@ -114,7 +114,7 @@ export default function AlignmentHUD({
               weight="700"
               style={{ color: '#fff', letterSpacing: 0.3 }}>
               {aligned
-                ? `Aligned · ${percentText}`
+                ? t('pilgrimageUi.aligned', { percent: percentText })
                 : `${percentText} · ${formatDistance(score.distanceMeters)} · ${formatHeadingDelta(
                     score.headingDeltaDeg
                   )}`}
@@ -163,7 +163,7 @@ export default function AlignmentHUD({
           {/* White text over success accent — readable per status.success contrast. */}
           <Ionicons name="checkmark-circle" size={18} color="#fff" />
           <ThemedText variant="bodySmall" weight="700" style={{ color: '#fff' }}>
-            Position locked — shoot now
+            {t('pilgrimageUi.positionLocked')}
           </ThemedText>
         </RNAnimated.View>
       ) : null}
