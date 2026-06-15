@@ -133,6 +133,26 @@ export function resolveCameraActive(input: CameraActiveInput): boolean {
   return input.appIsForeground && !input.settingsOpen;
 }
 
+export interface CameraInterruptionInput extends CameraActiveInput {
+  /**
+   * A native session interruption (phone call, FaceTime, another app grabbing
+   * the camera, control-center) is currently in effect, OR the camera is being
+   * re-armed after an `onError`-ended session. While this is true we keep
+   * `isActive` low so we don't fight the OS for the device; clearing it lets the
+   * session restart (§3.5 interruption / error recovery).
+   */
+  interrupted: boolean;
+}
+
+/**
+ * {@link resolveCameraActive} plus an interruption gate. The camera is active
+ * only while foregrounded, the settings sheet is closed, AND no interruption /
+ * re-arm cycle is in effect. Pure — same inputs always yield the same boolean.
+ */
+export function resolveCameraActiveWithInterruption(input: CameraInterruptionInput): boolean {
+  return resolveCameraActive(input) && !input.interrupted;
+}
+
 /**
  * Resolve the bottom safe-area inset the camera capture screen should pad for.
  *

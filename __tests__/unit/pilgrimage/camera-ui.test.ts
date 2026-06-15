@@ -11,8 +11,9 @@ import {
   CAMERA_TOP_BAR_ROW2_HEIGHT,
   formatCameraHeader,
   isCameraCapturePath,
-  resolveCameraBottomInset,
   resolveCameraActive,
+  resolveCameraActiveWithInterruption,
+  resolveCameraBottomInset,
   resolveCameraTopChromeHeight,
   resolveTransientCameraHudVisibility,
   roundExposureValue,
@@ -67,6 +68,38 @@ describe('camera UI helpers', () => {
     expect(resolveCameraActive({ appIsForeground: true, settingsOpen: false })).toBe(true);
     expect(resolveCameraActive({ appIsForeground: false, settingsOpen: false })).toBe(false);
     expect(resolveCameraActive({ appIsForeground: true, settingsOpen: true })).toBe(false);
+  });
+
+  it('drops the camera while an interruption is active, even when foregrounded', () => {
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: true,
+        settingsOpen: false,
+        interrupted: false,
+      })
+    ).toBe(true);
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: true,
+        settingsOpen: false,
+        interrupted: true,
+      })
+    ).toBe(false);
+    // Backgrounded or sheet-covered still wins regardless of interruption.
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: false,
+        settingsOpen: false,
+        interrupted: false,
+      })
+    ).toBe(false);
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: true,
+        settingsOpen: true,
+        interrupted: false,
+      })
+    ).toBe(false);
   });
 
   it('keeps the slim camera chrome large enough for its controls', () => {
