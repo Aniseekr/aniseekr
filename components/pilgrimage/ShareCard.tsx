@@ -30,6 +30,7 @@ import {
   type Pt,
   type RNPerspectiveTransform,
 } from '../../libs/services/pilgrimage/share-perspective';
+import { shotContentFitForCell, shotOrientation } from '../../libs/services/pilgrimage/share-aspect';
 
 export type ShareTemplate = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
 export type ShareRatio = '1:1' | '9:16' | '16:9';
@@ -89,6 +90,14 @@ export type ShareCardProps = {
    * Rebuilt into a matrix at each cell's measured size (resolution-independent).
    */
   shotManualWarpCorners?: readonly Pt[] | null;
+  /**
+   * Captured shot pixel dimensions (orientation truth). When the shot's
+   * orientation differs from its cell's, the user-shot cell uses
+   * `contentFit="contain"` (letterbox, no crop); the anime reference cell
+   * always stays `cover`. Missing / 0 → fall back to `cover`.
+   */
+  shotWidth?: number;
+  shotHeight?: number;
   ref?: Ref<View>;
 };
 
@@ -114,18 +123,30 @@ export function ShareCard(props: ShareCardProps) {
   const height = Math.round(width / aspect);
   const canvasBg = resolveBackgroundColor(template, props.customBg, theme.background.secondary);
 
+  // Per-cell contentFit for the USER shot only. In 9:16 the two cells stack
+  // (each cell is portrait-ish); in 1:1 / 16:9 they sit side by side (each cell
+  // is landscape-ish). Feed that cell orientation + the shot orientation to the
+  // pure helper so a portrait shot in a landscape cell letterboxes instead of
+  // cropping. The anime reference cell always stays `cover`.
+  const shotAspect =
+    shotOrientation(props.shotWidth, props.shotHeight) === 'unknown'
+      ? null
+      : (props.shotWidth as number) / (props.shotHeight as number);
+  const cellAspect = ratio === '9:16' ? 9 / 16 : 16 / 9;
+  const shotContentFit = shotContentFitForCell(shotAspect, cellAspect);
+
   return (
     <View ref={props.ref} collapsable={false} style={{ width, height, overflow: 'hidden' }}>
       {template === 'polaroid' ? (
-        <PolaroidTemplate {...props} height={height} canvasBg={canvasBg} />
+        <PolaroidTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
       ) : template === 'classic' ? (
-        <ClassicTemplate {...props} height={height} canvasBg={canvasBg} />
+        <ClassicTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
       ) : template === 'minimal' ? (
-        <MinimalTemplate {...props} height={height} canvasBg={canvasBg} />
+        <MinimalTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
       ) : template === 'comic' ? (
-        <ComicTemplate {...props} height={height} canvasBg={canvasBg} />
+        <ComicTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
       ) : (
-        <MangaTemplate {...props} height={height} canvasBg={canvasBg} />
+        <MangaTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
       )}
       {watermarkText ? (
         <WatermarkOverlay
@@ -141,7 +162,11 @@ export function ShareCard(props: ShareCardProps) {
   );
 }
 
-type TemplateProps = ShareCardProps & { height: number; canvasBg: string };
+type TemplateProps = ShareCardProps & {
+  height: number;
+  canvasBg: string;
+  shotContentFit: 'cover' | 'contain';
+};
 
 // ----- shared image layout -----
 
@@ -158,6 +183,7 @@ function ImagePair({
   shotFilterMatrix = null,
   shotPerspectiveTransform,
   shotManualWarpCorners,
+  shotContentFit = 'cover',
 }: {
   ratio: ShareRatio;
   imageUrl: string;
@@ -171,6 +197,7 @@ function ImagePair({
   shotFilterMatrix?: number[] | null;
   shotPerspectiveTransform?: RNPerspectiveTransform;
   shotManualWarpCorners?: readonly Pt[] | null;
+  shotContentFit?: 'cover' | 'contain';
 }) {
   const isPortrait = ratio === '9:16';
   const order = resolveImagePairOrder(swapOrder);
@@ -196,6 +223,7 @@ function ImagePair({
         filterMatrix={shotFilterMatrix}
         perspectiveTransform={shotPerspectiveTransform}
         manualWarpCorners={shotManualWarpCorners}
+        contentFit={shotContentFit}
       />
     ),
   };
@@ -270,11 +298,13 @@ function PerspectiveImage({
   filterMatrix = null,
   manualWarpCorners,
   autoTransform,
+  contentFit = 'cover',
 }: {
   uri: string;
   filterMatrix?: number[] | null;
   manualWarpCorners?: readonly Pt[] | null;
   autoTransform?: RNPerspectiveTransform;
+  contentFit?: 'cover' | 'contain';
 }) {
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -297,10 +327,10 @@ function PerspectiveImage({
     <View style={StyleSheet.absoluteFill} onLayout={needsMeasure ? onLayout : undefined}>
       {transform ? (
         <View style={[StyleSheet.absoluteFill, { transform }]}>
-          <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
+          <FilteredImage uri={uri} matrix={filterMatrix} contentFit={contentFit} />
         </View>
       ) : (
-        <FilteredImage uri={uri} matrix={filterMatrix} contentFit="cover" />
+        <FilteredImage uri={uri} matrix={filterMatrix} contentFit={contentFit} />
       )}
     </View>
   );
@@ -315,6 +345,7 @@ function ImageCell({
   filterMatrix = null,
   perspectiveTransform,
   manualWarpCorners,
+  contentFit = 'cover',
 }: {
   uri: string;
   badge: string;
@@ -324,6 +355,7 @@ function ImageCell({
   filterMatrix?: number[] | null;
   perspectiveTransform?: RNPerspectiveTransform;
   manualWarpCorners?: readonly Pt[] | null;
+  contentFit?: 'cover' | 'contain';
 }) {
   return (
     <View
@@ -339,6 +371,7 @@ function ImageCell({
         filterMatrix={filterMatrix}
         manualWarpCorners={manualWarpCorners}
         autoTransform={perspectiveTransform}
+        contentFit={contentFit}
       />
       {style === 'sticker' ? (
         <View
@@ -474,6 +507,7 @@ function PolaroidTemplate(props: TemplateProps) {
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
+          shotContentFit={props.shotContentFit}
         />
       </View>
 
@@ -648,6 +682,7 @@ function ClassicTemplate(props: TemplateProps) {
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
+          shotContentFit={props.shotContentFit}
         />
       </View>
 
@@ -746,6 +781,7 @@ function MinimalTemplate(props: TemplateProps) {
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
+          shotContentFit={props.shotContentFit}
         />
       </View>
       <LinearGradient
@@ -891,6 +927,7 @@ function ComicTemplate(props: TemplateProps) {
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
+          shotContentFit={props.shotContentFit}
         />
       </View>
 
@@ -1039,6 +1076,7 @@ function MangaTemplate(props: TemplateProps) {
           filterMatrix={props.shotFilterMatrix ?? null}
           manualWarpCorners={props.shotManualWarpCorners}
           autoTransform={props.shotPerspectiveTransform}
+          contentFit={props.shotContentFit}
         />
         <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
         <View

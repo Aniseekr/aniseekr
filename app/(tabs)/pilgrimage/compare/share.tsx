@@ -39,6 +39,7 @@ import {
   type ShareRatio,
   type ShareTemplate,
 } from '../../../../components/pilgrimage/ShareCard';
+import { shareRatioForShot } from '../../../../libs/services/pilgrimage/share-aspect';
 import { ShareComposerControls } from '../../../../components/pilgrimage/ShareComposerControls';
 import { CropSheet } from '../../../../components/pilgrimage/CropSheet';
 import { CornerPinSheet } from '../../../../components/pilgrimage/CornerPinSheet';
@@ -92,9 +93,14 @@ export default function ShareComparisonScreen() {
   const locationText = formatShareLocation(params);
   const imageUrl = getStringParam(params, 'imageUrl') ?? '';
   const shotUri = getStringParam(params, 'shotUri') ?? '';
+  // Captured shot dimensions (orientation truth) forwarded by preview.tsx via
+  // buildShareRouteParams. `0` / missing → unknown; the helpers fall back to
+  // square/cover and never invent a letterbox.
+  const shotWidth = getNumberParam(params, 'shotWidth') ?? 0;
+  const shotHeight = getNumberParam(params, 'shotHeight') ?? 0;
 
   const [template, setTemplate] = useState<ShareTemplate>('polaroid');
-  const [ratio, setRatio] = useState<ShareRatio>('1:1');
+  const [ratio, setRatio] = useState<ShareRatio>(() => shareRatioForShot(shotWidth, shotHeight));
   const [showScore, setShowScore] = useState(true);
   const [showLocation, setShowLocation] = useState(true);
   const [showDate, setShowDate] = useState(true);
@@ -366,6 +372,8 @@ export default function ShareComparisonScreen() {
                 width={cardWidth}
                 imageUrl={imageUrl}
                 shotUri={effectiveShotUri}
+                shotWidth={shotWidth}
+                shotHeight={shotHeight}
                 sceneName={sceneName}
                 animeTitle={animeTitle}
                 episode={ep}
