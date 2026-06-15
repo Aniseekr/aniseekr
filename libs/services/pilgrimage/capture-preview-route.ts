@@ -5,6 +5,7 @@ import {
   type CaptureSessionSource,
 } from './capture-session';
 import { getNumberParam, getStringParam, type RouterParams } from '../../utils/route-params';
+import type { PhotoDimensions } from './camera-engine-parity';
 
 function getFiniteNumber(params: RouterParams, key: string): number | null {
   const value = getNumberParam(params, key);
@@ -82,4 +83,30 @@ function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
     if (!b.has(value)) return false;
   }
   return true;
+}
+
+/**
+ * True when a route-hydrated shot is missing real pixel dimensions (either
+ * dim is non-finite or <= 0). `buildCaptureSessionShotFromRoute` defaults
+ * absent dims to `0`, which would make the full-mode stage fall back to 16:9
+ * and mislabel a portrait shot as landscape — so we re-decode in that case.
+ */
+export function routeShotDimensionsNeedDecode(width: number, height: number): boolean {
+  return !(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0);
+}
+
+/**
+ * Resolves a route-only shot's true dimensions. When `current` is already
+ * valid, returns it unchanged (no I/O). Otherwise awaits the injected decoder
+ * (`resolveCapturedPhotoDimensions`), passing `current` as the fallback so a
+ * partial/zero dim still degrades gracefully. The decoder is injected so this
+ * stays unit-testable without the native Skia decode.
+ */
+export async function resolveRouteShotDimensions(
+  current: PhotoDimensions,
+  decode: (uri: string, fallback: PhotoDimensions) => Promise<PhotoDimensions>,
+  uri: string
+): Promise<PhotoDimensions> {
+  if (!routeShotDimensionsNeedDecode(current.width, current.height)) return current;
+  return decode(uri, current);
 }
