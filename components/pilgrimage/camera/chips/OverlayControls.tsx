@@ -113,7 +113,7 @@ export default function OverlayControls({
               key={m.id}
               onPress={() => handleSelectMode(m.id)}
               accessibilityRole="button"
-              accessibilityLabel={`Overlay mode ${label}`}
+              accessibilityLabel={t('pilgrimageUi.overlayModeA11y', { mode: label })}
               accessibilityState={{ selected: active }}
               style={({ pressed }) => [
                 styles.modePill,
@@ -239,7 +239,11 @@ export default function OverlayControls({
         <Pressable
           onPress={onToggleEdit}
           accessibilityRole="button"
-          accessibilityLabel={editMode ? 'Lock overlay position' : 'Reposition overlay'}
+          accessibilityLabel={
+            editMode
+              ? t('pilgrimageUi.lockOverlayPosition')
+              : t('pilgrimageUi.repositionOverlay')
+          }
           accessibilityState={{ selected: editMode }}
           style={({ pressed }) => [
             styles.actionBtn,
@@ -255,7 +259,7 @@ export default function OverlayControls({
             variant="captionSmall"
             weight="600"
             style={{ color: editMode ? readableTextOn(themeColor) : '#fff' }}>
-            {editMode ? 'Repositioning' : 'Reposition'}
+            {editMode ? t('pilgrimageUi.repositioning') : t('pilgrimageUi.reposition')}
           </ThemedText>
         </Pressable>
 

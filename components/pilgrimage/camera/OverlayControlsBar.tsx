@@ -105,7 +105,11 @@ export default function OverlayControlsBar({
               key={m.id}
               onPress={() => handlePickMode(m.id)}
               accessibilityRole="button"
-              accessibilityLabel={m.id === 'off' ? 'Hide overlay' : `Overlay mode ${label}`}
+              accessibilityLabel={
+                m.id === 'off'
+                  ? t('pilgrimageUi.hideOverlay')
+                  : t('pilgrimageUi.overlayModeA11y', { mode: label })
+              }
               accessibilityState={{ selected: active }}
               style={({ pressed }) => [
                 styles.modePill,
@@ -171,7 +175,11 @@ export default function OverlayControlsBar({
             }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={characterSelected ? 'Swap character' : 'Pick character'}
+            accessibilityLabel={
+              characterSelected
+                ? t('pilgrimageUi.swapCharacter')
+                : t('pilgrimageUi.pickCharacter')
+            }
             accessibilityState={{ selected: characterSelected }}
             style={({ pressed }) => [
               styles.characterPill,
@@ -221,7 +229,11 @@ export default function OverlayControlsBar({
           icon={editMode ? 'lock-open-outline' : 'move-outline'}
           active={editMode}
           themeColor={themeColor}
-          accessibilityLabel={editMode ? 'Lock overlay position' : 'Reposition overlay'}
+          accessibilityLabel={
+            editMode
+              ? t('pilgrimageUi.lockOverlayPosition')
+              : t('pilgrimageUi.repositionOverlay')
+          }
           onPress={onToggleEdit}
         />
         <IconBtn
