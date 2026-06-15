@@ -44,8 +44,8 @@ describe('camera UI helpers', () => {
     expect(isCameraCapturePath('/pilgrimage')).toBe(false);
   });
 
-  it('requests flexible landscape instead of pinning the camera to the right side', () => {
-    expect(cameraOrientationLockIntent('auto')).toBe('unlock');
+  it('locks the interface to portrait in AUTO (stock-camera HUD) and landscape in LAND', () => {
+    expect(cameraOrientationLockIntent('auto')).toBe('portrait');
     expect(cameraOrientationLockIntent('landscape')).toBe('landscape');
   });
 

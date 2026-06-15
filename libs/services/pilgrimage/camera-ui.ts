@@ -12,7 +12,7 @@ export interface CameraHeaderText {
 }
 
 export type CameraOrientationMode = 'auto' | 'landscape';
-export type CameraOrientationLockIntent = 'unlock' | 'landscape';
+export type CameraOrientationLockIntent = 'portrait' | 'landscape';
 
 export interface CameraActiveInput {
   appIsForeground: boolean;
@@ -94,7 +94,7 @@ export function isCameraCapturePath(pathname: string | null | undefined): boolea
 export function cameraOrientationLockIntent(
   mode: CameraOrientationMode
 ): CameraOrientationLockIntent {
-  return mode === 'landscape' ? 'landscape' : 'unlock';
+  return mode === 'landscape' ? 'landscape' : 'portrait';
 }
 
 // AUTO  → capture follows the physical phone (stock-camera): 'device'.
