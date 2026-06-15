@@ -1,3 +1,5 @@
+import type { TranslationKey } from '../../i18n';
+
 export type EdgeIntensity = 'low' | 'mid' | 'high';
 
 export interface EdgeOverlayConfig {
@@ -14,10 +16,10 @@ const CONFIG: Record<EdgeIntensity, EdgeOverlayConfig> = {
   high: { threshold: 0.07, inkOpacity: 0.68, sourceOpacity: 0 },
 };
 
-const LABEL: Record<EdgeIntensity, string> = {
-  low: 'Edge+',
-  mid: 'Edge',
-  high: 'Edge Max',
+const LABEL: Record<EdgeIntensity, TranslationKey> = {
+  low: 'pilgrimageUi.edgeIntensityLow',
+  mid: 'pilgrimageUi.edgeIntensityMid',
+  high: 'pilgrimageUi.edgeIntensityHigh',
 };
 
 function isEdgeIntensity(value: unknown): value is EdgeIntensity {
@@ -28,6 +30,6 @@ export function getEdgeOverlayConfig(value: EdgeIntensity): EdgeOverlayConfig {
   return CONFIG[isEdgeIntensity(value) ? value : 'low'];
 }
 
-export function edgeIntensityLabel(value: EdgeIntensity): string {
+export function edgeIntensityLabel(value: EdgeIntensity): TranslationKey {
   return LABEL[isEdgeIntensity(value) ? value : 'low'];
 }
