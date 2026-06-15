@@ -16,7 +16,7 @@ import {
   type ResolutionTier,
 } from '../../../hooks/useCameraSettings';
 import type { AspectRatio } from './types';
-import { CAPTURE_MODE_HELP_TEXT } from '../../../libs/services/pilgrimage/capture-mode-copy';
+import { CAPTURE_MODE_HELP_TEXT_KEY } from '../../../libs/services/pilgrimage/capture-mode-copy';
 
 const CAPTURE_MODES: CaptureMode[] = ['single', 'burst', 'auto'];
 const CAPTURE_MODE_LABEL: Record<CaptureMode, string> = {
@@ -128,7 +128,7 @@ export default function CameraSettingsSheet({
                 }}
               />
               <ThemedText variant="caption" tone="secondary">
-                {CAPTURE_MODE_HELP_TEXT}
+                {t(CAPTURE_MODE_HELP_TEXT_KEY)}
               </ThemedText>
             </SettingsSection>
 
