@@ -1,9 +1,10 @@
 import { describe, expect, it, mock } from 'bun:test';
 import en from '../../../libs/i18n/locales/en.json';
 import {
-  CAPTURE_MODE_HELP_TEXT,
+  CAPTURE_MODE_HELP_TEXT_KEY,
   captureModeToastCopy,
 } from '../../../libs/services/pilgrimage/capture-mode-copy';
+import { translate } from '../../../libs/i18n/engine';
 import {
   preferredPhysicalDevicesForFacing,
   pickResolvedPhotoDimensions,
@@ -97,18 +98,19 @@ describe('camera feature parity', () => {
   });
 
   it('keeps capture mode copy aligned with the real capture implementations', () => {
-    expect(CAPTURE_MODE_HELP_TEXT).toContain('best-aligned');
-    expect(CAPTURE_MODE_HELP_TEXT).toContain('hardware HDR');
-    expect(CAPTURE_MODE_HELP_TEXT).not.toContain('sharpest');
-    expect(CAPTURE_MODE_HELP_TEXT).not.toContain('blends 3 exposures');
+    const help = translate('en', CAPTURE_MODE_HELP_TEXT_KEY);
+    expect(help).toContain('best-aligned');
+    expect(help).toContain('hardware HDR');
+    expect(help).not.toContain('sharpest');
+    expect(help).not.toContain('blends 3 exposures');
 
-    expect(captureModeToastCopy('burst', false).hint).toContain('best-aligned');
+    expect(translate('en', captureModeToastCopy('burst', false).hint)).toContain('best-aligned');
     // 'auto' is the replacement for the retired 'hdr' mode. When the scene
     // analyzer agrees AND the device has native photo-HDR, the toast advertises
     // hardware HDR. Otherwise it describes the bracket fallback honestly.
-    expect(captureModeToastCopy('auto', true).hint).toContain('hardware HDR');
-    expect(captureModeToastCopy('auto', false).hint).toContain('bracket');
-    expect(captureModeToastCopy('auto', true).hint).not.toContain('Android');
+    expect(translate('en', captureModeToastCopy('auto', true).hint)).toContain('hardware HDR');
+    expect(translate('en', captureModeToastCopy('auto', false).hint)).toContain('bracket');
+    expect(translate('en', captureModeToastCopy('auto', true).hint)).not.toContain('Android');
   });
 
   it('wires the animate-shutter setting into visible shutter feedback', () => {
