@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  AppState,
   Linking,
   Platform,
   Pressable,
@@ -30,7 +29,6 @@ import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
 import {
   CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
   resolveCameraBottomInset,
-  resolveCameraActive,
   resolveCameraTopChromeHeight,
   resolveTransientCameraHudVisibility,
 } from '../../../../libs/services/pilgrimage/camera-ui';
@@ -87,11 +85,13 @@ import {
   useCameraSettings,
   qualityToNumber,
   qualityToPrioritization,
+  type CameraSettings,
   type CaptureMode,
 } from '../../../../hooks/useCameraSettings';
 import { useCameraHud } from '../../../../hooks/useCameraHud';
 import { useSceneSwitcherSpots } from '../../../../hooks/useSceneSwitcherSpots';
 import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
+import { useFreezeFrame } from '../../../../hooks/useFreezeFrame';
 import { useCameraOrientation } from '../../../../hooks/useCameraOrientation';
 import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
@@ -218,11 +218,14 @@ export default function CompareCaptureScreen() {
   const cameraRef = useRef<CameraEngineHandle | null>(null);
   const { hasPermission, requestPermission, canRequestPermission, status } = useCameraPermission();
 
+  const { settings, setSettings } = useCameraSettings();
+
   // CLAUDE.md Rule 9: the camera HUD's discrete interaction state (facing,
   // flash, aspect, overlay config, panels, toasts) lives in one reducer hook,
   // not ~19 loose top-level useStates. Destructured so existing reads stay as
-  // bare identifiers; writes go through `setHud(patch)`.
-  const { hud, setHud } = useCameraHud();
+  // bare identifiers; writes go through `setHud(patch)`. The four persisted
+  // overlay knobs seed the reducer's lazy initializer from `settings`.
+  const { hud, setHud } = useCameraHud(settings);
   const {
     facing,
     flashMode,
@@ -245,7 +248,6 @@ export default function CompareCaptureScreen() {
   } = hud;
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
-  const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
   const [character, setCharacter] = useState<CharacterEntry | null>(null);
   const characterLayerRef = useRef<CharacterLayerHandle>(null);
   const [characterPickerOpen, setCharacterPickerOpen] = useState(false);
@@ -259,55 +261,29 @@ export default function CompareCaptureScreen() {
     sceneSwitcherOpen
   );
 
-  const { settings, setSettings, hydrated: settingsHydrated } = useCameraSettings();
-
-  // Persistence wiring for overlay-mode + its sub-knobs (edge intensity,
-  // subject focus / combine). The hud reducer is the source of truth at
-  // runtime; `CameraSettings` is the write-through cache. We seed once from
-  // persisted MMKV settings and then mirror every subsequent hud change so a
-  // mode/intensity/focus picked this session restores on the next launch.
-  //
-  // The ref-gated one-shot seed prevents the post-hydration sync from
-  // clobbering a brand-new in-session pick during the brief window
-  // between user interaction and the next render commit.
-  const overlaySettingsSyncedRef = useRef(false);
-  useEffect(() => {
-    if (!settingsHydrated || overlaySettingsSyncedRef.current) return;
-    overlaySettingsSyncedRef.current = true;
-    setHud({
-      overlayMode: settings.overlayMode,
-      edgeIntensity: settings.edgeIntensity,
-      subjectFocus: settings.subjectFocus,
-      subjectCombine: settings.subjectCombine,
-    });
-  }, [
-    settingsHydrated,
-    settings.overlayMode,
-    settings.edgeIntensity,
-    settings.subjectFocus,
-    settings.subjectCombine,
-    setHud,
-  ]);
-  // Mirror hud → settings on every change after the one-shot seed has run.
-  // Guarding on the ref keeps the mirror dormant during the pre-hydration
-  // window where hud holds its INITIAL_CAMERA_HUD defaults (not the user's
-  // persisted choices yet).
-  useEffect(() => {
-    if (!overlaySettingsSyncedRef.current) return;
-    setSettings({
-      overlayMode: hud.overlayMode,
-      edgeIntensity: hud.edgeIntensity,
-      subjectFocus: hud.subjectFocus,
-      subjectCombine: hud.subjectCombine,
-    });
-  }, [hud.overlayMode, hud.edgeIntensity, hud.subjectFocus, hud.subjectCombine, setSettings]);
-  const lifecycle = useCameraLifecycle(true);
+  // Overlay knobs (overlayMode / edgeIntensity / subjectFocus / subjectCombine)
+  // are SEEDED into the HUD reducer's lazy initializer from `settings` above
+  // (useCameraHud(settings)). Persistence now happens inline via this
+  // write-through — NOT a mirror effect. This kills the seed→mirror loop and
+  // the synced-ref latch (CLAUDE.md Rule 9: derive / write-through, don't
+  // reconcile two stores with a pair of effects).
+  const persistOverlayKnob = useCallback(
+    (
+      patch: Partial<
+        Pick<CameraSettings, 'overlayMode' | 'edgeIntensity' | 'subjectFocus' | 'subjectCombine'>
+      >
+    ) => {
+      setHud(patch);
+      setSettings(patch);
+    },
+    [setHud, setSettings]
+  );
+  const lifecycle = useCameraLifecycle({ settingsOpen, initialActive: true });
   const {
     active: cameraActive,
     isReady: cameraIsReady,
     onCameraReady,
     onMountError,
-    setActive: setCameraActive,
   } = lifecycle;
   // AUTO is device-mode by design: the capture follows the physical phone
   // while the HUD stays portrait. The hook also owns the ScreenOrientation
@@ -348,46 +324,14 @@ export default function CompareCaptureScreen() {
   // `requestSwitch` is what ZoomDial's island chip calls.
   const strategic = useStrategicCameraDevice(cohort);
 
-  // Snapshot of the previous lens's preview, captured right before a session
-  // swap so CameraStage can render it as a freeze-frame overlay while
-  // CameraX tears down the old session. Android-only (engine.takeSnapshot
-  // returns null on iOS); the animated vignette covers the iOS path.
-  const [freezeFrameUri, setFreezeFrameUri] = useState<string | null>(null);
-  // Mirror so cleanup paths can read the latest URI without depending on the
-  // closure-captured state value — used when a new switch arrives before the
-  // previous swap has finished cleaning up its temp file.
-  const freezeFrameUriRef = useRef<string | null>(null);
-  freezeFrameUriRef.current = freezeFrameUri;
-
-  const deleteFreezeFrame = useCallback((uri: string | null) => {
-    if (!uri) return;
-    FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
-  }, []);
-
-  // Clear the freeze-frame once the new session is up and the warmup overlay
-  // has finished its fade-out (~250ms). Also delete the temp file so we don't
-  // leak ~100 kB JPEGs into the cache each swap.
-  useEffect(() => {
-    if (strategic.isSwitching) return;
-    if (!freezeFrameUri) return;
-    const uri = freezeFrameUri;
-    const timer = setTimeout(() => {
-      setFreezeFrameUri(null);
-      // Best-effort cleanup; if the file vanished already or the path is
-      // malformed we just move on. No error toast — the snapshot is purely a
-      // visual nicety; failure should never reach the user.
-      deleteFreezeFrame(uri);
-    }, 260);
-    return () => clearTimeout(timer);
-  }, [strategic.isSwitching, freezeFrameUri, deleteFreezeFrame]);
-
-  // Always sweep the temp file on unmount so backgrounded swaps don't leak.
-  useEffect(() => {
-    return () => {
-      const pending = freezeFrameUriRef.current;
-      if (pending) deleteFreezeFrame(pending);
-    };
-  }, [deleteFreezeFrame]);
+  // Android lens-swap freeze-frame: snapshot of the previous lens held still
+  // while CameraX tears down the old session. The hook owns the URI + temp-file
+  // lifecycle (clear-after-swap, unmount sweep) and writes its ref mirror in the
+  // SETTER, not the render body (CLAUDE.md Rule 9). Android-only — on iOS the
+  // URI stays null and the hook's effects are no-ops.
+  const { freezeFrameUri, setFreezeFrameUri, getFreezeFrameUri } = useFreezeFrame({
+    isSwitching: strategic.isSwitching,
+  });
 
   // Wrapper around the FSM's `requestSwitch` that grabs a freeze-frame first
   // (fire-and-forget — the snapshot Promise is allowed to land after the
@@ -399,15 +343,17 @@ export default function CompareCaptureScreen() {
     (target: 'wide' | 'ultra-wide') => {
       if (Platform.OS === 'android') {
         // If a previous freeze-frame is still hanging around (rapid double-
-        // tap), delete it before overwriting. The ref read avoids racing the
-        // cleanup-timer effect that hasn't fired yet.
-        const previous = freezeFrameUriRef.current;
+        // tap), delete it before overwriting. getFreezeFrameUri() reads the
+        // hook's ref mirror, avoiding a race with its cleanup-timer effect.
+        const previous = getFreezeFrameUri();
         const snap = cameraRef.current?.takeSnapshot();
         if (snap) {
           snap
             .then((uri) => {
               if (!uri) return;
-              if (previous && previous !== uri) deleteFreezeFrame(previous);
+              if (previous && previous !== uri) {
+                FileSystem.deleteAsync(previous, { idempotent: true }).catch(() => undefined);
+              }
               setFreezeFrameUri(uri);
             })
             .catch(() => undefined);
@@ -415,7 +361,7 @@ export default function CompareCaptureScreen() {
       }
       strategic.requestSwitch(target);
     },
-    [strategic, deleteFreezeFrame]
+    [strategic, getFreezeFrameUri, setFreezeFrameUri]
   );
   // Compose `onCameraReady` with the FSM's `onCameraStarted` so the FSM
   // learns when a session swap has completed and flips back to STABLE.
@@ -601,17 +547,9 @@ export default function CompareCaptureScreen() {
     }
   }, [hasPermission, canRequestPermission, requestPermission]);
 
-  // T1 fix: drive the camera's active flag off app lifecycle + settings sheet.
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      setAppIsForeground(state === 'active');
-    });
-    return () => sub.remove();
-  }, []);
-
-  useEffect(() => {
-    setCameraActive(resolveCameraActive({ appIsForeground, settingsOpen }));
-  }, [appIsForeground, settingsOpen, setCameraActive]);
+  // Camera `active` is derived inside useCameraLifecycle from app foreground
+  // state + settingsOpen + onError re-arm; the route just passes `settingsOpen`
+  // in (above) and reads `cameraActive` (below). No effect here.
 
   const toggleFacing = useCallback(() => {
     hapticsBridge.selection();
@@ -1361,14 +1299,16 @@ export default function CompareCaptureScreen() {
       }}
       onSelectMode={(m) => {
         const seed = OVERLAY_MODE_TOAST[m];
+        // Visual-only fields (overlayVisible, switchToast) stay on setHud; the
+        // persisted knob goes through the write-through so it restores on relaunch.
         setHud({
-          overlayMode: m,
           overlayVisible: true,
           switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
         });
+        persistOverlayKnob({ overlayMode: m });
       }}
-      onSelectEdgeIntensity={(i) => setHud({ edgeIntensity: i })}
-      onToggleSubjectCombine={() => setHud((h) => ({ subjectCombine: !h.subjectCombine }))}
+      onSelectEdgeIntensity={(i) => persistOverlayKnob({ edgeIntensity: i })}
+      onToggleSubjectCombine={() => persistOverlayKnob({ subjectCombine: !subjectCombine })}
       onOpenCharacterPicker={() => setCharacterPickerOpen(true)}
       onChangeOpacity={(o) => setHud({ overlayOpacity: o })}
       onToggleFlip={overlayTransform.toggleFlip}
