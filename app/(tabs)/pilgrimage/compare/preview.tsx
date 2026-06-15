@@ -39,6 +39,7 @@ import { useCaptureSession, type CaptureSessionShot } from '../../../../hooks/us
 import { capturedOnWideAngle } from '../../../../libs/services/pilgrimage/capture-lens-gate';
 import { sanitizeCaptureNote } from '../../../../libs/services/pilgrimage/capture-session';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
+import { buildShareRouteParams } from '../../../../libs/services/pilgrimage/share-route-params';
 import { AnitabiOriginCredit } from '../../../../components/pilgrimage/common/AnitabiOriginCredit';
 
 function getRetakeTip(s: SensorSnapshot | null): string | null {
@@ -482,34 +483,31 @@ export default function ComparePreviewScreen() {
   const handleShare = useCallback(() => {
     if (!focusedShot) return;
     hapticsBridge.tap();
-    const shareParams: Record<string, string> = {
+    // The captured width/height is the orientation truth — forward it so the
+    // share screen + ShareCard letterbox a portrait shot instead of cropping.
+    // The sensor snapshot (tilt/headingDeltaDeg) feeds the share screen's
+    // auto-perspective (Track C #8) without re-measuring.
+    const shareParams = buildShareRouteParams({
       spotId,
       imageUrl,
       shotUri: focusedShot.uri,
       name: sceneName,
-      ep: ep ?? '',
-      animeId: animeId ?? '',
-      animeTitle: animeTitle ?? '',
+      ep,
+      animeId,
+      animeTitle,
       themeColor,
-      spotLat: spotLat ?? '',
-      spotLng: spotLng ?? '',
-    };
-    // Forward the shot's sensor snapshot so the share screen's auto-perspective
-    // (Track C #8) can correct tilt/heading without re-measuring.
-    if (focusedShot.tilt != null) shareParams.tilt = String(focusedShot.tilt);
-    if (focusedShot.headingDeltaDeg != null) {
-      shareParams.headingDeltaDeg = String(focusedShot.headingDeltaDeg);
-    }
-    if (frameMatch?.total != null) {
-      shareParams.matchScore = String(Math.round(frameMatch.total * 100));
-    }
-    if (frameMatch) {
-      shareParams.frameValid = frameMatch.valid ? '1' : '0';
-      if (frameMatch.reason) shareParams.frameReason = frameMatch.reason;
-    }
-    if (positionScore?.total != null) {
-      shareParams.positionScore = String(Math.round(positionScore.total * 100));
-    }
+      spotLat,
+      spotLng,
+      shotWidth: focusedShot.width,
+      shotHeight: focusedShot.height,
+      tilt: focusedShot.tilt,
+      headingDeltaDeg: focusedShot.headingDeltaDeg,
+      matchScore: frameMatch?.total != null ? Math.round(frameMatch.total * 100) : null,
+      frameValid: frameMatch ? frameMatch.valid : null,
+      frameReason: frameMatch?.reason ?? null,
+      positionScore:
+        positionScore?.total != null ? Math.round(positionScore.total * 100) : null,
+    });
     router.push({
       pathname: '/pilgrimage/compare/share',
       params: shareParams,
