@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { CaptureMode } from '../../../hooks/useCameraSettings';
 import { captureModeToastCopy } from '../../../libs/services/pilgrimage/capture-mode-copy';
 
@@ -45,6 +46,7 @@ export default function CaptureModeToast({
   themeColor,
   nativeHdrActive = false,
 }: CaptureModeToastProps) {
+  const t = useT();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(8);
 
@@ -82,10 +84,10 @@ export default function CaptureModeToast({
           variant="captionSmall"
           weight="700"
           style={[styles.label, { color: themeColor }]}>
-          {copy.label.toUpperCase()}
+          {t(copy.label).toUpperCase()}
         </ThemedText>
         <ThemedText variant="caption" weight="600" style={styles.hint}>
-          {copy.hint}
+          {t(copy.hint)}
         </ThemedText>
       </View>
     </Animated.View>

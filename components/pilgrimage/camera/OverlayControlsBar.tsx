@@ -129,7 +129,7 @@ export default function OverlayControlsBar({
         <View style={styles.subRow}>
           <SubSegment
             icon="git-network-outline"
-            options={EDGE_INTENSITIES.map((i) => ({ id: i, label: edgeIntensityLabel(i) }))}
+            options={EDGE_INTENSITIES.map((i) => ({ id: i, label: t(edgeIntensityLabel(i)) }))}
             activeId={edgeIntensity}
             themeColor={themeColor}
             onPick={(id) => onSelectEdgeIntensity(id as EdgeIntensity)}

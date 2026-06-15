@@ -143,7 +143,9 @@ export default function OverlayControls({
                 key={intensity}
                 onPress={() => handleSelectEdgeIntensity(intensity)}
                 accessibilityRole="button"
-                accessibilityLabel={`Edge intensity ${edgeIntensityLabel(intensity)}`}
+                accessibilityLabel={t('pilgrimageUi.edgeIntensityA11y', {
+                  intensity: t(edgeIntensityLabel(intensity)),
+                })}
                 accessibilityState={{ selected: active }}
                 style={({ pressed }) => [
                   styles.edgeIntensityBtn,
@@ -155,7 +157,7 @@ export default function OverlayControls({
                   weight="700"
                   numberOfLines={1}
                   style={{ color: fg }}>
-                  {edgeIntensityLabel(intensity)}
+                  {t(edgeIntensityLabel(intensity))}
                 </ThemedText>
               </Pressable>
             );
@@ -174,7 +176,9 @@ export default function OverlayControls({
                   key={focus}
                   onPress={() => handleSelectSubjectFocus(focus)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Subject focus ${subjectFocusLabel(focus)}`}
+                  accessibilityLabel={t('pilgrimageUi.subjectFocusA11y', {
+                    focus: t(subjectFocusLabel(focus)),
+                  })}
                   accessibilityState={{ selected: active }}
                   style={({ pressed }) => [
                     styles.edgeIntensityBtn,
@@ -186,7 +190,7 @@ export default function OverlayControls({
                     weight="700"
                     numberOfLines={1}
                     style={{ color: fg }}>
-                    {subjectFocusLabel(focus)}
+                    {t(subjectFocusLabel(focus))}
                   </ThemedText>
                 </Pressable>
               );
