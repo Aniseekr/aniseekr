@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  cameraHudInitialState,
   cameraHudReducer,
   INITIAL_CAMERA_HUD,
   type CameraHudState,
@@ -51,5 +52,46 @@ describe('cameraHudReducer', () => {
     });
     expect(next.overlayMode).toBe('edge');
     expect(next.switchToast?.label).toBe('Edge');
+  });
+});
+
+describe('cameraHudInitialState', () => {
+  it('seeds the four persisted overlay knobs from the settings argument', () => {
+    const seeded = cameraHudInitialState({
+      overlayMode: 'anime',
+      edgeIntensity: 'high',
+      subjectFocus: 'wide',
+      subjectCombine: true,
+    });
+    expect(seeded.overlayMode).toBe('anime');
+    expect(seeded.edgeIntensity).toBe('high');
+    expect(seeded.subjectFocus).toBe('wide');
+    expect(seeded.subjectCombine).toBe(true);
+  });
+
+  it('leaves every non-overlay HUD default untouched', () => {
+    const seeded = cameraHudInitialState({
+      overlayMode: 'sketch',
+      edgeIntensity: 'mid',
+      subjectFocus: 'tight',
+      subjectCombine: false,
+    });
+    expect(seeded.facing).toBe(INITIAL_CAMERA_HUD.facing);
+    expect(seeded.aspect).toBe(INITIAL_CAMERA_HUD.aspect);
+    expect(seeded.quickControlsOpen).toBe(INITIAL_CAMERA_HUD.quickControlsOpen);
+    expect(seeded.orientationMode).toBe(INITIAL_CAMERA_HUD.orientationMode);
+    expect(seeded.captureModeToast).toBeNull();
+  });
+
+  it('returns a fresh object, never the shared INITIAL_CAMERA_HUD', () => {
+    const seeded = cameraHudInitialState({
+      overlayMode: 'edge',
+      edgeIntensity: 'low',
+      subjectFocus: 'normal',
+      subjectCombine: false,
+    });
+    expect(seeded).not.toBe(INITIAL_CAMERA_HUD);
+    seeded.facing = 'front';
+    expect(INITIAL_CAMERA_HUD.facing).toBe('back');
   });
 });

@@ -2,6 +2,7 @@ import { useReducer } from 'react';
 import type { CameraOrientationMode } from '../libs/services/pilgrimage/camera-ui';
 import type { EdgeIntensity } from '../libs/services/pilgrimage/edge-overlay';
 import type { SubjectFocus } from '../libs/services/pilgrimage/subject-overlay';
+import type { CameraSettings } from '../libs/services/pilgrimage/camera-settings';
 import type {
   AspectRatio,
   CameraFacing,
@@ -88,6 +89,34 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
 };
 
 /**
+ * The persisted overlay knobs the HUD seeds from on mount. These four fields
+ * live in `CameraSettings` (MMKV) and are the only HUD values that survive a
+ * relaunch — everything else starts from {@link INITIAL_CAMERA_HUD}.
+ */
+export type CameraHudSeed = Pick<
+  CameraSettings,
+  'overlayMode' | 'edgeIntensity' | 'subjectFocus' | 'subjectCombine'
+>;
+
+/**
+ * Lazy initializer for the HUD reducer. Merges {@link INITIAL_CAMERA_HUD} with
+ * the four persisted overlay knobs so the camera screen opens with the user's
+ * real overlay pick on the FIRST frame — no post-mount mirror effect, no flash
+ * of the default 'edge' overlay (CLAUDE.md Rule 9 + Rule 10).
+ *
+ * Pure: returns a fresh object every call and never mutates the shared default.
+ */
+export function cameraHudInitialState(seed: CameraHudSeed): CameraHudState {
+  return {
+    ...INITIAL_CAMERA_HUD,
+    overlayMode: seed.overlayMode,
+    edgeIntensity: seed.edgeIntensity,
+    subjectFocus: seed.subjectFocus,
+    subjectCombine: seed.subjectCombine,
+  };
+}
+
+/**
  * A patch applied to the HUD state — either a partial object, or a function of
  * the current state (use the functional form for toggles and cycles so they
  * never read a stale render-closure value).
@@ -111,8 +140,18 @@ export interface UseCameraHudResult {
  * Owns the camera screen's discrete HUD state behind a small `{ hud, setHud }`
  * API. `setHud` is the reducer dispatch, so it is referentially stable and
  * safe to omit from / include in `useCallback` dependency arrays.
+ *
+ * Pass `initialSettings` (the synchronously-loaded `CameraSettings`) so the
+ * four persisted overlay knobs seed the reducer via its lazy initializer on the
+ * first render. Omitting it falls back to {@link INITIAL_CAMERA_HUD} defaults —
+ * used only by tests that don't care about persistence.
  */
-export function useCameraHud(): UseCameraHudResult {
-  const [hud, setHud] = useReducer(cameraHudReducer, INITIAL_CAMERA_HUD);
+export function useCameraHud(initialSettings?: CameraHudSeed): UseCameraHudResult {
+  const [hud, setHud] = useReducer(
+    cameraHudReducer,
+    initialSettings,
+    (seed: CameraHudSeed | undefined): CameraHudState =>
+      seed ? cameraHudInitialState(seed) : { ...INITIAL_CAMERA_HUD }
+  );
   return { hud, setHud };
 }
