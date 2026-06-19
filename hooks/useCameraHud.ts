@@ -49,7 +49,6 @@ export interface CameraHudState {
   // --- HUD panels ---
   settingsOpen: boolean;
   quickControlsOpen: boolean;
-  overlayDockOpen: boolean;
   sceneSwitcherOpen: boolean;
 
   // --- Transient toasts (set-only; the toast components self-dismiss) ---
@@ -80,7 +79,6 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
 
   settingsOpen: false,
   quickControlsOpen: true,
-  overlayDockOpen: true,
   sceneSwitcherOpen: false,
 
   captureModeToast: null,

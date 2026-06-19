@@ -50,19 +50,6 @@ export const CAMERA_BOTTOM_BAR_CONTENT_HEIGHT = 96;
 // only adds a little extra letterbox to an already-letterboxed screen.
 export const ANDROID_GESTURE_NAV_MIN_INSET = 24;
 
-export interface TransientCameraHudVisibilityInput {
-  /** Slide-up overlay controls panel is open and covering the lower HUD area. */
-  overlayControlsOpen?: boolean;
-  /** Tap-to-focus has locked AF/AE — the focus exposure bar becomes relevant. */
-  afLocked: boolean;
-}
-
-export interface TransientCameraHudVisibility {
-  showAutoCaptureBadge: boolean;
-  showCaptureHistory: boolean;
-  showFocusExposureBar: boolean;
-}
-
 const RESERVED_COMPARE_ROUTES = new Set(['align', 'preview', 'share', 'tips']);
 const EV_MIN = -2;
 const EV_MAX = 2;
@@ -116,17 +103,6 @@ export function roundExposureValue(value: number): number {
 
 export function resolveCameraTopChromeHeight(input: { quickControlsOpen: boolean }): number {
   return CAMERA_TOP_BAR_CONTENT_HEIGHT + (input.quickControlsOpen ? CAMERA_TOP_BAR_ROW2_HEIGHT : 0);
-}
-
-export function resolveTransientCameraHudVisibility(
-  input: TransientCameraHudVisibilityInput
-): TransientCameraHudVisibility {
-  const showTransientHud = !input.overlayControlsOpen;
-  return {
-    showAutoCaptureBadge: showTransientHud,
-    showCaptureHistory: showTransientHud,
-    showFocusExposureBar: input.afLocked && showTransientHud,
-  };
 }
 
 export function resolveCameraActive(input: CameraActiveInput): boolean {

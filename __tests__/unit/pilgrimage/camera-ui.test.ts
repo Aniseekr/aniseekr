@@ -15,7 +15,6 @@ import {
   resolveCameraActiveWithInterruption,
   resolveCameraBottomInset,
   resolveCameraTopChromeHeight,
-  resolveTransientCameraHudVisibility,
   roundExposureValue,
 } from '../../../libs/services/pilgrimage/camera-ui';
 
@@ -121,30 +120,6 @@ describe('camera UI helpers', () => {
     expect(resolveCameraTopChromeHeight({ quickControlsOpen: true })).toBe(
       CAMERA_TOP_BAR_CONTENT_HEIGHT + CAMERA_TOP_BAR_ROW2_HEIGHT
     );
-  });
-
-  it('hides transient HUD layers while the overlay dock is open', () => {
-    expect(
-      resolveTransientCameraHudVisibility({ afLocked: true, overlayControlsOpen: true })
-    ).toEqual({
-      showAutoCaptureBadge: false,
-      showCaptureHistory: false,
-      showFocusExposureBar: false,
-    });
-
-    expect(
-      resolveTransientCameraHudVisibility({ afLocked: true, overlayControlsOpen: false })
-    ).toEqual({
-      showAutoCaptureBadge: true,
-      showCaptureHistory: true,
-      showFocusExposureBar: true,
-    });
-
-    expect(resolveTransientCameraHudVisibility({ afLocked: false })).toEqual({
-      showAutoCaptureBadge: true,
-      showCaptureHistory: true,
-      showFocusExposureBar: false,
-    });
   });
 
   it('floors the Android camera bottom inset so the gesture bar cannot cover the shutter', () => {
