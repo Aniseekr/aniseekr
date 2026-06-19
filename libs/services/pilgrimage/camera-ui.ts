@@ -182,3 +182,99 @@ function formatEpisode(value: string): string {
   const normalized = value.replace(/^ep(?:isode)?\s*/i, '').trim();
   return normalized ? `EP ${normalized}` : '';
 }
+
+// ── Banded chrome layout (Samsung-style; identical stacking in both orientations) ──
+
+/** Zoom band: preset pills + opacity pill. */
+export const CAMERA_ZOOM_BAND_HEIGHT = 44;
+/** Overlay-mode carousel band (the primary control). */
+export const CAMERA_CAROUSEL_BAND_HEIGHT = 48;
+/** Bottom row: gallery | shutter | flip. */
+export const CAMERA_BOTTOM_ROW_HEIGHT = 88;
+/** Vertical breathing room between stacked bands. */
+export const CAMERA_BAND_GAP = 8;
+
+export interface CameraBandLayoutInput {
+  /** Safe-area bottom already resolved via {@link resolveCameraBottomInset}. */
+  bottomInset: number;
+  /** Whether the zoom band participates in the stack (driven by the visibility resolver). */
+  showZoomBand: boolean;
+}
+
+export interface CameraBandLayout {
+  shutterRowBottom: number;
+  shutterRowHeight: number;
+  carouselBottom: number;
+  carouselHeight: number;
+  zoomBandBottom: number;
+  zoomBandHeight: number;
+  /** Height of the whole bottom chrome cluster from the inset up; drives the AlignmentHUD reserve. */
+  totalBottomChromeHeight: number;
+}
+
+/**
+ * Resolve the bottom-up stack of fixed bands (shutter row → carousel → zoom band).
+ *
+ * Deliberately takes NO `isLandscape` input: the bands stack identically in both
+ * orientations. Landscape no longer reflows the cluster into a right-edge column —
+ * only the glyphs inside each band rotate (Apple/Samsung convention). This replaces
+ * the old per-layer `bottom: bottomBarHeight + N` offsets and `landscapeCluster`.
+ */
+export function resolveCameraBandLayout(input: CameraBandLayoutInput): CameraBandLayout {
+  const shutterRowBottom = input.bottomInset;
+  const carouselBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP;
+  const zoomBandBottom = carouselBottom + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP;
+  const totalBottomChromeHeight = input.showZoomBand
+    ? CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT
+    : CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT;
+  return {
+    shutterRowBottom,
+    shutterRowHeight: CAMERA_BOTTOM_ROW_HEIGHT,
+    carouselBottom,
+    carouselHeight: CAMERA_CAROUSEL_BAND_HEIGHT,
+    zoomBandBottom,
+    zoomBandHeight: CAMERA_ZOOM_BAND_HEIGHT,
+    totalBottomChromeHeight,
+  };
+}
+
+export interface CameraChromeVisibilityInput {
+  isLandscape: boolean;
+  /** Immersive intent (auto-on in landscape; cleared by a tap-to-reveal). */
+  immersive: boolean;
+  afLocked: boolean;
+  /** An overlay mode is selected (`overlayVisible === true`). */
+  overlayActive: boolean;
+}
+
+export interface CameraChromeVisibility {
+  showZoomBand: boolean;
+  showOpacityPill: boolean;
+  showTopContextIcons: boolean;
+  showCaptureHistory: boolean;
+  showAutoCaptureBadge: boolean;
+  showFocusExposureBar: boolean;
+  showOverlayQuickControls: boolean;
+}
+
+/**
+ * Immersive-by-subtraction. The chrome is ALWAYS glass (we never change opacity); instead,
+ * landscape-immersive hides the secondary controls (zoom band, opacity pill, top contextual
+ * icons, capture history), leaving the shutter row, the overlay carousel, and the alignment
+ * readout. A tap clears `immersive` to reveal everything again. Supersedes the dock-driven
+ * `resolveTransientCameraHudVisibility`.
+ */
+export function resolveCameraChromeVisibility(
+  input: CameraChromeVisibilityInput,
+): CameraChromeVisibility {
+  const secondaryHidden = input.isLandscape && input.immersive;
+  return {
+    showZoomBand: !secondaryHidden,
+    showOpacityPill: !secondaryHidden && input.overlayActive,
+    showTopContextIcons: !secondaryHidden,
+    showCaptureHistory: !secondaryHidden,
+    showAutoCaptureBadge: true,
+    showFocusExposureBar: input.afLocked,
+    showOverlayQuickControls: input.overlayActive,
+  };
+}

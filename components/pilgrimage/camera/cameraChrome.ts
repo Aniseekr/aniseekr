@@ -44,6 +44,14 @@ export const CameraChrome = {
   circleSize: 44,
   /** Default control icon size. */
   iconSize: 18,
+
+  // Faint top/bottom gradient scrims behind the chrome bands so the glass controls stay
+  // legible over bright outdoor scenes; the live preview still runs full-bleed behind them.
+  // There is no solid bar and no "becomes transparent" trigger — the chrome is always glass.
+  scrimTopColors: ['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)'],
+  scrimBottomColors: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)'],
+  scrimTopHeight: 140,
+  scrimBottomHeight: 240,
 } as const;
 
 /** Soft drop shadow so a floating control lifts cleanly off the live scene. */
