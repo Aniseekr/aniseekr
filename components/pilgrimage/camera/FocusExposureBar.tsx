@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { roundExposureValue } from '../../../libs/services/pilgrimage/camera-ui';
+import type { FocusPoint } from './types';
 
 interface FocusExposureBarProps {
   value: number;
@@ -11,6 +12,8 @@ interface FocusExposureBarProps {
   bottomOffset: number;
   isLandscape: boolean;
   onChange: (next: number) => void;
+  /** When set (portrait), anchor the transient EV bar just below the focus reticle, Samsung-style. */
+  anchor?: FocusPoint | null;
 }
 
 function formatEV(value: number): string {
@@ -24,6 +27,7 @@ export default function FocusExposureBar({
   bottomOffset,
   isLandscape,
   onChange,
+  anchor,
 }: FocusExposureBarProps) {
   const t = useT();
   return (
@@ -31,11 +35,13 @@ export default function FocusExposureBar({
       pointerEvents="box-none"
       style={[
         styles.root,
-        {
-          bottom: bottomOffset,
-          left: isLandscape ? '18%' : 16,
-          right: isLandscape ? '18%' : 16,
-        },
+        anchor && !isLandscape
+          ? { top: Math.max(96, anchor.y + 28), left: 16, right: 16 }
+          : {
+              bottom: bottomOffset,
+              left: isLandscape ? '18%' : 16,
+              right: isLandscape ? '18%' : 16,
+            },
       ]}>
       <View style={styles.bar}>
         <View style={[styles.lockPill, { borderColor: themeColor }]}>

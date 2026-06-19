@@ -27,11 +27,16 @@ import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-
 import { getPilgrimageSpotTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
 import {
-  CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
+  CAMERA_BAND_GAP,
+  resolveCameraBandLayout,
   resolveCameraBottomInset,
+  resolveCameraChromeVisibility,
   resolveCameraTopChromeHeight,
-  resolveTransientCameraHudVisibility,
 } from '../../../../libs/services/pilgrimage/camera-ui';
+import {
+  overlayCarouselIndex,
+  overlaySelectionForIndex,
+} from '../../../../libs/services/pilgrimage/overlay-carousel';
 import { embedCaptureMetadata } from '../../../../libs/services/pilgrimage/embed-capture-metadata';
 import { availableStopsFromDeviceInfo } from '../../../../libs/services/pilgrimage/lens-switching';
 import { captureAnalysisGate } from '../../../../libs/services/pilgrimage/capture-lens-gate';
@@ -55,13 +60,14 @@ import CameraTopBar, {
   CameraHeaderButton,
 } from '../../../../components/pilgrimage/camera/CameraTopBar';
 import AlignmentHUD from '../../../../components/pilgrimage/camera/AlignmentHUD';
-import ZoomDial from '../../../../components/pilgrimage/camera/ZoomDial';
-import ShutterRow, {
-  SHUTTER_ROW_LANDSCAPE_WIDTH,
-} from '../../../../components/pilgrimage/camera/ShutterRow';
+import ShutterRow from '../../../../components/pilgrimage/camera/ShutterRow';
 import ReferenceThumbnail from '../../../../components/pilgrimage/camera/ReferenceThumbnail';
-import OverlayDock from '../../../../components/pilgrimage/camera/OverlayDock';
-import OverlayControlsBar from '../../../../components/pilgrimage/camera/OverlayControlsBar';
+import OverlayModeCarousel from '../../../../components/pilgrimage/camera/OverlayModeCarousel';
+import OverlayQuickControls from '../../../../components/pilgrimage/camera/OverlayQuickControls';
+import ZoomPresets from '../../../../components/pilgrimage/camera/ZoomPresets';
+import OverlayOpacityPill from '../../../../components/pilgrimage/camera/OverlayOpacityPill';
+import GalleryThumb from '../../../../components/pilgrimage/camera/GalleryThumb';
+import CameraScrim from '../../../../components/pilgrimage/camera/CameraScrim';
 import CameraChip from '../../../../components/pilgrimage/camera/chips/CameraChip';
 import AspectChip from '../../../../components/pilgrimage/camera/chips/AspectChip';
 import CountdownChip from '../../../../components/pilgrimage/camera/chips/CountdownChip';
@@ -76,7 +82,7 @@ import type {
   FocalStop,
   OverlayMode,
 } from '../../../../components/pilgrimage/camera/types';
-import { useCameraZoom, STOP_TO_ZOOM } from '../../../../hooks/useCameraZoom';
+import { useCameraZoom } from '../../../../hooks/useCameraZoom';
 import { useTapToFocus } from '../../../../hooks/useTapToFocus';
 import { useOverlayTransform } from '../../../../hooks/useOverlayTransform';
 import { useAlignmentSensors } from '../../../../hooks/useAlignmentSensors';
@@ -232,6 +238,7 @@ export default function CompareCaptureScreen() {
     aspect,
     overlayMode,
     edgeIntensity,
+    subjectFocus,
     subjectCombine,
     overlayOpacity,
     editMode,
@@ -239,7 +246,6 @@ export default function CompareCaptureScreen() {
     orientationMode,
     settingsOpen,
     quickControlsOpen,
-    overlayDockOpen,
     overlayVisible,
     captureModeToast,
     autoCaptureToast,
@@ -248,6 +254,10 @@ export default function CompareCaptureScreen() {
   } = hud;
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
+  // Immersive-by-subtraction: landscape auto-hides secondary chrome; a preview tap reveals it.
+  const [immersive, setImmersive] = useState(false);
+  // Expanded capture-history strip, toggled from the gallery thumb.
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [character, setCharacter] = useState<CharacterEntry | null>(null);
   const characterLayerRef = useRef<CharacterLayerHandle>(null);
   const [characterPickerOpen, setCharacterPickerOpen] = useState(false);
@@ -438,6 +448,8 @@ export default function CompareCaptureScreen() {
     onFocus: (point) => {
       // Drives a real AE/AF/AWB metering operation at the tap location.
       void cameraRef.current?.focus(point);
+      // Tapping the preview also reveals the secondary chrome in landscape immersive.
+      setImmersive(false);
     },
   });
 
@@ -451,6 +463,12 @@ export default function CompareCaptureScreen() {
     const max = deviceInfo?.maxExposureBias ?? 0;
     exposureShared.value = Math.max(min, Math.min(max, evValue));
   }, [evValue, deviceInfo, exposureShared]);
+
+  // Landscape auto-enters immersive (secondary chrome subtracted); portrait shows everything.
+  // A preview tap (onFocus above) clears it until the next orientation change.
+  useEffect(() => {
+    setImmersive(isLandscape);
+  }, [isLandscape]);
 
   const overlayTransform = useOverlayTransform({ enabled: editMode });
   const getOverlayTransformSnapshot = overlayTransform.getSnapshot;
@@ -1236,85 +1254,51 @@ export default function CompareCaptureScreen() {
   // row + HUD layers always clear the system bar. iOS insets are used as-is.
   const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
   const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
-  const bottomBarHeight = safeAreaBottomPad + CAMERA_BOTTOM_BAR_CONTENT_HEIGHT;
   const topBarBottom = insets.top + resolveCameraTopChromeHeight({ quickControlsOpen });
-  const focusEvBarBottom = isLandscape ? safeAreaBottomPad + 72 : bottomBarHeight + 84;
-  const cameraHudVisibility = resolveTransientCameraHudVisibility({
-    overlayControlsOpen: overlayDockOpen,
+  // Banded chrome: visibility (immersive-by-subtraction) drives the band stack, which is
+  // identical in both orientations (the bottom row never reflows to a right-edge column).
+  const overlayActive = overlayVisible;
+  const carouselIndex = overlayCarouselIndex({ overlayVisible, overlayMode });
+  const chrome = resolveCameraChromeVisibility({
+    isLandscape,
+    immersive,
     afLocked: tapFocus.afLocked,
+    overlayActive,
   });
+  const bands = resolveCameraBandLayout({
+    bottomInset: safeAreaBottomPad,
+    showZoomBand: chrome.showZoomBand,
+  });
+  const chromeTop = safeAreaBottomPad + bands.totalBottomChromeHeight;
+  const overlayQuickControlsBottom =
+    (chrome.showZoomBand
+      ? bands.zoomBandBottom + bands.zoomBandHeight
+      : bands.carouselBottom + bands.carouselHeight) + CAMERA_BAND_GAP;
+  const rotateGlyphs = isLandscape && orientationMode === 'landscape';
   const handleOpenInfo = () => {
     hapticsBridge.tap();
     router.push({ pathname: '/pilgrimage/compare/align', params: { ...params } });
   };
-  // Island chip wires the off-strip lens-switch affordance for
-  // standalone-switch cohorts (S20FE / Pixel 8). The chip is null when:
-  //   * the cohort is logical (iOS / Xiaomi true-0.5) — strip handles 0.5
-  //     continuously, no chip needed; OR
-  //   * the cohort is wide-only (Pixel 6a) — no ultra-wide hardware exists.
-  //   * the cohort is still null (enumeration in flight) — never lie.
-  const dialIsland =
-    cohort && cohort.strategy === 'standalone-switch' && cohort.ultraWide
-      ? strategic.activeLens === 'wide'
-        ? { stop: 0.5 as FocalStop, targetLens: 'ultra-wide' as const }
-        : { stop: 1 as FocalStop, targetLens: 'wide' as const }
-      : null;
-  const focalDial = (
-    <ZoomDial
-      zoomShared={zoom.zoomShared}
-      activeStop={zoom.activeStop as FocalStop | null}
-      themeColor={themeColor}
-      availableStops={availableStops}
-      isFrontFacing={facing === 'front'}
-      stopZoom={STOP_TO_ZOOM}
-      minZoom={minZoom}
-      maxZoom={maxZoom}
-      onPickFocalStop={zoom.setStop}
-      island={dialIsland}
-      onPickIsland={handleRequestSwitch}
-      islandPending={strategic.isSwitching}
-      // Reuse the pinch handlers — dial drag past the wall and pinch past
-      // the wall share semantics (request the corresponding lens swap).
-      onDragBelowMin={canPinchToUltraWide ? handlePinchBelowMin : undefined}
-      onDragAboveMax={canPinchBackToWide ? handlePinchAboveMax : undefined}
-    />
-  );
-  const overlayControls = (
-    <OverlayControlsBar
-      visible={overlayVisible}
-      mode={overlayMode}
-      edgeIntensity={edgeIntensity}
-      subjectCombine={subjectCombine}
-      characterSelected={character !== null}
-      opacity={overlayOpacity}
-      flipped={overlayTransform.flipped}
-      editMode={editMode}
-      themeColor={themeColor}
-      onSelectOff={() => {
-        const seed = OVERLAY_MODE_TOAST.off;
-        setHud({
-          overlayVisible: false,
-          switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
-        });
-      }}
-      onSelectMode={(m) => {
-        const seed = OVERLAY_MODE_TOAST[m];
-        // Visual-only fields (overlayVisible, switchToast) stay on setHud; the
-        // persisted knob goes through the write-through so it restores on relaunch.
-        setHud({
-          overlayVisible: true,
-          switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
-        });
-        persistOverlayKnob({ overlayMode: m });
-      }}
-      onSelectEdgeIntensity={(i) => persistOverlayKnob({ edgeIntensity: i })}
-      onToggleSubjectCombine={() => persistOverlayKnob({ subjectCombine: !subjectCombine })}
-      onOpenCharacterPicker={() => setCharacterPickerOpen(true)}
-      onChangeOpacity={(o) => setHud({ overlayOpacity: o })}
-      onToggleFlip={overlayTransform.toggleFlip}
-      onToggleEdit={handleToggleEdit}
-    />
-  );
+  // Carousel index → HUD patch. Mirrors the old OverlayControlsBar onSelectOff/onSelectMode
+  // (same per-mode switch toast + persisted overlayMode write-through), so behavior is preserved.
+  const handleCarouselChange = (index: number) => {
+    const selection = overlaySelectionForIndex(index);
+    if (!selection.overlayVisible || !selection.overlayMode) {
+      const seed = OVERLAY_MODE_TOAST.off;
+      setHud({
+        overlayVisible: false,
+        switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+      });
+      return;
+    }
+    const seed = OVERLAY_MODE_TOAST[selection.overlayMode];
+    setHud({
+      overlayVisible: true,
+      overlayMode: selection.overlayMode,
+      switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+    });
+    persistOverlayKnob({ overlayMode: selection.overlayMode });
+  };
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -1363,6 +1347,9 @@ export default function CompareCaptureScreen() {
           edgeOrSketchError={edgeOrSketch.error}
           edgeSourceOpacity={edgeOrSketch.sourceOpacity}
         />
+
+        {/* Always-glass legibility scrim — full-bleed preview shows through. */}
+        <CameraScrim />
 
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <View style={styles.levelHorizonWrap}>
@@ -1521,8 +1508,8 @@ export default function CompareCaptureScreen() {
           themeColor={themeColor}
           topInset={insets.top}
           bottomInset={cameraBottomInset}
-          bottomBarHeight={bottomBarHeight}
-          rightReserve={isLandscape ? SHUTTER_ROW_LANDSCAPE_WIDTH : 0}
+          bottomBarHeight={bands.totalBottomChromeHeight}
+          rightReserve={0}
           isLandscape={isLandscape}
           transformed={overlayTransform.transformed}
           rotationDisplayDeg={overlayTransform.rotationDisplayDeg}
@@ -1530,153 +1517,48 @@ export default function CompareCaptureScreen() {
           onReset={overlayTransform.resetTransforms}
         />
 
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.focalDock,
-            isLandscape
-              ? { left: insets.left + 16, bottom: safeAreaBottomPad + 16 }
-              : { left: 0, right: 0, bottom: bottomBarHeight + 12, alignItems: 'center' },
-          ]}>
-          {focalDial}
-        </View>
-
-        {cameraHudVisibility.showFocusExposureBar ? (
+        {/* Transient focus / EV bar — only while AF is locked (tap-to-focus). */}
+        {chrome.showFocusExposureBar ? (
           <FocusExposureBar
             value={evValue}
             themeColor={themeColor}
-            bottomOffset={focusEvBarBottom}
+            anchor={tapFocus.focusPoint}
+            bottomOffset={chromeTop + 12}
             isLandscape={isLandscape}
             onChange={(v) => setHud({ evValue: v })}
           />
         ) : null}
 
-        <View
-          pointerEvents="none"
-          style={[
-            styles.autoBadgeWrap,
-            isLandscape
-              ? { right: SHUTTER_ROW_LANDSCAPE_WIDTH + 12, bottom: safeAreaBottomPad + 80 }
-              : { left: 0, right: 0, bottom: bottomBarHeight + 156 },
-            !cameraHudVisibility.showAutoCaptureBadge && styles.hidden,
-          ]}>
-          <AutoCaptureStatusBadge
-            remainingMs={autoCapture.remainingMs}
-            sustainMs={AUTO_SUSTAIN_MS}
-            themeColor={themeColor}
-          />
-        </View>
-
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.captureHistoryWrap,
-            isLandscape
-              ? {
-                  right: SHUTTER_ROW_LANDSCAPE_WIDTH + 8,
-                  top: topBarBottom + 48,
-                  bottom: safeAreaBottomPad + 96,
-                  width: 56,
-                }
-              : {
-                  left: 0,
-                  right: 0,
-                  bottom: bottomBarHeight + 84,
-                  height: 60,
-                },
-            !cameraHudVisibility.showCaptureHistory && styles.hidden,
-          ]}>
-          <CaptureHistoryStrip
-            uris={captureSession.shots.map((s) => s.uri)}
-            onSelect={(uri) => {
-              const shot = captureSession.shots.find((s) => s.uri === uri);
-              if (shot) navigateToPreview(shot);
-            }}
-            themeColor={themeColor}
-            isLandscape={isLandscape}
-          />
-        </View>
-
-        {/* Portrait: overlay controls bar + shutter row in a fixed bottom panel */}
-        {!isLandscape && (
-          <View
-            style={[
-              styles.portraitBottomPanel,
-              {
-                bottom: safeAreaBottomPad,
-                height: CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
-                paddingHorizontal: Math.max(16, insets.left),
-              },
-            ]}>
-            <ShutterRow
+        {/* Auto-capture countdown badge — alignment readout, kept in both orientations. */}
+        {chrome.showAutoCaptureBadge ? (
+          <View pointerEvents="none" style={[styles.floatCenter, { bottom: chromeTop + 56 }]}>
+            <AutoCaptureStatusBadge
+              remainingMs={autoCapture.remainingMs}
+              sustainMs={AUTO_SUSTAIN_MS}
               themeColor={themeColor}
-              capturing={anyCapturing}
+            />
+          </View>
+        ) : null}
+
+        {/* Expanded capture-history strip — toggled from the gallery thumb. */}
+        {historyOpen && chrome.showCaptureHistory ? (
+          <View
+            pointerEvents="box-none"
+            style={[styles.floatCenter, { bottom: chromeTop + 8, height: 60 }]}>
+            <CaptureHistoryStrip
+              uris={captureSession.shots.map((s) => s.uri)}
+              onSelect={(uri) => {
+                const shot = captureSession.shots.find((s) => s.uri === uri);
+                if (shot) navigateToPreview(shot);
+              }}
+              themeColor={themeColor}
               isLandscape={false}
-              animateCapture={settings.animateShutter}
-              isFrontFacing={facing === 'front'}
-              onShutter={onShutter}
-              onLongPress={onShutterLongPress}
-              onPickLibrary={handlePickLibraryImage}
-              onFlip={toggleFacing}
-              burst={
-                burst.capturing
-                  ? { active: true, captured: burst.captured, total: burst.total }
-                  : undefined
-              }
             />
           </View>
-        )}
+        ) : null}
 
-        <OverlayDock
-          open={overlayDockOpen}
-          onToggle={() => setHud((h) => ({ overlayDockOpen: !h.overlayDockOpen }))}
-          themeColor={themeColor}
-          isLandscape={isLandscape}
-          bottomBarHeight={bottomBarHeight}
-          bottomPad={safeAreaBottomPad}
-          clusterReserve={SHUTTER_ROW_LANDSCAPE_WIDTH}
-          leftInset={insets.left}
-          rightInset={insets.right}>
-          {overlayControls}
-        </OverlayDock>
-
-        {isLandscape && (
-          <View
-            style={[
-              styles.landscapeCluster,
-              { right: insets.right, top: topBarBottom, bottom: safeAreaBottomPad },
-            ]}>
-            <ShutterRow
-              themeColor={themeColor}
-              capturing={anyCapturing}
-              isLandscape={true}
-              animateCapture={settings.animateShutter}
-              isFrontFacing={facing === 'front'}
-              onShutter={onShutter}
-              onLongPress={onShutterLongPress}
-              onPickLibrary={handlePickLibraryImage}
-              onFlip={toggleFacing}
-              burst={
-                burst.capturing
-                  ? { active: true, captured: burst.captured, total: burst.total }
-                  : undefined
-              }
-            />
-          </View>
-        )}
-
-        <View
-          pointerEvents="none"
-          style={[
-            styles.modeToastWrap,
-            isLandscape
-              ? {
-                  left: insets.left + 16,
-                  right: SHUTTER_ROW_LANDSCAPE_WIDTH,
-                  bottom: safeAreaBottomPad + 24,
-                }
-              : { left: 0, right: 0, bottom: bottomBarHeight + 156 },
-          ]}>
+        {/* Toasts (capture-mode / auto-capture / lens-switch). */}
+        <View pointerEvents="none" style={[styles.floatCenter, { bottom: chromeTop + 104 }]}>
           <CaptureModeToast
             toast={captureModeToast}
             themeColor={themeColor}
@@ -1684,6 +1566,105 @@ export default function CompareCaptureScreen() {
           />
           <AutoCaptureToast toast={autoCaptureToast} themeColor={themeColor} />
           <CamSwitchToast toast={switchToast} themeColor={themeColor} />
+        </View>
+
+        {/* ── Bottom chrome bands — fixed at the bottom edge in BOTH orientations ── */}
+
+        {/* Overlay quick-controls popover (reposition/flip/edge/subject), above the zoom band. */}
+        {chrome.showOverlayQuickControls ? (
+          <View
+            pointerEvents="box-none"
+            style={[styles.bandRow, { bottom: overlayQuickControlsBottom }]}>
+            <OverlayQuickControls
+              mode={overlayMode}
+              edgeIntensity={edgeIntensity}
+              subjectFocus={subjectFocus}
+              subjectCombine={subjectCombine}
+              characterSelected={character !== null}
+              flipped={overlayTransform.flipped}
+              editMode={editMode}
+              themeColor={themeColor}
+              onSelectEdgeIntensity={(i) => persistOverlayKnob({ edgeIntensity: i })}
+              onSelectSubjectFocus={(f) => persistOverlayKnob({ subjectFocus: f })}
+              onToggleSubjectCombine={() => persistOverlayKnob({ subjectCombine: !subjectCombine })}
+              onOpenCharacterPicker={() => setCharacterPickerOpen(true)}
+              onToggleFlip={overlayTransform.toggleFlip}
+              onToggleEdit={handleToggleEdit}
+            />
+          </View>
+        ) : null}
+
+        {/* Zoom band: preset pills + opacity pill. Pinch stays on the preview (unchanged). */}
+        {chrome.showZoomBand ? (
+          <View pointerEvents="box-none" style={[styles.bandRow, { bottom: bands.zoomBandBottom }]}>
+            <ZoomPresets
+              stops={availableStops}
+              activeStop={zoom.activeStop as FocalStop | null}
+              themeColor={themeColor}
+              onPick={zoom.setStop}
+              onPickUltraWide={
+                cohortHint?.hasStandaloneUltraWide
+                  ? () => handleRequestSwitch('ultra-wide')
+                  : undefined
+              }
+              rotateLabels={rotateGlyphs}
+            />
+            {chrome.showOpacityPill ? (
+              <OverlayOpacityPill
+                opacity={overlayOpacity}
+                themeColor={themeColor}
+                onChange={(o) => setHud({ overlayOpacity: o })}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Overlay-mode carousel — the primary align-with-scene control. */}
+        <View pointerEvents="box-none" style={[styles.bandRow, { bottom: bands.carouselBottom }]}>
+          <OverlayModeCarousel
+            index={carouselIndex}
+            onChangeIndex={handleCarouselChange}
+            themeColor={themeColor}
+            isLandscape={isLandscape}
+            orientationMode={orientationMode}
+          />
+        </View>
+
+        {/* Bottom row: gallery | shutter | flip — fixed bottom, glyphs rotate in landscape. */}
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.bottomRow,
+            {
+              bottom: bands.shutterRowBottom,
+              height: bands.shutterRowHeight,
+              paddingHorizontal: Math.max(insets.left, insets.right),
+            },
+          ]}>
+          <ShutterRow
+            themeColor={themeColor}
+            capturing={anyCapturing}
+            isLandscape={isLandscape}
+            rotateGlyphs={rotateGlyphs}
+            animateCapture={settings.animateShutter}
+            isFrontFacing={facing === 'front'}
+            onShutter={onShutter}
+            onLongPress={onShutterLongPress}
+            onFlip={toggleFacing}
+            galleryNode={
+              <GalleryThumb
+                uris={captureSession.shots.map((s) => s.uri)}
+                themeColor={themeColor}
+                onPickLibrary={handlePickLibraryImage}
+                onExpand={() => setHistoryOpen((v) => !v)}
+              />
+            }
+            burst={
+              burst.capturing
+                ? { active: true, captured: burst.captured, total: burst.total }
+                : undefined
+            }
+          />
         </View>
 
         <CountdownOverlay
@@ -1737,8 +1718,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
-  focalDock: { position: 'absolute', zIndex: 58 },
-  autoBadgeWrap: { position: 'absolute', alignItems: 'center', zIndex: 60 },
   autoModeBadgeWrap: { position: 'absolute', zIndex: 66 },
   autoModeBadge: {
     flexDirection: 'row',
@@ -1749,24 +1728,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  modeToastWrap: { position: 'absolute', alignItems: 'center', zIndex: 80 },
-  captureHistoryWrap: { position: 'absolute', alignItems: 'center', zIndex: 58 },
-  portraitBottomPanel: {
+  // Banded chrome — every band is full-width and positioned by `bottom` from the resolver,
+  // identical in both orientations (no right-edge column).
+  bandRow: {
     position: 'absolute',
     left: 0,
     right: 0,
     zIndex: 70,
-    paddingBottom: 6,
-    justifyContent: 'center',
-  },
-  landscapeCluster: {
-    position: 'absolute',
-    zIndex: 70,
-    width: SHUTTER_ROW_LANDSCAPE_WIDTH,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
-  hidden: { display: 'none' },
+  bottomRow: { position: 'absolute', left: 0, right: 0, zIndex: 70, justifyContent: 'center' },
+  floatCenter: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 80 },
   levelHorizonWrap: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',

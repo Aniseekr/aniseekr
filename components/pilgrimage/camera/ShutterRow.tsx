@@ -23,12 +23,17 @@ interface ShutterRowProps {
   /** Front camera active — flips the flip button into its toggled state. */
   isFrontFacing: boolean;
   onShutter: () => void;
-  onPickLibrary: () => void;
+  /** Built-in library button handler. Unused when `galleryNode` is provided. */
+  onPickLibrary?: () => void;
   onFlip: () => void;
   /** Optional long-press handler — triggers burst capture in the parent. */
   onLongPress?: () => void;
   /** When `active`, overlay a progress ring on top of the shutter button. */
   burst?: { active: boolean; captured: number; total: number };
+  /** Replaces the built-in library button (e.g. the merged GalleryThumb) in the left slot. */
+  galleryNode?: ReactNode;
+  /** Rotate the side-button glyphs 90° in place (landscape-locked interface convention). */
+  rotateGlyphs?: boolean;
 }
 
 const SHUTTER_SIZE = 72;
@@ -53,12 +58,15 @@ export default function ShutterRow({
   onFlip,
   onLongPress,
   burst,
+  galleryNode,
+  rotateGlyphs = false,
 }: ShutterRowProps) {
   const t = useT();
   const burstActive = burst?.active === true;
   const shutterDisabled = capturing || burstActive;
   const shutterSize = isLandscape ? SHUTTER_SIZE_LANDSCAPE : SHUTTER_SIZE;
   const coreSize = shutterSize - SHUTTER_GAP;
+  const glyphRotation = rotateGlyphs ? ([{ rotate: '90deg' }] as const) : undefined;
 
   const handleShutterPress = () => {
     if (shutterDisabled) return;
@@ -76,7 +84,7 @@ export default function ShutterRow({
 
   const handleLibraryPress = () => {
     hapticsBridge.tap();
-    onPickLibrary();
+    onPickLibrary?.();
   };
 
   const handleFlipPress = () => {
@@ -124,12 +132,12 @@ export default function ShutterRow({
     </Pressable>
   );
 
-  const library = (
+  const leftSlot = galleryNode ?? (
     <SideButton
       shape="square"
       accessibilityLabel={t('pilgrimageUi.pickPhotoFromLibrary')}
       onPress={handleLibraryPress}>
-      <Ionicons name="images-outline" size={20} color="#fff" />
+      <Ionicons name="images-outline" size={20} color="#fff" style={{ transform: glyphRotation }} />
     </SideButton>
   );
 
@@ -145,13 +153,16 @@ export default function ShutterRow({
         name="camera-reverse-outline"
         size={20}
         color={isFrontFacing ? readableTextOn(themeColor) : '#fff'}
+        style={{ transform: glyphRotation }}
       />
     </SideButton>
   );
 
+  // Bottom row stays horizontal in BOTH orientations (Samsung/Apple convention) — only the
+  // glyphs rotate in place; it never reflows to a right-edge vertical column.
   return (
-    <View style={isLandscape ? styles.clusterColumn : styles.clusterRow}>
-      {library}
+    <View style={styles.clusterRow}>
+      {leftSlot}
       {shutter}
       {flip}
     </View>
@@ -200,11 +211,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 36,
-  },
-  clusterColumn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
   },
   // Shutter — a white ring with a white core, the universal capture affordance.
   shutterRing: {
