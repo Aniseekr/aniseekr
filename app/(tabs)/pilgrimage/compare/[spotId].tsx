@@ -254,7 +254,10 @@ export default function CompareCaptureScreen() {
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
   // Immersive-by-subtraction: landscape auto-hides secondary chrome; a preview tap reveals it.
-  const [immersive, setImmersive] = useState(false);
+  // `revealed` is the user's tap-to-reveal intent; `immersive` is DERIVED from it + orientation
+  // (no reconciling effect — Rule 9). Orientation flips re-arm immersive via render-time reset.
+  const [revealed, setRevealed] = useState(false);
+  const [prevLandscape, setPrevLandscape] = useState(isLandscape);
   // Expanded capture-history strip, toggled from the gallery thumb.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [character, setCharacter] = useState<CharacterEntry | null>(null);
@@ -448,7 +451,7 @@ export default function CompareCaptureScreen() {
       // Drives a real AE/AF/AWB metering operation at the tap location.
       void cameraRef.current?.focus(point);
       // Tapping the preview also reveals the secondary chrome in landscape immersive.
-      setImmersive(false);
+      setRevealed(true);
     },
   });
 
@@ -462,12 +465,6 @@ export default function CompareCaptureScreen() {
     const max = deviceInfo?.maxExposureBias ?? 0;
     exposureShared.value = Math.max(min, Math.min(max, evValue));
   }, [evValue, deviceInfo, exposureShared]);
-
-  // Landscape auto-enters immersive (secondary chrome subtracted); portrait shows everything.
-  // A preview tap (onFocus above) clears it until the next orientation change.
-  useEffect(() => {
-    setImmersive(isLandscape);
-  }, [isLandscape]);
 
   const overlayTransform = useOverlayTransform({ enabled: editMode });
   const getOverlayTransformSnapshot = overlayTransform.getSnapshot;
@@ -1253,6 +1250,13 @@ export default function CompareCaptureScreen() {
   // row + HUD layers always clear the system bar. iOS insets are used as-is.
   const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
   const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
+  // Re-arm immersive whenever orientation flips (adjust-state-during-render, not an effect):
+  // entering landscape starts immersive; a preview tap then clears `revealed` to show everything.
+  if (prevLandscape !== isLandscape) {
+    setPrevLandscape(isLandscape);
+    setRevealed(false);
+  }
+  const immersive = isLandscape && !revealed;
   // Banded chrome: visibility (immersive-by-subtraction) drives the band stack, which is
   // identical in both orientations (the bottom row never reflows to a right-edge column).
   const overlayActive = overlayVisible;
