@@ -1540,6 +1540,8 @@
     "overlayModeA11y": "疊層模式 {mode}",
     "overlayOff": "疊層關閉",
     "overlayOpacity": "疊層不透明度",
+    "previousOverlayMode": "上一個疊層模式",
+    "nextOverlayMode": "下一個疊層模式",
     "peach": "蜜桃色",
     "photoAccessNeededAllowPhotoMessage": "允許圖庫存取,即可為現有照片評分。",
     "photoAccessNeededAllowPhotoTitle": "需要照片權限",

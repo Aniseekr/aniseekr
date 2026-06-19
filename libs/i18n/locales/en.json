@@ -1540,6 +1540,8 @@
     "overlayModeA11y": "Overlay mode {mode}",
     "overlayOff": "Overlay Off",
     "overlayOpacity": "Overlay opacity",
+    "previousOverlayMode": "Previous overlay mode",
+    "nextOverlayMode": "Next overlay mode",
     "peach": "Peach",
     "photoAccessNeededAllowPhotoMessage": "Allow photo library access to score an existing image.",
     "photoAccessNeededAllowPhotoTitle": "Photo access needed",
