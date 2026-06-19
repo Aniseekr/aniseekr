@@ -245,7 +245,6 @@ export default function CompareCaptureScreen() {
     evValue,
     orientationMode,
     settingsOpen,
-    quickControlsOpen,
     overlayVisible,
     captureModeToast,
     autoCaptureToast,
@@ -1254,7 +1253,6 @@ export default function CompareCaptureScreen() {
   // row + HUD layers always clear the system bar. iOS insets are used as-is.
   const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
   const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
-  const topBarBottom = insets.top + resolveCameraTopChromeHeight({ quickControlsOpen });
   // Banded chrome: visibility (immersive-by-subtraction) drives the band stack, which is
   // identical in both orientations (the bottom row never reflows to a right-edge column).
   const overlayActive = overlayVisible;
@@ -1265,6 +1263,10 @@ export default function CompareCaptureScreen() {
     afLocked: tapFocus.afLocked,
     overlayActive,
   });
+  // Top contextual row (timer/aspect/orientation/guide) participates in the top-chrome height
+  // only while shown — it auto-hides in landscape immersive alongside the other secondary chrome.
+  const topBarBottom =
+    insets.top + resolveCameraTopChromeHeight({ quickControlsOpen: chrome.showTopContextIcons });
   const bands = resolveCameraBandLayout({
     bottomInset: safeAreaBottomPad,
     showZoomBand: chrome.showZoomBand,
@@ -1409,8 +1411,7 @@ export default function CompareCaptureScreen() {
               />
             </>
           }
-          quickControlsExpanded={quickControlsOpen}
-          onToggleQuickControls={() => setHud((h) => ({ quickControlsOpen: !h.quickControlsOpen }))}
+          showQuickControls={chrome.showTopContextIcons}
           quickControls={
             <>
               <CountdownChip
