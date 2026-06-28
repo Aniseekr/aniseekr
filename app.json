@@ -158,7 +158,8 @@
           "enableFullScreenImage_legacy": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@rnrepo/expo-config-plugin"
     ],
     "orientation": "default",
     "icon": "./assets/icon.png",

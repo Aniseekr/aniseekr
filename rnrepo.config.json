@@ -1,0 +1,6 @@
+{
+  "denyList": {
+    "android": ["react-native-nitro-modules"],
+    "ios": ["react-native-nitro-modules"]
+  }
+}
