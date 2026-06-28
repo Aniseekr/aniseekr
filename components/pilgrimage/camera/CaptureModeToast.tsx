@@ -12,6 +12,7 @@ import { readableTextOn, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import type { CaptureMode } from '../../../hooks/useCameraSettings';
 import { captureModeToastCopy } from '../../../libs/services/pilgrimage/capture-mode-copy';
+import { CameraChrome } from './cameraChrome';
 
 // Frame counts are the real values the capture hooks use. Burst still picks
 // the best alignment score, not sharpness. HDR copy is resolved at render time:
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   iconBadge: {
     width: 28,
     height: 28,
-    borderRadius: 9,
+    borderRadius: CameraChrome.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

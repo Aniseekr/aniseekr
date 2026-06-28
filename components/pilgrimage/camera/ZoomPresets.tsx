@@ -45,7 +45,7 @@ function ZoomPresetsComponent({ stops, activeStop, themeColor, onPick, onPickUlt
               if (stop === 0.5 && onPickUltraWide) onPickUltraWide();
               onPick(stop);
             }}
-            style={[styles.pill, active && { backgroundColor: themeColor }]}
+            style={({ pressed }) => [styles.pill, active && { backgroundColor: themeColor }, pressed && { transform: [{ scale: 0.96 }] }]}
           >
             <Text style={[styles.label, { color: fg, transform: [{ rotate }] }]}>{formatFocalStopLabel(stop)}</Text>
           </Pressable>
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: CameraChrome.border,
   },
-  label: { fontSize: 13, fontWeight: '700' },
+  label: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });
 
 export default memo(ZoomPresetsComponent);

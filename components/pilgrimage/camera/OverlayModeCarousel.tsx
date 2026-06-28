@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
@@ -22,6 +23,57 @@ interface OverlayModeCarouselProps {
   themeColor: string;
   isLandscape: boolean;
   orientationMode: CameraOrientationMode;
+}
+
+interface CarouselItemProps {
+  item: (typeof OVERLAY_CAROUSEL_ITEMS)[number];
+  itemIndex: number;
+  active: number;
+  themeColor: string;
+  rotate: string;
+  onPress: () => void;
+  label: string;
+}
+
+/**
+ * One carousel slot. Hook-free: the active slot's label pops in / fades out via
+ * Reanimated layout animations (`entering`/`exiting`) instead of React state, so
+ * the mount/unmount choreography stays off the render path (Rule 9) and the slot
+ * remains renderable by the synthetic unit-test renderer.
+ */
+function CarouselItem({ item, itemIndex, active, themeColor, rotate, onPress, label }: CarouselItemProps) {
+  const selected = itemIndex === active;
+  const fg = selected ? readableTextOn(themeColor) : CameraChrome.fg;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.item,
+        selected && { backgroundColor: themeColor },
+        cameraControlShadow,
+        pressed && { opacity: 0.85 },
+      ]}>
+      <Ionicons
+        name={item.icon as keyof typeof Ionicons.glyphMap}
+        size={16}
+        color={fg}
+        style={{ transform: [{ rotate }] }}
+      />
+      {selected ? (
+        <Animated.Text
+          entering={ZoomIn.springify().damping(20).stiffness(300)}
+          exiting={ZoomOut.duration(120)}
+          style={[styles.label, { color: fg, transform: [{ rotate }] }]}
+          numberOfLines={1}>
+          {label}
+        </Animated.Text>
+      ) : null}
+    </Pressable>
+  );
 }
 
 /**
@@ -64,46 +116,29 @@ function OverlayModeCarouselComponent({
           accessibilityLabel={t('pilgrimageUi.previousOverlayMode')}
           onPress={() => step(prevOverlayIndex(active))}
           hitSlop={8}
-          style={styles.chevron}
-        >
+          style={({ pressed }) => [styles.chevron, pressed && { opacity: 0.85 }]}>
           <Ionicons name="chevron-back" size={18} color={CameraChrome.fg} />
         </Pressable>
         <View style={styles.items} pointerEvents="box-none">
-          {OVERLAY_CAROUSEL_ITEMS.map((item, i) => {
-            const selected = i === active;
-            const label = t(item.labelKey);
-            const fg = selected ? readableTextOn(themeColor) : CameraChrome.fg;
-            return (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={label}
-                onPress={() => step(i)}
-                style={[styles.item, selected && { backgroundColor: themeColor }, cameraControlShadow]}
-              >
-                <Ionicons
-                  name={item.icon as keyof typeof Ionicons.glyphMap}
-                  size={16}
-                  color={fg}
-                  style={{ transform: [{ rotate }] }}
-                />
-                {selected ? (
-                  <Text style={[styles.label, { color: fg, transform: [{ rotate }] }]} numberOfLines={1}>
-                    {label}
-                  </Text>
-                ) : null}
-              </Pressable>
-            );
-          })}
+          {OVERLAY_CAROUSEL_ITEMS.map((item, i) => (
+            <CarouselItem
+              key={item.id}
+              item={item}
+              itemIndex={i}
+              active={active}
+              themeColor={themeColor}
+              rotate={rotate}
+              onPress={() => step(i)}
+              label={t(item.labelKey)}
+            />
+          ))}
         </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('pilgrimageUi.nextOverlayMode')}
           onPress={() => step(nextOverlayIndex(active))}
           hitSlop={8}
-          style={styles.chevron}
-        >
+          style={({ pressed }) => [styles.chevron, pressed && { opacity: 0.85 }]}>
           <Ionicons name="chevron-forward" size={18} color={CameraChrome.fg} />
         </Pressable>
       </View>

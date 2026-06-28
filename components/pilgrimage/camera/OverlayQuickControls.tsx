@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     minWidth: 46,
     height: 26,
     paddingHorizontal: 10,
-    borderRadius: 13,
+    borderRadius: CameraChrome.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

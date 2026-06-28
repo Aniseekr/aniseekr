@@ -45,6 +45,25 @@ function formatHeadingDelta(deg: number | null): string {
   return `${rounded > 0 ? '+' : ''}${rounded}°`;
 }
 
+/** Fades in from opacity 0 on mount — used for the reposition/rotation row. */
+function FadeInView({ top, children }: { top: number; children: React.ReactNode }) {
+  const opacity = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    RNAnimated.timing(opacity, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [opacity]);
+  return (
+    <RNAnimated.View
+      style={[styles.repositionRow, { top, opacity }]}
+      pointerEvents="box-none">
+      {children}
+    </RNAnimated.View>
+  );
+}
+
 /**
  * The alignment readout. A single badge sits below the top bar on the right:
  * while the framing is off it shows the live %, distance and heading delta so
@@ -68,14 +87,22 @@ export default function AlignmentHUD({
   const { theme } = useTheme();
   const t = useT();
   const perfectOpacity = useRef(new RNAnimated.Value(showPerfectBanner ? 1 : 0)).current;
+  const perfectTranslateY = useRef(new RNAnimated.Value(showPerfectBanner ? 0 : 6)).current;
 
   useEffect(() => {
-    RNAnimated.timing(perfectOpacity, {
-      toValue: showPerfectBanner ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [showPerfectBanner, perfectOpacity]);
+    RNAnimated.parallel([
+      RNAnimated.timing(perfectOpacity, {
+        toValue: showPerfectBanner ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(perfectTranslateY, {
+        toValue: showPerfectBanner ? 0 : 6,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [showPerfectBanner, perfectOpacity, perfectTranslateY]);
 
   const percentText = formatPercent(score.total);
   const aligned = score.total !== null && score.total >= ALIGNED_THRESHOLD;
@@ -112,7 +139,7 @@ export default function AlignmentHUD({
             <ThemedText
               variant="captionSmall"
               weight="700"
-              style={{ color: '#fff', letterSpacing: 0.3 }}>
+              style={{ color: '#fff', letterSpacing: 0.3, fontVariant: ['tabular-nums'] }}>
               {aligned
                 ? t('pilgrimageUi.aligned', { percent: percentText })
                 : `${percentText} · ${formatDistance(score.distanceMeters)} · ${formatHeadingDelta(
@@ -124,11 +151,14 @@ export default function AlignmentHUD({
       ) : null}
 
       {transformed || showRotationBadge ? (
-        <View style={[styles.repositionRow, { top: rowTop }]} pointerEvents="box-none">
+        <FadeInView top={rowTop}>
           {showRotationBadge ? (
             <View style={[styles.rotationBadge, { borderColor: themeColor }]} pointerEvents="none">
               <Ionicons name="sync" size={12} color={themeColor} />
-              <ThemedText variant="captionSmall" weight="700" style={{ color: theme.text.primary }}>
+              <ThemedText
+                variant="captionSmall"
+                weight="700"
+                style={{ color: theme.text.primary, fontVariant: ['tabular-nums'] }}>
                 {`${rotationDisplayDeg > 0 ? '+' : ''}${rotationDisplayDeg}°`}
               </ThemedText>
             </View>
@@ -147,7 +177,7 @@ export default function AlignmentHUD({
               </ThemedText>
             </Pressable>
           ) : null}
-        </View>
+        </FadeInView>
       ) : null}
 
       {showPerfectBanner ? (
@@ -158,7 +188,11 @@ export default function AlignmentHUD({
             isLandscape
               ? { bottom: bottomInset + 28, left: '14%', right: rightReserve + 24 }
               : { bottom: bottomBarHeight + 20, left: '12%', right: '12%' },
-            { backgroundColor: theme.status.success, opacity: perfectOpacity },
+            {
+              backgroundColor: theme.status.success,
+              opacity: perfectOpacity,
+              transform: [{ translateY: perfectTranslateY }],
+            },
           ]}>
           {/* White text over success accent — readable per status.success contrast. */}
           <Ionicons name="checkmark-circle" size={18} color="#fff" />

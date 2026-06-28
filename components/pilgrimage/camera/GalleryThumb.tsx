@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { fontSize: 11, fontWeight: '800' },
+  badgeText: { fontSize: 11, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });
 
 export default memo(GalleryThumbComponent);

@@ -36,7 +36,9 @@ export const CameraChrome = {
   groupHeight: 42,
   /** Secondary control height — contextual sub-row pills. */
   subControlHeight: 30,
-  /** Corner radius for a standalone pill / chip. */
+  /** Corner radius for a small squared chip / badge (toast icon badge, lock pill, quick-control chip). */
+  chipRadius: 6,
+  /** Corner radius for a standalone rounded pill (overlay carousel item, zoom preset). */
   pillRadius: 18,
   /** Corner radius for a grouped container (segmented bar, slider pill). */
   groupRadius: 20,

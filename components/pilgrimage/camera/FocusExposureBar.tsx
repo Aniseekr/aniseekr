@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { roundExposureValue } from '../../../libs/services/pilgrimage/camera-ui';
+import { CameraChrome } from './cameraChrome';
 import type { FocusPoint } from './types';
 
 interface FocusExposureBarProps {
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
   lockPill: {
     minHeight: 34,
     minWidth: 82,
-    borderRadius: 17,
+    borderRadius: CameraChrome.chipRadius,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,5 +112,6 @@ const styles = StyleSheet.create({
   valueText: {
     width: 58,
     color: '#fff',
+    fontVariant: ['tabular-nums'],
   },
 });

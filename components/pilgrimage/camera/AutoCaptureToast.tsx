@@ -10,6 +10,7 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
+import { CameraChrome } from './cameraChrome';
 
 /**
  * A fresh object identity each time auto-capture fires re-triggers the toast —
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
   iconBadge: {
     width: 28,
     height: 28,
-    borderRadius: 9,
+    borderRadius: CameraChrome.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },
