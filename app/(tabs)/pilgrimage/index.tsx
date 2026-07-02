@@ -104,7 +104,7 @@ const NEARBY_TIERS_KM: readonly { km: number; labelKey: string }[] = [
   { km: 30, labelKey: 'tabs.pilgrimageScreen.tier.walking' },
   { km: 100, labelKey: 'tabs.pilgrimageScreen.tier.dayTrip' },
   { km: 500, labelKey: 'tabs.pilgrimageScreen.tier.inRegion' },
-  { km: 5000, labelKey: 'tabs.pilgrimageScreen.tier.inJapan' },
+  { km: 5000, labelKey: 'tabs.pilgrimageScreen.tier.farAway' },
 ];
 const FEATURED_SPOT_LIMIT = 6;
 const POPULAR_LIMIT = 14;
@@ -438,7 +438,7 @@ export default function PilgrimageHubScreen() {
   }, [animeCards, userLocation, spotIntents]);
 
   // Walk through tiers until we find a non-empty one, so users outside Japan
-  // still see something meaningful (even if it just says "in Japan" with the
+  // still see something meaningful (even if it just says "far away" with the
   // closest hub).
   const nearby = useMemo<{ tierLabel: string | null; list: AnimeCard[] }>(() => {
     if (!userLocation) return { tierLabel: null, list: [] };
@@ -450,7 +450,7 @@ export default function PilgrimageHubScreen() {
       const within = sorted.filter((c) => (c.distanceKm ?? Infinity) <= tier.km);
       if (within.length > 0) return { tierLabel: t(tier.labelKey), list: within };
     }
-    return { tierLabel: t('tabs.pilgrimageScreen.tier.inJapan'), list: sorted.slice(0, 5) };
+    return { tierLabel: t('tabs.pilgrimageScreen.tier.farAway'), list: sorted.slice(0, 5) };
   }, [animeCards, userLocation, t]);
 
   const nearbyAnime = nearby.list;

@@ -695,7 +695,7 @@
       },
       "tier": {
         "dayTrip": "day trip · 100 km",
-        "inJapan": "in Japan",
+        "farAway": "Far away",
         "inRegion": "in region · 500 km",
         "walking": "walking · 30 km"
       },
