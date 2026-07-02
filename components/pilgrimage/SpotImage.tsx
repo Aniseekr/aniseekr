@@ -7,13 +7,9 @@ import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
+import { sanitizeImageUri } from './spot-image-uri';
 
-/** Only absolute http(s)/file URLs are renderable by expo-image. */
-export function sanitizeImageUri(uri: string | null | undefined): string | null {
-  if (typeof uri !== 'string') return null;
-  const trimmed = uri.trim();
-  return /^(https?|file):\/\//.test(trimmed) ? trimmed : null;
-}
+export { sanitizeImageUri } from './spot-image-uri';
 
 export interface SpotImageProps {
   uri: string | null | undefined;
@@ -40,6 +36,8 @@ export function SpotImage({
   if (clean === null || failedUri === clean) {
     return (
       <View
+        accessible
+        accessibilityRole="image"
         accessibilityLabel={t('pilgrimage.image.unavailable')}
         style={[styles.fallback, { backgroundColor: theme.background.tertiary }, style]}>
         <Ionicons name="image-outline" size={fallbackIconSize} color={theme.text.tertiary} />

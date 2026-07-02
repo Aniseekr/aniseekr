@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import * as React from 'react';
 import * as Haptics from 'expo-haptics';
 import en from '../../../libs/i18n/locales/en.json';
+import { sanitizeImageUri } from '../../../components/pilgrimage/spot-image-uri';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { findAll, getAllText, render } from './render-helpers';
 
@@ -57,16 +58,14 @@ mock.module('../../../context/ThemeContext', () => ({
 // components directly with no fiber/dispatcher, so a real stateful hook
 // throws "Invalid hook call" here — stub the component to a plain host node.
 // `mock.module` is process-global in bun and outlives this file's `afterEach`,
-// so this factory also re-exports a spec-faithful `sanitizeImageUri` (kept in
-// sync with SpotImage.tsx) — otherwise a later test file that imports the
-// real named export (spot-image.test.ts) would break when the whole suite
-// runs and picks up this leaked mock instead of the real module.
+// so a later test file that imports the real named export (spot-image.test.ts,
+// which now imports from the pure `spot-image-uri` module and is never
+// touched by this mock at all) can't be shadowed by a stale stub. The
+// factory re-exports the *real* pure helper (imported above) alongside the
+// hook-free `SpotImage` stub, so any process-wide leak still resolves to
+// real logic, not a hand-copied duplicate.
 mock.module('../../../components/pilgrimage/SpotImage', () => ({
-  sanitizeImageUri: (uri: string | null | undefined): string | null => {
-    if (typeof uri !== 'string') return null;
-    const trimmed = uri.trim();
-    return /^(https?|file):\/\//.test(trimmed) ? trimmed : null;
-  },
+  sanitizeImageUri,
   SpotImage: ({ uri, style, contentFit }: { uri?: string | null; style?: unknown; contentFit?: unknown }) =>
     React.createElement('Image', { source: { uri }, style, contentFit }),
 }));

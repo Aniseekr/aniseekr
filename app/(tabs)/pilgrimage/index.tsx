@@ -804,7 +804,9 @@ function NearbyHero({
         <View style={[styles.roadPath, { backgroundColor: theme.glassBorder, opacity: 0.55 }]} />
       </View>
 
-      <SpotImage uri={nearestAnime?.anime.cover} style={styles.heroCoverArt} contentFit="cover" />
+      {nearestAnime?.anime.cover ? (
+        <SpotImage uri={nearestAnime.anime.cover} style={styles.heroCoverArt} contentFit="cover" />
+      ) : null}
 
       <View
         style={[styles.satPin, { left: 78, top: 48, backgroundColor: theme.background.tertiary }]}

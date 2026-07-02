@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { sanitizeImageUri } from '../../../components/pilgrimage/SpotImage';
+import { sanitizeImageUri } from '../../../components/pilgrimage/spot-image-uri';
 
 describe('sanitizeImageUri', () => {
   test('accepts absolute http(s) urls', () => {
