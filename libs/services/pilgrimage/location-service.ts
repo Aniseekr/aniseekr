@@ -228,7 +228,11 @@ export class LocationService {
    */
   subscribeToUpdates(
     callback: (loc: LatLng) => void,
-    options: { distanceIntervalMeters?: number; timeIntervalMs?: number } = {}
+    options: {
+      distanceIntervalMeters?: number;
+      timeIntervalMs?: number;
+      accuracy?: 'balanced' | 'high';
+    } = {}
   ): Unsubscribe {
     let cancelled = false;
     let watcher: { remove: () => void } | null = null;
@@ -239,7 +243,10 @@ export class LocationService {
       try {
         watcher = await this.module.watchPositionAsync(
           {
-            accuracy: this.module.Accuracy?.Balanced ?? 3,
+            accuracy:
+              options.accuracy === 'high'
+                ? (this.module.Accuracy?.High ?? 4)
+                : (this.module.Accuracy?.Balanced ?? 3),
             distanceInterval: options.distanceIntervalMeters ?? 50,
             timeInterval: options.timeIntervalMs ?? 10_000,
           },

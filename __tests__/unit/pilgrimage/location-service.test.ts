@@ -14,7 +14,7 @@ interface FakePermission {
 }
 
 interface FakeLocationModule {
-  Accuracy: { Balanced: number };
+  Accuracy: { Balanced: number; High: number };
   requestForegroundPermissionsAsync: ReturnType<typeof mock>;
   getForegroundPermissionsAsync: ReturnType<typeof mock>;
   getCurrentPositionAsync: ReturnType<typeof mock>;
@@ -22,7 +22,7 @@ interface FakeLocationModule {
 }
 
 const buildFakeModule = (): FakeLocationModule => ({
-  Accuracy: { Balanced: 3 },
+  Accuracy: { Balanced: 3, High: 4 },
   requestForegroundPermissionsAsync: mock(
     async (): Promise<FakePermission> => ({ status: 'granted', canAskAgain: true })
   ),
@@ -150,6 +150,48 @@ describe('LocationService', () => {
       canAskAgain: true,
     });
     expect(await svc.requestPermission()).toBe(false);
+  });
+
+  it('PILG-LOC-005 subscribeToUpdates passes high-accuracy options through', async () => {
+    const capture: { opts: Record<string, unknown> | null } = { opts: null };
+    fakeModule.watchPositionAsync.mockImplementation(async (opts: Record<string, unknown>) => {
+      capture.opts = opts;
+      return { remove: () => undefined };
+    });
+
+    const svc = LocationService.resetForTests({
+      module: fakeModule as unknown as typeof import('expo-location'),
+    });
+
+    svc.subscribeToUpdates(() => undefined, {
+      accuracy: 'high',
+      distanceIntervalMeters: 10,
+      timeIntervalMs: 3000,
+    });
+    await Bun.sleep(0); // flush the async IIFE
+
+    expect(capture.opts?.accuracy).toBe(4);
+    expect(capture.opts?.distanceInterval).toBe(10);
+    expect(capture.opts?.timeInterval).toBe(3000);
+  });
+
+  it('PILG-LOC-005b subscribeToUpdates omits accuracy to keep the Balanced default', async () => {
+    const capture: { opts: Record<string, unknown> | null } = { opts: null };
+    fakeModule.watchPositionAsync.mockImplementation(async (opts: Record<string, unknown>) => {
+      capture.opts = opts;
+      return { remove: () => undefined };
+    });
+
+    const svc = LocationService.resetForTests({
+      module: fakeModule as unknown as typeof import('expo-location'),
+    });
+
+    svc.subscribeToUpdates(() => undefined);
+    await Bun.sleep(0);
+
+    expect(capture.opts?.accuracy).toBe(3);
+    expect(capture.opts?.distanceInterval).toBe(50);
+    expect(capture.opts?.timeInterval).toBe(10_000);
   });
 });
 
