@@ -467,6 +467,8 @@ export default function PilgrimageMapScreen() {
         city: anime.city ?? '',
         pointsLength: anime.pointsLength ?? 0,
         color: anime.color || theme.accent,
+        // ≥1 known point checked in ⇒ the user has started this anime's route.
+        visited: entry.visitedCount > 0,
       });
     }
     return out;

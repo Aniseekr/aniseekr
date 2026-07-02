@@ -80,7 +80,7 @@ export function resolveMarkerVisual(
     shape: 'balloon',
     ...BALLOON,
     ringColor: m.color,
-    visited: false,
+    visited: !!m.visited,
     badge: m.pointsLength != null ? { text: String(m.pointsLength), kind: 'pts' } : null,
     showStar: false,
   };
