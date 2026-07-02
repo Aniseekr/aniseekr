@@ -198,8 +198,16 @@ export default function PilgrimageMapScreen() {
   const [styleOverride, setStyleOverride] = useState(loadMapStyleOverrideSync);
   useEffect(() => subscribeMapStyleOverride(setStyleOverride), []);
   // 'auto' picks dark at night (18:00–06:00) as well as in a dark app theme.
+  // Poll the hour once a minute so a map left open actually flips (same-value
+  // setState bails, so this is render-free the other 59 minutes).
+  const [clockHour, setClockHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    if (mapThemePref !== 'auto') return;
+    const id = setInterval(() => setClockHour(new Date().getHours()), 60_000);
+    return () => clearInterval(id);
+  }, [mapThemePref]);
   const styleUrl = resolveMapStyleUrl(
-    resolveMapModeWithClock(mapThemePref, effectiveMode, new Date().getHours()),
+    resolveMapModeWithClock(mapThemePref, effectiveMode, clockHour),
     styleOverride
   );
 
@@ -527,6 +535,28 @@ export default function PilgrimageMapScreen() {
     setFlyTick((t) => t + 1);
   }, []);
 
+  // Small clusters delegate to the surface (big ones zoom-to-fit inside the
+  // engine). Fit their bbox; a same-building cluster (degenerate bbox) jumps
+  // past CLUSTER_DISABLE_AT instead so the markers actually separate.
+  const handleClusterPress = useCallback((members: readonly MapMarker[]) => {
+    if (members.length === 0) return;
+    let south = 90,
+      west = 180,
+      north = -90,
+      east = -180;
+    for (const m of members) {
+      south = Math.min(south, m.lat);
+      north = Math.max(north, m.lat);
+      west = Math.min(west, m.lng);
+      east = Math.max(east, m.lng);
+    }
+    if (north - south < 0.0005 && east - west < 0.0005) {
+      mapRef.current?.recenter(members[0].lat, members[0].lng, 16, { animate: true });
+      return;
+    }
+    mapRef.current?.fitBounds?.({ south, west, north, east }, { animate: true });
+  }, []);
+
   // The actual drill-down. Same handler whether the user tapped a marker, the
   // focused card, or a list row. returnTo=map so the detail screen's back
   // button returns to *this* hub map view rather than the tab root.
@@ -740,6 +770,7 @@ export default function PilgrimageMapScreen() {
             onMarkerPress={(m) => {
               if (m.bangumiId != null) handleMarkerPress(m.bangumiId);
             }}
+            onClusterPress={handleClusterPress}
             onBoundsChange={handleMapBoundsChange}
             onPanned={onUserPan}
             onLoadError={handleMapLoadError}
