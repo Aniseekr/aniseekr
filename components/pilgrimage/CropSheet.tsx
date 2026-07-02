@@ -26,6 +26,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../themed';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT, type TranslationKey } from '../../libs/i18n';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import {
   panToCropRegion,
@@ -41,16 +42,21 @@ export type CropSheetProps = {
   onApply: (croppedUri: string) => void;
 };
 
-const ASPECTS: { id: CropAspectId; label: string; hint: string }[] = [
-  { id: 'free', label: 'Free', hint: 'No crop' },
+// `labelKey` holds a TranslationKey for the entries whose label is real UI copy
+// ('Free' / 'Match'); the aspect-ratio entries keep their literal `label`
+// (format codes like '1:1' are not translatable). `hint` copy is not yet in the
+// i18n catalog and is left literal.
+const ASPECTS: { id: CropAspectId; label: string; labelKey?: TranslationKey; hint: string }[] = [
+  { id: 'free', label: 'Free', labelKey: 'pilgrimageUi.free', hint: 'No crop' },
   { id: 'square', label: '1:1', hint: 'Feed' },
   { id: 'portrait', label: '9:16', hint: 'Story' },
   { id: 'landscape', label: '16:9', hint: 'X' },
-  { id: 'matchReference', label: 'Match', hint: 'Same as anime' },
+  { id: 'matchReference', label: 'Match', labelKey: 'pilgrimageUi.match', hint: 'Same as anime' },
 ];
 
 export function CropSheet({ visible, sourceUri, referenceUri, onCancel, onApply }: CropSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const accent = theme.accent;
@@ -250,6 +256,7 @@ export function CropSheet({ visible, sourceUri, referenceUri, onCancel, onApply 
           applying={applying}
           onCancel={onCancel}
           onApply={handleApply}
+          t={t}
         />
 
         <View style={styles.viewport}>
@@ -278,6 +285,7 @@ export function CropSheet({ visible, sourceUri, referenceUri, onCancel, onApply 
           {ASPECTS.map((a) => {
             const active = a.id === aspect;
             const disabled = a.id === 'matchReference' && !refSize;
+            const aspectLabel = a.labelKey ? t(a.labelKey) : a.label;
             return (
               <Pressable
                 key={a.id}
@@ -288,7 +296,7 @@ export function CropSheet({ visible, sourceUri, referenceUri, onCancel, onApply 
                 }}
                 disabled={disabled}
                 accessibilityRole="button"
-                accessibilityLabel={`Crop aspect ${a.label}`}
+                accessibilityLabel={`Crop aspect ${aspectLabel}`}
                 accessibilityState={{ selected: active, disabled }}
                 style={({ pressed }) => [
                   styles.aspectChip,
@@ -302,7 +310,7 @@ export function CropSheet({ visible, sourceUri, referenceUri, onCancel, onApply 
                   variant="captionSmall"
                   weight="700"
                   style={{ color: active ? accentFg : theme.text.primary }}>
-                  {a.label}
+                  {aspectLabel}
                 </ThemedText>
                 <ThemedText
                   variant="captionSmall"
@@ -331,6 +339,7 @@ function CropHeader({
   applying,
   onCancel,
   onApply,
+  t,
 }: {
   theme: ThemePalette;
   accent: string;
@@ -338,6 +347,7 @@ function CropHeader({
   applying: boolean;
   onCancel: () => void;
   onApply: () => void;
+  t: (key: TranslationKey) => string;
 }) {
   return (
     <View style={styles.header}>
@@ -345,7 +355,7 @@ function CropHeader({
         onPress={onCancel}
         hitSlop={14}
         accessibilityRole="button"
-        accessibilityLabel="Cancel crop"
+        accessibilityLabel={t('pilgrimageUi.cancelCrop')}
         style={({ pressed }) => [
           styles.headerBtn,
           {
@@ -357,14 +367,14 @@ function CropHeader({
         <Ionicons name="close" size={20} color={theme.text.primary} />
       </Pressable>
       <ThemedText variant="titleLarge" weight="700">
-        Crop
+        {t('pilgrimageUi.crop')}
       </ThemedText>
       <Pressable
         onPress={onApply}
         disabled={applying}
         hitSlop={14}
         accessibilityRole="button"
-        accessibilityLabel="Apply crop"
+        accessibilityLabel={t('pilgrimageUi.applyCrop')}
         style={({ pressed }) => [
           styles.applyBtn,
           {
@@ -374,7 +384,7 @@ function CropHeader({
         ]}>
         <Ionicons name="checkmark" size={18} color={accentFg} />
         <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
-          Apply
+          {t('pilgrimageUi.apply')}
         </ThemedText>
       </Pressable>
     </View>

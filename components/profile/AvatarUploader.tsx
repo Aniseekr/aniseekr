@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { UserRepository } from '../../libs/repositories/user-repository';
+import { useT } from '../../libs/i18n';
 
 interface AvatarUploaderProps {
   currentAvatarUrl?: string | null;
@@ -29,6 +30,7 @@ async function ensureAvatarDir(): Promise<string | null> {
 }
 
 export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderProps) {
+  const t = useT();
   const [uri, setUri] = useState<string | null>(currentAvatarUrl ?? null);
   const [busy, setBusy] = useState(false);
 
@@ -43,12 +45,16 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
       const next = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (next.granted) return true;
     }
-    Alert.alert('Photo access needed', 'Allow photo library access to choose an avatar.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open settings', onPress: () => Linking.openSettings() },
-    ]);
+    Alert.alert(
+      t('profile.photoAccessNeededAllowPhotoTitle'),
+      t('profile.photoAccessNeededAllowPhotoMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: 'Open settings', onPress: () => Linking.openSettings() },
+      ],
+    );
     return false;
-  }, []);
+  }, [t]);
 
   const handlePick = useCallback(async () => {
     if (busy) return;
@@ -68,7 +74,10 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
       const asset = result.assets[0];
       const dir = await ensureAvatarDir();
       if (!dir) {
-        Alert.alert('Storage unavailable', 'Could not access local storage.');
+        Alert.alert(
+          t('profile.storageUnavailableCouldNotAccessTitle'),
+          t('profile.storageUnavailableCouldNotAccessMessage'),
+        );
         return;
       }
       const dest = `${dir}${Date.now()}.jpg`;
@@ -87,11 +96,14 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
     } catch (e) {
       console.warn('[AvatarUploader] failed:', e);
       hapticsBridge.error();
-      Alert.alert('Could not update avatar', 'Please try again.');
+      Alert.alert(
+        t('profile.couldNotUpdateAvatarPleaseTitle'),
+        t('profile.couldNotUpdateAvatarPleaseMessage'),
+      );
     } finally {
       setBusy(false);
     }
-  }, [busy, requestPermission, onChange]);
+  }, [busy, requestPermission, onChange, t]);
 
   const handleRemove = useCallback(async () => {
     if (busy) return;
@@ -137,7 +149,7 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
               styles.removeButton,
               { opacity: busy ? 0.6 : pressed ? 0.85 : 1 },
             ]}>
-            <Text style={styles.removeLabel}>Remove</Text>
+            <Text style={styles.removeLabel}>{t('profile.remove')}</Text>
           </Pressable>
         ) : null}
       </View>

@@ -26,6 +26,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ON_DARK, ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type {
   AnitabiBangumi,
@@ -119,6 +120,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     hasIntentForGroup,
   } = props;
 
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => [...SHEET_SNAPS], []);
@@ -347,7 +349,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
 
       <View style={styles.sectionTitleRow}>
         <ThemedText variant="titleMedium" weight="800">
-          Scene spots
+          {t('pilgrimageUi.sceneSpots')}
         </ThemedText>
         <ThemedText variant="bodySmall" tone="secondary">
           {totalSpotCount} {totalSpotCount === 1 ? 'place' : 'places'}

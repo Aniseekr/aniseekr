@@ -21,6 +21,7 @@ import { collectionService } from '../../libs/services/collection/collection-ser
 import { CollectionFolder } from '../../types';
 import { asIoniconsName } from '../../libs/utils/icon-types';
 import { sheetEnter } from '../../libs/animations/presets';
+import { useT } from '../../libs/i18n';
 
 const ICON_OPTIONS = [
   'folder',
@@ -51,6 +52,7 @@ function FolderPickerComponent({
   onAdded,
 }: FolderPickerProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [folders, setFolders] = useState<CollectionFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
@@ -139,7 +141,9 @@ function FolderPickerComponent({
               <View style={styles.handle} />
               <View style={styles.headerRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.title, { color: theme.text.primary }]}>Add to folder</Text>
+                  <Text style={[styles.title, { color: theme.text.primary }]}>
+                    {t('rate.addToFolder')}
+                  </Text>
                   <Text
                     style={[styles.subtitle, { color: theme.text.secondary }]}
                     numberOfLines={1}>
@@ -154,7 +158,7 @@ function FolderPickerComponent({
               {showCreate ? (
                 <View>
                   <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                    New folder name
+                    {t('rate.newFolderName')}
                   </Text>
                   <TextInput
                     value={newName}
@@ -170,7 +174,9 @@ function FolderPickerComponent({
                       },
                     ]}
                   />
-                  <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Icon</Text>
+                  <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                    {t('commonUi.icon')}
+                  </Text>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -212,7 +218,7 @@ function FolderPickerComponent({
                       color={newR18 ? theme.accent : theme.text.tertiary}
                     />
                     <Text style={[styles.r18Label, { color: theme.text.primary }]}>
-                      Folder contains R18 content
+                      {t('rate.folderContainsR18Content')}
                     </Text>
                   </Pressable>
 
@@ -225,7 +231,7 @@ function FolderPickerComponent({
                         { borderColor: theme.glassBorder },
                       ]}>
                       <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
-                        Back
+                        {t('common.back')}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -241,7 +247,7 @@ function FolderPickerComponent({
                       {adding === '__new' ? (
                         <ActivityIndicator color="#0E0A06" />
                       ) : (
-                        <Text style={styles.confirmLabel}>Create & add</Text>
+                        <Text style={styles.confirmLabel}>{t('rate.createAdd')}</Text>
                       )}
                     </Pressable>
                   </View>
@@ -301,7 +307,7 @@ function FolderPickerComponent({
                     style={[styles.createNew, { borderColor: theme.glassBorder }]}>
                     <MaterialIcons name="create-new-folder" size={20} color={theme.accent} />
                     <Text style={[styles.createNewLabel, { color: theme.accent }]}>
-                      Create new folder
+                      {t('rate.createNewFolder')}
                     </Text>
                   </Pressable>
                 </>

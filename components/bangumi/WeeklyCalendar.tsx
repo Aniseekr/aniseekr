@@ -3,11 +3,13 @@
 // (orange accent for today, glass border otherwise).
 
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { Anime } from '../rate/types';
 import { pushAnimeDetail, prefetchAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 
 interface WeeklyCalendarProps {
   weekDays: string[];
@@ -23,6 +25,7 @@ export function WeeklyCalendar({
   dayShortName,
 }: WeeklyCalendarProps) {
   const router = useRouter();
+  const t = useT();
 
   const renderDayColumn = (day: string) => {
     const dayData = groupedAnime.find((d) => d.day === day) || { day, anime: [] };
@@ -43,7 +46,7 @@ export function WeeklyCalendar({
           {dayData.anime.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialIcons name="tv-off" size={32} color={Colors.text.tertiary} />
-              <Text style={styles.emptyText}>No Signal</Text>
+              <Text style={styles.emptyText}>{t('bangumiTab.noSignal')}</Text>
             </View>
           ) : (
             <View style={{ gap: Spacing.sm }}>
@@ -58,9 +61,7 @@ export function WeeklyCalendar({
                     style={styles.animeImage}
                     resizeMode="cover"
                   />
-                  <Text style={styles.animeTitle} numberOfLines={2}>
-                    {anime.title}
-                  </Text>
+                  <AnimeTitleText anime={anime} style={styles.animeTitle} numberOfLines={2} />
                 </Pressable>
               ))}
             </View>

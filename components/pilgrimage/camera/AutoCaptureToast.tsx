@@ -9,6 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
+import { CameraChrome } from './cameraChrome';
 
 /**
  * A fresh object identity each time auto-capture fires re-triggers the toast —
@@ -35,6 +37,7 @@ interface AutoCaptureToastProps {
  * that tells them a shot was banked — the count is the real session length.
  */
 export default function AutoCaptureToast({ toast, themeColor }: AutoCaptureToastProps) {
+  const t = useT();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(8);
 
@@ -63,7 +66,7 @@ export default function AutoCaptureToast({ toast, themeColor }: AutoCaptureToast
         <Ionicons name="sparkles-outline" size={15} color={readableTextOn(themeColor)} />
       </View>
       <ThemedText variant="caption" weight="700" style={styles.label}>
-        {`已自動預拍 · ${toast.sessionCount}`}
+        {t('pilgrimageUi.autoCaptured', { count: toast.sessionCount })}
       </ThemedText>
     </Animated.View>
   );
@@ -86,7 +89,7 @@ const styles = StyleSheet.create({
   iconBadge: {
     width: 28,
     height: 28,
-    borderRadius: 9,
+    borderRadius: CameraChrome.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

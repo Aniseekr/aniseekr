@@ -7,6 +7,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 interface EditDisplayNameSheetProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export function EditDisplayNameSheet({
   onSave,
 }: EditDisplayNameSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [name, setName] = useState(currentName);
   const [saving, setSaving] = useState(false);
 
@@ -32,7 +34,10 @@ export function EditDisplayNameSheet({
   const handleSave = useCallback(async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      Alert.alert('Display name', 'Please enter a name.');
+      Alert.alert(
+        t('profile.displayNamePleaseEnterATitle'),
+        t('profile.displayNamePleaseEnterAMessage'),
+      );
       return;
     }
     setSaving(true);
@@ -42,7 +47,7 @@ export function EditDisplayNameSheet({
       onClose();
     } catch (e) {
       hapticsBridge.warning();
-      Alert.alert('Save failed', e instanceof Error ? e.message : 'Could not save.');
+      Alert.alert(t('profile.saveFailed'), e instanceof Error ? e.message : t('profile.couldNotSave'));
     } finally {
       setSaving(false);
     }
@@ -68,14 +73,14 @@ export function EditDisplayNameSheet({
             <SafeAreaView edges={['bottom']}>
               <View style={styles.handle} />
               <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>Edit display name</Text>
+                <Text style={[styles.title, { color: theme.text.primary }]}>{t('profile.editDisplayName')}</Text>
                 <Pressable onPress={onClose} hitSlop={12}>
                   <MaterialIcons name="close" size={22} color={theme.text.secondary} />
                 </Pressable>
               </View>
 
               <Text style={[styles.helperText, { color: theme.text.secondary }]}>
-                Stored on this device only. No account needed.
+                {t('profile.storedOnThisDeviceOnly')}
               </Text>
 
               <TextInput
@@ -89,7 +94,7 @@ export function EditDisplayNameSheet({
                 ]}
                 value={name}
                 onChangeText={setName}
-                placeholder="Anime fan"
+                placeholder={t('profile.animeFan')}
                 placeholderTextColor={theme.text.tertiary}
                 autoCapitalize="words"
                 autoCorrect={false}
@@ -106,7 +111,7 @@ export function EditDisplayNameSheet({
                   styles.saveButton,
                   { backgroundColor: theme.accent, opacity: saving ? 0.5 : pressed ? 0.85 : 1 },
                 ]}>
-                <Text style={styles.saveLabel}>{saving ? 'Saving…' : 'Save'}</Text>
+                <Text style={styles.saveLabel}>{saving ? t('commonUi.saving') : t('common.save')}</Text>
               </Pressable>
             </SafeAreaView>
           </Animated.View>

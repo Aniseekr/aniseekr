@@ -8,6 +8,7 @@ import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText } from '../themed';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -19,6 +20,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { readableTextOn } from '../themed';
@@ -59,6 +61,7 @@ export function FolderSwipeDeck({
   onOpenDetail,
 }: FolderSwipeDeckProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [index, setIndex] = useState(0);
 
@@ -81,7 +84,7 @@ export function FolderSwipeDeck({
         <View style={styles.emptyIconWrap}>
           <Ionicons name="checkmark-done" size={36} color={theme.accent} />
         </View>
-        <Text style={styles.emptyTitle}>{"You've triaged everything"}</Text>
+        <Text style={styles.emptyTitle}>{t('collectionUi.youVeTriagedEverything')}</Text>
         <Text style={styles.emptySubtitle}>
           {'Swipe ← for "haven\'t watched", swipe → to like. Tap a card to edit EP or score.'}
         </Text>
@@ -112,7 +115,7 @@ export function FolderSwipeDeck({
       <View style={styles.actionRow}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Haven't watched yet"
+          accessibilityLabel={t('collectionUi.havenTWatchedYet')}
           onPress={() => {
             hapticsBridge.selection();
             advance('left', current);
@@ -124,12 +127,12 @@ export function FolderSwipeDeck({
           ]}>
           <MaterialIcons name="bookmark-border" size={18} color={theme.text.primary} />
           <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
-            {"Haven't watched"}
+            {t('collectionUi.havenTWatched')}
           </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Like"
+          accessibilityLabel={t('collectionUi.like')}
           onPress={() => {
             hapticsBridge.success();
             advance('right', current);
@@ -140,7 +143,7 @@ export function FolderSwipeDeck({
             pressed && { opacity: 0.9 },
           ]}>
           <MaterialIcons name="favorite" size={18} color={likeFg} />
-          <Text style={[styles.actionLabel, { color: likeFg }]}>Like</Text>
+          <Text style={[styles.actionLabel, { color: likeFg }]}>{t('collectionUi.like')}</Text>
         </Pressable>
       </View>
     </View>
@@ -155,6 +158,7 @@ interface TopCardProps {
 }
 
 function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -269,9 +273,7 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
             pointerEvents="none"
           />
           <View style={styles.cardInfo} pointerEvents="none">
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
+            <AnimeTitleText anime={item} style={styles.cardTitle} numberOfLines={2} />
             <View style={styles.cardMetaRow}>
               <View style={styles.metaPill}>
                 <MaterialIcons name="play-circle-filled" size={11} color="#FFFFFF" />
@@ -295,7 +297,7 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${Math.round(progressPct * 100)}%` }]} />
             </View>
-            <Text style={styles.tapHint}>Tap to edit EP or score</Text>
+            <Text style={styles.tapHint}>{t('collectionUi.tapToEditEpOr')}</Text>
           </View>
         </Pressable>
 
@@ -306,7 +308,7 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
             <MaterialIcons name="bookmark-border" size={28} color={theme.text.primary} />
           </View>
           <Text style={[styles.indicatorLabel, { color: theme.text.primary }]}>
-            {"Haven't watched"}
+            {t('collectionUi.havenTWatched')}
           </Text>
         </Animated.View>
 
@@ -316,7 +318,9 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
           <View style={[styles.indicatorBubble, { borderColor: theme.accent }]}>
             <MaterialIcons name="favorite" size={28} color={theme.accent} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>Like</Text>
+          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>
+            {t('collectionUi.like')}
+          </Text>
         </Animated.View>
       </Animated.View>
     </GestureDetector>

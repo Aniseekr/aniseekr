@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
+import { CameraChrome } from './cameraChrome';
 
 export interface CamSwitchToastValue {
   icon: keyof typeof Ionicons.glyphMap;
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   iconBadge: {
     width: 24,
     height: 24,
-    borderRadius: 8,
+    borderRadius: CameraChrome.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },

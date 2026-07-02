@@ -8,6 +8,7 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { sheetEnter } from '../../libs/animations/presets';
+import { useT } from '../../libs/i18n';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
 import type {
   SwipeContentMode,
@@ -38,6 +39,7 @@ function ImageDisplaySettingsSheetComponent({
   onRestartGenre,
 }: ImageDisplaySettingsSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   const update = useCallback(
     <K extends keyof SwipePrefs>(key: K, value: SwipePrefs[K]) => {
@@ -73,13 +75,17 @@ function ImageDisplaySettingsSheetComponent({
           <SafeAreaView edges={['bottom']}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>Display Settings</Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>
+                {t('rate.displaySettings')}
+              </Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialIcons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Data source</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('commonUi.dataSource')}
+            </Text>
             <View style={styles.sourceRow}>
               <BrowseSourceChip
                 onPress={() => {
@@ -90,7 +96,9 @@ function ImageDisplaySettingsSheetComponent({
               />
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Image fit</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('rate.imageFit')}
+            </Text>
             <View style={styles.segmented}>
               {(['fill', 'fit'] as SwipeContentMode[]).map((mode) => {
                 const active = preferences.contentMode === mode;
@@ -123,7 +131,7 @@ function ImageDisplaySettingsSheetComponent({
             </View>
 
             <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              Rating buttons (Like mode)
+              {t('rate.ratingButtonsLikeMode')}
             </Text>
             <View style={styles.segmented}>
               {(['three', 'five'] as SwipeRatingButtons[]).map((mode) => {
@@ -153,32 +161,34 @@ function ImageDisplaySettingsSheetComponent({
 
             <ToggleRow
               icon="auto-awesome"
-              label="AI Insights"
-              description="Show AI-generated recommendations on each card"
+              label={t('rate.aiInsights')}
+              description={t('rate.showAiGeneratedRecommendationsOn')}
               value={preferences.showAIInsights}
               onChange={(v) => update('showAIInsights', v)}
             />
             <ToggleRow
               icon="bookmark"
-              label="Tracking shortcut"
-              description="Add anime to lists directly from the swipe deck"
+              label={t('rate.trackingShortcut')}
+              description={t('rate.addAnimeToListsDirectly')}
               value={preferences.trackingShortcut}
               onChange={(v) => update('trackingShortcut', v)}
             />
             <ToggleRow
               icon="translate"
-              label="Original titles"
-              description="Show romaji or Japanese titles instead of English"
+              label={t('rate.originalTitles')}
+              description={t('rate.showRomajiOrJapaneseTitles')}
               value={preferences.showOriginalTitle}
               onChange={(v) => update('showOriginalTitle', v)}
             />
 
             {onRestartGenre ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Deck</Text>
+                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                  {t('rate.deck')}
+                </Text>
                 <ActionRow
                   icon="refresh"
-                  label="Restart this genre"
+                  label={t('rate.restartThisGenre')}
                   description={
                     restartGenreName
                       ? `Start ${restartGenreName} from the first card again`

@@ -125,51 +125,99 @@ export class IDMappingService {
   }
 
   /**
-   * Bulk-insert mappings inside a single transaction. Uses prepared statements
-   * with 500-row chunks to keep the JS↔native bridge cost flat across the
-   * ~40k row file. Public so tests can verify IDM-006 directly without hitting
-   * the network.
+   * Bulk-import mappings WITHOUT blocking readers.
+   *
+   * The previous implementation ran ~68k single-row inserts inside one
+   * `withExclusiveTransactionAsync`, which serializes every other LocalDB
+   * statement behind the import — on a forced refresh the home screen's
+   * collection/pilgrimage queries stalled for the whole import (the
+   * "cold-launch jank" bug). Now:
+   *
+   *   1. Rows land in `id_mappings_staging` via multi-row INSERTs (50 rows ×
+   *      14 params = 700 bound vars, under every SQLite build's limit),
+   *      grouped into plain transactions so other queries interleave.
+   *      Readers keep hitting the OLD `id_mappings` the whole time — no
+   *      empty/partial-table window for `mapID` to mis-read.
+   *   2. A single short exclusive transaction atomically swaps the tables
+   *      and recreates the indexes (transactional DDL — a failed swap rolls
+   *      back to the old table).
    */
+  /** Serializes overlapping bulkInsert calls — staging is a shared resource. */
+  private bulkInsertChain: Promise<void> = Promise.resolve();
+
   async bulkInsert(mappings: AnimeMapping[]): Promise<void> {
+    const run = this.bulkInsertChain.catch(() => {}).then(() => this.doBulkInsert(mappings));
+    this.bulkInsertChain = run.catch(() => {});
+    return run;
+  }
+
+  private async doBulkInsert(mappings: AnimeMapping[]): Promise<void> {
+    // An empty payload (corrupt download, truncated parse) must never replace
+    // a populated live table with nothing.
+    if (mappings.length === 0) return;
+
     const db = await LocalDB.getDatabase();
-    const CHUNK_SIZE = 500;
+    const ROWS_PER_STATEMENT = 50;
+    const ROWS_PER_TX = 5000;
+
+    await db.execAsync(
+      `CREATE TABLE IF NOT EXISTS id_mappings_staging (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mal_id INTEGER, anilist_id INTEGER, kitsu_id INTEGER, bangumi_id INTEGER,
+        shikimori_id INTEGER, simkl_id INTEGER, annict_id INTEGER, thetvdb_id INTEGER,
+        themoviedb_id INTEGER, livechart_id INTEGER, anime_planet_id TEXT,
+        anisearch_id INTEGER, notify_moe_id TEXT, name_cn TEXT
+      );
+      DELETE FROM id_mappings_staging;`
+    );
+
+    const toParams = (m: AnimeMapping): (number | string | null)[] => [
+      m.mal_id ?? null,
+      m.anilist_id ?? null,
+      m.kitsu_id ?? null,
+      m.bangumi_id ?? null,
+      m.shikimori_id ?? null,
+      m.simkl_id ?? null,
+      m.annict_id ?? null,
+      m.thetvdb_id ?? null,
+      m.themoviedb_id ?? null,
+      m.livechart_id ?? null,
+      m.anime_planet_id ?? m['anime-planet_id'] ?? null,
+      m.anisearch_id ?? null,
+      m.notify_moe_id ?? m['notify.moe_id'] ?? null,
+      m.name_cn ?? null,
+    ];
+    const ROW_PLACEHOLDER = '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+
+    for (let txStart = 0; txStart < mappings.length; txStart += ROWS_PER_TX) {
+      const txRows = mappings.slice(txStart, txStart + ROWS_PER_TX);
+      await db.withTransactionAsync(async () => {
+        for (let i = 0; i < txRows.length; i += ROWS_PER_STATEMENT) {
+          const rows = txRows.slice(i, i + ROWS_PER_STATEMENT);
+          await db.runAsync(
+            `INSERT INTO id_mappings_staging (
+              mal_id, anilist_id, kitsu_id, bangumi_id, shikimori_id, simkl_id, annict_id,
+              thetvdb_id, themoviedb_id, livechart_id, anime_planet_id, anisearch_id,
+              notify_moe_id, name_cn
+            ) VALUES ${rows.map(() => ROW_PLACEHOLDER).join(', ')}`,
+            ...rows.flatMap(toParams)
+          );
+        }
+      });
+    }
 
     await db.withExclusiveTransactionAsync(async (tx) => {
-      await tx.execAsync('DELETE FROM id_mappings');
-
-      const statement = await tx.prepareAsync(
-        `INSERT INTO id_mappings (
-          mal_id, anilist_id, kitsu_id, bangumi_id, shikimori_id, simkl_id, annict_id,
-          thetvdb_id, themoviedb_id, livechart_id, anime_planet_id, anisearch_id, notify_moe_id,
-          name_cn
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      await tx.execAsync(
+        `DROP TABLE IF EXISTS id_mappings;
+        ALTER TABLE id_mappings_staging RENAME TO id_mappings;
+        CREATE INDEX IF NOT EXISTS idx_mal_id ON id_mappings(mal_id);
+        CREATE INDEX IF NOT EXISTS idx_anilist_id ON id_mappings(anilist_id);
+        CREATE INDEX IF NOT EXISTS idx_kitsu_id ON id_mappings(kitsu_id);
+        CREATE INDEX IF NOT EXISTS idx_bangumi_id ON id_mappings(bangumi_id);
+        CREATE INDEX IF NOT EXISTS idx_shikimori_id ON id_mappings(shikimori_id);
+        CREATE INDEX IF NOT EXISTS idx_simkl_id ON id_mappings(simkl_id);
+        CREATE INDEX IF NOT EXISTS idx_annict_id ON id_mappings(annict_id);`
       );
-
-      try {
-        for (let i = 0; i < mappings.length; i += CHUNK_SIZE) {
-          const chunk = mappings.slice(i, i + CHUNK_SIZE);
-          for (const m of chunk) {
-            await statement.executeAsync([
-              m.mal_id ?? null,
-              m.anilist_id ?? null,
-              m.kitsu_id ?? null,
-              m.bangumi_id ?? null,
-              m.shikimori_id ?? null,
-              m.simkl_id ?? null,
-              m.annict_id ?? null,
-              m.thetvdb_id ?? null,
-              m.themoviedb_id ?? null,
-              m.livechart_id ?? null,
-              m.anime_planet_id ?? m['anime-planet_id'] ?? null,
-              m.anisearch_id ?? null,
-              m.notify_moe_id ?? m['notify.moe_id'] ?? null,
-              m.name_cn ?? null,
-            ]);
-          }
-        }
-      } finally {
-        await statement.finalizeAsync();
-      }
     });
   }
 

@@ -1,84 +1,62 @@
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { memo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
   EDGE_INTENSITIES,
   edgeIntensityLabel,
   type EdgeIntensity,
 } from '../../../libs/services/pilgrimage/edge-overlay';
+import {
+  SUBJECT_FOCI,
+  subjectFocusLabel,
+  type SubjectFocus,
+} from '../../../libs/services/pilgrimage/subject-overlay';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
 import type { OverlayMode } from './types';
 
-type ModeOption = OverlayMode | 'off';
-
-interface OverlayControlsBarProps {
-  visible: boolean;
+interface OverlayQuickControlsProps {
   mode: OverlayMode;
   edgeIntensity: EdgeIntensity;
+  subjectFocus: SubjectFocus;
   subjectCombine: boolean;
   characterSelected: boolean;
-  opacity: number;
   flipped: boolean;
   editMode: boolean;
   themeColor: string;
-  onSelectOff: () => void;
-  onSelectMode: (mode: OverlayMode) => void;
   onSelectEdgeIntensity: (intensity: EdgeIntensity) => void;
+  onSelectSubjectFocus: (focus: SubjectFocus) => void;
   onToggleSubjectCombine: () => void;
   onOpenCharacterPicker: () => void;
-  onChangeOpacity: (opacity: number) => void;
   onToggleFlip: () => void;
   onToggleEdit: () => void;
 }
 
-interface ModeMeta {
-  id: ModeOption;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}
-
-const MODES: ModeMeta[] = [
-  { id: 'off', icon: 'eye-off-outline', label: 'Off' },
-  { id: 'anime', icon: 'image-outline', label: 'Anime' },
-  { id: 'edge', icon: 'analytics-outline', label: 'Edge' },
-  { id: 'sketch', icon: 'pencil-outline', label: 'Sketch' },
-  { id: 'subject', icon: 'person-outline', label: 'Subject' },
-];
-
 /**
- * Overlay controls: a horizontal filter-strip for mode selection (scrollable,
- * like a camera filter picker), contextual sub-options, and an opacity slider.
- * All surfaces float over the live camera preview (camera-scrim exception).
+ * Compact popover shown near the overlay carousel when an overlay mode is active. Replaces the
+ * OverlayControlsBar sub-rows (mode strip → carousel; opacity slider → zoom-band pill). Preserves
+ * every sub-affordance: reposition, flip, edge intensity, subject combine, character picker — and
+ * additionally surfaces the subject-focus tight/normal/wide selector that previously had no live UI.
  */
-export default function OverlayControlsBar({
-  visible,
+function OverlayQuickControlsComponent({
   mode,
   edgeIntensity,
+  subjectFocus,
   subjectCombine,
   characterSelected,
-  opacity,
   flipped,
   editMode,
   themeColor,
-  onSelectOff,
-  onSelectMode,
   onSelectEdgeIntensity,
+  onSelectSubjectFocus,
   onToggleSubjectCombine,
   onOpenCharacterPicker,
-  onChangeOpacity,
   onToggleFlip,
   onToggleEdit,
-}: OverlayControlsBarProps) {
-  const activeId: ModeOption = visible ? mode : 'off';
-
-  const handlePickMode = (id: ModeOption) => {
-    if (id === activeId) return;
-    hapticsBridge.selection();
-    if (id === 'off') onSelectOff();
-    else onSelectMode(id);
-  };
+}: OverlayQuickControlsProps) {
+  const t = useT();
 
   const handleFlip = () => {
     hapticsBridge.tap();
@@ -87,45 +65,11 @@ export default function OverlayControlsBar({
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      {/* Filter strip — horizontal scroll, each mode is a natural-width pill */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.stripScroll}
-        contentContainerStyle={styles.stripContent}>
-        {MODES.map((m) => {
-          const active = m.id === activeId;
-          const fg = active ? readableTextOn(themeColor) : CameraChrome.fg;
-          return (
-            <Pressable
-              key={m.id}
-              onPress={() => handlePickMode(m.id)}
-              accessibilityRole="button"
-              accessibilityLabel={m.id === 'off' ? 'Hide overlay' : `Overlay mode ${m.label}`}
-              accessibilityState={{ selected: active }}
-              style={({ pressed }) => [
-                styles.modePill,
-                active && { backgroundColor: themeColor, borderColor: themeColor },
-                pressed && !active && styles.pillPressed,
-              ]}>
-              <Ionicons name={m.icon} size={14} color={fg} />
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                numberOfLines={1}
-                style={{ color: fg }}>
-                {m.label}
-              </ThemedText>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {visible && mode === 'edge' ? (
+      {mode === 'edge' ? (
         <View style={styles.subRow}>
           <SubSegment
             icon="git-network-outline"
-            options={EDGE_INTENSITIES.map((i) => ({ id: i, label: edgeIntensityLabel(i) }))}
+            options={EDGE_INTENSITIES.map((i) => ({ id: i, label: t(edgeIntensityLabel(i)) }))}
             activeId={edgeIntensity}
             themeColor={themeColor}
             onPick={(id) => onSelectEdgeIntensity(id as EdgeIntensity)}
@@ -133,15 +77,22 @@ export default function OverlayControlsBar({
         </View>
       ) : null}
 
-      {visible && mode === 'subject' ? (
+      {mode === 'subject' ? (
         <View style={styles.subRow}>
+          <SubSegment
+            icon="scan-outline"
+            options={SUBJECT_FOCI.map((f) => ({ id: f, label: t(subjectFocusLabel(f)) }))}
+            activeId={subjectFocus}
+            themeColor={themeColor}
+            onPick={(id) => onSelectSubjectFocus(id as SubjectFocus)}
+          />
           <Pressable
             onPress={() => {
               hapticsBridge.selection();
               onToggleSubjectCombine();
             }}
             accessibilityRole="checkbox"
-            accessibilityLabel="Combine subject overlay into the captured photo"
+            accessibilityLabel={t('pilgrimageUi.combineSubjectOverlayIntoThe')}
             accessibilityState={{ checked: subjectCombine }}
             style={({ pressed }) => [
               styles.combinePill,
@@ -157,7 +108,7 @@ export default function OverlayControlsBar({
               variant="captionSmall"
               weight="700"
               style={{ color: subjectCombine ? readableTextOn(themeColor) : '#fff' }}>
-              Combine
+              {t('pilgrimageUi.combine')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -167,7 +118,9 @@ export default function OverlayControlsBar({
             }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={characterSelected ? 'Swap character' : 'Pick character'}
+            accessibilityLabel={
+              characterSelected ? t('pilgrimageUi.swapCharacter') : t('pilgrimageUi.pickCharacter')
+            }
             accessibilityState={{ selected: characterSelected }}
             style={({ pressed }) => [
               styles.characterPill,
@@ -184,47 +137,27 @@ export default function OverlayControlsBar({
               weight="700"
               numberOfLines={1}
               style={{ color: characterSelected ? readableTextOn(themeColor) : '#fff' }}>
-              Character
+              {t('pilgrimageUi.character')}
             </ThemedText>
           </Pressable>
         </View>
       ) : null}
 
-      <View
-        style={[styles.opacityRow, !visible && styles.dimmed]}
-        pointerEvents={visible ? 'auto' : 'none'}>
-        <View style={styles.opacityPill}>
-          <ThemedText variant="captionSmall" weight="600" style={styles.opacityLabel}>
-            Overlay
-          </ThemedText>
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={1}
-            value={opacity}
-            onValueChange={onChangeOpacity}
-            minimumTrackTintColor={themeColor}
-            maximumTrackTintColor={CameraChrome.trackInactive}
-            thumbTintColor="#fff"
-            accessibilityLabel="Overlay opacity"
-          />
-          <ThemedText variant="captionSmall" weight="700" style={styles.opacityValue}>
-            {Math.round(opacity * 100)}%
-          </ThemedText>
-        </View>
-
+      <View style={styles.actionRow}>
         <IconBtn
           icon={editMode ? 'lock-open-outline' : 'move-outline'}
           active={editMode}
           themeColor={themeColor}
-          accessibilityLabel={editMode ? 'Lock overlay position' : 'Reposition overlay'}
+          accessibilityLabel={
+            editMode ? t('pilgrimageUi.lockOverlayPosition') : t('pilgrimageUi.repositionOverlay')
+          }
           onPress={onToggleEdit}
         />
         <IconBtn
           icon="swap-horizontal-outline"
           active={flipped}
           themeColor={themeColor}
-          accessibilityLabel="Flip overlay horizontally"
+          accessibilityLabel={t('pilgrimageUi.flipOverlayHorizontally')}
           onPress={handleFlip}
         />
       </View>
@@ -307,38 +240,8 @@ function IconBtn({
 }
 
 const styles = StyleSheet.create({
-  root: { gap: 8 },
-
-  // Filter strip
-  stripScroll: { flexGrow: 0 },
-  stripContent: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 2,
-    paddingVertical: 2,
-  },
-  modePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    height: 34,
-    paddingHorizontal: 13,
-    borderRadius: 17,
-    backgroundColor: CameraChrome.controlFill,
-    borderWidth: 1,
-    borderColor: CameraChrome.border,
-    ...cameraControlShadow,
-  },
-  pillPressed: { backgroundColor: 'rgba(255,255,255,0.12)' },
-
-  // Sub-row (edge intensity / subject focus)
-  subRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
+  root: { gap: 8, alignItems: 'center' },
+  subRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8 },
   subSegment: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -358,10 +261,11 @@ const styles = StyleSheet.create({
     minWidth: 46,
     height: 26,
     paddingHorizontal: 10,
-    borderRadius: 13,
+    borderRadius: CameraChrome.chipRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pillPressed: { backgroundColor: 'rgba(255,255,255,0.12)' },
   combinePill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -386,30 +290,7 @@ const styles = StyleSheet.create({
     borderColor: CameraChrome.border,
     ...cameraControlShadow,
   },
-
-  // Opacity row
-  opacityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dimmed: { opacity: 0.4 },
-  opacityPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 44,
-    paddingHorizontal: 12,
-    borderRadius: CameraChrome.pillRadius,
-    backgroundColor: CameraChrome.groupFill,
-    borderWidth: 1,
-    borderColor: CameraChrome.border,
-    ...cameraControlShadow,
-  },
-  opacityLabel: { color: CameraChrome.fgMuted, width: 46 },
-  slider: { flex: 1, height: 36 },
-  opacityValue: { color: '#fff', width: 34, textAlign: 'right' },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: {
     width: 44,
     height: 44,
@@ -422,3 +303,5 @@ const styles = StyleSheet.create({
     ...cameraControlShadow,
   },
 });
+
+export default memo(OverlayQuickControlsComponent);

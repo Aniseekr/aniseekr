@@ -39,6 +39,7 @@ import {
   type ShareRatio,
   type ShareTemplate,
 } from '../../../../components/pilgrimage/ShareCard';
+import { shareRatioForShot } from '../../../../libs/services/pilgrimage/share-aspect';
 import { ShareComposerControls } from '../../../../components/pilgrimage/ShareComposerControls';
 import { CropSheet } from '../../../../components/pilgrimage/CropSheet';
 import { CornerPinSheet } from '../../../../components/pilgrimage/CornerPinSheet';
@@ -92,9 +93,14 @@ export default function ShareComparisonScreen() {
   const locationText = formatShareLocation(params);
   const imageUrl = getStringParam(params, 'imageUrl') ?? '';
   const shotUri = getStringParam(params, 'shotUri') ?? '';
+  // Captured shot dimensions (orientation truth) forwarded by preview.tsx via
+  // buildShareRouteParams. `0` / missing → unknown; the helpers fall back to
+  // square/cover and never invent a letterbox.
+  const shotWidth = getNumberParam(params, 'shotWidth') ?? 0;
+  const shotHeight = getNumberParam(params, 'shotHeight') ?? 0;
 
   const [template, setTemplate] = useState<ShareTemplate>('polaroid');
-  const [ratio, setRatio] = useState<ShareRatio>('1:1');
+  const [ratio, setRatio] = useState<ShareRatio>(() => shareRatioForShot(shotWidth, shotHeight));
   const [showScore, setShowScore] = useState(true);
   const [showLocation, setShowLocation] = useState(true);
   const [showDate, setShowDate] = useState(true);
@@ -331,23 +337,23 @@ export default function ShareComparisonScreen() {
             onPress={() => router.back()}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
-              Share Your Pilgrimage
+              {t('pilgrimageUi.shareYourPilgrimage')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary">
-              Share to social
+              {t('pilgrimageUi.shareToSocial')}
             </ThemedText>
           </View>
           <Pressable
             onPress={handleSave}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Save"
+            accessibilityLabel={t('common.save')}
             style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="download" size={20} color={theme.text.primary} />
           </Pressable>
@@ -366,6 +372,8 @@ export default function ShareComparisonScreen() {
                 width={cardWidth}
                 imageUrl={imageUrl}
                 shotUri={effectiveShotUri}
+                shotWidth={shotWidth}
+                shotHeight={shotHeight}
                 sceneName={sceneName}
                 animeTitle={animeTitle}
                 episode={ep}
@@ -437,17 +445,18 @@ export default function ShareComparisonScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.templateRow}>
-            {SHARE_TEMPLATES.map((t) => {
-              const active = t.id === template;
+            {SHARE_TEMPLATES.map((tpl) => {
+              const active = tpl.id === template;
+              const tplLabel = t(tpl.label);
               return (
                 <Pressable
-                  key={t.id}
+                  key={tpl.id}
                   onPress={() => {
                     hapticsBridge.selection();
-                    setTemplate(t.id);
+                    setTemplate(tpl.id);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={`Template ${t.label}`}
+                  accessibilityLabel={`Template ${tplLabel}`}
                   accessibilityState={{ selected: active }}
                   style={({ pressed }) => [
                     styles.templateChip,
@@ -461,7 +470,7 @@ export default function ShareComparisonScreen() {
                     variant="bodySmall"
                     weight="700"
                     style={{ color: active ? accentFg : theme.text.primary }}>
-                    {t.emoji} {t.label}
+                    {tpl.emoji} {tplLabel}
                   </ThemedText>
                 </Pressable>
               );
@@ -509,8 +518,8 @@ export default function ShareComparisonScreen() {
             <ToggleRow
               icon="trophy-outline"
               tone={theme.status.success}
-              label="Show Match Score"
-              subtitle="Include comparison score"
+              label={t('pilgrimageUi.showMatchScore')}
+              subtitle={t('pilgrimageUi.includeComparisonScore')}
               value={showScore}
               onChange={setShowScore}
               theme={theme}
@@ -518,8 +527,8 @@ export default function ShareComparisonScreen() {
             <ToggleRow
               icon="location-outline"
               tone={theme.accent}
-              label="Show Location"
-              subtitle="Include capture coordinates"
+              label={t('pilgrimageUi.showLocation')}
+              subtitle={t('pilgrimageUi.includeCaptureCoordinates')}
               value={showLocation}
               onChange={setShowLocation}
               theme={theme}
@@ -527,8 +536,8 @@ export default function ShareComparisonScreen() {
             <ToggleRow
               icon="calendar-outline"
               tone={theme.secondary}
-              label="Show Date"
-              subtitle="Include date"
+              label={t('pilgrimageUi.showDate')}
+              subtitle={t('pilgrimageUi.includeDate')}
               value={showDate}
               onChange={setShowDate}
               theme={theme}
@@ -543,41 +552,41 @@ export default function ShareComparisonScreen() {
               label="IG"
               gradient={['#FFB86A', '#FF4F8F', '#9B3BFF']}
               onPress={() => performShare('instagram')}
-              accessibilityLabel="Share to Instagram"
+              accessibilityLabel={t('pilgrimageUi.shareToInstagram')}
             />
             <SocialBtn
               icon="logo-twitter"
               label="X"
               gradient={['#1DA1F2', '#0E72B5']}
               onPress={() => performShare('twitter')}
-              accessibilityLabel="Share to X/Twitter"
+              accessibilityLabel={t('pilgrimageUi.shareToXTwitter')}
             />
             <SocialBtn
               icon="chatbubble-ellipses"
               label="LINE"
               gradient={['#10D966', '#0BBC55']}
               onPress={() => performShare('line')}
-              accessibilityLabel="Share via LINE"
+              accessibilityLabel={t('pilgrimageUi.shareViaLine')}
             />
             <SocialBtn
               icon="ellipsis-horizontal"
-              label="More"
+              label={t('pilgrimageUi.more')}
               gradient={[theme.background.tertiary, theme.background.tertiary]}
               onPress={() => performShare('system')}
-              accessibilityLabel="More share options"
+              accessibilityLabel={t('pilgrimageUi.moreShareOptions')}
             />
           </View>
           <Pressable
             onPress={handleSave}
             accessibilityRole="button"
-            accessibilityLabel="Save image"
+            accessibilityLabel={t('pilgrimageUi.saveImage')}
             style={({ pressed }) => [
               styles.saveBtn,
               { backgroundColor: accent, opacity: pressed ? 0.85 : 1 },
             ]}>
             <Ionicons name="download" size={18} color={accentFg} />
             <ThemedText variant="titleSmall" weight="700" style={{ color: accentFg }}>
-              Save to Camera Roll
+              {t('pilgrimageUi.saveToCameraRoll')}
             </ThemedText>
           </Pressable>
         </View>

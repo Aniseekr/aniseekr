@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -22,12 +23,13 @@ interface CollectionRecentRailProps {
 }
 
 function CollectionRecentRailComponent({
-  title = 'Recently Viewed',
+  title,
   items,
   onPressItem,
   onPressSeeAll,
 }: CollectionRecentRailProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   if (!items || items.length === 0) return null;
 
@@ -35,12 +37,12 @@ function CollectionRecentRailComponent({
     <View style={styles.section}>
       <View style={styles.header}>
         <ThemedText variant="titleMedium" weight="700">
-          {title}
+          {title ?? t('collectionUi.recentlyViewed')}
         </ThemedText>
         {onPressSeeAll ? (
           <Pressable onPress={onPressSeeAll} hitSlop={8}>
             <ThemedText variant="captionSmall" tone="secondary" weight="600">
-              See all
+              {t('commonUi.seeAll')}
             </ThemedText>
           </Pressable>
         ) : null}

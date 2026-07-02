@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AnimeTitleText } from '../themed';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -32,6 +33,7 @@ import { useIsAnimeScheduled } from '../../modules/notifications/animeNotificati
 import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 export interface DailyAnime {
   day: string;
@@ -65,8 +67,12 @@ interface FocusDayCarouselProps {
 const CARD_WIDTH_RATIO = 0.88;
 const SPACING = 16;
 
+// Sentinel returned by dayFullName for undated entries; the render site swaps
+// it for the localized label (the helper itself is outside React/hook scope).
+const UNKNOWN_AIR_KEY = '__unknown_air__';
+
 function dayFullName(day: string): string {
-  if (day === 'Unknown') return 'Unknown Air Date';
+  if (day === 'Unknown') return UNKNOWN_AIR_KEY;
   if (day.endsWith('s')) return day.slice(0, -1);
   return day;
 }
@@ -214,6 +220,7 @@ const FocusDayItem = memo(function FocusDayItem({
   trackedIds,
 }: FocusDayItemProps) {
   const { theme, effectiveMode } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const blurTint =
     effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
@@ -257,7 +264,7 @@ const FocusDayItem = memo(function FocusDayItem({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.dayTitle}>{dayFullName(day)}</Text>
+            <Text style={styles.dayTitle}>{dayFullName(day) === UNKNOWN_AIR_KEY ? t('bangumiTab.unknownAirDate') : dayFullName(day)}</Text>
             {isToday ? <View style={styles.todayDot} /> : null}
           </View>
           <View style={styles.countBadge}>
@@ -270,7 +277,7 @@ const FocusDayItem = memo(function FocusDayItem({
           {dayData.anime.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="tv-outline" size={36} color={theme.text.tertiary} />
-              <Text style={styles.emptyText}>No anime scheduled</Text>
+              <Text style={styles.emptyText}>{t('bangumiTab.noAnimeScheduled')}</Text>
             </View>
           ) : (
             previewAnime.map((anime) => (
@@ -366,9 +373,7 @@ const FocusDayRow = memo(function FocusDayRow({
         transition={150}
       />
       <View style={styles.rowText}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {anime.title}
-        </Text>
+        <AnimeTitleText anime={anime} style={styles.rowTitle} numberOfLines={1} />
         <View style={styles.metaRow}>
           {anime.score ? (
             <View style={styles.scorePill}>

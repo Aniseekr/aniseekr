@@ -14,8 +14,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText } from '../themed';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { CollectionFolder } from '../../types';
@@ -75,6 +77,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [recent, setRecent] = useState<string[]>(readCollectionRecentsSync);
@@ -287,17 +290,17 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
   const sections: { key: string; title: string; data: SearchHit[] }[] = useMemo(() => {
     const out: { key: string; title: string; data: SearchHit[] }[] = [];
     if (folderHits.length > 0) {
-      out.push({ key: 'folders', title: 'Folders', data: folderHits });
+      out.push({ key: 'folders', title: t('commonUi.folders'), data: folderHits });
     }
     if (animeHits.length > 0) {
       out.push({
         key: 'anime',
-        title: 'Anime in your collection',
+        title: t('collectionUi.animeInYourCollection'),
         data: animeHits,
       });
     }
     return out;
-  }, [folderHits, animeHits]);
+  }, [folderHits, animeHits, t]);
 
   type FlatRow =
     | { kind: 'header'; key: string; title: string }
@@ -357,7 +360,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
               <TextInput
                 ref={inputRef}
                 autoFocus
-                placeholder="Search your collection"
+                placeholder={t('collectionUi.searchYourCollection')}
                 placeholderTextColor={theme.text.tertiary}
                 value={query}
                 onChangeText={setQuery}
@@ -373,7 +376,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
               ) : null}
             </View>
             <Pressable onPress={handleClose} hitSlop={12} style={styles.cancel}>
-              <Text style={[styles.cancelText, { color: theme.accent }]}>Close</Text>
+              <Text style={[styles.cancelText, { color: theme.accent }]}>{t('common.close')}</Text>
             </Pressable>
           </View>
 
@@ -388,9 +391,13 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
               {recent.length > 0 ? (
                 <View>
                   <View style={styles.sectionRow}>
-                    <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Recent</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+                      {t('collectionUi.recent')}
+                    </Text>
                     <Pressable onPress={handleClearRecent} hitSlop={8}>
-                      <Text style={[styles.clearText, { color: theme.accent }]}>Clear</Text>
+                      <Text style={[styles.clearText, { color: theme.accent }]}>
+                        {t('collectionUi.clear')}
+                      </Text>
                     </Pressable>
                   </View>
                   <View style={styles.recentRow}>
@@ -420,10 +427,10 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
                 <View style={styles.emptyHint}>
                   <MaterialIcons name="search" size={28} color={theme.text.tertiary} />
                   <Text style={[styles.emptyHintTitle, { color: theme.text.primary }]}>
-                    Search your library
+                    {t('collectionUi.searchYourLibrary')}
                   </Text>
                   <Text style={[styles.emptyHintBody, { color: theme.text.secondary }]}>
-                    Find folders and anime you&apos;ve already collected.
+                    {t('collectionUi.findFoldersAndAnimeYou')}
                   </Text>
                 </View>
               )}
@@ -431,13 +438,15 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
           ) : !indexReady ? (
             <View style={styles.emptyHint}>
               <Text style={[styles.emptyHintBody, { color: theme.text.secondary }]}>
-                Indexing your collection…
+                {t('collectionUi.indexingYourCollection')}
               </Text>
             </View>
           ) : !hasResults ? (
             <View style={styles.emptyHint}>
               <MaterialIcons name="search-off" size={28} color={theme.text.tertiary} />
-              <Text style={[styles.emptyHintTitle, { color: theme.text.primary }]}>No matches</Text>
+              <Text style={[styles.emptyHintTitle, { color: theme.text.primary }]}>
+                {t('collectionUi.noMatches')}
+              </Text>
               <Text style={[styles.emptyHintBody, { color: theme.text.secondary }]}>
                 Nothing in your collection for &ldquo;{debouncedQuery}&rdquo;.
               </Text>
@@ -517,11 +526,11 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
                       <MaterialIcons name="play-circle-outline" size={18} color={theme.secondary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text
+                      <AnimeTitleText
+                        anime={anime}
                         style={[styles.rowTitle, { color: theme.text.primary }]}
-                        numberOfLines={1}>
-                        {anime.title}
-                      </Text>
+                        numberOfLines={1}
+                      />
                       <View style={styles.folderBadge}>
                         <MaterialIcons name="folder" size={12} color={theme.text.tertiary} />
                         <Text

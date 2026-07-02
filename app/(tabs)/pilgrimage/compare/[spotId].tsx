@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  AppState,
   Linking,
   Platform,
   Pressable,
@@ -16,7 +15,6 @@ import { useCameraPermission } from 'react-native-vision-camera';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
@@ -29,13 +27,16 @@ import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-
 import { getPilgrimageSpotTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
 import {
-  cameraOrientationLockIntent,
-  CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
+  CAMERA_BAND_GAP,
+  resolveCameraBandLayout,
   resolveCameraBottomInset,
-  resolveCameraActive,
+  resolveCameraChromeVisibility,
   resolveCameraTopChromeHeight,
-  resolveTransientCameraHudVisibility,
 } from '../../../../libs/services/pilgrimage/camera-ui';
+import {
+  overlayCarouselIndex,
+  overlaySelectionForIndex,
+} from '../../../../libs/services/pilgrimage/overlay-carousel';
 import { embedCaptureMetadata } from '../../../../libs/services/pilgrimage/embed-capture-metadata';
 import { availableStopsFromDeviceInfo } from '../../../../libs/services/pilgrimage/lens-switching';
 import { captureAnalysisGate } from '../../../../libs/services/pilgrimage/capture-lens-gate';
@@ -59,13 +60,14 @@ import CameraTopBar, {
   CameraHeaderButton,
 } from '../../../../components/pilgrimage/camera/CameraTopBar';
 import AlignmentHUD from '../../../../components/pilgrimage/camera/AlignmentHUD';
-import ZoomDial from '../../../../components/pilgrimage/camera/ZoomDial';
-import ShutterRow, {
-  SHUTTER_ROW_LANDSCAPE_WIDTH,
-} from '../../../../components/pilgrimage/camera/ShutterRow';
+import ShutterRow from '../../../../components/pilgrimage/camera/ShutterRow';
 import ReferenceThumbnail from '../../../../components/pilgrimage/camera/ReferenceThumbnail';
-import OverlayDock from '../../../../components/pilgrimage/camera/OverlayDock';
-import OverlayControlsBar from '../../../../components/pilgrimage/camera/OverlayControlsBar';
+import OverlayModeCarousel from '../../../../components/pilgrimage/camera/OverlayModeCarousel';
+import OverlayQuickControls from '../../../../components/pilgrimage/camera/OverlayQuickControls';
+import ZoomPresets from '../../../../components/pilgrimage/camera/ZoomPresets';
+import OverlayOpacityPill from '../../../../components/pilgrimage/camera/OverlayOpacityPill';
+import GalleryThumb from '../../../../components/pilgrimage/camera/GalleryThumb';
+import CameraScrim from '../../../../components/pilgrimage/camera/CameraScrim';
 import CameraChip from '../../../../components/pilgrimage/camera/chips/CameraChip';
 import AspectChip from '../../../../components/pilgrimage/camera/chips/AspectChip';
 import CountdownChip from '../../../../components/pilgrimage/camera/chips/CountdownChip';
@@ -80,7 +82,7 @@ import type {
   FocalStop,
   OverlayMode,
 } from '../../../../components/pilgrimage/camera/types';
-import { useCameraZoom, STOP_TO_ZOOM } from '../../../../hooks/useCameraZoom';
+import { useCameraZoom } from '../../../../hooks/useCameraZoom';
 import { useTapToFocus } from '../../../../hooks/useTapToFocus';
 import { useOverlayTransform } from '../../../../hooks/useOverlayTransform';
 import { useAlignmentSensors } from '../../../../hooks/useAlignmentSensors';
@@ -89,17 +91,20 @@ import {
   useCameraSettings,
   qualityToNumber,
   qualityToPrioritization,
+  type CameraSettings,
   type CaptureMode,
 } from '../../../../hooks/useCameraSettings';
 import { useCameraHud } from '../../../../hooks/useCameraHud';
 import { useSceneSwitcherSpots } from '../../../../hooks/useSceneSwitcherSpots';
 import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
+import { useFreezeFrame } from '../../../../hooks/useFreezeFrame';
+import { useCameraOrientation } from '../../../../hooks/useCameraOrientation';
 import { useBurstCapture } from '../../../../hooks/useBurstCapture';
 import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
 import { useExposureBracket } from '../../../../hooks/useExposureBracket';
 import { useSceneAnalyzer } from '../../../../hooks/useSceneAnalyzer';
 import { probeHdrFusionSupport } from '../../../../libs/services/pilgrimage/composite-hdr';
-import { useT } from '../../../../libs/i18n';
+import { useT, type TranslationKey } from '../../../../libs/i18n';
 import { useAutoCapture } from '../../../../hooks/useAutoCapture';
 import { useCaptureSession } from '../../../../hooks/useCaptureSession';
 import {
@@ -144,12 +149,19 @@ const FLASH_REAR_CYCLE: FlashMode[] = ['off', 'auto', 'on', 'torch'];
 const FLASH_FRONT_CYCLE: FlashMode[] = ['off', 'auto', 'on'];
 
 // Overlay mode switch toast copy — shown briefly when the user taps a mode pill.
-const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', CamSwitchToastValue> = {
-  off: { icon: 'eye-off-outline', label: 'Overlay Off' },
-  anime: { icon: 'image-outline', label: 'Anime', hint: 'Original scene overlay' },
-  edge: { icon: 'analytics-outline', label: 'Edge', hint: 'Edge detection overlay' },
-  sketch: { icon: 'pencil-outline', label: 'Sketch', hint: 'Sketch style overlay' },
-  subject: { icon: 'person-outline', label: 'Subject', hint: 'Subject extract overlay' },
+// `labelKey` is resolved to the toast `label` via t() at the spread site (the
+// `hint` strings are not yet in the i18n catalog and stay literal).
+type OverlayModeToastSeed = Omit<CamSwitchToastValue, 'label'> & { labelKey: TranslationKey };
+const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', OverlayModeToastSeed> = {
+  off: { icon: 'eye-off-outline', labelKey: 'pilgrimageUi.overlayOff' },
+  anime: { icon: 'image-outline', labelKey: 'commonUi.anime', hint: 'Original scene overlay' },
+  edge: { icon: 'analytics-outline', labelKey: 'pilgrimageUi.edge', hint: 'Edge detection overlay' },
+  sketch: { icon: 'pencil-outline', labelKey: 'pilgrimageUi.sketch', hint: 'Sketch style overlay' },
+  subject: {
+    icon: 'person-outline',
+    labelKey: 'pilgrimageUi.subject',
+    hint: 'Subject extract overlay',
+  },
 };
 
 // Capture mode is a top-bar icon button that cycles single → burst → auto; the
@@ -212,34 +224,45 @@ export default function CompareCaptureScreen() {
   const cameraRef = useRef<CameraEngineHandle | null>(null);
   const { hasPermission, requestPermission, canRequestPermission, status } = useCameraPermission();
 
+  const { settings, setSettings } = useCameraSettings();
+
   // CLAUDE.md Rule 9: the camera HUD's discrete interaction state (facing,
   // flash, aspect, overlay config, panels, toasts) lives in one reducer hook,
   // not ~19 loose top-level useStates. Destructured so existing reads stay as
-  // bare identifiers; writes go through `setHud(patch)`.
-  const { hud, setHud } = useCameraHud();
+  // bare identifiers; writes go through `setHud(patch)`. The four persisted
+  // overlay knobs seed the reducer's lazy initializer from `settings`.
+  const { hud, setHud } = useCameraHud(settings);
   const {
     facing,
     flashMode,
     aspect,
     overlayMode,
     edgeIntensity,
+    subjectFocus,
     subjectCombine,
-    overlayOpacity,
     editMode,
     evValue,
     orientationMode,
     settingsOpen,
-    quickControlsOpen,
-    overlayDockOpen,
     overlayVisible,
     captureModeToast,
     autoCaptureToast,
     switchToast,
     sceneSwitcherOpen,
   } = hud;
+  // Active overlay alpha is DERIVED from the per-mode map (Rule 9: no separate
+  // mirrored value). Each mode keeps its own alpha — edge reads at ~0.75, the
+  // anime bitmap at ~0.35 — so switching modes restores that mode's last pick.
+  const overlayOpacity = hud.overlayOpacityByMode[overlayMode] ?? 0.35;
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
-  const [appIsForeground, setAppIsForeground] = useState(() => AppState.currentState === 'active');
+  // Immersive-by-subtraction: landscape auto-hides secondary chrome; a preview tap reveals it.
+  // `revealed` is the user's tap-to-reveal intent; `immersive` is DERIVED from it + orientation
+  // (no reconciling effect — Rule 9). Orientation flips re-arm immersive via render-time reset.
+  const [revealed, setRevealed] = useState(false);
+  const [prevLandscape, setPrevLandscape] = useState(isLandscape);
+  // Expanded capture-history strip, toggled from the gallery thumb.
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [character, setCharacter] = useState<CharacterEntry | null>(null);
   const characterLayerRef = useRef<CharacterLayerHandle>(null);
   const [characterPickerOpen, setCharacterPickerOpen] = useState(false);
@@ -253,56 +276,35 @@ export default function CompareCaptureScreen() {
     sceneSwitcherOpen
   );
 
-  const { settings, setSettings, hydrated: settingsHydrated } = useCameraSettings();
-
-  // Persistence wiring for overlay-mode + its sub-knobs (edge intensity,
-  // subject focus / combine). The hud reducer is the source of truth at
-  // runtime; `CameraSettings` is the write-through cache. We seed once from
-  // persisted MMKV settings and then mirror every subsequent hud change so a
-  // mode/intensity/focus picked this session restores on the next launch.
-  //
-  // The ref-gated one-shot seed prevents the post-hydration sync from
-  // clobbering a brand-new in-session pick during the brief window
-  // between user interaction and the next render commit.
-  const overlaySettingsSyncedRef = useRef(false);
-  useEffect(() => {
-    if (!settingsHydrated || overlaySettingsSyncedRef.current) return;
-    overlaySettingsSyncedRef.current = true;
-    setHud({
-      overlayMode: settings.overlayMode,
-      edgeIntensity: settings.edgeIntensity,
-      subjectFocus: settings.subjectFocus,
-      subjectCombine: settings.subjectCombine,
-    });
-  }, [
-    settingsHydrated,
-    settings.overlayMode,
-    settings.edgeIntensity,
-    settings.subjectFocus,
-    settings.subjectCombine,
-    setHud,
-  ]);
-  // Mirror hud → settings on every change after the one-shot seed has run.
-  // Guarding on the ref keeps the mirror dormant during the pre-hydration
-  // window where hud holds its INITIAL_CAMERA_HUD defaults (not the user's
-  // persisted choices yet).
-  useEffect(() => {
-    if (!overlaySettingsSyncedRef.current) return;
-    setSettings({
-      overlayMode: hud.overlayMode,
-      edgeIntensity: hud.edgeIntensity,
-      subjectFocus: hud.subjectFocus,
-      subjectCombine: hud.subjectCombine,
-    });
-  }, [hud.overlayMode, hud.edgeIntensity, hud.subjectFocus, hud.subjectCombine, setSettings]);
-  const lifecycle = useCameraLifecycle(true);
+  // Overlay knobs (overlayMode / edgeIntensity / subjectFocus / subjectCombine)
+  // are SEEDED into the HUD reducer's lazy initializer from `settings` above
+  // (useCameraHud(settings)). Persistence now happens inline via this
+  // write-through — NOT a mirror effect. This kills the seed→mirror loop and
+  // the synced-ref latch (CLAUDE.md Rule 9: derive / write-through, don't
+  // reconcile two stores with a pair of effects).
+  const persistOverlayKnob = useCallback(
+    (
+      patch: Partial<
+        Pick<CameraSettings, 'overlayMode' | 'edgeIntensity' | 'subjectFocus' | 'subjectCombine'>
+      >
+    ) => {
+      setHud(patch);
+      setSettings(patch);
+    },
+    [setHud, setSettings]
+  );
+  const lifecycle = useCameraLifecycle({ settingsOpen, initialActive: true });
   const {
     active: cameraActive,
     isReady: cameraIsReady,
     onCameraReady,
     onMountError,
-    setActive: setCameraActive,
   } = lifecycle;
+  // AUTO is device-mode by design: the capture follows the physical phone
+  // while the HUD stays portrait. The hook also owns the ScreenOrientation
+  // lock lifecycle (apply lock-intent on chip change; restore PORTRAIT_UP on
+  // unmount) — previously two inline effects in this file.
+  const { orientationSource } = useCameraOrientation(orientationMode);
 
   // Cohort hint: derives `{ strategy, hasStandaloneUltraWide }` from the
   // full device list so the dial can route the 0.5 affordance correctly
@@ -337,46 +339,14 @@ export default function CompareCaptureScreen() {
   // `requestSwitch` is what ZoomDial's island chip calls.
   const strategic = useStrategicCameraDevice(cohort);
 
-  // Snapshot of the previous lens's preview, captured right before a session
-  // swap so CameraStage can render it as a freeze-frame overlay while
-  // CameraX tears down the old session. Android-only (engine.takeSnapshot
-  // returns null on iOS); the animated vignette covers the iOS path.
-  const [freezeFrameUri, setFreezeFrameUri] = useState<string | null>(null);
-  // Mirror so cleanup paths can read the latest URI without depending on the
-  // closure-captured state value — used when a new switch arrives before the
-  // previous swap has finished cleaning up its temp file.
-  const freezeFrameUriRef = useRef<string | null>(null);
-  freezeFrameUriRef.current = freezeFrameUri;
-
-  const deleteFreezeFrame = useCallback((uri: string | null) => {
-    if (!uri) return;
-    FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
-  }, []);
-
-  // Clear the freeze-frame once the new session is up and the warmup overlay
-  // has finished its fade-out (~250ms). Also delete the temp file so we don't
-  // leak ~100 kB JPEGs into the cache each swap.
-  useEffect(() => {
-    if (strategic.isSwitching) return;
-    if (!freezeFrameUri) return;
-    const uri = freezeFrameUri;
-    const timer = setTimeout(() => {
-      setFreezeFrameUri(null);
-      // Best-effort cleanup; if the file vanished already or the path is
-      // malformed we just move on. No error toast — the snapshot is purely a
-      // visual nicety; failure should never reach the user.
-      deleteFreezeFrame(uri);
-    }, 260);
-    return () => clearTimeout(timer);
-  }, [strategic.isSwitching, freezeFrameUri, deleteFreezeFrame]);
-
-  // Always sweep the temp file on unmount so backgrounded swaps don't leak.
-  useEffect(() => {
-    return () => {
-      const pending = freezeFrameUriRef.current;
-      if (pending) deleteFreezeFrame(pending);
-    };
-  }, [deleteFreezeFrame]);
+  // Android lens-swap freeze-frame: snapshot of the previous lens held still
+  // while CameraX tears down the old session. The hook owns the URI + temp-file
+  // lifecycle (clear-after-swap, unmount sweep) and writes its ref mirror in the
+  // SETTER, not the render body (CLAUDE.md Rule 9). Android-only — on iOS the
+  // URI stays null and the hook's effects are no-ops.
+  const { freezeFrameUri, setFreezeFrameUri, getFreezeFrameUri } = useFreezeFrame({
+    isSwitching: strategic.isSwitching,
+  });
 
   // Wrapper around the FSM's `requestSwitch` that grabs a freeze-frame first
   // (fire-and-forget — the snapshot Promise is allowed to land after the
@@ -388,15 +358,17 @@ export default function CompareCaptureScreen() {
     (target: 'wide' | 'ultra-wide') => {
       if (Platform.OS === 'android') {
         // If a previous freeze-frame is still hanging around (rapid double-
-        // tap), delete it before overwriting. The ref read avoids racing the
-        // cleanup-timer effect that hasn't fired yet.
-        const previous = freezeFrameUriRef.current;
+        // tap), delete it before overwriting. getFreezeFrameUri() reads the
+        // hook's ref mirror, avoiding a race with its cleanup-timer effect.
+        const previous = getFreezeFrameUri();
         const snap = cameraRef.current?.takeSnapshot();
         if (snap) {
           snap
             .then((uri) => {
               if (!uri) return;
-              if (previous && previous !== uri) deleteFreezeFrame(previous);
+              if (previous && previous !== uri) {
+                FileSystem.deleteAsync(previous, { idempotent: true }).catch(() => undefined);
+              }
               setFreezeFrameUri(uri);
             })
             .catch(() => undefined);
@@ -404,7 +376,7 @@ export default function CompareCaptureScreen() {
       }
       strategic.requestSwitch(target);
     },
-    [strategic, deleteFreezeFrame]
+    [strategic, getFreezeFrameUri, setFreezeFrameUri]
   );
   // Compose `onCameraReady` with the FSM's `onCameraStarted` so the FSM
   // learns when a session swap has completed and flips back to STABLE.
@@ -465,6 +437,11 @@ export default function CompareCaptureScreen() {
 
   const zoom = useCameraZoom({
     initial: 1,
+    // Suspend camera pinch-zoom while repositioning the overlay so a two-finger
+    // pinch scales the OVERLAY (OverlayLayer's own pinch) instead of fighting
+    // the camera zoom — the two full-screen pinch surfaces are otherwise
+    // un-arbitrated and both fire ("兩個行為衝突").
+    enabled: !editMode,
     minZoom,
     maxZoom,
     stops: availableStops,
@@ -481,6 +458,8 @@ export default function CompareCaptureScreen() {
     onFocus: (point) => {
       // Drives a real AE/AF/AWB metering operation at the tap location.
       void cameraRef.current?.focus(point);
+      // Tapping the preview also reveals the secondary chrome in landscape immersive.
+      setRevealed(true);
     },
   });
 
@@ -590,17 +569,9 @@ export default function CompareCaptureScreen() {
     }
   }, [hasPermission, canRequestPermission, requestPermission]);
 
-  // T1 fix: drive the camera's active flag off app lifecycle + settings sheet.
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      setAppIsForeground(state === 'active');
-    });
-    return () => sub.remove();
-  }, []);
-
-  useEffect(() => {
-    setCameraActive(resolveCameraActive({ appIsForeground, settingsOpen }));
-  }, [appIsForeground, settingsOpen, setCameraActive]);
+  // Camera `active` is derived inside useCameraLifecycle from app foreground
+  // state + settingsOpen + onError re-arm; the route just passes `settingsOpen`
+  // in (above) and reads `cameraActive` (below). No effect here.
 
   const toggleFacing = useCallback(() => {
     hapticsBridge.selection();
@@ -630,27 +601,6 @@ export default function CompareCaptureScreen() {
     hapticsBridge.selection();
     setHud((h) => ({ editMode: !h.editMode }));
   }, [setHud]);
-
-  useEffect(() => {
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
-        () => undefined
-      );
-    };
-  }, []);
-
-  // Drive the OS orientation lock off the auto/land chip. VisionCamera realigns
-  // its own preview natively via `orientationSource="interface"`, so unlike
-  // expo-camera we no longer need the keyed-remount trick to clear a stale
-  // preview rotation.
-  useEffect(() => {
-    const lockIntent = cameraOrientationLockIntent(orientationMode);
-    const op =
-      lockIntent === 'landscape'
-        ? ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-        : ScreenOrientation.unlockAsync();
-    op.catch(() => undefined);
-  }, [orientationMode]);
 
   const handlePickSpot = useCallback(
     (spot: AnitabiPoint) => {
@@ -1179,12 +1129,16 @@ export default function CompareCaptureScreen() {
       const next = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (next.granted) return true;
     }
-    Alert.alert('Photo access needed', 'Allow photo library access to score an existing image.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
-    ]);
+    Alert.alert(
+      t('pilgrimageUi.photoAccessNeededAllowPhotoTitle'),
+      t('pilgrimageUi.photoAccessNeededAllowPhotoMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
+      ]
+    );
     return false;
-  }, []);
+  }, [t]);
 
   const handlePickLibraryImage = useCallback(async () => {
     autoCapture.cancel();
@@ -1226,7 +1180,10 @@ export default function CompareCaptureScreen() {
     } catch (err) {
       console.warn('[camera] library import failed', err);
       hapticsBridge.error();
-      Alert.alert('Could not import photo', 'Please try another image from your library.');
+      Alert.alert(
+        t('pilgrimageUi.couldNotImportPhotoPleaseTitle'),
+        t('pilgrimageUi.couldNotImportPhotoPleaseMessage')
+      );
     } finally {
       setCapturing(false);
     }
@@ -1241,6 +1198,7 @@ export default function CompareCaptureScreen() {
     sensors.tilt,
     captureSession,
     navigateToPreview,
+    t,
   ]);
 
   // Permission UI — `status === 'not-determined'` is the brief initial state
@@ -1258,14 +1216,14 @@ export default function CompareCaptureScreen() {
           <View style={styles.permContent}>
             <Ionicons name="camera-outline" size={48} color={theme.text.secondary} />
             <ThemedText variant="titleLarge" weight="700" align="center">
-              Camera access needed
+              {t('pilgrimageUi.cameraAccessNeeded')}
             </ThemedText>
             <ThemedText
               variant="bodyMedium"
               tone="secondary"
               align="center"
               style={{ marginBottom: 8 }}>
-              Allow camera so you can frame this scene against its anime reference.
+              {t('pilgrimageUi.allowCameraSoYouCan')}
             </ThemedText>
             <Pressable
               onPress={() => {
@@ -1286,7 +1244,7 @@ export default function CompareCaptureScreen() {
             </Pressable>
             <Pressable onPress={() => router.back()} hitSlop={12}>
               <ThemedText variant="bodyMedium" tone="secondary">
-                Not now
+                {t('common.notNow')}
               </ThemedText>
             </Pressable>
           </View>
@@ -1300,78 +1258,61 @@ export default function CompareCaptureScreen() {
   // row + HUD layers always clear the system bar. iOS insets are used as-is.
   const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
   const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
-  const bottomBarHeight = safeAreaBottomPad + CAMERA_BOTTOM_BAR_CONTENT_HEIGHT;
-  const topBarBottom = insets.top + resolveCameraTopChromeHeight({ quickControlsOpen });
-  const focusEvBarBottom = isLandscape ? safeAreaBottomPad + 72 : bottomBarHeight + 84;
-  const cameraHudVisibility = resolveTransientCameraHudVisibility({
-    overlayControlsOpen: overlayDockOpen,
+  // Re-arm immersive whenever orientation flips (adjust-state-during-render, not an effect):
+  // entering landscape starts immersive; a preview tap then clears `revealed` to show everything.
+  if (prevLandscape !== isLandscape) {
+    setPrevLandscape(isLandscape);
+    setRevealed(false);
+  }
+  const immersive = isLandscape && !revealed;
+  // Banded chrome: visibility (immersive-by-subtraction) drives the band stack, which is
+  // identical in both orientations (the bottom row never reflows to a right-edge column).
+  const overlayActive = overlayVisible;
+  const carouselIndex = overlayCarouselIndex({ overlayVisible, overlayMode });
+  const chrome = resolveCameraChromeVisibility({
+    isLandscape,
+    immersive,
     afLocked: tapFocus.afLocked,
+    overlayActive,
   });
+  // Top contextual row (timer/aspect/orientation/guide) participates in the top-chrome height
+  // only while shown — it auto-hides in landscape immersive alongside the other secondary chrome.
+  const topBarBottom =
+    insets.top + resolveCameraTopChromeHeight({ quickControlsOpen: chrome.showTopContextIcons });
+  const bands = resolveCameraBandLayout({
+    bottomInset: safeAreaBottomPad,
+    showZoomBand: chrome.showZoomBand,
+  });
+  const chromeTop = safeAreaBottomPad + bands.totalBottomChromeHeight;
+  const overlayQuickControlsBottom =
+    (chrome.showZoomBand
+      ? bands.zoomBandBottom + bands.zoomBandHeight
+      : bands.carouselBottom + bands.carouselHeight) + CAMERA_BAND_GAP;
+  const rotateGlyphs = isLandscape && orientationMode === 'landscape';
   const handleOpenInfo = () => {
     hapticsBridge.tap();
     router.push({ pathname: '/pilgrimage/compare/align', params: { ...params } });
   };
-  // Island chip wires the off-strip lens-switch affordance for
-  // standalone-switch cohorts (S20FE / Pixel 8). The chip is null when:
-  //   * the cohort is logical (iOS / Xiaomi true-0.5) — strip handles 0.5
-  //     continuously, no chip needed; OR
-  //   * the cohort is wide-only (Pixel 6a) — no ultra-wide hardware exists.
-  //   * the cohort is still null (enumeration in flight) — never lie.
-  const dialIsland =
-    cohort && cohort.strategy === 'standalone-switch' && cohort.ultraWide
-      ? strategic.activeLens === 'wide'
-        ? { stop: 0.5 as FocalStop, targetLens: 'ultra-wide' as const }
-        : { stop: 1 as FocalStop, targetLens: 'wide' as const }
-      : null;
-  const focalDial = (
-    <ZoomDial
-      zoomShared={zoom.zoomShared}
-      activeStop={zoom.activeStop as FocalStop | null}
-      themeColor={themeColor}
-      availableStops={availableStops}
-      isFrontFacing={facing === 'front'}
-      stopZoom={STOP_TO_ZOOM}
-      minZoom={minZoom}
-      maxZoom={maxZoom}
-      onPickFocalStop={zoom.setStop}
-      island={dialIsland}
-      onPickIsland={handleRequestSwitch}
-      islandPending={strategic.isSwitching}
-      // Reuse the pinch handlers — dial drag past the wall and pinch past
-      // the wall share semantics (request the corresponding lens swap).
-      onDragBelowMin={canPinchToUltraWide ? handlePinchBelowMin : undefined}
-      onDragAboveMax={canPinchBackToWide ? handlePinchAboveMax : undefined}
-    />
-  );
-  const overlayControls = (
-    <OverlayControlsBar
-      visible={overlayVisible}
-      mode={overlayMode}
-      edgeIntensity={edgeIntensity}
-      subjectCombine={subjectCombine}
-      characterSelected={character !== null}
-      opacity={overlayOpacity}
-      flipped={overlayTransform.flipped}
-      editMode={editMode}
-      themeColor={themeColor}
-      onSelectOff={() => {
-        setHud({ overlayVisible: false, switchToast: { ...OVERLAY_MODE_TOAST.off } });
-      }}
-      onSelectMode={(m) => {
-        setHud({
-          overlayMode: m,
-          overlayVisible: true,
-          switchToast: { ...OVERLAY_MODE_TOAST[m] },
-        });
-      }}
-      onSelectEdgeIntensity={(i) => setHud({ edgeIntensity: i })}
-      onToggleSubjectCombine={() => setHud((h) => ({ subjectCombine: !h.subjectCombine }))}
-      onOpenCharacterPicker={() => setCharacterPickerOpen(true)}
-      onChangeOpacity={(o) => setHud({ overlayOpacity: o })}
-      onToggleFlip={overlayTransform.toggleFlip}
-      onToggleEdit={handleToggleEdit}
-    />
-  );
+  // Carousel index → HUD patch. Mirrors the old OverlayControlsBar onSelectOff/onSelectMode
+  // (same per-mode switch toast + persisted overlayMode write-through), so behavior is preserved.
+  const handleCarouselChange = (index: number) => {
+    const selection = overlaySelectionForIndex(index);
+    if (!selection.overlayVisible || !selection.overlayMode) {
+      const seed = OVERLAY_MODE_TOAST.off;
+      setHud({
+        overlayVisible: false,
+        switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+      });
+      return;
+    }
+    const seed = OVERLAY_MODE_TOAST[selection.overlayMode];
+    setHud({
+      overlayVisible: true,
+      overlayMode: selection.overlayMode,
+      switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+    });
+    persistOverlayKnob({ overlayMode: selection.overlayMode });
+  };
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -1390,6 +1331,7 @@ export default function CompareCaptureScreen() {
             active={cameraActive}
             resolutionTier={settings.resolutionTier}
             aspect={aspect}
+            orientationSource={orientationSource}
             qualityPrioritization={qualityToPrioritization(settings.quality)}
             quality={qualityToNumber(settings.quality)}
             enableShutterSound={!settings.mute}
@@ -1419,6 +1361,9 @@ export default function CompareCaptureScreen() {
           edgeOrSketchError={edgeOrSketch.error}
           edgeSourceOpacity={edgeOrSketch.sourceOpacity}
         />
+
+        {/* Always-glass legibility scrim — full-bleed preview shows through. */}
+        <CameraScrim />
 
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <View style={styles.levelHorizonWrap}>
@@ -1467,7 +1412,7 @@ export default function CompareCaptureScreen() {
               />
               <CameraHeaderButton
                 icon="settings-outline"
-                accessibilityLabel="Camera settings"
+                accessibilityLabel={t('pilgrimageUi.cameraSettings')}
                 accessibilityState={{ expanded: settingsOpen }}
                 themeColor={themeColor}
                 active={settingsOpen}
@@ -1478,8 +1423,7 @@ export default function CompareCaptureScreen() {
               />
             </>
           }
-          quickControlsExpanded={quickControlsOpen}
-          onToggleQuickControls={() => setHud((h) => ({ quickControlsOpen: !h.quickControlsOpen }))}
+          showQuickControls={chrome.showTopContextIcons}
           quickControls={
             <>
               <CountdownChip
@@ -1493,9 +1437,9 @@ export default function CompareCaptureScreen() {
               />
               <CameraChip
                 icon="information-circle-outline"
-                label="Guide"
+                label={t('pilgrimageUi.guide')}
                 themeColor={themeColor}
-                accessibilityLabel="Open framing guide"
+                accessibilityLabel={t('pilgrimageUi.openFramingGuide')}
                 onPress={handleOpenInfo}
               />
             </>
@@ -1577,8 +1521,8 @@ export default function CompareCaptureScreen() {
           themeColor={themeColor}
           topInset={insets.top}
           bottomInset={cameraBottomInset}
-          bottomBarHeight={bottomBarHeight}
-          rightReserve={isLandscape ? SHUTTER_ROW_LANDSCAPE_WIDTH : 0}
+          bottomBarHeight={bands.totalBottomChromeHeight}
+          rightReserve={0}
           isLandscape={isLandscape}
           transformed={overlayTransform.transformed}
           rotationDisplayDeg={overlayTransform.rotationDisplayDeg}
@@ -1586,153 +1530,48 @@ export default function CompareCaptureScreen() {
           onReset={overlayTransform.resetTransforms}
         />
 
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.focalDock,
-            isLandscape
-              ? { left: insets.left + 16, bottom: safeAreaBottomPad + 16 }
-              : { left: 0, right: 0, bottom: bottomBarHeight + 12, alignItems: 'center' },
-          ]}>
-          {focalDial}
-        </View>
-
-        {cameraHudVisibility.showFocusExposureBar ? (
+        {/* Transient focus / EV bar — only while AF is locked (tap-to-focus). */}
+        {chrome.showFocusExposureBar ? (
           <FocusExposureBar
             value={evValue}
             themeColor={themeColor}
-            bottomOffset={focusEvBarBottom}
+            anchor={tapFocus.focusPoint}
+            bottomOffset={chromeTop + 12}
             isLandscape={isLandscape}
             onChange={(v) => setHud({ evValue: v })}
           />
         ) : null}
 
-        <View
-          pointerEvents="none"
-          style={[
-            styles.autoBadgeWrap,
-            isLandscape
-              ? { right: SHUTTER_ROW_LANDSCAPE_WIDTH + 12, bottom: safeAreaBottomPad + 80 }
-              : { left: 0, right: 0, bottom: bottomBarHeight + 156 },
-            !cameraHudVisibility.showAutoCaptureBadge && styles.hidden,
-          ]}>
-          <AutoCaptureStatusBadge
-            remainingMs={autoCapture.remainingMs}
-            sustainMs={AUTO_SUSTAIN_MS}
-            themeColor={themeColor}
-          />
-        </View>
-
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.captureHistoryWrap,
-            isLandscape
-              ? {
-                  right: SHUTTER_ROW_LANDSCAPE_WIDTH + 8,
-                  top: topBarBottom + 48,
-                  bottom: safeAreaBottomPad + 96,
-                  width: 56,
-                }
-              : {
-                  left: 0,
-                  right: 0,
-                  bottom: bottomBarHeight + 84,
-                  height: 60,
-                },
-            !cameraHudVisibility.showCaptureHistory && styles.hidden,
-          ]}>
-          <CaptureHistoryStrip
-            uris={captureSession.shots.map((s) => s.uri)}
-            onSelect={(uri) => {
-              const shot = captureSession.shots.find((s) => s.uri === uri);
-              if (shot) navigateToPreview(shot);
-            }}
-            themeColor={themeColor}
-            isLandscape={isLandscape}
-          />
-        </View>
-
-        {/* Portrait: overlay controls bar + shutter row in a fixed bottom panel */}
-        {!isLandscape && (
-          <View
-            style={[
-              styles.portraitBottomPanel,
-              {
-                bottom: safeAreaBottomPad,
-                height: CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
-                paddingHorizontal: Math.max(16, insets.left),
-              },
-            ]}>
-            <ShutterRow
+        {/* Auto-capture countdown badge — alignment readout, kept in both orientations. */}
+        {chrome.showAutoCaptureBadge ? (
+          <View pointerEvents="none" style={[styles.floatCenter, { bottom: chromeTop + 56 }]}>
+            <AutoCaptureStatusBadge
+              remainingMs={autoCapture.remainingMs}
+              sustainMs={AUTO_SUSTAIN_MS}
               themeColor={themeColor}
-              capturing={anyCapturing}
+            />
+          </View>
+        ) : null}
+
+        {/* Expanded capture-history strip — toggled from the gallery thumb. */}
+        {historyOpen && chrome.showCaptureHistory ? (
+          <View
+            pointerEvents="box-none"
+            style={[styles.floatCenter, { bottom: chromeTop + 8, height: 60 }]}>
+            <CaptureHistoryStrip
+              uris={captureSession.shots.map((s) => s.uri)}
+              onSelect={(uri) => {
+                const shot = captureSession.shots.find((s) => s.uri === uri);
+                if (shot) navigateToPreview(shot);
+              }}
+              themeColor={themeColor}
               isLandscape={false}
-              animateCapture={settings.animateShutter}
-              isFrontFacing={facing === 'front'}
-              onShutter={onShutter}
-              onLongPress={onShutterLongPress}
-              onPickLibrary={handlePickLibraryImage}
-              onFlip={toggleFacing}
-              burst={
-                burst.capturing
-                  ? { active: true, captured: burst.captured, total: burst.total }
-                  : undefined
-              }
             />
           </View>
-        )}
+        ) : null}
 
-        <OverlayDock
-          open={overlayDockOpen}
-          onToggle={() => setHud((h) => ({ overlayDockOpen: !h.overlayDockOpen }))}
-          themeColor={themeColor}
-          isLandscape={isLandscape}
-          bottomBarHeight={bottomBarHeight}
-          bottomPad={safeAreaBottomPad}
-          clusterReserve={SHUTTER_ROW_LANDSCAPE_WIDTH}
-          leftInset={insets.left}
-          rightInset={insets.right}>
-          {overlayControls}
-        </OverlayDock>
-
-        {isLandscape && (
-          <View
-            style={[
-              styles.landscapeCluster,
-              { right: insets.right, top: topBarBottom, bottom: safeAreaBottomPad },
-            ]}>
-            <ShutterRow
-              themeColor={themeColor}
-              capturing={anyCapturing}
-              isLandscape={true}
-              animateCapture={settings.animateShutter}
-              isFrontFacing={facing === 'front'}
-              onShutter={onShutter}
-              onLongPress={onShutterLongPress}
-              onPickLibrary={handlePickLibraryImage}
-              onFlip={toggleFacing}
-              burst={
-                burst.capturing
-                  ? { active: true, captured: burst.captured, total: burst.total }
-                  : undefined
-              }
-            />
-          </View>
-        )}
-
-        <View
-          pointerEvents="none"
-          style={[
-            styles.modeToastWrap,
-            isLandscape
-              ? {
-                  left: insets.left + 16,
-                  right: SHUTTER_ROW_LANDSCAPE_WIDTH,
-                  bottom: safeAreaBottomPad + 24,
-                }
-              : { left: 0, right: 0, bottom: bottomBarHeight + 156 },
-          ]}>
+        {/* Toasts (capture-mode / auto-capture / lens-switch). */}
+        <View pointerEvents="none" style={[styles.floatCenter, { bottom: chromeTop + 104 }]}>
           <CaptureModeToast
             toast={captureModeToast}
             themeColor={themeColor}
@@ -1740,6 +1579,114 @@ export default function CompareCaptureScreen() {
           />
           <AutoCaptureToast toast={autoCaptureToast} themeColor={themeColor} />
           <CamSwitchToast toast={switchToast} themeColor={themeColor} />
+        </View>
+
+        {/* ── Bottom chrome bands — fixed at the bottom edge in BOTH orientations ── */}
+
+        {/* Overlay quick-controls popover (reposition/flip/edge/subject), above the zoom band. */}
+        {chrome.showOverlayQuickControls ? (
+          <View
+            pointerEvents="box-none"
+            style={[styles.bandRow, { bottom: overlayQuickControlsBottom }]}>
+            <OverlayQuickControls
+              mode={overlayMode}
+              edgeIntensity={edgeIntensity}
+              subjectFocus={subjectFocus}
+              subjectCombine={subjectCombine}
+              characterSelected={character !== null}
+              flipped={overlayTransform.flipped}
+              editMode={editMode}
+              themeColor={themeColor}
+              onSelectEdgeIntensity={(i) => persistOverlayKnob({ edgeIntensity: i })}
+              onSelectSubjectFocus={(f) => persistOverlayKnob({ subjectFocus: f })}
+              onToggleSubjectCombine={() => persistOverlayKnob({ subjectCombine: !subjectCombine })}
+              onOpenCharacterPicker={() => setCharacterPickerOpen(true)}
+              onToggleFlip={overlayTransform.toggleFlip}
+              onToggleEdit={handleToggleEdit}
+            />
+          </View>
+        ) : null}
+
+        {/* Zoom band: preset pills + opacity pill. Pinch stays on the preview (unchanged). */}
+        {chrome.showZoomBand ? (
+          <View pointerEvents="box-none" style={[styles.bandRow, { bottom: bands.zoomBandBottom }]}>
+            <ZoomPresets
+              stops={availableStops}
+              activeStop={zoom.activeStop as FocalStop | null}
+              themeColor={themeColor}
+              onPick={zoom.setStop}
+              onPickUltraWide={
+                cohortHint?.hasStandaloneUltraWide
+                  ? () => handleRequestSwitch('ultra-wide')
+                  : undefined
+              }
+              rotateLabels={rotateGlyphs}
+            />
+            {chrome.showOpacityPill ? (
+              <OverlayOpacityPill
+                opacity={overlayOpacity}
+                themeColor={themeColor}
+                onChange={(o) =>
+                  setHud((s) => ({
+                    overlayOpacityByMode: { ...s.overlayOpacityByMode, [s.overlayMode]: o },
+                  }))
+                }
+                onComplete={(o) =>
+                  setSettings((prev) => ({
+                    overlayOpacityByMode: { ...prev.overlayOpacityByMode, [overlayMode]: o },
+                  }))
+                }
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Overlay-mode carousel — the primary align-with-scene control. */}
+        <View pointerEvents="box-none" style={[styles.bandRow, { bottom: bands.carouselBottom }]}>
+          <OverlayModeCarousel
+            index={carouselIndex}
+            onChangeIndex={handleCarouselChange}
+            themeColor={themeColor}
+            isLandscape={isLandscape}
+            orientationMode={orientationMode}
+          />
+        </View>
+
+        {/* Bottom row: gallery | shutter | flip — fixed bottom, glyphs rotate in landscape. */}
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.bottomRow,
+            {
+              bottom: bands.shutterRowBottom,
+              height: bands.shutterRowHeight,
+              paddingHorizontal: Math.max(insets.left, insets.right),
+            },
+          ]}>
+          <ShutterRow
+            themeColor={themeColor}
+            capturing={anyCapturing}
+            isLandscape={isLandscape}
+            rotateGlyphs={rotateGlyphs}
+            animateCapture={settings.animateShutter}
+            isFrontFacing={facing === 'front'}
+            onShutter={onShutter}
+            onLongPress={onShutterLongPress}
+            onFlip={toggleFacing}
+            galleryNode={
+              <GalleryThumb
+                uris={captureSession.shots.map((s) => s.uri)}
+                themeColor={themeColor}
+                onPickLibrary={handlePickLibraryImage}
+                onExpand={() => setHistoryOpen((v) => !v)}
+              />
+            }
+            burst={
+              burst.capturing
+                ? { active: true, captured: burst.captured, total: burst.total }
+                : undefined
+            }
+          />
         </View>
 
         <CountdownOverlay
@@ -1793,8 +1740,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
-  focalDock: { position: 'absolute', zIndex: 58 },
-  autoBadgeWrap: { position: 'absolute', alignItems: 'center', zIndex: 60 },
   autoModeBadgeWrap: { position: 'absolute', zIndex: 66 },
   autoModeBadge: {
     flexDirection: 'row',
@@ -1805,24 +1750,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  modeToastWrap: { position: 'absolute', alignItems: 'center', zIndex: 80 },
-  captureHistoryWrap: { position: 'absolute', alignItems: 'center', zIndex: 58 },
-  portraitBottomPanel: {
+  // Banded chrome — every band is full-width and positioned by `bottom` from the resolver,
+  // identical in both orientations (no right-edge column).
+  bandRow: {
     position: 'absolute',
     left: 0,
     right: 0,
     zIndex: 70,
-    paddingBottom: 6,
-    justifyContent: 'center',
-  },
-  landscapeCluster: {
-    position: 'absolute',
-    zIndex: 70,
-    width: SHUTTER_ROW_LANDSCAPE_WIDTH,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
-  hidden: { display: 'none' },
+  bottomRow: { position: 'absolute', left: 0, right: 0, zIndex: 70, justifyContent: 'center' },
+  floatCenter: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 80 },
   levelHorizonWrap: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',

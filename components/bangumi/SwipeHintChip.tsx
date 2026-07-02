@@ -5,6 +5,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 interface SwipeHintChipProps {
   onDismiss: () => void;
@@ -12,6 +13,7 @@ interface SwipeHintChipProps {
 
 export function SwipeHintChip({ onDismiss }: SwipeHintChipProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handleDismiss = () => {
@@ -29,15 +31,15 @@ export function SwipeHintChip({ onDismiss }: SwipeHintChipProps) {
         <MaterialIcons name="swap-horiz" size={14} color={theme.accent} />
       </View>
       <Text style={styles.label} numberOfLines={1}>
-        <Text style={styles.labelEmphasis}>← Remind</Text>
+        <Text style={styles.labelEmphasis}>{`← ${t('bangumiTab.remind')}`}</Text>
         <Text style={styles.labelDivider}>  ·  </Text>
-        <Text style={styles.labelEmphasis}>Plan →</Text>
+        <Text style={styles.labelEmphasis}>{`${t('commonUi.plan')} →`}</Text>
       </Text>
       <Pressable
         onPress={handleDismiss}
         hitSlop={12}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss swipe hint"
+        accessibilityLabel={t('bangumiTab.dismissSwipeHint')}
         style={({ pressed }) => [styles.dismissBtn, pressed && { opacity: 0.6 }]}
       >
         <MaterialIcons name="close" size={14} color={theme.text.tertiary} />

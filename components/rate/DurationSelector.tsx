@@ -6,13 +6,16 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { listItemEnterDown } from '../../libs/animations/presets';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 export type DurationKey = 'all' | 'short' | 'standard' | 'long' | 'movie';
 
 interface DurationOption {
   key: DurationKey;
-  label: string;
-  description: string;
+  labelKey: TranslationKey;
+  /** Catalog key for the description; `description` is the raw fallback for ranges not yet in the catalog. */
+  descriptionKey?: TranslationKey;
+  description?: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   minMinutes?: number;
   maxMinutes?: number;
@@ -21,20 +24,20 @@ interface DurationOption {
 export const DURATION_OPTIONS: DurationOption[] = [
   {
     key: 'all',
-    label: 'All Lengths',
-    description: 'Any episode duration',
+    labelKey: 'rate.allLengths',
+    descriptionKey: 'rate.anyEpisodeDuration',
     icon: 'all-inclusive',
   },
   {
     key: 'short',
-    label: 'Short Form',
-    description: 'Under 13 min',
+    labelKey: 'rate.shortForm',
+    descriptionKey: 'rate.under13Min',
     icon: 'flash-on',
     maxMinutes: 13,
   },
   {
     key: 'standard',
-    label: 'Standard',
+    labelKey: 'rate.standard',
     description: '13 to 30 min',
     icon: 'tv',
     minMinutes: 13,
@@ -42,7 +45,7 @@ export const DURATION_OPTIONS: DurationOption[] = [
   },
   {
     key: 'long',
-    label: 'Long Form',
+    labelKey: 'rate.longForm',
     description: '30 to 60 min',
     icon: 'access-time-filled',
     minMinutes: 30,
@@ -50,7 +53,7 @@ export const DURATION_OPTIONS: DurationOption[] = [
   },
   {
     key: 'movie',
-    label: 'Movies',
+    labelKey: 'rate.movies',
     description: '60+ min',
     icon: 'movie',
     minMinutes: 60,
@@ -64,6 +67,7 @@ interface DurationSelectorProps {
 
 function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -98,9 +102,11 @@ function DurationSelectorComponent({ value, onChange }: DurationSelectorProps) {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: theme.text.primary }]}>{option.label}</Text>
+                <Text style={[styles.label, { color: theme.text.primary }]}>
+                  {t(option.labelKey)}
+                </Text>
                 <Text style={[styles.description, { color: theme.text.secondary }]}>
-                  {option.description}
+                  {option.descriptionKey ? t(option.descriptionKey) : option.description}
                 </Text>
               </View>
               <MaterialIcons

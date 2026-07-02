@@ -1,3 +1,7 @@
+import { getAppLanguageSync } from '../../i18n/app-language';
+import { getEffectiveTitleOrderSync, type TitleLanguageId } from '../../i18n/title-language';
+import { chineseScriptFor } from '../../utils/anime-localization-service';
+import { toTraditional } from '../../utils/chinese-converter';
 import { lookupByBangumiId, type AnitabiCrossIndexEntry } from './anitabi-cross-index';
 import type { AnitabiPoint } from './types';
 
@@ -24,6 +28,8 @@ export interface PilgrimageDisplayTitles {
 
 export interface PilgrimageTitleOptions {
   lookupCrossIndex?: (bangumiId: number) => AnitabiCrossIndexEntry | null;
+  /** Injectable for tests; defaults to the active app language. */
+  appLanguage?: string;
 }
 
 export function getPilgrimageAnimeTitles(
@@ -35,13 +41,29 @@ export function getPilgrimageAnimeTitles(
     typeof bangumiId === 'number'
       ? (options.lookupCrossIndex ?? lookupByBangumiId)(bangumiId)
       : null;
+  const appLanguage = options.appLanguage ?? getAppLanguageSync();
 
   const english = firstNonEmpty(anime.titleEnglish, cross?.titleEnglish);
   const romaji = firstNonEmpty(anime.titleRomaji, cross?.titleRomaji);
   const original = firstNonEmpty(anime.titleJa, anime.title, cross?.titleJa);
-  const chinese = firstNonEmpty(anime.titleCn, anime.cn, cross?.titleCn);
-  const primary = firstNonEmpty(english, original, chinese, romaji, 'Unknown Title')!;
-  const supporting = distinctTitles(primary, original, chinese, romaji, english);
+  const rawChinese = firstNonEmpty(anime.titleCn, anime.cn, cross?.titleCn);
+  // Anitabi/Bangumi ship Simplified; zh-Hant users expect Traditional.
+  const chinese =
+    rawChinese && chineseScriptFor(appLanguage) === 'hant' ? toTraditional(rawChinese) : rawChinese;
+
+  // Candidates walk the user's title-language priority (custom order, or
+  // derived from the app language) — the same order every other screen
+  // renders with, instead of the old hardcoded english-first chain.
+  const byLanguage: Record<TitleLanguageId, string | null> = {
+    english,
+    romaji,
+    japanese: original,
+    chinese,
+    russian: null,
+  };
+  const ranked = getEffectiveTitleOrderSync(appLanguage).map((lang) => byLanguage[lang]);
+  const primary = firstNonEmpty(...ranked, english, original, chinese, romaji, 'Unknown Title')!;
+  const supporting = distinctTitles(primary, ...ranked, english, original, chinese, romaji);
 
   return {
     primary,

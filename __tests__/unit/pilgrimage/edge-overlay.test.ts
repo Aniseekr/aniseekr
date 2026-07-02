@@ -5,6 +5,7 @@ import {
   getEdgeOverlayConfig,
   type EdgeIntensity,
 } from '../../../libs/services/pilgrimage/edge-overlay';
+import { translate } from '../../../libs/i18n/engine';
 
 describe('edge overlay intensity', () => {
   it('exposes low, mid, and high in UI order', () => {
@@ -12,7 +13,8 @@ describe('edge overlay intensity', () => {
   });
 
   it('maps low to Edge+ with a faint reference backdrop and sparse lines', () => {
-    expect(edgeIntensityLabel('low')).toBe('Edge+');
+    expect(edgeIntensityLabel('low')).toBe('pilgrimageUi.edgeIntensityLow');
+    expect(translate('en', edgeIntensityLabel('low'))).toBe('Edge+');
     expect(getEdgeOverlayConfig('low')).toEqual({
       threshold: 0.24,
       inkOpacity: 0.42,
@@ -25,8 +27,8 @@ describe('edge overlay intensity', () => {
     const mid = getEdgeOverlayConfig('mid');
     const high = getEdgeOverlayConfig('high');
 
-    expect(edgeIntensityLabel('mid')).toBe('Edge');
-    expect(edgeIntensityLabel('high')).toBe('Edge Max');
+    expect(translate('en', edgeIntensityLabel('mid'))).toBe('Edge');
+    expect(translate('en', edgeIntensityLabel('high'))).toBe('Edge Max');
     expect(mid.sourceOpacity).toBe(0);
     expect(high.sourceOpacity).toBe(0);
     expect(low.threshold).toBeGreaterThan(mid.threshold);
@@ -38,5 +40,6 @@ describe('edge overlay intensity', () => {
 
   it('falls back to low for unknown persisted values', () => {
     expect(getEdgeOverlayConfig('other' as EdgeIntensity)).toEqual(getEdgeOverlayConfig('low'));
+    expect(edgeIntensityLabel('other' as EdgeIntensity)).toBe(edgeIntensityLabel('low'));
   });
 });

@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 import type { SwipeMode } from '../../libs/services/user-prefs';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -32,6 +33,7 @@ type Props = {
  */
 export function ModeSwitcherSheet({ visible, value, options, onSelect, onClose }: Props) {
   const { theme, effectiveMode } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const blurTint = effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
 
@@ -44,7 +46,7 @@ export function ModeSwitcherSheet({ visible, value, options, onSelect, onClose }
       animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Dismiss">
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('commonUi.dismiss')}>
         <Pressable
           style={styles.sheetWrapper}
           onPress={(e) => e.stopPropagation()}
@@ -58,7 +60,7 @@ export function ModeSwitcherSheet({ visible, value, options, onSelect, onClose }
 
             <View style={styles.content}>
               <Text style={styles.title}>{`You're in ${activeOption?.label ?? ''} mode.`}</Text>
-              <Text style={styles.subtitle}>Tap to change.</Text>
+              <Text style={styles.subtitle}>{t('rate.tapToChange')}</Text>
 
               <View style={styles.segmentRow}>
                 {options.map((option) => {

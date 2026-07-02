@@ -86,7 +86,7 @@ export default function AdvancedScreen() {
             }}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [
               styles.backButton,
               {

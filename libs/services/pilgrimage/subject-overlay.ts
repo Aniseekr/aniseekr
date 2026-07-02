@@ -1,3 +1,5 @@
+import type { TranslationKey } from '../../i18n';
+
 export type SubjectFocus = 'tight' | 'normal' | 'wide';
 
 export interface SubjectOverlayConfig {
@@ -15,10 +17,10 @@ const CONFIG: Record<SubjectFocus, SubjectOverlayConfig> = {
   wide: { radiusX: 0.43, radiusY: 0.58, feather: 0.16, opacity: 0.94 },
 };
 
-const LABEL: Record<SubjectFocus, string> = {
-  tight: 'Tight',
-  normal: 'Normal',
-  wide: 'Wide',
+const LABEL: Record<SubjectFocus, TranslationKey> = {
+  tight: 'pilgrimageUi.subjectFocusTight',
+  normal: 'pilgrimageUi.subjectFocusNormal',
+  wide: 'pilgrimageUi.subjectFocusWide',
 };
 
 export function isSubjectFocus(value: unknown): value is SubjectFocus {
@@ -29,6 +31,6 @@ export function getSubjectOverlayConfig(value: SubjectFocus): SubjectOverlayConf
   return CONFIG[isSubjectFocus(value) ? value : 'normal'];
 }
 
-export function subjectFocusLabel(value: SubjectFocus): string {
+export function subjectFocusLabel(value: SubjectFocus): TranslationKey {
   return LABEL[isSubjectFocus(value) ? value : 'normal'];
 }

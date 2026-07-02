@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
+import { useT } from '../../libs/i18n';
 import type { AnitabiPoint } from '../../libs/services/pilgrimage/types';
 
 export interface PilgrimageSpotListProps {
@@ -38,6 +39,7 @@ export function buildMapsURL(lat: number, lng: number): string {
 export function PilgrimageSpotList({ points, openURL }: PilgrimageSpotListProps) {
   const opener = openURL ?? Linking.openURL.bind(Linking);
   const { theme } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   // The "Open in Maps" button is filled with the accent — its label must use
   // the contrast-safe foreground so it stays readable on light accents.
@@ -46,7 +48,7 @@ export function PilgrimageSpotList({ points, openURL }: PilgrimageSpotListProps)
   if (points.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>No pilgrimage spots yet.</Text>
+        <Text style={styles.emptyText}>{t('pilgrimageUi.noPilgrimageSpotsYet')}</Text>
       </View>
     );
   }
@@ -87,7 +89,7 @@ export function PilgrimageSpotList({ points, openURL }: PilgrimageSpotListProps)
                 accessibilityLabel={`Open ${point.name} in maps`}>
                 <Ionicons name="map" size={14} color={valid ? mapsFg : theme.text.tertiary} />
                 <Text style={[styles.mapsText, { color: valid ? mapsFg : theme.text.tertiary }]}>
-                  {valid ? 'Open in Maps' : 'No coordinates'}
+                  {valid ? t('pilgrimageUi.openInMaps') : 'No coordinates'}
                 </Text>
               </Pressable>
             </View>

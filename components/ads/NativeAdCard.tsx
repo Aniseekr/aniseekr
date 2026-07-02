@@ -29,6 +29,7 @@ import {
 } from '../../libs/services/ads/rate-native-ad-session';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import {
   getStackRevealTranslation,
   STACK_REVEAL_DISTANCE,
@@ -125,6 +126,7 @@ interface Props {
 }
 
 export function NativeAdCard({ isTop, onSwipe, activeTranslation, ref }: Props) {
+  const t = useT();
   const subscription = useSubscription();
   const [nativeAd, setNativeAd] = useState<NativeAdLike | null>(null);
   const [loading, setLoading] = useState(false);
@@ -435,7 +437,7 @@ export function NativeAdCard({ isTop, onSwipe, activeTranslation, ref }: Props) 
                         </Text>
                       </NativeAsset>
                     ) : (
-                      <Text style={styles.advertiser}>Sponsored</Text>
+                      <Text style={styles.advertiser}>{t('ads.sponsored')}</Text>
                     )}
                   </View>
                 </View>
@@ -460,7 +462,7 @@ export function NativeAdCard({ isTop, onSwipe, activeTranslation, ref }: Props) 
           ) : (
             <View style={styles.loadingState}>
               <ActivityIndicator size="small" color={Colors.text.primary} animating={loading} />
-              <Text style={styles.loadingTitle}>Loading ad</Text>
+              <Text style={styles.loadingTitle}>{t('ads.loadingAd')}</Text>
             </View>
           )}
 
@@ -469,7 +471,7 @@ export function NativeAdCard({ isTop, onSwipe, activeTranslation, ref }: Props) 
               <View style={styles.progressTrack}>
                 <Animated.View style={[styles.progressFill, progressStyle]} />
               </View>
-              <Text style={styles.progressText}>Continue in a moment</Text>
+              <Text style={styles.progressText}>{t('ads.continueInAMoment')}</Text>
             </View>
           ) : null}
         </Animated.View>

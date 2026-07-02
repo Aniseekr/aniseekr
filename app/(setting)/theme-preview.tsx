@@ -7,10 +7,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import { useT } from '../../libs/i18n';
 
 export default function ThemePreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accent = theme.accent;
@@ -25,15 +27,15 @@ export default function ThemePreviewScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back to settings"
+            accessibilityLabel={t('settingsUi.backToSettings')}
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
             <ThemedText variant="bodyMedium" weight="500">
-              Settings
+              {t('common.settings')}
             </ThemedText>
           </Pressable>
           <ThemedText variant="titleLarge" weight="600">
-            Live Preview
+            {t('settingsUi.livePreview')}
           </ThemedText>
           <Pressable
             onPress={() => {
@@ -42,7 +44,7 @@ export default function ThemePreviewScreen() {
             }}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Switch accent color"
+            accessibilityLabel={t('settingsUi.switchAccentColor')}
             style={({ pressed }) => [
               styles.switchPill,
               { borderColor: accent },
@@ -50,7 +52,7 @@ export default function ThemePreviewScreen() {
             ]}>
             <View style={[styles.pillDot, { backgroundColor: accent }]} />
             <ThemedText variant="captionSmall" weight="600" style={{ color: accent }}>
-              Switch
+              {t('settingsUi.switch')}
             </ThemedText>
           </Pressable>
         </View>
@@ -69,7 +71,7 @@ export default function ThemePreviewScreen() {
                 <View style={[styles.heroBadge, { backgroundColor: accent + 'DD' }]}>
                   <Ionicons name="star" size={10} color={accentFg} />
                   <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
-                    Featured Today
+                    {t('settingsUi.featuredToday')}
                   </ThemedText>
                 </View>
               </View>
@@ -83,7 +85,7 @@ export default function ThemePreviewScreen() {
                   </ThemedText>
                 </View>
                 <ThemedButton
-                  label="Watch Now"
+                  label={t('commonUi.watchNow')}
                   onPress={() => hapticsBridge.tap()}
                   size="sm"
                   shape="rounded"
@@ -95,8 +97,8 @@ export default function ThemePreviewScreen() {
 
           {/* Filter chips */}
           <View style={styles.chipsRow}>
-            <Chip label="Action" active />
-            <Chip label="Romance" />
+            <Chip label={t('settingsUi.action')} active />
+            <Chip label={t('settingsUi.romance')} />
             <Chip label="SF" />
           </View>
 
@@ -116,7 +118,7 @@ export default function ThemePreviewScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <ThemedText variant="captionSmall" tone="secondary" weight="500">
-                  Currently Watching
+                  {t('settingsUi.currentlyWatching')}
                 </ThemedText>
                 <ThemedText variant="titleMedium" weight="700" style={{ marginTop: 2 }}>
                   Ep 12 / 24
@@ -130,17 +132,17 @@ export default function ThemePreviewScreen() {
 
           {/* Button row — actual ThemedButton variants */}
           <View style={styles.buttonRow}>
-            <ThemedButton label="Primary" onPress={() => hapticsBridge.tap()} size="sm" shape="rounded" />
+            <ThemedButton label={t('settingsUi.primary')} onPress={() => hapticsBridge.tap()} size="sm" shape="rounded" />
             <ThemedButton
               variant="outline"
-              label="Outline"
+              label={t('settingsUi.outline')}
               onPress={() => hapticsBridge.tap()}
               size="sm"
               shape="rounded"
             />
             <ThemedButton
               variant="ghost"
-              label="Ghost"
+              label={t('settingsUi.ghost')}
               onPress={() => hapticsBridge.tap()}
               size="sm"
               shape="rounded"
@@ -157,7 +159,7 @@ export default function ThemePreviewScreen() {
             <View style={[styles.badge, { backgroundColor: accent + '14', borderColor: accent + '55' }]}>
               <Ionicons name="trending-up" size={11} color={accent} />
               <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
-                Trending
+                {t('settingsUi.trending')}
               </ThemedText>
             </View>
             <View
@@ -183,10 +185,10 @@ export default function ThemePreviewScreen() {
               borderTopColor: theme.glassBorder,
             },
           ]}>
-          <TabItem label="Home" icon="home" active />
-          <TabItem label="Search" icon="search" />
-          <TabItem label="Library" icon="bookmark" />
-          <TabItem label="Profile" icon="person" />
+          <TabItem label={t('settingsUi.home')} icon="home" active />
+          <TabItem label={t('common.search')} icon="search" />
+          <TabItem label={t('settingsUi.library')} icon="bookmark" />
+          <TabItem label={t('settingsUi.profile')} icon="person" />
         </View>
       </SafeAreaView>
     </View>

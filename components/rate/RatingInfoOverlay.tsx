@@ -1,5 +1,6 @@
 import { Platform, View, Text, Pressable, StyleSheet } from 'react-native';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
+import { useT } from '../../libs/i18n';
 import { Photo } from './types';
 import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function RatingInfoOverlay({ photo, onClose, onMoreDetails }: Props) {
+  const t = useT();
   const displayTitle = useAnimeDisplayTitle(
     photo?.title
       ? {
@@ -68,12 +70,12 @@ export function RatingInfoOverlay({ photo, onClose, onMoreDetails }: Props) {
           <View style={styles.metadataRow}>
             <View style={styles.metadataItem}>
               <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.5)" />
-              <Text style={styles.metadataText}>{photo.year || 'Unknown'}</Text>
+              <Text style={styles.metadataText}>{photo.year || t('commonUi.unknown')}</Text>
             </View>
             <View style={styles.metadataSeparator} />
             <View style={styles.metadataItem}>
               <Ionicons name="tv-outline" size={12} color="rgba(255,255,255,0.5)" />
-              <Text style={styles.metadataText}>{photo.type || 'Anime'}</Text>
+              <Text style={styles.metadataText}>{photo.type || t('commonUi.anime')}</Text>
             </View>
           </View>
 
@@ -92,7 +94,7 @@ export function RatingInfoOverlay({ photo, onClose, onMoreDetails }: Props) {
           <View style={styles.actionsRow}>
             <Pressable onPress={onMoreDetails} style={styles.detailButton}>
               <Ionicons name="information-circle-outline" size={18} color="#fff" />
-              <Text style={styles.detailButtonText}>Details</Text>
+              <Text style={styles.detailButtonText}>{t('rate.details')}</Text>
             </Pressable>
           </View>
         </BlurView>

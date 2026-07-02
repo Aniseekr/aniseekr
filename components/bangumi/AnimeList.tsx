@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText } from '../themed';
 import { useRouter } from 'expo-router';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import ReanimatedSwipeable, {
@@ -219,9 +220,7 @@ function AnimeRowCardImpl({
         <View style={styles.cardContainer}>
           <Image source={{ uri: anime.image }} style={styles.cardImage} resizeMode="cover" />
           <View className="ml-4 flex-1 justify-center">
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {anime.title}
-            </Text>
+            <AnimeTitleText anime={anime} style={styles.cardTitle} numberOfLines={2} />
 
             {bangumiId !== undefined ? (
               <View style={{ marginTop: 4, marginBottom: 4 }}>

@@ -12,6 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Magnetometer } from 'expo-sensors';
 import { Radius, Spacing, bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
+import { useT } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
 import {
@@ -41,6 +42,7 @@ export default function GpsAlignScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const params = useLocalSearchParams();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
@@ -137,16 +139,16 @@ export default function GpsAlignScreen() {
             onPress={() => router.back()}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
-              Precision Alignment
+              {t('pilgrimageUi.precisionAlignment')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary">
-              GPS Alignment
+              {t('pilgrimageUi.gpsAlignment')}
             </ThemedText>
           </View>
           <View style={{ width: 36 }} />
@@ -250,14 +252,14 @@ export default function GpsAlignScreen() {
               icon="locate"
               tone={theme.accent}
               theme={theme}
-              label="Accuracy"
+              label={t('pilgrimageUi.accuracy')}
               value={accuracy != null ? `±${accuracy.toFixed(0)} m` : '—'}
             />
             <SummaryCell
               icon="compass"
               tone={theme.status.info}
               theme={theme}
-              label="Compass"
+              label={t('pilgrimageUi.compass')}
               value={heading != null ? `${Math.round(heading)}°` : '—'}
               hint={heading != null ? cardinal(heading) : undefined}
             />
@@ -265,15 +267,15 @@ export default function GpsAlignScreen() {
               icon="trending-up"
               tone={theme.status.success}
               theme={theme}
-              label="Altitude"
+              label={t('pilgrimageUi.altitude')}
               value="—"
               hint="Slight elevation"
             />
           </View>
 
           <SectionHeader
-            title="Calibration Steps"
-            subtitle="GPS and compass checks"
+            title={t('pilgrimageUi.calibrationSteps')}
+            subtitle={t('pilgrimageUi.gpsAndCompassChecks')}
             theme={theme}
           />
           <View style={styles.stepList}>
@@ -281,21 +283,21 @@ export default function GpsAlignScreen() {
               done={!!userLocation}
               accent={accent}
               theme={theme}
-              title="Enable GPS"
+              title={t('pilgrimageUi.enableGps')}
               subtitle="Accuracy ≤ 25 m"
             />
             <StepRow
               done={heading != null}
               accent={accent}
               theme={theme}
-              title="Calibrate compass"
-              subtitle="Wave the phone in a figure-8 if heading drifts"
+              title={t('pilgrimageUi.calibrateCompass')}
+              subtitle={t('pilgrimageUi.waveThePhoneInA')}
             />
             <StepRow
               done={!!(distance != null && distance < 0.05)}
               accent={accent}
               theme={theme}
-              title="Walk to the spot"
+              title={t('pilgrimageUi.walkToTheSpot')}
               subtitle={
                 distance != null
                   ? `${(distance * 1000).toFixed(0)} m to target`
@@ -306,7 +308,7 @@ export default function GpsAlignScreen() {
               done={false}
               accent={accent}
               theme={theme}
-              title="Open AR camera"
+              title={t('pilgrimageUi.openArCamera')}
               subtitle="When you're aligned, launch capture"
             />
           </View>
@@ -316,7 +318,7 @@ export default function GpsAlignScreen() {
           <Pressable
             onPress={handleStart}
             accessibilityRole="button"
-            accessibilityLabel="Open AR camera"
+            accessibilityLabel={t('pilgrimageUi.openArCamera')}
             style={({ pressed }) => [
               styles.startBtn,
               {
@@ -326,7 +328,7 @@ export default function GpsAlignScreen() {
             ]}>
             <Ionicons name="camera" size={20} color={accentFg} />
             <ThemedText variant="titleMedium" weight="700" style={{ color: accentFg }}>
-              Open AR Camera
+              {t('pilgrimageUi.openArCamera2')}
             </ThemedText>
           </Pressable>
         </View>

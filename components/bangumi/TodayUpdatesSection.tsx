@@ -4,6 +4,7 @@
 
 import { memo, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -12,6 +13,7 @@ import { pushAnimeDetail, prefetchAnimeDetail } from '../../libs/utils/navigate-
 import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 interface TodayUpdatesSectionProps {
   todayAnime: Anime[];
@@ -36,6 +38,7 @@ function TodayUpdatesSectionComponent({
 }: TodayUpdatesSectionProps) {
   const router = useRouter();
   const { theme, effectiveMode } = useTheme();
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const blurTint =
     effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
@@ -54,7 +57,7 @@ function TodayUpdatesSectionComponent({
 
       <Pressable onPress={() => setCollapsed((p) => !p)} style={styles.header}>
         <Ionicons name="sparkles" size={16} color={theme.accent} />
-        <Text style={styles.title}>Today</Text>
+        <Text style={styles.title}>{t('bangumiTab.today')}</Text>
         <Text style={styles.count}>({todayAnime.length})</Text>
         <View style={{ flex: 1 }} />
         <Ionicons
@@ -88,9 +91,7 @@ function TodayUpdatesSectionComponent({
                 style={styles.card}>
                 <Image source={{ uri: anime.image }} style={styles.poster} resizeMode="cover" />
                 <View style={styles.cardText}>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {anime.title}
-                  </Text>
+                  <AnimeTitleText anime={anime} style={styles.cardTitle} numberOfLines={2} />
                   {anime.nextAiringEpisode ? (
                     <Text style={styles.cardTime}>
                       {formatAiringTime(anime.nextAiringEpisode.airingAt)}

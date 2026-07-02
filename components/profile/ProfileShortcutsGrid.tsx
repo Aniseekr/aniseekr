@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../themed';
 import { QuickActionSheet, type QuickAction } from '../settings/QuickActionSheet';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 import {
   PROFILE_SHORTCUT_COUNT,
   getShortcutSpec,
@@ -22,6 +23,7 @@ interface ProfileShortcutsGridProps {
 
 export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGridProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
 
@@ -84,14 +86,14 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
   const pillBorder = editMode ? theme.accent : theme.glassBorder;
   const pillFg = editMode ? readableTextOn(theme.accent) : theme.text.primary;
   const pillIcon = editMode ? 'checkmark' : 'pencil';
-  const pillLabel = editMode ? 'Done' : 'Edit';
+  const pillLabel = editMode ? t('common.done') : t('common.edit');
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <ThemedText variant="titleLarge" weight="700">
-            Quick Shortcuts
+            {t('profile.quickShortcuts')}
           </ThemedText>
           <Ionicons name="sparkles" size={14} color={theme.accent} />
         </View>
@@ -137,8 +139,8 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
         <QuickActionSheet
           visible
           onClose={() => setEditingSlot(null)}
-          title="Replace shortcut"
-          subtitle="Tap a shortcut to put it in this slot"
+          title={t('profile.replaceShortcut')}
+          subtitle={t('profile.tapAShortcutToPut')}
           actions={sheetActions}
         />
       ) : null}

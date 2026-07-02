@@ -5,6 +5,7 @@ import {
   CAMERA_SETTINGS_STORAGE_KEY,
   CAPTURE_MODES,
   DEFAULT_CAMERA_SETTINGS,
+  DEFAULT_OVERLAY_OPACITY_BY_MODE,
   SILENT_SHUTTER_HELP_TEXT,
   clampBracketEvStops,
   loadCameraSettings,
@@ -121,5 +122,50 @@ describe('loadCameraSettings — v4 → auto migration', () => {
   it('exposes the persisted settings through the synchronous read', async () => {
     await saveCameraSettings({ ...DEFAULT_CAMERA_SETTINGS, mute: true });
     expect(loadCameraSettingsSync().mute).toBe(true);
+  });
+});
+
+describe('overlayOpacityByMode — per-mode overlay alpha', () => {
+  beforeEach(() => {
+    appStorage.clearAll();
+    __resetAppStorageForTests();
+  });
+
+  it('ships edge high / anime low defaults', () => {
+    expect(DEFAULT_OVERLAY_OPACITY_BY_MODE.edge).toBe(0.75);
+    expect(DEFAULT_OVERLAY_OPACITY_BY_MODE.anime).toBe(0.35);
+    expect(DEFAULT_CAMERA_SETTINGS.overlayOpacityByMode).toEqual(DEFAULT_OVERLAY_OPACITY_BY_MODE);
+  });
+
+  it('round-trips a per-mode map through storage', async () => {
+    await saveCameraSettings({
+      ...DEFAULT_CAMERA_SETTINGS,
+      overlayOpacityByMode: { anime: 0.2, edge: 0.9, sketch: 0.5, subject: 0.4 },
+    });
+    const loaded = await loadCameraSettings();
+    expect(loaded.overlayOpacityByMode.edge).toBe(0.9);
+    expect(loaded.overlayOpacityByMode.anime).toBe(0.2);
+  });
+
+  it('clamps persisted alphas into 0..1 and back-fills missing/garbage modes', async () => {
+    appStorage.set(
+      CAMERA_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_CAMERA_SETTINGS,
+        overlayOpacityByMode: { anime: 1.8, edge: -0.5, sketch: 'lots' },
+      })
+    );
+    const loaded = await loadCameraSettings();
+    expect(loaded.overlayOpacityByMode.anime).toBe(1); // clamped from 1.8
+    expect(loaded.overlayOpacityByMode.edge).toBe(0); // clamped from -0.5
+    expect(loaded.overlayOpacityByMode.sketch).toBe(DEFAULT_OVERLAY_OPACITY_BY_MODE.sketch); // garbage → default
+    expect(loaded.overlayOpacityByMode.subject).toBe(DEFAULT_OVERLAY_OPACITY_BY_MODE.subject); // missing → default
+  });
+
+  it('falls back to the full default map when the persisted field is absent', async () => {
+    const { overlayOpacityByMode: _omit, ...withoutMap } = DEFAULT_CAMERA_SETTINGS;
+    appStorage.set(CAMERA_SETTINGS_STORAGE_KEY, JSON.stringify(withoutMap));
+    const loaded = await loadCameraSettings();
+    expect(loaded.overlayOpacityByMode).toEqual(DEFAULT_OVERLAY_OPACITY_BY_MODE);
   });
 });

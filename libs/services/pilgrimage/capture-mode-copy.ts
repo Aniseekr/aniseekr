@@ -1,27 +1,36 @@
+import type { TranslationKey } from '../../i18n';
+
 // User-facing CaptureMode union. Mirrors the persisted CaptureMode in
 // camera-settings.ts — the retired 'hdr' value migrates to 'auto' on load, so
 // nothing here ever needs to render 'hdr' copy.
 export type CaptureModeCopyMode = 'single' | 'burst' | 'auto';
 
 export interface CaptureModeCopy {
-  label: string;
-  hint: string;
+  /** Translation key — resolve with `t()` at the call site. */
+  label: TranslationKey;
+  /** Translation key — resolve with `t()` at the call site. */
+  hint: TranslationKey;
+  /** Ionicons glyph name — not user-facing text. */
   icon: string;
 }
 
-export const CAPTURE_MODE_HELP_TEXT =
-  'Single: one shot. Burst: 6 frames, keeps the best-aligned. Auto: detects high-contrast scenes and brackets exposure when needed (uses hardware HDR if supported).';
+/** Translation key for the capture-mode help paragraph. Resolve with `t()`. */
+export const CAPTURE_MODE_HELP_TEXT_KEY: TranslationKey = 'pilgrimageUi.captureModeHelp';
 
 const MODE_COPY: Record<CaptureModeCopyMode, CaptureModeCopy> = {
-  single: { label: 'Photo', hint: 'One sharp shot', icon: 'camera-outline' },
+  single: {
+    label: 'pilgrimageUi.captureModeSingleLabel',
+    hint: 'pilgrimageUi.captureModeSingleHint',
+    icon: 'camera-outline',
+  },
   burst: {
-    label: 'Burst',
-    hint: 'Captures 6 frames, keeps the best-aligned',
+    label: 'pilgrimageUi.captureModeBurstLabel',
+    hint: 'pilgrimageUi.captureModeBurstHint',
     icon: 'albums-outline',
   },
   auto: {
-    label: 'Auto',
-    hint: 'Detects high-contrast scenes and brackets exposure when needed',
+    label: 'pilgrimageUi.captureModeAutoLabel',
+    hint: 'pilgrimageUi.captureModeAutoHint',
     icon: 'sparkles-outline',
   },
 };
@@ -33,7 +42,7 @@ export function captureModeToastCopy(
   if (mode === 'auto' && nativeHdrActive) {
     return {
       ...MODE_COPY.auto,
-      hint: 'High-contrast scene — using hardware HDR on this device',
+      hint: 'pilgrimageUi.captureModeAutoHintHdr',
     };
   }
   return MODE_COPY[mode];

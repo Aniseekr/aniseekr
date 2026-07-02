@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
 import { sheetEnter } from '../../libs/animations/presets';
+import { useT } from '../../libs/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - Spacing.md * 2, 360);
@@ -23,12 +24,14 @@ interface RatingSliderOverlayProps {
 function RatingSliderOverlayComponent({
   visible,
   initialValue = 5,
-  title = 'Rate this anime',
+  title,
   subtitle,
   onCancel,
   onConfirm,
 }: RatingSliderOverlayProps) {
   const { theme } = useTheme();
+  const t = useT();
+  const resolvedTitle = title ?? t('rate.rateThisAnime');
   const [value, setValue] = useState(initialValue);
 
   useEffect(() => {
@@ -66,7 +69,7 @@ function RatingSliderOverlayComponent({
               borderColor: theme.glassBorder,
             },
           ]}>
-          <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{resolvedTitle}</Text>
           {subtitle ? (
             <Text style={[styles.subtitle, { color: theme.text.secondary }]}>{subtitle}</Text>
           ) : null}
@@ -97,7 +100,9 @@ function RatingSliderOverlayComponent({
                 styles.cancelButton,
                 { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
               ]}>
-              <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>Cancel</Text>
+              <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
+                {t('common.cancel')}
+              </Text>
             </Pressable>
             <Pressable
               onPress={handleConfirm}
@@ -105,7 +110,7 @@ function RatingSliderOverlayComponent({
                 styles.button,
                 { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
               ]}>
-              <Text style={styles.confirmLabel}>Save rating</Text>
+              <Text style={styles.confirmLabel}>{t('rate.saveRating')}</Text>
             </Pressable>
           </View>
         </Animated.View>

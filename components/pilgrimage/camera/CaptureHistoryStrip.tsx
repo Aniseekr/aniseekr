@@ -9,6 +9,7 @@
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 interface CaptureHistoryStripProps {
@@ -31,6 +32,7 @@ export default function CaptureHistoryStrip({
   isLandscape,
 }: CaptureHistoryStripProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   // Honest empty state — parent owns the data, we mirror it. See header note.
   if (uris.length === 0) return null;
@@ -56,7 +58,7 @@ export default function CaptureHistoryStrip({
             onSelect(uri);
           }}
           accessibilityRole="button"
-          accessibilityLabel="Open recent capture"
+          accessibilityLabel={t('pilgrimageUi.openRecentCapture')}
           style={({ pressed }) => [
             styles.thumb,
             {

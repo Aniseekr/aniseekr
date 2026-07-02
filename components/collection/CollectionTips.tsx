@@ -4,6 +4,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
+import type { TranslationKey } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
@@ -13,8 +15,8 @@ const tipMmkvKey = (storageKey: string) => `${COLLECTION_TIP_KEY_PREFIX}${storag
 
 interface TipDef {
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  title: string;
-  description: string;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
   storageKey: string;
   shouldShow: (ctx: CollectionTipContext) => boolean;
 }
@@ -27,22 +29,22 @@ interface CollectionTipContext {
 const TIPS: TipDef[] = [
   {
     icon: 'create-new-folder',
-    title: 'Create your first folder',
-    description: 'Group anime by mood, season, or anything you like.',
+    titleKey: 'collectionUi.createYourFirstFolder',
+    descriptionKey: 'collectionUi.groupAnimeByMoodSeason',
     storageKey: 'tip:firstFolder',
     shouldShow: (ctx) => ctx.folderCount === 0,
   },
   {
     icon: 'auto-awesome',
-    title: 'Quick rate unrated picks',
-    description: 'Use the rate shortcut on the floating bar to clear your backlog.',
+    titleKey: 'collectionUi.quickRateUnratedPicks',
+    descriptionKey: 'collectionUi.useTheRateShortcutOn',
     storageKey: 'tip:quickRate',
     shouldShow: (ctx) => ctx.hasUnrated,
   },
   {
     icon: 'ios-share',
-    title: 'Share your top picks',
-    description: 'Switch to Share mode and pick favorites to send a beautiful list.',
+    titleKey: 'collectionUi.shareYourTopPicks',
+    descriptionKey: 'collectionUi.switchToShareModeAnd',
     storageKey: 'tip:share',
     shouldShow: (ctx) => ctx.folderCount > 1,
   },
@@ -54,6 +56,7 @@ interface CollectionTipsProps {
 
 function CollectionTipsComponent({ context }: CollectionTipsProps) {
   const { theme } = useTheme();
+  const t = useT();
   // Seed sync from MMKV — no async hydrate, no `hydrated` flag, no flash of
   // a tip that should be hidden. `seen[storageKey]` is true when the user
   // has already dismissed that tip on this device.
@@ -65,7 +68,7 @@ function CollectionTipsComponent({ context }: CollectionTipsProps) {
     return out;
   });
 
-  const tip = TIPS.find((t) => !seen[t.storageKey] && t.shouldShow(context));
+  const tip = TIPS.find((def) => !seen[def.storageKey] && def.shouldShow(context));
   if (!tip) return null;
 
   const dismiss = () => {
@@ -88,9 +91,9 @@ function CollectionTipsComponent({ context }: CollectionTipsProps) {
           <MaterialIcons name={tip.icon} size={22} color={theme.accent} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: theme.text.primary }]}>{tip.title}</Text>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{t(tip.titleKey)}</Text>
           <Text style={[styles.description, { color: theme.text.secondary }]}>
-            {tip.description}
+            {t(tip.descriptionKey)}
           </Text>
         </View>
         <Pressable onPress={dismiss} hitSlop={12}>

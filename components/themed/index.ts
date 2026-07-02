@@ -1,3 +1,4 @@
+export { AnimeTitleText, type AnimeTitleTextProps } from './AnimeTitleText';
 export {
   ThemedButton,
   type ThemedButtonProps,

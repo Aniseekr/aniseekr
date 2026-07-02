@@ -19,6 +19,7 @@ import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bottomPad, Size } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
+import { useT } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedSurface, ThemedText } from '../../../../components/themed';
 import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
@@ -28,6 +29,7 @@ import {
   buildCaptureSessionShotFromRoute,
   reconcileCapturePreviewSelection,
   resolveCapturePreviewFocus,
+  resolveRouteShotDimensions,
 } from '../../../../libs/services/pilgrimage/capture-preview-route';
 import {
   computeFrameMatch,
@@ -38,6 +40,8 @@ import { useCaptureSession, type CaptureSessionShot } from '../../../../hooks/us
 import { capturedOnWideAngle } from '../../../../libs/services/pilgrimage/capture-lens-gate';
 import { sanitizeCaptureNote } from '../../../../libs/services/pilgrimage/capture-session';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
+import { buildShareRouteParams } from '../../../../libs/services/pilgrimage/share-route-params';
+import { resolveCapturedPhotoDimensions } from '../../../../libs/services/pilgrimage/camera-engine-parity';
 import { AnitabiOriginCredit } from '../../../../components/pilgrimage/common/AnitabiOriginCredit';
 
 function getRetakeTip(s: SensorSnapshot | null): string | null {
@@ -79,6 +83,7 @@ export default function ComparePreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const params = useLocalSearchParams();
   const { shots: sessionShots, removeShot } = useCaptureSession();
 
@@ -195,6 +200,34 @@ export default function ComparePreviewScreen() {
     granularPermissions: ['photo'],
   });
   const [stagePx, setStagePx] = useState({ width: 0, height: 0 });
+  // Route-only previews (deep link / album) may arrive with width/height = 0.
+  // Decode the true pixel dims once so full-mode sizing + the share ratio see
+  // the real orientation instead of falling back to 16:9 / landscape.
+  const [decodedShotDims, setDecodedShotDims] = useState<{ width: number; height: number } | null>(
+    null
+  );
+  useEffect(() => {
+    if (!routeOnlyPreview || !routeShot || !routeShot.uri) {
+      setDecodedShotDims(null);
+      return;
+    }
+    let cancelled = false;
+    void resolveRouteShotDimensions(
+      { width: routeShot.width, height: routeShot.height },
+      resolveCapturedPhotoDimensions,
+      routeShot.uri
+    )
+      .then((dims) => {
+        if (cancelled) return;
+        setDecodedShotDims(dims.width > 0 && dims.height > 0 ? dims : null);
+      })
+      .catch(() => {
+        if (!cancelled) setDecodedShotDims(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeOnlyPreview, routeShot]);
 
   // A new shot invalidates the "Saved" badge — the user took more photos.
   useEffect(() => {
@@ -480,34 +513,31 @@ export default function ComparePreviewScreen() {
   const handleShare = useCallback(() => {
     if (!focusedShot) return;
     hapticsBridge.tap();
-    const shareParams: Record<string, string> = {
+    // The captured width/height is the orientation truth — forward it so the
+    // share screen + ShareCard letterbox a portrait shot instead of cropping.
+    // The sensor snapshot (tilt/headingDeltaDeg) feeds the share screen's
+    // auto-perspective (Track C #8) without re-measuring.
+    const shareParams = buildShareRouteParams({
       spotId,
       imageUrl,
       shotUri: focusedShot.uri,
       name: sceneName,
-      ep: ep ?? '',
-      animeId: animeId ?? '',
-      animeTitle: animeTitle ?? '',
+      ep,
+      animeId,
+      animeTitle,
       themeColor,
-      spotLat: spotLat ?? '',
-      spotLng: spotLng ?? '',
-    };
-    // Forward the shot's sensor snapshot so the share screen's auto-perspective
-    // (Track C #8) can correct tilt/heading without re-measuring.
-    if (focusedShot.tilt != null) shareParams.tilt = String(focusedShot.tilt);
-    if (focusedShot.headingDeltaDeg != null) {
-      shareParams.headingDeltaDeg = String(focusedShot.headingDeltaDeg);
-    }
-    if (frameMatch?.total != null) {
-      shareParams.matchScore = String(Math.round(frameMatch.total * 100));
-    }
-    if (frameMatch) {
-      shareParams.frameValid = frameMatch.valid ? '1' : '0';
-      if (frameMatch.reason) shareParams.frameReason = frameMatch.reason;
-    }
-    if (positionScore?.total != null) {
-      shareParams.positionScore = String(Math.round(positionScore.total * 100));
-    }
+      spotLat,
+      spotLng,
+      shotWidth: decodedShotDims?.width ?? focusedShot.width,
+      shotHeight: decodedShotDims?.height ?? focusedShot.height,
+      tilt: focusedShot.tilt,
+      headingDeltaDeg: focusedShot.headingDeltaDeg,
+      matchScore: frameMatch?.total != null ? Math.round(frameMatch.total * 100) : null,
+      frameValid: frameMatch ? frameMatch.valid : null,
+      frameReason: frameMatch?.reason ?? null,
+      positionScore:
+        positionScore?.total != null ? Math.round(positionScore.total * 100) : null,
+    });
     router.push({
       pathname: '/pilgrimage/compare/share',
       params: shareParams,
@@ -515,6 +545,7 @@ export default function ComparePreviewScreen() {
   }, [
     router,
     focusedShot,
+    decodedShotDims,
     spotId,
     imageUrl,
     sceneName,
@@ -569,12 +600,12 @@ export default function ComparePreviewScreen() {
               hitSlop={14}
               style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
               accessibilityRole="button"
-              accessibilityLabel="Back">
+              accessibilityLabel={t('common.back')}>
               <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
             </Pressable>
             <View style={styles.headerMid}>
               <ThemedText variant="titleLarge" weight="700" align="center" numberOfLines={1}>
-                Comparison Result
+                {t('pilgrimageUi.comparisonResult')}
               </ThemedText>
             </View>
             <View style={styles.headerBtn} />
@@ -582,10 +613,10 @@ export default function ComparePreviewScreen() {
           <View style={styles.emptyWrap}>
             <Ionicons name="images-outline" size={48} color={theme.text.tertiary} />
             <ThemedText variant="titleMedium" weight="700" align="center">
-              No shots yet
+              {t('pilgrimageUi.noShotsYet')}
             </ThemedText>
             <ThemedText variant="bodySmall" tone="secondary" align="center">
-              Head back to the camera to capture this spot.
+              {t('pilgrimageUi.headBackToTheCamera')}
             </ThemedText>
             <Pressable
               onPress={handleRetake}
@@ -594,10 +625,10 @@ export default function ComparePreviewScreen() {
                 { backgroundColor: themeColor, opacity: pressed ? 0.88 : 1 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Retake">
+              accessibilityLabel={t('pilgrimageUi.retake')}>
               <Ionicons name="camera" size={18} color="#000" />
               <ThemedText variant="bodyMedium" weight="700" style={{ color: '#000' }}>
-                Retake
+                {t('pilgrimageUi.retake')}
               </ThemedText>
             </Pressable>
           </View>
@@ -616,12 +647,12 @@ export default function ComparePreviewScreen() {
             hitSlop={14}
             style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
             accessibilityRole="button"
-            accessibilityLabel="Back">
+            accessibilityLabel={t('common.back')}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>
           <View style={styles.headerMid}>
             <ThemedText variant="titleLarge" weight="700" align="center" numberOfLines={1}>
-              Comparison Result
+              {t('pilgrimageUi.comparisonResult')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary" align="center" numberOfLines={1}>
               {ep ? `EP ${ep} · ` : ''}
@@ -634,7 +665,7 @@ export default function ComparePreviewScreen() {
             hitSlop={14}
             style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
             accessibilityRole="button"
-            accessibilityLabel="Share">
+            accessibilityLabel={t('commonUi.share')}>
             <Ionicons name="share-outline" size={22} color={theme.text.primary} />
           </Pressable>
         </View>
@@ -687,7 +718,7 @@ export default function ComparePreviewScreen() {
               ]}>
               <View style={{ flex: 1, gap: 10 }}>
                 <ThemedText variant="captionSmall" tone="secondary" weight="600">
-                  Frame Match
+                  {t('pilgrimageUi.frameMatch')}
                 </ThemedText>
                 {positionScore?.total != null ? (
                   <ThemedText variant="captionSmall" tone="secondary">
@@ -709,7 +740,7 @@ export default function ComparePreviewScreen() {
                           {`${sensorSnapshot.distanceMeters.toFixed(1)} m`}
                         </ThemedText>
                         <ThemedText variant="captionSmall" tone="secondary">
-                          Distance to spot
+                          {t('pilgrimageUi.distanceToSpot')}
                         </ThemedText>
                       </View>
                     ) : null}
@@ -726,7 +757,7 @@ export default function ComparePreviewScreen() {
                           {formatSignedDeg(sensorSnapshot.headingDeltaDeg)}
                         </ThemedText>
                         <ThemedText variant="captionSmall" tone="secondary">
-                          Heading offset
+                          {t('pilgrimageUi.headingOffset')}
                         </ThemedText>
                       </View>
                     ) : null}
@@ -743,7 +774,7 @@ export default function ComparePreviewScreen() {
                           {formatSignedDeg(sensorSnapshot.tilt)}
                         </ThemedText>
                         <ThemedText variant="captionSmall" tone="secondary">
-                          Tilt offset
+                          {t('pilgrimageUi.tiltOffset')}
                         </ThemedText>
                       </View>
                     ) : null}
@@ -827,28 +858,39 @@ export default function ComparePreviewScreen() {
                 mode === 'full' && {
                   height: resolveFullModeStageHeight(
                     stagePx.width,
-                    focusedShot?.width,
-                    focusedShot?.height
+                    decodedShotDims?.width ?? focusedShot?.width,
+                    decodedShotDims?.height ?? focusedShot?.height
                   ),
                 },
               ]}>
               {mode === 'stacked' ? (
                 <View style={styles.stackedFlow}>
-                  <LabeledImage uri={imageUrl} label="Anime" accent={themeColor} />
-                  <LabeledImage uri={shotUri} label="Your shot" accent={themeColor} />
+                  <LabeledImage uri={imageUrl} label={t('commonUi.anime')} accent={themeColor} />
+                  <LabeledImage
+                    uri={shotUri}
+                    label={t('pilgrimageUi.yourShot')}
+                    accent={themeColor}
+                    contentFit="contain"
+                  />
                 </View>
               ) : mode === 'sideBySide' ? (
                 <View style={styles.sideFlow}>
                   <View style={styles.sideHalf}>
-                    <LabeledImage uri={imageUrl} label="Anime" accent={themeColor} compact />
+                    <LabeledImage uri={imageUrl} label={t('commonUi.anime')} accent={themeColor} compact />
                   </View>
                   <View style={styles.sideHalf}>
-                    <LabeledImage uri={shotUri} label="Your shot" accent={themeColor} compact />
+                    <LabeledImage
+                      uri={shotUri}
+                      label={t('pilgrimageUi.yourShot')}
+                      accent={themeColor}
+                      compact
+                      contentFit="contain"
+                    />
                   </View>
                 </View>
               ) : mode === 'overlay' ? (
                 <View style={styles.overlayFlow}>
-                  <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="cover" />
+                  <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                   <Image
                     source={{ uri: imageUrl }}
                     style={[
@@ -869,7 +911,7 @@ export default function ComparePreviewScreen() {
               ) : mode === 'slider' ? (
                 <GestureDetector gesture={sliderPan}>
                   <View style={styles.sliderFlow}>
-                    <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="cover" />
+                    <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                     <Animated.View style={[styles.sliderClip, sliderClipStyle]}>
                       {stagePx.width > 0 ? (
                         <Image
@@ -889,12 +931,12 @@ export default function ComparePreviewScreen() {
                     </Animated.View>
                     <View style={[styles.sliderHint, styles.sliderHintLeft]}>
                       <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                        Anime
+                        {t('commonUi.anime')}
                       </ThemedText>
                     </View>
                     <View style={[styles.sliderHint, styles.sliderHintRight]}>
                       <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
-                        Yours
+                        {t('pilgrimageUi.yours')}
                       </ThemedText>
                     </View>
                   </View>
@@ -939,13 +981,13 @@ export default function ComparePreviewScreen() {
               ]}>
               <View style={styles.analysisHeader}>
                 <ThemedText variant="titleMedium" weight="700">
-                  Position Lock
+                  {t('pilgrimageUi.positionLock')}
                 </ThemedText>
                 <Ionicons name="navigate" size={14} color={theme.accent} />
               </View>
               {sensorSnapshot.distanceMeters != null && positionScore.position != null ? (
                 <AnalysisBar
-                  label="Position"
+                  label={t('pilgrimageUi.position')}
                   value={positionScore.position * 100}
                   rightLabel={`${sensorSnapshot.distanceMeters.toFixed(1)} m`}
                   theme={theme}
@@ -954,7 +996,7 @@ export default function ComparePreviewScreen() {
               ) : null}
               {sensorSnapshot.headingDeltaDeg != null && positionScore.heading != null ? (
                 <AnalysisBar
-                  label="Heading"
+                  label={t('pilgrimageUi.heading')}
                   value={positionScore.heading * 100}
                   rightLabel={`±${Math.round(Math.abs(sensorSnapshot.headingDeltaDeg))}°`}
                   theme={theme}
@@ -963,7 +1005,7 @@ export default function ComparePreviewScreen() {
               ) : null}
               {sensorSnapshot.tilt != null && positionScore.tilt != null ? (
                 <AnalysisBar
-                  label="Tilt"
+                  label={t('pilgrimageUi.tilt')}
                   value={positionScore.tilt * 100}
                   rightLabel={formatSignedDeg(sensorSnapshot.tilt)}
                   theme={theme}
@@ -984,13 +1026,13 @@ export default function ComparePreviewScreen() {
               ]}>
               <View style={styles.analysisHeader}>
                 <ThemedText variant="titleMedium" weight="700">
-                  Frame Match
+                  {t('pilgrimageUi.frameMatch')}
                 </ThemedText>
                 <Ionicons name="image" size={14} color={theme.accent} />
               </View>
               {frameMatch.histogram != null ? (
                 <AnalysisBar
-                  label="Histogram"
+                  label={t('pilgrimageUi.histogram')}
                   value={frameMatch.histogram * 100}
                   rightLabel={`${Math.round(frameMatch.histogram * 100)}%`}
                   theme={theme}
@@ -999,7 +1041,7 @@ export default function ComparePreviewScreen() {
               ) : null}
               {frameMatch.edge != null ? (
                 <AnalysisBar
-                  label="Edge"
+                  label={t('pilgrimageUi.edge')}
                   value={frameMatch.edge * 100}
                   rightLabel={`${Math.round(frameMatch.edge * 100)}%`}
                   theme={theme}
@@ -1008,7 +1050,7 @@ export default function ComparePreviewScreen() {
               ) : null}
               {frameMatch.lighting != null ? (
                 <AnalysisBar
-                  label="Lighting"
+                  label={t('pilgrimageUi.lighting')}
                   value={frameMatch.lighting * 100}
                   rightLabel={`${Math.round(frameMatch.lighting * 100)}%`}
                   theme={theme}
@@ -1027,7 +1069,7 @@ export default function ComparePreviewScreen() {
               <Ionicons name="bulb-outline" size={16} color={theme.accent} />
               <View style={{ flex: 1 }}>
                 <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
-                  Tips to improve
+                  {t('pilgrimageUi.tipsToImprove')}
                 </ThemedText>
                 <ThemedText variant="bodySmall" tone="secondary" style={{ marginTop: 2 }}>
                   {retakeTip}
@@ -1046,19 +1088,19 @@ export default function ComparePreviewScreen() {
             ]}>
             <View style={styles.analysisHeader}>
               <ThemedText variant="titleMedium" weight="700">
-                Album description
+                {t('pilgrimageUi.albumDescription')}
               </ThemedText>
               <Ionicons name="create-outline" size={14} color={theme.accent} />
             </View>
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="Add where, why, or what to remember about this shot"
+              placeholder={t('pilgrimageUi.addWhereWhyOrWhat')}
               placeholderTextColor={theme.text.tertiary}
               multiline
               maxLength={280}
               textAlignVertical="top"
-              accessibilityLabel="Album description"
+              accessibilityLabel={t('pilgrimageUi.albumDescription')}
               style={[
                 styles.noteInput,
                 {
@@ -1092,10 +1134,10 @@ export default function ComparePreviewScreen() {
               pressed && { opacity: 0.85 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Retake">
+            accessibilityLabel={t('pilgrimageUi.retake')}>
             <Ionicons name="refresh" size={18} color={theme.text.primary} />
             <ThemedText variant="bodyMedium" weight="600">
-              Retake
+              {t('pilgrimageUi.retake')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -1149,6 +1191,7 @@ function Filmstrip({
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const t = useT();
   return (
     <ScrollView
       horizontal
@@ -1213,7 +1256,7 @@ function Filmstrip({
                 hitSlop={10}
                 style={[styles.thumbDelete, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
                 accessibilityRole="button"
-                accessibilityLabel="Delete shot">
+                accessibilityLabel={t('pilgrimageUi.deleteShot')}>
                 <Ionicons name="close" size={13} color="#fff" />
               </Pressable>
             ) : null}
@@ -1240,6 +1283,7 @@ function CaptureExifInfoCard({
   userLocation: CaptureSessionShot['userLocation'];
 }) {
   const { theme } = useTheme();
+  const t = useT();
 
   const animeRow = animeTitle && animeTitle.length > 0 ? animeTitle : null;
   const animeWithEpisode =
@@ -1269,7 +1313,7 @@ function CaptureExifInfoCard({
           {animeWithEpisode ? (
             <View style={styles.exifRow}>
               <ThemedText variant="bodySmall" weight="600" style={{ color: theme.text.secondary }}>
-                Anime
+                {t('commonUi.anime')}
               </ThemedText>
               <ThemedText
                 variant="bodySmall"
@@ -1283,7 +1327,7 @@ function CaptureExifInfoCard({
           {recordedGpsText ? (
             <View style={styles.exifRow}>
               <ThemedText variant="bodySmall" weight="600" style={{ color: theme.text.secondary }}>
-                Recorded GPS
+                {t('pilgrimageUi.recordedGps')}
               </ThemedText>
               <ThemedText
                 variant="bodySmall"
@@ -1296,7 +1340,7 @@ function CaptureExifInfoCard({
           {sceneGpsText ? (
             <View style={styles.exifRow}>
               <ThemedText variant="bodySmall" weight="600" style={{ color: theme.text.secondary }}>
-                Scene GPS
+                {t('pilgrimageUi.sceneGps')}
               </ThemedText>
               <ThemedText
                 variant="bodySmall"
@@ -1309,7 +1353,7 @@ function CaptureExifInfoCard({
           {headingText ? (
             <View style={styles.exifRow}>
               <ThemedText variant="bodySmall" weight="600" style={{ color: theme.text.secondary }}>
-                Heading
+                {t('pilgrimageUi.heading')}
               </ThemedText>
               <ThemedText
                 variant="bodySmall"
@@ -1330,15 +1374,17 @@ function LabeledImage({
   label,
   accent,
   compact,
+  contentFit = 'cover',
 }: {
   uri: string;
   label: string;
   accent: string;
   compact?: boolean;
+  contentFit?: 'cover' | 'contain';
 }) {
   return (
     <View style={[styles.labelWrap, compact && { flex: 1 }]}>
-      <Image source={{ uri }} style={styles.fullImage} contentFit="cover" />
+      <Image source={{ uri }} style={styles.fullImage} contentFit={contentFit} />
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']} style={styles.labelGradient} />
       <View style={[styles.labelBadge, { borderColor: accent }]}>
         <View style={[styles.labelDot, { backgroundColor: accent }]} />

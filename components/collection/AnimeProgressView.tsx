@@ -5,6 +5,8 @@ import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyb
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
+import type { TranslationKey } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
@@ -31,15 +33,15 @@ export const DEFAULT_PROGRESS: AnimeProgress = {
 
 const STATUS_OPTIONS: {
   key: AnimeStatus;
-  label: string;
+  labelKey: TranslationKey;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
 }[] = [
-  { key: 'watching', label: 'Watching', icon: 'play-circle-filled' },
-  { key: 'completed', label: 'Completed', icon: 'check-circle' },
-  { key: 'on_hold', label: 'On hold', icon: 'pause-circle-filled' },
-  { key: 'dropped', label: 'Dropped', icon: 'cancel' },
-  { key: 'planning', label: 'Plan to watch', icon: 'bookmark' },
-  { key: 'rewatching', label: 'Rewatching', icon: 'replay' },
+  { key: 'watching', labelKey: 'commonUi.watching', icon: 'play-circle-filled' },
+  { key: 'completed', labelKey: 'commonUi.completed', icon: 'check-circle' },
+  { key: 'on_hold', labelKey: 'collectionUi.onHold', icon: 'pause-circle-filled' },
+  { key: 'dropped', labelKey: 'commonUi.dropped', icon: 'cancel' },
+  { key: 'planning', labelKey: 'collectionUi.planToWatch', icon: 'bookmark' },
+  { key: 'rewatching', labelKey: 'commonUi.rewatching', icon: 'replay' },
 ];
 
 interface AnimeProgressViewProps {
@@ -60,6 +62,7 @@ function AnimeProgressViewComponent({
   onSave,
 }: AnimeProgressViewProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [draft, setDraft] = useState<AnimeProgress>(progress ?? DEFAULT_PROGRESS);
 
   useEffect(() => {
@@ -103,7 +106,9 @@ function AnimeProgressViewComponent({
               <View style={styles.handle} />
               <View style={styles.headerRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.title, { color: theme.text.primary }]}>Track progress</Text>
+                  <Text style={[styles.title, { color: theme.text.primary }]}>
+                    {t('collectionUi.trackProgress')}
+                  </Text>
                   <Text
                     style={[styles.subtitle, { color: theme.text.secondary }]}
                     numberOfLines={1}>
@@ -117,7 +122,9 @@ function AnimeProgressViewComponent({
                 showsVerticalScrollIndicator={false}
                 bottomOffset={20}
                 keyboardShouldPersistTaps="handled">
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Status</Text>
+                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                  {t('commonUi.status')}
+                </Text>
                 <View style={styles.statusGrid}>
                   {STATUS_OPTIONS.map((opt) => {
                     const active = draft.status === opt.key;
@@ -143,7 +150,7 @@ function AnimeProgressViewComponent({
                             styles.statusLabel,
                             { color: active ? '#0E0A06' : theme.text.primary },
                           ]}>
-                          {opt.label}
+                          {t(opt.labelKey)}
                         </Text>
                       </Pressable>
                     );
@@ -153,7 +160,7 @@ function AnimeProgressViewComponent({
                 {draft.status !== 'planning' ? (
                   <>
                     <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                      Episodes
+                      {t('commonUi.episodes')}
                     </Text>
                     <View
                       style={[
@@ -191,7 +198,7 @@ function AnimeProgressViewComponent({
                 {draft.status === 'rewatching' ? (
                   <>
                     <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                      Rewatches
+                      {t('collectionUi.rewatches')}
                     </Text>
                     <View
                       style={[
@@ -228,7 +235,7 @@ function AnimeProgressViewComponent({
                 {draft.status !== 'planning' ? (
                   <>
                     <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                      Score
+                      {t('commonUi.score')}
                     </Text>
                     <View style={styles.scoreRow}>
                       <Text style={[styles.scoreValue, { color: theme.accent }]}>
@@ -245,11 +252,13 @@ function AnimeProgressViewComponent({
                   </>
                 ) : null}
 
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Notes</Text>
+                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                  {t('collectionUi.notes')}
+                </Text>
                 <TextInput
                   value={draft.notes}
                   onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}
-                  placeholder="Personal notes..."
+                  placeholder={t('collectionUi.personalNotes')}
                   placeholderTextColor={theme.text.tertiary}
                   multiline
                   style={[
@@ -271,7 +280,9 @@ function AnimeProgressViewComponent({
                     styles.cancelButton,
                     { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
                   ]}>
-                  <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>Cancel</Text>
+                  <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
+                    {t('common.cancel')}
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={handleSave}
@@ -279,7 +290,7 @@ function AnimeProgressViewComponent({
                     styles.footerButton,
                     { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
                   ]}>
-                  <Text style={styles.confirmLabel}>Save progress</Text>
+                  <Text style={styles.confirmLabel}>{t('collectionUi.saveProgress')}</Text>
                 </Pressable>
               </View>
             </SafeAreaView>

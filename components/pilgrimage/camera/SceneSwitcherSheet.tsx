@@ -121,7 +121,7 @@ export default function SceneSwitcherSheet({
               <View style={styles.headerRow}>
                 <View style={{ flex: 1 }}>
                   <ThemedText variant="titleSmall" weight="700">
-                    Switch scene
+                    {t('pilgrimageUi.switchScene')}
                   </ThemedText>
                   <ThemedText variant="captionSmall" tone="secondary">
                     {orderedSpots == null
@@ -136,7 +136,7 @@ export default function SceneSwitcherSheet({
                   }}
                   hitSlop={14}
                   accessibilityRole="button"
-                  accessibilityLabel="Close scene switcher"
+                  accessibilityLabel={t('pilgrimageUi.closeSceneSwitcher')}
                   style={({ pressed }) => [
                     styles.closeBtn,
                     {

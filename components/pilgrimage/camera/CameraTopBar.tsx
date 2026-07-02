@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText, readableTextOn } from '../../themed';
-import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { useT } from '../../../libs/i18n';
 import {
   CAMERA_TOP_BAR_CONTENT_HEIGHT,
   CAMERA_TOP_BAR_ROW2_HEIGHT,
@@ -26,10 +26,10 @@ interface CameraTopBarProps {
   onClose: () => void;
   /** Up to 3 icon-button actions on the right side. */
   actions?: ReactNode;
-  /** Optional second-row quick controls such as timer, aspect, and orientation. */
+  /** Second-row contextual controls (timer, aspect, orientation, guide). */
   quickControls?: ReactNode;
-  quickControlsExpanded?: boolean;
-  onToggleQuickControls?: () => void;
+  /** Show the quick-controls row. Driven by chrome visibility (auto-hidden in landscape immersive); no manual chevron. */
+  showQuickControls?: boolean;
 }
 
 /**
@@ -39,25 +39,18 @@ interface CameraTopBarProps {
  */
 export default function CameraTopBar({
   placeName,
-  themeColor,
   topInset,
   leftInset = 0,
   rightInset = 0,
   onClose,
   actions,
   quickControls,
-  quickControlsExpanded = false,
-  onToggleQuickControls,
+  showQuickControls = false,
 }: CameraTopBarProps) {
-  const hasQuickControls = quickControls != null && onToggleQuickControls != null;
-  const showQuickControls = hasQuickControls && quickControlsExpanded;
+  const t = useT();
+  const showRow2 = quickControls != null && showQuickControls;
   const scrimHeight =
-    topInset + CAMERA_TOP_BAR_CONTENT_HEIGHT + (showQuickControls ? CAMERA_TOP_BAR_ROW2_HEIGHT : 0);
-  const handleToggleQuickControls = () => {
-    if (!onToggleQuickControls) return;
-    hapticsBridge.selection();
-    onToggleQuickControls();
-  };
+    topInset + CAMERA_TOP_BAR_CONTENT_HEIGHT + (showRow2 ? CAMERA_TOP_BAR_ROW2_HEIGHT : 0);
 
   return (
     <View
@@ -80,7 +73,7 @@ export default function CameraTopBar({
           onPress={onClose}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Close camera"
+          accessibilityLabel={t('pilgrimageUi.closeCamera')}
           style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}>
           <Ionicons name="close" size={20} color="#fff" />
         </Pressable>
@@ -91,26 +84,10 @@ export default function CameraTopBar({
           </ThemedText>
         </View>
 
-        <View style={styles.actionsRow}>
-          {actions}
-          {hasQuickControls ? (
-            <CameraHeaderButton
-              icon={quickControlsExpanded ? 'chevron-up' : 'chevron-down'}
-              accessibilityLabel={
-                quickControlsExpanded
-                  ? 'Collapse camera quick controls'
-                  : 'Expand camera quick controls'
-              }
-              accessibilityState={{ expanded: quickControlsExpanded }}
-              themeColor={themeColor}
-              active={quickControlsExpanded}
-              onPress={handleToggleQuickControls}
-            />
-          ) : null}
-        </View>
+        <View style={styles.actionsRow}>{actions}</View>
       </View>
 
-      {showQuickControls ? (
+      {showRow2 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}

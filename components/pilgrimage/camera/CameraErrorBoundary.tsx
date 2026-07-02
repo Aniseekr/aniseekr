@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedButton, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { Spacing } from '../../../constants/DesignSystem';
 
 interface CameraErrorBoundaryProps {
@@ -15,20 +16,25 @@ interface CameraErrorBoundaryState {
 }
 
 interface CameraErrorFallbackProps {
-  message: string;
   onRetry: () => void;
 }
 
-function CameraErrorFallback({ message, onRetry }: CameraErrorFallbackProps) {
+function CameraErrorFallback({ onRetry }: CameraErrorFallbackProps) {
   const { theme } = useTheme();
+  const t = useT();
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
       <View style={styles.content}>
-        <ThemedText variant="titleLarge">相機需要重新啟動</ThemedText>
+        <ThemedText variant="titleLarge">{t('pilgrimageUi.cameraNeedsRestart')}</ThemedText>
         <ThemedText variant="bodyMedium" tone="secondary" style={styles.message}>
-          {message}
+          {t('pilgrimageUi.cameraTemporarilyUnavailable')}
         </ThemedText>
-        <ThemedButton size="lg" label="重新啟動相機" onPress={onRetry} fullWidth />
+        <ThemedButton
+          size="lg"
+          label={t('pilgrimageUi.restartCamera')}
+          onPress={onRetry}
+          fullWidth
+        />
       </View>
     </View>
   );
@@ -55,8 +61,10 @@ export default class CameraErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      const message = this.state.error?.message ?? '相機暫時無法使用';
-      return <CameraErrorFallback message={message} onRetry={this.handleReset} />;
+      // The raw Error.message is developer-facing — it is logged in
+      // componentDidCatch, never shown. The fallback renders a localized,
+      // generic message instead (Rule 11 + no leaked internals).
+      return <CameraErrorFallback onRetry={this.handleReset} />;
     }
     return this.props.children;
   }

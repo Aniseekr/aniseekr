@@ -4,6 +4,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useTheme } from '../../context/ThemeContext';
+import { useT } from '../../libs/i18n';
 
 interface ErrorStateViewProps {
   title?: string;
@@ -15,14 +16,17 @@ interface ErrorStateViewProps {
 }
 
 function ErrorStateViewComponent({
-  title = 'Something went wrong',
-  message = 'Please try again in a moment.',
+  title,
+  message,
   onRetry,
-  retryLabel = 'Try again',
+  retryLabel,
   style,
   variant = 'inline',
 }: ErrorStateViewProps) {
   const { theme } = useTheme();
+  const t = useT();
+  const resolvedTitle = title ?? t('common.error');
+  const resolvedMessage = message ?? t('commonUi.pleaseTryAgainInA');
 
   const handleRetry = () => {
     hapticsBridge.warning();
@@ -34,8 +38,8 @@ function ErrorStateViewComponent({
       <View style={styles.iconCircle}>
         <MaterialIcons name="error-outline" size={32} color={Colors.error} />
       </View>
-      <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
-      <Text style={[styles.message, { color: theme.text.secondary }]}>{message}</Text>
+      <Text style={[styles.title, { color: theme.text.primary }]}>{resolvedTitle}</Text>
+      <Text style={[styles.message, { color: theme.text.secondary }]}>{resolvedMessage}</Text>
       {onRetry ? (
         <Pressable
           onPress={handleRetry}
@@ -44,7 +48,7 @@ function ErrorStateViewComponent({
             { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
           ]}>
           <MaterialIcons name="refresh" size={18} color="#0E0A06" />
-          <Text style={styles.buttonLabel}>{retryLabel}</Text>
+          <Text style={styles.buttonLabel}>{retryLabel ?? t('commonUi.tryAgain')}</Text>
         </Pressable>
       ) : null}
     </View>

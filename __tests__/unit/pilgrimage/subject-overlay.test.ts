@@ -6,6 +6,7 @@ import {
   subjectFocusLabel,
   type SubjectFocus,
 } from '../../../libs/services/pilgrimage/subject-overlay';
+import { translate } from '../../../libs/i18n/engine';
 
 describe('subject overlay focus', () => {
   it('exposes tight, normal, and wide in UI order', () => {
@@ -13,9 +14,12 @@ describe('subject overlay focus', () => {
   });
 
   it('labels each focus level for compact camera controls', () => {
-    expect(subjectFocusLabel('tight')).toBe('Tight');
-    expect(subjectFocusLabel('normal')).toBe('Normal');
-    expect(subjectFocusLabel('wide')).toBe('Wide');
+    expect(subjectFocusLabel('tight')).toBe('pilgrimageUi.subjectFocusTight');
+    expect(subjectFocusLabel('normal')).toBe('pilgrimageUi.subjectFocusNormal');
+    expect(subjectFocusLabel('wide')).toBe('pilgrimageUi.subjectFocusWide');
+    expect(translate('en', subjectFocusLabel('tight'))).toBe('Tight');
+    expect(translate('en', subjectFocusLabel('normal'))).toBe('Normal');
+    expect(translate('en', subjectFocusLabel('wide'))).toBe('Wide');
   });
 
   it('widens the subject matte progressively', () => {
@@ -36,6 +40,6 @@ describe('subject overlay focus', () => {
     expect(getSubjectOverlayConfig('other' as SubjectFocus)).toEqual(
       getSubjectOverlayConfig('normal')
     );
-    expect(subjectFocusLabel('other' as SubjectFocus)).toBe('Normal');
+    expect(subjectFocusLabel('other' as SubjectFocus)).toBe('pilgrimageUi.subjectFocusNormal');
   });
 });

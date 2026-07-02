@@ -2,7 +2,7 @@
   "expo": {
     "name": "AniSeekr",
     "slug": "aniseekr",
-    "version": "1.1.7",
+    "version": "1.1.8",
     "scheme": "aniseeker",
     "web": {
       "favicon": "./assets/favicon.png"
@@ -154,10 +154,12 @@
         {
           "image": "./assets/splash.png",
           "resizeMode": "cover",
-          "backgroundColor": "#0A1929"
+          "backgroundColor": "#0A1929",
+          "enableFullScreenImage_legacy": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@rnrepo/expo-config-plugin"
     ],
     "orientation": "default",
     "icon": "./assets/icon.png",

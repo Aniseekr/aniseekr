@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { ThemedIconButton, ThemedText, readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -35,6 +36,7 @@ function CollectionHeaderComponent({
   onPressSearch,
 }: CollectionHeaderProps) {
   const { theme } = useTheme();
+  const t = useT();
   const onAccent = readableTextOn(theme.accent);
   const hasMeta = totalAnime !== undefined || folderCount !== undefined;
   const metaParts = [
@@ -49,10 +51,10 @@ function CollectionHeaderComponent({
       <View style={styles.headerRow}>
         <View style={styles.titleBlock}>
           <ThemedText variant="headlineLarge" weight="800" style={styles.title}>
-            Collection
+            {t('commonUi.collection')}
           </ThemedText>
           <ThemedText variant="bodySmall" tone="secondary" style={styles.subtitle}>
-            Your saved anime library
+            {t('collectionUi.yourSavedAnimeLibrary')}
           </ThemedText>
           {hasMeta ? (
             <ThemedText variant="captionSmall" tone="tertiary" style={styles.metaLine}>
@@ -63,7 +65,7 @@ function CollectionHeaderComponent({
         <View style={styles.actionsRow}>
           {onPressSearch ? (
             <ThemedIconButton
-              accessibilityLabel="Search collection"
+              accessibilityLabel={t('collectionUi.searchCollection')}
               variant="glass"
               size={36}
               onPress={onPressSearch}
@@ -72,7 +74,7 @@ function CollectionHeaderComponent({
           ) : null}
           {onPressShare ? (
             <ThemedIconButton
-              accessibilityLabel="Share collection"
+              accessibilityLabel={t('collectionUi.shareCollection')}
               variant="glass"
               size={36}
               onPress={onPressShare}
@@ -83,7 +85,7 @@ function CollectionHeaderComponent({
           ) : null}
           {onAddFolder ? (
             <ThemedIconButton
-              accessibilityLabel="Add folder"
+              accessibilityLabel={t('collectionUi.addFolder')}
               variant="solid"
               size={36}
               accent={theme.accent}

@@ -19,6 +19,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type {
   PilgrimageSeriesEntry,
@@ -51,6 +52,7 @@ function SeriesDropdownPillImpl({
   theme,
   onSelect,
 }: SeriesDropdownPillProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const pillRef = useRef<RNView>(null);
   const [open, setOpen] = useState(false);
@@ -59,10 +61,10 @@ function SeriesDropdownPillImpl({
   const canSelectAll = availableCount > 1;
 
   const currentLabel = useMemo(() => {
-    if (selection === 'all') return canSelectAll ? 'All' : entries[0]?.subject.label ?? '—';
+    if (selection === 'all') return canSelectAll ? t('commonUi.all') : entries[0]?.subject.label ?? '—';
     const match = entries.find((e) => e.subject.id === selection);
-    return match?.subject.label ?? 'All';
-  }, [selection, entries, canSelectAll]);
+    return match?.subject.label ?? t('commonUi.all');
+  }, [selection, entries, canSelectAll, t]);
 
   const currentBadge = useMemo(() => {
     if (selection === 'all') {
@@ -125,7 +127,7 @@ function SeriesDropdownPillImpl({
                 contentContainerStyle={styles.menuContent}>
                 {canSelectAll ? (
                   <SeriesDropdownItem
-                    label="All"
+                    label={t('commonUi.all')}
                     sublabel={`${availableCount} titles`}
                     active={selection === 'all'}
                     disabled={false}
@@ -145,7 +147,7 @@ function SeriesDropdownPillImpl({
                     <SeriesDropdownItem
                       key={entry.subject.id}
                       label={entry.subject.label}
-                      sublabel={enabled ? title : 'No spots yet'}
+                      sublabel={enabled ? title : t('pilgrimageUi.noSpotsYet')}
                       active={active}
                       disabled={!enabled}
                       badge={entry.anime?.pointsLength}

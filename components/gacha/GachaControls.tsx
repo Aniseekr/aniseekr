@@ -1,6 +1,7 @@
 import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useT } from '../../libs/i18n';
 
 interface GachaControlsProps {
   onShowHistory: () => void;
@@ -13,24 +14,25 @@ export function GachaControls({
   onShowCollection,
   onShowRanking,
 }: GachaControlsProps) {
+  const t = useT();
   return (
     <View style={styles.container}>
       <View style={styles.controlsRow}>
         <ControlButton
           icon={<Ionicons name="time-outline" size={26} color="rgba(255,255,255,0.9)" />}
-          label="History"
+          label={t('gacha.history')}
           onPress={onShowHistory}
         />
         <View style={styles.divider} />
         <ControlButton
           icon={<MaterialIcons name="collections" size={26} color="rgba(255,255,255,0.9)" />}
-          label="Collection"
+          label={t('commonUi.collection')}
           onPress={onShowCollection}
         />
         <View style={styles.divider} />
         <ControlButton
           icon={<Ionicons name="stats-chart" size={26} color="rgba(255,255,255,0.9)" />}
-          label="Ranking"
+          label={t('gacha.ranking')}
           onPress={onShowRanking}
         />
       </View>

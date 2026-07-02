@@ -15,6 +15,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import { Image as ExpoImage } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -47,13 +48,13 @@ interface SortSelectorProps {
   onClose: () => void;
 }
 
-const SORT_OPTIONS = [
-  { id: 'newest', label: 'Newest' },
-  { id: 'oldest', label: 'Oldest' },
-  { id: 'rarity', label: 'Rarity' },
-  { id: 'popularity', label: 'Popularity' },
-  { id: 'count', label: 'Count' },
-  { id: 'id', label: 'ID' },
+const SORT_OPTIONS: { id: string; labelKey: TranslationKey | null }[] = [
+  { id: 'newest', labelKey: 'gacha.newest' },
+  { id: 'oldest', labelKey: 'gacha.oldest' },
+  { id: 'rarity', labelKey: 'gacha.rarity' },
+  { id: 'popularity', labelKey: 'gacha.popularity' },
+  { id: 'count', labelKey: 'gacha.count' },
+  { id: 'id', labelKey: null },
 ];
 
 const rarityColor = {
@@ -64,6 +65,7 @@ const rarityColor = {
 };
 
 export function CardDetailView({ visible, card, onClose, onShardExchange }: CardDetailViewProps) {
+  const t = useT();
   const [showFullStats, setShowFullStats] = useState(false);
 
   const handleClose = () => {
@@ -111,7 +113,7 @@ export function CardDetailView({ visible, card, onClose, onShardExchange }: Card
 
             {showFullStats && (
               <View style={styles.fullStats}>
-                <Text style={styles.statsLabel}>Exchange Rate</Text>
+                <Text style={styles.statsLabel}>{t('gacha.exchangeRate')}</Text>
                 <Text style={styles.statsValue}>1 Shards</Text>
               </View>
             )}
@@ -129,6 +131,7 @@ export function CardDetailView({ visible, card, onClose, onShardExchange }: Card
 }
 
 export function ShardCounter({ totalShards, shardsPerCard, exchangeRate }: ShardCounterProps) {
+  const t = useT();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -143,13 +146,14 @@ export function ShardCounter({ totalShards, shardsPerCard, exchangeRate }: Shard
 
       <View style={styles.counterContainer}>
         <Text style={styles.counter}>{totalShards}</Text>
-        <Text style={styles.label}>Shards</Text>
+        <Text style={styles.label}>{t('gacha.shards')}</Text>
       </View>
     </Animated.View>
   );
 }
 
 export function SortSelector({ currentSort, onSortChange, visible, onClose }: SortSelectorProps) {
+  const t = useT();
   const handleSortSelect = (sortId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onSortChange(sortId as any);
@@ -170,7 +174,7 @@ export function SortSelector({ currentSort, onSortChange, visible, onClose }: So
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Sort Collection</Text>
+          <Text style={styles.title}>{t('gacha.sortCollection')}</Text>
 
           <ScrollView style={styles.sortList}>
             {SORT_OPTIONS.map((option) => {
@@ -183,7 +187,7 @@ export function SortSelector({ currentSort, onSortChange, visible, onClose }: So
                   onPress={() => handleSortSelect(option.id)}>
                   <Text
                     style={[styles.sortOptionText, isSelected && styles.sortOptionTextSelected]}>
-                    {option.label}
+                    {option.labelKey ? t(option.labelKey) : 'ID'}
                   </Text>
                   {isSelected && <Text style={styles.checkmark}>✓</Text>}
                 </TouchableOpacity>

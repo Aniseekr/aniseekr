@@ -13,6 +13,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
 import { SWIPE_ACTION_TIP_KEY_PREFIX } from '../../libs/services/storage/keys';
+import { useT } from '../../libs/i18n';
 
 const tipMmkvKey = (storageKey: string) => `${SWIPE_ACTION_TIP_KEY_PREFIX}${storageKey}`;
 
@@ -24,10 +25,11 @@ interface SwipeActionTipProps {
 
 function SwipeActionTipComponent({
   storageKey,
-  message = 'Swipe to rate',
+  message,
   visibleByDefault = false,
 }: SwipeActionTipProps) {
   const { theme } = useTheme();
+  const t = useT();
   // Seed sync from MMKV — `visible` is correct on frame 1. Previously the
   // tip popped in after an async resolve which was visually jarring.
   const [visible, setVisible] = useState(() => {
@@ -87,9 +89,11 @@ function SwipeActionTipComponent({
         <Animated.View style={arrowStyle}>
           <MaterialIcons name="swipe" size={20} color={theme.accent} />
         </Animated.View>
-        <Text style={[styles.message, { color: theme.text.primary }]}>{message}</Text>
+        <Text style={[styles.message, { color: theme.text.primary }]}>
+          {message ?? t('commonUi.swipeToRate')}
+        </Text>
         <Pressable onPress={dismiss} hitSlop={12}>
-          <Text style={[styles.dismiss, { color: theme.accent }]}>Got it</Text>
+          <Text style={[styles.dismiss, { color: theme.accent }]}>{t('commonUi.gotIt')}</Text>
         </Pressable>
       </View>
     </Animated.View>

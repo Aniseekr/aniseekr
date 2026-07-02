@@ -217,10 +217,10 @@ export default function NotificationsScreen() {
     } else {
       hapticsBridge.error();
       Alert.alert(
-        'Permission required',
-        'Open system settings to enable notifications for Aniseekr.',
+        t('settingsUi.permissionRequiredOpenSystemSettingsTitle'),
+        t('settingsUi.permissionRequiredOpenSystemSettingsMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
             text: 'Open settings',
             onPress: () => Linking.openSettings(),
@@ -232,10 +232,10 @@ export default function NotificationsScreen() {
 
   const handleCancelAll = () => {
     Alert.alert(
-      'Cancel all reminders?',
-      'You can re-enable individual reminders by tapping the bell on an episode.',
+      t('settingsUi.cancelAllRemindersYouCanTitle'),
+      t('settingsUi.cancelAllRemindersYouCanMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Cancel all',
           style: 'destructive',

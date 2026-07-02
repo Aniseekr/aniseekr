@@ -2,6 +2,10 @@ import { useReducer } from 'react';
 import type { CameraOrientationMode } from '../libs/services/pilgrimage/camera-ui';
 import type { EdgeIntensity } from '../libs/services/pilgrimage/edge-overlay';
 import type { SubjectFocus } from '../libs/services/pilgrimage/subject-overlay';
+import {
+  DEFAULT_OVERLAY_OPACITY_BY_MODE,
+  type CameraSettings,
+} from '../libs/services/pilgrimage/camera-settings';
 import type {
   AspectRatio,
   CameraFacing,
@@ -38,7 +42,13 @@ export interface CameraHudState {
   overlayMode: OverlayMode;
   /** Off-segment toggle — when false the overlay renders at 0 opacity. */
   overlayVisible: boolean;
-  overlayOpacity: number;
+  /**
+   * Per-mode overlay alpha (0..1). The ACTIVE opacity is read as
+   * `overlayOpacityByMode[overlayMode]` — there is no separate shared value, so
+   * edge and the anime bitmap each keep their own alpha. Seeded from
+   * `CameraSettings.overlayOpacityByMode`; the slider writes it back per mode.
+   */
+  overlayOpacityByMode: Record<OverlayMode, number>;
   /** Reposition (drag/scale/rotate) mode for the overlay transform. */
   editMode: boolean;
   edgeIntensity: EdgeIntensity;
@@ -48,7 +58,6 @@ export interface CameraHudState {
   // --- HUD panels ---
   settingsOpen: boolean;
   quickControlsOpen: boolean;
-  overlayDockOpen: boolean;
   sceneSwitcherOpen: boolean;
 
   // --- Transient toasts (set-only; the toast components self-dismiss) ---
@@ -71,7 +80,7 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
   // launches restore the user's pick.
   overlayMode: 'edge',
   overlayVisible: true,
-  overlayOpacity: 0.35,
+  overlayOpacityByMode: { ...DEFAULT_OVERLAY_OPACITY_BY_MODE },
   editMode: false,
   edgeIntensity: 'low',
   subjectFocus: 'normal',
@@ -79,13 +88,46 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
 
   settingsOpen: false,
   quickControlsOpen: true,
-  overlayDockOpen: true,
   sceneSwitcherOpen: false,
 
   captureModeToast: null,
   autoCaptureToast: null,
   switchToast: null,
 };
+
+/**
+ * The persisted overlay knobs the HUD seeds from on mount. These four fields
+ * live in `CameraSettings` (MMKV) and are the only HUD values that survive a
+ * relaunch — everything else starts from {@link INITIAL_CAMERA_HUD}.
+ */
+export type CameraHudSeed = Pick<
+  CameraSettings,
+  'overlayMode' | 'edgeIntensity' | 'subjectFocus' | 'subjectCombine' | 'overlayOpacityByMode'
+>;
+
+/**
+ * Lazy initializer for the HUD reducer. Merges {@link INITIAL_CAMERA_HUD} with
+ * the four persisted overlay knobs so the camera screen opens with the user's
+ * real overlay pick on the FIRST frame — no post-mount mirror effect, no flash
+ * of the default 'edge' overlay (CLAUDE.md Rule 9 + Rule 10).
+ *
+ * Pure: returns a fresh object every call and never mutates the shared default.
+ */
+export function cameraHudInitialState(seed: CameraHudSeed): CameraHudState {
+  return {
+    ...INITIAL_CAMERA_HUD,
+    overlayMode: seed.overlayMode,
+    edgeIntensity: seed.edgeIntensity,
+    subjectFocus: seed.subjectFocus,
+    subjectCombine: seed.subjectCombine,
+    // Defensive merge: a partial seed (older persisted shape, tests) still
+    // yields a full mode-keyed map so the active alpha is never undefined.
+    overlayOpacityByMode: {
+      ...DEFAULT_OVERLAY_OPACITY_BY_MODE,
+      ...seed.overlayOpacityByMode,
+    },
+  };
+}
 
 /**
  * A patch applied to the HUD state — either a partial object, or a function of
@@ -111,8 +153,18 @@ export interface UseCameraHudResult {
  * Owns the camera screen's discrete HUD state behind a small `{ hud, setHud }`
  * API. `setHud` is the reducer dispatch, so it is referentially stable and
  * safe to omit from / include in `useCallback` dependency arrays.
+ *
+ * Pass `initialSettings` (the synchronously-loaded `CameraSettings`) so the
+ * four persisted overlay knobs seed the reducer via its lazy initializer on the
+ * first render. Omitting it falls back to {@link INITIAL_CAMERA_HUD} defaults —
+ * used only by tests that don't care about persistence.
  */
-export function useCameraHud(): UseCameraHudResult {
-  const [hud, setHud] = useReducer(cameraHudReducer, INITIAL_CAMERA_HUD);
+export function useCameraHud(initialSettings?: CameraHudSeed): UseCameraHudResult {
+  const [hud, setHud] = useReducer(
+    cameraHudReducer,
+    initialSettings,
+    (seed: CameraHudSeed | undefined): CameraHudState =>
+      seed ? cameraHudInitialState(seed) : { ...INITIAL_CAMERA_HUD }
+  );
   return { hud, setHud };
 }

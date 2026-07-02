@@ -1,6 +1,8 @@
 import { RefObject } from 'react';
 import { Share, Platform, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
+import { getAppLanguageSync } from '../../libs/i18n/app-language';
 import { Anime } from '../rate/types';
 
 interface DailyAnime {
@@ -50,13 +52,14 @@ function buildScheduleText({
   groupedAnime,
   totalCount,
 }: Pick<ShareScheduleOptions, 'seasonLabel' | 'groupedAnime' | 'totalCount'>): string {
+  const language = getAppLanguageSync();
   const lines: string[] = [`Aniseekr · ${seasonLabel}`, `${totalCount} series this season`, ''];
 
   groupedAnime.forEach((group) => {
     if (!group.anime.length) return;
     lines.push(`${dayShort[group.day] ?? group.day}`);
     group.anime.slice(0, 8).forEach((a) => {
-      lines.push(`· ${a.title}`);
+      lines.push(`· ${resolveDisplayTitleSync(a, language)}`);
     });
     if (group.anime.length > 8) {
       lines.push(`  +${group.anime.length - 8} more`);

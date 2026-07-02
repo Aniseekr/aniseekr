@@ -567,10 +567,10 @@ export default function RatingScreen() {
     const genreName = params.genreName ? String(params.genreName) : 'this genre';
     hapticsBridge.warning();
     Alert.alert(
-      'Restart this genre?',
-      `Cards you swiped in ${genreName} will come back from the start. Your collection, favorites, and tracking status stay unchanged.`,
+      t('rate.restartThisGenreCardsYouTitle'),
+      t('rate.restartThisGenreCardsYouMessage', { genreName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Restart',
           style: 'destructive',
@@ -580,7 +580,7 @@ export default function RatingScreen() {
         },
       ]
     );
-  }, [handleRestart, params.animeId, params.genreId, params.genreName]);
+  }, [handleRestart, params.animeId, params.genreId, params.genreName, t]);
 
   const cardContainerStyle = useMemo(
     () => ({

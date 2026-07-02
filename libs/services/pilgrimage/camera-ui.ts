@@ -1,3 +1,5 @@
+import type { OrientationSource } from 'react-native-vision-camera';
+
 export interface CameraHeaderInput {
   sceneName?: string | string[] | null;
   animeTitle?: string | string[] | null;
@@ -10,7 +12,7 @@ export interface CameraHeaderText {
 }
 
 export type CameraOrientationMode = 'auto' | 'landscape';
-export type CameraOrientationLockIntent = 'unlock' | 'landscape';
+export type CameraOrientationLockIntent = 'portrait' | 'landscape';
 
 export interface CameraActiveInput {
   appIsForeground: boolean;
@@ -48,19 +50,6 @@ export const CAMERA_BOTTOM_BAR_CONTENT_HEIGHT = 96;
 // only adds a little extra letterbox to an already-letterboxed screen.
 export const ANDROID_GESTURE_NAV_MIN_INSET = 24;
 
-export interface TransientCameraHudVisibilityInput {
-  /** Slide-up overlay controls panel is open and covering the lower HUD area. */
-  overlayControlsOpen?: boolean;
-  /** Tap-to-focus has locked AF/AE — the focus exposure bar becomes relevant. */
-  afLocked: boolean;
-}
-
-export interface TransientCameraHudVisibility {
-  showAutoCaptureBadge: boolean;
-  showCaptureHistory: boolean;
-  showFocusExposureBar: boolean;
-}
-
 const RESERVED_COMPARE_ROUTES = new Set(['align', 'preview', 'share', 'tips']);
 const EV_MIN = -2;
 const EV_MAX = 2;
@@ -92,7 +81,14 @@ export function isCameraCapturePath(pathname: string | null | undefined): boolea
 export function cameraOrientationLockIntent(
   mode: CameraOrientationMode
 ): CameraOrientationLockIntent {
-  return mode === 'landscape' ? 'landscape' : 'unlock';
+  return mode === 'landscape' ? 'landscape' : 'portrait';
+}
+
+// AUTO  → capture follows the physical phone (stock-camera): 'device'.
+// LAND  → capture follows the landscape-locked interface (forced landscape): 'interface'.
+// `OrientationSource` is the vision-camera prop type ('interface' | 'device').
+export function cameraOrientationSource(mode: CameraOrientationMode): OrientationSource {
+  return mode === 'landscape' ? 'interface' : 'device';
 }
 
 // Keep CameraView remount policy out of this helper module. The old
@@ -109,19 +105,28 @@ export function resolveCameraTopChromeHeight(input: { quickControlsOpen: boolean
   return CAMERA_TOP_BAR_CONTENT_HEIGHT + (input.quickControlsOpen ? CAMERA_TOP_BAR_ROW2_HEIGHT : 0);
 }
 
-export function resolveTransientCameraHudVisibility(
-  input: TransientCameraHudVisibilityInput
-): TransientCameraHudVisibility {
-  const showTransientHud = !input.overlayControlsOpen;
-  return {
-    showAutoCaptureBadge: showTransientHud,
-    showCaptureHistory: showTransientHud,
-    showFocusExposureBar: input.afLocked && showTransientHud,
-  };
-}
-
 export function resolveCameraActive(input: CameraActiveInput): boolean {
   return input.appIsForeground && !input.settingsOpen;
+}
+
+export interface CameraInterruptionInput extends CameraActiveInput {
+  /**
+   * A native session interruption (phone call, FaceTime, another app grabbing
+   * the camera, control-center) is currently in effect, OR the camera is being
+   * re-armed after an `onError`-ended session. While this is true we keep
+   * `isActive` low so we don't fight the OS for the device; clearing it lets the
+   * session restart (§3.5 interruption / error recovery).
+   */
+  interrupted: boolean;
+}
+
+/**
+ * {@link resolveCameraActive} plus an interruption gate. The camera is active
+ * only while foregrounded, the settings sheet is closed, AND no interruption /
+ * re-arm cycle is in effect. Pure — same inputs always yield the same boolean.
+ */
+export function resolveCameraActiveWithInterruption(input: CameraInterruptionInput): boolean {
+  return resolveCameraActive(input) && !input.interrupted;
 }
 
 /**
@@ -152,4 +157,100 @@ function formatEpisode(value: string): string {
   if (!value) return '';
   const normalized = value.replace(/^ep(?:isode)?\s*/i, '').trim();
   return normalized ? `EP ${normalized}` : '';
+}
+
+// ── Banded chrome layout (Samsung-style; identical stacking in both orientations) ──
+
+/** Zoom band: preset pills + opacity pill. */
+export const CAMERA_ZOOM_BAND_HEIGHT = 44;
+/** Overlay-mode carousel band (the primary control). */
+export const CAMERA_CAROUSEL_BAND_HEIGHT = 48;
+/** Bottom row: gallery | shutter | flip. */
+export const CAMERA_BOTTOM_ROW_HEIGHT = 88;
+/** Vertical breathing room between stacked bands. */
+export const CAMERA_BAND_GAP = 8;
+
+export interface CameraBandLayoutInput {
+  /** Safe-area bottom already resolved via {@link resolveCameraBottomInset}. */
+  bottomInset: number;
+  /** Whether the zoom band participates in the stack (driven by the visibility resolver). */
+  showZoomBand: boolean;
+}
+
+export interface CameraBandLayout {
+  shutterRowBottom: number;
+  shutterRowHeight: number;
+  carouselBottom: number;
+  carouselHeight: number;
+  zoomBandBottom: number;
+  zoomBandHeight: number;
+  /** Height of the whole bottom chrome cluster from the inset up; drives the AlignmentHUD reserve. */
+  totalBottomChromeHeight: number;
+}
+
+/**
+ * Resolve the bottom-up stack of fixed bands (shutter row → carousel → zoom band).
+ *
+ * Deliberately takes NO `isLandscape` input: the bands stack identically in both
+ * orientations. Landscape no longer reflows the cluster into a right-edge column —
+ * only the glyphs inside each band rotate (Apple/Samsung convention). This replaces
+ * the old per-layer `bottom: bottomBarHeight + N` offsets and `landscapeCluster`.
+ */
+export function resolveCameraBandLayout(input: CameraBandLayoutInput): CameraBandLayout {
+  const shutterRowBottom = input.bottomInset;
+  const carouselBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP;
+  const zoomBandBottom = carouselBottom + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP;
+  const totalBottomChromeHeight = input.showZoomBand
+    ? CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT
+    : CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT;
+  return {
+    shutterRowBottom,
+    shutterRowHeight: CAMERA_BOTTOM_ROW_HEIGHT,
+    carouselBottom,
+    carouselHeight: CAMERA_CAROUSEL_BAND_HEIGHT,
+    zoomBandBottom,
+    zoomBandHeight: CAMERA_ZOOM_BAND_HEIGHT,
+    totalBottomChromeHeight,
+  };
+}
+
+export interface CameraChromeVisibilityInput {
+  isLandscape: boolean;
+  /** Immersive intent (auto-on in landscape; cleared by a tap-to-reveal). */
+  immersive: boolean;
+  afLocked: boolean;
+  /** An overlay mode is selected (`overlayVisible === true`). */
+  overlayActive: boolean;
+}
+
+export interface CameraChromeVisibility {
+  showZoomBand: boolean;
+  showOpacityPill: boolean;
+  showTopContextIcons: boolean;
+  showCaptureHistory: boolean;
+  showAutoCaptureBadge: boolean;
+  showFocusExposureBar: boolean;
+  showOverlayQuickControls: boolean;
+}
+
+/**
+ * Immersive-by-subtraction. The chrome is ALWAYS glass (we never change opacity); instead,
+ * landscape-immersive hides the secondary controls (zoom band, opacity pill, top contextual
+ * icons, capture history), leaving the shutter row, the overlay carousel, and the alignment
+ * readout. A tap clears `immersive` to reveal everything again. Supersedes the dock-driven
+ * `resolveTransientCameraHudVisibility`.
+ */
+export function resolveCameraChromeVisibility(
+  input: CameraChromeVisibilityInput,
+): CameraChromeVisibility {
+  const secondaryHidden = input.isLandscape && input.immersive;
+  return {
+    showZoomBand: !secondaryHidden,
+    showOpacityPill: !secondaryHidden && input.overlayActive,
+    showTopContextIcons: !secondaryHidden,
+    showCaptureHistory: !secondaryHidden,
+    showAutoCaptureBadge: true,
+    showFocusExposureBar: input.afLocked,
+    showOverlayQuickControls: input.overlayActive,
+  };
 }

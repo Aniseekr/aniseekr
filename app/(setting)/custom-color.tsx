@@ -141,7 +141,7 @@ export default function CustomColorScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
           </Pressable>

@@ -14,6 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraPermission } from 'react-native-vision-camera';
 import { bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
+import { useT, type TranslationKey } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../../../components/themed';
 import { useSceneAnalysis } from '../../../../components/pilgrimage/SceneAnalyzer';
@@ -45,16 +46,20 @@ const WARN_ICONS: Record<WarningItem['icon'], React.ComponentProps<typeof Ionico
 
 // Shown only when scene analysis is unavailable (offline, decode error). Once
 // analysis succeeds we hand control to inferWarnings() which is driven by the
-// actual image signals.
-const FALLBACK_WARNINGS: WarningItem[] = [
+// actual image signals. `titleKey` carries the fixed-UI translation key for
+// these static fallbacks; real inferWarnings() titles stay as computed strings.
+type FallbackWarningItem = WarningItem & { titleKey?: TranslationKey };
+const FALLBACK_WARNINGS: FallbackWarningItem[] = [
   {
     icon: 'people',
     title: 'Avoid peak crowds',
+    titleKey: 'pilgrimageUi.avoidPeakCrowds',
     body: 'Crowds peak on weekend afternoons — try early morning or weekdays.',
   },
   {
     icon: 'flash-off',
     title: 'Keep flash off',
+    titleKey: 'pilgrimageUi.keepFlashOff',
     body: 'Flash washes out the cinematic depth — keep it off.',
   },
 ];
@@ -63,6 +68,7 @@ export default function PhotoTipsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
   const params = useLocalSearchParams();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
@@ -112,10 +118,10 @@ export default function PhotoTipsScreen() {
       // instead of navigating into a broken camera screen.
       hapticsBridge.warning();
       Alert.alert(
-        'Camera access needed',
-        'Open Settings → AniSeekr → Camera to capture pilgrimage comparison photos.',
+        t('pilgrimageUi.cameraAccessNeededOpenSettingsTitle'),
+        t('pilgrimageUi.cameraAccessNeededOpenSettingsMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
             text: 'Open Settings',
             onPress: () => {
@@ -152,7 +158,7 @@ export default function PhotoTipsScreen() {
             onPress={() => router.back()}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="arrow-back" size={18} color={theme.text.primary} />
           </Pressable>
@@ -161,7 +167,7 @@ export default function PhotoTipsScreen() {
               variant="titleSmall"
               weight="700"
               style={{ fontSize: 15, textDecorationLine: 'underline' }}>
-              Photo Tips
+              {t('pilgrimageUi.photoTips')}
             </ThemedText>
             <View style={styles.locChip}>
               <Ionicons name="location" size={10} color={accent} />
@@ -174,7 +180,7 @@ export default function PhotoTipsScreen() {
             onPress={handleHelp}
             hitSlop={14}
             accessibilityRole="button"
-            accessibilityLabel="Help / GPS alignment"
+            accessibilityLabel={t('pilgrimageUi.helpGpsAlignment')}
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
             <Ionicons name="help" size={18} color={theme.text.primary} />
           </Pressable>
@@ -267,8 +273,8 @@ export default function PhotoTipsScreen() {
           <SectionHeader
             iconName="locate"
             iconColor={theme.status.warning}
-            title="Best Shot Settings"
-            subtitle="Reference-based guidance"
+            title={t('pilgrimageUi.bestShotSettings')}
+            subtitle={t('pilgrimageUi.referenceBasedGuidance')}
             theme={theme}
           />
           <View style={styles.grid2}>
@@ -276,40 +282,64 @@ export default function PhotoTipsScreen() {
               icon="sunny"
               tone={theme.status.warning}
               theme={theme}
-              label="Best Time"
-              {...tileState(loading, errored, bestTime, (d) => ({
-                value: d.en,
-                subtitle: d.range,
-              }))}
+              label={t('pilgrimageUi.bestTime')}
+              {...tileState(
+                loading,
+                errored,
+                bestTime,
+                (d) => ({
+                  value: d.en,
+                  subtitle: d.range,
+                }),
+                t
+              )}
             />
             <TipTile
               icon="partly-sunny"
               tone={theme.status.info}
               theme={theme}
-              label="Weather"
-              {...tileState(loading, errored, weather, (d) => ({
-                value: d.en,
-              }))}
+              label={t('pilgrimageUi.weather')}
+              {...tileState(
+                loading,
+                errored,
+                weather,
+                (d) => ({
+                  value: d.en,
+                }),
+                t
+              )}
             />
             <TipTile
               icon="compass"
               tone={theme.secondary}
               theme={theme}
-              label="Camera Angle"
-              {...tileState(loading, errored, cameraAngle, (d) => ({
-                value: d.en,
-                subtitle: `${d.en} · ${d.light}`,
-              }))}
+              label={t('pilgrimageUi.cameraAngle')}
+              {...tileState(
+                loading,
+                errored,
+                cameraAngle,
+                (d) => ({
+                  value: d.en,
+                  subtitle: `${d.en} · ${d.light}`,
+                }),
+                t
+              )}
             />
             <TipTile
               icon="resize"
               tone={theme.status.success}
               theme={theme}
-              label="Distance"
-              {...tileState(loading, errored, distance, (d) => ({
-                value: d.en,
-                subtitle: d.en,
-              }))}
+              label={t('pilgrimageUi.distance')}
+              {...tileState(
+                loading,
+                errored,
+                distance,
+                (d) => ({
+                  value: d.en,
+                  subtitle: d.en,
+                }),
+                t
+              )}
             />
           </View>
 
@@ -317,8 +347,8 @@ export default function PhotoTipsScreen() {
           <SectionHeader
             iconName="camera"
             iconColor={theme.status.warning}
-            title="Composition Tips"
-            subtitle="Framing guidance"
+            title={t('pilgrimageUi.compositionTips')}
+            subtitle={t('pilgrimageUi.framingGuidance')}
             theme={theme}
           />
           <View style={styles.tipsList}>
@@ -343,7 +373,7 @@ export default function PhotoTipsScreen() {
               accent={accent}
               accentFg={accentFg}
               theme={theme}
-              title="Keep the anime camera angle"
+              title={t('pilgrimageUi.keepTheAnimeCameraAngle')}
               body={
                 cameraAngle
                   ? `Match the anime — ${cameraAngle.en.toLowerCase()} shot, ${cameraAngle.light.toLowerCase()}.`
@@ -371,18 +401,21 @@ export default function PhotoTipsScreen() {
           <SectionHeader
             iconName="warning"
             iconColor={theme.status.error}
-            title="Things to Avoid"
-            subtitle="Accuracy and safety checks"
+            title={t('pilgrimageUi.thingsToAvoid')}
+            subtitle={t('pilgrimageUi.accuracyAndSafetyChecks')}
             theme={theme}
           />
           <View style={styles.warnBox}>
-            {(warnings ?? FALLBACK_WARNINGS).map((w, i, arr) => (
-              <Fragment key={`${w.icon}-${i}`}>
-                {i > 0 ? <View style={styles.warnDivider} /> : null}
-                <WarnRow icon={WARN_ICONS[w.icon]} theme={theme} title={w.title} body={w.body} />
-                {i === arr.length - 1 ? null : null}
-              </Fragment>
-            ))}
+            {((warnings ?? FALLBACK_WARNINGS) as FallbackWarningItem[]).map((w, i, arr) => {
+              const warnTitle = w.titleKey ? t(w.titleKey) : w.title;
+              return (
+                <Fragment key={`${w.icon}-${i}`}>
+                  {i > 0 ? <View style={styles.warnDivider} /> : null}
+                  <WarnRow icon={WARN_ICONS[w.icon]} theme={theme} title={warnTitle} body={w.body} />
+                  {i === arr.length - 1 ? null : null}
+                </Fragment>
+              );
+            })}
           </View>
         </ScrollView>
 
@@ -398,7 +431,7 @@ export default function PhotoTipsScreen() {
           <Pressable
             onPress={handleStart}
             accessibilityRole="button"
-            accessibilityLabel="Start AR camera"
+            accessibilityLabel={t('pilgrimageUi.startArCamera')}
             style={({ pressed }) => [
               styles.startBtn,
               { backgroundColor: accent, opacity: pressed ? 0.9 : 1 },
@@ -406,7 +439,7 @@ export default function PhotoTipsScreen() {
             <Ionicons name="camera" size={20} color={accentFg} />
             <View style={{ alignItems: 'center', gap: 1 }}>
               <ThemedText weight="700" style={{ color: accentFg, fontSize: 14 }}>
-                Start AR Camera
+                {t('pilgrimageUi.startArCamera2')}
               </ThemedText>
               <ThemedText
                 weight="600"
@@ -415,7 +448,7 @@ export default function PhotoTipsScreen() {
                   fontSize: 10,
                   letterSpacing: 0.6,
                 }}>
-                Align with scene
+                {t('pilgrimageUi.alignWithScene')}
               </ThemedText>
             </View>
           </Pressable>
@@ -429,7 +462,8 @@ function tileState<T>(
   loading: boolean,
   errored: boolean,
   data: T | null,
-  ready: (d: T) => { value: string; subtitle?: string }
+  ready: (d: T) => { value: string; subtitle?: string },
+  t: (key: TranslationKey) => string
 ): { value: string; subtitle: string; loading: boolean; muted: boolean } {
   if (loading) {
     return {
@@ -442,7 +476,7 @@ function tileState<T>(
   if (errored || !data) {
     return {
       value: 'Unavailable',
-      subtitle: 'Image unavailable',
+      subtitle: t('pilgrimageUi.imageUnavailable'),
       loading: false,
       muted: true,
     };

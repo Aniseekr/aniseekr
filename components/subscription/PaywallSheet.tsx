@@ -16,6 +16,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useSubscription } from '../../context/SubscriptionContext';
 import type { SubscriptionOfferingPackage } from '../../libs/services/subscription/subscription-service';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 function unsupportedMessage(
   reason: ReturnType<typeof useSubscription>['unsupportedReason']
@@ -35,11 +36,11 @@ function unsupportedMessage(
   }
 }
 
-const FEATURES = [
-  { icon: 'block' as const, label: 'No ads' },
-  { icon: 'palette' as const, label: 'All premium themes' },
-  { icon: 'cloud-sync' as const, label: 'Unlimited sync platforms' },
-  { icon: 'auto-awesome' as const, label: 'Pilgrimage offline maps' },
+const FEATURES: { icon: 'block' | 'palette' | 'cloud-sync' | 'auto-awesome'; labelKey: TranslationKey }[] = [
+  { icon: 'block', labelKey: 'subscription.noAds' },
+  { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'cloud-sync', labelKey: 'subscription.unlimitedSyncPlatforms' },
+  { icon: 'auto-awesome', labelKey: 'subscription.pilgrimageOfflineMaps' },
 ];
 
 export interface PaywallSheetProps {
@@ -49,6 +50,7 @@ export interface PaywallSheetProps {
 
 export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const subscription = useSubscription();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
       }
     } catch (e) {
       hapticsBridge.error();
-      const message = e instanceof Error ? e.message : 'Purchase failed';
+      const message = e instanceof Error ? e.message : t('subscription.purchaseFailed');
       if (!/cancel/i.test(message)) {
         setError(message);
       }
@@ -101,7 +103,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
         setError('No active subscription found on this account.');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Restore failed');
+      setError(e instanceof Error ? e.message : t('commonUi.restoreFailed'));
     } finally {
       setBusy(false);
     }
@@ -122,9 +124,11 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
           ]}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>Aniseekr Pro</Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>
+                {t('subscription.aniseekrPro')}
+              </Text>
               <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
-                Unlock the full toolkit
+                {t('subscription.unlockTheFullToolkit')}
               </Text>
             </View>
             <Pressable
@@ -144,12 +148,12 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
           <ScrollView style={{ maxHeight: 480 }}>
             <View style={styles.features}>
               {FEATURES.map((feature) => (
-                <View key={feature.label} style={styles.featureRow}>
+                <View key={feature.labelKey} style={styles.featureRow}>
                   <View style={[styles.featureIcon, { backgroundColor: theme.accent + '24' }]}>
                     <MaterialIcons name={feature.icon} size={18} color={theme.accent} />
                   </View>
                   <Text style={[styles.featureLabel, { color: theme.text.primary }]}>
-                    {feature.label}
+                    {t(feature.labelKey)}
                   </Text>
                 </View>
               ))}
@@ -167,7 +171,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
               <View style={styles.loading}>
                 <ActivityIndicator color={theme.accent} />
                 <Text style={[styles.loadingLabel, { color: theme.text.secondary }]}>
-                  Loading offerings…
+                  {t('subscription.loadingOfferings')}
                 </Text>
               </View>
             ) : null}
@@ -187,7 +191,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
                 ]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.packageTitle, { color: theme.text.primary }]}>
-                    {labelForPackage(pkg)}
+                    {labelForPackage(pkg, t)}
                   </Text>
                   {pkg.product?.description ? (
                     <Text style={[styles.packageDescription, { color: theme.text.secondary }]}>
@@ -217,7 +221,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
               disabled={busy}
               style={({ pressed }) => [styles.restore, { opacity: pressed ? 0.7 : 1 }]}>
               <Text style={[styles.restoreLabel, { color: theme.text.secondary }]}>
-                Restore purchases
+                {t('commonUi.restorePurchases')}
               </Text>
             </Pressable>
 
@@ -230,9 +234,9 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
                 }}
                 hitSlop={8}
                 accessibilityRole="link"
-                accessibilityLabel="Terms of Service">
+                accessibilityLabel={t('subscription.termsOfService')}>
                 <Text style={[styles.legalLink, { color: theme.text.secondary }]}>
-                  Terms of Service
+                  {t('subscription.termsOfService')}
                 </Text>
               </Pressable>
               <Text style={[styles.legalSeparator, { color: theme.text.tertiary }]}>·</Text>
@@ -244,9 +248,9 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
                 }}
                 hitSlop={8}
                 accessibilityRole="link"
-                accessibilityLabel="Privacy Policy">
+                accessibilityLabel={t('subscription.privacyPolicy')}>
                 <Text style={[styles.legalLink, { color: theme.text.secondary }]}>
-                  Privacy Policy
+                  {t('subscription.privacyPolicy')}
                 </Text>
               </Pressable>
             </View>
@@ -257,17 +261,21 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
   );
 }
 
-function labelForPackage(pkg: SubscriptionOfferingPackage): string {
+function labelForPackage(
+  pkg: SubscriptionOfferingPackage,
+  t: (key: TranslationKey) => string
+): string {
   switch (pkg.packageType) {
     case 'ANNUAL':
-      return 'Annual';
+      return t('subscription.annual');
     case 'MONTHLY':
-      return 'Monthly';
+      return t('subscription.monthly');
     case 'LIFETIME':
-      return 'Lifetime';
+      return t('subscription.lifetime');
     case 'WEEKLY':
-      return 'Weekly';
+      return t('subscription.weekly');
     default:
+      // Product title is dynamic store data (RevenueCat) — not translatable.
       return pkg.product?.title ?? pkg.identifier;
   }
 }

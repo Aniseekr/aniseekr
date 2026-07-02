@@ -8,6 +8,7 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
+import { useT } from '../../libs/i18n';
 
 export type BangumiViewMode = 'calendar' | 'list' | 'cards';
 export type BangumiBaseViewMode = 'calendar' | 'list';
@@ -52,6 +53,7 @@ function BangumiSettingsSheetComponent({
   onShare,
 }: BangumiSettingsSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   const update = useCallback(
     <K extends keyof BangumiPreferences>(key: K, value: BangumiPreferences[K]) => {
@@ -93,13 +95,17 @@ function BangumiSettingsSheetComponent({
           <SafeAreaView edges={['bottom']}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>Bangumi options</Text>
+              <Text style={[styles.title, { color: theme.text.primary }]}>
+                {t('bangumiTab.bangumiOptions')}
+              </Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialIcons name="close" size={22} color={theme.text.secondary} />
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Data source</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('commonUi.dataSource')}
+            </Text>
             <View style={styles.sourceRow}>
               <BrowseSourceChip
                 onPress={() => {
@@ -110,7 +116,9 @@ function BangumiSettingsSheetComponent({
               />
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>View mode</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('bangumiTab.viewMode')}
+            </Text>
             <View style={styles.segmented}>
               {(['calendar', 'list'] as BangumiBaseViewMode[]).map((mode) => {
                 // Swipe-mode (cards) lives on the header toggle; settings only
@@ -137,14 +145,16 @@ function BangumiSettingsSheetComponent({
                         styles.segmentLabel,
                         { color: active ? '#0E0A06' : theme.text.primary },
                       ]}>
-                      {mode === 'calendar' ? 'Calendar' : 'List'}
+                      {mode === 'calendar' ? t('bangumiTab.calendar') : t('bangumiTab.list')}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Filter</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('bangumiTab.filter')}
+            </Text>
             <View style={styles.segmented}>
               {(['tracking', 'all'] as BangumiFilterMode[]).map((mode) => {
                 const active = preferences.filterMode === mode;
@@ -164,22 +174,24 @@ function BangumiSettingsSheetComponent({
                         styles.segmentLabel,
                         { color: active ? '#0E0A06' : theme.text.primary },
                       ]}>
-                      {mode === 'tracking' ? 'Tracking' : 'All series'}
+                      {mode === 'tracking' ? t('bangumiTab.tracking') : t('bangumiTab.allSeries')}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Type</Text>
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('bangumiTab.type')}
+            </Text>
             <View style={styles.segmented}>
               {(
                 [
-                  { key: 'all', icon: 'apps', label: 'All' },
+                  { key: 'all', icon: 'apps', label: t('commonUi.all') },
                   { key: 'tv', icon: 'tv', label: 'TV' },
-                  { key: 'movie', icon: 'movie', label: 'Movie' },
+                  { key: 'movie', icon: 'movie', label: t('bangumiTab.movie') },
                   { key: 'ova', icon: 'videocam', label: 'OVA' },
-                  { key: 'special', icon: 'star', label: 'Special' },
+                  { key: 'special', icon: 'star', label: t('bangumiTab.special') },
                 ] as {
                   key: BangumiTypeFilter;
                   icon: React.ComponentProps<typeof MaterialIcons>['name'];
@@ -217,22 +229,22 @@ function BangumiSettingsSheetComponent({
 
             <ToggleRow
               icon="visibility"
-              label="Show undated entries"
-              description="Display series with unknown air days"
+              label={t('bangumiTab.showUndatedEntries')}
+              description={t('bangumiTab.displaySeriesWithUnknownAir')}
               value={preferences.showUnknownDays}
               onChange={(v) => update('showUnknownDays', v)}
             />
             <ToggleRow
               icon="notifications-active"
-              label="Episode reminders"
-              description="Get notified before each episode"
+              label={t('bangumiTab.episodeReminders')}
+              description={t('bangumiTab.getNotifiedBeforeEachEpisode')}
               value={preferences.notificationsEnabled}
               onChange={(v) => update('notificationsEnabled', v)}
             />
             <ToggleRow
               icon="explicit"
-              label="Show adult content"
-              description="Reveal R18 series in seasonal lists"
+              label={t('bangumiTab.showAdultContent')}
+              description={t('bangumiTab.revealR18SeriesInSeasonal')}
               value={adultContent}
               onChange={onAdultContentChange}
             />
@@ -254,7 +266,7 @@ function BangumiSettingsSheetComponent({
                   ]}>
                   <MaterialIcons name="notifications" size={18} color={theme.text.primary} />
                   <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
-                    Manage reminders
+                    {t('bangumiTab.manageReminders')}
                   </Text>
                   {pendingNotifications > 0 ? (
                     <View style={[styles.badge, { backgroundColor: theme.accent }]}>
@@ -279,7 +291,7 @@ function BangumiSettingsSheetComponent({
                   ]}>
                   <MaterialIcons name="ios-share" size={18} color={theme.text.primary} />
                   <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
-                    Share schedule
+                    {t('bangumiTab.shareSchedule')}
                   </Text>
                 </Pressable>
               ) : null}

@@ -25,6 +25,7 @@ import { Radius, Shadow, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../../themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { useT } from '../../../libs/i18n';
 import { formatScore, humanizeStatus, seasonOf } from './shared';
 import type { Anime } from '../types';
 
@@ -42,6 +43,7 @@ interface SpotlightLayoutProps {
 function SpotlightLayoutComponent({ data, onSelect }: SpotlightLayoutProps) {
   const { width: screenW } = useWindowDimensions();
   const { theme } = useTheme();
+  const t = useT();
   const accentFg = readableTextOn(theme.accent);
   const scrollX = useSharedValue(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -110,7 +112,7 @@ function SpotlightLayoutComponent({ data, onSelect }: SpotlightLayoutProps) {
           <View style={styles.railHeadLeft}>
             <Ionicons name="flame" size={14} color={theme.accent} />
             <ThemedText variant="titleMedium" weight="700">
-              Top of the Season
+              {t('rate.topOfTheSeason')}
             </ThemedText>
           </View>
           <View style={styles.seeAll}>
@@ -118,7 +120,7 @@ function SpotlightLayoutComponent({ data, onSelect }: SpotlightLayoutProps) {
               variant="captionSmall"
               weight="700"
               style={{ color: theme.accent }}>
-              See all
+              {t('commonUi.seeAll')}
             </ThemedText>
             <Ionicons name="chevron-forward" size={11} color={theme.accent} />
           </View>
@@ -161,6 +163,7 @@ const SpotlightCard = memo(function SpotlightCard({
   borderColor,
   onPress,
 }: SpotlightCardProps) {
+  const t = useT();
   const inputRange = [
     (index - 1) * ITEM_FULL,
     index * ITEM_FULL,
@@ -277,7 +280,7 @@ const SpotlightCard = memo(function SpotlightCard({
               variant="bodySmall"
               weight="700"
               style={{ color: accentFg }}>
-              Watch Now
+              {t('commonUi.watchNow')}
             </ThemedText>
           </View>
         </View>

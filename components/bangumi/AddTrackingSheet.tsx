@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
@@ -12,19 +13,20 @@ import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { collectionService } from '../../libs/services/collection/collection-service';
 import type { AnimeStatus } from '../../libs/services/auth/types';
 import type { CollectionFolder } from '../../types';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 type UiStatus = 'watching' | 'wishlist' | 'completed' | 'paused' | 'dropped';
 
 const STATUS_OPTIONS: {
   key: UiStatus;
-  label: string;
+  labelKey: TranslationKey;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
 }[] = [
-  { key: 'watching', label: 'Watching', icon: 'play-circle-outline' },
-  { key: 'wishlist', label: 'Wishlist', icon: 'bookmark-outline' },
-  { key: 'completed', label: 'Completed', icon: 'check-circle-outline' },
-  { key: 'paused', label: 'Paused', icon: 'pause-circle-outline' },
-  { key: 'dropped', label: 'Dropped', icon: 'cancel' },
+  { key: 'watching', labelKey: 'commonUi.watching', icon: 'play-circle-outline' },
+  { key: 'wishlist', labelKey: 'commonUi.wishlist', icon: 'bookmark-outline' },
+  { key: 'completed', labelKey: 'commonUi.completed', icon: 'check-circle-outline' },
+  { key: 'paused', labelKey: 'bangumiTab.paused', icon: 'pause-circle-outline' },
+  { key: 'dropped', labelKey: 'commonUi.dropped', icon: 'cancel' },
 ];
 
 const UI_STATUS_TO_DB: Record<UiStatus, AnimeStatus> = {
@@ -44,6 +46,7 @@ interface AddTrackingSheetProps {
 
 function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrackingSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const [status, setStatus] = useState<UiStatus>('watching');
   const [score, setScore] = useState(7);
   const [progress, setProgress] = useState(0);
@@ -138,9 +141,11 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
               <View style={styles.headerInfo}>
                 <Image source={{ uri: anime.image }} style={styles.cover} />
                 <View style={styles.headerText}>
-                  <Text style={[styles.title, { color: theme.text.primary }]} numberOfLines={2}>
-                    {anime.title}
-                  </Text>
+                  <AnimeTitleText
+                    anime={anime}
+                    style={[styles.title, { color: theme.text.primary }]}
+                    numberOfLines={2}
+                  />
                   {anime.studios?.[0] || seasonLabel ? (
                     <Text
                       style={[styles.subtitle, { color: theme.text.secondary }]}
@@ -156,7 +161,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Status</Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                {t('commonUi.status')}
+              </Text>
               <View style={styles.statusRow}>
                 {STATUS_OPTIONS.map((opt) => {
                   const active = status === opt.key;
@@ -185,21 +192,25 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
                           styles.statusChipLabel,
                           { color: active ? '#0E0A06' : theme.text.primary },
                         ]}>
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Score</Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                {t('commonUi.score')}
+              </Text>
               <View style={styles.scoreRow}>
                 <Text style={[styles.scoreValue, { color: theme.accent }]}>{score.toFixed(1)}</Text>
                 <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
               </View>
               <RatingSlider value={score} onChange={setScore} width={320} step={0.5} />
 
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Episodes</Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                {t('commonUi.episodes')}
+              </Text>
               <View style={styles.stepperRow}>
                 <Pressable
                   onPress={decrementProgress}
@@ -240,7 +251,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
                 </Pressable>
               </View>
 
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>Folder</Text>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                {t('bangumiTab.folder')}
+              </Text>
               <View style={styles.folderRow}>
                 <Pressable
                   onPress={() => {
@@ -263,7 +276,7 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
                         color: selectedFolderId === null ? '#0E0A06' : theme.text.primary,
                       },
                     ]}>
-                    Default folder
+                    {t('bangumiTab.defaultFolder')}
                   </Text>
                 </Pressable>
                 {folders.map((f) => {
@@ -310,7 +323,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
                     opacity: pressed ? 0.7 : 1,
                   },
                 ]}>
-                <Text style={[styles.buttonLabel, { color: theme.text.primary }]}>Cancel</Text>
+                <Text style={[styles.buttonLabel, { color: theme.text.primary }]}>
+                  {t('common.cancel')}
+                </Text>
               </Pressable>
               <Pressable
                 disabled={saving}
@@ -323,7 +338,7 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
                     opacity: pressed || saving ? 0.85 : 1,
                   },
                 ]}>
-                <Text style={styles.saveLabel}>{saving ? 'Saving…' : 'Save'}</Text>
+                <Text style={styles.saveLabel}>{saving ? t('commonUi.saving') : t('common.save')}</Text>
               </Pressable>
             </View>
           </SafeAreaView>

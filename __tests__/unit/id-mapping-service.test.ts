@@ -149,35 +149,48 @@ describe('IDMappingService', () => {
     spy.mockRestore();
   });
 
-  it('IDM-015 bulkInsert writes name_cn through the prepared statement', async () => {
+  it('IDM-015 bulkInsert writes name_cn through the batched insert', async () => {
     const svc = IDMappingService.getInstance();
     const db = await LocalDB.getDatabase();
-    const captured: unknown[][] = [];
-    let preparedSql = '';
-    // bulkInsert runs against the tx handed to withExclusiveTransactionAsync
-    // (the raw db, not the LocalDB wrapper), so inject a fake tx instead of
-    // spying prepareAsync on the wrapper.
-    const fakeTx = {
-      execAsync: async () => {},
-      prepareAsync: async (sql: string) => {
-        preparedSql = sql;
-        return {
-          executeAsync: async (params: unknown[]) => {
-            captured.push(params as unknown[]);
-            return { changes: 1, lastInsertRowId: 0 };
-          },
-          finalizeAsync: async () => {},
-        };
-      },
-    };
-    const spy = spyOn(db, 'withExclusiveTransactionAsync').mockImplementation((async (
-      fn: (tx: typeof fakeTx) => Promise<void>
-    ) => {
-      await fn(fakeTx);
-    }) as never);
+    const runSpy = spyOn(db, 'runAsync');
     await svc.bulkInsert([{ mal_id: 1, bangumi_id: 2, name_cn: '葬送的芙莉蓮' }]);
-    expect(preparedSql).toContain('name_cn');
-    expect(captured[0]).toContain('葬送的芙莉蓮');
+    const insert = runSpy.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).startsWith('INSERT INTO id_mappings_staging')
+    );
+    expect(insert?.[0]).toContain('name_cn');
+    expect(insert?.slice(1)).toContain('葬送的芙莉蓮');
+    runSpy.mockRestore();
+  });
+
+  it('IDM-017 bulkInsert with an empty array never swaps the live table', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const exclusiveSpy = spyOn(db, 'withExclusiveTransactionAsync');
+    const runSpy = spyOn(db, 'runAsync');
+    await svc.bulkInsert([]);
+    expect(exclusiveSpy).not.toHaveBeenCalled();
+    expect(runSpy).not.toHaveBeenCalled();
+    runSpy.mockRestore();
+    exclusiveSpy.mockRestore();
+  });
+
+  it('IDM-018 concurrent bulkInsert calls serialize instead of interleaving', async () => {
+    const svc = IDMappingService.getInstance();
+    const db = await LocalDB.getDatabase();
+    const order: string[] = [];
+    const spy = spyOn(db, 'withExclusiveTransactionAsync').mockImplementation((async (
+      fn: (tx: unknown) => Promise<void>
+    ) => {
+      order.push('swap-start');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await fn(db as never);
+      order.push('swap-end');
+    }) as never);
+    await Promise.all([
+      svc.bulkInsert([{ mal_id: 1 }]),
+      svc.bulkInsert([{ mal_id: 2 }]),
+    ]);
+    expect(order).toEqual(['swap-start', 'swap-end', 'swap-start', 'swap-end']);
     spy.mockRestore();
   });
 
@@ -192,16 +205,24 @@ describe('IDMappingService', () => {
     spy.mockRestore();
   });
 
-  it('IDM-006 bulk insert wraps in a single exclusive transaction', async () => {
+  it('IDM-006 bulk insert batches rows into staging and swaps in one short exclusive tx', async () => {
     const svc = IDMappingService.getInstance();
     const db = await LocalDB.getDatabase();
-    const txSpy = spyOn(db, 'withExclusiveTransactionAsync');
-    await svc.bulkInsert([
-      { mal_id: 1, anilist_id: 11 },
-      { mal_id: 2, anilist_id: 22 },
-      { mal_id: 3, anilist_id: 33 },
-    ]);
-    expect(txSpy).toHaveBeenCalledTimes(1);
-    txSpy.mockRestore();
+    const exclusiveSpy = spyOn(db, 'withExclusiveTransactionAsync');
+    const runSpy = spyOn(db, 'runAsync');
+    const rows = Array.from({ length: 120 }, (_, i) => ({ mal_id: i + 1, anilist_id: i + 1 }));
+    await svc.bulkInsert(rows);
+
+    // 120 rows at 50 rows/statement → 3 INSERTs, all against the staging table.
+    const inserts = runSpy.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && (c[0] as string).startsWith('INSERT INTO id_mappings_staging')
+    );
+    expect(inserts.length).toBe(3);
+    const firstSql = inserts[0]?.[0] as string;
+    expect(firstSql.match(/\(\?/g)?.length).toBe(50);
+    // Heavy writes do NOT hold the exclusive lock; only the final swap does.
+    expect(exclusiveSpy).toHaveBeenCalledTimes(1);
+    runSpy.mockRestore();
+    exclusiveSpy.mockRestore();
   });
 });

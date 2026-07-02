@@ -104,7 +104,31 @@ export interface CameraSettings {
    * Subject-overlay combine toggle (overlap-and-blend vs replace).
    */
   subjectCombine: boolean;
+  /**
+   * Per-mode overlay opacity (0..1). Each overlay mode remembers its OWN alpha,
+   * so edge (sparse ink, needs ~0.75 to read) and the anime bitmap (dense,
+   * needs ~0.35 so the live scene shows through for framing) no longer fight
+   * over a single shared slider. Seeded into the HUD reducer on launch and
+   * written through on slide-complete.
+   */
+  overlayOpacityByMode: Record<OverlayMode, number>;
 }
+
+/**
+ * Default overlay alpha per mode. Edge/sketch are sparse ink → high alpha so the
+ * lines read against the scene; the anime bitmap and the lifted subject are
+ * dense → low alpha so the live preview shows through for framing. Users
+ * override per mode via the zoom-band slider; the pick persists in
+ * `CameraSettings.overlayOpacityByMode`.
+ */
+export const DEFAULT_OVERLAY_OPACITY_BY_MODE: Record<OverlayMode, number> = {
+  anime: 0.35,
+  edge: 0.75,
+  sketch: 0.6,
+  subject: 0.5,
+};
+
+const OVERLAY_MODES: readonly OverlayMode[] = ['anime', 'edge', 'sketch', 'subject'];
 
 export const DEFAULT_CAMERA_SETTINGS: CameraSettings = {
   // Silent by default — pilgrimage shooting is mostly in cafés, stations,
@@ -127,6 +151,7 @@ export const DEFAULT_CAMERA_SETTINGS: CameraSettings = {
   edgeIntensity: 'low',
   subjectFocus: 'normal',
   subjectCombine: false,
+  overlayOpacityByMode: { ...DEFAULT_OVERLAY_OPACITY_BY_MODE },
 };
 
 /**
@@ -188,6 +213,25 @@ function isSubjectFocus(value: unknown): value is SubjectFocus {
   return value === 'tight' || value === 'normal' || value === 'wide';
 }
 
+/**
+ * Merge a persisted per-mode opacity map over the defaults: keep any finite
+ * 0..1 value (clamped) per mode, fall back to the default for missing/garbage
+ * entries. Always returns a full {@link OverlayMode}-keyed map so callers never
+ * read an `undefined` alpha.
+ */
+function pickOverlayOpacityByMode(value: unknown): Record<OverlayMode, number> {
+  const out: Record<OverlayMode, number> = { ...DEFAULT_OVERLAY_OPACITY_BY_MODE };
+  if (isObject(value)) {
+    for (const mode of OVERLAY_MODES) {
+      const v = (value as Record<string, unknown>)[mode];
+      if (typeof v === 'number' && Number.isFinite(v)) {
+        out[mode] = Math.max(0, Math.min(1, v));
+      }
+    }
+  }
+  return out;
+}
+
 function pickValidSettings(value: Record<string, unknown>): Partial<CameraSettings> {
   const out: Partial<CameraSettings> = {};
   if (typeof value.mute === 'boolean') out.mute = value.mute;
@@ -212,6 +256,7 @@ function pickValidSettings(value: Record<string, unknown>): Partial<CameraSettin
   if (isEdgeIntensity(value.edgeIntensity)) out.edgeIntensity = value.edgeIntensity;
   if (isSubjectFocus(value.subjectFocus)) out.subjectFocus = value.subjectFocus;
   if (typeof value.subjectCombine === 'boolean') out.subjectCombine = value.subjectCombine;
+  out.overlayOpacityByMode = pickOverlayOpacityByMode(value.overlayOpacityByMode);
   return out;
 }
 

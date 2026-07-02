@@ -6,6 +6,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useT } from '../../libs/i18n';
 
 interface StatCardProps {
   label: string;
@@ -51,14 +52,15 @@ interface StatsGridProps {
 }
 
 export function StatsGrid({ stats }: StatsGridProps) {
+  const t = useT();
   if (!stats) return null;
 
   return (
     <View style={styles.container}>
-      <StatCard label="Total" value={stats.total} icon="bookmark" color="#3b82f6" />
-      <StatCard label="Watching" value={stats.watching} icon="play-circle" color="#10b981" />
-      <StatCard label="Completed" value={stats.completed} icon="checkmark-circle" color="#22c55e" />
-      <StatCard label="Dropped" value={stats.dropped} icon="x-circle" color="#ef4444" />
+      <StatCard label={t('profile.total')} value={stats.total} icon="bookmark" color="#3b82f6" />
+      <StatCard label={t('commonUi.watching')} value={stats.watching} icon="play-circle" color="#10b981" />
+      <StatCard label={t('commonUi.completed')} value={stats.completed} icon="checkmark-circle" color="#22c55e" />
+      <StatCard label={t('commonUi.dropped')} value={stats.dropped} icon="x-circle" color="#ef4444" />
     </View>
   );
 }

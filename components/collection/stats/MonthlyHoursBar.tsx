@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
+import { useT } from '../../../libs/i18n';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
 import { MonthlyHourBucket } from '../../../libs/services/collection/stats-service';
@@ -10,8 +11,9 @@ interface Props {
   year?: number;
 }
 
-export function MonthlyHoursBar({ data, title = 'Monthly hrs', year }: Props) {
+export function MonthlyHoursBar({ data, title, year }: Props) {
   const { theme } = useTheme();
+  const t = useT();
   const max = Math.max(1, ...data.map((b) => b.hours));
   const peakMonth = data.findIndex((b) => b.hours === max);
 
@@ -26,7 +28,7 @@ export function MonthlyHoursBar({ data, title = 'Monthly hrs', year }: Props) {
       ]}>
       <View style={styles.headerRow}>
         <ThemedText variant="titleMedium" weight="700">
-          {title}
+          {title ?? t('collectionUi.monthlyHrs')}
         </ThemedText>
         {year ? (
           <ThemedText variant="captionSmall" tone="tertiary">

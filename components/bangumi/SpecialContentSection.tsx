@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText } from '../themed';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { Anime } from '../rate/types';
@@ -8,6 +9,7 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { ProgressiveImage } from '../common/ProgressiveImage';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 
 interface SpecialContentSectionProps {
   title: string;
@@ -26,6 +28,7 @@ function SpecialContentSectionComponent({
 }: SpecialContentSectionProps) {
   const router = useRouter();
   const { theme } = useTheme();
+  const t = useT();
 
   if (!anime || anime.length === 0) return null;
 
@@ -59,7 +62,7 @@ function SpecialContentSectionComponent({
               onSeeAll();
             }}
             hitSlop={8}>
-            <Text style={[styles.seeAll, { color: theme.accent }]}>See all</Text>
+            <Text style={[styles.seeAll, { color: theme.accent }]}>{t('commonUi.seeAll')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -86,9 +89,11 @@ function SpecialContentSectionComponent({
               borderRadius={14}
             />
             <View style={styles.cardBody}>
-              <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={2}>
-                {item.title}
-              </Text>
+              <AnimeTitleText
+                anime={item}
+                style={[styles.cardTitle, { color: theme.text.primary }]}
+                numberOfLines={2}
+              />
               <View style={styles.metaRow}>
                 {item.format ? (
                   <View style={[styles.formatBadge, { backgroundColor: theme.accent + '24' }]}>

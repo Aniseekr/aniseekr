@@ -31,6 +31,7 @@ import {
   readableTextOn,
 } from '../../components/themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { useT } from '../../libs/i18n';
 import {
   classifyCohort,
   type DeviceCohort,
@@ -115,6 +116,7 @@ function platformIdentity(): DiagnosticsPayload['identity'] {
 
 export default function CameraDiagnosticsScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { theme } = useTheme();
   const devices = useCameraDevices();
   const [refreshTick, setRefreshTick] = useState(0);
@@ -144,10 +146,10 @@ export default function CameraDiagnosticsScreen() {
   const handleShare = useCallback(() => {
     hapticsBridge.tap();
     Share.share({
-      title: 'Aniseekr camera diagnostics',
+      title: t('settingsUi.aniseekrCameraDiagnostics'),
       message: jsonText,
     }).catch(() => undefined);
-  }, [jsonText]);
+  }, [jsonText, t]);
 
   const handleRefresh = useCallback(() => {
     hapticsBridge.selection();
@@ -166,7 +168,7 @@ export default function CameraDiagnosticsScreen() {
             }}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('common.back')}
             style={({ pressed }) => [
               styles.iconButton,
               {
@@ -179,7 +181,7 @@ export default function CameraDiagnosticsScreen() {
           </Pressable>
           <View style={styles.headerTitleWrap}>
             <ThemedText variant="titleLarge" weight="700">
-              Camera diagnostics
+              {t('settingsUi.cameraDiagnostics')}
             </ThemedText>
             <ThemedText variant="bodySmall" tone="secondary">
               Hardware fingerprint + cohort classification
@@ -189,7 +191,7 @@ export default function CameraDiagnosticsScreen() {
             onPress={handleRefresh}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Refresh device snapshot"
+            accessibilityLabel={t('settingsUi.refreshDeviceSnapshot')}
             style={({ pressed }) => [
               styles.iconButton,
               {
@@ -208,18 +210,18 @@ export default function CameraDiagnosticsScreen() {
             { paddingBottom: insets.bottom + Spacing.xl * 2 },
           ]}
           showsVerticalScrollIndicator={false}>
-          <Section title="Identity">
-            <Row label="Manufacturer / Model" value={`${payload.identity.manufacturer} / ${payload.identity.model}`} />
+          <Section title={t('settingsUi.identity')}>
+            <Row label={t('settingsUi.manufacturerModel')} value={`${payload.identity.manufacturer} / ${payload.identity.model}`} />
             <Row label="OS" value={`${payload.identity.osPlatform} ${payload.identity.osVersion}`} />
-            <Row label="App version" value={`${payload.identity.appVersion} (${payload.identity.appBuildNumber})`} />
-            <Row label="Snapshot taken" value={payload.generatedAt} />
+            <Row label={t('settingsUi.appVersion')} value={`${payload.identity.appVersion} (${payload.identity.appBuildNumber})`} />
+            <Row label={t('settingsUi.snapshotTaken')} value={payload.generatedAt} />
           </Section>
 
-          <Section title="Cohort classification">
-            <Row label="Strategy" value={payload.cohort.strategy ?? '(null — no back devices)'} />
-            <Row label="Primary" value={payload.cohort.primaryId ?? '(none)'} />
-            <Row label="Ultra-wide" value={payload.cohort.ultraWideId ?? '(none — no 0.5× swap target)'} />
-            <Row label="Telephoto" value={payload.cohort.telephotoId ?? '(none)'} />
+          <Section title={t('settingsUi.cohortClassification')}>
+            <Row label={t('settingsUi.strategy')} value={payload.cohort.strategy ?? '(null — no back devices)'} />
+            <Row label={t('settingsUi.primary')} value={payload.cohort.primaryId ?? '(none)'} />
+            <Row label={t('settingsUi.ultraWide')} value={payload.cohort.ultraWideId ?? '(none — no 0.5× swap target)'} />
+            <Row label={t('settingsUi.telephoto')} value={payload.cohort.telephotoId ?? '(none)'} />
           </Section>
 
           <Section title={`Cameras (${payload.totalDeviceCount})`}>
@@ -238,7 +240,7 @@ export default function CameraDiagnosticsScreen() {
           <Pressable
             onPress={handleShare}
             accessibilityRole="button"
-            accessibilityLabel="Share diagnostics JSON"
+            accessibilityLabel={t('settingsUi.shareDiagnosticsJson')}
             style={({ pressed }) => [
               styles.shareButton,
               {
@@ -255,7 +257,7 @@ export default function CameraDiagnosticsScreen() {
               variant="titleMedium"
               weight="700"
               style={{ color: readableTextOn(theme.accent) }}>
-              Share diagnostics
+              {t('settingsUi.shareDiagnostics')}
             </ThemedText>
           </Pressable>
 

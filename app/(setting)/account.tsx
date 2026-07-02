@@ -105,7 +105,7 @@ export default function AccountScreen() {
       hapticsBridge.error();
       Alert.alert(
         `Couldn't connect to ${platform.name}`,
-        e instanceof Error ? e.message : 'Unknown error'
+        e instanceof Error ? e.message : t('settingsUi.unknownError')
       );
     } finally {
       await refreshAll();
@@ -159,16 +159,16 @@ export default function AccountScreen() {
     const connectedCount = Object.values(connections).filter(Boolean).length;
     if (connectedCount === 0) {
       Alert.alert(
-        'Nothing to disconnect',
-        'You are not connected to any platforms on this device.'
+        t('settingsUi.nothingToDisconnectYouAreTitle'),
+        t('settingsUi.nothingToDisconnectYouAreMessage')
       );
       return;
     }
     Alert.alert(
-      'Disconnect everything from this device?',
-      'This signs you out of every connected platform and erases every stored OAuth token from this device. To also delete data held by each platform, revoke access in their own account settings. To wipe local caches as well, delete the app.',
+      t('settingsUi.disconnectEverythingFromThisDeviceTitle'),
+      t('settingsUi.disconnectEverythingFromThisDeviceMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Disconnect all',
           style: 'destructive',

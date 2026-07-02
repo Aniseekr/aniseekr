@@ -53,6 +53,7 @@ import {
   type Constraint,
   type DeviceType,
   type MirrorMode,
+  type OrientationSource,
   type QualityPrioritization,
   type TorchMode,
   usePhotoOutput,
@@ -161,6 +162,14 @@ export interface CameraStageProps {
    * the old hard-cut overlay.
    */
   freezeFrameUri?: string | null;
+
+  /**
+   * Which orientation authority VisionCamera uses to rotate the saved photo.
+   * `'device'` (AUTO) follows the physical phone; `'interface'` (LAND) follows
+   * the landscape-locked UI. Derived from the AUTO/LAND chip via
+   * `useCameraOrientation` in `compare/[spotId].tsx` — do not hardcode here.
+   */
+  orientationSource: OrientationSource;
   ref?: Ref<CameraEngineHandle>;
 }
 
@@ -186,6 +195,7 @@ export function CameraStage({
   frameOutput,
   device: deviceProp,
   freezeFrameUri,
+  orientationSource,
   ref,
 }: CameraStageProps) {
   const { theme } = useTheme();
@@ -628,7 +638,7 @@ export function CameraStage({
                 torchMode={resolvedTorchMode}
                 mirrorMode={mirrorMode}
                 constraints={constraints}
-                orientationSource="device"
+                orientationSource={orientationSource}
                 onStarted={handleStarted}
                 onError={handleMountError}
               />

@@ -28,6 +28,7 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../themed';
 import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import {
@@ -52,6 +53,7 @@ const HANDLE_RADIUS = 16;
 
 export function CornerPinSheet({ visible, sourceUri, onCancel, onApply }: CornerPinSheetProps) {
   const { theme } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
   const accent = theme.accent;
@@ -282,7 +284,7 @@ export function CornerPinSheet({ visible, sourceUri, onCancel, onApply }: Corner
 
         <View style={styles.hintBar}>
           <ThemedText variant="captionSmall" tone="secondary" weight="600">
-            Drag the four corners to warp the user shot
+            {t('pilgrimageUi.dragTheFourCornersTo')}
           </ThemedText>
         </View>
       </SafeAreaView>
@@ -337,13 +339,14 @@ function Header({
   onApply: () => void;
   onReset: () => void;
 }) {
+  const t = useT();
   return (
     <View style={styles.header}>
       <Pressable
         onPress={onCancel}
         hitSlop={14}
         accessibilityRole="button"
-        accessibilityLabel="Cancel perspective warp"
+        accessibilityLabel={t('pilgrimageUi.cancelPerspectiveWarp')}
         style={({ pressed }) => [
           styles.headerBtn,
           {
@@ -355,14 +358,14 @@ function Header({
         <Ionicons name="close" size={20} color={theme.text.primary} />
       </Pressable>
       <ThemedText variant="titleLarge" weight="700">
-        Warp
+        {t('pilgrimageUi.warp')}
       </ThemedText>
       <View style={styles.headerRight}>
         <Pressable
           onPress={onReset}
           hitSlop={14}
           accessibilityRole="button"
-          accessibilityLabel="Reset corners"
+          accessibilityLabel={t('pilgrimageUi.resetCorners')}
           style={({ pressed }) => [
             styles.headerBtn,
             {
@@ -376,14 +379,14 @@ function Header({
         <Pressable
           onPress={onApply}
           accessibilityRole="button"
-          accessibilityLabel="Apply warp"
+          accessibilityLabel={t('pilgrimageUi.applyWarp')}
           style={({ pressed }) => [
             styles.applyBtn,
             { backgroundColor: accent, opacity: pressed ? 0.85 : 1 },
           ]}>
           <Ionicons name="checkmark" size={18} color={accentFg} />
           <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
-            Apply
+            {t('pilgrimageUi.apply')}
           </ThemedText>
         </Pressable>
       </View>

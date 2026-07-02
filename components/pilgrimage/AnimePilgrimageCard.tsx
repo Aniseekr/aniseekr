@@ -66,6 +66,9 @@ export function AnimePilgrimageCard({
   const regionFg = readableTextOn(regionColor);
   const distanceFg = readableTextOn(themeColor);
   const successFg = readableTextOn(theme.status.success);
+  // Language reactivity is transitive: this card is not memoized and every
+  // pilgrimage screen consumes the i18n context, so a language switch
+  // re-renders the tree and getPilgrimageAnimeTitles re-reads the language.
   const titles = getPilgrimageAnimeTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import type { OrientationSource } from 'react-native-vision-camera';
 import {
   ANDROID_GESTURE_NAV_MIN_INSET,
   cameraOrientationLockIntent,
+  cameraOrientationSource,
   CAMERA_BOTTOM_BAR_CONTENT_HEIGHT,
   CAMERA_LANDSCAPE_CLUSTER_RESERVE,
   CAMERA_SHUTTER_ROW_HEIGHT,
@@ -9,10 +11,10 @@ import {
   CAMERA_TOP_BAR_ROW2_HEIGHT,
   formatCameraHeader,
   isCameraCapturePath,
-  resolveCameraBottomInset,
   resolveCameraActive,
+  resolveCameraActiveWithInterruption,
+  resolveCameraBottomInset,
   resolveCameraTopChromeHeight,
-  resolveTransientCameraHudVisibility,
   roundExposureValue,
 } from '../../../libs/services/pilgrimage/camera-ui';
 
@@ -42,9 +44,17 @@ describe('camera UI helpers', () => {
     expect(isCameraCapturePath('/pilgrimage')).toBe(false);
   });
 
-  it('requests flexible landscape instead of pinning the camera to the right side', () => {
-    expect(cameraOrientationLockIntent('auto')).toBe('unlock');
+  it('locks the interface to portrait in AUTO (stock-camera HUD) and landscape in LAND', () => {
+    expect(cameraOrientationLockIntent('auto')).toBe('portrait');
     expect(cameraOrientationLockIntent('landscape')).toBe('landscape');
+  });
+
+  it('maps AUTO to device-follows-phone and LAND to interface-follows-UI orientation sources', () => {
+    const autoSource: OrientationSource = cameraOrientationSource('auto');
+    const landscapeSource: OrientationSource = cameraOrientationSource('landscape');
+
+    expect(autoSource).toBe('device');
+    expect(landscapeSource).toBe('interface');
   });
 
   it('rounds AF exposure bar values to clamped one-decimal EV values', () => {
@@ -57,6 +67,38 @@ describe('camera UI helpers', () => {
     expect(resolveCameraActive({ appIsForeground: true, settingsOpen: false })).toBe(true);
     expect(resolveCameraActive({ appIsForeground: false, settingsOpen: false })).toBe(false);
     expect(resolveCameraActive({ appIsForeground: true, settingsOpen: true })).toBe(false);
+  });
+
+  it('drops the camera while an interruption is active, even when foregrounded', () => {
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: true,
+        settingsOpen: false,
+        interrupted: false,
+      })
+    ).toBe(true);
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: true,
+        settingsOpen: false,
+        interrupted: true,
+      })
+    ).toBe(false);
+    // Backgrounded or sheet-covered still wins regardless of interruption.
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: false,
+        settingsOpen: false,
+        interrupted: false,
+      })
+    ).toBe(false);
+    expect(
+      resolveCameraActiveWithInterruption({
+        appIsForeground: true,
+        settingsOpen: true,
+        interrupted: false,
+      })
+    ).toBe(false);
   });
 
   it('keeps the slim camera chrome large enough for its controls', () => {
@@ -78,30 +120,6 @@ describe('camera UI helpers', () => {
     expect(resolveCameraTopChromeHeight({ quickControlsOpen: true })).toBe(
       CAMERA_TOP_BAR_CONTENT_HEIGHT + CAMERA_TOP_BAR_ROW2_HEIGHT
     );
-  });
-
-  it('hides transient HUD layers while the overlay dock is open', () => {
-    expect(
-      resolveTransientCameraHudVisibility({ afLocked: true, overlayControlsOpen: true })
-    ).toEqual({
-      showAutoCaptureBadge: false,
-      showCaptureHistory: false,
-      showFocusExposureBar: false,
-    });
-
-    expect(
-      resolveTransientCameraHudVisibility({ afLocked: true, overlayControlsOpen: false })
-    ).toEqual({
-      showAutoCaptureBadge: true,
-      showCaptureHistory: true,
-      showFocusExposureBar: true,
-    });
-
-    expect(resolveTransientCameraHudVisibility({ afLocked: false })).toEqual({
-      showAutoCaptureBadge: true,
-      showCaptureHistory: true,
-      showFocusExposureBar: false,
-    });
   });
 
   it('floors the Android camera bottom inset so the gesture bar cannot cover the shutter', () => {

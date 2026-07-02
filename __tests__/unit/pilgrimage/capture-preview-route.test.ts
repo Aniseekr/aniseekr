@@ -4,8 +4,11 @@ import {
   buildCaptureSessionShotFromRoute,
   reconcileCapturePreviewSelection,
   resolveCapturePreviewFocus,
+  resolveRouteShotDimensions,
+  routeShotDimensionsNeedDecode,
 } from '../../../libs/services/pilgrimage/capture-preview-route';
 import type { CaptureSessionShot } from '../../../libs/services/pilgrimage/capture-session';
+import type { PhotoDimensions } from '../../../libs/services/pilgrimage/camera-engine-parity';
 import type { RouterParams } from '../../../libs/utils/route-params';
 
 describe('capture preview route shot hydration', () => {
@@ -78,5 +81,49 @@ describe('capture preview state reconciliation', () => {
 
   it('keeps the focused shot stable when it is still present', () => {
     expect(resolveCapturePreviewFocus('a', [shot('a')])).toBe('a');
+  });
+});
+
+describe('routeShotDimensionsNeedDecode', () => {
+  it('needs a decode when either dimension is missing / non-positive', () => {
+    expect(routeShotDimensionsNeedDecode(0, 4032)).toBe(true);
+    expect(routeShotDimensionsNeedDecode(3024, 0)).toBe(true);
+    expect(routeShotDimensionsNeedDecode(0, 0)).toBe(true);
+    expect(routeShotDimensionsNeedDecode(Number.NaN, 4032)).toBe(true);
+    expect(routeShotDimensionsNeedDecode(-1, 4032)).toBe(true);
+  });
+
+  it('does not need a decode when both dimensions are already positive', () => {
+    expect(routeShotDimensionsNeedDecode(3024, 4032)).toBe(false);
+    expect(routeShotDimensionsNeedDecode(1, 1)).toBe(false);
+  });
+});
+
+describe('resolveRouteShotDimensions', () => {
+  it('returns the current dims unchanged (no decode) when they are already valid', async () => {
+    let calls = 0;
+    const decode = async (): Promise<PhotoDimensions> => {
+      calls += 1;
+      return { width: 1, height: 1 };
+    };
+    const current = { width: 3024, height: 4032 };
+    const result = await resolveRouteShotDimensions(current, decode, 'file:///shot.jpg');
+    expect(result).toEqual({ width: 3024, height: 4032 });
+    expect(calls).toBe(0);
+  });
+
+  it('decodes the true dims (passing current as the fallback) when dims are 0', async () => {
+    const seen: { uri: string; fallback: PhotoDimensions }[] = [];
+    const decode = async (uri: string, fallback: PhotoDimensions): Promise<PhotoDimensions> => {
+      seen.push({ uri, fallback });
+      return { width: 1080, height: 1920 };
+    };
+    const result = await resolveRouteShotDimensions(
+      { width: 0, height: 0 },
+      decode,
+      'file:///portrait.jpg'
+    );
+    expect(result).toEqual({ width: 1080, height: 1920 });
+    expect(seen).toEqual([{ uri: 'file:///portrait.jpg', fallback: { width: 0, height: 0 } }]);
   });
 });
