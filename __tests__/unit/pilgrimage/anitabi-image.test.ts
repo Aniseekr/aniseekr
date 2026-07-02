@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, test } from 'bun:test';
 import {
+  anitabiImageSource,
   normalizeAnitabiImageUrl,
   toFullResImageUrl,
 } from '../../../libs/services/pilgrimage/anitabi-image';
@@ -66,5 +67,20 @@ describe('normalizeAnitabiImageUrl', () => {
     expect(
       normalizeAnitabiImageUrl('https://image.anitabi.cn/bangumi/240038.jpg?plan=h360', 240038)
     ).toBe('https://image.anitabi.cn/bangumi/240038.jpg?plan=h360');
+  });
+});
+
+describe('anitabiImageSource', () => {
+  test('anitabi CDN urls get referer + browser UA headers', () => {
+    const s = anitabiImageSource('https://image.anitabi.cn/points/1/a.jpg?plan=h160');
+    expect(s.uri).toBe('https://image.anitabi.cn/points/1/a.jpg?plan=h160');
+    expect(s.headers?.Referer).toBe('https://anitabi.cn/');
+    expect(s.headers?.['User-Agent']).toContain('Safari');
+  });
+  test('non-anitabi urls stay bare', () => {
+    expect(anitabiImageSource('https://lain.bgm.tv/x.jpg').headers).toBeUndefined();
+  });
+  test('unparseable input stays bare', () => {
+    expect(anitabiImageSource('not-a-url').headers).toBeUndefined();
   });
 });

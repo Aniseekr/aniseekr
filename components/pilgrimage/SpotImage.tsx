@@ -7,6 +7,7 @@ import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
+import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import { sanitizeImageUri } from './spot-image-uri';
 
 export { sanitizeImageUri } from './spot-image-uri';
@@ -46,7 +47,7 @@ export function SpotImage({
   }
   return (
     <Image
-      source={{ uri: clean }}
+      source={anitabiImageSource(clean)}
       style={style}
       contentFit={contentFit}
       cachePolicy="memory-disk"

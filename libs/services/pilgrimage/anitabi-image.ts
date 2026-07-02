@@ -49,3 +49,28 @@ function withDefaultPlan(url: string): string {
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}plan=${DEFAULT_THUMBNAIL_PLAN}`;
 }
+
+const ANITABI_IMAGE_HOST = 'image.anitabi.cn';
+
+/**
+ * anitabi's CDN sits behind a Cloudflare WAF that 403s obvious non-browser
+ * clients (see spec 2026-07-03 §1.1). A referer + mobile-Safari UA keeps us on
+ * the allow side — same workaround class as the api.bgm.tv redirect issue
+ * documented in [animeId].tsx. Non-anitabi hosts get a bare source.
+ */
+export const ANITABI_IMAGE_HEADERS: Record<string, string> = {
+  Referer: 'https://anitabi.cn/',
+  'User-Agent':
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+};
+
+export function anitabiImageSource(url: string): { uri: string; headers?: Record<string, string> } {
+  try {
+    if (new URL(url).host === ANITABI_IMAGE_HOST) {
+      return { uri: url, headers: { ...ANITABI_IMAGE_HEADERS } };
+    }
+  } catch {
+    // not an absolute URL — return bare and let the image layer surface the failure
+  }
+  return { uri: url };
+}

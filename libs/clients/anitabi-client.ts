@@ -116,6 +116,7 @@ export class AnitabiClient {
         headers: {
           'User-Agent': USER_AGENT,
           Accept: 'application/json',
+          Referer: 'https://anitabi.cn/',
         },
         signal: controller?.signal,
       });
