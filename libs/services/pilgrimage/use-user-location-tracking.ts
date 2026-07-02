@@ -212,7 +212,12 @@ export function useUserLocationTracking(
       .then((loc) => {
         if (!loc) return;
         if (!sameLatLng(locationRef.current, loc)) setLocation(loc);
-        onFollowLocationRef.current?.(loc, 'following');
+        // Re-read the CURRENT follow state, not the value captured when this
+        // promise was kicked off: a cold GPS fix takes 1-5s, and if the user
+        // panned to idle in that window, an unconditional recentre here would
+        // yank the map back out from under them.
+        const fs = followStateRef.current;
+        if (fs === 'following' || fs === 'compass') onFollowLocationRef.current?.(loc, fs);
       })
       .catch(() => undefined);
   }, [internal.permission]);
@@ -321,13 +326,22 @@ export function useUserLocationTracking(
             // foreground) must not auto-engage over a user who then cycled
             // back to idle.
             autoEngagedRef.current = true;
-            setInternal((prev) => ({ ...prev, followState: 'following' }));
+            // Guard against the auto-engage effect having already fired *and*
+            // the user having panned to idle in the gap between the OS prompt
+            // resolving and this callback running — same shape as the
+            // auto-engage effect above.
+            setInternal((prev) =>
+              prev.followState === 'idle' ? { ...prev, followState: 'following' } : prev
+            );
             locationService
               .getCurrentLocation()
               .then((loc) => {
                 if (!loc) return;
                 if (!sameLatLng(locationRef.current, loc)) setLocation(loc);
-                onFollowLocationRef.current?.(loc, 'following');
+                // Same gating as the auto-engage effect: fire only if still in
+                // a follow state by the time the fix resolves.
+                const fs = followStateRef.current;
+                if (fs === 'following' || fs === 'compass') onFollowLocationRef.current?.(loc, fs);
               })
               .catch(() => undefined);
           } else if (next === 'blocked' && !sheetShownThisSessionRef.current) {
