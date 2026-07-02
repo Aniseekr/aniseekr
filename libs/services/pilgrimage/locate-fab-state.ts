@@ -50,3 +50,16 @@ export function resolveLocateFabDecision(input: {
     current === 'idle' ? 'following' : current === 'following' ? 'compass' : 'idle';
   return { kind: 'cycle', nextFollow };
 }
+
+/**
+ * One-shot decision: a map surface auto-enters `following` the first time it
+ * sees granted permission, so opening a map means "the map is on me" without a
+ * FAB tap. `alreadyEngaged` is the surface's mount-scoped latch — once the
+ * user pans away (→ idle) we never fight them by re-engaging.
+ */
+export function shouldAutoEngageFollow(input: {
+  permission: LocatePermissionState;
+  alreadyEngaged: boolean;
+}): boolean {
+  return input.permission === 'granted' && !input.alreadyEngaged;
+}

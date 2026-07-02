@@ -1,18 +1,27 @@
 // useUserLocationTracking — drives the Google-Maps-style 3-state locate FAB.
 //
 // States (cycled by `cycleState`):
-//   idle      → no live subscriptions. Last known (or last received) location
-//               may still be available in `location` so the map keeps the
-//               user dot visible without burning the GPS.
-//   following → subscribe to GPS; each fix recentres the map at walking zoom.
+//   idle      → puck stays live via a battery-friendly coarse watcher
+//               (subscribeToUpdates with default options) whenever permission
+//               is granted, so it never goes stale — but the map does not
+//               recentre/follow. "idle" means "not following", not "frozen".
+//   following → tightens the same watcher to walking cadence (high accuracy,
+//               10m/3s) and recentres the map at walking zoom on each fix.
 //               No heading subscription (compass is off).
 //   compass   → following + magnetometer/heading subscription. Heading flows
 //               through a ref + delta-gate so we don't re-render React state
 //               at sensor frequency (Rule 9 in CLAUDE.md).
 //
+// The map defaults to following: the first time this hook observes granted
+// permission it auto-engages `following` once per mount (see the auto-engage
+// effect below), so opening a map with permission already granted means "the
+// map is on me" without a FAB tap.
+//
 // User pan/zoom (`onUserPan`) breaks following/compass back to idle. Map
 // surfaces call it only for real user gestures; programmatic recentres/flyTo
-// moves stay silent so following does not fight itself.
+// moves stay silent so following does not fight itself. Dropping to idle
+// stops the map from recentring, but the coarse watcher above keeps the puck
+// itself moving.
 //
 // Permission handling:
 //   - First user tap: ask the OS (`requestForegroundPermissionsAsync`).
@@ -40,6 +49,7 @@ import { locationService, type LatLng } from './location-service';
 import { sameLatLng } from './pilgrimage-screen-state';
 import {
   resolveLocateFabDecision,
+  shouldAutoEngageFollow,
   type LocateFollowState,
   type LocatePermissionState,
 } from './locate-fab-state';
@@ -187,6 +197,26 @@ export function useUserLocationTracking(
     };
   }, []);
 
+  // ─── Auto-engage follow on first granted permission (once per mount) ────
+  const autoEngagedRef = useRef(false);
+  useEffect(() => {
+    if (!shouldAutoEngageFollow({ permission: internal.permission, alreadyEngaged: autoEngagedRef.current })) {
+      return;
+    }
+    autoEngagedRef.current = true;
+    setInternal((prev) =>
+      prev.followState === 'idle' ? { ...prev, followState: 'following' } : prev
+    );
+    locationService
+      .getCurrentLocation()
+      .then((loc) => {
+        if (!loc) return;
+        if (!sameLatLng(locationRef.current, loc)) setLocation(loc);
+        onFollowLocationRef.current?.(loc, 'following');
+      })
+      .catch(() => undefined);
+  }, [internal.permission]);
+
   // ─── Warm-cache hydration ───────────────────────────────────────────────
   // Skip when we already have a value (cache hit during useState init).
   useEffect(() => {
@@ -205,26 +235,32 @@ export function useUserLocationTracking(
     };
   }, []);
 
-  // ─── Location watcher (only while following/compass) ────────────────────
+  // ─── Location watcher (alive whenever permission is granted) ────────────
+  // idle keeps a battery-friendly coarse watcher so the puck stays live;
+  // following/compass tighten to walking cadence for the recentre loop.
   useEffect(() => {
-    if (internal.followState === 'idle') return;
-    const unsubscribe = locationService.subscribeToUpdates((loc) => {
-      if (sameLatLng(locationRef.current, loc)) {
-        // Still fire the follow-recentre callback so a static fix nudges the
-        // map back into frame if the user has manually scrolled off-centre
-        // *but* hasn't dropped follow yet (e.g. on the same gesture).
+    if (internal.permission !== 'granted') return;
+    const follow = internal.followState !== 'idle';
+    const unsubscribe = locationService.subscribeToUpdates(
+      (loc) => {
+        if (sameLatLng(locationRef.current, loc)) {
+          // Still fire the follow-recentre callback so a static fix nudges the
+          // map back into frame if the user has manually scrolled off-centre
+          // *but* hasn't dropped follow yet (e.g. on the same gesture).
+          const cb = onFollowLocationRef.current;
+          const fs = followStateRef.current;
+          if (cb && (fs === 'following' || fs === 'compass')) cb(loc, fs);
+          return;
+        }
+        setLocation(loc);
         const cb = onFollowLocationRef.current;
         const fs = followStateRef.current;
         if (cb && (fs === 'following' || fs === 'compass')) cb(loc, fs);
-        return;
-      }
-      setLocation(loc);
-      const cb = onFollowLocationRef.current;
-      const fs = followStateRef.current;
-      if (cb && (fs === 'following' || fs === 'compass')) cb(loc, fs);
-    });
+      },
+      follow ? { accuracy: 'high', distanceIntervalMeters: 10, timeIntervalMs: 3000 } : {}
+    );
     return unsubscribe;
-  }, [internal.followState]);
+  }, [internal.followState, internal.permission]);
 
   // ─── Heading watcher (only while compass) ───────────────────────────────
   useEffect(() => {
@@ -280,6 +316,11 @@ export function useUserLocationTracking(
           const next = mapPermissionStatus(result);
           setInternal((prev) => (prev.permission === next ? prev : { ...prev, permission: next }));
           if (next === 'granted') {
+            // Latch the auto-engage effect too: this request-flow already put
+            // us into following, so a later permission re-check (e.g. app
+            // foreground) must not auto-engage over a user who then cycled
+            // back to idle.
+            autoEngagedRef.current = true;
             setInternal((prev) => ({ ...prev, followState: 'following' }));
             locationService
               .getCurrentLocation()

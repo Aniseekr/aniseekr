@@ -15,9 +15,10 @@
 //   PILG-FAB-PERM-003       — blocked + sheet never shown → show sheet.
 //   PILG-FAB-PERM-004       — blocked + sheet already shown → no-op.
 
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, test } from 'bun:test';
 import {
   resolveLocateFabDecision,
+  shouldAutoEngageFollow,
   type LocateFollowState,
   type LocatePermissionState,
 } from '../../../libs/services/pilgrimage/locate-fab-state';
@@ -127,5 +128,19 @@ describe('resolveLocateFabDecision', () => {
         expect(result.kind).not.toBe('cycle');
       }
     }
+  });
+});
+
+describe('shouldAutoEngageFollow', () => {
+  test('engages once when permission granted', () => {
+    expect(shouldAutoEngageFollow({ permission: 'granted', alreadyEngaged: false })).toBe(true);
+  });
+  test('never re-engages after the first time (user pan wins)', () => {
+    expect(shouldAutoEngageFollow({ permission: 'granted', alreadyEngaged: true })).toBe(false);
+  });
+  test('never engages without permission', () => {
+    expect(shouldAutoEngageFollow({ permission: 'undetermined', alreadyEngaged: false })).toBe(false);
+    expect(shouldAutoEngageFollow({ permission: 'denied', alreadyEngaged: false })).toBe(false);
+    expect(shouldAutoEngageFollow({ permission: 'blocked', alreadyEngaged: false })).toBe(false);
   });
 });
