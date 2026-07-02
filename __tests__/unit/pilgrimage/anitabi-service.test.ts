@@ -1,7 +1,9 @@
 // Deterministic unit tests for AnitabiService.
 // Spec cases: PILG-001, PILG-002, PILG-003, PILG-004.
 
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn, test } from 'bun:test';
+import { AnitabiClient } from '../../../libs/clients/anitabi-client';
+import type { PilgrimageRow, PilgrimageSaveInput } from '../../../libs/db';
 import { LocalDB } from '../../../libs/db';
 import { CacheService } from '../../../libs/services/cache-service';
 import {
@@ -63,6 +65,30 @@ const samplePointsResponse = (): RawAnitabiBangumiPoints => ({
     },
   ],
 });
+
+const RELATIVE_LITE = {
+  id: 115908,
+  cn: '',
+  title: '響け！ユーフォニアム',
+  city: '宇治市',
+  cover: '/images/bangumi/115908.jpg',
+  color: '#4a90d9',
+  geo: [34.89, 135.8] as [number, number],
+  zoom: 12,
+  modified: 0,
+  pointsLength: 577,
+  imagesLength: 500,
+  litePoints: [
+    { id: 'pt1', name: '宇治橋', image: '/images/points/115908/pt1.jpg', ep: 1, s: 120, geo: [34.9, 135.8] as [number, number] },
+  ],
+};
+
+const noopCache = {
+  get: async () => null,
+  getWithMeta: async () => null,
+  set: async () => undefined,
+  delete: async () => undefined,
+} as unknown as typeof CacheService;
 
 describe('AnitabiService', () => {
   let fetchSpy: ReturnType<typeof spyOn>;
@@ -233,5 +259,51 @@ describe('AnitabiService', () => {
     const refreshed = await svc.getAnimePilgrimage(SUBJECT_ID);
     expect(refreshed?.id).toBe(SUBJECT_ID);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  test('lite payload images are normalized before return and persist', async () => {
+    // `as` cast defeats TS narrowing `saved` to the literal `null` type — the
+    // assignment only happens inside the `savePilgrimage` closure below, which
+    // control-flow analysis can't see executing before the read at the bottom.
+    let saved: PilgrimageSaveInput | null = null as PilgrimageSaveInput | null;
+    const svc = AnitabiService.resetForTests({
+      client: { getLite: async () => ({ ...RELATIVE_LITE }) } as unknown as typeof AnitabiClient,
+      db: {
+        getPilgrimage: async () => null,
+        savePilgrimage: async (row: PilgrimageSaveInput) => { saved = row; },
+      } as unknown as typeof LocalDB,
+      cache: noopCache,
+    });
+    const out = await svc.getAnimePilgrimage(115908);
+    expect(out?.litePoints[0]?.image).toBe('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
+    expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
+    expect(saved?.litePointsJson ?? '').toContain('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
+  });
+
+  test('rowToBangumi heals relative paths cached by older builds (no cache-bust needed)', async () => {
+    const row: PilgrimageRow = {
+      bangumi_id: 115908,
+      title: '響け！ユーフォニアム',
+      title_cn: null,
+      city: null,
+      cover: '/images/bangumi/115908.jpg',
+      color: null,
+      center_lat: 34.89,
+      center_lng: 135.8,
+      zoom: 12,
+      points_length: 577,
+      images_length: 500,
+      lite_points_json: JSON.stringify(RELATIVE_LITE.litePoints),
+      cached_at: 0,
+      expires_at: Number.MAX_SAFE_INTEGER,
+    };
+    const svc = AnitabiService.resetForTests({
+      client: { getLite: async () => { throw new Error('must not hit network'); } } as unknown as typeof AnitabiClient,
+      db: { getPilgrimage: async () => row, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      cache: noopCache,
+    });
+    const out = await svc.getAnimePilgrimage(115908);
+    expect(out?.litePoints[0]?.image).toBe('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
+    expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
   });
 });

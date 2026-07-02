@@ -11,7 +11,7 @@
 //     a name. This collapses cuts of the same location into one spot.
 
 import { normalizeAnitabiImageUrl } from './anitabi-image';
-import type { AnitabiPoint, AnitabiSpot, RawAnitabiPoint } from './types';
+import type { AnitabiBangumi, AnitabiPoint, AnitabiSpot, RawAnitabiPoint } from './types';
 
 /** Two cuts with the same name within this many metres are treated as one spot. */
 const PROXIMITY_MERGE_M = 60;
@@ -122,6 +122,23 @@ export function groupPointsIntoSpots(points: readonly AnitabiPoint[]): AnitabiSp
   );
   spots.sort((a, b) => firstIndex(a, indexOf) - firstIndex(b, indexOf));
   return spots;
+}
+
+/**
+ * Normalize a raw `/lite` payload: `cover` and litePoint `image` arrive as
+ * host-relative `/images/...` paths and must become absolute CDN URLs before
+ * they are rendered or persisted. Idempotent — already-absolute URLs pass
+ * through unchanged, so re-running on rows cached by older builds is safe.
+ */
+export function normalizeLiteBangumi(bangumi: AnitabiBangumi): AnitabiBangumi {
+  return {
+    ...bangumi,
+    cover: normalizeAnitabiImageUrl(bangumi.cover, bangumi.id),
+    litePoints: normalizeRawPoints(
+      (bangumi.litePoints ?? []) as unknown as readonly RawAnitabiPoint[],
+      bangumi.id
+    ),
+  };
 }
 
 // ---------- helpers ----------

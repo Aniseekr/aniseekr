@@ -4,7 +4,7 @@
 import { LocalDB, type PilgrimageRow, type PilgrimageSaveInput } from '../../db';
 import { AnitabiClient, DataSourceError } from '../../clients/anitabi-client';
 import { CacheService } from '../cache-service';
-import { normalizeRawPoints } from './anitabi-points';
+import { normalizeLiteBangumi, normalizeRawPoints } from './anitabi-points';
 import type {
   AnitabiBangumi,
   AnitabiPoint,
@@ -138,6 +138,7 @@ export class AnitabiService {
         return null;
       }
 
+      fresh = normalizeLiteBangumi(fresh);
       this.memCache.set(bangumiId, { kind: 'hit', value: fresh });
 
       // Persist (best effort — log & continue on failure).
@@ -319,7 +320,7 @@ export class AnitabiService {
         litePoints = [];
       }
     }
-    return {
+    return normalizeLiteBangumi({
       id: row.bangumi_id,
       cn: row.title_cn ?? '',
       title: row.title,
@@ -332,7 +333,7 @@ export class AnitabiService {
       litePoints,
       pointsLength: row.points_length ?? 0,
       imagesLength: row.images_length ?? 0,
-    };
+    });
   }
 }
 
