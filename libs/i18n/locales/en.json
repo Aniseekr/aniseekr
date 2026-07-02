@@ -1017,8 +1017,19 @@
       "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)"
     },
     "detail": {
+      "bearing": {
+        "n": "N",
+        "ne": "NE",
+        "e": "E",
+        "se": "SE",
+        "s": "S",
+        "sw": "SW",
+        "w": "W",
+        "nw": "NW"
+      },
       "browseFallback": "Browse",
       "clearSearchA11y": "Clear search",
+      "distanceAway": "{distance} away",
       "emptyFilter": "No scenes match this filter.",
       "emptyNoData": "No pilgrimage data yet for this anime.",
       "emptySearch": "No spots match this search.",
@@ -1033,6 +1044,8 @@
       },
       "goBack": "Go back",
       "openAlbumA11y": "Open pilgrimage album",
+      "sceneLocation": "Scene location",
+      "sceneOfCount": "{index} of {count} scenes",
       "searchA11y": "Search pilgrimage spots or episodes",
       "searchPlaceholder": "Search spot or EP",
       "shareA11y": "Share",
@@ -1062,6 +1075,9 @@
         "grid": "Grid",
         "rows": "Rows"
       },
+      "locateIdleA11y": "Show my location",
+      "locateFollowingA11y": "Stop following my location",
+      "locateCompassA11y": "Stop compass mode",
       "locationPromptAllow": "Allow location",
       "locationPromptBody": "Allow location access to open the map around you and show nearby pilgrimage scenes immediately.",
       "locationPromptNotNow": "Not now",

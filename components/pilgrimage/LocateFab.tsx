@@ -33,6 +33,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { Shadow, Spacing } from '../../constants/DesignSystem';
 import { ThemedIconButton, readableTextOn } from '../themed';
+import { useT } from '../../libs/i18n';
 import type { LocateFollowState } from '../../libs/services/pilgrimage/use-user-location-tracking';
 
 const FAB_SIZE = 48;
@@ -100,6 +101,7 @@ function LocateFabComponent({
   testID = 'locate-fab',
 }: LocateFabProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   const accentFg = readableTextOn(theme.accent);
 
@@ -111,10 +113,10 @@ function LocateFabComponent({
 
   const a11y =
     state === 'idle'
-      ? 'Show my location'
+      ? t('pilgrimage.map.locateIdleA11y')
       : state === 'following'
-        ? 'Stop following my location'
-        : 'Stop compass mode';
+        ? t('pilgrimage.map.locateFollowingA11y')
+        : t('pilgrimage.map.locateCompassA11y');
 
   // Compass adds a soft accent glow to read as "more on" than following.
   const glowStyle = useMemo<ViewStyle | null>(

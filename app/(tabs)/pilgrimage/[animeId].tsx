@@ -863,6 +863,7 @@ export default function PilgrimageDetailScreen() {
           themeColor={themeColor}
           themeColorFg={themeColorFg}
           distanceKm={activeSpotDistance}
+          userLocation={userLocation}
           visitedTarget={activeSpotVisitedTarget}
           visited={activeSpotVisited}
           saved={activeSpotSaved}

@@ -1017,8 +1017,19 @@
       "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）"
     },
     "detail": {
+      "bearing": {
+        "n": "北",
+        "ne": "東北",
+        "e": "東",
+        "se": "東南",
+        "s": "南",
+        "sw": "西南",
+        "w": "西",
+        "nw": "西北"
+      },
       "browseFallback": "瀏覽",
       "clearSearchA11y": "清除搜尋",
+      "distanceAway": "距離 {distance}",
       "emptyFilter": "沒有符合此篩選的場景。",
       "emptyNoData": "這部動畫尚無巡禮資料。",
       "emptySearch": "沒有符合的搜尋結果。",
@@ -1033,6 +1044,8 @@
       },
       "goBack": "返回",
       "openAlbumA11y": "開啟巡禮相簿",
+      "sceneLocation": "場景位置",
+      "sceneOfCount": "第 {index}／{count} 個場景",
       "searchA11y": "搜尋巡禮地點或集數",
       "searchPlaceholder": "搜尋地點或集數",
       "shareA11y": "分享",
@@ -1062,6 +1075,9 @@
         "grid": "格狀",
         "rows": "列表"
       },
+      "locateIdleA11y": "顯示我的位置",
+      "locateFollowingA11y": "停止跟隨我的位置",
+      "locateCompassA11y": "停止指南針模式",
       "locationPromptAllow": "允許位置存取",
       "locationPromptBody": "允許位置存取後，地圖會直接顯示你附近的動畫場景。",
       "locationPromptNotNow": "暫時不要",
