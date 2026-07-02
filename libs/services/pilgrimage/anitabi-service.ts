@@ -29,7 +29,7 @@ export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * in the UI), so old cached entries simply lack attribution data and pick it
  * up naturally as the 7-day TTL expires — no cache-bust required.
  */
-const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
+export const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
 
 /** How far past TTL a cached detail payload may still be served on network failure. */
 const DETAIL_STALE_GRACE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -142,9 +142,9 @@ export class AnitabiService {
           // Stale beats blank: anitabi is a fragile third party (CF WAF 403s,
           // see spec 2026-07-03 §1.1) — serve the expired row rather than
           // rendering an empty screen over data we still hold.
-          const decoded = this.rowToBangumi(staleRow);
-          this.memCache.set(bangumiId, { kind: 'hit', value: decoded });
-          return decoded;
+          // Stale serves are per-call, not memoized, so recovery is picked
+          // up on the next call once the network is healthy again.
+          return this.rowToBangumi(staleRow);
         }
         throw err;
       }
@@ -214,14 +214,27 @@ export class AnitabiService {
     if (pending) return pending;
 
     const promise = (async (): Promise<AnitabiPoint[]> => {
-      // 3. SQLite cache.
+      // 3. SQLite cache — a SINGLE getWithMeta read covers both the fresh
+      // hit and the stale-if-error fallback. A plain `get()` (graceMs=0)
+      // would DELETE the row once it's past TTL, so by the time a later
+      // network failure tried to read it as "stale", it would already be
+      // gone — that was the bug. Reading once with the grace window keeps
+      // the row available for both outcomes.
+      let staleCandidate: AnitabiPoint[] | null = null;
       try {
-        const cached = await this.cache.get<AnitabiPoint[]>(
-          DETAIL_CACHE_KEY_PREFIX + bangumiId
+        const meta = await this.cache.getWithMeta<AnitabiPoint[]>(
+          DETAIL_CACHE_KEY_PREFIX + bangumiId,
+          DETAIL_STALE_GRACE_MS
         );
-        if (cached) {
-          this.detailMemCache.set(bangumiId, { kind: 'hit', value: cached });
-          return cached;
+        if (meta && Array.isArray(meta.value) && meta.value.length > 0) {
+          if (!meta.isStale) {
+            this.detailMemCache.set(bangumiId, { kind: 'hit', value: meta.value });
+            return meta.value;
+          }
+          // Past TTL but within the stale-if-error grace window — hold onto
+          // it as a fallback candidate. Do NOT memoize yet: we only serve it
+          // if the network below actually fails.
+          staleCandidate = meta.value;
         }
       } catch (err) {
         console.warn('[AnitabiService] points cache read failed:', err);
@@ -246,8 +259,11 @@ export class AnitabiService {
             this.detailMemCache.set(bangumiId, { kind: 'miss' });
             return [];
           }
-          const stale = await this.readStaleDetail(bangumiId);
-          if (stale) return stale;
+          if (staleCandidate) {
+            // Stale serves are per-call, not memoized, so recovery is
+            // picked up on the next call once the network is healthy again.
+            return staleCandidate;
+          }
           throw err;
         }
         raw = pointsResult.value;
@@ -262,8 +278,11 @@ export class AnitabiService {
           this.detailMemCache.set(bangumiId, { kind: 'miss' });
           return [];
         }
-        const stale = await this.readStaleDetail(bangumiId);
-        if (stale) return stale;
+        if (staleCandidate) {
+          // Stale serves are per-call, not memoized, so recovery is picked
+          // up on the next call once the network is healthy again.
+          return staleCandidate;
+        }
         throw err;
       }
 
@@ -322,27 +341,6 @@ export class AnitabiService {
     this.memCache.clear();
     this.detailMemCache.clear();
     this.pendingLite.clear();
-  }
-
-  /**
-   * Best-effort stale-if-error fallback for {@link getDetailedPoints}: reads
-   * the cached point list even past its TTL (within {@link DETAIL_STALE_GRACE_MS})
-   * so a network failure doesn't blank out data we already have.
-   */
-  private async readStaleDetail(bangumiId: number): Promise<AnitabiPoint[] | null> {
-    try {
-      const meta = await this.cache.getWithMeta<AnitabiPoint[]>(
-        DETAIL_CACHE_KEY_PREFIX + bangumiId,
-        DETAIL_STALE_GRACE_MS
-      );
-      if (meta && Array.isArray(meta.value) && meta.value.length > 0) {
-        this.detailMemCache.set(bangumiId, { kind: 'hit', value: meta.value });
-        return meta.value;
-      }
-    } catch {
-      // stale read is best-effort
-    }
-    return null;
   }
 
   /**

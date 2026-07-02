@@ -8,10 +8,12 @@ import { LocalDB } from '../../../libs/db';
 import { CacheService } from '../../../libs/services/cache-service';
 import {
   AnitabiService,
+  DETAIL_CACHE_KEY_PREFIX,
   PILGRIMAGE_TTL_MS,
 } from '../../../libs/services/pilgrimage/anitabi-service';
 import type {
   AnitabiBangumi,
+  AnitabiPoint,
   RawAnitabiBangumiPoints,
 } from '../../../libs/services/pilgrimage/types';
 
@@ -341,8 +343,11 @@ describe('AnitabiService', () => {
       } as unknown as typeof AnitabiClient,
       db: { getPilgrimage: async () => null, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
       cache: {
+        // `get` is kept only for interface compatibility — the production
+        // code's stale-if-error path now reads exclusively via `getWithMeta`
+        // (a single up-front call), so `get` is unused here.
         ...noopCache,
-        get: async () => null, // fresh read misses (expired)
+        get: async () => null,
         getWithMeta: async (_k: string, graceMs: number) =>
           graceMs > 0 ? { value: stalePoints, isStale: true } : null,
       } as unknown as typeof CacheService,
@@ -350,5 +355,92 @@ describe('AnitabiService', () => {
     const out = await svc.getDetailedPoints(42);
     expect(out).toHaveLength(1);
     expect(out[0]?.id).toBe('p1');
+  });
+
+  test('lite: a stale-served row does not poison memCache — the next call with a healthy network returns fresh data', async () => {
+    const STALE_ID = 990003;
+    const expiredRow: PilgrimageRow = {
+      bangumi_id: STALE_ID,
+      title: 'Old Stale Anime',
+      title_cn: null, city: null,
+      cover: 'https://image.anitabi.cn/bangumi/990003.jpg?plan=h160',
+      color: null, center_lat: 1, center_lng: 2, zoom: 10,
+      points_length: 3, images_length: 3,
+      lite_points_json: '[]',
+      cached_at: 0,
+      expires_at: 1, // long expired
+    };
+    // A mutable fake so the SAME service instance can see the client
+    // "recover" between calls — resetting AnitabiService between calls
+    // would trivially get a blank memCache regardless of whether the fix
+    // actually avoids memoizing stale serves.
+    const client: { getLite: () => Promise<AnitabiBangumi | null> } = {
+      getLite: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+    };
+    const svc = AnitabiService.resetForTests({
+      client: client as unknown as typeof AnitabiClient,
+      // Fake db returns the same expired row on every call — that's fine,
+      // it's the memCache poisoning (not the SQLite mock) under test here.
+      db: { getPilgrimage: async () => expiredRow, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      cache: noopCache,
+    });
+
+    const staleResult = await svc.getAnimePilgrimage(STALE_ID);
+    expect(staleResult?.title).toBe('Old Stale Anime');
+
+    client.getLite = async () => ({ ...sampleBangumi(), id: STALE_ID, title: 'Fresh Anime' });
+    const freshResult = await svc.getAnimePilgrimage(STALE_ID);
+    expect(freshResult?.title).toBe('Fresh Anime');
+  });
+
+  test('detail: real CacheService — TTL-expired row survives as stale-if-error, and a later healthy call returns fresh data (no memCache poisoning)', async () => {
+    const REGRESSION_ID = 990001;
+    const key = DETAIL_CACHE_KEY_PREFIX + REGRESSION_ID;
+    const stalePoints: AnitabiPoint[] = [
+      { id: 'r1', name: '駅前', image: 'https://image.anitabi.cn/points/990001/r1.jpg?plan=h160', ep: 1, s: 0, geo: [1, 2] },
+    ];
+    const freshRaw: RawAnitabiBangumiPoints = {
+      points: [
+        { id: 'r2', name: '新宿', image: 'https://image.anitabi.cn/scenes/990001/r2.jpg', ep: 2, s: 30, geo: [3, 4] },
+      ],
+    };
+
+    try {
+      // Seed the REAL cache with a tiny TTL, then let it expire.
+      await CacheService.set(key, stalePoints, 5);
+      await Bun.sleep(10);
+
+      // Mutable fake client so the SAME service instance can "recover"
+      // between calls (same rationale as the lite no-poisoning test above).
+      const client: {
+        getPoints: () => Promise<RawAnitabiBangumiPoints | null>;
+        getPointsDetail: () => Promise<unknown>;
+      } = {
+        getPoints: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+        getPointsDetail: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+      };
+      const svc = AnitabiService.resetForTests({
+        client: client as unknown as typeof AnitabiClient,
+        db: { getPilgrimage: async () => null, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+        cache: CacheService,
+      });
+
+      // Network fails entirely — the expired-but-in-grace row must be
+      // served instead of throwing. This is the exact "TTL-expired cache +
+      // network outage" scenario the reviewer's probe showed was dead code.
+      const staleResult = await svc.getDetailedPoints(REGRESSION_ID);
+      expect(staleResult).toHaveLength(1);
+      expect(staleResult[0]?.id).toBe('r1');
+
+      // Network recovers — the stale serve above must NOT have been
+      // memoized, so this call retries SQLite+network and gets fresh data.
+      client.getPoints = async () => freshRaw;
+      client.getPointsDetail = async () => [];
+      const freshResult = await svc.getDetailedPoints(REGRESSION_ID);
+      expect(freshResult).toHaveLength(1);
+      expect(freshResult[0]?.id).toBe('r2');
+    } finally {
+      await CacheService.delete(key);
+    }
   });
 });
