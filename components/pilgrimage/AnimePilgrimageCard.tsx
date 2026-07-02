@@ -5,7 +5,6 @@
 
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { readableTextOn } from '../themed/contrast';
@@ -17,6 +16,7 @@ import {
   getPilgrimageAnimeTitles,
 } from '../../libs/services/pilgrimage/pilgrimage-localization';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
+import { SpotImage } from './SpotImage';
 
 export interface AnimePilgrimageCardProps {
   anime: AnitabiBangumi;
@@ -82,12 +82,7 @@ export function AnimePilgrimageCard({
         inCollection && styles.cardInCollection,
       ]}>
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: (anime.cover ?? '').replace('?plan=h160', '?plan=h360') }}
-          style={styles.image}
-          contentFit="cover"
-          transition={200}
-        />
+        <SpotImage uri={anime.cover} style={styles.image} contentFit="cover" />
         <LinearGradient
           colors={['transparent', `${themeColor}40`, theme.background.secondary]}
           style={styles.imageGradient}
@@ -144,11 +139,7 @@ export function AnimePilgrimageCard({
           <View style={styles.previewRow}>
             {anime.litePoints.slice(0, 3).map((point, idx) => (
               <View key={point.id} style={styles.previewThumb}>
-                <Image
-                  source={{ uri: point.image }}
-                  style={styles.previewImage}
-                  contentFit="cover"
-                />
+                <SpotImage uri={point.image} style={styles.previewImage} contentFit="cover" />
                 {idx === 2 && anime.litePoints.length > 3 ? (
                   <View style={styles.moreOverlay}>
                     <Text style={styles.moreText}>+{anime.pointsLength - 3}</Text>

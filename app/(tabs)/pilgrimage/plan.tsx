@@ -10,7 +10,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -30,6 +29,7 @@ import {
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { useT } from '../../../libs/i18n';
+import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 
 type TripCandidate = {
   anime: AnitabiBangumi;
@@ -383,15 +383,7 @@ function FeaturedTripCard({ candidate, theme, onPress }: FeaturedTripCardProps) 
       accessibilityLabel={t('pilgrimage.plan.featuredTripA11y', { title: anime.title })}
       style={({ pressed }) => [styles.featuredCard, pressed && { opacity: 0.92 }]}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.secondary }]} />
-      {anime.cover ? (
-        <Image
-          // Anitabi CDN serves bangumi covers only at h160/h360/full — h720 404s.
-          source={{ uri: anime.cover.replace('?plan=h160', '?plan=h360') }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={300}
-        />
-      ) : null}
+      <SpotImage uri={anime.cover} style={StyleSheet.absoluteFill} contentFit="cover" />
       <LinearGradient
         colors={['rgba(8,8,8,0)', `${theme.background.primary}C4`, `${theme.background.primary}F2`]}
         locations={[0, 0.5, 1]}
@@ -613,16 +605,7 @@ function SuggestedTripRow({ candidate, theme, onPress }: SuggestedTripRowProps) 
         { borderLeftColor: tint },
         pressed && { opacity: 0.85 },
       ]}>
-      {anime.cover ? (
-        <Image
-          source={{ uri: anime.cover.replace('?plan=h160', '?plan=h360') }}
-          style={styles.suggestedThumb}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : (
-        <View style={[styles.suggestedThumb, { backgroundColor: theme.background.secondary }]} />
-      )}
+      <SpotImage uri={anime.cover} style={styles.suggestedThumb} contentFit="cover" />
       <View style={styles.suggestedBody}>
         <View style={styles.suggestedCityRow}>
           <View style={[styles.suggestedCityDot, { backgroundColor: tint }]} />

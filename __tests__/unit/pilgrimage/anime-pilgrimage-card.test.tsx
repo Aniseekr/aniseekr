@@ -6,9 +6,22 @@
 // on the React.createElement output.
 
 import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import * as React from 'react';
 import * as Haptics from 'expo-haptics';
+import en from '../../../libs/i18n/locales/en.json';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { findAll, getAllText, render } from './render-helpers';
+
+const tEn = (key: string): string =>
+  (key
+    .split('.')
+    .reduce<unknown>(
+      (node, part) =>
+        node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+      en
+    ) as string) ?? key;
+
+mock.module('../../../libs/i18n', () => ({ useT: () => tEn }));
 
 mock.module('../../../context/ThemeContext', () => ({
   useTheme: () => ({
@@ -37,6 +50,25 @@ mock.module('../../../context/ThemeContext', () => ({
       },
     },
   }),
+}));
+
+// SpotImage owns local `useState` for its load-failure fallback (CLAUDE.md
+// Rule 8's honest error tile). The render-helpers tree walker calls function
+// components directly with no fiber/dispatcher, so a real stateful hook
+// throws "Invalid hook call" here — stub the component to a plain host node.
+// `mock.module` is process-global in bun and outlives this file's `afterEach`,
+// so this factory also re-exports a spec-faithful `sanitizeImageUri` (kept in
+// sync with SpotImage.tsx) — otherwise a later test file that imports the
+// real named export (spot-image.test.ts) would break when the whole suite
+// runs and picks up this leaked mock instead of the real module.
+mock.module('../../../components/pilgrimage/SpotImage', () => ({
+  sanitizeImageUri: (uri: string | null | undefined): string | null => {
+    if (typeof uri !== 'string') return null;
+    const trimmed = uri.trim();
+    return /^(https?|file):\/\//.test(trimmed) ? trimmed : null;
+  },
+  SpotImage: ({ uri, style, contentFit }: { uri?: string | null; style?: unknown; contentFit?: unknown }) =>
+    React.createElement('Image', { source: { uri }, style, contentFit }),
 }));
 
 const { AnimePilgrimageCard } = await import(

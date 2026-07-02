@@ -14,7 +14,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
@@ -49,6 +48,7 @@ import {
   subscribeCharacters,
 } from '../../../libs/services/companion/character-library-store';
 import type { CharacterGroup } from '../../../libs/services/companion/character-library';
+import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 
 type AlbumEntry = PilgrimageAlbumEntry;
 
@@ -527,8 +527,8 @@ export default function PilgrimageAlbumScreen() {
                           borderColor: theme.glassBorder,
                         },
                       ]}>
-                      <Image
-                        source={{ uri: group.cover.thumbUri }}
+                      <SpotImage
+                        uri={group.cover.thumbUri}
                         style={StyleSheet.absoluteFill}
                         contentFit="contain"
                       />
@@ -949,12 +949,7 @@ function FolderCard({
       ]}>
       <View style={styles.folderCoverWrap}>
         {folder.cover ? (
-          <Image
-            source={{ uri: folder.cover }}
-            style={styles.folderCoverImage}
-            contentFit="cover"
-            transition={160}
-          />
+          <SpotImage uri={folder.cover} style={styles.folderCoverImage} contentFit="cover" />
         ) : (
           <LinearGradient
             colors={[`${theme.accent}26`, 'transparent']}
@@ -1052,12 +1047,7 @@ function CompareCard({
       ]}>
       <View style={styles.compareImgsWrap}>
         <View style={[styles.compareHalf, { height: animeH }]}>
-          <Image
-            source={{ uri: entry.spot.image }}
-            style={styles.compareImgFill}
-            contentFit="cover"
-            transition={140}
-          />
+          <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
           <View style={styles.cornerTag}>
             <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
               {t('pilgrimage.album.tagScene')}
@@ -1066,12 +1056,7 @@ function CompareCard({
         </View>
         <View style={styles.divider} />
         <View style={[styles.compareHalf, { height: realH }]}>
-          <Image
-            source={{ uri: entry.capture.uri }}
-            style={styles.compareImgFill}
-            contentFit="cover"
-            transition={140}
-          />
+          <SpotImage uri={entry.capture.uri} style={styles.compareImgFill} contentFit="cover" />
           <View style={[styles.cornerTag, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
             <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
               {entry.capture.source === 'library'

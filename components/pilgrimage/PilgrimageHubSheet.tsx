@@ -19,7 +19,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
@@ -35,6 +34,7 @@ import {
 } from '../../libs/services/pilgrimage/pilgrimage-localization';
 import { StatCell } from './detail/StatCell';
 import { formatDistanceKm } from './detail/_helpers';
+import { SpotImage } from './SpotImage';
 
 export interface HubAnimeEntry {
   anime: AnitabiBangumi;
@@ -364,9 +364,7 @@ function FocusedAnimeCard({
             styles.posterWrap,
             { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
           ]}>
-          {anime.cover ? (
-            <Image source={{ uri: anime.cover }} style={styles.poster} contentFit="cover" />
-          ) : null}
+          <SpotImage uri={anime.cover} style={styles.poster} contentFit="cover" />
           <View style={styles.posterBadge} pointerEvents="none">
             <ThemedText
               variant="captionSmall"
@@ -501,9 +499,7 @@ const HubAnimeRow = memo(function HubAnimeRow({
           styles.rowPosterWrap,
           { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
         ]}>
-        {anime.cover ? (
-          <Image source={{ uri: anime.cover }} style={styles.rowPoster} contentFit="cover" />
-        ) : null}
+        <SpotImage uri={anime.cover} style={styles.rowPoster} contentFit="cover" />
         <View style={[styles.rowBadge, { backgroundColor: `${themeColor}E6` }]}>
           <ThemedText
             variant="captionSmall"
@@ -611,9 +607,7 @@ const HubAnimeCard = memo(function HubAnimeCard({
           styles.cardPosterWrap,
           { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
         ]}>
-        {anime.cover ? (
-          <Image source={{ uri: anime.cover }} style={styles.cardPoster} contentFit="cover" />
-        ) : null}
+        <SpotImage uri={anime.cover} style={styles.cardPoster} contentFit="cover" />
         <View style={[styles.cardBadge, { backgroundColor: `${themeColor}E6` }]}>
           <ThemedText
             variant="captionSmall"

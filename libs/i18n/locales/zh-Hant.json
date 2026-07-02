@@ -1047,6 +1047,9 @@
         "rows": "列表"
       }
     },
+    "image": {
+      "unavailable": "無法載入圖片"
+    },
     "map": {
       "allJapan": "全日本",
       "clearSearchA11y": "清除搜尋",

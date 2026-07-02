@@ -30,7 +30,6 @@ import {
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
@@ -79,6 +78,7 @@ import {
   type PilgrimageSortKey,
 } from '../../../libs/services/pilgrimage/pilgrimage-collection-sort';
 import { PilgrimageSortPill } from '../../../components/pilgrimage/PilgrimageSortPill';
+import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 import { useT } from '../../../libs/i18n';
 
 interface FeaturedSpot {
@@ -804,14 +804,7 @@ function NearbyHero({
         <View style={[styles.roadPath, { backgroundColor: theme.glassBorder, opacity: 0.55 }]} />
       </View>
 
-      {nearestAnime?.anime.cover ? (
-        <Image
-          source={{ uri: nearestAnime.anime.cover }}
-          style={styles.heroCoverArt}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : null}
+      <SpotImage uri={nearestAnime?.anime.cover} style={styles.heroCoverArt} contentFit="cover" />
 
       <View
         style={[styles.satPin, { left: 78, top: 48, backgroundColor: theme.background.tertiary }]}
@@ -974,12 +967,7 @@ function PopularCard({
       accessibilityLabel={`${titles.primary} pilgrimage`}
       style={({ pressed }) => [styles.popularCard, pressed && { opacity: 0.9 }]}>
       <View style={styles.popularPosterWrap}>
-        <Image
-          source={{ uri: anime.cover }}
-          style={styles.popularPoster}
-          contentFit="cover"
-          transition={180}
-        />
+        <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
         <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
           <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg, fontSize: 10 }}>
             {total} spots
@@ -1053,12 +1041,7 @@ function FeaturedSpotRow({
       accessibilityRole="button"
       accessibilityLabel={`${spotTitles.primary} from ${animeTitles.primary}`}
       style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.92 }]}>
-      <Image
-        source={{ uri: spot.image }}
-        style={styles.spotThumb}
-        contentFit="cover"
-        transition={150}
-      />
+      <SpotImage uri={spot.image} style={styles.spotThumb} contentFit="cover" />
       <View style={styles.spotBody}>
         <View style={styles.spotTitleRow}>
           <ThemedText variant="bodySmall" weight="700" numberOfLines={1} style={{ flex: 1 }}>

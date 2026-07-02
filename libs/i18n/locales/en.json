@@ -1047,6 +1047,9 @@
         "rows": "Rows"
       }
     },
+    "image": {
+      "unavailable": "Image unavailable"
+    },
     "map": {
       "allJapan": "All Japan",
       "clearSearchA11y": "Clear search",
