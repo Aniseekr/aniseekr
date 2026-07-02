@@ -50,3 +50,4 @@ infra/terraform/*.tfplan
 
 .claude/
 
+.alma-snapshots

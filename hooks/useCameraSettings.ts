@@ -26,10 +26,22 @@ export type {
   ResolutionTier,
 } from '../libs/services/pilgrimage/camera-settings';
 
+export type CameraSettingsPatch =
+  | Partial<CameraSettings>
+  | ((prev: CameraSettings) => Partial<CameraSettings>);
+
 export interface UseCameraSettingsResult {
   settings: CameraSettings;
-  setSettings: (patch: Partial<CameraSettings>) => void;
+  setSettings: (patch: CameraSettingsPatch) => void;
   hydrated: boolean;
+}
+
+export function mergeCameraSettingsPatch(
+  prev: CameraSettings,
+  patch: CameraSettingsPatch
+): CameraSettings {
+  const resolved = typeof patch === 'function' ? patch(prev) : patch;
+  return { ...prev, ...resolved };
 }
 
 /**
@@ -43,9 +55,9 @@ export interface UseCameraSettingsResult {
 export function useCameraSettings(): UseCameraSettingsResult {
   const [settings, setSettingsState] = useState<CameraSettings>(loadCameraSettingsSync);
 
-  const setSettings = useCallback((patch: Partial<CameraSettings>) => {
+  const setSettings = useCallback((patch: CameraSettingsPatch) => {
     setSettingsState((prev) => {
-      const next: CameraSettings = { ...prev, ...patch };
+      const next = mergeCameraSettingsPatch(prev, patch);
       void saveCameraSettings(next);
       return next;
     });

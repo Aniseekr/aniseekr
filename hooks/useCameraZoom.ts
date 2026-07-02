@@ -45,6 +45,15 @@ const THROTTLE_MS = 120;
 const ZOOM_TWEEN = { duration: 200, easing: Easing.out(Easing.cubic) } as const;
 
 export interface UseCameraZoomInput {
+  /**
+   * When false the pinch-to-zoom gesture is disabled. The compare screen sets
+   * this to `!editMode` so that while the user is repositioning/scaling the
+   * reference overlay, a two-finger pinch scales the OVERLAY (OverlayLayer's
+   * own pinch) instead of fighting the camera zoom — the two full-screen pinch
+   * surfaces are otherwise un-arbitrated (no `simultaneousWithExternalGesture`)
+   * and both fire. Defaults to true (zoom always on).
+   */
+  enabled?: boolean;
   /** Real device min zoom factor (typically 0.5× on Pro phones, 1× on single-lens). */
   minZoom?: number;
   /** Real device max zoom factor (e.g. 15× on iPhone 15 Pro). */
@@ -159,6 +168,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
   const onPinchBelowMin = input?.onPinchBelowMin;
   const onPinchAboveMax = input?.onPinchAboveMax;
   const activeLens = input?.activeLens ?? 'wide';
+  const enabled = input?.enabled ?? true;
 
   const initialFactor = clamp(stopZoom[initial], minZoom, maxZoom);
   const zoomShared = useSharedValue<number>(initialFactor);
@@ -204,6 +214,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
   const pinchGesture = useMemo(
     () =>
       Gesture.Pinch()
+        .enabled(enabled)
         .onBegin(() => {
           savedZoom.value = zoomShared.value;
           // Reset trigger latches so a fresh gesture can fire its swap
@@ -258,6 +269,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
           }
         }),
     [
+      enabled,
       zoomShared,
       savedZoom,
       minZoom,

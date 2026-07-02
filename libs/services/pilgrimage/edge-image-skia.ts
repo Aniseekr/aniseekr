@@ -117,9 +117,46 @@ function getSketchEffect(): SkRuntimeEffect {
 const renderCache = new Map<string, SkImage>();
 const sketchCache = new Map<string, SkImage>();
 
-// Memoised remote→local resolutions so repeated edge/sketch builds for the
-// same scene don't re-download or re-probe the cache.
+// Memoised remote→local resolutions that have already been decoded by Skia, so
+// repeated edge/sketch builds for the same scene don't re-download or re-probe
+// the cache.
 const localUriCache = new Map<string, string>();
+
+function asFileUri(path: string): string {
+  return path.startsWith('file://') ? path : `file://${path}`;
+}
+
+function directCacheUri(remoteUrl: string): string | null {
+  const cacheDir = FileSystem.cacheDirectory;
+  if (!cacheDir) return null;
+  const ext = remoteUrl.split('?')[0].split('.').pop()?.toLowerCase();
+  const safeExt = ext && ext.length <= 5 ? ext : 'img';
+  return `${cacheDir}edge-src-${hashString(remoteUrl)}.${safeExt}`;
+}
+
+async function loadDecodedImage(candidate: string): Promise<SkImage | null> {
+  try {
+    const data = await Skia.Data.fromURI(candidate);
+    if (!data) return null;
+    return Skia.Image.MakeImageFromEncoded(data);
+  } catch {
+    return null;
+  }
+}
+
+async function tryOverlaySourceCandidate(
+  sourceUri: string,
+  candidate: string | null | undefined,
+  tried: Set<string>
+): Promise<SkImage | null> {
+  if (!candidate || tried.has(candidate)) return null;
+  tried.add(candidate);
+  const image = await loadDecodedImage(candidate);
+  if (image) {
+    localUriCache.set(sourceUri, candidate);
+  }
+  return image;
+}
 
 // Skia's `Data.fromURI` remote fetch is unreliable for large CDN images, so we
 // hand it a local `file://` path instead. `expo-image` already downloaded the
@@ -136,7 +173,7 @@ export async function resolveLocalUri(remoteUrl: string): Promise<string> {
     await ExpoImage.prefetch(remoteUrl);
     const cachePath = await ExpoImage.getCachePathAsync(remoteUrl);
     if (cachePath) {
-      const localUri = cachePath.startsWith('file://') ? cachePath : `file://${cachePath}`;
+      const localUri = asFileUri(cachePath);
       localUriCache.set(remoteUrl, localUri);
       return localUri;
     }
@@ -165,6 +202,60 @@ export async function resolveLocalUri(remoteUrl: string): Promise<string> {
   }
 
   return remoteUrl;
+}
+
+/**
+ * Load the source image for processed overlays with decode-aware fallbacks.
+ *
+ * ExpoImage cache paths are fastest, but SDK/cache backends can return a path
+ * Skia cannot decode. Do not surface that as "無法載入描邊" immediately: try the
+ * direct file-system cache/download next, then the original remote URI as the
+ * final attempt. The memo only stores candidates that successfully decode.
+ */
+export async function loadOverlaySourceImage(sourceUri: string): Promise<SkImage> {
+  const tried = new Set<string>();
+
+  const cached = localUriCache.get(sourceUri);
+  const cachedImage = await tryOverlaySourceCandidate(sourceUri, cached, tried);
+  if (cachedImage) return cachedImage;
+
+  if (/^https?:/i.test(sourceUri)) {
+    try {
+      const prefetched = await ExpoImage.prefetch(sourceUri);
+      if (prefetched !== false) {
+        const cachePath = await ExpoImage.getCachePathAsync(sourceUri);
+        const cacheImage = await tryOverlaySourceCandidate(
+          sourceUri,
+          cachePath ? asFileUri(cachePath) : null,
+          tried
+        );
+        if (cacheImage) return cacheImage;
+      }
+    } catch {
+      // Fall through to the direct file-system cache/download.
+    }
+
+    const directUri = directCacheUri(sourceUri);
+    if (directUri) {
+      try {
+        const info = await FileSystem.getInfoAsync(directUri);
+        if (info.exists) {
+          const existingImage = await tryOverlaySourceCandidate(sourceUri, directUri, tried);
+          if (existingImage) return existingImage;
+        }
+        const downloaded = await FileSystem.downloadAsync(sourceUri, directUri);
+        const downloadedImage = await tryOverlaySourceCandidate(sourceUri, downloaded.uri, tried);
+        if (downloadedImage) return downloadedImage;
+      } catch {
+        // Fall through to the original remote URL.
+      }
+    }
+  }
+
+  const remoteImage = await tryOverlaySourceCandidate(sourceUri, sourceUri, tried);
+  if (remoteImage) return remoteImage;
+
+  throw new Error('Failed to load image data');
 }
 
 function hashString(input: string): string {
@@ -205,12 +296,7 @@ async function buildEdgeImage(
   inkColor: string,
   inkOpacity: number
 ): Promise<SkImage> {
-  const localUri = await resolveLocalUri(uri);
-  const data = await Skia.Data.fromURI(localUri);
-  if (!data) throw new Error('Failed to load image data');
-
-  const image = Skia.Image.MakeImageFromEncoded(data);
-  if (!image) throw new Error('Failed to decode image');
+  const image = await loadOverlaySourceImage(uri);
 
   const w = image.width();
   const h = image.height();
@@ -308,12 +394,7 @@ async function buildSketchImage(
   inkColor: string,
   inkOpacity: number
 ): Promise<SkImage> {
-  const localUri = await resolveLocalUri(uri);
-  const data = await Skia.Data.fromURI(localUri);
-  if (!data) throw new Error('Failed to load image data');
-
-  const image = Skia.Image.MakeImageFromEncoded(data);
-  if (!image) throw new Error('Failed to decode image');
+  const image = await loadOverlaySourceImage(uri);
 
   const w = image.width();
   const h = image.height();

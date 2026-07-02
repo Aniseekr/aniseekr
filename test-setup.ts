@@ -761,9 +761,13 @@ for (const iconName of [
 mock.module('@shopify/react-native-skia', () => ({
   AlphaType: { Unknown: 0, Opaque: 1, Premul: 2, Unpremul: 3 },
   ColorType: { RGBA_8888: 4 },
+  TileMode: { Clamp: 'Clamp' },
+  FilterMode: { Linear: 'Linear' },
+  MipmapMode: { None: 'None' },
   Skia: {
     Data: { fromURI: async () => null },
     Image: { MakeImageFromEncoded: () => null },
+    RuntimeEffect: { Make: () => null },
     Surface: { Make: () => null },
     Paint: () => ({}),
   },

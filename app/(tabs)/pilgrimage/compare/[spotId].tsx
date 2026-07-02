@@ -240,7 +240,6 @@ export default function CompareCaptureScreen() {
     edgeIntensity,
     subjectFocus,
     subjectCombine,
-    overlayOpacity,
     editMode,
     evValue,
     orientationMode,
@@ -251,6 +250,10 @@ export default function CompareCaptureScreen() {
     switchToast,
     sceneSwitcherOpen,
   } = hud;
+  // Active overlay alpha is DERIVED from the per-mode map (Rule 9: no separate
+  // mirrored value). Each mode keeps its own alpha — edge reads at ~0.75, the
+  // anime bitmap at ~0.35 — so switching modes restores that mode's last pick.
+  const overlayOpacity = hud.overlayOpacityByMode[overlayMode] ?? 0.35;
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
   // Immersive-by-subtraction: landscape auto-hides secondary chrome; a preview tap reveals it.
@@ -434,6 +437,11 @@ export default function CompareCaptureScreen() {
 
   const zoom = useCameraZoom({
     initial: 1,
+    // Suspend camera pinch-zoom while repositioning the overlay so a two-finger
+    // pinch scales the OVERLAY (OverlayLayer's own pinch) instead of fighting
+    // the camera zoom — the two full-screen pinch surfaces are otherwise
+    // un-arbitrated and both fire ("兩個行為衝突").
+    enabled: !editMode,
     minZoom,
     maxZoom,
     stops: availableStops,
@@ -1618,7 +1626,16 @@ export default function CompareCaptureScreen() {
               <OverlayOpacityPill
                 opacity={overlayOpacity}
                 themeColor={themeColor}
-                onChange={(o) => setHud({ overlayOpacity: o })}
+                onChange={(o) =>
+                  setHud((s) => ({
+                    overlayOpacityByMode: { ...s.overlayOpacityByMode, [s.overlayMode]: o },
+                  }))
+                }
+                onComplete={(o) =>
+                  setSettings((prev) => ({
+                    overlayOpacityByMode: { ...prev.overlayOpacityByMode, [overlayMode]: o },
+                  }))
+                }
               />
             ) : null}
           </View>

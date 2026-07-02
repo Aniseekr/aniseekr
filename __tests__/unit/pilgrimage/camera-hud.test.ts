@@ -5,6 +5,7 @@ import {
   INITIAL_CAMERA_HUD,
   type CameraHudState,
 } from '../../../hooks/useCameraHud';
+import { DEFAULT_OVERLAY_OPACITY_BY_MODE } from '../../../libs/services/pilgrimage/camera-settings';
 
 describe('cameraHudReducer', () => {
   it('seeds sensible HUD defaults', () => {
@@ -62,6 +63,7 @@ describe('cameraHudInitialState', () => {
       edgeIntensity: 'high',
       subjectFocus: 'wide',
       subjectCombine: true,
+      overlayOpacityByMode: DEFAULT_OVERLAY_OPACITY_BY_MODE,
     });
     expect(seeded.overlayMode).toBe('anime');
     expect(seeded.edgeIntensity).toBe('high');
@@ -75,6 +77,7 @@ describe('cameraHudInitialState', () => {
       edgeIntensity: 'mid',
       subjectFocus: 'tight',
       subjectCombine: false,
+      overlayOpacityByMode: DEFAULT_OVERLAY_OPACITY_BY_MODE,
     });
     expect(seeded.facing).toBe(INITIAL_CAMERA_HUD.facing);
     expect(seeded.aspect).toBe(INITIAL_CAMERA_HUD.aspect);
@@ -89,9 +92,60 @@ describe('cameraHudInitialState', () => {
       edgeIntensity: 'low',
       subjectFocus: 'normal',
       subjectCombine: false,
+      overlayOpacityByMode: DEFAULT_OVERLAY_OPACITY_BY_MODE,
     });
     expect(seeded).not.toBe(INITIAL_CAMERA_HUD);
     seeded.facing = 'front';
     expect(INITIAL_CAMERA_HUD.facing).toBe('back');
+  });
+});
+
+describe('per-mode overlay opacity', () => {
+  it('defaults edge high (sparse ink) and the anime bitmap low (dense)', () => {
+    // Edge is sparse lines → needs more alpha to read; the anime bitmap covers
+    // the live scene → needs less so the user can still frame the shot.
+    expect(INITIAL_CAMERA_HUD.overlayOpacityByMode.edge).toBe(0.75);
+    expect(INITIAL_CAMERA_HUD.overlayOpacityByMode.anime).toBe(0.35);
+    expect(INITIAL_CAMERA_HUD.overlayOpacityByMode.edge).toBeGreaterThan(
+      INITIAL_CAMERA_HUD.overlayOpacityByMode.anime
+    );
+  });
+
+  it('seeds the per-mode opacity map from settings', () => {
+    const seeded = cameraHudInitialState({
+      overlayMode: 'edge',
+      edgeIntensity: 'low',
+      subjectFocus: 'normal',
+      subjectCombine: false,
+      overlayOpacityByMode: { anime: 0.2, edge: 0.9, sketch: 0.5, subject: 0.4 },
+    });
+    expect(seeded.overlayOpacityByMode.edge).toBe(0.9);
+    expect(seeded.overlayOpacityByMode.anime).toBe(0.2);
+  });
+
+  it('back-fills missing modes from the defaults when the seed map is partial', () => {
+    // An older persisted shape may only carry the modes the user touched.
+    const seeded = cameraHudInitialState({
+      overlayMode: 'edge',
+      edgeIntensity: 'low',
+      subjectFocus: 'normal',
+      subjectCombine: false,
+      overlayOpacityByMode: { edge: 0.6 } as Record<
+        'anime' | 'edge' | 'sketch' | 'subject',
+        number
+      >,
+    });
+    expect(seeded.overlayOpacityByMode.edge).toBe(0.6);
+    expect(seeded.overlayOpacityByMode.anime).toBe(DEFAULT_OVERLAY_OPACITY_BY_MODE.anime);
+    expect(seeded.overlayOpacityByMode.subject).toBe(DEFAULT_OVERLAY_OPACITY_BY_MODE.subject);
+  });
+
+  it('keeps an edit to one mode from leaking into another (independent alphas)', () => {
+    const next = cameraHudReducer(INITIAL_CAMERA_HUD, (h) => ({
+      overlayOpacityByMode: { ...h.overlayOpacityByMode, edge: 0.5 },
+    }));
+    expect(next.overlayOpacityByMode.edge).toBe(0.5);
+    // anime untouched.
+    expect(next.overlayOpacityByMode.anime).toBe(0.35);
   });
 });

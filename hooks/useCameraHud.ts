@@ -2,7 +2,10 @@ import { useReducer } from 'react';
 import type { CameraOrientationMode } from '../libs/services/pilgrimage/camera-ui';
 import type { EdgeIntensity } from '../libs/services/pilgrimage/edge-overlay';
 import type { SubjectFocus } from '../libs/services/pilgrimage/subject-overlay';
-import type { CameraSettings } from '../libs/services/pilgrimage/camera-settings';
+import {
+  DEFAULT_OVERLAY_OPACITY_BY_MODE,
+  type CameraSettings,
+} from '../libs/services/pilgrimage/camera-settings';
 import type {
   AspectRatio,
   CameraFacing,
@@ -39,7 +42,13 @@ export interface CameraHudState {
   overlayMode: OverlayMode;
   /** Off-segment toggle — when false the overlay renders at 0 opacity. */
   overlayVisible: boolean;
-  overlayOpacity: number;
+  /**
+   * Per-mode overlay alpha (0..1). The ACTIVE opacity is read as
+   * `overlayOpacityByMode[overlayMode]` — there is no separate shared value, so
+   * edge and the anime bitmap each keep their own alpha. Seeded from
+   * `CameraSettings.overlayOpacityByMode`; the slider writes it back per mode.
+   */
+  overlayOpacityByMode: Record<OverlayMode, number>;
   /** Reposition (drag/scale/rotate) mode for the overlay transform. */
   editMode: boolean;
   edgeIntensity: EdgeIntensity;
@@ -71,7 +80,7 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
   // launches restore the user's pick.
   overlayMode: 'edge',
   overlayVisible: true,
-  overlayOpacity: 0.35,
+  overlayOpacityByMode: { ...DEFAULT_OVERLAY_OPACITY_BY_MODE },
   editMode: false,
   edgeIntensity: 'low',
   subjectFocus: 'normal',
@@ -93,7 +102,7 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
  */
 export type CameraHudSeed = Pick<
   CameraSettings,
-  'overlayMode' | 'edgeIntensity' | 'subjectFocus' | 'subjectCombine'
+  'overlayMode' | 'edgeIntensity' | 'subjectFocus' | 'subjectCombine' | 'overlayOpacityByMode'
 >;
 
 /**
@@ -111,6 +120,12 @@ export function cameraHudInitialState(seed: CameraHudSeed): CameraHudState {
     edgeIntensity: seed.edgeIntensity,
     subjectFocus: seed.subjectFocus,
     subjectCombine: seed.subjectCombine,
+    // Defensive merge: a partial seed (older persisted shape, tests) still
+    // yields a full mode-keyed map so the active alpha is never undefined.
+    overlayOpacityByMode: {
+      ...DEFAULT_OVERLAY_OPACITY_BY_MODE,
+      ...seed.overlayOpacityByMode,
+    },
   };
 }
 

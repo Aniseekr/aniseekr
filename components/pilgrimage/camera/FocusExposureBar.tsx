@@ -76,6 +76,13 @@ const styles = StyleSheet.create({
   root: {
     position: 'absolute',
     alignItems: 'center',
+    // Float ABOVE the persistent bottom bands (zoom / carousel / shutter, all
+    // zIndex 70). This bar is anchored to the tap-to-focus point, so a low tap
+    // lands it over those bands; without an elevated zIndex the bands (70 > 0)
+    // render on top and swallow the slider's touches — the drag bar gets
+    // "blocked underneath". 75 keeps it under the transient floats (80) and the
+    // countdown (110).
+    zIndex: 75,
   },
   bar: {
     width: '100%',
