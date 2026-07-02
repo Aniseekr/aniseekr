@@ -31,6 +31,9 @@ export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  */
 const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
 
+/** How far past TTL a cached detail payload may still be served on network failure. */
+const DETAIL_STALE_GRACE_MS = 90 * 24 * 60 * 60 * 1000;
+
 /** Sentinel rows for in-memory cache so we can also remember "no data" results. */
 type CacheValue = { kind: 'hit'; value: AnitabiBangumi } | { kind: 'miss' };
 type DetailCacheValue = { kind: 'hit'; value: AnitabiPoint[] } | { kind: 'miss' };
@@ -107,12 +110,17 @@ export class AnitabiService {
 
     const promise = (async (): Promise<AnitabiBangumi | null> => {
       // 3. SQLite cache
+      let staleRow: PilgrimageRow | null = null;
       try {
         const row = await this.db.getPilgrimage(bangumiId);
-        if (row && row.expires_at > this.now()) {
-          const decoded = this.rowToBangumi(row);
-          this.memCache.set(bangumiId, { kind: 'hit', value: decoded });
-          return decoded;
+        if (row) {
+          if (row.expires_at > this.now()) {
+            const decoded = this.rowToBangumi(row);
+            this.memCache.set(bangumiId, { kind: 'hit', value: decoded });
+            return decoded;
+          }
+          // Expired — keep as a stale-if-error fallback instead of discarding.
+          staleRow = row;
         }
       } catch (err) {
         // SQLite read failures are non-fatal — fall through to network.
@@ -129,6 +137,14 @@ export class AnitabiService {
           // Defensive — client maps 404→null already, but we double-check.
           this.memCache.set(bangumiId, { kind: 'miss' });
           return null;
+        }
+        if (staleRow) {
+          // Stale beats blank: anitabi is a fragile third party (CF WAF 403s,
+          // see spec 2026-07-03 §1.1) — serve the expired row rather than
+          // rendering an empty screen over data we still hold.
+          const decoded = this.rowToBangumi(staleRow);
+          this.memCache.set(bangumiId, { kind: 'hit', value: decoded });
+          return decoded;
         }
         throw err;
       }
@@ -230,6 +246,8 @@ export class AnitabiService {
             this.detailMemCache.set(bangumiId, { kind: 'miss' });
             return [];
           }
+          const stale = await this.readStaleDetail(bangumiId);
+          if (stale) return stale;
           throw err;
         }
         raw = pointsResult.value;
@@ -244,6 +262,8 @@ export class AnitabiService {
           this.detailMemCache.set(bangumiId, { kind: 'miss' });
           return [];
         }
+        const stale = await this.readStaleDetail(bangumiId);
+        if (stale) return stale;
         throw err;
       }
 
@@ -302,6 +322,27 @@ export class AnitabiService {
     this.memCache.clear();
     this.detailMemCache.clear();
     this.pendingLite.clear();
+  }
+
+  /**
+   * Best-effort stale-if-error fallback for {@link getDetailedPoints}: reads
+   * the cached point list even past its TTL (within {@link DETAIL_STALE_GRACE_MS})
+   * so a network failure doesn't blank out data we already have.
+   */
+  private async readStaleDetail(bangumiId: number): Promise<AnitabiPoint[] | null> {
+    try {
+      const meta = await this.cache.getWithMeta<AnitabiPoint[]>(
+        DETAIL_CACHE_KEY_PREFIX + bangumiId,
+        DETAIL_STALE_GRACE_MS
+      );
+      if (meta && Array.isArray(meta.value) && meta.value.length > 0) {
+        this.detailMemCache.set(bangumiId, { kind: 'hit', value: meta.value });
+        return meta.value;
+      }
+    } catch {
+      // stale read is best-effort
+    }
+    return null;
   }
 
   /**

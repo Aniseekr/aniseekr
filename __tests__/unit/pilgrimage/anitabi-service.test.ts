@@ -2,7 +2,7 @@
 // Spec cases: PILG-001, PILG-002, PILG-003, PILG-004.
 
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn, test } from 'bun:test';
-import { AnitabiClient } from '../../../libs/clients/anitabi-client';
+import { AnitabiClient, DataSourceError } from '../../../libs/clients/anitabi-client';
 import type { PilgrimageRow, PilgrimageSaveInput } from '../../../libs/db';
 import { LocalDB } from '../../../libs/db';
 import { CacheService } from '../../../libs/services/cache-service';
@@ -305,5 +305,50 @@ describe('AnitabiService', () => {
     const out = await svc.getAnimePilgrimage(115908);
     expect(out?.litePoints[0]?.image).toBe('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
     expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
+  });
+
+  test('lite: expired SQLite row is served when the network fails', async () => {
+    const expiredRow: PilgrimageRow = {
+      bangumi_id: 42,
+      title: 'Stale Anime',
+      title_cn: null, city: null,
+      cover: 'https://image.anitabi.cn/bangumi/42.jpg?plan=h160',
+      color: null, center_lat: 1, center_lng: 2, zoom: 10,
+      points_length: 3, images_length: 3,
+      lite_points_json: '[]',
+      cached_at: 0,
+      expires_at: 1, // long expired
+    };
+    const svc = AnitabiService.resetForTests({
+      client: {
+        getLite: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+      } as unknown as typeof AnitabiClient,
+      db: { getPilgrimage: async () => expiredRow, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      cache: noopCache,
+    });
+    const out = await svc.getAnimePilgrimage(42);
+    expect(out?.title).toBe('Stale Anime');
+  });
+
+  test('detail: stale cached points are served when the network fails', async () => {
+    const stalePoints = [
+      { id: 'p1', name: '駅前', image: 'https://image.anitabi.cn/points/42/p1.jpg?plan=h160', ep: 1, s: 0, geo: [1, 2] as [number, number] },
+    ];
+    const svc = AnitabiService.resetForTests({
+      client: {
+        getPoints: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+        getPointsDetail: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+      } as unknown as typeof AnitabiClient,
+      db: { getPilgrimage: async () => null, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      cache: {
+        ...noopCache,
+        get: async () => null, // fresh read misses (expired)
+        getWithMeta: async (_k: string, graceMs: number) =>
+          graceMs > 0 ? { value: stalePoints, isStale: true } : null,
+      } as unknown as typeof CacheService,
+    });
+    const out = await svc.getDetailedPoints(42);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.id).toBe('p1');
   });
 });
