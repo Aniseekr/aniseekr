@@ -136,7 +136,11 @@ export default function PilgrimageTripScreen() {
     // Google dir links cap at 9 waypoints; a longer trip chains into more
     // than one URL but only the first leg opens automatically here — tell
     // the user honestly instead of silently dropping the rest of the trip.
-    if (urls.length > 1) Alert.alert(t('pilgrimage.trip.routeTruncated'));
+    if (urls.length > 1) {
+      // Explicit localized button — RN's default Alert dismiss is hardcoded
+      // English on Android (Rule 11).
+      Alert.alert(t('pilgrimage.trip.routeTruncated'), undefined, [{ text: t('common.ok') }]);
+    }
   }, [ordered, t]);
 
   const hasStops = ordered.length > 0;

@@ -43,10 +43,11 @@ export default function PilgrimagePlanScreen() {
   const [intents, setIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
   const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
 
-  // The trip map (trip/[animeId].tsx) mutates visited state via check-ins
-  // while this screen stays mounted underneath — silently re-seed from MMKV
-  // on every focus after the first so returning here reflects those check-ins
-  // without a loading flash (skip-first-focus guard, mirrors index.tsx).
+  // Screens pushed on top (trip map today; check-in flows as they land) can
+  // change intents/visited in MMKV while this screen stays mounted underneath
+  // — silently re-seed on every focus after the first so returning here shows
+  // current state without a loading flash (skip-first-focus guard, mirrors
+  // index.tsx).
   const focusRefreshSeenRef = useRef(false);
   useFocusEffect(
     useCallback(() => {
