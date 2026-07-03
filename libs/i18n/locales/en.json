@@ -695,8 +695,9 @@
       "charactersA11y": "Characters",
       "searchA11y": "Search",
       "section": {
+        "explore": "Explore",
         "featuredSpots": "Featured Spots",
-        "myCollection": "My Collection",
+        "myPilgrimage": "My Pilgrimage",
         "popularAnimes": "Popular Animes",
         "seeAll": "See all",
         "viewMap": "View map",
@@ -1649,6 +1650,7 @@
     "positionLock": "Position Lock",
     "positionLocked": "Position locked — shoot now",
     "precisionAlignment": "Precision Alignment",
+    "progressFraction": "{visited}/{total}",
     "real": "Real",
     "recordedGps": "Recorded GPS",
     "red": "Red",

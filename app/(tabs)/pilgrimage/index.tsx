@@ -65,6 +65,7 @@ import { normalizeAnitabiImageUrl } from '../../../libs/services/pilgrimage/anit
 import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 import { useT } from '../../../libs/i18n';
 import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScreenData';
+import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -114,7 +115,6 @@ export default function PilgrimageHubScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const accentFg = readableTextOn(theme.accent);
   const t = useT();
   const {
     collectionAnimes,
@@ -456,10 +456,17 @@ export default function PilgrimageHubScreen() {
             </View>
           ) : null}
 
+          {/*
+            "我的巡禮" — the user's own collection, promoted to the second
+            slot (right after the nearest-spot hero) so their own progress
+            anchors the hub instead of being buried under discovery rails.
+            Each card's checkmark badge and accent now come from
+            resolveHubAnimeProgress / anime.color inside PopularCard.
+          */}
           {sortedCollectionAnimes.length > 0 ? (
             <View style={styles.section}>
               <SectionHeader
-                title={t('tabs.pilgrimageScreen.section.myCollection')}
+                title={t('tabs.pilgrimageScreen.section.myPilgrimage')}
                 count={sortedCollectionAnimes.length}
                 cta={t('tabs.pilgrimageScreen.section.seeAll')}
                 onCta={handleSeeAllCollection}
@@ -482,8 +489,6 @@ export default function PilgrimageHubScreen() {
                     key={anime.id}
                     anime={anime}
                     visited={visited}
-                    accent={theme.accent}
-                    accentFg={accentFg}
                     theme={theme}
                     fromCollection={false}
                     distanceKm={collectionDistanceKm.get(anime.id)}
@@ -493,14 +498,6 @@ export default function PilgrimageHubScreen() {
               </ScrollView>
             </View>
           ) : null}
-
-          <Tourism88Rail
-            entries={tourism88Entries}
-            collectionBangumiIds={collectionBangumiIds}
-            coversById={tourism88Covers}
-            onPressEntry={handle88EntryPress}
-            onSeeAll={handleSee88All}
-          />
 
           {popularList.length > 0 ? (
             <View style={styles.section}>
@@ -519,8 +516,6 @@ export default function PilgrimageHubScreen() {
                     key={card.anime.id}
                     anime={card.anime}
                     visited={visited}
-                    accent={theme.accent}
-                    accentFg={accentFg}
                     theme={theme}
                     fromCollection={card.fromCollection}
                     distanceKm={card.distanceKm}
@@ -531,27 +526,52 @@ export default function PilgrimageHubScreen() {
             </View>
           ) : null}
 
-          {featuredSpots.length > 0 ? (
+          {/*
+            探索 — everything that isn't the user's own collection or the
+            nearby rail lands here, demoted below the personal sections:
+            the Tourism 88 official list and the cross-anime featured-spots
+            list (ranked by real distance, see rankFeaturedSpotsByPriority).
+          */}
+          {tourism88Entries.length > 0 || featuredSpots.length > 0 ? (
             <View style={styles.section}>
-              <SectionHeader
-                title={t('tabs.pilgrimageScreen.section.featuredSpots')}
-                cta={t('tabs.pilgrimageScreen.section.viewMap')}
-                onCta={handleHeroPress}
-                theme={theme}
+              <ThemedText
+                variant="captionSmall"
+                weight="700"
+                style={[styles.introCaps, { color: theme.accent }]}>
+                {t('tabs.pilgrimageScreen.section.explore')}
+              </ThemedText>
+
+              <Tourism88Rail
+                entries={tourism88Entries}
+                collectionBangumiIds={collectionBangumiIds}
+                coversById={tourism88Covers}
+                onPressEntry={handle88EntryPress}
+                onSeeAll={handleSee88All}
               />
-              <View style={styles.spotList}>
-                {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
-                  <FeaturedSpotRow
-                    key={`${anime.id}:${spot.id}`}
-                    spot={spot}
-                    anime={anime}
-                    distanceKm={distanceKm}
-                    fromCollection={fromCollection}
+
+              {featuredSpots.length > 0 ? (
+                <View style={styles.section}>
+                  <SectionHeader
+                    title={t('tabs.pilgrimageScreen.section.featuredSpots')}
+                    cta={t('tabs.pilgrimageScreen.section.viewMap')}
+                    onCta={handleHeroPress}
                     theme={theme}
-                    onPress={() => handleAnimePress(anime)}
                   />
-                ))}
-              </View>
+                  <View style={styles.spotList}>
+                    {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
+                      <FeaturedSpotRow
+                        key={`${anime.id}:${spot.id}`}
+                        spot={spot}
+                        anime={anime}
+                        distanceKm={distanceKm}
+                        fromCollection={fromCollection}
+                        theme={theme}
+                        onPress={() => handleAnimePress(anime)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -685,8 +705,6 @@ function SectionHeader({
 function PopularCard({
   anime,
   visited,
-  accent,
-  accentFg,
   theme,
   fromCollection,
   distanceKm,
@@ -694,8 +712,6 @@ function PopularCard({
 }: {
   anime: AnitabiBangumi;
   visited: VisitedMap;
-  accent: string;
-  accentFg: string;
   theme: ThemePalette;
   fromCollection: boolean;
   distanceKm?: number;
@@ -704,7 +720,15 @@ function PopularCard({
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const total = anime.pointsLength ?? 0;
-  const visitedCount = (anime.litePoints ?? []).filter((p) => visited[p.id]).length;
+  // Per-anime accent (map.tsx:491 precedent): `color` can be an empty string
+  // from Anitabi, so `||` falls back to the theme accent honestly instead of
+  // rendering a blank/transparent badge.
+  const accent = anime.color || theme.accent;
+  const accentFg = readableTextOn(accent);
+  // Honest progress (Rule 8): visitedCount is real (visited ∩ litePoints);
+  // the denominator only appears once Phase 3's per-anime detail-points
+  // cache is wired in — until then this always renders "✓{count}" alone.
+  const progress = resolveHubAnimeProgress(anime, visited);
   const titles = getPilgrimageAnimeTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
   return (
@@ -725,14 +749,19 @@ function PopularCard({
             <Ionicons name="bookmark" size={9} color={readableTextOn(theme.status.info)} />
           </View>
         ) : null}
-        {visitedCount > 0 ? (
+        {progress.visitedCount > 0 ? (
           <View style={styles.popularVisited}>
             <Ionicons name="checkmark" size={10} color={theme.status.success} />
             <ThemedText
               variant="captionSmall"
               weight="700"
               style={{ color: theme.status.success, fontSize: 9 }}>
-              {visitedCount}
+              {progress.total != null
+                ? t('pilgrimageUi.progressFraction', {
+                    visited: progress.visitedCount,
+                    total: progress.total,
+                  })
+                : progress.visitedCount}
             </ThemedText>
           </View>
         ) : null}
@@ -822,13 +851,6 @@ function FeaturedSpotRow({
             </ThemedText>
           </View>
         ) : null}
-      </View>
-      <View style={[styles.miniMap, { backgroundColor: theme.background.tertiary }]}>
-        <LinearGradient
-          colors={[`${theme.accent}1F`, 'rgba(0,0,0,0.0)']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={[styles.miniMapPin, { backgroundColor: theme.accent }]} />
       </View>
     </Pressable>
   );
@@ -992,16 +1014,5 @@ function makeStyles(theme: ThemePalette) {
     },
     spotMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     spotDistRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-    miniMap: {
-      width: 56,
-      height: 56,
-      borderRadius: 10,
-      overflow: 'hidden',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
-    miniMapPin: { width: 10, height: 10, borderRadius: 5 },
   });
 }

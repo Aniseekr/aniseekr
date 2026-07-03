@@ -695,8 +695,9 @@
       "charactersA11y": "角色",
       "searchA11y": "搜尋",
       "section": {
+        "explore": "探索",
         "featuredSpots": "精選景點",
-        "myCollection": "我的收藏",
+        "myPilgrimage": "我的巡禮",
         "popularAnimes": "熱門動畫",
         "seeAll": "查看全部",
         "viewMap": "查看地圖",
@@ -1649,6 +1650,7 @@
     "positionLock": "位置鎖定",
     "positionLocked": "位置已鎖定 — 立即拍攝",
     "precisionAlignment": "精準對位",
+    "progressFraction": "{visited}/{total}",
     "real": "實景",
     "recordedGps": "記錄的 GPS",
     "red": "紅色",
