@@ -20,38 +20,21 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
-import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
-import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
-import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
-import {
-  loadVisitedSpotsSync,
-  type VisitedMap,
-} from '../../../libs/services/pilgrimage/visited-prefs';
-import {
-  loadSpotIntentsSync,
-  type SpotIntentMap,
-} from '../../../libs/services/pilgrimage/spot-intents';
+import { locationService } from '../../../libs/services/pilgrimage/location-service';
+import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
-import {
-  getPilgrimageHubSnapshot,
-  updatePilgrimageHubSnapshot,
-  type PilgrimageHubSnapshot,
-} from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
@@ -61,8 +44,6 @@ import {
   getIndexVersion,
   subscribeAnitabiIndex,
 } from '../../../libs/services/pilgrimage/anitabi-index';
-import { buildSeededPilgrimageAnimes } from '../../../libs/services/pilgrimage/pilgrimage-screen-state';
-import { buildPilgrimageCollectionState } from '../../../libs/services/pilgrimage/pilgrimage-hub-collection-state';
 import {
   formatPilgrimageSubtitle,
   getPilgrimageAnimeTitles,
@@ -79,11 +60,11 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-collection-sort';
 import { PilgrimageSortPill } from '../../../components/pilgrimage/PilgrimageSortPill';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
-import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
 import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
 import { normalizeAnitabiImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 import { useT } from '../../../libs/i18n';
+import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScreenData';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -128,17 +109,6 @@ function formatKm(km: number): string {
   return `${Math.round(km)} km`;
 }
 
-function hasSnapshotSlice<K extends keyof PilgrimageHubSnapshot>(
-  snapshot: PilgrimageHubSnapshot | null,
-  key: K
-): boolean {
-  return !!snapshot && Object.prototype.hasOwnProperty.call(snapshot, key);
-}
-
-function buildSeededFeatured(): AnitabiBangumi[] {
-  return buildSeededPilgrimageAnimes(FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId));
-}
-
 export default function PilgrimageHubScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -146,213 +116,17 @@ export default function PilgrimageHubScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const accentFg = readableTextOn(theme.accent);
   const t = useT();
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
-  const hasInitialCollection = hasSnapshotSlice(initialSnapshot, 'collectionAnimes');
-  const hasInitialFeatured = hasSnapshotSlice(initialSnapshot, 'featuredAnimes');
-
-  const [collectionAnimes, setCollectionAnimes] = useState<AnitabiBangumi[]>(
-    () => initialSnapshot?.collectionAnimes ?? []
-  );
-  // Seed featured from the bundled offline index so the rail renders on frame
-  // 1 even on a fresh install (no SQLite cache yet). The HTTP fill-in below
-  // upgrades each entry with `litePoints` as responses stream in. This is
-  // what kills the 30s+ skeleton — first paint now happens in <100ms.
-  const [featuredAnimes, setFeaturedAnimes] = useState<AnitabiBangumi[]>(() => {
-    const cached = initialSnapshot?.featuredAnimes;
-    if (cached && cached.length > 0) return cached;
-    return buildSeededFeatured();
-  });
-  const [collectionLoading, setCollectionLoading] = useState(!hasInitialCollection);
-  // `featuredLoading` now means "still filling in litePoints", not "no cards
-  // at all" — the seed gives us cards from the start. The skeleton below
-  // gates on `animeCards.length === 0`, so it only shows when we genuinely
-  // have nothing to render.
-  const [featuredLoading, setFeaturedLoading] = useState(!hasInitialFeatured);
-  const [visited, setVisited] = useState<VisitedMap>(
-    () => initialSnapshot?.visited ?? loadVisitedSpotsSync()
-  );
-  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
-  const [userLocation, setUserLocation] = useState<LatLng | null>(
-    () => initialSnapshot?.userLocation ?? null
-  );
-  const [error, setError] = useState<string | null>(null);
+  const {
+    collectionAnimes,
+    featuredAnimes,
+    loading,
+    error,
+    visited,
+    spotIntents,
+    userLocation,
+    nearestSpot,
+  } = usePilgrimageHubScreenData();
   const [sortKey, setSortKey] = useState<PilgrimageSortKey>(DEFAULT_PILGRIMAGE_SORT_KEY);
-
-  const loading = collectionLoading || featuredLoading;
-
-  const refreshCollectionAnimes = useCallback(
-    async ({
-      isActive = () => true,
-      clearOnError = false,
-    }: {
-      isActive?: () => boolean;
-      clearOnError?: boolean;
-    } = {}): Promise<number | null> => {
-      try {
-        const entries = await collectionPilgrimageService.getEntries();
-        if (!isActive()) return null;
-        const { collectionAnimes: animes } = buildPilgrimageCollectionState(entries);
-        setCollectionAnimes(animes);
-        updatePilgrimageHubSnapshot({ collectionAnimes: animes });
-        return animes.length;
-      } catch (err: unknown) {
-        if (!isActive()) return null;
-        // Collection failures shouldn't block the hub — featured backfill is
-        // enough to render something useful.
-        console.warn('[PilgrimageHub] collection load failed:', err);
-        if (clearOnError) setCollectionAnimes([]);
-        return null;
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.resolve()
-      .then(() =>
-        refreshCollectionAnimes({
-          isActive: () => !cancelled,
-          clearOnError: !hasInitialCollection,
-        })
-      )
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setCollectionLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [hasInitialCollection, refreshCollectionAnimes]);
-
-  const focusRefreshSeenRef = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (!focusRefreshSeenRef.current) {
-        focusRefreshSeenRef.current = true;
-        return;
-      }
-      let active = true;
-      refreshCollectionAnimes({
-        isActive: () => active,
-      }).catch(() => undefined);
-      return () => {
-        active = false;
-      };
-    }, [refreshCollectionAnimes])
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    setFeaturedLoading(!hasInitialFeatured);
-
-    // Stream the per-anime `/lite` responses in instead of waiting for all
-    // ~30 to settle. The seeded list is rendered first; each successful HTTP
-    // response merges its richer payload (mainly `litePoints`) into state.
-    // setState calls are coalesced via a 200ms batch window so we don't
-    // re-run `allSpots` 30 times in a row on a cold install.
-    const ids = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId);
-    const pending: AnitabiBangumi[] = [];
-    let flushTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const commit = () => {
-      flushTimer = null;
-      if (cancelled || pending.length === 0) return;
-      const batch = pending.splice(0);
-      setFeaturedAnimes((current) => {
-        const byId = new Map(current.map((a) => [a.id, a] as const));
-        for (const fresh of batch) byId.set(fresh.id, fresh);
-        const merged = Array.from(byId.values()).sort(
-          (a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0)
-        );
-        updatePilgrimageHubSnapshot({ featuredAnimes: merged });
-        return merged;
-      });
-    };
-
-    const scheduleCommit = () => {
-      if (flushTimer != null) return;
-      flushTimer = setTimeout(commit, 200);
-    };
-
-    let remaining = ids.length;
-    let anySuccess = false;
-    for (const id of ids) {
-      pilgrimageRepository
-        .getSpotsByBangumiId(id)
-        .then((anime) => {
-          if (cancelled) return;
-          if (anime) {
-            anySuccess = true;
-            pending.push(anime);
-            scheduleCommit();
-          }
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          // Per-anime failures are common (404, transient network) — don't
-          // surface them, just leave the seeded card alone.
-          console.warn('[PilgrimageHub] featured fetch failed:', id, err);
-        })
-        .finally(() => {
-          if (cancelled) return;
-          remaining -= 1;
-          if (remaining === 0) {
-            if (flushTimer != null) {
-              clearTimeout(flushTimer);
-              flushTimer = null;
-            }
-            commit();
-            // Only show the network error when we had no seeded fallback AND
-            // every request failed; otherwise the user already sees cards.
-            if (!anySuccess && !hasInitialFeatured && featuredAnimes.length === 0) {
-              setError(t('tabs.pilgrimageScreen.errorLoadFailed'));
-            } else {
-              setError(null);
-            }
-            setFeaturedLoading(false);
-          }
-        });
-    }
-
-    return () => {
-      cancelled = true;
-      if (flushTimer != null) {
-        clearTimeout(flushTimer);
-        flushTimer = null;
-      }
-    };
-    // featuredAnimes intentionally excluded — only read at error time and the
-    // value at effect-mount is what we want there.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasInitialFeatured]);
-
-  // Visited / spot-intents are seeded synchronously above from MMKV; no
-  // async reconcile needed. The snapshot is also primed from those seeds.
-  useEffect(() => {
-    updatePilgrimageHubSnapshot({ visited });
-    // Only fires once on first mount — `visited` is the seed value and
-    // doesn't change here. Per-spot toggles flow through their own writers.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    locationService
-      .getCurrentLocation()
-      .then((loc) => {
-        if (!cancelled) {
-          setUserLocation(loc ?? null);
-          updatePilgrimageHubSnapshot({ userLocation: loc ?? null });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) updatePilgrimageHubSnapshot({ userLocation: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Merge: collection first, then backfill from featured (deduped by id).
   const animeCards = useMemo<AnimeCard[]>(() => {
@@ -460,28 +234,9 @@ export default function PilgrimageHubScreen() {
   const nearbyAnime = nearby.list;
   const nearestAnime = nearbyAnime[0] ?? null;
 
-  // Nearest single point-level spot for the hero card (spec 2.4). Loaded lazily
-  // off the SQLite spots index when a location fix lands; null when we have no
-  // location or the index has nothing within 50km (honest empty state).
-  const [nearestSpot, setNearestSpot] = useState<NearbySpotHit | null>(null);
-  useEffect(() => {
-    if (!userLocation) {
-      setNearestSpot(null);
-      return;
-    }
-    let active = true;
-    getSpotsNear(userLocation, 50, 1)
-      .then((hits) => {
-        if (active) setNearestSpot(hits[0] ?? null);
-      })
-      .catch(() => {
-        if (active) setNearestSpot(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [userLocation]);
-
+  // `nearestSpot` (nearest single point-level spot for the hero card, spec
+  // 2.4) comes from usePilgrimageHubScreenData — it's derived from
+  // `userLocation`, which the hook already owns.
   const nearestSpotAnime = nearestSpot ? getIndexedById(nearestSpot.bangumiId) : null;
 
   const featuredSpots = useMemo<FeaturedSpot[]>(() => {
