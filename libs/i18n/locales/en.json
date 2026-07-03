@@ -650,6 +650,7 @@
         "other": "{count} folders"
       },
       "libraryStats": "Library stats",
+      "metaAnimeCount": "{count} anime",
       "myFolders": "My Folders",
       "newFolder": "New folder",
       "recentAnime": "Recent anime",

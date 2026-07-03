@@ -5,7 +5,7 @@ export interface CollectionFolder {
   isShared: boolean;
   isSystemFolder: boolean;
   isR18: boolean;
-  folderType: 'custom' | 'wishlist' | 'favorites' | 'watching' | 'completed' | 'dropped';
+  folderType: 'custom' | 'wishlist' | 'favorites' | 'watching' | 'completed' | 'dropped' | 'all';
   createdAt: Date;
   animeCount: number;
   sharedBy: number;

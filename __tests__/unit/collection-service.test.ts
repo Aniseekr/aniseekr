@@ -40,3 +40,15 @@ describe('collectionService.getFolderItems ordering', () => {
     expect(sqls[0]).toContain('ORDER BY added_at DESC');
   });
 });
+
+describe('collectionService.getFolders system_all label', () => {
+  it('labels system_all with folderType "all" (not the mislabelled "watching")', async () => {
+    spyOn(LocalDB, 'getDatabase').mockResolvedValue({
+      getAllAsync: async () => [],
+      getFirstAsync: async () => ({ count: 0 }),
+    } as never);
+    const folders = await collectionService.getFolders();
+    const all = folders.find((f) => f.id === 'system_all');
+    expect(all?.folderType).toBe('all');
+  });
+});

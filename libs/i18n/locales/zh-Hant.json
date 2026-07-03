@@ -650,6 +650,7 @@
         "other": "{count} 個資料夾"
       },
       "libraryStats": "資料庫統計",
+      "metaAnimeCount": "{count} 部動畫",
       "myFolders": "我的資料夾",
       "newFolder": "新增資料夾",
       "recentAnime": "最近的動畫",

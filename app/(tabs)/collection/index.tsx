@@ -50,25 +50,6 @@ import { useT } from '../../../libs/i18n';
 type SortMode = CollectionSortMode;
 type ScreenMode = 'collect' | 'share';
 
-const CATEGORIES = ['All', 'Watching', 'Planned', 'Done'];
-
-// Map UI label → DB status. Multiple labels can map to the same canonical value;
-// 'All' is handled separately by skipping the WHERE clause.
-const CATEGORY_TO_STATUS: Record<string, string | null> = {
-  All: null,
-  Watching: 'watching',
-  Planned: 'planned',
-  Done: 'completed',
-};
-
-// Map UI tag → system folder id (so "See all" deep-links into the folder view).
-const CATEGORY_TO_SYSTEM_FOLDER: Record<string, string> = {
-  All: 'system_all',
-  Watching: 'system_watching',
-  Planned: 'system_plan_to_watch',
-  Done: 'system_completed',
-};
-
 const ANIME_PREVIEW_LIMIT = 6;
 
 type AnimeCardRow = {
@@ -87,20 +68,13 @@ type RecentRow = {
   updated_at: number | null;
 };
 
-async function fetchAnimeCards(category: string): Promise<CollectionAnimeCardItem[]> {
+async function fetchAnimeCards(): Promise<CollectionAnimeCardItem[]> {
   const db = await LocalDB.getDatabase();
-  const status = CATEGORY_TO_STATUS[category];
   const rows = await db.getAllAsync<AnimeCardRow>(
-    status
-      ? `SELECT anime_id, title, image_url, progress, total_episodes, status
-           FROM user_anime
-          WHERE title IS NOT NULL AND status = ?
-          ORDER BY COALESCE(updated_at, 0) DESC`
-      : `SELECT anime_id, title, image_url, progress, total_episodes, status
-           FROM user_anime
-          WHERE title IS NOT NULL
-          ORDER BY COALESCE(updated_at, 0) DESC`,
-    ...(status ? [status] : [])
+    `SELECT anime_id, title, image_url, progress, total_episodes, status
+       FROM user_anime
+      WHERE title IS NOT NULL
+      ORDER BY COALESCE(updated_at, 0) DESC`
   );
 
   return rows.map((r) => ({
@@ -166,7 +140,6 @@ export default function CollectionScreen() {
   const { theme } = useTheme();
   const t = useT();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('All');
   // Seed from MMKV so the collection grid renders in the user's chosen sort
   // mode on frame 1 instead of flashing through `newest` first.
   const [sortMode, setSortMode] = useState<SortMode>(loadCollectionSortModeSync);
@@ -186,29 +159,15 @@ export default function CollectionScreen() {
   const rendererRef = useRef<View>(null);
   const collectionLoadRef = useRef(0);
   const animeCardsLoadRef = useRef(0);
-  const categoryLoadInitializedRef = useRef(false);
   const router = useRouter();
 
-  const loadAnimeCards = useCallback(async (category: string) => {
-    const requestId = ++animeCardsLoadRef.current;
-    try {
-      const next = await fetchAnimeCards(category);
-      if (requestId !== animeCardsLoadRef.current) return;
-      setAnimeCards((prev) => (sameAnimeCards(prev, next) ? prev : next));
-    } catch (error) {
-      if (requestId !== animeCardsLoadRef.current) return;
-      console.error('Failed to load anime cards:', error);
-      setAnimeCards((prev) => (prev.length === 0 ? prev : []));
-    }
-  }, []);
-
-  const loadCollectionData = useCallback(async (category: string) => {
+  const loadCollectionData = useCallback(async () => {
     const collectionRequestId = ++collectionLoadRef.current;
     const animeCardsRequestId = ++animeCardsLoadRef.current;
     const [foldersResult, recentsResult, cardsResult] = await Promise.allSettled([
       collectionService.getFolders(),
       fetchRecents(),
-      fetchAnimeCards(category),
+      fetchAnimeCards(),
     ]);
 
     if (collectionRequestId === collectionLoadRef.current) {
@@ -241,22 +200,12 @@ export default function CollectionScreen() {
   }, []);
 
   useEffect(() => {
-    loadCollectionData(selectedCategory);
-    // Initial hydration only; category changes refresh the preview cards below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadCollectionData();
   }, [loadCollectionData]);
-
-  useEffect(() => {
-    if (!categoryLoadInitializedRef.current) {
-      categoryLoadInitializedRef.current = true;
-      return;
-    }
-    loadAnimeCards(selectedCategory);
-  }, [loadAnimeCards, selectedCategory]);
 
   // Refresh counts + recents + cards whenever the tab regains focus, so adds
   // from other tabs (e.g. Bangumi wishlist) propagate without a manual pull.
-  // The skipFirst ref avoids double-loading on initial mount (the effects
+  // The skipFirst ref avoids double-loading on initial mount (the effect
   // above already kicked off the first load).
   const focusInitRef = useRef(false);
   useFocusEffect(
@@ -265,8 +214,8 @@ export default function CollectionScreen() {
         focusInitRef.current = true;
         return;
       }
-      loadCollectionData(selectedCategory);
-    }, [loadCollectionData, selectedCategory])
+      loadCollectionData();
+    }, [loadCollectionData])
   );
 
   // Subscribe to tracking-set changes — adds/removes that happen from any
@@ -274,9 +223,9 @@ export default function CollectionScreen() {
   // (no need to switch tabs or pull-to-refresh).
   useEffect(() => {
     return trackingService.onTrackedIdsChange(() => {
-      loadCollectionData(selectedCategory);
+      loadCollectionData();
     });
-  }, [loadCollectionData, selectedCategory]);
+  }, [loadCollectionData]);
 
   // Skip the very first write — `sortMode` was just seeded from MMKV, so
   // there's nothing to persist. Every subsequent change is a user action.
@@ -422,8 +371,7 @@ export default function CollectionScreen() {
     collections.forEach((folder) => {
       if (folder.id === 'system_all') counts['All'] = folder.animeCount;
       if (folder.folderType === 'favorites') counts['Favorites'] = folder.animeCount;
-      if (folder.folderType === 'watching' && folder.id === 'system_watching')
-        counts['Watching'] = folder.animeCount;
+      if (folder.folderType === 'watching') counts['Watching'] = folder.animeCount;
       if (folder.folderType === 'completed') counts['Done'] = folder.animeCount;
       if (folder.folderType === 'dropped') counts['Dropped'] = folder.animeCount;
       if (folder.folderType === 'wishlist') counts['Planned'] = folder.animeCount;
@@ -462,42 +410,16 @@ export default function CollectionScreen() {
   }, []);
 
   const visibleFolders = useMemo(() => {
-    const targetTypeMap: Record<string, CollectionFolder['folderType']> = {
-      Watching: 'watching',
-      Done: 'completed',
-      Dropped: 'dropped',
-      Planned: 'wishlist',
-    };
     // Hide the synthetic 'system_all' folder — its count duplicates the
     // overview card, so showing it as a tile is just noise.
     const baseFolders = collections.filter((f) => f.id !== 'system_all');
-    let filtered: CollectionFolder[];
-    if (selectedCategory === 'All') {
-      // Show every folder (system + custom). System tiles let users jump
-      // straight to Watching/Completed/etc on a fresh install.
-      filtered = baseFolders;
-    } else {
-      // For a status tag: show the matching system folder plus every custom
-      // folder. Custom folders aren't bound to a single status, so hiding
-      // them when a tag is active would strand the user's own folders.
-      const targetType = targetTypeMap[selectedCategory];
-      filtered = targetType
-        ? baseFolders.filter(
-            (f) =>
-              f.folderType === targetType ||
-              f.folderType === 'custom' ||
-              f.folderType === 'favorites'
-          )
-        : baseFolders;
-    }
-
-    return [...filtered].sort((a, b) => {
+    return [...baseFolders].sort((a, b) => {
       if (sortMode === 'newest') return b.createdAt.getTime() - a.createdAt.getTime();
       if (sortMode === 'oldest') return a.createdAt.getTime() - b.createdAt.getTime();
       if (sortMode === 'count') return b.animeCount - a.animeCount;
       return 0;
     });
-  }, [collections, selectedCategory, sortMode]);
+  }, [collections, sortMode]);
 
   const folderCovers = useMemo(() => {
     const map: { [id: string]: string | undefined } = {};
@@ -509,14 +431,14 @@ export default function CollectionScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadCollectionData(selectedCategory).finally(() => {
+    loadCollectionData().finally(() => {
       setRefreshing(false);
     });
-  }, [loadCollectionData, selectedCategory]);
+  }, [loadCollectionData]);
 
   const refreshCollectionData = useCallback(() => {
-    void loadCollectionData(selectedCategory);
-  }, [loadCollectionData, selectedCategory]);
+    void loadCollectionData();
+  }, [loadCollectionData]);
 
   const enterShareMode = useCallback(() => {
     hapticsBridge.tap();
@@ -546,12 +468,8 @@ export default function CollectionScreen() {
       <View style={styles.container}>
         {screenMode === 'collect' ? (
           <CollectionHeader
-            categories={CATEGORIES}
-            selectedCategory={selectedCategory}
-            categoryCounts={categoryCounts}
             totalAnime={totalCount}
             folderCount={userFolderCount}
-            onSelectCategory={setSelectedCategory}
             onAddFolder={() => setCreateModalVisible(true)}
             onPressShare={enterShareMode}
             onPressSearch={() => setSearchOpen(true)}
@@ -593,34 +511,32 @@ export default function CollectionScreen() {
               </Pressable>
             </View>
 
-            {selectedCategory !== 'All' ? (
-              <View style={styles.sortRow}>
-                {sortOptions.map((option) => {
-                  const isActive = sortMode === option.value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => handleSort(option.value)}
-                      style={[
-                        styles.sortChip,
-                        {
-                          backgroundColor: isActive ? theme.accent : theme.background.tertiary,
-                          borderColor: isActive ? theme.accent : theme.glassBorder,
-                        },
-                      ]}>
-                      <ThemedText
-                        variant="captionSmall"
-                        weight={isActive ? '700' : '600'}
-                        style={{
-                          color: isActive ? theme.background.primary : theme.text.secondary,
-                        }}>
-                        {option.label}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
+            <View style={styles.sortRow}>
+              {sortOptions.map((option) => {
+                const isActive = sortMode === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => handleSort(option.value)}
+                    style={[
+                      styles.sortChip,
+                      {
+                        backgroundColor: isActive ? theme.accent : theme.background.tertiary,
+                        borderColor: isActive ? theme.accent : theme.glassBorder,
+                      },
+                    ]}>
+                    <ThemedText
+                      variant="captionSmall"
+                      weight={isActive ? '700' : '600'}
+                      style={{
+                        color: isActive ? theme.background.primary : theme.text.secondary,
+                      }}>
+                      {option.label}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             {visibleFolders.length > 0 ? (
               <FolderGrid
@@ -636,43 +552,28 @@ export default function CollectionScreen() {
             ) : (
               <View style={styles.emptyState}>
                 <ThemedText variant="titleMedium" weight="700" align="center">
-                  {selectedCategory === 'All'
-                    ? t('tabs.collectionScreen.emptyFolderTitle.all')
-                    : t('tabs.collectionScreen.emptyFolderTitle.category', {
-                        category: selectedCategory.toLowerCase(),
-                      })}
+                  {t('tabs.collectionScreen.emptyFolderTitle.all')}
                 </ThemedText>
                 <ThemedText variant="bodySmall" tone="secondary" align="center">
-                  {selectedCategory === 'All'
-                    ? t('tabs.collectionScreen.emptyFolderBody.all')
-                    : t('tabs.collectionScreen.emptyFolderBody.category')}
+                  {t('tabs.collectionScreen.emptyFolderBody.all')}
                 </ThemedText>
-                {selectedCategory === 'All' ? (
-                  <Pressable
-                    onPress={() => {
-                      hapticsBridge.tap();
-                      setCreateModalVisible(true);
-                    }}
-                    style={({ pressed }) => [
-                      styles.emptyAction,
-                      {
-                        backgroundColor: theme.accent,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}>
-                    <MaterialIcons
-                      name="create-new-folder"
-                      size={16}
-                      color={theme.background.primary}
-                    />
-                    <ThemedText
-                      variant="bodySmall"
-                      weight="700"
-                      style={{ color: theme.background.primary }}>
-                      {t('tabs.collectionScreen.newFolder')}
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    setCreateModalVisible(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.emptyAction,
+                    { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                  ]}>
+                  <MaterialIcons name="create-new-folder" size={16} color={theme.background.primary} />
+                  <ThemedText
+                    variant="bodySmall"
+                    weight="700"
+                    style={{ color: theme.background.primary }}>
+                    {t('tabs.collectionScreen.newFolder')}
+                  </ThemedText>
+                </Pressable>
               </View>
             )}
           </View>
@@ -715,19 +616,16 @@ export default function CollectionScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <ThemedText variant="titleMedium" weight="700">
-                {selectedCategory === 'All'
-                  ? t('tabs.collectionScreen.recentAnime')
-                  : t('tabs.collectionScreen.recentAnimeForCategory', {
-                      category: selectedCategory,
-                    })}
+                {t('tabs.collectionScreen.recentAnime')}
               </ThemedText>
               {animeCards.length > ANIME_PREVIEW_LIMIT ? (
                 <Pressable
                   onPress={() => {
                     hapticsBridge.tap();
-                    const folderId = CATEGORY_TO_SYSTEM_FOLDER[selectedCategory] ?? 'system_all';
                     router.push(
-                      `/collection/${folderId}?name=${encodeURIComponent(selectedCategory)}`
+                      `/collection/system_all?name=${encodeURIComponent(
+                        t('tabs.collectionScreen.categoryAll')
+                      )}`
                     );
                   }}
                   hitSlop={8}
@@ -756,11 +654,7 @@ export default function CollectionScreen() {
                   {t('tabs.collectionScreen.emptyAnimeTitle')}
                 </ThemedText>
                 <ThemedText variant="bodySmall" tone="secondary" align="center">
-                  {selectedCategory === 'All'
-                    ? t('tabs.collectionScreen.emptyAnimeBody.all')
-                    : t('tabs.collectionScreen.emptyAnimeBody.category', {
-                        category: selectedCategory.toLowerCase(),
-                      })}
+                  {t('tabs.collectionScreen.emptyAnimeBody.all')}
                 </ThemedText>
               </View>
             )}

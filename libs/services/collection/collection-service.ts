@@ -10,7 +10,7 @@ const SYSTEM_FOLDERS: Omit<CollectionFolder, 'animeCount' | 'sharedBy' | 'create
     isShared: false,
     isSystemFolder: true,
     isR18: false,
-    folderType: 'watching',
+    folderType: 'all',
   },
   {
     id: 'system_watching',

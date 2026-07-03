@@ -1,17 +1,12 @@
 import { memo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { ThemedIconButton, ThemedText, readableTextOn } from '../themed';
-import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
 interface CollectionHeaderProps {
-  categories: string[];
-  selectedCategory: string;
-  onSelectCategory: (category: string) => void;
-  categoryCounts: { [key: string]: number };
   /** Total anime count, shown in subtitle. */
   totalAnime?: number;
   /** Number of user-visible folders (favorites + custom), shown in subtitle. */
@@ -25,10 +20,6 @@ interface CollectionHeaderProps {
 }
 
 function CollectionHeaderComponent({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  categoryCounts,
   totalAnime,
   folderCount,
   onPressShare,
@@ -40,9 +31,13 @@ function CollectionHeaderComponent({
   const onAccent = readableTextOn(theme.accent);
   const hasMeta = totalAnime !== undefined || folderCount !== undefined;
   const metaParts = [
-    totalAnime !== undefined ? `${totalAnime} anime` : null,
+    totalAnime !== undefined
+      ? t('tabs.collectionScreen.metaAnimeCount', { count: String(totalAnime) })
+      : null,
     folderCount !== undefined
-      ? `${folderCount} ${folderCount === 1 ? 'folder' : 'folders'}`
+      ? folderCount === 1
+        ? t('tabs.collectionScreen.folderCount.one', { count: String(folderCount) })
+        : t('tabs.collectionScreen.folderCount.other', { count: String(folderCount) })
       : null,
   ].filter(Boolean) as string[];
 
@@ -95,44 +90,6 @@ function CollectionHeaderComponent({
           ) : null}
         </View>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContainer}>
-        {categories.map((category) => {
-          const count = categoryCounts[category] || 0;
-          const isSelected = selectedCategory === category;
-          const bg = isSelected ? theme.accent : theme.background.secondary;
-          const border = isSelected ? theme.accent : theme.glassBorder;
-          const labelColor = isSelected ? onAccent : theme.text.secondary;
-          return (
-            <Pressable
-              key={category}
-              onPress={() => {
-                hapticsBridge.selection();
-                onSelectCategory(category);
-              }}
-              style={[
-                styles.categoryButton,
-                { backgroundColor: bg, borderColor: border },
-              ]}>
-              <View style={styles.categoryContent}>
-                <ThemedText
-                  variant="bodySmall"
-                  weight={isSelected ? '700' : '500'}
-                  style={{ color: labelColor }}>
-                  {category}
-                </ThemedText>
-                {count > 0 && !isSelected ? (
-                  <ThemedText variant="captionSmall" tone="tertiary" weight="600">
-                    {count}
-                  </ThemedText>
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
     </View>
   );
 }
@@ -169,22 +126,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    paddingVertical: 2,
-  },
-  categoryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    borderWidth: 1,
-  },
-  categoryContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
 });
 
