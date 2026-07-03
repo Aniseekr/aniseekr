@@ -79,6 +79,10 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-collection-sort';
 import { PilgrimageSortPill } from '../../../components/pilgrimage/PilgrimageSortPill';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
+import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
+import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
+import { normalizeAnitabiImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
+import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 import { useT } from '../../../libs/i18n';
 
 interface FeaturedSpot {
@@ -456,6 +460,30 @@ export default function PilgrimageHubScreen() {
   const nearbyAnime = nearby.list;
   const nearestAnime = nearbyAnime[0] ?? null;
 
+  // Nearest single point-level spot for the hero card (spec 2.4). Loaded lazily
+  // off the SQLite spots index when a location fix lands; null when we have no
+  // location or the index has nothing within 50km (honest empty state).
+  const [nearestSpot, setNearestSpot] = useState<NearbySpotHit | null>(null);
+  useEffect(() => {
+    if (!userLocation) {
+      setNearestSpot(null);
+      return;
+    }
+    let active = true;
+    getSpotsNear(userLocation, 50, 1)
+      .then((hits) => {
+        if (active) setNearestSpot(hits[0] ?? null);
+      })
+      .catch(() => {
+        if (active) setNearestSpot(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [userLocation]);
+
+  const nearestSpotAnime = nearestSpot ? getIndexedById(nearestSpot.bangumiId) : null;
+
   const featuredSpots = useMemo<FeaturedSpot[]>(() => {
     return rankFeaturedSpotsByPriority(allSpots).slice(0, FEATURED_SPOT_LIMIT);
   }, [allSpots]);
@@ -520,7 +548,7 @@ export default function PilgrimageHubScreen() {
   // See All screen directly in map mode and centres on the nearest anime.
   const handleHeroPress = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    const focus = nearestAnime?.anime.id ?? null;
+    const focus = nearestSpot?.bangumiId ?? nearestAnime?.anime.id ?? null;
     router.push({
       pathname: '/pilgrimage/map',
       params: {
@@ -528,7 +556,7 @@ export default function PilgrimageHubScreen() {
         ...(focus ? { focus: String(focus) } : {}),
       },
     });
-  }, [nearestAnime, router]);
+  }, [nearestSpot, nearestAnime, router]);
 
   // Popular rail is pure discovery: collection now has its own rail above, so
   // exclude collected anime here to avoid showing them twice. When the
@@ -642,6 +670,10 @@ export default function PilgrimageHubScreen() {
 
           <NearbyHero
             theme={theme}
+            nearestSpot={nearestSpot}
+            nearestSpotAnimeName={
+              nearestSpotAnime ? (nearestSpotAnime.cn || nearestSpotAnime.title) : null
+            }
             nearestAnime={nearestAnime}
             nearbyCount={nearbyAnime.length}
             tierLabel={nearby.tierLabel}
@@ -777,6 +809,8 @@ export default function PilgrimageHubScreen() {
 
 function NearbyHero({
   theme,
+  nearestSpot,
+  nearestSpotAnimeName,
   nearestAnime,
   nearbyCount,
   tierLabel,
@@ -784,6 +818,8 @@ function NearbyHero({
   onPress,
 }: {
   theme: ThemePalette;
+  nearestSpot: NearbySpotHit | null;
+  nearestSpotAnimeName: string | null;
   nearestAnime: AnimeCard | null;
   nearbyCount: number;
   tierLabel: string | null;
@@ -791,9 +827,11 @@ function NearbyHero({
   onPress: () => void;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const fgPin = readableTextOn(theme.accent);
-  const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
   const t = useT();
+  const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
+  const spotImageUri = nearestSpot
+    ? normalizeAnitabiImageUrl(nearestSpot.image, nearestSpot.bangumiId)
+    : null;
 
   return (
     <Pressable
@@ -801,67 +839,11 @@ function NearbyHero({
       accessibilityRole="button"
       accessibilityLabel={t('tabs.pilgrimageScreen.hero.labelAccessibility')}
       style={({ pressed }) => [styles.heroCard, pressed && { opacity: 0.92 }]}>
-      <View style={styles.heroGrid} pointerEvents="none">
-        {[60, 130, 200, 270, 330].map((x) => (
-          <View
-            key={`v${x}`}
-            style={[styles.gridLineV, { left: x, backgroundColor: theme.glassBorder }]}
-          />
-        ))}
-        {[34, 68, 102, 136].map((y) => (
-          <View
-            key={`h${y}`}
-            style={[styles.gridLineH, { top: y, backgroundColor: theme.glassBorder }]}
-          />
-        ))}
-        <View style={[styles.roadPath, { backgroundColor: theme.glassBorder, opacity: 0.55 }]} />
-      </View>
-
-      {nearestAnime?.anime.cover ? (
-        <SpotImage uri={nearestAnime.anime.cover} style={styles.heroCoverArt} contentFit="cover" />
-      ) : null}
-
-      <View
-        style={[styles.satPin, { left: 78, top: 48, backgroundColor: theme.background.tertiary }]}
-      />
-      <View
-        style={[
-          styles.satPin,
-          {
-            left: 266,
-            top: 34,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
-            backgroundColor: theme.background.tertiary,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.satPin,
-          {
-            left: 118,
-            top: 118,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
-            backgroundColor: theme.background.tertiary,
-          },
-        ]}
-      />
-
-      <View
-        style={[
-          styles.primaryPin,
-          {
-            backgroundColor: theme.accent,
-            borderColor: theme.background.primary,
-            shadowColor: theme.accent,
-          },
-        ]}>
-        <Ionicons name="location" size={12} color={fgPin} />
-      </View>
+      {spotImageUri ? (
+        <SpotImage uri={spotImageUri} style={styles.heroCoverArt} contentFit="cover" />
+      ) : (
+        <View style={[styles.heroCoverArt, { backgroundColor: theme.background.tertiary }]} />
+      )}
 
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']}
@@ -874,32 +856,26 @@ function NearbyHero({
             <Ionicons name="location" size={11} color={theme.text.primary} />
           </View>
           <ThemedText variant="bodySmall" weight="700">
-            {hasLocation && nearbyCount > 0 && tierLabel
-              ? t('tabs.pilgrimageScreen.hero.countLabel', {
-                  count: String(nearbyCount),
-                  animeWord:
-                    nearbyCount === 1
-                      ? t('tabs.pilgrimageScreen.wordAnime')
-                      : t('tabs.pilgrimageScreen.wordAnimes'),
-                  tier: tierLabel,
-                })
-              : t('tabs.pilgrimageScreen.hero.title')}
+            {t('tabs.pilgrimageScreen.hero.nearestSpotCaps')}
           </ThemedText>
         </View>
         <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
           {hasLocation
-            ? nearestAnime
-              ? nearestAnime.distanceKm !== undefined
-                ? t('tabs.pilgrimageScreen.hero.closestWithDistance', {
-                    title: nearestTitles?.primary ?? '—',
-                    distance: formatKm(nearestAnime.distanceKm),
-                  })
-                : t('tabs.pilgrimageScreen.hero.closest', {
-                    title: nearestTitles?.primary ?? '—',
-                  })
-              : t('tabs.pilgrimageScreen.hero.noMappedAnime')
+            ? nearestSpot
+              ? t('tabs.pilgrimageScreen.hero.closestWithDistance', {
+                  title: nearestSpot.cn || nearestSpot.name,
+                  distance: formatKm(nearestSpot.distanceKm),
+                })
+              : nearestAnime
+                ? t('tabs.pilgrimageScreen.hero.closest', { title: nearestTitles?.primary ?? '—' })
+                : t('tabs.pilgrimageScreen.hero.noMappedAnime')
             : t('tabs.pilgrimageScreen.hero.withoutLocation')}
         </ThemedText>
+        {hasLocation && nearestSpot && nearestSpotAnimeName ? (
+          <ThemedText variant="captionSmall" tone="tertiary" style={{ marginTop: 2 }} numberOfLines={1}>
+            {nearestSpotAnimeName}
+          </ThemedText>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -1140,46 +1116,8 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
-    heroGrid: { ...StyleSheet.absoluteFill },
     heroCoverArt: {
       ...StyleSheet.absoluteFill,
-      opacity: 0.18,
-    },
-    gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, opacity: 0.5 },
-    gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, opacity: 0.5 },
-    roadPath: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 90,
-      height: 2,
-      transform: [{ rotate: '-4deg' }],
-    },
-    satPin: {
-      position: 'absolute',
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      opacity: 0.85,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
-    primaryPin: {
-      position: 'absolute',
-      left: '50%',
-      top: '40%',
-      marginLeft: -14,
-      marginTop: -14,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 3,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.5,
-      shadowRadius: 10,
-      elevation: 6,
     },
     heroOverlay: {
       position: 'absolute',

@@ -679,6 +679,7 @@
         "closestWithDistance": "Closest: {title} · {distance} away",
         "countLabel": "{count} {animeWord} · {tier}",
         "labelAccessibility": "Open pilgrimage map",
+        "nearestSpotCaps": "Nearest sacred site",
         "noMappedAnime": "No mapped anime yet — tap to open the map",
         "title": "Pilgrimage Map",
         "withoutLocation": "Tap to browse pilgrimage spots across Japan"

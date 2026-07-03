@@ -679,6 +679,7 @@
         "closestWithDistance": "最近：{title} · 距離 {distance}",
         "countLabel": "{count} {animeWord} · {tier}",
         "labelAccessibility": "開啟聖地地圖",
+        "nearestSpotCaps": "最近的聖地",
         "noMappedAnime": "尚未有對應動畫——點擊開啟地圖",
         "title": "聖地地圖",
         "withoutLocation": "點擊瀏覽日本各地的聖地"

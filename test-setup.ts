@@ -238,6 +238,7 @@ const staleHandleError = (method: string) =>
 class FakeDatabase {
   private cache = new Map<string, Row>();
   private pilgrimage = new Map<number, Row>();
+  private anitabiSpots = new Map<string, Row>();
 
   constructor(private readonly options: FakeDatabaseOptions = {}) {}
 
@@ -480,6 +481,59 @@ class FakeDatabase {
         }
       }
       result.changes = removed;
+      return result;
+    }
+
+    // ----- anitabi_spots table -----
+    // hydrateAnitabiSpots wraps `DELETE FROM anitabi_spots` + chunked
+    // multi-row `INSERT OR REPLACE INTO anitabi_spots (...) VALUES (?,?,?,?,?,?,?), (...)...`
+    // in one transaction. queryAnitabiSpotsByBox does the real lat/lng
+    // BETWEEN prefilter — mirrored here by column position (not name) so a
+    // swapped min/max bind order in db.ts actually fails the integration test.
+    if (upper.startsWith('DELETE FROM ANITABI_SPOTS')) {
+      this.anitabiSpots.clear();
+      return result;
+    }
+    if (
+      upper.startsWith('INSERT OR REPLACE INTO ANITABI_SPOTS') ||
+      upper.startsWith('INSERT INTO ANITABI_SPOTS')
+    ) {
+      const COLS = 7; // point_id, bangumi_id, lat, lng, name, cn, image
+      let written = 0;
+      for (let i = 0; i + COLS <= params.length; i += COLS) {
+        const [point_id, bangumi_id, lat, lng, name, cn, image] = params.slice(
+          i,
+          i + COLS
+        ) as unknown[];
+        this.anitabiSpots.set(String(point_id), {
+          point_id,
+          bangumi_id,
+          lat,
+          lng,
+          name,
+          cn,
+          image,
+        });
+        written++;
+      }
+      result.changes = written;
+      return result;
+    }
+    if (upper.startsWith('SELECT') && upper.includes('FROM ANITABI_SPOTS')) {
+      if (upper.includes('COUNT(*)')) {
+        result.rows = [{ count: this.anitabiSpots.size }];
+        return result;
+      }
+      if (upper.includes('WHERE LAT BETWEEN')) {
+        const [minLat, maxLat, minLng, maxLng] = params as [number, number, number, number];
+        result.rows = [...this.anitabiSpots.values()].filter((r) => {
+          const lat = r.lat as number;
+          const lng = r.lng as number;
+          return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+        });
+        return result;
+      }
+      result.rows = [...this.anitabiSpots.values()];
       return result;
     }
 
