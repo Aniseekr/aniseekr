@@ -95,6 +95,9 @@ function isValidSpotEntry(s: SpotEntry): boolean {
     Number.isFinite(s.lng) &&
     s.lng >= -180 &&
     s.lng <= 180 &&
+    // (0,0) is the pipeline's missing-GPS sentinel (anitabi-points-build.ts
+    // filters it before emitting) — mirror that rule as defense in depth.
+    !(s.lat === 0 && s.lng === 0) &&
     typeof s.n === 'string' &&
     typeof s.c === 'string' &&
     typeof s.img === 'string' &&
@@ -134,9 +137,10 @@ export function mapSpotEntries(entries: readonly SpotEntry[]): SpotIndexRow[] {
 
 /**
  * Download + hydrate the spots index into SQLite. Safe to call on every cold
- * launch; short-circuits when the device copy is still fresh AND already
- * hydrated. Failures are swallowed — the anime-centre index remains the
- * fallback for nearby.
+ * launch; the freshness window only gates the network download — a fresh
+ * on-disk copy is still re-hydrated into the table each launch (atomic
+ * replace, ~50k rows, one transaction). Failures are swallowed — the
+ * anime-centre index remains the fallback for nearby.
  */
 export async function hydrateSpotIndex(): Promise<void> {
   const file = await loadFile();

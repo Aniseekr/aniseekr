@@ -53,6 +53,11 @@ describe('mapSpotEntries', () => {
     expect(mapSpotEntries([entry({ lng: -181 })])).toEqual([]);
   });
 
+  test('drops the (0,0) missing-GPS sentinel but keeps a real single-zero axis', () => {
+    expect(mapSpotEntries([entry({ lat: 0, lng: 0 })])).toEqual([]);
+    expect(mapSpotEntries([entry({ lat: 0, lng: 6.6 })])).toHaveLength(1);
+  });
+
   test('drops entries with an invalid bangumi id', () => {
     expect(mapSpotEntries([entry({ b: 0 })])).toEqual([]);
     expect(mapSpotEntries([entry({ b: NaN })])).toEqual([]);
