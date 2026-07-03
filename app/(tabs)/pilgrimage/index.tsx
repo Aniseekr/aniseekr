@@ -605,8 +605,14 @@ function NearbyHero({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const t = useT();
   const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
+  // Anitabi CDN serves scene images only at h160/h360/full — h720 404s. The
+  // hub hero renders larger than the h160 thumbnail default, so upgrade it
+  // one step (mirrors the same replace in (rate)/index.tsx's trending card).
   const spotImageUri = nearestSpot
-    ? normalizeAnitabiImageUrl(nearestSpot.image, nearestSpot.bangumiId)
+    ? normalizeAnitabiImageUrl(nearestSpot.image, nearestSpot.bangumiId).replace(
+        '?plan=h160',
+        '?plan=h360'
+      )
     : null;
 
   return (
@@ -739,7 +745,7 @@ function PopularCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${titles.primary} pilgrimage`}
+      accessibilityLabel={t('pilgrimageUi.animePilgrimageA11y', { title: titles.primary })}
       style={({ pressed }) => [styles.popularCard, pressed && { opacity: 0.9 }]}>
       <View style={styles.popularPosterWrap}>
         <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
@@ -812,6 +818,7 @@ function FeaturedSpotRow({
   theme: ThemePalette;
   onPress: () => void;
 }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const spotTitles = getPilgrimageSpotTitles(spot);
   const animeTitles = getPilgrimageAnimeTitles(anime);
@@ -819,7 +826,10 @@ function FeaturedSpotRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${spotTitles.primary} from ${animeTitles.primary}`}
+      accessibilityLabel={t('pilgrimageUi.spotFromAnimeA11y', {
+        spot: spotTitles.primary,
+        anime: animeTitles.primary,
+      })}
       style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.92 }]}>
       <SpotImage uri={spot.image} style={styles.spotThumb} contentFit="cover" />
       <View style={styles.spotBody}>

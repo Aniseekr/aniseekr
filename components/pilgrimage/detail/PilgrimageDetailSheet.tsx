@@ -27,6 +27,7 @@ import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ON_DARK, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type {
   AnitabiBangumi,
@@ -309,7 +310,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
             pressed && onOpenAnimePoster && { opacity: 0.86 },
           ]}>
           {posterUri ? (
-            <Image source={{ uri: posterUri }} style={styles.poster} contentFit="cover" />
+            <Image source={anitabiImageSource(posterUri)} style={styles.poster} contentFit="cover" />
           ) : null}
           <View style={styles.posterBadge} pointerEvents="none">
             <ThemedText

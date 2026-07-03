@@ -23,7 +23,7 @@ import { useT } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedSurface, ThemedText } from '../../../../components/themed';
 import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
-import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
+import { anitabiImageSource, toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { scoreSnapshot } from '../../../../libs/services/pilgrimage/alignment-scoring';
 import {
   buildCaptureSessionShotFromRoute,
@@ -892,7 +892,7 @@ export default function ComparePreviewScreen() {
                 <View style={styles.overlayFlow}>
                   <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                   <Image
-                    source={{ uri: imageUrl }}
+                    source={anitabiImageSource(imageUrl)}
                     style={[
                       styles.fullImage,
                       StyleSheet.absoluteFill,
@@ -915,7 +915,7 @@ export default function ComparePreviewScreen() {
                     <Animated.View style={[styles.sliderClip, sliderClipStyle]}>
                       {stagePx.width > 0 ? (
                         <Image
-                          source={{ uri: imageUrl }}
+                          source={anitabiImageSource(imageUrl)}
                           style={{ width: stagePx.width, height: stagePx.height }}
                           contentFit="cover"
                         />

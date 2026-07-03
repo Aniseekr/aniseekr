@@ -34,7 +34,7 @@ import {
 } from '../../../libs/services/collection-prefs';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { LocalDB } from '../../../libs/db';
-import { ThemedText } from '../../../components/themed';
+import { ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
 import {
   buildShareTemplate,
@@ -557,23 +557,19 @@ export default function CollectionScreen() {
                 <ThemedText variant="bodySmall" tone="secondary" align="center">
                   {t('tabs.collectionScreen.emptyFolderBody.all')}
                 </ThemedText>
-                <Pressable
-                  onPress={() => {
-                    hapticsBridge.tap();
-                    setCreateModalVisible(true);
-                  }}
-                  style={({ pressed }) => [
-                    styles.emptyAction,
-                    { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-                  ]}>
-                  <MaterialIcons name="create-new-folder" size={16} color={theme.background.primary} />
-                  <ThemedText
-                    variant="bodySmall"
-                    weight="700"
-                    style={{ color: theme.background.primary }}>
-                    {t('tabs.collectionScreen.newFolder')}
-                  </ThemedText>
-                </Pressable>
+                <ThemedButton
+                  label={t('tabs.collectionScreen.newFolder')}
+                  icon={
+                    <MaterialIcons
+                      name="create-new-folder"
+                      size={16}
+                      color={readableTextOn(theme.accent)}
+                    />
+                  }
+                  onPress={() => setCreateModalVisible(true)}
+                  size="sm"
+                  style={styles.emptyAction}
+                />
               </View>
             )}
           </View>
@@ -816,13 +812,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   emptyAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.chipLg,
   },
   offscreenRenderer: {
     position: 'absolute',

@@ -26,7 +26,7 @@ import {
   type AnimeProgress,
 } from '../../../components/collection/AnimeProgressView';
 import { FolderSwipeDeck } from '../../../components/collection/FolderSwipeDeck';
-import { Skeleton, ThemedText } from '../../../components/themed';
+import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
@@ -605,7 +605,9 @@ export default function FolderDetailScreen() {
                   <ThemedText
                     variant="captionSmall"
                     weight={active ? '700' : '600'}
-                    style={{ color: active ? theme.background.primary : theme.text.secondary }}>
+                    style={{
+                      color: active ? readableTextOn(theme.accent) : theme.text.secondary,
+                    }}>
                     {sortLabel(mode)}
                   </ThemedText>
                 </Pressable>

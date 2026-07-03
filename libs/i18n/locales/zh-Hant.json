@@ -1682,6 +1682,7 @@
     "silentShutter": "靜音快門",
     "sketch": "素描",
     "sky": "天空藍",
+    "spotFromAnimeA11y": "{spot}，來自《{anime}》",
     "spotsCount": "{count} 個景點",
     "spotsNearYou": "附近的巡禮點",
     "startArCamera": "啟動 AR 相機",

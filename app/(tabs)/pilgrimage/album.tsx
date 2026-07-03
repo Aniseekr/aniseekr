@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../../components/themed';
+import { ON_DARK, ThemedText, readableTextOn } from '../../../components/themed';
 import { Shadow, Spacing } from '../../../constants/DesignSystem';
 import {
   clearCapture,
@@ -211,7 +211,12 @@ export default function PilgrimageAlbumScreen() {
           lastCapturedAt: entry.capture.capturedAt,
           avgMatch: null,
           visitedSpots: 0,
-          totalSpots: entry.anime.pointsLength ?? entry.anime.litePoints?.length ?? 0,
+          // `litePoints` is only ~10 sample points for cards, not the full
+          // per-anime count (see AnitabiBangumi) — falling back to its
+          // length here would render a fabricated, undercounted denominator
+          // (Rule 8). `pointsLength` (or the honest "unknown" 0) is the only
+          // real total.
+          totalSpots: entry.anime.pointsLength ?? 0,
           cover: entry.anime.cover || entry.spot.image || entry.capture.uri,
           region: eighty8[0]?.region ?? null,
         });
@@ -993,22 +998,28 @@ function FolderCard({
         />
         {regionLabel ? (
           <View style={styles.regionPill}>
-            <Ionicons name="location-outline" size={10} color="#FFFFFF" />
-            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }} numberOfLines={1}>
+            <Ionicons name="location-outline" size={10} color={ON_DARK} />
+            <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 10 }} numberOfLines={1}>
               {regionLabel}
             </ThemedText>
           </View>
         ) : null}
         <View style={styles.countPill}>
-          <Ionicons name="camera" size={10} color="#FFFFFF" />
-          <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }}>
+          <Ionicons name="camera" size={10} color={ON_DARK} />
+          <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 10 }}>
             {folder.entries.length}
           </ThemedText>
         </View>
         {folder.avgMatch !== null ? (
           <View style={[styles.matchOverlay, { backgroundColor: `${theme.status.success}E6` }]}>
-            <Ionicons name="checkmark-circle" size={11} color="#FFFFFF" />
-            <ThemedText weight="800" style={{ color: '#FFFFFF', fontSize: 11 }}>
+            <Ionicons
+              name="checkmark-circle"
+              size={11}
+              color={readableTextOn(theme.status.success)}
+            />
+            <ThemedText
+              weight="800"
+              style={{ color: readableTextOn(theme.status.success), fontSize: 11 }}>
               {folder.avgMatch}%
             </ThemedText>
           </View>
@@ -1085,7 +1096,7 @@ function CompareCard({
             <View style={[styles.compareHalf, { height: animeH }]}>
               <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
               <View style={styles.cornerTag}>
-                <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
+                <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 9 }}>
                   {t('pilgrimage.album.tagScene')}
                 </ThemedText>
               </View>
@@ -1096,7 +1107,7 @@ function CompareCard({
         <View style={[styles.compareHalf, { height: realH }]}>
           <SpotImage uri={entry.capture.uri} style={styles.compareImgFill} contentFit="cover" />
           <View style={[styles.cornerTag, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
+            <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 9 }}>
               {entry.capture.source === 'library'
                 ? t('pilgrimage.album.tagLibrary')
                 : t('pilgrimage.album.tagYours')}
@@ -1106,7 +1117,7 @@ function CompareCard({
         {entry.matchPercent !== null ? (
           <View style={styles.matchPill}>
             <Ionicons name="checkmark-circle" size={10} color={theme.status.success} />
-            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 10 }}>
+            <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 10 }}>
               {entry.matchPercent}%
             </ThemedText>
           </View>

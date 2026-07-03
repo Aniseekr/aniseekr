@@ -8,7 +8,7 @@ import { Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedText } from '../themed';
+import { ThemedText, readableTextOn } from '../themed';
 import type { CollectionFolder } from '../../types';
 
 interface FolderGridProps {
@@ -95,7 +95,7 @@ function FolderCard({ folder, cover, onPress, onLongPress }: FolderCardProps) {
                 <ThemedText
                   variant="captionSmall"
                   weight="700"
-                  style={{ color: theme.background.primary }}>
+                  style={{ color: readableTextOn(theme.accent) }}>
                   18+
                 </ThemedText>
               </View>

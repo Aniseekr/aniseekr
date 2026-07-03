@@ -20,6 +20,7 @@ import {
   type LatLng,
 } from '../../../../libs/services/pilgrimage/location-service';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
+import { anitabiImageSource } from '../../../../libs/services/pilgrimage/anitabi-image';
 
 function bearingBetween(from: LatLng, to: LatLng): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -160,7 +161,7 @@ export default function GpsAlignScreen() {
           <View style={styles.targetCard}>
             {imageUrl ? (
               <Image
-                source={{ uri: imageUrl }}
+                source={anitabiImageSource(imageUrl)}
                 style={styles.targetThumb}
                 contentFit="cover"
                 transition={140}
