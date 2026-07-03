@@ -94,7 +94,14 @@ function schedulePersist(): void {
   if (persistTimer !== null) return;
   persistTimer = setTimeout(() => {
     persistTimer = null;
-    if (snapshot) cache.set(PILGRIMAGE_HUB_CACHE_KEY, snapshot, PERSIST_TTL_MS);
+    // Promise.resolve + catch guards adapters that return promises and don't
+    // swallow errors internally (the real CacheService does, but the seam's
+    // `unknown` return makes no such promise).
+    if (snapshot) {
+      void Promise.resolve(cache.set(PILGRIMAGE_HUB_CACHE_KEY, snapshot, PERSIST_TTL_MS)).catch(
+        () => undefined
+      );
+    }
   }, persistDebounceMs);
 }
 

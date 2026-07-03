@@ -1,7 +1,4 @@
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-
-import { hydratePilgrimageHubSnapshotFromCache } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 
 export default function PilgrimageLayout() {
   // The hub map renders its own native <MapSurface> inline (see map.tsx). A
@@ -10,10 +7,9 @@ export default function PilgrimageLayout() {
   // no shared keep-alive host is needed. A native map inside the screen stays
   // warm under pushed detail screens, and portal-based GL surfaces can bleed
   // through opacity gates on back-navigation.
-  useEffect(() => {
-    // Warm the module snapshot from SQLite before the hub / map screen reads
-    // it synchronously (CLAUDE.md Rule 10 — silent upgrade, never a skeleton).
-    hydratePilgrimageHubSnapshotFromCache().catch(() => undefined);
-  }, []);
+  //
+  // The hub-snapshot cache warm lives in app/_layout.tsx (root) — an effect
+  // here would run in the same commit as the hub's useState initializer and
+  // always lose that race.
   return <Stack screenOptions={{ headerShown: false }} />;
 }
