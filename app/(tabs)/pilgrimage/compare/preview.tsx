@@ -1384,7 +1384,9 @@ function LabeledImage({
 }) {
   return (
     <View style={[styles.labelWrap, compact && { flex: 1 }]}>
-      <Image source={{ uri }} style={styles.fullImage} contentFit={contentFit} />
+      {/* anitabiImageSource adds WAF headers for anitabi scene urls and
+          no-ops for local capture uris — safe for both LabeledImage inputs. */}
+      <Image source={anitabiImageSource(uri)} style={styles.fullImage} contentFit={contentFit} />
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']} style={styles.labelGradient} />
       <View style={[styles.labelBadge, { borderColor: accent }]}>
         <View style={[styles.labelDot, { backgroundColor: accent }]} />
