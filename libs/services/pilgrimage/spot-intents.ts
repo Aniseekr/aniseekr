@@ -1,18 +1,42 @@
 // Local-only persistence for pilgrimage spot intents (saved / planned).
-// Schema: a single MMKV key holding a JSON `Record<spotId, SpotIntent>`.
+// v2 schema: a single MMKV key holding `Record<spotId, SpotIntent>` where each
+// intent may carry a `meta` snapshot captured at toggle time — the anime it
+// belongs to plus this point's own geo/image. That snapshot is what lets the
+// plan page group planned spots offline (Rule 8: it's real data the user saw
+// when they tapped, not a guess). v1 payloads (flag-only, no meta) migrate on
+// read: flags are preserved, `meta` stays undefined, and the plan page files
+// those under "uncategorized" until the user re-toggles them.
 //
-// The synchronous read lets the map / spot list seed save & plan markers on
-// the first frame instead of popping them in after an async resolve.
+// The synchronous read lets the map / spot list / plan page seed markers and
+// lists on the first frame instead of popping them in after an async resolve.
 
 import { kvGet, kvSet } from '../storage/app-storage';
-import { SPOT_INTENTS_STORAGE_KEY } from '../storage/keys';
+import {
+  SPOT_INTENTS_STORAGE_KEY,
+  SPOT_INTENTS_STORAGE_KEY_V2,
+} from '../storage/keys';
 import { Logger } from '../../utils/logger';
 
 export type SpotIntentKind = 'saved' | 'planned';
 
+/**
+ * Snapshot captured the moment a user toggles an intent. `animeId`/`name`/`cn`
+ * describe the ANIME the point belongs to (so the plan page can label a group
+ * offline); `geo`/`image` describe THIS point (so the trip map can draw markers
+ * + a route line and show a scene thumbnail without any network).
+ */
+export interface SpotIntentMeta {
+  animeId: number;
+  name: string;
+  cn?: string;
+  geo: [number, number];
+  image: string;
+}
+
 export interface SpotIntent {
   saved?: true;
   planned?: true;
+  meta?: SpotIntentMeta;
 }
 
 export type SpotIntentMap = Record<string, SpotIntent>;
@@ -20,9 +44,12 @@ export type SpotIntentMap = Record<string, SpotIntent>;
 /** Synchronous read — safe to seed `useState` with on the first-paint path. */
 export function loadSpotIntentsSync(): SpotIntentMap {
   try {
-    const raw = kvGet(SPOT_INTENTS_STORAGE_KEY);
-    if (!raw) return {};
-    return sanitizeSpotIntents(JSON.parse(raw) as unknown);
+    const rawV2 = kvGet(SPOT_INTENTS_STORAGE_KEY_V2);
+    if (rawV2) return sanitizeSpotIntents(JSON.parse(rawV2) as unknown);
+    // Migrate a v1 payload on first read: preserve flags, meta stays undefined.
+    const rawV1 = kvGet(SPOT_INTENTS_STORAGE_KEY);
+    if (rawV1) return sanitizeSpotIntents(JSON.parse(rawV1) as unknown);
+    return {};
   } catch (err) {
     Logger.warn('[SpotIntents] load failed, returning empty', err);
     return {};
@@ -36,26 +63,74 @@ export async function loadSpotIntents(): Promise<SpotIntentMap> {
 
 export async function saveSpotIntents(map: SpotIntentMap): Promise<void> {
   try {
-    kvSet(SPOT_INTENTS_STORAGE_KEY, JSON.stringify(sanitizeSpotIntents(map)));
+    kvSet(SPOT_INTENTS_STORAGE_KEY_V2, JSON.stringify(sanitizeSpotIntents(map)));
   } catch (err) {
     Logger.warn('[SpotIntents] save failed', err);
   }
 }
 
-export function toggleSpotIntent(
+/**
+ * Add or remove a single intent for one spot id, optionally attaching a meta
+ * snapshot on add. The single source of truth for intent mutation — the hook's
+ * grouped toggle and the compat `toggleSpotIntent` both funnel through here.
+ */
+export function applySpotIntent(
   map: SpotIntentMap,
   spotId: string,
-  intent: SpotIntentKind
+  intent: SpotIntentKind,
+  op: 'add' | 'remove',
+  meta?: SpotIntentMeta
 ): SpotIntentMap {
   const current = map[spotId] ?? {};
   const nextIntent: SpotIntent = { ...current };
-  if (nextIntent[intent]) delete nextIntent[intent];
-  else nextIntent[intent] = true;
-
+  if (op === 'add') {
+    nextIntent[intent] = true;
+    if (meta) nextIntent.meta = meta;
+  } else {
+    delete nextIntent[intent];
+  }
   const next: SpotIntentMap = { ...map };
   if (nextIntent.saved || nextIntent.planned) next[spotId] = nextIntent;
   else delete next[spotId];
   return next;
+}
+
+/** Toggle one flag (compat signature). Decides add/remove from current state. */
+export function toggleSpotIntent(
+  map: SpotIntentMap,
+  spotId: string,
+  intent: SpotIntentKind,
+  meta?: SpotIntentMeta
+): SpotIntentMap {
+  const isSet = map[spotId]?.[intent] === true;
+  return applySpotIntent(map, spotId, intent, isSet ? 'remove' : 'add', meta);
+}
+
+function sanitizeMeta(value: unknown): SpotIntentMeta | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const m = value as Record<string, unknown>;
+  const geo = m.geo;
+  if (
+    typeof m.animeId !== 'number' ||
+    !Number.isFinite(m.animeId) ||
+    typeof m.name !== 'string' ||
+    typeof m.image !== 'string' ||
+    m.image.length === 0 ||
+    !Array.isArray(geo) ||
+    geo.length < 2 ||
+    typeof geo[0] !== 'number' ||
+    typeof geo[1] !== 'number'
+  ) {
+    return undefined;
+  }
+  const out: SpotIntentMeta = {
+    animeId: m.animeId,
+    name: m.name,
+    geo: [geo[0], geo[1]],
+    image: m.image,
+  };
+  if (typeof m.cn === 'string' && m.cn.length > 0) out.cn = m.cn;
+  return out;
 }
 
 function sanitizeSpotIntents(value: unknown): SpotIntentMap {
@@ -69,7 +144,10 @@ function sanitizeSpotIntents(value: unknown): SpotIntentMap {
     const intent: SpotIntent = {};
     if (source.saved === true) intent.saved = true;
     if (source.planned === true) intent.planned = true;
-    if (intent.saved || intent.planned) out[spotId] = intent;
+    if (!intent.saved && !intent.planned) continue;
+    const meta = sanitizeMeta(source.meta);
+    if (meta) intent.meta = meta;
+    out[spotId] = intent;
   }
   return out;
 }
