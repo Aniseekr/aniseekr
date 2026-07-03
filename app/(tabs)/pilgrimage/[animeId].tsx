@@ -249,11 +249,26 @@ export default function PilgrimageDetailScreen() {
       setProximityTarget({ spot: near.spot, distanceMeters: near.distanceMeters });
     }
   }, [userLocation, points, visited]);
+  // The banner targets a specific spot snapshot; if that spot gets checked in
+  // some other way while the banner is still up (e.g. the SpotSheet's own
+  // 打卡 button), the banner is stale — clear it instead of leaving it to
+  // offer a now-wrong action.
+  useEffect(() => {
+    if (proximityTarget && visited[proximityTarget.spot.id]) {
+      setProximityTarget(null);
+    }
+  }, [proximityTarget, visited]);
   const handleProximityCheckIn = useCallback(() => {
-    if (!proximityTarget) return;
+    // Guard against a stale banner: `toggleVisitedPoint` is bidirectional, so
+    // if the spot was already checked in elsewhere while the banner sat open,
+    // tapping it must not reverse (check OUT) a real visit.
+    if (!proximityTarget || visited[proximityTarget.spot.id]) {
+      setProximityTarget(null);
+      return;
+    }
     toggleVisitedPoint(proximityTarget.spot);
     setProximityTarget(null);
-  }, [proximityTarget, toggleVisitedPoint]);
+  }, [proximityTarget, visited, toggleVisitedPoint]);
   const handleProximityDismiss = useCallback(() => setProximityTarget(null), []);
 
   const sheet = usePilgrimageSpotSheet({
@@ -771,8 +786,12 @@ export default function PilgrimageDetailScreen() {
             </View>
 
             {/* Layer 3 — map-side dock for marker / offline toggles. Only in
-                map view, and only when we have a real map underneath. */}
-            {hasMap && viewMode === 'map' && sheetIndex <= 1 ? (
+                map view, and only when we have a real map underneath. Also
+                yields to the proximity check-in banner — the banner grows
+                the top overlay column enough to overlap the dock's pinned
+                position, so the dock hides while the banner is up and
+                returns once it's dismissed or checked in. */}
+            {hasMap && viewMode === 'map' && sheetIndex <= 1 && proximityTarget == null ? (
               <View
                 style={[styles.mapOptionsDock, { top: insets.top + 132 }]}
                 pointerEvents="box-none">
