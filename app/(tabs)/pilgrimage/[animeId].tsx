@@ -58,6 +58,7 @@ import {
   type PilgrimageDetailViewPreset,
 } from '../../../libs/services/pilgrimage/pilgrimage-detail-flow';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
@@ -378,6 +379,17 @@ export default function PilgrimageDetailScreen() {
       Haptics.selectionAsync().catch(() => undefined);
       const next = resolvePilgrimageDetailViewPreset(preset);
       setView({ viewMode: next.viewMode, listLayout: next.listLayout });
+    },
+    [setView]
+  );
+
+  // Rows-mode area section header tap — peek the sheet so the map is
+  // dominant, then fit the camera to that area's bounds.
+  const handleAreaPress = useCallback(
+    (area: SpotArea) => {
+      Haptics.selectionAsync().catch(() => undefined);
+      setView({ viewMode: 'map' });
+      spotMapRef.current?.fitBounds(area.bounds, { animate: true });
     },
     [setView]
   );
@@ -905,6 +917,7 @@ export default function PilgrimageDetailScreen() {
               onOpenBrowse={handleOpenBrowse}
               onSpotPress={openGroup}
               onToggleVisited={toggleGroupedVisited}
+              onAreaPress={handleAreaPress}
               onOpenMaps={handleOpenMaps}
               onTakeComparison={handleFrameShot}
               representativeForGroup={representativeForGroup}

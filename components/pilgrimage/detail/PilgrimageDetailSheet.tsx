@@ -40,11 +40,15 @@ import type {
   SpotIntentKind,
   SpotIntentMap,
 } from '../../../libs/services/pilgrimage/spot-intents';
+import { groupSpotsIntoAreas, type SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
 import { SceneTile } from './SceneTile';
 import { SpotRow } from './SpotRow';
 import { StatCell } from './StatCell';
 import { formatDistanceKm } from './_helpers';
 import { AnitabiAttributionFooter } from '../common/AnitabiAttributionFooter';
+
+/** Rows-mode FlatList item — either an area section header or a spot row. */
+type RowItem = { kind: 'header'; area: SpotArea } | { kind: 'spot'; spot: AnitabiSpot };
 
 export interface PilgrimageDetailSheetProps {
   anime: AnitabiBangumi | null;
@@ -74,6 +78,8 @@ export interface PilgrimageDetailSheetProps {
   onOpenAnimePoster?: () => void;
   onSpotPress: (group: AnitabiSpot) => void;
   onToggleVisited: (group: AnitabiSpot) => void;
+  /** rows-mode area section header tap — jumps the map to that area's bounds. */
+  onAreaPress?: (area: SpotArea) => void;
   onOpenMaps: (spot: AnitabiPoint) => void;
   onTakeComparison: (spot: AnitabiPoint) => void;
   representativeForGroup: (group: AnitabiSpot) => AnitabiPoint;
@@ -113,6 +119,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     onOpenAnimePoster,
     onSpotPress,
     onToggleVisited,
+    onAreaPress,
     onOpenMaps,
     onTakeComparison,
     representativeForGroup,
@@ -229,6 +236,49 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       themeColorFg,
       visited,
     ]
+  );
+
+  // Rows-mode area section headers — a pure grid-cluster memo over the already
+  // loaded spots (CLAUDE.md Rule 9: no new state/effects). Grid mode never
+  // sections; rows mode only sections when there's more than one area to make
+  // the split worth the header rows.
+  const rowData = useMemo<RowItem[]>(() => {
+    if (listLayout !== 'rows') return [];
+    const areas = groupSpotsIntoAreas(filteredGroupedSpots);
+    if (areas.length < 2) {
+      return filteredGroupedSpots.map((spot) => ({ kind: 'spot', spot }) as RowItem);
+    }
+    const out: RowItem[] = [];
+    areas.forEach((area) => {
+      out.push({ kind: 'header', area });
+      for (const spot of area.spots) out.push({ kind: 'spot', spot });
+    });
+    return out;
+  }, [listLayout, filteredGroupedSpots]);
+
+  const renderRowItem = useCallback(
+    ({ item }: { item: RowItem }, index: number) => {
+      if (item.kind === 'header') {
+        const areaNumber = rowData.slice(0, index + 1).filter((r) => r.kind === 'header').length;
+        const label = t('pilgrimage.detail.areaLabel', {
+          index: areaNumber,
+          count: item.area.spots.length,
+        });
+        return (
+          <Pressable
+            onPress={() => onAreaPress?.(item.area)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.areaHeader, pressed && { opacity: 0.7 }]}>
+            <ThemedText variant="titleSmall" weight="800">
+              {label}
+            </ThemedText>
+            <Ionicons name="map-outline" size={15} color={theme.text.tertiary} />
+          </Pressable>
+        );
+      }
+      return renderRow({ item: item.spot });
+    },
+    [onAreaPress, renderRow, rowData, styles.areaHeader, t, theme.text.tertiary]
   );
 
   const handleIndexChange = useCallback(
@@ -387,9 +437,19 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       onChange={handleIndexChange}>
       <BottomSheetFlatList
         key={listKey}
-        data={filteredGroupedSpots as AnitabiSpot[]}
-        keyExtractor={(item) => item.id}
-        renderItem={listLayout === 'grid' ? renderTile : renderRow}
+        data={(listLayout === 'grid' ? (filteredGroupedSpots as AnitabiSpot[]) : rowData) as readonly unknown[] as never[]}
+        keyExtractor={(item: unknown, index: number) =>
+          listLayout === 'grid'
+            ? (item as AnitabiSpot).id
+            : (item as RowItem).kind === 'header'
+              ? `h:${(item as { area: SpotArea }).area.id}`
+              : `s:${((item as { spot: AnitabiSpot }).spot).id}`
+        }
+        renderItem={
+          listLayout === 'grid'
+            ? (renderTile as never)
+            : (({ item, index }: { item: RowItem; index: number }) => renderRowItem({ item }, index)) as never
+        }
         numColumns={numColumns}
         ListHeaderComponent={headerNode}
         ListEmptyComponent={emptyNode}
@@ -431,6 +491,7 @@ function areEqual(
     prev.onOpenAnimePoster === next.onOpenAnimePoster &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onToggleVisited === next.onToggleVisited &&
+    prev.onAreaPress === next.onAreaPress &&
     prev.onOpenMaps === next.onOpenMaps &&
     prev.onTakeComparison === next.onTakeComparison &&
     prev.representativeForGroup === next.representativeForGroup &&
@@ -535,6 +596,13 @@ function makeStyles(theme: ThemePalette) {
     },
     rowCell: {
       paddingBottom: Spacing.sm,
+    },
+    areaHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.xs,
     },
     emptyCard: {
       marginTop: Spacing.lg,
