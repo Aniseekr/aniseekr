@@ -15,6 +15,7 @@ import { ON_DARK, ThemedText, readableTextOn } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { formatDistanceKm, getPointSourceLabel } from './_helpers';
 import { sceneTilePropsEqual } from './_equality';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
@@ -92,7 +93,7 @@ function SceneTileImpl({
       accessibilityLabel={`Open ${titles.primary}`}
       accessibilityHint="Long press to toggle visited">
       <Image
-        source={{ uri: displayedUri }}
+        source={anitabiImageSource(displayedUri)}
         style={styles.image}
         contentFit="cover"
         transition={160}

@@ -13,6 +13,7 @@ import {
   VISITED_COLOR,
   type MarkerVisual,
 } from '../../../../../libs/services/pilgrimage/map-engine/marker-style';
+import { anitabiImageSource } from '../../../../../libs/services/pilgrimage/anitabi-image';
 
 // Fixed map-pin chrome. These float over the tiles, not over app surfaces, so
 // they use fixed white chrome + a dark badge chip rather than theme surfaces.
@@ -53,7 +54,7 @@ function BalloonMarker({ marker, visual }: { marker: MapMarker; visual: MarkerVi
     <View style={[styles.balloonBox, { width: visual.width, height: visual.height }]}>
       <View style={[styles.photo, { borderColor: border }]}>
         {marker.image ? (
-          <Image source={{ uri: marker.image }} style={styles.photoImg} />
+          <Image source={anitabiImageSource(marker.image)} style={styles.photoImg} />
         ) : (
           <View style={[styles.photoFallback, { backgroundColor: visual.ringColor }]}>
             <Text style={styles.photoFallbackPin}>📍</Text>

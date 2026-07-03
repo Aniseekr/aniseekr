@@ -12,6 +12,7 @@ import { ON_DARK, ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { formatDistanceKm, getPointSourceLabel, hasValidGeo } from './_helpers';
 import { spotRowPropsEqual } from './_equality';
 
@@ -94,7 +95,7 @@ function SpotRowImpl({
             </View>
             <View style={styles.imageHalf}>
               <Image
-                source={{ uri: spot.image }}
+                source={anitabiImageSource(spot.image)}
                 style={styles.imgFull}
                 contentFit="cover"
                 transition={150}
@@ -112,7 +113,7 @@ function SpotRowImpl({
         ) : (
           <View style={styles.imageFull}>
             <Image
-              source={{ uri: spot.image }}
+              source={anitabiImageSource(spot.image)}
               style={styles.imgFull}
               contentFit="cover"
               transition={150}

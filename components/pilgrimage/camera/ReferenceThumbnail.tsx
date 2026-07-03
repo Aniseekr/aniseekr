@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 
 interface ReferenceThumbnailProps {
   /** The anime reference image the user is framing against. */
@@ -53,7 +54,7 @@ export default function ReferenceThumbnail({
       ]}>
       {imageUrl ? (
         <Image
-          source={{ uri: imageUrl }}
+          source={anitabiImageSource(imageUrl)}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           transition={140}

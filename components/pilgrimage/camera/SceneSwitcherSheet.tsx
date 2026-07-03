@@ -25,7 +25,7 @@ import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { toFullResImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
+import { anitabiImageSource, toFullResImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
 
@@ -241,7 +241,7 @@ function SceneTile({ spot, isActive, themeColor, onPress }: SceneTileProps) {
         },
       ]}>
       <Image
-        source={{ uri: fullResImage || spot.image }}
+        source={anitabiImageSource(fullResImage || spot.image)}
         style={styles.tileImage}
         contentFit="cover"
         transition={120}

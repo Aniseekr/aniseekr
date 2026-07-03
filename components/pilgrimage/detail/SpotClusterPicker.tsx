@@ -13,6 +13,7 @@ import { ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { formatDistanceKm, getPointSourceLabel } from './_helpers';
 
@@ -57,7 +58,7 @@ function SpotClusterPickerImpl({
           accessibilityLabel={`Open ${titles.primary}`}>
           <View style={[styles.thumbWrap, { borderColor: themeColor }]}>
             <Image
-              source={{ uri: spot.image }}
+              source={anitabiImageSource(spot.image)}
               style={styles.thumb}
               contentFit="cover"
               transition={120}

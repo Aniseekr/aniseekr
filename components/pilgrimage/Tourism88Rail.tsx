@@ -18,6 +18,7 @@ import { Spacing, Radius, Shadow, Typography } from '../../constants/DesignSyste
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../themed';
 import { useT } from '../../libs/i18n';
+import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import type {
   AnimeTourism88Region,
   UniqueAnime88Entry,
@@ -123,7 +124,7 @@ function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Touri
       <View style={styles.posterWrap}>
         {cover ? (
           <Image
-            source={{ uri: cover }}
+            source={anitabiImageSource(cover)}
             style={styles.poster}
             contentFit="cover"
             transition={180}

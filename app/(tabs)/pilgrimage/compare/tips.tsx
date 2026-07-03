@@ -31,6 +31,7 @@ import {
   inferWeather,
   type WarningItem,
 } from '../../../../libs/services/pilgrimage/scene-analysis';
+import { anitabiImageSource } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { getStringParam } from '../../../../libs/utils/route-params';
 
 const WARN_ICONS: Record<WarningItem['icon'], React.ComponentProps<typeof Ionicons>['name']> = {
@@ -194,7 +195,7 @@ export default function PhotoTipsScreen() {
             <View style={styles.heroImageWrap}>
               {imageUrl ? (
                 <Image
-                  source={{ uri: imageUrl }}
+                  source={anitabiImageSource(imageUrl)}
                   style={styles.heroImage}
                   contentFit="cover"
                   transition={180}

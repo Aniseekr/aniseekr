@@ -22,6 +22,7 @@ import type { TranslationKey } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import {
   bearingDegrees,
   buildAnitabiMapUrl,
@@ -213,7 +214,7 @@ function SpotSheetImpl({
         ) : (
           <>
         <View style={styles.hero}>
-          <Image source={{ uri: spot.image }} style={styles.cover} contentFit="cover" />
+          <Image source={anitabiImageSource(spot.image)} style={styles.cover} contentFit="cover" />
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.76)']}
             style={styles.sheetHeroGradient}
@@ -262,7 +263,7 @@ function SpotSheetImpl({
                     pressed && { opacity: 0.78 },
                   ]}>
                   <Image
-                    source={{ uri: scene.image }}
+                    source={anitabiImageSource(scene.image)}
                     style={styles.sceneThumb}
                     contentFit="cover"
                   />
