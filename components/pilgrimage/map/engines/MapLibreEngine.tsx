@@ -74,6 +74,7 @@ export function MapLibreEngine({
   styleUrl,
   controlsBottomOffset = 0,
   onMarkerPress,
+  onMarkerLongPress,
   onClusterPress,
   onPanned,
   onBoundsChange,
@@ -237,7 +238,12 @@ export function MapLibreEngine({
               key={`m:${it.id}`}
               lngLat={[it.lng, it.lat]}
               anchor={resolveMarkerVisual(m, markerMode).anchor}>
-              <NativeMapMarker marker={m} defaultMode={markerMode} onPress={onMarkerPress} />
+              <NativeMapMarker
+                marker={m}
+                defaultMode={markerMode}
+                onPress={onMarkerPress}
+                onLongPress={onMarkerLongPress}
+              />
             </Marker>
           );
         })}

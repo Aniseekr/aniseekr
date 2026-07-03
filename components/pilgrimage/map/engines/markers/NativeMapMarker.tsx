@@ -26,6 +26,7 @@ export interface NativeMapMarkerProps {
   /** Surface fallback bubble/dot for spot markers with no own markerMode. */
   defaultMode?: MapMarkerMode;
   onPress?: (marker: MapMarker) => void;
+  onLongPress?: (marker: MapMarker) => void;
 }
 
 function Badge({ visual }: { visual: MarkerVisual }) {
@@ -89,10 +90,13 @@ function DotMarker({ visual }: { visual: MarkerVisual }) {
   );
 }
 
-function NativeMapMarkerImpl({ marker, defaultMode, onPress }: NativeMapMarkerProps) {
+function NativeMapMarkerImpl({ marker, defaultMode, onPress, onLongPress }: NativeMapMarkerProps) {
   const visual = resolveMarkerVisual(marker, defaultMode);
   return (
-    <Pressable accessibilityRole="button" onPress={() => onPress?.(marker)}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => onPress?.(marker)}
+      onLongPress={onLongPress ? () => onLongPress(marker) : undefined}>
       {visual.shape === 'dot' ? (
         <DotMarker visual={visual} />
       ) : visual.shape === 'gold88' ? (

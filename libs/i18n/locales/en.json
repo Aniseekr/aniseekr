@@ -1115,6 +1115,10 @@
       "offlineBody": "You're offline or the connection dropped. Check your network and try again — areas you've already viewed still work offline.",
       "offlineTitle": "Can't load the map",
       "openAlbumA11y": "Open pilgrimage album",
+      "quickAction": {
+        "navigate": "Navigate here",
+        "openDetail": "View sacred site"
+      },
       "searchA11y": "Search anime",
       "searchPlaceholder": "Search anime or city",
       "viewModeAnime": "Scene locations",

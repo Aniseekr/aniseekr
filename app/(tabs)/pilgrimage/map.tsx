@@ -22,7 +22,7 @@
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Dimensions, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -85,6 +85,7 @@ import {
 } from '../../../components/pilgrimage/PilgrimageHubSheet';
 import { RoundHeaderButton } from '../../../components/pilgrimage/detail/RoundHeaderButton';
 import { FilterPill } from '../../../components/pilgrimage/detail/FilterPill';
+import { buildMapsURL } from '../../../components/pilgrimage/detail';
 import { useT } from '../../../libs/i18n';
 import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
 import { buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
@@ -646,6 +647,29 @@ export default function PilgrimageMapScreen() {
     [navigateToDetail]
   );
 
+  // Long-press quick actions on a hub marker. Scoped to two HONEST actions —
+  // navigate / open detail — because spot-intents and visited are point-keyed;
+  // 收藏/計畫/打卡 on an anime centroid would fabricate state (Rule 8) until
+  // spot-level markers exist.
+  const [quickActionMarker, setQuickActionMarker] = useState<MapMarker | null>(null);
+  const handleMarkerLongPress = useCallback((m: MapMarker) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setQuickActionMarker(m);
+  }, []);
+  const closeQuickActions = useCallback(() => setQuickActionMarker(null), []);
+  const handleQuickNavigate = useCallback(() => {
+    const m = quickActionMarker;
+    if (!m) return;
+    Linking.openURL(buildMapsURL(m.lat, m.lng, m.title)).catch(() => undefined);
+    setQuickActionMarker(null);
+  }, [quickActionMarker]);
+  const handleQuickOpen = useCallback(() => {
+    const m = quickActionMarker;
+    if (!m || m.bangumiId == null) return;
+    setQuickActionMarker(null);
+    handleMarkerPress(m.bangumiId);
+  }, [quickActionMarker, handleMarkerPress]);
+
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.back();
@@ -837,6 +861,7 @@ export default function PilgrimageMapScreen() {
             onMarkerPress={(m) => {
               if (m.bangumiId != null) handleMarkerPress(m.bangumiId);
             }}
+            onMarkerLongPress={handleMarkerLongPress}
             onClusterPress={handleClusterPress}
             onBoundsChange={handleMapBoundsChange}
             onPanned={onUserPan}
@@ -1026,6 +1051,43 @@ export default function PilgrimageMapScreen() {
               nearbySpots={nearbySpots}
               onPickNearbySpot={handlePickNearbySpot}
             />
+
+            {/* Long-press quick actions — anime-centroid honest actions only
+              (navigate / open detail). See Rule 8 note above handlers. */}
+            {quickActionMarker ? (
+              <Pressable style={styles.quickActionBackdrop} onPress={closeQuickActions}>
+                <Pressable
+                  style={[
+                    styles.quickActionSheet,
+                    { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+                  ]}
+                  onPress={() => undefined}>
+                  <ThemedText variant="titleSmall" weight="800" numberOfLines={1}>
+                    {quickActionMarker.title}
+                  </ThemedText>
+                  <Pressable
+                    onPress={handleQuickNavigate}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
+                    <Ionicons name="navigate-outline" size={18} color={theme.text.primary} />
+                    <ThemedText variant="bodyMedium">
+                      {t('pilgrimage.map.quickAction.navigate')}
+                    </ThemedText>
+                  </Pressable>
+                  {quickActionMarker.bangumiId != null ? (
+                    <Pressable
+                      onPress={handleQuickOpen}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
+                      <Ionicons name="information-circle-outline" size={18} color={theme.text.primary} />
+                      <ThemedText variant="bodyMedium">
+                        {t('pilgrimage.map.quickAction.openDetail')}
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
+                </Pressable>
+              </Pressable>
+            ) : null}
           </>
         )}
 
@@ -1311,6 +1373,26 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+
+    // Long-press marker quick-action sheet (navigate / open detail).
+    quickActionBackdrop: {
+      ...StyleSheet.absoluteFill,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      padding: 16,
+    },
+    quickActionSheet: {
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      padding: 16,
+      gap: 8,
+    },
+    quickActionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: 44,
     },
   });
 }
