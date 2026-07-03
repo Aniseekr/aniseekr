@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { groupSpotsIntoAreas } from '../../../libs/services/pilgrimage/spot-areas';
+import { composeAreaRows, groupSpotsIntoAreas } from '../../../libs/services/pilgrimage/spot-areas';
 import type { AnitabiSpot } from '../../../libs/services/pilgrimage/types';
 
 function spot(id: string, lat: number, lng: number): AnitabiSpot {
@@ -45,5 +45,90 @@ describe('groupSpotsIntoAreas', () => {
     const b = groupSpotsIntoAreas([spot('a', 35.0, 139.0), spot('b', 35.027, 139.0)], { cellKm: 5 });
     expect(a.length).toBe(2);
     expect(b.length).toBe(1);
+  });
+});
+
+describe('composeAreaRows', () => {
+  // Regression: rowData in PilgrimageDetailSheet used to concatenate only
+  // `area.spots`, so any spot `groupSpotsIntoAreas` dropped (no usable geo —
+  // a real, expected state SpotRow already renders gracefully) silently
+  // vanished from the list in rows mode with ≥2 areas (CLAUDE.md Rule 8).
+
+  test('<2 areas: returns every input spot flat, including geo-less, no headers', () => {
+    const spots = [spot('a', 35.0, 139.0), spot('b', 35.0002, 139.0002), spot('nogeo', 0, 0)];
+    const areas = groupSpotsIntoAreas(spots);
+    expect(areas.length).toBeLessThan(2);
+    const rows = composeAreaRows(spots, areas);
+    expect(rows.filter((r) => r.kind === 'header')).toHaveLength(0);
+    const spotRows = rows.filter((r) => r.kind === 'spot');
+    expect(spotRows).toHaveLength(spots.length);
+    expect(spotRows.map((r) => (r as { spot: AnitabiSpot }).spot.id)).toEqual([
+      'a',
+      'b',
+      'nogeo',
+    ]);
+  });
+
+  test('>=2 areas: geo-less spots are appended as trailing rows after every section, none dropped', () => {
+    const spots = [
+      spot('near', 35.0, 139.0),
+      spot('far', 35.9, 139.9),
+      spot('nogeo1', 0, 0),
+      spot('nogeo2', NaN, NaN),
+    ];
+    const areas = groupSpotsIntoAreas(spots);
+    expect(areas.length).toBeGreaterThanOrEqual(2);
+    const rows = composeAreaRows(spots, areas);
+
+    // Invariant: composed row spot-count === input spot count.
+    const spotRows = rows.filter((r) => r.kind === 'spot') as { kind: 'spot'; spot: AnitabiSpot }[];
+    expect(spotRows).toHaveLength(spots.length);
+    expect(new Set(spotRows.map((r) => r.spot.id))).toEqual(
+      new Set(['near', 'far', 'nogeo1', 'nogeo2'])
+    );
+
+    // Geo-less spots land after the last header (trailing, unsectioned).
+    const lastHeaderIndex = rows.reduce(
+      (acc, r, i) => (r.kind === 'header' ? i : acc),
+      -1
+    );
+    const nogeoIndices = rows
+      .map((r, i) => ({ r, i }))
+      .filter(({ r }) => r.kind === 'spot' && (r.spot.id === 'nogeo1' || r.spot.id === 'nogeo2'))
+      .map(({ i }) => i);
+    for (const i of nogeoIndices) expect(i).toBeGreaterThan(lastHeaderIndex);
+  });
+
+  test('header rows carry a precomputed, sequential 1-indexed areaNumber', () => {
+    const spots = [spot('near', 35.0, 139.0), spot('far', 35.9, 139.9)];
+    const areas = groupSpotsIntoAreas(spots);
+    const rows = composeAreaRows(spots, areas);
+    const headers = rows.filter((r) => r.kind === 'header') as {
+      kind: 'header';
+      areaNumber: number;
+    }[];
+    expect(headers.map((h) => h.areaNumber)).toEqual(areas.map((_, i) => i + 1));
+  });
+
+  test('invariant holds across mixed valid/invalid geo for both <2 and >=2 area cases', () => {
+    const fixtures: AnitabiSpot[][] = [
+      // all invalid geo, single implicit "area" (none)
+      [spot('x', 0, 0), spot('y', NaN, NaN)],
+      // one real area + geo-less
+      [spot('a', 35.0, 139.0), spot('b', 35.0001, 139.0001), spot('nogeo', 0, 0)],
+      // multiple areas + geo-less
+      [
+        spot('near1', 35.0, 139.0),
+        spot('near2', 35.0001, 139.0001),
+        spot('far', 35.9, 139.9),
+        spot('nogeo', 0, 0),
+      ],
+    ];
+    for (const spots of fixtures) {
+      const areas = groupSpotsIntoAreas(spots);
+      const rows = composeAreaRows(spots, areas);
+      const spotRows = rows.filter((r) => r.kind === 'spot');
+      expect(spotRows).toHaveLength(spots.length);
+    }
   });
 });

@@ -40,15 +40,17 @@ import type {
   SpotIntentKind,
   SpotIntentMap,
 } from '../../../libs/services/pilgrimage/spot-intents';
-import { groupSpotsIntoAreas, type SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
+import {
+  composeAreaRows,
+  groupSpotsIntoAreas,
+  type SpotArea,
+  type SpotAreaRow,
+} from '../../../libs/services/pilgrimage/spot-areas';
 import { SceneTile } from './SceneTile';
 import { SpotRow } from './SpotRow';
 import { StatCell } from './StatCell';
 import { formatDistanceKm } from './_helpers';
 import { AnitabiAttributionFooter } from '../common/AnitabiAttributionFooter';
-
-/** Rows-mode FlatList item — either an area section header or a spot row. */
-type RowItem = { kind: 'header'; area: SpotArea } | { kind: 'spot'; spot: AnitabiSpot };
 
 export interface PilgrimageDetailSheetProps {
   anime: AnitabiBangumi | null;
@@ -241,27 +243,21 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
   // Rows-mode area section headers — a pure grid-cluster memo over the already
   // loaded spots (CLAUDE.md Rule 9: no new state/effects). Grid mode never
   // sections; rows mode only sections when there's more than one area to make
-  // the split worth the header rows.
-  const rowData = useMemo<RowItem[]>(() => {
+  // the split worth the header rows. `composeAreaRows` is the pure, unit-
+  // tested helper (spot-areas.ts) that guarantees every spot gets a row even
+  // when `groupSpotsIntoAreas` drops it for having no usable geo — those
+  // spots come back as plain trailing rows after the sectioned ones.
+  const rowData = useMemo<SpotAreaRow[]>(() => {
     if (listLayout !== 'rows') return [];
     const areas = groupSpotsIntoAreas(filteredGroupedSpots);
-    if (areas.length < 2) {
-      return filteredGroupedSpots.map((spot) => ({ kind: 'spot', spot }) as RowItem);
-    }
-    const out: RowItem[] = [];
-    areas.forEach((area) => {
-      out.push({ kind: 'header', area });
-      for (const spot of area.spots) out.push({ kind: 'spot', spot });
-    });
-    return out;
+    return composeAreaRows(filteredGroupedSpots, areas);
   }, [listLayout, filteredGroupedSpots]);
 
   const renderRowItem = useCallback(
-    ({ item }: { item: RowItem }, index: number) => {
+    ({ item }: { item: SpotAreaRow }) => {
       if (item.kind === 'header') {
-        const areaNumber = rowData.slice(0, index + 1).filter((r) => r.kind === 'header').length;
         const label = t('pilgrimage.detail.areaLabel', {
-          index: areaNumber,
+          index: item.areaNumber,
           count: item.area.spots.length,
         });
         return (
@@ -278,7 +274,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       }
       return renderRow({ item: item.spot });
     },
-    [onAreaPress, renderRow, rowData, styles.areaHeader, t, theme.text.tertiary]
+    [onAreaPress, renderRow, styles.areaHeader, t, theme.text.tertiary]
   );
 
   const handleIndexChange = useCallback(
@@ -441,15 +437,11 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
         keyExtractor={(item: unknown, index: number) =>
           listLayout === 'grid'
             ? (item as AnitabiSpot).id
-            : (item as RowItem).kind === 'header'
+            : (item as SpotAreaRow).kind === 'header'
               ? `h:${(item as { area: SpotArea }).area.id}`
               : `s:${((item as { spot: AnitabiSpot }).spot).id}`
         }
-        renderItem={
-          listLayout === 'grid'
-            ? (renderTile as never)
-            : (({ item, index }: { item: RowItem; index: number }) => renderRowItem({ item }, index)) as never
-        }
+        renderItem={listLayout === 'grid' ? (renderTile as never) : (renderRowItem as never)}
         numColumns={numColumns}
         ListHeaderComponent={headerNode}
         ListEmptyComponent={emptyNode}

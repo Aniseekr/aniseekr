@@ -384,12 +384,20 @@ export default function PilgrimageDetailScreen() {
   );
 
   // Rows-mode area section header tap — peek the sheet so the map is
-  // dominant, then fit the camera to that area's bounds.
+  // dominant, then fit the camera to that area's bounds. A singleton-area
+  // (or otherwise degenerate) box has south===north / west===east, which
+  // fitBounds can't meaningfully zoom to — recenter instead, same guard as
+  // map.tsx's handleClusterPress.
   const handleAreaPress = useCallback(
     (area: SpotArea) => {
       Haptics.selectionAsync().catch(() => undefined);
       setView({ viewMode: 'map' });
-      spotMapRef.current?.fitBounds(area.bounds, { animate: true });
+      const { bounds, center } = area;
+      if (bounds.north - bounds.south < 0.0005 && bounds.east - bounds.west < 0.0005) {
+        spotMapRef.current?.recenter(center.lat, center.lng, 16, { animate: true });
+        return;
+      }
+      spotMapRef.current?.fitBounds(bounds, { animate: true });
     },
     [setView]
   );

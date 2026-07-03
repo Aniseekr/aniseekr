@@ -20,6 +20,12 @@ export interface SpotArea {
   spots: AnitabiSpot[];
 }
 
+/** Detail list row: an area section header (1-indexed, precomputed so the
+ * renderer never rescans prior rows) or a spot. */
+export type SpotAreaRow =
+  | { kind: 'header'; area: SpotArea; areaNumber: number }
+  | { kind: 'spot'; spot: AnitabiSpot };
+
 const KM_PER_DEG_LAT = 111;
 
 function hasGeo(geo: readonly [number, number]): boolean {
@@ -80,4 +86,42 @@ export function groupSpotsIntoAreas(
       spots: members,
     };
   });
+}
+
+/**
+ * Compose the detail list's rows-mode row sequence from the full spot list
+ * and its area grouping. PURE + unit-testable (CLAUDE.md Rule 8/9).
+ *
+ * With <2 areas the split isn't worth a header — return every spot flat, in
+ * input order (`spots`, not the areas, so geo-less spots are included too).
+ *
+ * With ≥2 areas, section by area — but `groupSpotsIntoAreas` silently drops
+ * spots with no usable geo (they can't be bucketed). Those spots are a real,
+ * expected state (SpotRow already renders them, just with maps disabled),
+ * not an error — so they're appended after every area section as plain
+ * trailing rows (no header: we have no honest name for "no area").
+ *
+ * Invariant: the returned row list contains exactly one `spot` row per input
+ * spot — nothing is ever dropped.
+ */
+export function composeAreaRows(
+  spots: readonly AnitabiSpot[],
+  areas: readonly SpotArea[]
+): SpotAreaRow[] {
+  if (areas.length < 2) {
+    return spots.map((spot) => ({ kind: 'spot', spot }) as SpotAreaRow);
+  }
+  const rows: SpotAreaRow[] = [];
+  const placed = new Set<string>();
+  areas.forEach((area, i) => {
+    rows.push({ kind: 'header', area, areaNumber: i + 1 });
+    for (const spot of area.spots) {
+      rows.push({ kind: 'spot', spot });
+      placed.add(spot.id);
+    }
+  });
+  for (const spot of spots) {
+    if (!placed.has(spot.id)) rows.push({ kind: 'spot', spot });
+  }
+  return rows;
 }
