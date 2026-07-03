@@ -32,7 +32,7 @@ export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
 
 /** How far past TTL a cached detail payload may still be served on network failure. */
-const DETAIL_STALE_GRACE_MS = 90 * 24 * 60 * 60 * 1000;
+export const DETAIL_STALE_GRACE_MS = 90 * 24 * 60 * 60 * 1000;
 
 /** Sentinel rows for in-memory cache so we can also remember "no data" results. */
 type CacheValue = { kind: 'hit'; value: AnitabiBangumi } | { kind: 'miss' };
