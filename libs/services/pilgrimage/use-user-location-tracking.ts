@@ -12,10 +12,14 @@
 //               through a ref + delta-gate so we don't re-render React state
 //               at sensor frequency (Rule 9 in CLAUDE.md).
 //
-// The map defaults to following: the first time this hook observes granted
-// permission it auto-engages `following` once per mount (see the auto-engage
-// effect below), so opening a map with permission already granted means "the
-// map is on me" without a FAB tap.
+// Auto-engage (`autoEngage: true`) makes the map default to following: the
+// first time this hook observes granted permission it auto-engages
+// `following` once per mount (see the auto-engage effect below), so opening
+// that map with permission already granted means "the map is on me" without
+// a FAB tap. It defaults to FALSE and is opt-in per surface: the hub map
+// wants this (it's a "where am I" map), but the per-anime detail screen must
+// keep centering on the anime at mount, not yank the camera to the user's
+// location the instant permission happens to be granted.
 //
 // User pan/zoom (`onUserPan`) breaks following/compass back to idle. Map
 // surfaces call it only for real user gestures; programmatic recentres/flyTo
@@ -93,6 +97,14 @@ export interface UseUserLocationTrackingOptions {
    * / `getLastKnown` to resolve. Captured once at mount.
    */
   initialLocation?: LatLng | null;
+  /**
+   * Opt-in: auto-engage `following` the first time this hook observes granted
+   * permission (once per mount). Defaults to `false` so a surface that merely
+   * wants the user dot (e.g. a detail screen centered on an anime) does not
+   * get its camera yanked to the user's location at mount. The hub map,
+   * which IS a "where am I" surface, passes `true`.
+   */
+  autoEngage?: boolean;
 }
 
 export interface UseUserLocationTrackingResult {
@@ -146,7 +158,7 @@ function mapPermissionStatus(result: {
 export function useUserLocationTracking(
   options: UseUserLocationTrackingOptions = {}
 ): UseUserLocationTrackingResult {
-  const { onFollowLocation, onHeadingChange, initialLocation } = options;
+  const { onFollowLocation, onHeadingChange, initialLocation, autoEngage = false } = options;
 
   const [internal, setInternal] = useState<InternalState>(() => ({
     followState: 'idle',
@@ -198,8 +210,13 @@ export function useUserLocationTracking(
   }, []);
 
   // ─── Auto-engage follow on first granted permission (once per mount) ────
+  // Opt-in per surface (see `autoEngage` doc on the options type) — a
+  // detail screen that centers on the anime must not have this hook yank
+  // its camera to the user's location just because permission happens to
+  // already be granted.
   const autoEngagedRef = useRef(false);
   useEffect(() => {
+    if (!autoEngage) return;
     if (!shouldAutoEngageFollow({ permission: internal.permission, alreadyEngaged: autoEngagedRef.current })) {
       return;
     }
@@ -220,7 +237,7 @@ export function useUserLocationTracking(
         if (fs === 'following' || fs === 'compass') onFollowLocationRef.current?.(loc, fs);
       })
       .catch(() => undefined);
-  }, [internal.permission]);
+  }, [autoEngage, internal.permission]);
 
   // ─── Warm-cache hydration ───────────────────────────────────────────────
   // Skip when we already have a value (cache hit during useState init).

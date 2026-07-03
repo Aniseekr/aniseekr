@@ -695,7 +695,7 @@
       },
       "tier": {
         "dayTrip": "day trip · 100 km",
-        "farAway": "Far away",
+        "farAway": "far away",
         "inRegion": "in region · 500 km",
         "walking": "walking · 30 km"
       },

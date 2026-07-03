@@ -220,20 +220,32 @@ export class AnitabiService {
       // network failure tried to read it as "stale", it would already be
       // gone — that was the bug. Reading once with the grace window keeps
       // the row available for both outcomes.
+      //
+      // The row itself is written with a WIDENED ttl (this.ttlMs +
+      // DETAIL_STALE_GRACE_MS — see the `cache.set` call below), so
+      // CacheService.prune() at boot (CacheManager.pruneAll(), see
+      // app/_layout.tsx) does not reap a row that's merely past the base
+      // TTL but still inside the stale-if-error grace window. Because the
+      // row's own ttl is now the widened value, we read with graceMs=0 (the
+      // row survives on its own until the widened ttl) and derive staleness
+      // ourselves from `meta.age` vs the BASE ttl, rather than trusting
+      // CacheService's `isStale` (which would compare against the widened
+      // ttl and basically never report stale).
       let staleCandidate: AnitabiPoint[] | null = null;
       try {
         const meta = await this.cache.getWithMeta<AnitabiPoint[]>(
           DETAIL_CACHE_KEY_PREFIX + bangumiId,
-          DETAIL_STALE_GRACE_MS
+          0
         );
         if (meta && Array.isArray(meta.value) && meta.value.length > 0) {
-          if (!meta.isStale) {
+          const isStale = meta.age > this.ttlMs;
+          if (!isStale) {
             this.detailMemCache.set(bangumiId, { kind: 'hit', value: meta.value });
             return meta.value;
           }
-          // Past TTL but within the stale-if-error grace window — hold onto
-          // it as a fallback candidate. Do NOT memoize yet: we only serve it
-          // if the network below actually fails.
+          // Past the base TTL but within the stale-if-error grace window —
+          // hold onto it as a fallback candidate. Do NOT memoize yet: we
+          // only serve it if the network below actually fails.
           staleCandidate = meta.value;
         }
       } catch (err) {
@@ -311,9 +323,16 @@ export class AnitabiService {
       }
 
       this.detailMemCache.set(bangumiId, { kind: 'hit', value: fresh });
-      // Persist (best effort).
+      // Persist (best effort). The row's SQLite ttl is widened to
+      // ttlMs + DETAIL_STALE_GRACE_MS (see the read above) so a boot-time
+      // CacheService.prune() cannot delete it before the stale-if-error
+      // grace window we actually want has elapsed.
       try {
-        await this.cache.set(DETAIL_CACHE_KEY_PREFIX + bangumiId, fresh, this.ttlMs);
+        await this.cache.set(
+          DETAIL_CACHE_KEY_PREFIX + bangumiId,
+          fresh,
+          this.ttlMs + DETAIL_STALE_GRACE_MS
+        );
       } catch (err) {
         console.warn('[AnitabiService] points cache write failed:', err);
       }

@@ -231,6 +231,10 @@ export default function PilgrimageMapScreen() {
   );
   const tracking = useUserLocationTracking({
     initialLocation: initialUserLocation,
+    // Hub map is a "where am I" surface — default to following the user the
+    // first time permission is observed granted (opt-in; the detail screen
+    // does NOT pass this so it keeps centering on the anime).
+    autoEngage: true,
     onFollowLocation: (loc, fs) => {
       mapRef.current?.recenter(
         loc.latitude,
@@ -538,24 +542,30 @@ export default function PilgrimageMapScreen() {
   // Small clusters delegate to the surface (big ones zoom-to-fit inside the
   // engine). Fit their bbox; a same-building cluster (degenerate bbox) jumps
   // past CLUSTER_DISABLE_AT instead so the markers actually separate.
-  const handleClusterPress = useCallback((members: readonly MapMarker[]) => {
-    if (members.length === 0) return;
-    let south = 90,
-      west = 180,
-      north = -90,
-      east = -180;
-    for (const m of members) {
-      south = Math.min(south, m.lat);
-      north = Math.max(north, m.lat);
-      west = Math.min(west, m.lng);
-      east = Math.max(east, m.lng);
-    }
-    if (north - south < 0.0005 && east - west < 0.0005) {
-      mapRef.current?.recenter(members[0].lat, members[0].lng, 16, { animate: true });
-      return;
-    }
-    mapRef.current?.fitBounds?.({ south, west, north, east }, { animate: true });
-  }, []);
+  const handleClusterPress = useCallback(
+    (members: readonly MapMarker[]) => {
+      if (members.length === 0) return;
+      // Programmatic camera move driven by a cluster tap — pause follow
+      // first (I5) so this content-focus breaks follow instead of fighting it.
+      onUserPan();
+      let south = 90,
+        west = 180,
+        north = -90,
+        east = -180;
+      for (const m of members) {
+        south = Math.min(south, m.lat);
+        north = Math.max(north, m.lat);
+        west = Math.min(west, m.lng);
+        east = Math.max(east, m.lng);
+      }
+      if (north - south < 0.0005 && east - west < 0.0005) {
+        mapRef.current?.recenter(members[0].lat, members[0].lng, 16, { animate: true });
+        return;
+      }
+      mapRef.current?.fitBounds?.({ south, west, north, east }, { animate: true });
+    },
+    [onUserPan]
+  );
 
   // The actual drill-down. Same handler whether the user tapped a marker, the
   // focused card, or a list row. returnTo=map so the detail screen's back
@@ -710,19 +720,26 @@ export default function PilgrimageMapScreen() {
 
   // ─── Drive the inline map camera (Rule 9 — imperative, off React state) ──
   // Fly to the focused anime when it changes (swap / sheet-row preview) so the
-  // sheet + map track together.
+  // sheet + map track together. This is a programmatic camera move driven by
+  // content focus, not the user — pause follow first (I5, Google Maps
+  // convention: focusing content breaks "follow me").
   useEffect(() => {
     if (mapViewMode !== 'anime') return;
     const anime = focusedAnime?.anime;
     if (anime && isValidGeo(anime.geo)) {
+      onUserPan();
       mapRef.current?.focus?.({ lat: anime.geo[0], lng: anime.geo[1], zoom: 11 });
     }
-  }, [focusedAnime, mapViewMode]);
+  }, [focusedAnime, mapViewMode, onUserPan]);
 
-  useEffect(() => {
-    if (mapViewMode !== 'myLocation' || !userLocation) return;
-    flyToUserLocation(userLocation);
-  }, [flyToUserLocation, mapViewMode, userLocation]);
+  // NOTE: there used to be a `mapViewMode === 'myLocation' && userLocation`
+  // effect here that recentred on every location tick. With the T6 always-on
+  // watcher that fired on every fix and fought any pan the user made while
+  // following, bypassing the follow state machine entirely. The follow
+  // machine already owns continuous recentring (`onFollowLocation` above);
+  // `handleSwitchMapViewMode` (above) does the one-shot recenter when the
+  // user explicitly switches TO myLocation. Do not re-add a myLocation-driven
+  // recenter effect here.
 
   useEffect(() => {
     if (loading || autoPermissionPromptedRef.current) return;
@@ -735,10 +752,13 @@ export default function PilgrimageMapScreen() {
   }, [loading, locatePermission, requestPermissionSheet, userLocation]);
 
   // Fly to a region's bounds on a region-chip tap. `flyBoundsRequest` gets a
-  // fresh identity per tap so re-taps re-run this.
+  // fresh identity per tap so re-taps re-run this. Programmatic camera move —
+  // pause follow first (I5) so a region pick doesn't fight the follow state.
   useEffect(() => {
-    if (flyBoundsRequest) mapRef.current?.fitBounds?.(flyBoundsRequest.bounds);
-  }, [flyBoundsRequest]);
+    if (!flyBoundsRequest) return;
+    onUserPan();
+    mapRef.current?.fitBounds?.(flyBoundsRequest.bounds);
+  }, [flyBoundsRequest, onUserPan]);
 
   return (
     <>

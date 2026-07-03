@@ -345,11 +345,17 @@ describe('AnitabiService', () => {
       cache: {
         // `get` is kept only for interface compatibility — the production
         // code's stale-if-error path now reads exclusively via `getWithMeta`
-        // (a single up-front call), so `get` is unused here.
+        // (a single up-front call, graceMs=0 — the row's own ttl is already
+        // widened by the writer, see anitabi-service.ts), so `get` is unused
+        // here. Staleness is derived from `age` vs the service's ttlMs
+        // (default PILGRIMAGE_TTL_MS here), not from the mock's `isStale`.
         ...noopCache,
         get: async () => null,
-        getWithMeta: async (_k: string, graceMs: number) =>
-          graceMs > 0 ? { value: stalePoints, isStale: true } : null,
+        getWithMeta: async () => ({
+          value: stalePoints,
+          age: PILGRIMAGE_TTL_MS + 1000,
+          isStale: true,
+        }),
       } as unknown as typeof CacheService,
     });
     const out = await svc.getDetailedPoints(42);
@@ -393,7 +399,7 @@ describe('AnitabiService', () => {
     expect(freshResult?.title).toBe('Fresh Anime');
   });
 
-  test('detail: real CacheService — TTL-expired row survives as stale-if-error, and a later healthy call returns fresh data (no memCache poisoning)', async () => {
+  test('detail: real CacheService — TTL-expired row survives the widened grace ttl, prune() does not reap it within grace, and a later healthy call returns fresh data (no memCache poisoning)', async () => {
     const REGRESSION_ID = 990001;
     const key = DETAIL_CACHE_KEY_PREFIX + REGRESSION_ID;
     const stalePoints: AnitabiPoint[] = [
@@ -405,10 +411,34 @@ describe('AnitabiService', () => {
       ],
     };
 
+    // Scaled-down stand-ins for (PILGRIMAGE_TTL_MS, DETAIL_STALE_GRACE_MS) —
+    // small enough to sleep past in a test, same shape: the BASE ttl expires
+    // quickly, and the WIDENED (base + grace) ttl is what actually guards
+    // the row from a boot-time prune().
+    const BASE_TTL_MS = 30;
+    const GRACE_MS = 300;
+
     try {
-      // Seed the REAL cache with a tiny TTL, then let it expire.
-      await CacheService.set(key, stalePoints, 5);
-      await Bun.sleep(10);
+      // Seed the REAL cache with the WIDENED ttl — this is what
+      // AnitabiService.getDetailedPoints now writes on a successful fetch
+      // (`cache.set(key, fresh, this.ttlMs + DETAIL_STALE_GRACE_MS)`), not
+      // the bare base ttl the old version of this test used.
+      await CacheService.set(key, stalePoints, BASE_TTL_MS + GRACE_MS);
+      // Advance real time past the BASE ttl but still well inside the
+      // widened grace window — "app relaunched a few days after the 7-day
+      // base TTL but well within the 90-day grace".
+      await Bun.sleep(BASE_TTL_MS + 20);
+
+      // I3 regression guard: a boot-time prune (CacheManager.pruneAll() →
+      // CacheService.prune(), wired up in app/_layout.tsx) run in this
+      // window must NOT delete the row — it's past the base TTL but still
+      // inside the widened row ttl. Before this fix, the row was written
+      // with the bare base ttl, so this exact prune() call would have
+      // deleted it and defeated the stale-if-error grace below.
+      const prunedCount = await CacheService.prune();
+      expect(prunedCount).toBe(0);
+      const survivesPrune = await CacheService.get<AnitabiPoint[]>(key);
+      expect(survivesPrune).not.toBeNull();
 
       // Mutable fake client so the SAME service instance can "recover"
       // between calls (same rationale as the lite no-poisoning test above).
@@ -419,15 +449,20 @@ describe('AnitabiService', () => {
         getPoints: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
         getPointsDetail: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
       };
+      // ttlMs matches the BASE_TTL_MS used to seed the row above, so the
+      // service's own `meta.age > this.ttlMs` staleness check lines up with
+      // the "past base TTL, within grace" window we just advanced into.
       const svc = AnitabiService.resetForTests({
         client: client as unknown as typeof AnitabiClient,
         db: { getPilgrimage: async () => null, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
         cache: CacheService,
+        ttlMs: BASE_TTL_MS,
       });
 
-      // Network fails entirely — the expired-but-in-grace row must be
-      // served instead of throwing. This is the exact "TTL-expired cache +
-      // network outage" scenario the reviewer's probe showed was dead code.
+      // Network fails entirely — the expired-by-base-TTL-but-in-grace row
+      // must be served instead of throwing. This is the exact "TTL-expired
+      // cache + network outage" scenario the reviewer's probe showed was
+      // dead code.
       const staleResult = await svc.getDetailedPoints(REGRESSION_ID);
       expect(staleResult).toHaveLength(1);
       expect(staleResult[0]?.id).toBe('r1');

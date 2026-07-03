@@ -195,7 +195,7 @@ function SpotSheetImpl({
       : 0;
   const visitSpot = visitedTarget ?? spot;
   const bearing =
-    spot && userLocation && hasValidGeo(spot.geo) ? bearingDegrees(userLocation, spot.geo) : null;
+    spot && userLocation && hasGeo ? bearingDegrees(userLocation, spot.geo) : null;
 
   return (
     <BottomSheet
