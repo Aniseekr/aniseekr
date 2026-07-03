@@ -1169,6 +1169,16 @@
       "untitled": "Untitled",
       "walkHoursLong": "~{hours}h walk",
       "walkHoursShort": "~{hours}h"
+    },
+    "trip": {
+      "nextStop": "Next stop",
+      "away": "{distance} away",
+      "openInMaps": "Open in Google Maps",
+      "openInMapsA11y": "Open this trip in Google Maps",
+      "routeTruncated": "Long route — opened the first leg in Maps.",
+      "allVisited": "All stops visited",
+      "empty": "This trip has no mappable spots yet.",
+      "back": "Back"
     }
   },
   "companion": {

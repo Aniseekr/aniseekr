@@ -5,9 +5,9 @@
 // spot counts and visited∩planned progress. Tapping "Start pilgrimage" opens
 // the full-screen trip map (trip/[animeId]).
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -15,7 +15,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { ThemedButton, ThemedText } from '../../../components/themed';
+import { ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 import {
   loadSpotIntentsSync,
@@ -40,8 +40,24 @@ export default function PilgrimagePlanScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // Seed sync from MMKV so the list is real on frame 1 (Rule 10) — no skeleton.
-  const [intents] = useState<SpotIntentMap>(loadSpotIntentsSync);
-  const [visited] = useState<VisitedMap>(loadVisitedSpotsSync);
+  const [intents, setIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
+  const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
+
+  // The trip map (trip/[animeId].tsx) mutates visited state via check-ins
+  // while this screen stays mounted underneath — silently re-seed from MMKV
+  // on every focus after the first so returning here reflects those check-ins
+  // without a loading flash (skip-first-focus guard, mirrors index.tsx).
+  const focusRefreshSeenRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusRefreshSeenRef.current) {
+        focusRefreshSeenRef.current = true;
+        return;
+      }
+      setIntents(loadSpotIntentsSync());
+      setVisited(loadVisitedSpotsSync());
+    }, [])
+  );
 
   const { groups, uncategorized } = useMemo(() => groupPlannedIntents(intents), [intents]);
 
@@ -198,7 +214,7 @@ function PlannedGroupCard({ group, visited, theme, onStart }: PlannedGroupCardPr
             <SpotImage uri={spot.image} style={styles.thumb} recyclingKey={spot.id} />
             {visited[spot.id] ? (
               <View style={[styles.thumbCheck, { backgroundColor: theme.status.success }]}>
-                <Ionicons name="checkmark" size={10} color="#fff" />
+                <Ionicons name="checkmark" size={10} color={readableTextOn(theme.status.success)} />
               </View>
             ) : null}
           </View>
