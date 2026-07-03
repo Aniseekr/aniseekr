@@ -86,6 +86,11 @@ import {
 import { RoundHeaderButton } from '../../../components/pilgrimage/detail/RoundHeaderButton';
 import { FilterPill } from '../../../components/pilgrimage/detail/FilterPill';
 import { useT } from '../../../libs/i18n';
+import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
+import { buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
+import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
+import { MAP_LOCATE_RADIUS_KM } from '../../../libs/services/pilgrimage/map-nearby';
+import type { NearbySpot } from '../../../libs/services/pilgrimage/nearby-spots';
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
 const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
@@ -520,6 +525,43 @@ export default function PilgrimageMapScreen() {
       photoCount: captureCount,
     };
   }, [filteredEntries, captureCount]);
+
+  // ─── Point-level "nearby spots" strip (spec 2.3) ───────────────────────
+  // Low-frequency: re-queries only when the coarse user location or the
+  // collection membership changes (Rule 9), not on every map pan/tick.
+  const [nearbySpots, setNearbySpots] = useState<readonly NearbySpot[]>([]);
+  useEffect(() => {
+    if (!userLocation) {
+      setNearbySpots([]);
+      return;
+    }
+    let active = true;
+    getSpotsNear(userLocation, MAP_LOCATE_RADIUS_KM, 40)
+      .then((hits) => {
+        if (!active) return;
+        setNearbySpots(
+          buildNearbySpotsFromIndex(
+            hits,
+            (id) => {
+              const e = getIndexedById(id);
+              return e ? { title: e.title, cn: e.cn, color: e.color } : null;
+            },
+            collectionIds
+          )
+        );
+      })
+      .catch(() => {
+        if (active) setNearbySpots([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [userLocation, collectionIds]);
+
+  const handlePickNearbySpot = useCallback((spot: NearbySpot) => {
+    setFocusedAnimeId(spot.animeId);
+    mapRef.current?.recenter(spot.lat, spot.lng, 15, { animate: true });
+  }, []);
 
   // ─── Handlers ──────────────────────────────────────────────────────────
   const handlePickRegion = useCallback((region: AnimeTourism88Region) => {
@@ -981,6 +1023,8 @@ export default function PilgrimageMapScreen() {
               onSheetIndexChange={handleSheetIndexChange}
               onAnimePress={handleSheetAnimePress}
               onSwapFocused={handleSwapFocused}
+              nearbySpots={nearbySpots}
+              onPickNearbySpot={handlePickNearbySpot}
             />
           </>
         )}

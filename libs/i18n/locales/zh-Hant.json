@@ -1109,6 +1109,7 @@
       "emptyCollection": "你的收藏中還沒有聖地巡禮景點。",
       "emptyNearby": "附近還沒有動畫。試著拖曳地圖到其他地區看看。",
       "emptySearch": "沒有符合「{query}」的動畫。",
+      "nearbySpotsTitle": "你附近的聖地",
       "goToCollection": "前往收藏",
       "mapLoadError": "無法載入地圖。",
       "offlineBody": "你目前離線或連線中斷。請檢查網路後重試 — 已瀏覽過的區域仍可離線使用。",

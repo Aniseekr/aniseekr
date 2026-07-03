@@ -35,6 +35,8 @@ import {
 import { StatCell } from './detail/StatCell';
 import { formatDistanceKm } from './detail/_helpers';
 import { SpotImage } from './SpotImage';
+import { NearbySpotRow } from './NearbySpotsSheet';
+import type { NearbySpot } from '../../libs/services/pilgrimage/nearby-spots';
 
 export interface HubAnimeEntry {
   anime: AnitabiBangumi;
@@ -86,6 +88,10 @@ export interface PilgrimageHubSheetProps {
   onSwapFocused: () => void;
   /** Tap the section title's "See all" hint → expand the sheet to full. */
   onExpandRequest?: () => void;
+  /** Point-level nearby spots (spec 2.3). Rendered as a horizontal strip above
+   *  the anime list. Empty/undefined ⇒ no strip. */
+  nearbySpots?: readonly NearbySpot[];
+  onPickNearbySpot?: (spot: NearbySpot) => void;
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
@@ -109,6 +115,8 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     onAnimePress,
     onSwapFocused,
     onExpandRequest,
+    nearbySpots,
+    onPickNearbySpot,
   } = props;
 
   const t = useT();
@@ -221,6 +229,10 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         />
       </View>
 
+      {nearbySpots && nearbySpots.length > 0 ? (
+        <NearbySpotsStrip spots={nearbySpots} theme={theme} onPick={onPickNearbySpot} />
+      ) : null}
+
       <View style={styles.sectionTitleRow}>
         <ThemedText variant="titleMedium" weight="800">
           {sectionTitle}
@@ -316,13 +328,47 @@ function areEqual(prev: PilgrimageHubSheetProps, next: PilgrimageHubSheetProps):
     prev.onSheetIndexChange === next.onSheetIndexChange &&
     prev.onAnimePress === next.onAnimePress &&
     prev.onSwapFocused === next.onSwapFocused &&
-    prev.onExpandRequest === next.onExpandRequest
+    prev.onExpandRequest === next.onExpandRequest &&
+    prev.nearbySpots === next.nearbySpots &&
+    prev.onPickNearbySpot === next.onPickNearbySpot
   );
 }
 
 export const PilgrimageHubSheet = memo(PilgrimageHubSheetImpl, areEqual);
 
 // ─── Subcomponents (file-local; not exported) ────────────────────────────────
+
+// Point-level "nearby spots" section (spec 2.3). Lives inside the sheet's
+// existing ListHeaderComponent instead of a second bottom sheet — stacking
+// another @gorhom/bottom-sheet would fight the hub sheet for the same
+// bottom-edge gesture/snap anchor. Renders a plain `.map` of up to 6 rows
+// (not a nested FlatList/horizontal scroller) so it can't fight the outer
+// BottomSheetFlatList's own scroll gesture.
+function NearbySpotsStrip({
+  spots,
+  theme,
+  onPick,
+}: {
+  spots: readonly NearbySpot[];
+  theme: ThemePalette;
+  onPick?: (spot: NearbySpot) => void;
+}) {
+  const t = useT();
+  return (
+    <View style={{ paddingBottom: 8, gap: 6 }}>
+      <ThemedText
+        variant="captionSmall"
+        weight="800"
+        tone="secondary"
+        style={{ paddingHorizontal: 4 }}>
+        {t('pilgrimage.map.nearbySpotsTitle')}
+      </ThemedText>
+      {spots.slice(0, 6).map((spot) => (
+        <NearbySpotRow key={spot.markerId} spot={spot} theme={theme} onPress={() => onPick?.(spot)} />
+      ))}
+    </View>
+  );
+}
 
 interface FocusedAnimeCardProps {
   entry: HubAnimeEntry;

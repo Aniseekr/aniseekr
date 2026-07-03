@@ -6,13 +6,13 @@
 
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ThemedText } from '../themed';
 import { useT } from '../../libs/i18n';
 import type { NearbySpot } from '../../libs/services/pilgrimage/nearby-spots';
+import { SpotImage } from './SpotImage';
 
 interface NearbySpotsSheetProps {
   spots: readonly NearbySpot[];
@@ -26,7 +26,7 @@ interface NearbySpotsSheetProps {
 const MAX_LIST_HEIGHT = 320;
 const THUMB_SIZE = 56;
 
-function formatKm(km: number): string {
+export function formatKm(km: number): string {
   if (!Number.isFinite(km)) return '';
   if (km < 1) return `${Math.round(km * 1000)} m`;
   if (km < 10) return `${km.toFixed(1)} km`;
@@ -117,7 +117,7 @@ interface NearbySpotRowProps {
   onPress: () => void;
 }
 
-function NearbySpotRow({ spot, theme, onPress }: NearbySpotRowProps) {
+export function NearbySpotRow({ spot, theme, onPress }: NearbySpotRowProps) {
   const styles = useMemo(() => makeRowStyles(theme), [theme]);
   const subtitle = spot.ep > 0 ? `${spot.animeTitle} · EP ${spot.ep}` : spot.animeTitle;
   return (
@@ -126,12 +126,7 @@ function NearbySpotRow({ spot, theme, onPress }: NearbySpotRowProps) {
       accessibilityRole="button"
       accessibilityLabel={spot.name}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}>
-      <Image
-        source={{ uri: spot.image }}
-        style={styles.thumb}
-        contentFit="cover"
-        transition={120}
-      />
+      <SpotImage uri={spot.image} style={styles.thumb} contentFit="cover" recyclingKey={spot.markerId} />
       <View style={styles.body}>
         <ThemedText variant="bodySmall" weight="700" numberOfLines={1}>
           {spot.name}
