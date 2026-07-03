@@ -1319,6 +1319,10 @@
     "exhibits": "Exhibits",
     "failedToLoadStats": "Failed to load stats",
     "favorites": "Favorites",
+    "folderItemCount": {
+      "one": "{count} item",
+      "other": "{count} items"
+    },
     "folderName": "Folder Name",
     "groupAnimeByMoodSeason": "Group anime by mood, season, or anything you like.",
     "hallOfFame": "Hall of Fame",

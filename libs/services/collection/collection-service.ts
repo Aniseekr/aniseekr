@@ -2,6 +2,9 @@ import * as Crypto from 'expo-crypto';
 import { LocalDB } from '../../db';
 import { CollectionFolder } from '../../../types';
 
+// `is_shared` (DB column) / `isShared` & `sharedBy` (type fields) are dormant scaffold:
+// folder sharing has no backend, so these are always false/0 and never surfaced in the UI
+// (see Rule 8). Kept for schema/backup parity — no migration planned.
 const SYSTEM_FOLDERS: Omit<CollectionFolder, 'animeCount' | 'sharedBy' | 'createdAt'>[] = [
   {
     id: 'system_all',

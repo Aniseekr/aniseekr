@@ -692,7 +692,6 @@ export default function CollectionScreen() {
                   name: editingFolder.name,
                   icon: editingFolder.icon,
                   isR18: editingFolder.isR18,
-                  isShared: editingFolder.isShared,
                 }
               : undefined
           }

@@ -31,7 +31,7 @@ interface CreateFolderModalProps {
   onCreated?: () => void;
   onCreate?: (data: NewFolderData) => Promise<void>;
   onUpdate?: (id: string, data: NewFolderData) => Promise<void>;
-  editing?: { id: string; name: string; icon: string; isR18: boolean; isShared: boolean };
+  editing?: { id: string; name: string; icon: string; isR18: boolean };
 }
 
 const ICONS = [
@@ -60,7 +60,6 @@ export function CreateFolderModal({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('folder');
-  const [isShared, setIsShared] = useState(false);
   const [isR18, setIsR18] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -71,12 +70,10 @@ export function CreateFolderModal({
     if (editing) {
       setName(editing.name);
       setIcon(editing.icon || 'folder');
-      setIsShared(!!editing.isShared);
       setIsR18(!!editing.isR18);
     } else {
       setName('');
       setIcon('folder');
-      setIsShared(false);
       setIsR18(false);
     }
   }, [visible, editing]);
@@ -89,7 +86,7 @@ export function CreateFolderModal({
       const data: NewFolderData = {
         name: name.trim(),
         icon,
-        isShared,
+        isShared: false, // dormant: folder sharing has no backend yet.
         isR18,
       };
 
@@ -161,16 +158,6 @@ export function CreateFolderModal({
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-
-              <View style={styles.switchRow}>
-                <Text style={styles.label}>{t('collectionUi.shareWithFriends')}</Text>
-                <Switch
-                  value={isShared}
-                  onValueChange={setIsShared}
-                  trackColor={{ false: theme.background.tertiary, true: theme.status.info }}
-                  thumbColor={theme.text.primary}
-                />
-              </View>
 
               <View style={styles.switchRow}>
                 <Text style={styles.label}>{t('collectionUi.containsR18Content')}</Text>

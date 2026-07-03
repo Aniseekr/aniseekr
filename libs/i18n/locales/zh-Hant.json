@@ -1319,6 +1319,10 @@
     "exhibits": "展品",
     "failedToLoadStats": "統計載入失敗",
     "favorites": "最愛",
+    "folderItemCount": {
+      "one": "{count} 部",
+      "other": "{count} 部"
+    },
     "folderName": "資料夾名稱",
     "groupAnimeByMoodSeason": "依心情、季度或任何方式整理動畫。",
     "hallOfFame": "名人堂",
