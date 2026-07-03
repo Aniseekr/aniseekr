@@ -83,7 +83,9 @@ export function anitabiProxyUri(url: string, base: string = ANITABI_PROXY_BASE):
   try {
     const u = new URL(url);
     if (u.host !== ANITABI_IMAGE_HOST) return null;
-    return `${base}/anitabi/img${u.pathname}${u.search}`;
+    // Tolerate a trailing slash in the pasted origin — a double slash in the
+    // proxy path would silently 404 every image.
+    return `${base.replace(/\/+$/, '')}/anitabi/img${u.pathname}${u.search}`;
   } catch {
     return null;
   }

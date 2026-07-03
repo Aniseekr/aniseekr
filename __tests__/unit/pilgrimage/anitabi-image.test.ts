@@ -136,3 +136,12 @@ describe('anitabiImageSource proxy wiring', () => {
     }
   });
 });
+
+
+describe('anitabiProxyUri trailing-slash tolerance', () => {
+  test('a base pasted with a trailing slash never produces a double slash', () => {
+    expect(
+      anitabiProxyUri('https://image.anitabi.cn/points/1/a.jpg?plan=h160', 'https://p.example.dev/')
+    ).toBe('https://p.example.dev/anitabi/img/points/1/a.jpg?plan=h160');
+  });
+});
