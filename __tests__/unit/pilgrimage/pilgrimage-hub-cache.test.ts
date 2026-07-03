@@ -5,6 +5,7 @@ import {
   getPilgrimageHubSnapshot,
   hydratePilgrimageHubSnapshotFromCache,
   updatePilgrimageHubSnapshot,
+  PERSIST_TTL_MS,
 } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
@@ -135,6 +136,27 @@ test('getPilgrimageHubSnapshot seeds from a warm cache mirror when module snapsh
   const snap = getPilgrimageHubSnapshot();
   expect(snap).not.toBeNull();
   expect(Object.prototype.hasOwnProperty.call(snap ?? {}, 'collectionAnimes')).toBe(true);
+});
+
+test('getPilgrimageHubSnapshot(PERSIST_TTL_MS) accepts a >5min-old persisted snapshot (stale-while-revalidate seed path)', () => {
+  const cache = makeFakeCache();
+  const writtenAt = 0;
+  const sixMinutesLater = 6 * 60 * 1000; // older than the 5-min default, well inside the 24h persist TTL
+  cache.seed({ collectionAnimes: [], userLocation: null, updatedAt: writtenAt });
+  __resetPilgrimageHubCacheForTests({
+    now: () => sixMinutesLater,
+    cache: cache as never,
+    debounceMs: 0,
+  });
+
+  // The tight 5-min default discards it...
+  expect(getPilgrimageHubSnapshot()).toBeNull();
+
+  // ...but a cold module snapshot means the 5-min miss above didn't seed
+  // `snapshot`, so the seed-path call with the persist TTL still finds it.
+  const seeded = getPilgrimageHubSnapshot(PERSIST_TTL_MS);
+  expect(seeded).not.toBeNull();
+  expect(Object.prototype.hasOwnProperty.call(seeded ?? {}, 'collectionAnimes')).toBe(true);
 });
 
 test('hydratePilgrimageHubSnapshotFromCache seeds the module snapshot from SQLite', async () => {

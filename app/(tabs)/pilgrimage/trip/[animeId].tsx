@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
@@ -55,8 +55,24 @@ export default function PilgrimageTripScreen() {
   const { onUserPan } = tracking;
 
   // Seed sync — the trip's spots come entirely from planned-intent meta.
-  const [intents] = useState(loadSpotIntentsSync);
-  const [visited] = useState(loadVisitedSpotsSync);
+  const [intents, setIntents] = useState(loadSpotIntentsSync);
+  const [visited, setVisited] = useState(loadVisitedSpotsSync);
+
+  // The plan page (or the spot detail sheet) can change intents/visited in
+  // MMKV while this trip map stays mounted underneath — re-seed on every
+  // focus after the first so returning here reflects a freshly-checked-in
+  // spot instead of the value frozen at mount (mirrors plan.tsx).
+  const focusRefreshSeenRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!focusRefreshSeenRef.current) {
+        focusRefreshSeenRef.current = true;
+        return;
+      }
+      setIntents(loadSpotIntentsSync());
+      setVisited(loadVisitedSpotsSync());
+    }, [])
+  );
 
   const group = useMemo(
     () => groupPlannedIntents(intents).groups.find((g) => g.animeId === animeId) ?? null,

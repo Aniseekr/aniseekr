@@ -16,6 +16,7 @@ import { loadSpotIntentsSync, type SpotIntentMap } from '../libs/services/pilgri
 import {
   getPilgrimageHubSnapshot,
   updatePilgrimageHubSnapshot,
+  PERSIST_TTL_MS as HUB_SNAPSHOT_PERSIST_TTL_MS,
   type PilgrimageHubSnapshot,
 } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { buildSeededPilgrimageAnimes } from '../libs/services/pilgrimage/pilgrimage-screen-state';
@@ -54,7 +55,11 @@ function buildSeededFeatured(): AnitabiBangumi[] {
 
 export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
   const t = useT();
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
+  // Stale-while-revalidate: accept a persisted snapshot up to the 24h budget
+  // it's written with, not the tighter 5-min default — a cold start after an
+  // overnight-closed app should still paint collection/featured cards from
+  // disk instead of dropping back to the bundled offline seed.
+  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot(HUB_SNAPSHOT_PERSIST_TTL_MS));
   const hasInitialCollection = hasSnapshotSlice(initialSnapshot, 'collectionAnimes');
   const hasInitialFeatured = hasSnapshotSlice(initialSnapshot, 'featuredAnimes');
 
@@ -76,11 +81,14 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
   // gates on `animeCards.length === 0`, so it only shows when we genuinely
   // have nothing to render.
   const [featuredLoading, setFeaturedLoading] = useState(!hasInitialFeatured);
-  // Visited / spot-intents are seeded synchronously from MMKV; the setters
-  // are never called elsewhere in the hub (per-spot toggles flow through
-  // their own writers), so only the seed value is exposed — read-only here.
-  const [visited] = useState<VisitedMap>(() => initialSnapshot?.visited ?? loadVisitedSpotsSync());
-  const [spotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
+  // Visited / spot-intents are seeded synchronously from live MMKV — never
+  // from the snapshot slice, which can be up to 24h stale (persist TTL) and
+  // would freeze the hub's visited/planned markers behind a check-in the
+  // user made on another screen after the snapshot was last written. Per-spot
+  // toggles flow through their own atomic writers; this hook only re-reads
+  // on focus below (mirrors plan.tsx's skip-first-focus re-seed).
+  const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
+  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
   const [userLocation, setUserLocation] = useState<LatLng | null>(
     () => initialSnapshot?.userLocation ?? null
   );
@@ -140,6 +148,13 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
         focusRefreshSeenRef.current = true;
         return;
       }
+      // Screens pushed on top (spot detail check-in, save/plan toggles, the
+      // trip map) can change visited/spot-intents in MMKV while the hub stays
+      // mounted underneath — re-seed on every focus after the first so
+      // returning here shows current state instead of the value frozen at
+      // mount (mirrors plan.tsx).
+      setVisited(loadVisitedSpotsSync());
+      setSpotIntents(loadSpotIntentsSync());
       let active = true;
       refreshCollectionAnimes({
         isActive: () => active,

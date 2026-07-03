@@ -69,6 +69,7 @@ import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pi
 import {
   getPilgrimageHubSnapshot,
   updatePilgrimageHubSnapshot,
+  PERSIST_TTL_MS as HUB_SNAPSHOT_PERSIST_TTL_MS,
 } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { resolvePilgrimageHubInitialView } from '../../../libs/services/pilgrimage/pilgrimage-hub-initial-view';
 import { resolvePilgrimageMapInitialMode } from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
@@ -214,7 +215,14 @@ export default function PilgrimageMapScreen() {
     styleOverride
   );
 
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
+  // Stale-while-revalidate: accept a persisted snapshot up to the same 24h
+  // budget it's written with, not the tighter 5-min default — collection /
+  // last-known-location rarely change hour-to-hour, and a cold start after
+  // an overnight-closed app should still paint from disk instead of falling
+  // back to the bundled offline seed. (The `getFreshUserLocation` 5-min gate
+  // inside pilgrimage-hub-initial-view is a separate, independent check that
+  // protects map CENTERING specifically — untouched here.)
+  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot(HUB_SNAPSHOT_PERSIST_TTL_MS));
   const initialSnapshotHasUserLocation = Object.prototype.hasOwnProperty.call(
     initialSnapshot ?? {},
     'userLocation'

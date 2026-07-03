@@ -3,13 +3,23 @@ import type { LatLng } from './location-service';
 import type { AnitabiBangumi } from './types';
 import type { VisitedMap } from './visited-prefs';
 
+// Default `getPilgrimageHubSnapshot()` budget for callers that genuinely need
+// a FRESH read (none exist today — the hub's own frame-1 seed callers all
+// pass `PERSIST_TTL_MS` below for stale-while-revalidate instead). Kept as
+// the parameter default so a future fresh-only caller doesn't have to know
+// this number.
 const PILGRIMAGE_HUB_SNAPSHOT_TTL_MS = 5 * 60 * 1000;
 
 const PILGRIMAGE_HUB_CACHE_KEY = 'pilgrimage_hub_snapshot_v1';
 // 24h — a stale hub is fine (collection/location rarely change hour-to-hour);
 // it only needs to survive an app restart so the user's own anime + last fix
 // paint immediately instead of falling back to the bundled offline seed.
-const PERSIST_TTL_MS = 24 * 60 * 60 * 1000;
+// Exported so the hub/map/trip seed-path callers can request "accept
+// anything up to what we'd even bother persisting" (stale-while-revalidate)
+// instead of the tighter 5-min default above, which was discarding an
+// overnight-old-but-still-persisted snapshot and forcing every cold start
+// back to the bundled offline seed.
+export const PERSIST_TTL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_PERSIST_DEBOUNCE_MS = 800;
 
 interface HubCacheAdapter {
