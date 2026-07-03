@@ -18,6 +18,7 @@ export const VISITED_SPOTS_STORAGE_KEY = 'aniseekr.pilgrimage.visited.v1';
 export const SPOT_INTENTS_STORAGE_KEY = 'aniseekr.pilgrimage.spot-intents.v1';
 export const SPOT_INTENTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.spot-intents.v2';
 export const CAPTURES_STORAGE_KEY = '@aniseekr/pilgrimage/captures/v1';
+export const CAPTURES_STORAGE_KEY_V2 = '@aniseekr/pilgrimage/captures/v2';
 export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
 
 // --- Tier 2: pref services ---
