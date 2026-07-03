@@ -196,20 +196,27 @@ export function MapLibreEngine({
         {/* initialViewState applies once; later moves go through the handle so
             marker/user re-renders never snap the viewport back (Rule 9). */}
         <Camera ref={cameraRef} initialViewState={{ center: initialCenter, zoom }} />
-        {(routes ?? []).map((r) => (
-          <GeoJSONSource key={`route:${r.id}`} id={`route-src-${r.id}`} data={routeLineFeature(r)}>
-            <Layer
-              id={`route-line-${r.id}`}
-              type="line"
-              paint={{
-                'line-color': r.color ?? DEFAULT_ROUTE_COLOR,
-                'line-width': 3,
-                'line-opacity': 0.8,
-              }}
-              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-            />
-          </GeoJSONSource>
-        ))}
+        {(routes ?? []).map((r) => {
+          // routeLineFeature is the single source of the "≥2 coords" rule
+          // (RFC 7946 §3.1.4) — a degenerate route renders nothing rather
+          // than an invalid LineString that can crash the native layer.
+          const feature = routeLineFeature(r);
+          if (!feature) return null;
+          return (
+            <GeoJSONSource key={`route:${r.id}`} id={`route-src-${r.id}`} data={feature}>
+              <Layer
+                id={`route-line-${r.id}`}
+                type="line"
+                paint={{
+                  'line-color': r.color ?? DEFAULT_ROUTE_COLOR,
+                  'line-width': 3,
+                  'line-opacity': 0.8,
+                }}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              />
+            </GeoJSONSource>
+          );
+        })}
         {items.map((it) => {
           if (it.type === 'cluster') {
             return (

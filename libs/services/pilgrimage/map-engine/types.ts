@@ -71,6 +71,7 @@ export type MapRouteKind = 'gpx' | 'tour';
 
 /** A polyline (GPX track / 導覽 leg). Reserved for spec P5/P6; engines may ignore. */
 export interface MapRoute {
+  /** Unique within a route set — source/layer ids derive from it. */
   id: string;
   coords: readonly LatLng[];
   kind: MapRouteKind;
