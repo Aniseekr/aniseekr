@@ -1064,6 +1064,7 @@
         "visited": "Visited"
       },
       "goBack": "Go back",
+      "nearSpotPrompt": "You're near {name}",
       "openAlbumA11y": "Open pilgrimage album",
       "sceneLocation": "Scene location",
       "sceneOfCount": "{index} of {count} scenes",

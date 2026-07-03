@@ -58,6 +58,7 @@ import {
   type PilgrimageDetailViewPreset,
 } from '../../../libs/services/pilgrimage/pilgrimage-detail-flow';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
 import {
@@ -75,6 +76,7 @@ import {
   LayoutModeButton,
   PilgrimageDetailLoadingShell,
   PilgrimageDetailSheet,
+  ProximityCheckInBanner,
   RoundHeaderButton,
   SeriesDropdownPill,
   SpotClusterPicker,
@@ -101,6 +103,10 @@ const SHEET_PEEK_FRACTION = 0.16;
 // needs a gap tall enough to stack ABOVE that block — the wide 3-segment
 // toggle reaches the FAB's right-edge column on phone widths.
 const LOCATE_FAB_EDGE_GAP = VIEW_MODE_TOGGLE_HEIGHT + 36 + 8 + 6 + 10;
+
+// Foreground proximity check-in radius (spec 3.5) — distinct from the 150m
+// standalone-capture mount radius in nearest-cached-spot.ts (spec 3.2).
+const PROXIMITY_RADIUS_METERS = 100;
 
 // First-non-EMPTY fallback (mirrors `firstNonEmpty` in
 // pilgrimage-localization.ts, which isn't exported): `??` alone treats a
@@ -223,6 +229,32 @@ export default function PilgrimageDetailScreen() {
     distanceForGroup,
     representativeForGroup,
   } = derived;
+
+  // Foreground proximity check-in (spec 3.5): when the live location lands
+  // within 100m of an unvisited spot, offer a one-tap check-in banner. No
+  // background geofence. `userLocation` already updates coarsely (the
+  // tracking hook throttles it — Rule 9), and the ref gate below means this
+  // effect only ever sets state once per spot per session, never on every
+  // GPS tick.
+  const promptedSpotIdsRef = useRef<Set<string>>(new Set());
+  const [proximityTarget, setProximityTarget] = useState<{
+    spot: AnitabiPoint;
+    distanceMeters: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!userLocation) return;
+    const near = nearestUnvisitedWithin(points, visited, userLocation, PROXIMITY_RADIUS_METERS);
+    if (near && !promptedSpotIdsRef.current.has(near.spot.id)) {
+      promptedSpotIdsRef.current.add(near.spot.id);
+      setProximityTarget({ spot: near.spot, distanceMeters: near.distanceMeters });
+    }
+  }, [userLocation, points, visited]);
+  const handleProximityCheckIn = useCallback(() => {
+    if (!proximityTarget) return;
+    toggleVisitedPoint(proximityTarget.spot);
+    setProximityTarget(null);
+  }, [proximityTarget, toggleVisitedPoint]);
+  const handleProximityDismiss = useCallback(() => setProximityTarget(null), []);
 
   const sheet = usePilgrimageSpotSheet({
     groupedSpotByPointId,
@@ -724,6 +756,17 @@ export default function PilgrimageDetailScreen() {
                     </Pressable>
                   ) : null}
                 </View>
+              ) : null}
+
+              {proximityTarget ? (
+                <ProximityCheckInBanner
+                  spotName={getPilgrimageSpotTitles(proximityTarget.spot).primary}
+                  distanceMeters={proximityTarget.distanceMeters}
+                  theme={theme}
+                  t={t}
+                  onCheckIn={handleProximityCheckIn}
+                  onDismiss={handleProximityDismiss}
+                />
               ) : null}
             </View>
 

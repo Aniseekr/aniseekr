@@ -1064,6 +1064,7 @@
         "visited": "已造訪"
       },
       "goBack": "返回",
+      "nearSpotPrompt": "你在 {name} 附近",
       "openAlbumA11y": "開啟巡禮相簿",
       "sceneLocation": "場景位置",
       "sceneOfCount": "第 {index}／{count} 個場景",
