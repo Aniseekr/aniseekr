@@ -7,7 +7,9 @@
 // its distance to the user, and sort nearest-first.
 
 import { groupPointsIntoSpots } from './anitabi-points';
+import { normalizeAnitabiImageUrl } from './anitabi-image';
 import type { LatLng } from './location-service';
+import type { NearbySpotHit } from './spot-index';
 import type { AnitabiBangumi } from './types';
 
 export interface NearbySpot {
@@ -92,4 +94,46 @@ export function buildNearbySpots(
   }
   out.sort((a, b) => a.distanceKm - b.distanceKm);
   return out.slice(0, Math.max(0, maxSpots));
+}
+
+/**
+ * Build {@link NearbySpot}s directly from point-level index hits (the SQLite
+ * anitabi_spots query result), used by the global "sacred sites near me"
+ * surfaces. Collection anime float to the top, then by distance. The stored
+ * `image` is a host-relative anitabi path, so it is normalized to an absolute
+ * CDN thumbnail here — SpotImage only renders absolute http(s) URLs.
+ *
+ * `ep`/`sceneCount` are not carried by the flat index (it's one row per point,
+ * not grouped), so they are 0/1 — honest placeholders that render as
+ * "no episode badge / single scene", never fabricated counts (Rule 8).
+ */
+export function buildNearbySpotsFromIndex(
+  hits: readonly NearbySpotHit[],
+  lookup: (bangumiId: number) => { title: string; cn: string; color: string } | null,
+  collectionIds: ReadonlySet<number>
+): NearbySpot[] {
+  const out: NearbySpot[] = hits.map((h) => {
+    const anime = lookup(h.bangumiId);
+    return {
+      id: h.pointId,
+      markerId: `${h.bangumiId}:${h.pointId}`,
+      name: h.cn || h.name,
+      lat: h.lat,
+      lng: h.lng,
+      image: normalizeAnitabiImageUrl(h.image, h.bangumiId),
+      ep: 0,
+      sceneCount: 1,
+      distanceKm: h.distanceKm,
+      animeId: h.bangumiId,
+      animeTitle: anime?.cn || anime?.title || '',
+      ringColor: anime?.color || '',
+    };
+  });
+  out.sort((a, b) => {
+    const aCol = collectionIds.has(a.animeId) ? 0 : 1;
+    const bCol = collectionIds.has(b.animeId) ? 0 : 1;
+    if (aCol !== bCol) return aCol - bCol;
+    return a.distanceKm - b.distanceKm;
+  });
+  return out;
 }
