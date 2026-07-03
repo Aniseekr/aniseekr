@@ -21,7 +21,7 @@
 // Route params:
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, Linking, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,12 +72,9 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { resolvePilgrimageHubInitialView } from '../../../libs/services/pilgrimage/pilgrimage-hub-initial-view';
 import { resolvePilgrimageMapInitialMode } from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
-import {
-  loadPilgrimageMapViewModeSync,
-  setPilgrimageMapViewMode,
-  type PilgrimageMapViewMode,
-} from '../../../libs/services/pilgrimage/map-view-mode-prefs';
+import { type PilgrimageMapViewMode } from '../../../libs/services/pilgrimage/map-view-mode-prefs';
 import { usePilgrimageHubData } from '../../../hooks/usePilgrimageHubData';
+import { usePilgrimageMapScreenState, type HubFilter } from '../../../hooks/usePilgrimageMapScreenState';
 import {
   PilgrimageHubSheet,
   type HubAnimeEntry,
@@ -179,8 +176,6 @@ function isValidGeo(geo: readonly [number, number] | null | undefined): boolean 
 const SHEET_PEEK_FRACTION = 0.16;
 const VIEW_MODE_TOGGLE_HEIGHT = 52;
 
-type HubFilter = 'all' | 'collection' | 'official88';
-
 export default function PilgrimageMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -223,9 +218,6 @@ export default function PilgrimageMapScreen() {
   const initialSnapshotHasUserLocation = Object.prototype.hasOwnProperty.call(
     initialSnapshot ?? {},
     'userLocation'
-  );
-  const [mapViewMode, setMapViewModeState] = useState<PilgrimageMapViewMode>(
-    loadPilgrimageMapViewModeSync
   );
   const autoPermissionPromptedRef = useRef(false);
 
@@ -289,6 +281,41 @@ export default function PilgrimageMapScreen() {
     })
   );
 
+  const initialHubFilter = useMemo<HubFilter>(() => {
+    const raw = getStringParam(params, 'filter');
+    return raw === 'collection' || raw === 'official88' ? raw : 'all';
+  }, [params]);
+  // ─── View state (parent-owned) — lifted into usePilgrimageMapScreenState so
+  // this screen stays a view orchestrator (CLAUDE.md Rule 9). Derived memos
+  // below (hubEntries, filteredEntries, markers, stats, focusedAnime) and the
+  // imperative camera effects consume these outputs.
+  const {
+    searchQuery,
+    deferredSearchQuery,
+    hubFilter,
+    listLayout,
+    selectedRegions,
+    flyTick,
+    focusedAnimeId,
+    mapViewMode,
+    setFocusedAnimeId,
+    persistMapViewMode,
+    handleSearchChange,
+    handleSearchClear,
+    handlePickFilter,
+    handlePickLayout,
+    handlePickRegion,
+    handleResetToJapan,
+  } = usePilgrimageMapScreenState({
+    initialFilter: initialHubFilter,
+    initialFocusBangumiId: focusBangumiIdParam,
+  });
+
+  // Base-map load failure (offline + no cached tiles). `mapReloadKey` remounts
+  // the GL surface so "Retry" actually re-attempts the style fetch.
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
+  const [mapReloadKey, setMapReloadKey] = useState(0);
+
   // ─── Data cluster (collection + featured + lazy index, MMKV-seeded) ──────
   // Lifted into usePilgrimageHubData so this screen stays a view orchestrator
   // (CLAUDE.md Rule 9). The hook owns the snapshot/index seed, the loading
@@ -310,31 +337,6 @@ export default function PilgrimageMapScreen() {
     },
     [handleBoundsChange]
   );
-
-  // ─── View state (parent-owned) ──────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  // Seed the filter from the route so the hub's "My Collection → See all" lands
-  // directly on the collection-filtered list (params: { filter: 'collection' }).
-  const [hubFilter, setHubFilter] = useState<HubFilter>(() => {
-    const raw = getStringParam(params, 'filter');
-    return raw === 'collection' || raw === 'official88' ? raw : 'all';
-  });
-  const [listLayout, setListLayout] = useState<'grid' | 'rows'>('rows');
-  // Multi-select region filter for the Tourism-88 view. Empty set = whole
-  // Japan; otherwise the 88 markers + camera narrow to the union of picks (US-04).
-  const [selectedRegions, setSelectedRegions] = useState<ReadonlySet<AnimeTourism88Region>>(
-    () => new Set()
-  );
-  const [flyTick, setFlyTick] = useState(0);
-  // Base-map load failure (offline + no cached tiles). `mapReloadKey` remounts
-  // the GL surface so "Retry" actually re-attempts the style fetch.
-  const [mapLoadFailed, setMapLoadFailed] = useState(false);
-  const [mapReloadKey, setMapReloadKey] = useState(0);
-
-  // Track which anime should be in the swap-able focused card. We persist the
-  // bangumi id (not the index) so the swap behaviour survives list re-sorts.
-  const [focusedAnimeId, setFocusedAnimeId] = useState<number | null>(focusBangumiIdParam);
 
   // ─── Derived: 88-selection lookup ──────────────────────────────────────
   const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
@@ -567,23 +569,6 @@ export default function PilgrimageMapScreen() {
   }, []);
 
   // ─── Handlers ──────────────────────────────────────────────────────────
-  const handlePickRegion = useCallback((region: AnimeTourism88Region) => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setSelectedRegions((cur) => {
-      const next = new Set(cur);
-      if (next.has(region)) next.delete(region);
-      else next.add(region);
-      return next;
-    });
-    setFlyTick((t) => t + 1);
-  }, []);
-
-  const handleResetToJapan = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setSelectedRegions((cur) => (cur.size === 0 ? cur : new Set()));
-    setFlyTick((t) => t + 1);
-  }, []);
-
   // Small clusters delegate to the surface (big ones zoom-to-fit inside the
   // engine). Fit their bbox; a same-building cluster (degenerate bbox) jumps
   // past CLUSTER_DISABLE_AT instead so the markers actually separate.
@@ -699,27 +684,6 @@ export default function PilgrimageMapScreen() {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/pilgrimage/capture');
   }, [router]);
-
-  const handleSearchChange = useCallback((text: string) => setSearchQuery(text), []);
-  const handleSearchClear = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setSearchQuery('');
-  }, []);
-
-  const handlePickFilter = useCallback((next: HubFilter) => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setHubFilter(next);
-  }, []);
-
-  const handlePickLayout = useCallback((next: 'grid' | 'rows') => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setListLayout(next);
-  }, []);
-
-  const persistMapViewMode = useCallback((next: PilgrimageMapViewMode) => {
-    setMapViewModeState(next);
-    setPilgrimageMapViewMode(next).catch(() => undefined);
-  }, []);
 
   const flyToUserLocation = useCallback(
     (loc: LatLng | null = userLocation) => {
