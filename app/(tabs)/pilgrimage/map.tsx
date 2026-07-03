@@ -719,12 +719,6 @@ export default function PilgrimageMapScreen() {
     setPilgrimageMapViewMode(next).catch(() => undefined);
   }, []);
 
-  const flyToFocusedAnime = useCallback(() => {
-    const anime = focusedAnime?.anime;
-    if (!anime || !isValidGeo(anime.geo)) return;
-    mapRef.current?.focus?.({ lat: anime.geo[0], lng: anime.geo[1], zoom: 11 });
-  }, [focusedAnime]);
-
   const flyToUserLocation = useCallback(
     (loc: LatLng | null = userLocation) => {
       if (!loc) return false;
@@ -740,16 +734,8 @@ export default function PilgrimageMapScreen() {
     persistMapViewMode(next);
     if (next === 'myLocation') {
       if (!flyToUserLocation()) requestPermissionSheet();
-      return;
     }
-    flyToFocusedAnime();
-  }, [
-    flyToFocusedAnime,
-    flyToUserLocation,
-    mapViewMode,
-    persistMapViewMode,
-    requestPermissionSheet,
-  ]);
+  }, [flyToUserLocation, mapViewMode, persistMapViewMode, requestPermissionSheet]);
 
   const handleAllowLocationFromSheet = useCallback(() => {
     dismissPermissionSheet();
@@ -760,7 +746,6 @@ export default function PilgrimageMapScreen() {
   // ─── Bottom-sheet anchor plumbing ──────────────────────────────────────
   const screenHeight = Dimensions.get('window').height;
   const sheetPosition = useSharedValue(screenHeight);
-  const [sheetIndex, setSheetIndex] = useState<number>(1);
 
   const sheetPeekOffset = useMemo(() => {
     return Math.max(
@@ -769,7 +754,6 @@ export default function PilgrimageMapScreen() {
     );
   }, [insets.bottom, screenHeight]);
 
-  const handleSheetIndexChange = useCallback((idx: number) => setSheetIndex(idx), []);
   const initialSheetIndex = initialMode === 'list' ? 2 : 1;
 
   // Anchor floating bottom chrome to the sheet's top edge so it slides with
@@ -784,10 +768,6 @@ export default function PilgrimageMapScreen() {
       opacity: hidden ? 0 : 1,
     };
   });
-
-  // Cycle the focused id when a row tap should preview-without-drilling.
-  // (Currently unused — kept for an eventual "long-press = preview" path.)
-  void sheetIndex;
 
   // ─── Drive the inline map camera (Rule 9 — imperative, off React state) ──
   // Fly to the focused anime when it changes (swap / sheet-row preview) so the
@@ -1045,7 +1025,6 @@ export default function PilgrimageMapScreen() {
               onGoToCollection={handleGoToCollection}
               initialIndex={initialSheetIndex}
               animatedPosition={sheetPosition}
-              onSheetIndexChange={handleSheetIndexChange}
               onAnimePress={handleSheetAnimePress}
               onSwapFocused={handleSwapFocused}
               nearbySpots={nearbySpots}
