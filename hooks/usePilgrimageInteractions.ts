@@ -9,6 +9,7 @@
 
 import { useCallback, useState } from 'react';
 import * as Haptics from 'expo-haptics';
+import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import {
   loadCapturesSync,
   type PilgrimageCapture,
@@ -23,7 +24,8 @@ import {
 } from '../libs/services/pilgrimage/spot-intents';
 import {
   loadVisitedSpotsSync,
-  saveVisitedSpots,
+  checkInSpot,
+  checkOutSpot,
   type VisitedMap,
 } from '../libs/services/pilgrimage/visited-prefs';
 import type { AnitabiPoint, AnitabiSpot } from '../libs/services/pilgrimage/types';
@@ -74,30 +76,44 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
     setCaptures(loadCapturesSync());
   }, []);
 
+  // Persistence routes through the atomic per-spot `checkInSpot`/`checkOutSpot`
+  // APIs (read-modify-write of the v2 timestamp map for ONE spot id), never
+  // the bulk `saveVisitedSpots(map)` round-trip. A stale local snapshot handed
+  // to `saveVisitedSpots` from this hook could clobber a timestamp another
+  // surface just wrote for a different spot; the atomic APIs re-read fresh
+  // storage on every call, so they can't stomp anything. `setVisited` keeps
+  // the local boolean map that the UI renders from in sync in the same tick.
   const toggleVisitedPoint = useCallback((spot: AnitabiPoint) => {
-    Haptics.selectionAsync().catch(() => undefined);
     setVisited((prev) => {
       const next: VisitedMap = { ...prev };
       if (next[spot.id]) {
         delete next[spot.id];
+        hapticsBridge.selection();
+        void checkOutSpot(spot.id);
       } else {
         next[spot.id] = true;
+        hapticsBridge.success(); // check-in finalizes the visit — Rule 7
+        void checkInSpot(spot.id);
       }
-      void saveVisitedSpots(next);
       return next;
     });
   }, []);
 
   const toggleGroupedVisited = useCallback((group: AnitabiSpot) => {
-    Haptics.selectionAsync().catch(() => undefined);
     setVisited((prev) => {
       const anyVisited = group.scenes.some((p) => prev[p.id] === true);
       const next: VisitedMap = { ...prev };
       for (const p of group.scenes) {
-        if (anyVisited) delete next[p.id];
-        else next[p.id] = true;
+        if (anyVisited) {
+          delete next[p.id];
+          void checkOutSpot(p.id);
+        } else {
+          next[p.id] = true;
+          void checkInSpot(p.id);
+        }
       }
-      void saveVisitedSpots(next);
+      if (anyVisited) hapticsBridge.selection();
+      else hapticsBridge.success(); // group checked in — Rule 7
       return next;
     });
   }, []);

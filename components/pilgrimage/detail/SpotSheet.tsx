@@ -155,8 +155,11 @@ function SpotSheetImpl({
     if (spot) onOpenMaps(spot);
   }, [onOpenMaps, spot]);
   const handleStartCamera = useCallback(() => {
-    if (spot) onStartCamera(spot);
-  }, [onStartCamera, spot]);
+    if (spot) {
+      if (!visited) onToggleVisited(visitedTarget ?? spot); // check-in on the way to the camera
+      onStartCamera(spot);
+    }
+  }, [onStartCamera, onToggleVisited, spot, visited, visitedTarget]);
   const handleFrameShot = useCallback(() => {
     if (spot) onFrameShot(spot);
   }, [onFrameShot, spot]);
@@ -348,7 +351,7 @@ function SpotSheetImpl({
               pressed && { opacity: 0.84 },
             ]}>
             <Ionicons
-              name={visited ? 'checkmark-circle' : 'film-outline'}
+              name={visited ? 'checkmark-circle' : 'flag-outline'}
               size={16}
               color={visited ? theme.status.success : theme.text.secondary}
             />
@@ -356,7 +359,7 @@ function SpotSheetImpl({
               variant="bodySmall"
               weight="700"
               style={{ color: visited ? theme.status.success : theme.text.secondary }}>
-              {visited ? 'Visited' : sceneCount > 1 ? `${sceneCount} scenes` : 'Scene'}
+              {visited ? t('pilgrimageUi.checkedIn') : t('pilgrimageUi.checkIn')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -421,7 +424,7 @@ function SpotSheetImpl({
           ]}>
           <Ionicons name="camera" size={18} color={themeColorFg} />
           <ThemedText variant="bodyMedium" weight="800" style={{ color: themeColorFg }}>
-            {t('pilgrimageUi.startArCamera2')}
+            {visited ? t('pilgrimageUi.startArCamera2') : t('pilgrimageUi.checkInPhoto')}
           </ThemedText>
         </Pressable>
 

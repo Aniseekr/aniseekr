@@ -97,3 +97,43 @@ export async function saveVisitedSpots(map: VisitedMap): Promise<void> {
     Logger.warn('[VisitedPrefs] save failed', err);
   }
 }
+
+/**
+ * Check in a single spot: read-modify-write just that spot's entry in the v2
+ * timestamp map. This is the atomic counterpart to `saveVisitedSpots` — a
+ * caller that only knows about ONE spot (the SpotSheet check-in button) must
+ * never round-trip a full boolean snapshot, because a snapshot taken before
+ * another surface (e.g. the grouped map toggle) wrote its own change would
+ * stomp that other spot's timestamp when saved back.
+ *
+ * If the spot is already checked in, this is a no-op — the ORIGINAL stamp is
+ * preserved, never overwritten with `at`. The first visit time is the honest
+ * one (Rule 8); re-stamping on a repeat tap would fabricate a "revisit" we
+ * don't actually track.
+ */
+export async function checkInSpot(spotId: string, at: number = Date.now()): Promise<void> {
+  try {
+    const prev = loadVisitedAtSync();
+    if (spotId in prev) return; // already checked in — keep the original stamp
+    const next: VisitedAtMap = { ...prev, [spotId]: at };
+    kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify(next));
+  } catch (err) {
+    Logger.warn('[VisitedPrefs] checkIn failed', err);
+  }
+}
+
+/**
+ * Check out a single spot: read-modify-write to drop just that spot's entry
+ * from the v2 timestamp map, leaving every other spot's timestamp untouched.
+ */
+export async function checkOutSpot(spotId: string): Promise<void> {
+  try {
+    const prev = loadVisitedAtSync();
+    if (!(spotId in prev)) return; // already checked out
+    const next: VisitedAtMap = { ...prev };
+    delete next[spotId];
+    kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify(next));
+  } catch (err) {
+    Logger.warn('[VisitedPrefs] checkOut failed', err);
+  }
+}
