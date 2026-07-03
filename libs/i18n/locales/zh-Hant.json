@@ -616,6 +616,13 @@
       "emptyTitle": "這個資料夾還沒有內容",
       "folder": "資料夾",
       "loading": "載入中…",
+      "searchPlaceholder": "搜尋此資料夾",
+      "sort": {
+        "added": "加入順序",
+        "updated": "最近更新",
+        "title": "標題",
+        "rating": "評分"
+      },
       "swipeToLike": "滑動表達喜好",
       "swipeToTriage": "滑動分類 · {count}",
       "unknownTitle": "未知標題"

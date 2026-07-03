@@ -272,7 +272,9 @@ class CollectionService {
         return rows.map((r) => r.id);
       }
       if (folderId === 'system_all') {
-        const rows = await db.getAllAsync<{ anime_id: string }>('SELECT anime_id FROM user_anime');
+        const rows = await db.getAllAsync<{ anime_id: string }>(
+          'SELECT anime_id FROM user_anime ORDER BY COALESCE(updated_at, 0) DESC'
+        );
         return rows.map((r) => r.anime_id);
       }
 
@@ -287,7 +289,7 @@ class CollectionService {
       const status = statusMap[type] || type;
 
       const rows = await db.getAllAsync<{ anime_id: string }>(
-        'SELECT anime_id FROM user_anime WHERE status = ?',
+        'SELECT anime_id FROM user_anime WHERE status = ? ORDER BY COALESCE(updated_at, 0) DESC',
         status
       );
       return rows.map((r) => r.anime_id);

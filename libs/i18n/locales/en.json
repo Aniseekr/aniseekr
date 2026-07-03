@@ -616,6 +616,13 @@
       "emptyTitle": "No items in this folder",
       "folder": "Folder",
       "loading": "Loading…",
+      "searchPlaceholder": "Search this folder",
+      "sort": {
+        "added": "Added",
+        "updated": "Updated",
+        "title": "Title",
+        "rating": "Rating"
+      },
       "swipeToLike": "Swipe to like",
       "swipeToTriage": "Swipe to triage · {count}",
       "unknownTitle": "Unknown Title"

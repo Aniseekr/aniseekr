@@ -42,6 +42,7 @@ export interface FolderSwipeItem {
   score: number;
   notes: string;
   rewatch_count: number;
+  updated_at: number | null;
 }
 
 interface FolderSwipeDeckProps {

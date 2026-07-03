@@ -22,6 +22,7 @@ export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
 // --- Tier 2: pref services ---
 export const USER_PREFS_STORAGE_KEY = 'aniseekr.user.prefs.v1';
 export const COLLECTION_SORT_MODE_STORAGE_KEY = 'aniseekr.collection.sortMode.v1';
+export const COLLECTION_FOLDER_SORT_MODE_STORAGE_KEY = 'aniseekr.collection.folderSortMode.v1';
 export const BANGUMI_PREFS_STORAGE_KEY = 'aniseekr.bangumi.prefs.v1';
 export const BROWSE_SOURCE_STORAGE_KEY = 'aniseekr.browseSource';
 export const ALLOW_R18_STORAGE_KEY = 'aniseekr.allowR18Content';
