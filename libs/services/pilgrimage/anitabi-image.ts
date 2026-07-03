@@ -64,7 +64,34 @@ export const ANITABI_IMAGE_HEADERS: Record<string, string> = {
     'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
 };
 
+/**
+ * When non-empty, all anitabi CDN images are routed through our own Cloudflare
+ * Workers proxy (`aniseeker_backend` GET /anitabi/img/*) instead of hitting
+ * image.anitabi.cn directly. Empty string = direct connection with the P0
+ * Referer+UA headers. Flip this on only after the Workers egress WAF probe
+ * passes (see plan 2026-07-03-pilgrimage-p0b Task 4).
+ */
+export const ANITABI_PROXY_BASE = '';
+
+/**
+ * Rewrite an anitabi CDN url to the proxy path. Returns null when there is no
+ * proxy base, the host is not the anitabi image CDN, or the input is not a URL —
+ * callers then fall back to the direct source.
+ */
+export function anitabiProxyUri(url: string, base: string = ANITABI_PROXY_BASE): string | null {
+  if (!base) return null;
+  try {
+    const u = new URL(url);
+    if (u.host !== ANITABI_IMAGE_HOST) return null;
+    return `${base}/anitabi/img${u.pathname}${u.search}`;
+  } catch {
+    return null;
+  }
+}
+
 export function anitabiImageSource(url: string): { uri: string; headers?: Record<string, string> } {
+  const proxied = anitabiProxyUri(url);
+  if (proxied) return { uri: proxied };
   try {
     if (new URL(url).host === ANITABI_IMAGE_HOST) {
       return { uri: url, headers: { ...ANITABI_IMAGE_HEADERS } };
