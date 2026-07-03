@@ -975,6 +975,16 @@
     }
   },
   "pilgrimage": {
+    "regions": {
+      "chubu": "Chubu",
+      "chugoku_shikoku": "Chugoku / Shikoku",
+      "hokkaido_tohoku": "Hokkaido / Tohoku",
+      "kanto": "Kanto",
+      "kinki": "Kinki",
+      "kyushu_okinawa": "Kyushu / Okinawa",
+      "other": "Other",
+      "tokyo": "Tokyo"
+    },
     "share": {
       "appMissingBody": "{app} isn't installed. Your photo is saved to Photos and the caption is copied.",
       "appMissingTitle": "{app} not installed",
@@ -1039,6 +1049,7 @@
       "entryA11y": "Free capture camera"
     },
     "detail": {
+      "areaLabel": "Area {index} ({count})",
       "bearing": {
         "n": "N",
         "ne": "NE",
@@ -1189,6 +1200,11 @@
       "untitled": "Untitled",
       "walkHoursLong": "~{hours}h walk",
       "walkHoursShort": "~{hours}h"
+    },
+    "tourism88": {
+      "entryA11y": "{title}, Anime Tourism 88 entry",
+      "moreCities": "+{count} cities",
+      "official": "★ Official"
     },
     "trip": {
       "nextStop": "Next stop",
@@ -1493,6 +1509,8 @@
     "allowCameraSoYouCan": "Allow camera so you can frame this scene against its anime reference.",
     "altitude": "Altitude",
     "animateShutter": "Animate shutter",
+    "anime": "Anime",
+    "animePilgrimageA11y": "{title} pilgrimage",
     "animeTourism88": "Anime Tourism 88",
     "apply": "Apply",
     "applyCrop": "Apply crop",
@@ -1599,9 +1617,11 @@
     "more": "More",
     "moreShareOptions": "More share options",
     "navy": "Navy",
+    "nearbyAnime": "Nearby anime",
     "noPilgrimageSpotsYet": "No pilgrimage spots yet.",
     "noShotsYet": "No shots yet",
     "noSpotsYet": "No spots yet",
+    "openAnimeA11y": "Open {title}",
     "openAnitabiHomepage": "Open Anitabi homepage",
     "openArCamera": "Open AR camera",
     "openArCamera2": "Open AR Camera",
@@ -1613,6 +1633,7 @@
     "overlayModeA11y": "Overlay mode {mode}",
     "overlayOff": "Overlay Off",
     "overlayOpacity": "Overlay opacity",
+    "photos": "Photos",
     "previousOverlayMode": "Previous overlay mode",
     "nextOverlayMode": "Next overlay mode",
     "peach": "Peach",
@@ -1645,6 +1666,7 @@
     "sceneGps": "Scene GPS",
     "sceneSpots": "Scene spots",
     "scenes": "Scenes",
+    "scenesCount": "{count} scenes",
     "selfTimer": "Self-timer",
     "shareToInstagram": "Share to Instagram",
     "shareToSocial": "Share to social",
@@ -1658,6 +1680,7 @@
     "silentShutter": "Silent shutter",
     "sketch": "Sketch",
     "sky": "Sky",
+    "spotsCount": "{count} spots",
     "spotsNearYou": "Spots near you",
     "startArCamera": "Start AR camera",
     "startArCamera2": "Start AR Camera",
@@ -1676,6 +1699,7 @@
     "tilt": "Tilt",
     "tiltOffset": "Tilt offset",
     "tipsToImprove": "Tips to improve",
+    "unknownTitle": "Unknown title",
     "viewFullMapOnAnitabi": "View full map on Anitabi",
     "viewOnAnitabi": "View on Anitabi",
     "visited": "Visited",

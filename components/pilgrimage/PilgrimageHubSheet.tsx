@@ -176,7 +176,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
   );
   const focusedSubtitle = focusedTitles ? formatPilgrimageSubtitle(focusedTitles) : undefined;
 
-  const sectionTitle = nearbyAnimes.length === 1 ? 'Nearby anime' : 'Nearby animes';
+  const sectionTitle = t('pilgrimageUi.nearbyAnime');
 
   const headerNode = (
     <View style={styles.headerWrap}>
@@ -199,7 +199,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         <StatCell
           icon="movie"
           value={String(stats.nearbyCount)}
-          label={stats.nearbyCount === 1 ? 'Anime' : 'Animes'}
+          label={t('pilgrimageUi.anime')}
           color={themeColor}
           theme={theme}
         />
@@ -223,7 +223,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         <StatCell
           icon="photo"
           value={String(stats.photoCount)}
-          label={stats.photoCount === 1 ? 'Photo' : 'Photos'}
+          label={t('pilgrimageUi.photos')}
           color={stats.photoCount > 0 ? themeColor : theme.text.tertiary}
           theme={theme}
         />
@@ -403,7 +403,9 @@ function FocusedAnimeCard({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`Open ${titles?.primary ?? 'anime'}`}
+        accessibilityLabel={t('pilgrimageUi.openAnimeA11y', {
+          title: titles?.primary ?? t('pilgrimageUi.unknownTitle'),
+        })}
         style={({ pressed }) => [styles.focusedBody, pressed && { opacity: 0.92 }]}>
         <View
           style={[
@@ -417,14 +419,14 @@ function FocusedAnimeCard({
               weight="800"
               numberOfLines={1}
               style={{ color: ON_DARK }}>
-              {anime.pointsLength ?? 0} scenes
+              {t('pilgrimageUi.scenesCount', { count: anime.pointsLength ?? 0 })}
             </ThemedText>
           </View>
         </View>
         <View style={styles.titleColumn}>
           <View style={styles.focusedTitleRow}>
             <ThemedText variant="titleLarge" weight="800" numberOfLines={1} style={{ flex: 1 }}>
-              {titles?.primary ?? 'Unknown Title'}
+              {titles?.primary ?? t('pilgrimageUi.unknownTitle')}
             </ThemedText>
             {entry.fromCollection ? (
               <View
@@ -530,6 +532,7 @@ const HubAnimeRow = memo(function HubAnimeRow({
   styles,
   onPress,
 }: HubAnimeRowProps) {
+  const t = useT();
   const anime = entry.anime;
   const titles = getPilgrimageAnimeTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
@@ -538,7 +541,7 @@ const HubAnimeRow = memo(function HubAnimeRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${titles.primary} pilgrimage`}
+      accessibilityLabel={t('pilgrimageUi.animePilgrimageA11y', { title: titles.primary })}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.88 }]}>
       <View
         style={[
@@ -639,6 +642,7 @@ const HubAnimeCard = memo(function HubAnimeCard({
   styles,
   onPress,
 }: HubAnimeCardProps) {
+  const t = useT();
   const anime = entry.anime;
   const titles = getPilgrimageAnimeTitles(anime);
   const distanceText = entry.distanceKm !== undefined ? formatDistanceKm(entry.distanceKm) : null;
@@ -646,7 +650,7 @@ const HubAnimeCard = memo(function HubAnimeCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${titles.primary} pilgrimage`}
+      accessibilityLabel={t('pilgrimageUi.animePilgrimageA11y', { title: titles.primary })}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}>
       <View
         style={[
@@ -659,7 +663,7 @@ const HubAnimeCard = memo(function HubAnimeCard({
             variant="captionSmall"
             weight="800"
             style={{ color: themeColorFg, fontSize: 10 }}>
-            {anime.pointsLength ?? 0} spots
+            {t('pilgrimageUi.spotsCount', { count: anime.pointsLength ?? 0 })}
           </ThemedText>
         </View>
         {entry.fromCollection ? (

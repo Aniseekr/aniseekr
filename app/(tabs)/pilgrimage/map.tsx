@@ -86,7 +86,7 @@ import {
 import { RoundHeaderButton } from '../../../components/pilgrimage/detail/RoundHeaderButton';
 import { FilterPill } from '../../../components/pilgrimage/detail/FilterPill';
 import { buildMapsURL } from '../../../components/pilgrimage/detail';
-import { useT } from '../../../libs/i18n';
+import { useT, type TranslationKey } from '../../../libs/i18n';
 import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
 import { buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
 import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
@@ -94,14 +94,16 @@ import { MAP_LOCATE_RADIUS_KM } from '../../../libs/services/pilgrimage/map-near
 import type { NearbySpot } from '../../../libs/services/pilgrimage/nearby-spots';
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
-const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
-  hokkaido_tohoku: 'Hokkaido / Tohoku',
-  kanto: 'Kanto',
-  tokyo: 'Tokyo',
-  chubu: 'Chubu',
-  kinki: 'Kinki',
-  chugoku_shikoku: 'Chugoku / Shikoku',
-  kyushu_okinawa: 'Kyushu / Okinawa',
+// Values point into the shared `pilgrimage.regions.*` catalog so this rail,
+// Tourism88Rail, and album.tsx all localize to the same wording.
+const REGION_LABEL_KEY: Record<AnimeTourism88Region, TranslationKey> = {
+  hokkaido_tohoku: 'pilgrimage.regions.hokkaido_tohoku',
+  kanto: 'pilgrimage.regions.kanto',
+  tokyo: 'pilgrimage.regions.tokyo',
+  chubu: 'pilgrimage.regions.chubu',
+  kinki: 'pilgrimage.regions.kinki',
+  chugoku_shikoku: 'pilgrimage.regions.chugoku_shikoku',
+  kyushu_okinawa: 'pilgrimage.regions.kyushu_okinawa',
 };
 
 // Geographic bounding boxes for each region. Hand-tuned to feel like a
@@ -1219,7 +1221,7 @@ function RegionChipStrip({
               variant="captionSmall"
               weight="600"
               style={[chipStyles.chipLabel, active ? { color: accentFg } : null]}>
-              {REGION_88_LABELS[r]}
+              {t(REGION_LABEL_KEY[r])}
             </ThemedText>
           </Pressable>
         );

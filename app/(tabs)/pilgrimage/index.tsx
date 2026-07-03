@@ -946,6 +946,7 @@ function PopularCard({
   distanceKm?: number;
   onPress: () => void;
 }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const total = anime.pointsLength ?? 0;
   const visitedCount = (anime.litePoints ?? []).filter((p) => visited[p.id]).length;
@@ -961,7 +962,7 @@ function PopularCard({
         <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
         <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
           <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg, fontSize: 10 }}>
-            {total} spots
+            {t('pilgrimageUi.spotsCount', { count: total })}
           </ThemedText>
         </View>
         {fromCollection ? (

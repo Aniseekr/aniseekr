@@ -975,6 +975,16 @@
     }
   },
   "pilgrimage": {
+    "regions": {
+      "chubu": "中部",
+      "chugoku_shikoku": "中國・四國",
+      "hokkaido_tohoku": "北海道・東北",
+      "kanto": "關東",
+      "kinki": "近畿",
+      "kyushu_okinawa": "九州・沖繩",
+      "other": "其他",
+      "tokyo": "東京"
+    },
     "share": {
       "appMissingBody": "未安裝 {app}。照片已儲存到「照片」，標題文字已複製。",
       "appMissingTitle": "未安裝 {app}",
@@ -1039,6 +1049,7 @@
       "entryA11y": "自由拍攝相機"
     },
     "detail": {
+      "areaLabel": "區域 {index}（{count} 點）",
       "bearing": {
         "n": "北",
         "ne": "東北",
@@ -1189,6 +1200,11 @@
       "untitled": "未命名",
       "walkHoursLong": "約 {hours} 小時步行",
       "walkHoursShort": "約 {hours} 小時"
+    },
+    "tourism88": {
+      "entryA11y": "{title}，動畫聖地巡禮 88 選",
+      "moreCities": "+{count} 個城市",
+      "official": "★ 官方"
     },
     "trip": {
       "nextStop": "下一站",
@@ -1493,6 +1509,8 @@
     "allowCameraSoYouCan": "允許相機權限,即可對照動畫場景取景。",
     "altitude": "海拔",
     "animateShutter": "快門動畫",
+    "anime": "動畫",
+    "animePilgrimageA11y": "{title} 聖地巡禮",
     "animeTourism88": "動畫旅遊 88 選",
     "apply": "套用",
     "applyCrop": "套用裁切",
@@ -1599,9 +1617,11 @@
     "more": "更多",
     "moreShareOptions": "更多分享選項",
     "navy": "海軍藍",
+    "nearbyAnime": "附近動畫",
     "noPilgrimageSpotsYet": "還沒有巡禮點。",
     "noShotsYet": "還沒有照片",
     "noSpotsYet": "還沒有巡禮點",
+    "openAnimeA11y": "開啟 {title}",
     "openAnitabiHomepage": "開啟 Anitabi 首頁",
     "openArCamera": "開啟 AR 相機",
     "openArCamera2": "開啟 AR 相機",
@@ -1613,6 +1633,7 @@
     "overlayModeA11y": "疊層模式 {mode}",
     "overlayOff": "疊層關閉",
     "overlayOpacity": "疊層不透明度",
+    "photos": "照片",
     "previousOverlayMode": "上一個疊層模式",
     "nextOverlayMode": "下一個疊層模式",
     "peach": "蜜桃色",
@@ -1645,6 +1666,7 @@
     "sceneGps": "場景 GPS",
     "sceneSpots": "場景巡禮點",
     "scenes": "場景",
+    "scenesCount": "{count} 個場景",
     "selfTimer": "自拍計時",
     "shareToInstagram": "分享到 Instagram",
     "shareToSocial": "分享到社群",
@@ -1658,6 +1680,7 @@
     "silentShutter": "靜音快門",
     "sketch": "素描",
     "sky": "天空藍",
+    "spotsCount": "{count} 個景點",
     "spotsNearYou": "附近的巡禮點",
     "startArCamera": "啟動 AR 相機",
     "startArCamera2": "啟動 AR 相機",
@@ -1676,6 +1699,7 @@
     "tilt": "俯仰",
     "tiltOffset": "俯仰偏差",
     "tipsToImprove": "改善建議",
+    "unknownTitle": "未知標題",
     "viewFullMapOnAnitabi": "在 Anitabi 查看完整地圖",
     "viewOnAnitabi": "在 Anitabi 查看",
     "visited": "已造訪",

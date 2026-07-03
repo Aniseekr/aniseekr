@@ -45,7 +45,7 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import { useT } from '../../../libs/i18n';
+import { useT, type TranslationKey } from '../../../libs/i18n';
 import {
   getCharacterGroups,
   subscribeCharacters,
@@ -75,15 +75,17 @@ interface FolderGroup {
 type RegionFilter = AnimeTourism88Region | 'all' | 'other';
 
 // Localized region labels. Long names render at small font sizes — keep the
-// kanji compact so they fit a single-line chip on 375pt-wide phones.
-const REGION_LABELS: Record<AnimeTourism88Region, string> = {
-  hokkaido_tohoku: '北海道・東北',
-  kanto: '関東',
-  tokyo: '東京',
-  chubu: '中部',
-  kinki: '近畿',
-  chugoku_shikoku: '中国・四国',
-  kyushu_okinawa: '九州・沖縄',
+// translated names compact so they fit a single-line chip on 375pt-wide
+// phones. Values point into the shared `pilgrimage.regions.*` catalog so
+// this rail, Tourism88Rail, and map.tsx all localize to the same wording.
+const REGION_LABEL_KEY: Record<AnimeTourism88Region, TranslationKey> = {
+  hokkaido_tohoku: 'pilgrimage.regions.hokkaido_tohoku',
+  kanto: 'pilgrimage.regions.kanto',
+  tokyo: 'pilgrimage.regions.tokyo',
+  chubu: 'pilgrimage.regions.chubu',
+  kinki: 'pilgrimage.regions.kinki',
+  chugoku_shikoku: 'pilgrimage.regions.chugoku_shikoku',
+  kyushu_okinawa: 'pilgrimage.regions.kyushu_okinawa',
 };
 
 const REGION_ORDER: AnimeTourism88Region[] = [
@@ -626,7 +628,7 @@ export default function PilgrimageAlbumScreen() {
                 return (
                   <Chip
                     key={region}
-                    label={REGION_LABELS[region]}
+                    label={t(REGION_LABEL_KEY[region])}
                     count={count}
                     active={regionFilter === region}
                     onPress={() => {
@@ -641,7 +643,7 @@ export default function PilgrimageAlbumScreen() {
               })}
               {availableRegions.hasOther ? (
                 <Chip
-                  label="その他"
+                  label={t('pilgrimage.regions.other')}
                   count={folders.filter((f) => f.region === null).length}
                   active={regionFilter === 'other'}
                   onPress={() => {
@@ -666,7 +668,7 @@ export default function PilgrimageAlbumScreen() {
                     </ThemedText>
                     {selectedFolder.region ? (
                       <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 2 }}>
-                        {REGION_LABELS[selectedFolder.region]} ·{' '}
+                        {t(REGION_LABEL_KEY[selectedFolder.region])} ·{' '}
                         {t('pilgrimage.album.capturesShort', {
                           count: selectedFolder.entries.length,
                         })}
@@ -952,7 +954,7 @@ function FolderCard({
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const title = folderTitle(folder.anime, t);
-  const regionLabel = folder.region ? REGION_LABELS[folder.region] : null;
+  const regionLabel = folder.region ? t(REGION_LABEL_KEY[folder.region]) : null;
   const spotPart =
     folder.totalSpots > 0
       ? t('pilgrimage.album.folderSpotsRatio', {
