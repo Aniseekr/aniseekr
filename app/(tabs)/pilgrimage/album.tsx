@@ -22,7 +22,9 @@ import { ThemedText, readableTextOn } from '../../../components/themed';
 import { Shadow, Spacing } from '../../../constants/DesignSystem';
 import {
   clearCapture,
-  loadCapturesSync,
+  clearFreeCapture,
+  loadCapturesV2Sync,
+  type CapturesIndexV2,
   type PilgrimageCapture,
 } from '../../../libs/services/pilgrimage/captures';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
@@ -30,6 +32,7 @@ import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/c
 import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
 import {
   buildPilgrimageAlbumEntries,
+  FREE_FOLDER_ANIME_ID,
   type PilgrimageAlbumEntry,
 } from '../../../libs/services/pilgrimage/album-captures';
 import {
@@ -106,6 +109,15 @@ function formatRelative(timestamp: number, now: number, t: ReturnType<typeof use
   return new Date(timestamp).toLocaleDateString();
 }
 
+// The free-capture folder (`FREE_FOLDER_ANIME_ID`) has no real anime title —
+// its `anime.title`/`anime.cn` are intentionally empty (see album-captures.ts).
+// Route every folder/anime title read through here so the free folder always
+// gets its i18n label instead of blank chrome.
+function folderTitle(anime: AnitabiBangumi, t: ReturnType<typeof useT>): string {
+  if (anime.id === FREE_FOLDER_ANIME_ID) return t('pilgrimage.album.freeCapturesFolder');
+  return getPilgrimageAnimeTitles(anime).primary;
+}
+
 export default function PilgrimageAlbumScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -123,7 +135,9 @@ export default function PilgrimageAlbumScreen() {
 
   // Seed sync from MMKV so the album thumbnail grid renders the user's
   // captures on frame 1 instead of momentarily showing the empty state.
-  const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>(loadCapturesSync);
+  // v2: every spot holds an array of captures (multi-capture) plus a
+  // standalone `free` bucket for captures taken without a spot.
+  const [capturesV2, setCapturesV2] = useState<CapturesIndexV2>(loadCapturesV2Sync);
   const [animes, setAnimes] = useState<AnitabiBangumi[]>([]);
   const [regionFilter, setRegionFilter] = useState<RegionFilter>('all');
   const [selectedAnimeId, setSelectedAnimeId] = useState<string | null>(animeIdParam ?? null);
@@ -169,11 +183,14 @@ export default function PilgrimageAlbumScreen() {
   // to render even before the related anime appears in the preloaded index;
   // legacy captures still get matched through known Anitabi lite points.
   const entries = useMemo<AlbumEntry[]>(() => {
+    const spotCaptures: PilgrimageCapture[] = [];
+    for (const arr of Object.values(capturesV2.spots)) spotCaptures.push(...arr);
     return buildPilgrimageAlbumEntries({
-      captures: Object.values(captures),
+      captures: spotCaptures,
+      free: capturesV2.free,
       animes,
     });
-  }, [captures, animes]);
+  }, [capturesV2, animes]);
 
   // Group entries by anime to form folders.
   const folders = useMemo<FolderGroup[]>(() => {
@@ -253,6 +270,8 @@ export default function PilgrimageAlbumScreen() {
 
   const handleEntryPress = useCallback(
     (entry: AlbumEntry) => {
+      // Free captures have no reference scene to compare against.
+      if (entry.isFree) return;
       hapticsBridge.selection();
       const animeTitles = getPilgrimageAnimeTitles(entry.anime);
       const spotTitles = getPilgrimageSpotTitles(entry.spot);
@@ -309,23 +328,32 @@ export default function PilgrimageAlbumScreen() {
       const spotTitles = getPilgrimageSpotTitles(entry.spot);
       Alert.alert(
         t('pilgrimage.album.deleteTitle'),
-        t('pilgrimage.album.deleteBody', { title: spotTitles.primary }),
+        t('pilgrimage.album.deleteBody', {
+          title: entry.isFree ? t('pilgrimage.album.freeCapturesFolder') : spotTitles.primary,
+        }),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
             text: t('pilgrimage.album.deleteConfirm'),
             style: 'destructive',
             onPress: () => {
-              const { spotId } = entry.capture;
-              // Optimistically drop it from the rendered set; clearCapture
-              // persists the removal to MMKV.
-              setCaptures((prev) => {
-                if (!(spotId in prev)) return prev;
-                const next = { ...prev };
-                delete next[spotId];
-                return next;
+              const { spotId, uri } = entry.capture;
+              // Optimistically drop this one capture from the rendered v2
+              // snapshot; clearCapture/clearFreeCapture persists to MMKV.
+              setCapturesV2((prev) => {
+                if (entry.isFree) {
+                  return { spots: prev.spots, free: prev.free.filter((c) => c.uri !== uri) };
+                }
+                const arr = prev.spots[spotId];
+                if (!arr) return prev;
+                const filtered = arr.filter((c) => c.uri !== uri);
+                const spots = { ...prev.spots };
+                if (filtered.length > 0) spots[spotId] = filtered;
+                else delete spots[spotId];
+                return { spots, free: prev.free };
               });
-              clearCapture(spotId).catch((err) => {
+              const p = entry.isFree ? clearFreeCapture(uri) : clearCapture(spotId, uri);
+              p.catch((err) => {
                 console.warn('[PilgrimageAlbum] delete failed:', err);
               });
             },
@@ -400,7 +428,7 @@ export default function PilgrimageAlbumScreen() {
 
   const headerTitle = isDetail
     ? selectedFolder
-      ? getPilgrimageAnimeTitles(selectedFolder.anime).primary
+      ? folderTitle(selectedFolder.anime, t)
       : t('pilgrimage.album.albumFallback')
     : t('pilgrimage.album.title');
 
@@ -634,7 +662,7 @@ export default function PilgrimageAlbumScreen() {
                 <View style={styles.detailHeader}>
                   <View style={{ flex: 1 }}>
                     <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
-                      {getPilgrimageAnimeTitles(selectedFolder.anime).primary}
+                      {folderTitle(selectedFolder.anime, t)}
                     </ThemedText>
                     {selectedFolder.region ? (
                       <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 2 }}>
@@ -667,11 +695,11 @@ export default function PilgrimageAlbumScreen() {
                   <View style={styles.col}>
                     {detailColumns.left.map((entry, i) => (
                       <CompareCard
-                        key={entry.capture.spotId}
+                        key={`${entry.capture.spotId}:${entry.capture.capturedAt}`}
                         entry={entry}
                         theme={theme}
                         heightVariant={i % 3}
-                        onPress={() => handleEntryPress(entry)}
+                        onPress={entry.isFree ? undefined : () => handleEntryPress(entry)}
                         onDelete={() => handleDeleteEntry(entry)}
                       />
                     ))}
@@ -679,11 +707,11 @@ export default function PilgrimageAlbumScreen() {
                   <View style={styles.col}>
                     {detailColumns.right.map((entry, i) => (
                       <CompareCard
-                        key={entry.capture.spotId}
+                        key={`${entry.capture.spotId}:${entry.capture.capturedAt}`}
                         entry={entry}
                         theme={theme}
                         heightVariant={(i + 1) % 3}
-                        onPress={() => handleEntryPress(entry)}
+                        onPress={entry.isFree ? undefined : () => handleEntryPress(entry)}
                         onDelete={() => handleDeleteEntry(entry)}
                       />
                     ))}
@@ -923,7 +951,7 @@ function FolderCard({
 }) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const titles = getPilgrimageAnimeTitles(folder.anime);
+  const title = folderTitle(folder.anime, t);
   const regionLabel = folder.region ? REGION_LABELS[folder.region] : null;
   const spotPart =
     folder.totalSpots > 0
@@ -938,7 +966,7 @@ function FolderCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={t('pilgrimage.album.openFolderA11y', { title: titles.primary })}
+      accessibilityLabel={t('pilgrimage.album.openFolderA11y', { title })}
       style={({ pressed }) => [
         styles.folderCard,
         {
@@ -986,7 +1014,7 @@ function FolderCard({
       </View>
       <View style={styles.folderBody}>
         <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
-          {titles.primary}
+          {title}
         </ThemedText>
         <View style={styles.folderMetaRow}>
           <ThemedText
@@ -1018,7 +1046,7 @@ function CompareCard({
   entry: AlbumEntry;
   theme: ThemePalette;
   heightVariant: number;
-  onPress: () => void;
+  onPress?: () => void;
   onDelete?: () => void;
 }) {
   const t = useT();
@@ -1029,13 +1057,17 @@ function CompareCard({
   const realH = [120, 138, 108][heightVariant] ?? 120;
   const spotTitles = getPilgrimageSpotTitles(entry.spot);
   const animeTitles = getPilgrimageAnimeTitles(entry.anime);
+  // Free captures have no reference spot/anime/episode — spotTitles/animeTitles
+  // fall back to placeholder-looking strings ("EP 0", "Unknown Title") that
+  // would misrepresent real data (Rule 8). Use the honest folder label instead.
+  const cardTitle = entry.isFree ? t('pilgrimage.album.freeCapturesFolder') : spotTitles.primary;
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onDelete}
       delayLongPress={350}
       accessibilityRole="button"
-      accessibilityLabel={t('pilgrimage.album.compareA11y', { title: spotTitles.primary })}
+      accessibilityLabel={t('pilgrimage.album.compareA11y', { title: cardTitle })}
       accessibilityHint={onDelete ? t('pilgrimage.album.deleteHint') : undefined}
       style={({ pressed }) => [
         styles.compareCard,
@@ -1046,15 +1078,19 @@ function CompareCard({
         },
       ]}>
       <View style={styles.compareImgsWrap}>
-        <View style={[styles.compareHalf, { height: animeH }]}>
-          <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
-          <View style={styles.cornerTag}>
-            <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
-              {t('pilgrimage.album.tagScene')}
-            </ThemedText>
-          </View>
-        </View>
-        <View style={styles.divider} />
+        {entry.spot.image ? (
+          <>
+            <View style={[styles.compareHalf, { height: animeH }]}>
+              <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
+              <View style={styles.cornerTag}>
+                <ThemedText weight="700" style={{ color: '#FFFFFF', fontSize: 9 }}>
+                  {t('pilgrimage.album.tagScene')}
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.divider} />
+          </>
+        ) : null}
         <View style={[styles.compareHalf, { height: realH }]}>
           <SpotImage uri={entry.capture.uri} style={styles.compareImgFill} contentFit="cover" />
           <View style={[styles.cornerTag, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
@@ -1076,7 +1112,7 @@ function CompareCard({
       </View>
       <View style={styles.compareFoot}>
         <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
-          {spotTitles.primary}
+          {cardTitle}
         </ThemedText>
         {entry.capture.note ? (
           <ThemedText
@@ -1087,21 +1123,23 @@ function CompareCard({
             {entry.capture.note}
           </ThemedText>
         ) : null}
-        <View style={styles.compareMetaRow}>
-          <ThemedText
-            variant="captionSmall"
-            tone="tertiary"
-            numberOfLines={1}
-            style={{ fontSize: 9, flex: 1 }}>
-            {animeTitles.primary}
-          </ThemedText>
-          <ThemedText
-            variant="captionSmall"
-            weight="600"
-            style={{ color: theme.accent, fontSize: 9 }}>
-            {t('pilgrimage.album.epLabel', { ep: entry.spot.ep })}
-          </ThemedText>
-        </View>
+        {entry.isFree ? null : (
+          <View style={styles.compareMetaRow}>
+            <ThemedText
+              variant="captionSmall"
+              tone="tertiary"
+              numberOfLines={1}
+              style={{ fontSize: 9, flex: 1 }}>
+              {animeTitles.primary}
+            </ThemedText>
+            <ThemedText
+              variant="captionSmall"
+              weight="600"
+              style={{ color: theme.accent, fontSize: 9 }}>
+              {t('pilgrimage.album.epLabel', { ep: entry.spot.ep })}
+            </ThemedText>
+          </View>
+        )}
         {entry.capture.userLocation ? (
           <View style={styles.compareMetaRow}>
             <Ionicons name="location-outline" size={10} color={theme.text.tertiary} />

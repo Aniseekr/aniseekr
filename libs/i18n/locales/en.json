@@ -1003,6 +1003,7 @@
       "foldersByAnime": "Folders by anime",
       "folderSpotsCount": "{count} spots",
       "folderSpotsRatio": "{visited}/{total} spots",
+      "freeCapturesFolder": "Free captures",
       "hoursAgo": "{count}h ago",
       "justNow": "Just now",
       "loadingFolder": "Loading folder…",

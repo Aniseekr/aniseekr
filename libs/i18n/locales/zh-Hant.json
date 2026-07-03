@@ -1003,6 +1003,7 @@
       "foldersByAnime": "依動畫分類",
       "folderSpotsCount": "{count} 個地點",
       "folderSpotsRatio": "{visited}/{total} 個地點",
+      "freeCapturesFolder": "自由拍攝",
       "hoursAgo": "{count} 小時前",
       "justNow": "剛剛",
       "loadingFolder": "載入資料夾中…",
