@@ -22,7 +22,7 @@
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Dimensions, Linking, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -1054,8 +1054,17 @@ export default function PilgrimageMapScreen() {
 
             {/* Long-press quick actions — anime-centroid honest actions only
               (navigate / open detail). See Rule 8 note above handlers. */}
-            {quickActionMarker ? (
-              <Pressable style={styles.quickActionBackdrop} onPress={closeQuickActions}>
+            <Modal
+              transparent
+              visible={quickActionMarker != null}
+              onRequestClose={closeQuickActions}
+              statusBarTranslucent
+              animationType="fade">
+              <Pressable
+                style={styles.quickActionBackdrop}
+                onPress={closeQuickActions}
+                accessibilityLabel={t('commonUi.dismiss')}
+                accessibilityRole="button">
                 <Pressable
                   style={[
                     styles.quickActionSheet,
@@ -1063,7 +1072,7 @@ export default function PilgrimageMapScreen() {
                   ]}
                   onPress={() => undefined}>
                   <ThemedText variant="titleSmall" weight="800" numberOfLines={1}>
-                    {quickActionMarker.title}
+                    {quickActionMarker?.title}
                   </ThemedText>
                   <Pressable
                     onPress={handleQuickNavigate}
@@ -1074,7 +1083,7 @@ export default function PilgrimageMapScreen() {
                       {t('pilgrimage.map.quickAction.navigate')}
                     </ThemedText>
                   </Pressable>
-                  {quickActionMarker.bangumiId != null ? (
+                  {quickActionMarker?.bangumiId != null ? (
                     <Pressable
                       onPress={handleQuickOpen}
                       accessibilityRole="button"
@@ -1087,7 +1096,7 @@ export default function PilgrimageMapScreen() {
                   ) : null}
                 </Pressable>
               </Pressable>
-            ) : null}
+            </Modal>
           </>
         )}
 
