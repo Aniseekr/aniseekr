@@ -75,7 +75,10 @@ class CollectionService {
   async createCustomFolder(
     name: string,
     icon: string,
-    isShared: boolean,
+    // Dormant: folder sharing has no backend yet (Rule 8). Callers may omit
+    // this now that `NewFolderData.isShared` is optional; default it here so
+    // creates still write an explicit 0 for the NOT NULL `is_shared` column.
+    isShared: boolean = false,
     isR18: boolean
   ): Promise<CollectionFolder> {
     const db = await LocalDB.getDatabase();

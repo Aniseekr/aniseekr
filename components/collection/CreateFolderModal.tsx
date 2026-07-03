@@ -21,7 +21,11 @@ import type { IoniconsName } from '../../libs/utils/icon-types';
 export interface NewFolderData {
   name: string;
   icon: string;
-  isShared: boolean;
+  // Omitted (not `false`): folder sharing has no backend yet (Rule 8, dormant
+  // scaffold). Leaving this `undefined` lets `collectionService.updateFolder`
+  // skip the `is_shared` column entirely instead of force-writing 0 over
+  // values imported from CloudKit/legacy backups.
+  isShared?: boolean;
   isR18: boolean;
 }
 
@@ -86,7 +90,6 @@ export function CreateFolderModal({
       const data: NewFolderData = {
         name: name.trim(),
         icon,
-        isShared: false, // dormant: folder sharing has no backend yet.
         isR18,
       };
 

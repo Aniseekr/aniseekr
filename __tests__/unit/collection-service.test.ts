@@ -19,6 +19,19 @@ function stubDb() {
   return { sqls };
 }
 
+/** Stub LocalDB.getDatabase; capture every SQL + args passed to runAsync. */
+function stubRunDb() {
+  const calls: { sql: string; args: unknown[] }[] = [];
+  const db = {
+    runAsync: async (sql: string, ...args: unknown[]) => {
+      calls.push({ sql, args });
+      return {} as never;
+    },
+  };
+  spyOn(LocalDB, 'getDatabase').mockResolvedValue(db as never);
+  return { calls };
+}
+
 describe('collectionService.getFolderItems ordering', () => {
   it('orders a system status folder by updated_at DESC', async () => {
     const { sqls } = stubDb();
@@ -50,5 +63,32 @@ describe('collectionService.getFolders system_all label', () => {
     const folders = await collectionService.getFolders();
     const all = folders.find((f) => f.id === 'system_all');
     expect(all?.folderType).toBe('all');
+  });
+});
+
+describe('collectionService.updateFolder / createCustomFolder — is_shared', () => {
+  it('updateFolder without isShared never touches is_shared (no clobbering dormant column)', async () => {
+    const { calls } = stubRunDb();
+    await collectionService.updateFolder('some-folder-id', { name: 'x' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sql).not.toContain('is_shared');
+    expect(calls[0].sql).toContain('name = ?');
+  });
+
+  it('updateFolder still writes is_shared when explicitly provided', async () => {
+    const { calls } = stubRunDb();
+    await collectionService.updateFolder('some-folder-id', { isShared: true });
+    expect(calls[0].sql).toContain('is_shared = ?');
+  });
+
+  it('createCustomFolder without isShared still writes is_shared 0 (service default)', async () => {
+    const { calls } = stubRunDb();
+    // Mirrors the CreateFolderModal call site, which now passes `data.isShared`
+    // as `undefined` (field omitted) — the service default must still apply.
+    await collectionService.createCustomFolder('My Folder', 'folder', undefined, false);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sql).toContain('is_shared');
+    // is_shared is the 5th bound value: id, name, icon, type, is_shared, is_r18, created_at
+    expect(calls[0].args[4]).toBe(0);
   });
 });
