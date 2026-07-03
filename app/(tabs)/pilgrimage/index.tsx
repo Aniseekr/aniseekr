@@ -489,6 +489,11 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/album');
   }, [router]);
 
+  const handleOpenCamera = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/pilgrimage/capture');
+  }, [router]);
+
   const handleOpenCharacters = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/companion/library');
@@ -597,6 +602,14 @@ export default function PilgrimageHubScreen() {
               accessibilityLabel={t('tabs.pilgrimageScreen.myAlbumA11y')}
               style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
               <Ionicons name="albums-outline" size={18} color={theme.text.primary} />
+            </Pressable>
+            <Pressable
+              onPress={handleOpenCamera}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('pilgrimage.capture.entryA11y')}
+              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="camera-outline" size={18} color={theme.text.primary} />
             </Pressable>
             <Pressable
               onPress={handleSearch}

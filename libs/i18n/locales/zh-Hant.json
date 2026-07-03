@@ -1034,7 +1034,8 @@
       "mountTitle": "靠近 {name}",
       "mountBody": "距離 {distance} 公尺 · 要把這張照片掛到此場景嗎？",
       "mountConfirm": "掛到此場景",
-      "mountDismiss": "留在自由拍攝"
+      "mountDismiss": "留在自由拍攝",
+      "entryA11y": "自由拍攝相機"
     },
     "detail": {
       "bearing": {

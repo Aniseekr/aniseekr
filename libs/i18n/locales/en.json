@@ -1034,7 +1034,8 @@
       "mountTitle": "Near {name}",
       "mountBody": "{distance}m away · attach this photo to the scene?",
       "mountConfirm": "Attach to scene",
-      "mountDismiss": "Keep as free capture"
+      "mountDismiss": "Keep as free capture",
+      "entryA11y": "Free capture camera"
     },
     "detail": {
       "bearing": {

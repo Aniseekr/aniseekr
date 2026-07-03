@@ -627,6 +627,11 @@ export default function PilgrimageMapScreen() {
     router.push('/pilgrimage/album');
   }, [router]);
 
+  const handleOpenCamera = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/pilgrimage/capture');
+  }, [router]);
+
   const handleSearchChange = useCallback((text: string) => setSearchQuery(text), []);
   const handleSearchClear = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -832,6 +837,13 @@ export default function PilgrimageMapScreen() {
                     icon="albums-outline"
                     onPress={handleOpenAlbum}
                     accessibilityLabel={t('pilgrimage.map.openAlbumA11y')}
+                    tint={themeColor}
+                    theme={theme}
+                  />
+                  <RoundHeaderButton
+                    icon="camera-outline"
+                    onPress={handleOpenCamera}
+                    accessibilityLabel={t('pilgrimage.capture.entryA11y')}
                     tint={themeColor}
                     theme={theme}
                   />
