@@ -30,6 +30,7 @@ import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
+import { hydrateSpotIndex } from '../libs/services/pilgrimage/spot-index-data-service';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
 import { resolveOnboardingGate } from '../libs/navigation/root-layout-navigation';
@@ -102,6 +103,7 @@ export default function RootLayout() {
         })
         .catch((e) => console.warn('[updateMappings]', e));
       void hydrateAllPilgrimageData().catch((e) => console.warn('[hydratePilgrimage]', e));
+      void hydrateSpotIndex().catch((e) => console.warn('[hydrateSpotIndex]', e));
       void CacheManager.getInstance()
         .pruneAll()
         .then(({ totalRemoved }) => {
