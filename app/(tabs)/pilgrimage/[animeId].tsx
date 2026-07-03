@@ -102,6 +102,18 @@ const SHEET_PEEK_FRACTION = 0.16;
 // toggle reaches the FAB's right-edge column on phone widths.
 const LOCATE_FAB_EDGE_GAP = VIEW_MODE_TOGGLE_HEIGHT + 36 + 8 + 6 + 10;
 
+// First-non-EMPTY fallback (mirrors `firstNonEmpty` in
+// pilgrimage-localization.ts, which isn't exported): `??` alone treats a
+// present-but-blank `anime.title` as the final value instead of falling
+// through to `anime.cn`, which would snapshot an empty intent-meta name.
+function firstNonEmptyTitle(...values: (string | null | undefined)[]): string {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
+
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
   const bangumiId = getNumberParam(params, 'animeId');
@@ -297,7 +309,7 @@ export default function PilgrimageDetailScreen() {
     (spot: AnitabiPoint) =>
       toggleSpotIntent(spot, 'saved', groupedSpotByPointId, {
         animeId: anime?.id ?? bangumiId ?? 0,
-        name: anime?.title ?? anime?.cn ?? '',
+        name: firstNonEmptyTitle(anime?.title, anime?.cn),
         cn: anime?.cn || undefined,
       }),
     [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
@@ -306,7 +318,7 @@ export default function PilgrimageDetailScreen() {
     (spot: AnitabiPoint) =>
       toggleSpotIntent(spot, 'planned', groupedSpotByPointId, {
         animeId: anime?.id ?? bangumiId ?? 0,
-        name: anime?.title ?? anime?.cn ?? '',
+        name: firstNonEmptyTitle(anime?.title, anime?.cn),
         cn: anime?.cn || undefined,
       }),
     [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]

@@ -16,6 +16,8 @@ import {
   SPOT_INTENTS_STORAGE_KEY_V2,
 } from '../storage/keys';
 import { Logger } from '../../utils/logger';
+import type { AnitabiPoint } from './types';
+import type { PilgrimageSeriesPoint } from './pilgrimage-series';
 
 export type SpotIntentKind = 'saved' | 'planned';
 
@@ -104,6 +106,63 @@ export function toggleSpotIntent(
 ): SpotIntentMap {
   const isSet = map[spotId]?.[intent] === true;
   return applySpotIntent(map, spotId, intent, isSet ? 'remove' : 'add', meta);
+}
+
+/** Screen-level anime metadata, used only when a point carries no source of its own. */
+export interface SpotIntentMetaFallback {
+  animeId: number;
+  name: string;
+  cn?: string;
+}
+
+/**
+ * Build the meta snapshot for ONE point at toggle time.
+ *
+ * In the "All" series view, `pilgrimage-series.ts` merges points from every
+ * season into one list, and each merged point carries its OWN
+ * `sourceBangumiId`/`sourceAnimeTitle` (see `PilgrimageSeriesPoint`). A point
+ * pulled in from S2 must snapshot S2's anime — stamping every point with the
+ * screen-level anime would mislabel S2 scenes as S1 (or vice versa) the
+ * moment the user saves/plans from the merged view (Rule 8).
+ *
+ * `geo`/`image` always come from the point itself (real per-point data).
+ * `animeId`/`name` prefer the point's own source annotation and fall back to
+ * the screen-level `fallback` when the point carries none (single-season
+ * view, where every point already belongs to the anime being shown).
+ * `cn` is only ever taken from `fallback`, and only when `fallback` actually
+ * describes this point's anime (no source override) — `PilgrimageSeriesPoint`
+ * doesn't carry a Chinese title per source anime, so fabricating one from an
+ * unrelated fallback would misattribute it (Rule 8: omit rather than guess).
+ */
+export function buildSpotIntentMeta(
+  point: AnitabiPoint,
+  fallback: SpotIntentMetaFallback
+): SpotIntentMeta {
+  const sourceBangumiId = getPointSourceBangumiId(point);
+  const sourceAnimeTitle = getPointSourceAnimeTitle(point);
+  const hasSource = sourceBangumiId !== null && sourceAnimeTitle !== null;
+  const meta: SpotIntentMeta = {
+    animeId: hasSource ? sourceBangumiId : fallback.animeId,
+    name: hasSource ? sourceAnimeTitle : fallback.name,
+    geo: point.geo,
+    image: point.image,
+  };
+  if (!hasSource && fallback.cn) meta.cn = fallback.cn;
+  return meta;
+}
+
+// Typed field access for the optional series-merge annotation. Mirrors
+// `getPointSourceBangumiId`/`getPointSourceLabel` in
+// `components/pilgrimage/detail/_helpers.ts` — duplicated here (rather than
+// imported) because a service must not import from `components/`.
+function getPointSourceBangumiId(point: AnitabiPoint): number | null {
+  const source = (point as Partial<PilgrimageSeriesPoint>).sourceBangumiId;
+  return typeof source === 'number' && Number.isFinite(source) && source > 0 ? source : null;
+}
+
+function getPointSourceAnimeTitle(point: AnitabiPoint): string | null {
+  const title = (point as Partial<PilgrimageSeriesPoint>).sourceAnimeTitle;
+  return typeof title === 'string' && title.length > 0 ? title : null;
 }
 
 function sanitizeMeta(value: unknown): SpotIntentMeta | undefined {

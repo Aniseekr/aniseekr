@@ -15,11 +15,11 @@ import {
 } from '../libs/services/pilgrimage/captures';
 import {
   applySpotIntent,
+  buildSpotIntentMeta,
   loadSpotIntentsSync,
   saveSpotIntents,
   type SpotIntentKind,
   type SpotIntentMap,
-  type SpotIntentMeta,
 } from '../libs/services/pilgrimage/spot-intents';
 import {
   loadVisitedSpotsSync,
@@ -117,13 +117,10 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
         const op = shouldRemove ? 'remove' : 'add';
         let next = prev;
         for (const p of points) {
-          const meta: SpotIntentMeta = {
-            animeId: animeMeta.animeId,
-            name: animeMeta.name,
-            ...(animeMeta.cn ? { cn: animeMeta.cn } : {}),
-            geo: p.geo,
-            image: p.image,
-          };
+          // Only build (and re-snapshot) meta on add — a remove never reads
+          // it, so building it unconditionally was a wasted allocation per
+          // scene in the group.
+          const meta = op === 'add' ? buildSpotIntentMeta(p, animeMeta) : undefined;
           next = applySpotIntent(next, p.id, intent, op, meta);
         }
         void saveSpotIntents(next);

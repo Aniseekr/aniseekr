@@ -4,12 +4,14 @@ import { SPOT_INTENTS_STORAGE_KEY } from '../../../libs/services/storage/keys';
 
 import {
   applySpotIntent,
+  buildSpotIntentMeta,
   loadSpotIntents,
   loadSpotIntentsSync,
   saveSpotIntents,
   toggleSpotIntent,
   type SpotIntentMeta,
 } from '../../../libs/services/pilgrimage/spot-intents';
+import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 
 beforeEach(() => {
   appStorage.clearAll();
@@ -87,5 +89,75 @@ describe('spot intents v2 meta snapshot', () => {
   it('migrates a v1 payload (flags preserved, meta undefined) when v2 is absent', () => {
     appStorage.set(SPOT_INTENTS_STORAGE_KEY, JSON.stringify({ old1: { saved: true, planned: true } }));
     expect(loadSpotIntentsSync()).toEqual({ old1: { saved: true, planned: true } });
+  });
+});
+
+// Screen-level anime the route is currently showing. Used as the fallback
+// meta for points that carry no per-point source annotation.
+const SCREEN_FALLBACK = { animeId: 999, name: 'Screen Anime', cn: 'Screen 動畫' };
+
+function makePoint(overrides: Partial<AnitabiPoint> = {}): AnitabiPoint {
+  return {
+    id: 'pt-a',
+    name: 'Scene A',
+    image: 'https://image.anitabi.cn/points/pt-a.jpg?plan=h160',
+    ep: 1,
+    s: 0,
+    geo: [34.9, 135.8],
+    ...overrides,
+  };
+}
+
+describe('buildSpotIntentMeta', () => {
+  it('two points in the same group with distinct geo/image produce distinct metas', () => {
+    const p1 = makePoint({ id: 'pt-1', geo: [34.9, 135.8], image: 'https://img/1.jpg' });
+    const p2 = makePoint({ id: 'pt-2', geo: [35.0, 135.9], image: 'https://img/2.jpg' });
+
+    const meta1 = buildSpotIntentMeta(p1, SCREEN_FALLBACK);
+    const meta2 = buildSpotIntentMeta(p2, SCREEN_FALLBACK);
+
+    expect(meta1.geo).toEqual([34.9, 135.8]);
+    expect(meta1.image).toBe('https://img/1.jpg');
+    expect(meta2.geo).toEqual([35.0, 135.9]);
+    expect(meta2.image).toBe('https://img/2.jpg');
+    expect(meta1).not.toEqual(meta2);
+  });
+
+  it('a point WITH sourceBangumiId/sourceAnimeTitle uses the source values, not the fallback', () => {
+    const sourcedPoint = {
+      ...makePoint({ id: 'pt-source', geo: [35.6, 139.7], image: 'https://img/source.jpg' }),
+      sourceBangumiId: 12345,
+      sourceAnimeTitle: 'Source Season 2',
+      sourceLabel: 'S2',
+    } as AnitabiPoint;
+
+    const meta = buildSpotIntentMeta(sourcedPoint, SCREEN_FALLBACK);
+
+    expect(meta.animeId).toBe(12345);
+    expect(meta.name).toBe('Source Season 2');
+    expect(meta.geo).toEqual([35.6, 139.7]);
+    expect(meta.image).toBe('https://img/source.jpg');
+    // `PilgrimageSeriesPoint` doesn't carry a per-source `cn`, and the
+    // fallback's `cn` describes a DIFFERENT anime — omit rather than
+    // fabricate one (Rule 8).
+    expect(meta.cn).toBeUndefined();
+  });
+
+  it('a point WITHOUT source annotations falls back to the screen-level meta', () => {
+    const plainPoint = makePoint({ id: 'pt-plain', geo: [1, 2], image: 'https://img/plain.jpg' });
+
+    const meta = buildSpotIntentMeta(plainPoint, SCREEN_FALLBACK);
+
+    expect(meta.animeId).toBe(SCREEN_FALLBACK.animeId);
+    expect(meta.name).toBe(SCREEN_FALLBACK.name);
+    expect(meta.cn).toBe(SCREEN_FALLBACK.cn);
+    expect(meta.geo).toEqual([1, 2]);
+    expect(meta.image).toBe('https://img/plain.jpg');
+  });
+
+  it('omits cn when the fallback has none (never fabricated)', () => {
+    const plainPoint = makePoint({ id: 'pt-no-cn' });
+    const meta = buildSpotIntentMeta(plainPoint, { animeId: 1, name: 'No Cn Anime' });
+    expect(meta.cn).toBeUndefined();
   });
 });
