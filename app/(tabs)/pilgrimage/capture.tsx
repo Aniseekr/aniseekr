@@ -27,6 +27,7 @@ import CameraScrim from '../../../components/pilgrimage/camera/CameraScrim';
 import CamSwitchToast, { type CamSwitchToastValue } from '../../../components/pilgrimage/camera/CamSwitchToast';
 import { CameraChrome, cameraControlShadow } from '../../../components/pilgrimage/camera/cameraChrome';
 import type { CameraFacing, FocalStop } from '../../../components/pilgrimage/camera/types';
+import { useCameraLifecycle } from '../../../hooks/useCameraLifecycle';
 import { useCameraZoom } from '../../../hooks/useCameraZoom';
 import { useTapToFocus } from '../../../hooks/useTapToFocus';
 import { availableStopsFromDeviceInfo } from '../../../libs/services/pilgrimage/lens-switching';
@@ -62,6 +63,14 @@ export default function StandaloneCaptureScreen() {
     onFocus: (p) => {
       void cameraRef.current?.focus(p);
     },
+  });
+  // Same lifecycle hook as compare/[spotId].tsx: pauses the session on
+  // background and re-arms it after a native onError instead of leaving a
+  // dead preview with no recovery. This screen has no settings sheet, so
+  // `settingsOpen` is always false — the hook still owns AppState + re-arm.
+  const { active: cameraActive, onCameraReady, onMountError } = useCameraLifecycle({
+    settingsOpen: false,
+    initialActive: true,
   });
 
   const handleDeviceInfo = useCallback((info: CameraDeviceInfo | null) => {
@@ -177,6 +186,7 @@ export default function StandaloneCaptureScreen() {
         zoomShared={zoom.zoomShared}
         exposureShared={exposureShared}
         enableTorch={false}
+        active={cameraActive}
         pinchGesture={zoom.pinchGesture}
         tapGesture={focus.tapGesture}
         resolutionTier="4k"
@@ -185,6 +195,8 @@ export default function StandaloneCaptureScreen() {
         quality={0.9}
         orientationSource="device"
         onDeviceInfo={handleDeviceInfo}
+        onCameraReady={onCameraReady}
+        onMountError={onMountError}
       />
       <CameraScrim />
       <SafeAreaView style={styles.overlay} pointerEvents="box-none">
