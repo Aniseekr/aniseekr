@@ -294,12 +294,22 @@ export default function PilgrimageDetailScreen() {
   }, []);
 
   const handleToggleSaved = useCallback(
-    (spot: AnitabiPoint) => toggleSpotIntent(spot, 'saved', groupedSpotByPointId),
-    [toggleSpotIntent, groupedSpotByPointId]
+    (spot: AnitabiPoint) =>
+      toggleSpotIntent(spot, 'saved', groupedSpotByPointId, {
+        animeId: anime?.id ?? bangumiId ?? 0,
+        name: anime?.title ?? anime?.cn ?? '',
+        cn: anime?.cn || undefined,
+      }),
+    [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
   );
   const handleTogglePlanned = useCallback(
-    (spot: AnitabiPoint) => toggleSpotIntent(spot, 'planned', groupedSpotByPointId),
-    [toggleSpotIntent, groupedSpotByPointId]
+    (spot: AnitabiPoint) =>
+      toggleSpotIntent(spot, 'planned', groupedSpotByPointId, {
+        animeId: anime?.id ?? bangumiId ?? 0,
+        name: anime?.title ?? anime?.cn ?? '',
+        cn: anime?.cn || undefined,
+      }),
+    [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
   );
 
   const activeViewPreset = getPilgrimageDetailViewPreset(viewMode, listLayout);

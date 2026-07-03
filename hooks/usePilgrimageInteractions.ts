@@ -14,10 +14,12 @@ import {
   type PilgrimageCapture,
 } from '../libs/services/pilgrimage/captures';
 import {
+  applySpotIntent,
   loadSpotIntentsSync,
   saveSpotIntents,
   type SpotIntentKind,
   type SpotIntentMap,
+  type SpotIntentMeta,
 } from '../libs/services/pilgrimage/spot-intents';
 import {
   loadVisitedSpotsSync,
@@ -46,7 +48,8 @@ export interface UsePilgrimageInteractionsResult {
   toggleSpotIntent: (
     spot: AnitabiPoint,
     intent: SpotIntentKind,
-    groupedSpotByPointId: Map<string, AnitabiSpot>
+    groupedSpotByPointId: Map<string, AnitabiSpot>,
+    animeMeta: { animeId: number; name: string; cn?: string }
   ) => void;
   hasIntentForGroup: (group: AnitabiSpot, intent: SpotIntentKind) => boolean;
   hasIntentForPoint: (
@@ -103,20 +106,25 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
     (
       spot: AnitabiPoint,
       intent: SpotIntentKind,
-      groupedSpotByPointId: Map<string, AnitabiSpot>
+      groupedSpotByPointId: Map<string, AnitabiSpot>,
+      animeMeta: { animeId: number; name: string; cn?: string }
     ) => {
       Haptics.selectionAsync().catch(() => undefined);
       const group = groupedSpotByPointId.get(spot.id);
-      const ids = group ? group.scenes.map((p) => p.id) : [spot.id];
+      const points = group ? group.scenes : [spot];
       setSpotIntents((prev) => {
-        const shouldRemove = ids.some((id) => prev[id]?.[intent] === true);
-        const next: SpotIntentMap = { ...prev };
-        for (const id of ids) {
-          const nextIntent = { ...(next[id] ?? {}) };
-          if (shouldRemove) delete nextIntent[intent];
-          else nextIntent[intent] = true;
-          if (nextIntent.saved || nextIntent.planned) next[id] = nextIntent;
-          else delete next[id];
+        const shouldRemove = points.some((p) => prev[p.id]?.[intent] === true);
+        const op = shouldRemove ? 'remove' : 'add';
+        let next = prev;
+        for (const p of points) {
+          const meta: SpotIntentMeta = {
+            animeId: animeMeta.animeId,
+            name: animeMeta.name,
+            ...(animeMeta.cn ? { cn: animeMeta.cn } : {}),
+            geo: p.geo,
+            image: p.image,
+          };
+          next = applySpotIntent(next, p.id, intent, op, meta);
         }
         void saveSpotIntents(next);
         return next;
