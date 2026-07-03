@@ -583,7 +583,7 @@ export default function PilgrimageHubScreen() {
     <View style={styles.root}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.headerBar}>
-          <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
+          <ThemedText variant="titleLarge" weight="700" numberOfLines={1} style={styles.headerTitle}>
             {t('tabs.pilgrimageScreen.title')}
           </ThemedText>
           <View style={styles.headerRight}>
@@ -1114,7 +1114,9 @@ function makeStyles(theme: ThemePalette) {
       paddingBottom: 4,
       gap: 12,
     },
-    headerTitle: { fontSize: 22 },
+    // flexShrink + single line so the 4-button header cluster can't push the
+    // title into unclipped overflow on narrow screens (album.tsx precedent).
+    headerTitle: { fontSize: 22, flexShrink: 1 },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     iconBtn: {
       width: 40,
