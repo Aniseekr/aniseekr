@@ -2,16 +2,9 @@ import { kvGet, kvSet } from './storage/app-storage';
 import { COLLECTION_SORT_MODE_STORAGE_KEY } from './storage/keys';
 import { Logger } from '../utils/logger';
 
-export type CollectionSortMode = 'newest' | 'oldest' | 'rarity' | 'popularity' | 'count' | 'id';
+export type CollectionSortMode = 'newest' | 'oldest' | 'count';
 
-const VALID_SORT_MODES: CollectionSortMode[] = [
-  'newest',
-  'oldest',
-  'rarity',
-  'popularity',
-  'count',
-  'id',
-];
+const VALID_SORT_MODES: CollectionSortMode[] = ['newest', 'oldest', 'count'];
 
 /**
  * Synchronous MMKV read. Safe for first-frame `useState` initialisers.

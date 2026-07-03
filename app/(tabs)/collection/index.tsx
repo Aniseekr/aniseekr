@@ -494,10 +494,7 @@ export default function CollectionScreen() {
     return [...filtered].sort((a, b) => {
       if (sortMode === 'newest') return b.createdAt.getTime() - a.createdAt.getTime();
       if (sortMode === 'oldest') return a.createdAt.getTime() - b.createdAt.getTime();
-      if (sortMode === 'rarity') return (b.isR18 ? 1 : 0) - (a.isR18 ? 1 : 0);
-      if (sortMode === 'popularity') return b.sharedBy - a.sharedBy;
       if (sortMode === 'count') return b.animeCount - a.animeCount;
-      if (sortMode === 'id') return a.id.localeCompare(b.id);
       return 0;
     });
   }, [collections, selectedCategory, sortMode]);
@@ -531,7 +528,6 @@ export default function CollectionScreen() {
       { label: t('tabs.collectionScreen.sort.newest'), value: 'newest' },
       { label: t('tabs.collectionScreen.sort.oldest'), value: 'oldest' },
       { label: t('tabs.collectionScreen.sort.count'), value: 'count' },
-      { label: t('tabs.collectionScreen.sort.rarity'), value: 'rarity' },
     ],
     [t]
   );
