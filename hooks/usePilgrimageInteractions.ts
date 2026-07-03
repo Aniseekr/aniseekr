@@ -15,10 +15,9 @@ import {
   type PilgrimageCapture,
 } from '../libs/services/pilgrimage/captures';
 import {
-  applySpotIntent,
+  applySpotIntentAtomic,
   buildSpotIntentMeta,
   loadSpotIntentsSync,
-  saveSpotIntents,
   type SpotIntentKind,
   type SpotIntentMap,
 } from '../libs/services/pilgrimage/spot-intents';
@@ -131,16 +130,22 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
       setSpotIntents((prev) => {
         const shouldRemove = points.some((p) => prev[p.id]?.[intent] === true);
         const op = shouldRemove ? 'remove' : 'add';
-        let next = prev;
+        // PERSISTENCE routes through `applySpotIntentAtomic`, which re-reads
+        // a fresh synchronous snapshot from storage per point instead of
+        // trusting `prev` — `prev` is a React-state closure that can be
+        // stale if another surface (e.g. the map's own grouped toggle)
+        // wrote a different spot's intent since this hook's state was last
+        // set. Persisting through a stale `prev` would silently drop that
+        // other write. Same hazard as the visited map above (:79-85).
+        let persisted: SpotIntentMap = prev;
         for (const p of points) {
           // Only build (and re-snapshot) meta on add — a remove never reads
           // it, so building it unconditionally was a wasted allocation per
           // scene in the group.
           const meta = op === 'add' ? buildSpotIntentMeta(p, animeMeta) : undefined;
-          next = applySpotIntent(next, p.id, intent, op, meta);
+          persisted = applySpotIntentAtomic(p.id, intent, op, meta);
         }
-        void saveSpotIntents(next);
-        return next;
+        return persisted;
       });
     },
     []

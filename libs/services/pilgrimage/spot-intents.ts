@@ -43,19 +43,36 @@ export interface SpotIntent {
 
 export type SpotIntentMap = Record<string, SpotIntent>;
 
-/** Synchronous read — safe to seed `useState` with on the first-paint path. */
-export function loadSpotIntentsSync(): SpotIntentMap {
+/**
+ * Parse a stored v2 blob. Returns `null` if the string isn't valid JSON
+ * (corrupted) — the caller falls through to the v1 migration path instead
+ * of masking real v1 data behind an empty map. Mirrors `parseV2` in
+ * captures.ts.
+ */
+function parseV2(raw: string): SpotIntentMap | null {
   try {
-    const rawV2 = kvGet(SPOT_INTENTS_STORAGE_KEY_V2);
-    if (rawV2) return sanitizeSpotIntents(JSON.parse(rawV2) as unknown);
-    // Migrate a v1 payload on first read: preserve flags, meta stays undefined.
-    const rawV1 = kvGet(SPOT_INTENTS_STORAGE_KEY);
-    if (rawV1) return sanitizeSpotIntents(JSON.parse(rawV1) as unknown);
-    return {};
+    return sanitizeSpotIntents(JSON.parse(raw) as unknown);
   } catch (err) {
-    Logger.warn('[SpotIntents] load failed, returning empty', err);
+    Logger.warn('[SpotIntents] v2 blob corrupted, falling back to v1', err);
+    return null;
+  }
+}
+
+/** Migrate a v1 payload: preserve flags, meta stays undefined. Never throws. */
+function migrateV1(raw: string | null): SpotIntentMap {
+  if (!raw) return {};
+  try {
+    return sanitizeSpotIntents(JSON.parse(raw) as unknown);
+  } catch (err) {
+    Logger.warn('[SpotIntents] v1 blob corrupted, returning empty', err);
     return {};
   }
+}
+
+/** Synchronous read — safe to seed `useState` with on the first-paint path. */
+export function loadSpotIntentsSync(): SpotIntentMap {
+  const rawV2 = kvGet(SPOT_INTENTS_STORAGE_KEY_V2);
+  return (rawV2 ? parseV2(rawV2) : null) ?? migrateV1(kvGet(SPOT_INTENTS_STORAGE_KEY));
 }
 
 /** Async read kept for callers that want a `Promise` signature. */
@@ -106,6 +123,31 @@ export function toggleSpotIntent(
 ): SpotIntentMap {
   const isSet = map[spotId]?.[intent] === true;
   return applySpotIntent(map, spotId, intent, isSet ? 'remove' : 'add', meta);
+}
+
+/**
+ * Read-modify-write ONE spot's intent flag against a FRESH synchronous read
+ * of storage, then persist immediately. This is the atomic counterpart to
+ * `saveSpotIntents` — mirrors `checkInSpot`/`checkOutSpot` in
+ * visited-prefs.ts. A caller driving this from React state (e.g.
+ * `usePilgrimageInteractions`) must not persist through an older `prev`
+ * snapshot: another surface could have toggled a DIFFERENT spot's intent in
+ * the interim (e.g. the map's own grouped toggle, or a second screen), and
+ * writing that stale snapshot back would silently drop the other spot's
+ * change. Reading fresh here means the write can't stomp anything.
+ *
+ * Returns the freshly-persisted map so a caller that also drives local React
+ * state can adopt it directly instead of drifting from what's on disk.
+ */
+export function applySpotIntentAtomic(
+  spotId: string,
+  intent: SpotIntentKind,
+  op: 'add' | 'remove',
+  meta?: SpotIntentMeta
+): SpotIntentMap {
+  const next = applySpotIntent(loadSpotIntentsSync(), spotId, intent, op, meta);
+  void saveSpotIntents(next);
+  return next;
 }
 
 /** Screen-level anime metadata, used only when a point carries no source of its own. */

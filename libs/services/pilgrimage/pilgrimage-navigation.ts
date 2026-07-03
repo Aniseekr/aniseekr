@@ -140,7 +140,9 @@ export function buildMultiStopDirectionsUrl(
     const waypoints = segment
       .slice(0, segment.length - 1)
       .map(latLng)
-      .join('|');
+      // URL-encoded pipe (%7C) — a raw `|` in a query string is technically
+      // legal but several webview/native URL handlers mis-split on it.
+      .join('%7C');
     urls.push(
       `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}`
     );

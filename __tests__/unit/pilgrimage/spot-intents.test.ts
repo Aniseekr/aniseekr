@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { appStorage, __resetAppStorageForTests } from '../../../libs/services/storage/app-storage';
-import { SPOT_INTENTS_STORAGE_KEY } from '../../../libs/services/storage/keys';
+import {
+  SPOT_INTENTS_STORAGE_KEY,
+  SPOT_INTENTS_STORAGE_KEY_V2,
+} from '../../../libs/services/storage/keys';
 
 import {
   applySpotIntent,
+  applySpotIntentAtomic,
   buildSpotIntentMeta,
   loadSpotIntents,
   loadSpotIntentsSync,
@@ -89,6 +93,50 @@ describe('spot intents v2 meta snapshot', () => {
   it('migrates a v1 payload (flags preserved, meta undefined) when v2 is absent', () => {
     appStorage.set(SPOT_INTENTS_STORAGE_KEY, JSON.stringify({ old1: { saved: true, planned: true } }));
     expect(loadSpotIntentsSync()).toEqual({ old1: { saved: true, planned: true } });
+  });
+
+  it('a corrupted v2 blob falls through to valid v1 data instead of masking it with {}', () => {
+    appStorage.set(SPOT_INTENTS_STORAGE_KEY_V2, '{not valid json');
+    appStorage.set(SPOT_INTENTS_STORAGE_KEY, JSON.stringify({ old1: { saved: true } }));
+    expect(loadSpotIntentsSync()).toEqual({ old1: { saved: true } });
+  });
+});
+
+describe('applySpotIntentAtomic (atomic per-spot toggle)', () => {
+  it('adds a flag for one spot and persists it', () => {
+    const result = applySpotIntentAtomic('pt1', 'saved', 'add', META_A);
+    expect(result).toEqual({ pt1: { saved: true, meta: META_A } });
+    expect(loadSpotIntentsSync()).toEqual({ pt1: { saved: true, meta: META_A } });
+  });
+
+  it('removes a flag for one spot and persists it', () => {
+    applySpotIntentAtomic('pt1', 'saved', 'add', META_A);
+    const result = applySpotIntentAtomic('pt1', 'saved', 'remove');
+    expect(result).toEqual({});
+    expect(loadSpotIntentsSync()).toEqual({});
+  });
+
+  it('never clobbers a DIFFERENT spot toggled through a stale in-memory snapshot', () => {
+    // Simulate a caller (e.g. a hook) holding an old React-state snapshot of
+    // the map, taken BEFORE another surface persisted a change for a
+    // different spot.
+    const staleSnapshot = applySpotIntentAtomic('pt-a', 'saved', 'add', META_A);
+    expect(staleSnapshot).toEqual({ 'pt-a': { saved: true, meta: META_A } });
+
+    // Another surface (e.g. the map's own grouped toggle) persists a change
+    // for a DIFFERENT spot — this must land on disk even though the caller
+    // above is still holding the pre-write snapshot.
+    applySpotIntentAtomic('pt-b', 'planned', 'add', META_A);
+
+    // The caller now toggles a third flag on the ORIGINAL spot; even if it
+    // were driven from the stale `staleSnapshot` closure, `applySpotIntentAtomic`
+    // must read fresh storage rather than trusting it, so pt-b survives.
+    applySpotIntentAtomic('pt-a', 'planned', 'add', META_A);
+
+    expect(loadSpotIntentsSync()).toEqual({
+      'pt-a': { saved: true, planned: true, meta: META_A },
+      'pt-b': { planned: true, meta: META_A },
+    });
   });
 });
 

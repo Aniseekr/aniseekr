@@ -52,6 +52,7 @@ export default function PilgrimageTripScreen() {
     onHeadingChange: (deg) => mapRef.current?.setHeading(deg),
   });
   const userLocation = tracking.location;
+  const { onUserPan } = tracking;
 
   // Seed sync — the trip's spots come entirely from planned-intent meta.
   const [intents] = useState(loadSpotIntentsSync);
@@ -159,6 +160,7 @@ export default function PilgrimageTripScreen() {
           zoom={13}
           clusterDisableAtZoom={CLUSTER_DISABLE_AT.hub}
           controlsBottomOffset={140}
+          onPanned={onUserPan}
         />
       ) : (
         <View style={[styles.container, { backgroundColor: theme.background.primary }]} />

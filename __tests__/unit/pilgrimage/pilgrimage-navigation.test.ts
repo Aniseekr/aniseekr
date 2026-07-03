@@ -104,7 +104,7 @@ describe('buildMultiStopDirectionsUrl', () => {
   it('google: single segment with waypoints + final destination', () => {
     const urls = buildMultiStopDirectionsUrl([g(35, 135), g(35.1, 135.1), g(35.2, 135.2)], 'google');
     expect(urls).toEqual([
-      'https://www.google.com/maps/dir/?api=1&destination=35.2,135.2&waypoints=35,135|35.1,135.1',
+      'https://www.google.com/maps/dir/?api=1&destination=35.2,135.2&waypoints=35,135%7C35.1,135.1',
     ]);
   });
 
@@ -122,7 +122,7 @@ describe('buildMultiStopDirectionsUrl', () => {
     expect(urls[0]).toContain('destination=9,9');
     // segment 2 resumes from stop 9 and ends at stop 11
     expect(urls[1]).toContain('destination=11,11');
-    expect(urls[1]).toContain('waypoints=9,9|10,10');
+    expect(urls[1]).toContain('waypoints=9,9%7C10,10');
   });
 
   it('apple: one search url per stop (no multi-stop support)', () => {
