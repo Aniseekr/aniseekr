@@ -1,8 +1,7 @@
 // Pilgrimage hub. Matches japanwalker.pen Screen 1 (q3N3pG):
 // Header (聖地巡禮 + album + search) → Plan your day intro →
-// Nearby hero (170h with grid + scatter pins; opens the See All map) →
-// Popular Animes rail (128x200) → Featured Spots list (72 photo + info +
-// 56 mini map).
+// hero (nearest spot) → 我的巡禮 (the user's collection) → 附近 (nearby/
+// popular rail) → 探索 (Tourism 88 + cross-anime Featured Spots list).
 //
 // The hub is list-only. Map view lives on the See All screen
 // (app/(tabs)/pilgrimage/map.tsx) so users land on a navigable card list
@@ -66,6 +65,8 @@ import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index
 import { useT } from '../../../libs/i18n';
 import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScreenData';
 import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
+import { CacheService } from '../../../libs/services/cache-service';
+import { DETAIL_CACHE_KEY_PREFIX } from '../../../libs/services/pilgrimage/anitabi-service';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -725,10 +726,13 @@ function PopularCard({
   // rendering a blank/transparent badge.
   const accent = anime.color || theme.accent;
   const accentFg = readableTextOn(accent);
-  // Honest progress (Rule 8): visitedCount is real (visited ∩ litePoints);
-  // the denominator only appears once Phase 3's per-anime detail-points
-  // cache is wired in — until then this always renders "✓{count}" alone.
-  const progress = resolveHubAnimeProgress(anime, visited);
+  // Honest progress (Rule 8): visitedCount ∩ points, with the denominator
+  // only when we hold this anime's full per-anime points list — populated
+  // by opening the detail screen, and boot-seeded for the top-100 by
+  // hydratePointsTop. getSync is a cheap in-memory-mirror read (Rule 10),
+  // safe to call per card on a bounded rail. Absent → "✓{count}" alone.
+  const fullPoints = CacheService.getSync<AnitabiPoint[]>(DETAIL_CACHE_KEY_PREFIX + anime.id);
+  const progress = resolveHubAnimeProgress(anime, visited, fullPoints);
   const titles = getPilgrimageAnimeTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
   return (
