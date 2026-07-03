@@ -1025,6 +1025,17 @@
     "camera": {
       "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）"
     },
+    "capture": {
+      "title": "自由拍攝",
+      "permTitle": "需要相機權限",
+      "permBody": "允許相機權限即可拍攝巡禮照片。",
+      "permCta": "開啟設定",
+      "savedToAlbum": "已存入相簿",
+      "mountTitle": "靠近 {name}",
+      "mountBody": "距離 {distance} 公尺 · 要把這張照片掛到此場景嗎？",
+      "mountConfirm": "掛到此場景",
+      "mountDismiss": "留在自由拍攝"
+    },
     "detail": {
       "bearing": {
         "n": "北",

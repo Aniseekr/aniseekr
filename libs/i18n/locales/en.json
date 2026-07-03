@@ -1025,6 +1025,17 @@
     "camera": {
       "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)"
     },
+    "capture": {
+      "title": "Free capture",
+      "permTitle": "Camera access needed",
+      "permBody": "Allow camera access to take pilgrimage photos.",
+      "permCta": "Open Settings",
+      "savedToAlbum": "Saved to your album",
+      "mountTitle": "Near {name}",
+      "mountBody": "{distance}m away · attach this photo to the scene?",
+      "mountConfirm": "Attach to scene",
+      "mountDismiss": "Keep as free capture"
+    },
     "detail": {
       "bearing": {
         "n": "N",
