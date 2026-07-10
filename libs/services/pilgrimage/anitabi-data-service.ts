@@ -136,7 +136,11 @@ async function loadFile<T>(url: string, filename: string): Promise<T | null> {
 export async function hydrateAllPilgrimageData(): Promise<void> {
   await Promise.all([
     loadFile<AnitabiIndexFile>(ANITABI_INDEX_URL, ANITABI_INDEX_FILENAME).then((f) => {
-      if (f && Array.isArray(f.entries) && f.entries.length > 0) {
+      // `fallbackUsed` marks the CI's degraded stub (anitabi API 403'd the
+      // build runner) — it can carry far fewer entries than our bundled seed.
+      // Hydrating it would REPLACE the richer seed and blank out the Tourism 88
+      // rail, so keep the seed until CI ships a real payload again.
+      if (f && Array.isArray(f.entries) && f.entries.length > 0 && !f.fallbackUsed) {
         hydrateAnitabiIndex(f);
       }
     }),

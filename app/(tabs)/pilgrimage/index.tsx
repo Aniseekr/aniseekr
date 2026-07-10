@@ -17,13 +17,7 @@
 // Featured Spots rank real distance first. Planned landmarks and collection
 // entries get bounded boosts so intent matters without burying nearby spots.
 
-import {
-  useCallback,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -38,11 +32,7 @@ import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
-import {
-  getAllIndexed,
-  getIndexVersion,
-  subscribeAnitabiIndex,
-} from '../../../libs/services/pilgrimage/anitabi-index';
+import { bangumiSubjectImageUrl } from '../../../libs/clients/bangumi-client';
 import {
   formatPilgrimageSubtitle,
   getPilgrimageAnimeTitles,
@@ -323,23 +313,10 @@ export default function PilgrimageHubScreen() {
     [animeCards]
   );
 
-  // Anime Tourism 88 rail. Sorted once at module import; the cover map is
-  // rebuilt from anitabi-index (drops to placeholder when an entry isn't in
-  // the offline Anitabi cache yet).
+  // Anime Tourism 88 rail. Sorted once at module import. Covers come from the
+  // Bangumi poster CDN keyed by bangumiId (bangumiSubjectImageUrl) — anitabi's
+  // CDN 403s non-browser clients, so the anitabi-index cover is unusable here.
   const tourism88Entries = useMemo(() => getUnique88AnimeByPopularity(), []);
-  const anitabiIndexVersion = useSyncExternalStore(
-    subscribeAnitabiIndex,
-    getIndexVersion,
-    getIndexVersion
-  );
-  const tourism88Covers = useMemo(() => {
-    void anitabiIndexVersion;
-    const m = new Map<number, string>();
-    for (const e of getAllIndexed()) {
-      if (e.cover) m.set(e.id, e.cover);
-    }
-    return m;
-  }, [anitabiIndexVersion]);
   const collectionBangumiIds = useMemo(
     () => new Set(collectionAnimes.map((a) => a.id)),
     [collectionAnimes]
@@ -352,11 +329,11 @@ export default function PilgrimageHubScreen() {
           returnTo: 'hub',
           title: entry.titleJa || entry.titleEn,
           titleSecondary: entry.titleEn && entry.titleEn !== entry.titleJa ? entry.titleEn : null,
-          poster: tourism88Covers.get(entry.bangumiId) ?? null,
+          poster: bangumiSubjectImageUrl(entry.bangumiId),
         })
       );
     },
-    [router, tourism88Covers]
+    [router]
   );
   const handleSee88All = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -545,7 +522,6 @@ export default function PilgrimageHubScreen() {
               <Tourism88Rail
                 entries={tourism88Entries}
                 collectionBangumiIds={collectionBangumiIds}
-                coversById={tourism88Covers}
                 onPressEntry={handle88EntryPress}
                 onSeeAll={handleSee88All}
               />

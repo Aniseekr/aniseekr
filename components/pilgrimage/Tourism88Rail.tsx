@@ -18,7 +18,7 @@ import { Spacing, Radius, Shadow, Typography } from '../../constants/DesignSyste
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../themed';
 import { useT, type TranslationKey } from '../../libs/i18n';
-import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
+import { bangumiSubjectImageUrl } from '../../libs/clients/bangumi-client';
 import type {
   AnimeTourism88Region,
   UniqueAnime88Entry,
@@ -38,8 +38,6 @@ export interface Tourism88RailProps {
   entries: readonly UniqueAnime88Entry[];
   /** Bangumi ids the user already has in their collection. */
   collectionBangumiIds: ReadonlySet<number>;
-  /** bangumiId → cover URL (typically resolved from anitabi-index). */
-  coversById: ReadonlyMap<number, string>;
   onPressEntry: (entry: UniqueAnime88Entry) => void;
   onSeeAll?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -48,7 +46,6 @@ export interface Tourism88RailProps {
 export function Tourism88Rail({
   entries,
   collectionBangumiIds,
-  coversById,
   onPressEntry,
   onSeeAll,
   style,
@@ -91,7 +88,6 @@ export function Tourism88Rail({
             key={entry.bangumiId}
             entry={entry}
             inCollection={collectionBangumiIds.has(entry.bangumiId)}
-            cover={coversById.get(entry.bangumiId) ?? null}
             onPress={() => onPressEntry(entry)}
             theme={theme}
           />
@@ -104,12 +100,11 @@ export function Tourism88Rail({
 interface Tourism88RailCardProps {
   entry: UniqueAnime88Entry;
   inCollection: boolean;
-  cover: string | null;
   onPress: () => void;
   theme: ThemePalette;
 }
 
-function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Tourism88RailCardProps) {
+function Tourism88RailCard({ entry, inCollection, onPress, theme }: Tourism88RailCardProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const primaryEntry = entry.locations[0];
@@ -123,24 +118,18 @@ function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Touri
       accessibilityLabel={t('pilgrimage.tourism88.entryA11y', { title })}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.92 }]}>
       <View style={styles.posterWrap}>
-        {cover ? (
-          <Image
-            source={anitabiImageSource(cover)}
-            style={styles.poster}
-            contentFit="cover"
-            transition={180}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View
-            style={[
-              styles.poster,
-              styles.posterPlaceholder,
-              { backgroundColor: theme.background.tertiary },
-            ]}>
-            <Ionicons name="film-outline" size={24} color={theme.text.tertiary} />
-          </View>
-        )}
+        {/* Poster from Bangumi (2:3, not Cloudflare-blocked) keyed by the 88
+            list's bangumiId — every entry has one, so no placeholder branch.
+            anitabi's CDN 403s non-browser clients and serves 16:9 scene stills,
+            so it's unusable here (see build-anitabi-index dependency risk).
+            posterWrap's own background shows through while the image loads. */}
+        <Image
+          source={{ uri: bangumiSubjectImageUrl(entry.bangumiId) }}
+          style={styles.poster}
+          contentFit="cover"
+          transition={180}
+          cachePolicy="memory-disk"
+        />
         <View style={styles.idChip}>
           <ThemedText variant="captionSmall" weight="800" style={styles.idChipLabel}>
             ★ #{primaryEntry.id}
@@ -232,10 +221,6 @@ function makeStyles(theme: ThemePalette) {
     poster: {
       width: '100%',
       height: '100%',
-    },
-    posterPlaceholder: {
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     idChip: {
       position: 'absolute',

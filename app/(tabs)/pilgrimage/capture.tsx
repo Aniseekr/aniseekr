@@ -6,14 +6,13 @@
 // ref, the mount suggestion is the only piece of render state this screen
 // owns beyond facing/capturing/device caps.
 import { useCallback, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useSharedValue } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useCameraPermission } from 'react-native-vision-camera';
 import * as MediaLibrary from 'expo-media-library';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { ThemedText, ThemedButton, ThemedSurface } from '../../../components/themed';
@@ -24,12 +23,16 @@ import type { CameraDeviceInfo, CameraEngineHandle } from '../../../components/p
 import ShutterRow from '../../../components/pilgrimage/camera/ShutterRow';
 import ZoomPresets from '../../../components/pilgrimage/camera/ZoomPresets';
 import CameraScrim from '../../../components/pilgrimage/camera/CameraScrim';
+import CameraTopBar from '../../../components/pilgrimage/camera/CameraTopBar';
+import { LevelHorizon } from '../../../components/pilgrimage/camera/LevelHorizon';
+import { FocusReticle } from '../../../components/pilgrimage/camera/FocusReticle';
+import GalleryThumb from '../../../components/pilgrimage/camera/GalleryThumb';
 import CamSwitchToast, { type CamSwitchToastValue } from '../../../components/pilgrimage/camera/CamSwitchToast';
-import { CameraChrome, cameraControlShadow } from '../../../components/pilgrimage/camera/cameraChrome';
 import type { CameraFacing, FocalStop } from '../../../components/pilgrimage/camera/types';
 import { useCameraLifecycle } from '../../../hooks/useCameraLifecycle';
 import { useCameraZoom } from '../../../hooks/useCameraZoom';
 import { useTapToFocus } from '../../../hooks/useTapToFocus';
+import { useAlignmentSensors } from '../../../hooks/useAlignmentSensors';
 import { availableStopsFromDeviceInfo } from '../../../libs/services/pilgrimage/lens-switching';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import { recordFreeCapture, recordCapture, clearFreeCapture } from '../../../libs/services/pilgrimage/captures';
@@ -55,6 +58,9 @@ export default function StandaloneCaptureScreen() {
   const [maxZoom, setMaxZoom] = useState(1);
   const [suggestion, setSuggestion] = useState<NearestSpotSuggestion | null>(null);
   const [savedToast, setSavedToast] = useState<CamSwitchToastValue | null>(null);
+  // Recent free shots this session, newest first — feeds the ShutterRow gallery
+  // thumb (same bottom-row layout as compare/[spotId].tsx).
+  const [shotUris, setShotUris] = useState<string[]>([]);
   const lastFreeRef = useRef<{ uri: string; capturedAt: number } | null>(null);
 
   const exposureShared = useSharedValue(0);
@@ -64,6 +70,9 @@ export default function StandaloneCaptureScreen() {
       void cameraRef.current?.focus(p);
     },
   });
+  // No spot to align to here — the hook still drives `tiltShared` off
+  // DeviceMotion so the LevelHorizon renders, matching compare's live level.
+  const sensors = useAlignmentSensors({ spotLat: undefined, spotLng: undefined });
   // Same lifecycle hook as compare/[spotId].tsx: pauses the session on
   // background and re-arms it after a native onError instead of leaving a
   // dead preview with no recovery. This screen has no settings sheet, so
@@ -107,6 +116,7 @@ export default function StandaloneCaptureScreen() {
         userLocation: user ? { latitude: user.latitude, longitude: user.longitude } : undefined,
       });
       lastFreeRef.current = { uri: photo.uri, capturedAt };
+      setShotUris((prev) => [photo.uri, ...prev].slice(0, 12));
       if (await ensureMedia()) {
         await MediaLibrary.saveToLibraryAsync(photo.uri).catch(() => undefined);
       }
@@ -152,6 +162,11 @@ export default function StandaloneCaptureScreen() {
     hapticsBridge.tap();
     setSuggestion(null);
   }, []);
+
+  const openAlbum = useCallback(() => {
+    hapticsBridge.tap();
+    router.push('/pilgrimage/album');
+  }, [router]);
 
   if (!hasPermission) {
     return (
@@ -199,24 +214,24 @@ export default function StandaloneCaptureScreen() {
         onMountError={onMountError}
       />
       <CameraScrim />
-      <SafeAreaView style={styles.overlay} pointerEvents="box-none">
-        <View style={styles.topRow}>
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              router.back();
-            }}
-            hitSlop={14}
-            accessibilityRole="button"
-            accessibilityLabel={t('pilgrimageUi.closeCamera')}
-            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="close" size={20} color={CameraChrome.fg} />
-          </Pressable>
-          <ThemedText variant="titleSmall" weight="700" style={styles.titleText}>
-            {t('pilgrimage.capture.title')}
-          </ThemedText>
-          <View style={styles.iconBtn} />
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View style={styles.levelHorizonWrap}>
+          <LevelHorizon tiltShared={sensors.tiltShared} color={theme.accent} />
         </View>
+        <FocusReticle focusPoint={focus.focusPoint} accent={theme.accent} afLocked={focus.afLocked} />
+      </View>
+      <CameraTopBar
+        placeName={t('pilgrimage.capture.title')}
+        themeColor={theme.accent}
+        topInset={insets.top}
+        leftInset={insets.left}
+        rightInset={insets.right}
+        onClose={() => {
+          hapticsBridge.tap();
+          router.back();
+        }}
+      />
+      <SafeAreaView style={styles.overlay} pointerEvents="box-none" edges={['bottom']}>
         <View style={styles.bottom}>
           <View style={styles.toastWrap}>
             <CamSwitchToast toast={savedToast} themeColor={theme.accent} />
@@ -224,7 +239,7 @@ export default function StandaloneCaptureScreen() {
           <View style={styles.zoomWrap}>
             <ZoomPresets stops={stops} activeStop={zoom.activeStop} themeColor={theme.accent} onPick={zoom.setStop} />
           </View>
-          <View style={[styles.shutterWrap, { paddingBottom: insets.bottom }]}>
+          <View style={styles.shutterWrap}>
             <ShutterRow
               themeColor={theme.accent}
               capturing={capturing}
@@ -235,6 +250,14 @@ export default function StandaloneCaptureScreen() {
                 hapticsBridge.selection();
                 setFacing((f) => (f === 'back' ? 'front' : 'back'));
               }}
+              galleryNode={
+                <GalleryThumb
+                  uris={shotUris}
+                  themeColor={theme.accent}
+                  onPickLibrary={openAlbum}
+                  onExpand={openAlbum}
+                />
+              }
             />
           </View>
         </View>
@@ -309,28 +332,12 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingHorizontal: Spacing.xl,
   },
-  overlay: { flex: 1, justifyContent: 'space-between' },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.sm,
-    paddingTop: Spacing.xs,
-  },
-  // rgba / #fff below float over the live camera preview — camera-scrim
-  // exception (CLAUDE.md), matching CameraTopBar's icon-button chrome.
-  iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  levelHorizonWrap: {
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: CameraChrome.controlFill,
-    borderWidth: 1,
-    borderColor: CameraChrome.border,
-    ...cameraControlShadow,
   },
-  titleText: { color: CameraChrome.fg },
   bottom: { gap: Spacing.sm, paddingBottom: Spacing.xs },
   toastWrap: { alignItems: 'center' },
   zoomWrap: { alignItems: 'center' },

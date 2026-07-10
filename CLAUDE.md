@@ -2,6 +2,14 @@
 
 Anime tracking app built with Expo Router + React Native. Local-first storage, multi-source data (AniList / MyAnimeList / Bangumi / Kitsu), pilgrimage map, rating UX.
 
+## Agent operations (read first, every session)
+
+- **Every coding task starts with the `flow` skill**: size it S/M/L, then follow that size's process. Before writing ANY UI code you MUST read `.claude/skills/ui-polish/SKILL.md` (a PostToolUse hook will remind you if you edit UI files without it).
+- **Rules map** — one entry point per domain: UI rules = rules 1–11 in this file. Data-source / repository / pilgrimage logic = `docs/spec/agent.md` (spec → failing test → implement → update traceability, machine-enforced by `bun run spec:check`). Past designs and plans = `docs/superpowers/{specs,plans}/`.
+- **Never read, print, or commit**: `secrets/` (live service-account keys), `.env`, `.env.production` (permission-denied via `.claude/settings.json`).
+- **Ignore build artifacts**: root `build-*.aab` / `build-*.ipa` are stale local outputs (~670 MB) — exclude from searches, never glob over them.
+- **Verify before claiming done**: `bun run typecheck && bun run lint && bun run test:unit`, plus `bun run spec:check` when touching spec-mapped domains. Raw `bun test` without `--preload ./test-setup.ts` breaks native mocks.
+
 ## Project layout
 
 | Path | Purpose |

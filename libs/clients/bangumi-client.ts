@@ -116,6 +116,20 @@ export function normalizeBangumiImage(url: string | null | undefined): string | 
   return url;
 }
 
+/**
+ * Direct poster URL for a Bangumi subject, built from just the subject id.
+ * `/v0/subjects/{id}/image` 302-redirects to the lain.bgm.tv cover, so no JSON
+ * round-trip (and no cover hash) is needed. Unlike anitabi's CDN, bgm.tv is not
+ * Cloudflare-blocked, and this returns the proper 2:3 poster rather than a 16:9
+ * pilgrimage scene still — see [animeId].tsx, which resolves posters the same way.
+ */
+export function bangumiSubjectImageUrl(
+  id: number,
+  type: 'small' | 'grid' | 'medium' | 'common' | 'large' = 'large'
+): string {
+  return `https://api.bgm.tv/v0/subjects/${id}/image?type=${type}`;
+}
+
 interface FetchOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
