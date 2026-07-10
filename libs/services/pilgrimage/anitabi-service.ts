@@ -4,7 +4,7 @@
 import { LocalDB, type PilgrimageRow, type PilgrimageSaveInput } from '../../db';
 import { AnitabiClient, DataSourceError } from '../../clients/anitabi-client';
 import { CacheService } from '../cache-service';
-import { normalizeRawPoints } from './anitabi-points';
+import { normalizeLiteBangumi, normalizeRawPoints } from './anitabi-points';
 import type {
   AnitabiBangumi,
   AnitabiPoint,
@@ -29,7 +29,10 @@ export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * in the UI), so old cached entries simply lack attribution data and pick it
  * up naturally as the 7-day TTL expires — no cache-bust required.
  */
-const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
+export const DETAIL_CACHE_KEY_PREFIX = 'anitabi_points_v2_';
+
+/** How far past TTL a cached detail payload may still be served on network failure. */
+export const DETAIL_STALE_GRACE_MS = 90 * 24 * 60 * 60 * 1000;
 
 /** Sentinel rows for in-memory cache so we can also remember "no data" results. */
 type CacheValue = { kind: 'hit'; value: AnitabiBangumi } | { kind: 'miss' };
@@ -107,12 +110,17 @@ export class AnitabiService {
 
     const promise = (async (): Promise<AnitabiBangumi | null> => {
       // 3. SQLite cache
+      let staleRow: PilgrimageRow | null = null;
       try {
         const row = await this.db.getPilgrimage(bangumiId);
-        if (row && row.expires_at > this.now()) {
-          const decoded = this.rowToBangumi(row);
-          this.memCache.set(bangumiId, { kind: 'hit', value: decoded });
-          return decoded;
+        if (row) {
+          if (row.expires_at > this.now()) {
+            const decoded = this.rowToBangumi(row);
+            this.memCache.set(bangumiId, { kind: 'hit', value: decoded });
+            return decoded;
+          }
+          // Expired — keep as a stale-if-error fallback instead of discarding.
+          staleRow = row;
         }
       } catch (err) {
         // SQLite read failures are non-fatal — fall through to network.
@@ -130,6 +138,14 @@ export class AnitabiService {
           this.memCache.set(bangumiId, { kind: 'miss' });
           return null;
         }
+        if (staleRow) {
+          // Stale beats blank: anitabi is a fragile third party (CF WAF 403s,
+          // see spec 2026-07-03 §1.1) — serve the expired row rather than
+          // rendering an empty screen over data we still hold.
+          // Stale serves are per-call, not memoized, so recovery is picked
+          // up on the next call once the network is healthy again.
+          return this.rowToBangumi(staleRow);
+        }
         throw err;
       }
 
@@ -138,6 +154,7 @@ export class AnitabiService {
         return null;
       }
 
+      fresh = normalizeLiteBangumi(fresh);
       this.memCache.set(bangumiId, { kind: 'hit', value: fresh });
 
       // Persist (best effort — log & continue on failure).
@@ -197,14 +214,39 @@ export class AnitabiService {
     if (pending) return pending;
 
     const promise = (async (): Promise<AnitabiPoint[]> => {
-      // 3. SQLite cache.
+      // 3. SQLite cache — a SINGLE getWithMeta read covers both the fresh
+      // hit and the stale-if-error fallback. A plain `get()` (graceMs=0)
+      // would DELETE the row once it's past TTL, so by the time a later
+      // network failure tried to read it as "stale", it would already be
+      // gone — that was the bug. Reading once with the grace window keeps
+      // the row available for both outcomes.
+      //
+      // The row itself is written with a WIDENED ttl (this.ttlMs +
+      // DETAIL_STALE_GRACE_MS — see the `cache.set` call below), so
+      // CacheService.prune() at boot (CacheManager.pruneAll(), see
+      // app/_layout.tsx) does not reap a row that's merely past the base
+      // TTL but still inside the stale-if-error grace window. Because the
+      // row's own ttl is now the widened value, we read with graceMs=0 (the
+      // row survives on its own until the widened ttl) and derive staleness
+      // ourselves from `meta.age` vs the BASE ttl, rather than trusting
+      // CacheService's `isStale` (which would compare against the widened
+      // ttl and basically never report stale).
+      let staleCandidate: AnitabiPoint[] | null = null;
       try {
-        const cached = await this.cache.get<AnitabiPoint[]>(
-          DETAIL_CACHE_KEY_PREFIX + bangumiId
+        const meta = await this.cache.getWithMeta<AnitabiPoint[]>(
+          DETAIL_CACHE_KEY_PREFIX + bangumiId,
+          0
         );
-        if (cached) {
-          this.detailMemCache.set(bangumiId, { kind: 'hit', value: cached });
-          return cached;
+        if (meta && Array.isArray(meta.value) && meta.value.length > 0) {
+          const isStale = meta.age > this.ttlMs;
+          if (!isStale) {
+            this.detailMemCache.set(bangumiId, { kind: 'hit', value: meta.value });
+            return meta.value;
+          }
+          // Past the base TTL but within the stale-if-error grace window —
+          // hold onto it as a fallback candidate. Do NOT memoize yet: we
+          // only serve it if the network below actually fails.
+          staleCandidate = meta.value;
         }
       } catch (err) {
         console.warn('[AnitabiService] points cache read failed:', err);
@@ -229,6 +271,11 @@ export class AnitabiService {
             this.detailMemCache.set(bangumiId, { kind: 'miss' });
             return [];
           }
+          if (staleCandidate) {
+            // Stale serves are per-call, not memoized, so recovery is
+            // picked up on the next call once the network is healthy again.
+            return staleCandidate;
+          }
           throw err;
         }
         raw = pointsResult.value;
@@ -242,6 +289,11 @@ export class AnitabiService {
         if (err instanceof DataSourceError && err.code === 'NOT_FOUND') {
           this.detailMemCache.set(bangumiId, { kind: 'miss' });
           return [];
+        }
+        if (staleCandidate) {
+          // Stale serves are per-call, not memoized, so recovery is picked
+          // up on the next call once the network is healthy again.
+          return staleCandidate;
         }
         throw err;
       }
@@ -271,9 +323,16 @@ export class AnitabiService {
       }
 
       this.detailMemCache.set(bangumiId, { kind: 'hit', value: fresh });
-      // Persist (best effort).
+      // Persist (best effort). The row's SQLite ttl is widened to
+      // ttlMs + DETAIL_STALE_GRACE_MS (see the read above) so a boot-time
+      // CacheService.prune() cannot delete it before the stale-if-error
+      // grace window we actually want has elapsed.
       try {
-        await this.cache.set(DETAIL_CACHE_KEY_PREFIX + bangumiId, fresh, this.ttlMs);
+        await this.cache.set(
+          DETAIL_CACHE_KEY_PREFIX + bangumiId,
+          fresh,
+          this.ttlMs + DETAIL_STALE_GRACE_MS
+        );
       } catch (err) {
         console.warn('[AnitabiService] points cache write failed:', err);
       }
@@ -319,7 +378,7 @@ export class AnitabiService {
         litePoints = [];
       }
     }
-    return {
+    return normalizeLiteBangumi({
       id: row.bangumi_id,
       cn: row.title_cn ?? '',
       title: row.title,
@@ -332,7 +391,7 @@ export class AnitabiService {
       litePoints,
       pointsLength: row.points_length ?? 0,
       imagesLength: row.images_length ?? 0,
-    };
+    });
   }
 }
 

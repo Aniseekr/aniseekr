@@ -13,6 +13,7 @@ import {
   VISITED_COLOR,
   type MarkerVisual,
 } from '../../../../../libs/services/pilgrimage/map-engine/marker-style';
+import { anitabiImageSource } from '../../../../../libs/services/pilgrimage/anitabi-image';
 
 // Fixed map-pin chrome. These float over the tiles, not over app surfaces, so
 // they use fixed white chrome + a dark badge chip rather than theme surfaces.
@@ -25,6 +26,7 @@ export interface NativeMapMarkerProps {
   /** Surface fallback bubble/dot for spot markers with no own markerMode. */
   defaultMode?: MapMarkerMode;
   onPress?: (marker: MapMarker) => void;
+  onLongPress?: (marker: MapMarker) => void;
 }
 
 function Badge({ visual }: { visual: MarkerVisual }) {
@@ -53,7 +55,7 @@ function BalloonMarker({ marker, visual }: { marker: MapMarker; visual: MarkerVi
     <View style={[styles.balloonBox, { width: visual.width, height: visual.height }]}>
       <View style={[styles.photo, { borderColor: border }]}>
         {marker.image ? (
-          <Image source={{ uri: marker.image }} style={styles.photoImg} />
+          <Image source={anitabiImageSource(marker.image)} style={styles.photoImg} />
         ) : (
           <View style={[styles.photoFallback, { backgroundColor: visual.ringColor }]}>
             <Text style={styles.photoFallbackPin}>📍</Text>
@@ -88,10 +90,13 @@ function DotMarker({ visual }: { visual: MarkerVisual }) {
   );
 }
 
-function NativeMapMarkerImpl({ marker, defaultMode, onPress }: NativeMapMarkerProps) {
+function NativeMapMarkerImpl({ marker, defaultMode, onPress, onLongPress }: NativeMapMarkerProps) {
   const visual = resolveMarkerVisual(marker, defaultMode);
   return (
-    <Pressable accessibilityRole="button" onPress={() => onPress?.(marker)}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => onPress?.(marker)}
+      onLongPress={onLongPress ? () => onLongPress(marker) : undefined}>
       {visual.shape === 'dot' ? (
         <DotMarker visual={visual} />
       ) : visual.shape === 'gold88' ? (

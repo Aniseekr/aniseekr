@@ -21,8 +21,8 @@
 // Route params:
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, Linking, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -69,15 +69,13 @@ import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pi
 import {
   getPilgrimageHubSnapshot,
   updatePilgrimageHubSnapshot,
+  PERSIST_TTL_MS as HUB_SNAPSHOT_PERSIST_TTL_MS,
 } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { resolvePilgrimageHubInitialView } from '../../../libs/services/pilgrimage/pilgrimage-hub-initial-view';
 import { resolvePilgrimageMapInitialMode } from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
-import {
-  loadPilgrimageMapViewModeSync,
-  setPilgrimageMapViewMode,
-  type PilgrimageMapViewMode,
-} from '../../../libs/services/pilgrimage/map-view-mode-prefs';
+import { type PilgrimageMapViewMode } from '../../../libs/services/pilgrimage/map-view-mode-prefs';
 import { usePilgrimageHubData } from '../../../hooks/usePilgrimageHubData';
+import { usePilgrimageMapScreenState, type HubFilter } from '../../../hooks/usePilgrimageMapScreenState';
 import {
   PilgrimageHubSheet,
   type HubAnimeEntry,
@@ -85,17 +83,25 @@ import {
 } from '../../../components/pilgrimage/PilgrimageHubSheet';
 import { RoundHeaderButton } from '../../../components/pilgrimage/detail/RoundHeaderButton';
 import { FilterPill } from '../../../components/pilgrimage/detail/FilterPill';
-import { useT } from '../../../libs/i18n';
+import { buildMapsURL } from '../../../components/pilgrimage/detail';
+import { useT, type TranslationKey } from '../../../libs/i18n';
+import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
+import { buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
+import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
+import { MAP_LOCATE_RADIUS_KM } from '../../../libs/services/pilgrimage/map-nearby';
+import type { NearbySpot } from '../../../libs/services/pilgrimage/nearby-spots';
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
-const REGION_88_LABELS: Record<AnimeTourism88Region, string> = {
-  hokkaido_tohoku: 'Hokkaido / Tohoku',
-  kanto: 'Kanto',
-  tokyo: 'Tokyo',
-  chubu: 'Chubu',
-  kinki: 'Kinki',
-  chugoku_shikoku: 'Chugoku / Shikoku',
-  kyushu_okinawa: 'Kyushu / Okinawa',
+// Values point into the shared `pilgrimage.regions.*` catalog so this rail,
+// Tourism88Rail, and album.tsx all localize to the same wording.
+const REGION_LABEL_KEY: Record<AnimeTourism88Region, TranslationKey> = {
+  hokkaido_tohoku: 'pilgrimage.regions.hokkaido_tohoku',
+  kanto: 'pilgrimage.regions.kanto',
+  tokyo: 'pilgrimage.regions.tokyo',
+  chubu: 'pilgrimage.regions.chubu',
+  kinki: 'pilgrimage.regions.kinki',
+  chugoku_shikoku: 'pilgrimage.regions.chugoku_shikoku',
+  kyushu_okinawa: 'pilgrimage.regions.kyushu_okinawa',
 };
 
 // Geographic bounding boxes for each region. Hand-tuned to feel like a
@@ -171,8 +177,6 @@ function isValidGeo(geo: readonly [number, number] | null | undefined): boolean 
 const SHEET_PEEK_FRACTION = 0.16;
 const VIEW_MODE_TOGGLE_HEIGHT = 52;
 
-type HubFilter = 'all' | 'collection' | 'official88';
-
 export default function PilgrimageMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -198,18 +202,30 @@ export default function PilgrimageMapScreen() {
   const [styleOverride, setStyleOverride] = useState(loadMapStyleOverrideSync);
   useEffect(() => subscribeMapStyleOverride(setStyleOverride), []);
   // 'auto' picks dark at night (18:00–06:00) as well as in a dark app theme.
+  // Poll the hour once a minute so a map left open actually flips (same-value
+  // setState bails, so this is render-free the other 59 minutes).
+  const [clockHour, setClockHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    if (mapThemePref !== 'auto') return;
+    const id = setInterval(() => setClockHour(new Date().getHours()), 60_000);
+    return () => clearInterval(id);
+  }, [mapThemePref]);
   const styleUrl = resolveMapStyleUrl(
-    resolveMapModeWithClock(mapThemePref, effectiveMode, new Date().getHours()),
+    resolveMapModeWithClock(mapThemePref, effectiveMode, clockHour),
     styleOverride
   );
 
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
+  // Stale-while-revalidate: accept a persisted snapshot up to the same 24h
+  // budget it's written with, not the tighter 5-min default — collection /
+  // last-known-location rarely change hour-to-hour, and a cold start after
+  // an overnight-closed app should still paint from disk instead of falling
+  // back to the bundled offline seed. (The `getFreshUserLocation` 5-min gate
+  // inside pilgrimage-hub-initial-view is a separate, independent check that
+  // protects map CENTERING specifically — untouched here.)
+  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot(HUB_SNAPSHOT_PERSIST_TTL_MS));
   const initialSnapshotHasUserLocation = Object.prototype.hasOwnProperty.call(
     initialSnapshot ?? {},
     'userLocation'
-  );
-  const [mapViewMode, setMapViewModeState] = useState<PilgrimageMapViewMode>(
-    loadPilgrimageMapViewModeSync
   );
   const autoPermissionPromptedRef = useRef(false);
 
@@ -223,6 +239,10 @@ export default function PilgrimageMapScreen() {
   );
   const tracking = useUserLocationTracking({
     initialLocation: initialUserLocation,
+    // Hub map is a "where am I" surface — default to following the user the
+    // first time permission is observed granted (opt-in; the detail screen
+    // does NOT pass this so it keeps centering on the anime).
+    autoEngage: true,
     onFollowLocation: (loc, fs) => {
       mapRef.current?.recenter(
         loc.latitude,
@@ -269,6 +289,41 @@ export default function PilgrimageMapScreen() {
     })
   );
 
+  const initialHubFilter = useMemo<HubFilter>(() => {
+    const raw = getStringParam(params, 'filter');
+    return raw === 'collection' || raw === 'official88' ? raw : 'all';
+  }, [params]);
+  // ─── View state (parent-owned) — lifted into usePilgrimageMapScreenState so
+  // this screen stays a view orchestrator (CLAUDE.md Rule 9). Derived memos
+  // below (hubEntries, filteredEntries, markers, stats, focusedAnime) and the
+  // imperative camera effects consume these outputs.
+  const {
+    searchQuery,
+    deferredSearchQuery,
+    hubFilter,
+    listLayout,
+    selectedRegions,
+    flyTick,
+    focusedAnimeId,
+    mapViewMode,
+    setFocusedAnimeId,
+    persistMapViewMode,
+    handleSearchChange,
+    handleSearchClear,
+    handlePickFilter,
+    handlePickLayout,
+    handlePickRegion,
+    handleResetToJapan,
+  } = usePilgrimageMapScreenState({
+    initialFilter: initialHubFilter,
+    initialFocusBangumiId: focusBangumiIdParam,
+  });
+
+  // Base-map load failure (offline + no cached tiles). `mapReloadKey` remounts
+  // the GL surface so "Retry" actually re-attempts the style fetch.
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
+  const [mapReloadKey, setMapReloadKey] = useState(0);
+
   // ─── Data cluster (collection + featured + lazy index, MMKV-seeded) ──────
   // Lifted into usePilgrimageHubData so this screen stays a view orchestrator
   // (CLAUDE.md Rule 9). The hook owns the snapshot/index seed, the loading
@@ -290,31 +345,6 @@ export default function PilgrimageMapScreen() {
     },
     [handleBoundsChange]
   );
-
-  // ─── View state (parent-owned) ──────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  // Seed the filter from the route so the hub's "My Collection → See all" lands
-  // directly on the collection-filtered list (params: { filter: 'collection' }).
-  const [hubFilter, setHubFilter] = useState<HubFilter>(() => {
-    const raw = getStringParam(params, 'filter');
-    return raw === 'collection' || raw === 'official88' ? raw : 'all';
-  });
-  const [listLayout, setListLayout] = useState<'grid' | 'rows'>('rows');
-  // Multi-select region filter for the Tourism-88 view. Empty set = whole
-  // Japan; otherwise the 88 markers + camera narrow to the union of picks (US-04).
-  const [selectedRegions, setSelectedRegions] = useState<ReadonlySet<AnimeTourism88Region>>(
-    () => new Set()
-  );
-  const [flyTick, setFlyTick] = useState(0);
-  // Base-map load failure (offline + no cached tiles). `mapReloadKey` remounts
-  // the GL surface so "Retry" actually re-attempts the style fetch.
-  const [mapLoadFailed, setMapLoadFailed] = useState(false);
-  const [mapReloadKey, setMapReloadKey] = useState(0);
-
-  // Track which anime should be in the swap-able focused card. We persist the
-  // bangumi id (not the index) so the swap behaviour survives list re-sorts.
-  const [focusedAnimeId, setFocusedAnimeId] = useState<number | null>(focusBangumiIdParam);
 
   // ─── Derived: 88-selection lookup ──────────────────────────────────────
   const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
@@ -467,6 +497,8 @@ export default function PilgrimageMapScreen() {
         city: anime.city ?? '',
         pointsLength: anime.pointsLength ?? 0,
         color: anime.color || theme.accent,
+        // ≥1 known point checked in ⇒ the user has started this anime's route.
+        visited: entry.visitedCount > 0,
       });
     }
     return out;
@@ -507,23 +539,71 @@ export default function PilgrimageMapScreen() {
     };
   }, [filteredEntries, captureCount]);
 
-  // ─── Handlers ──────────────────────────────────────────────────────────
-  const handlePickRegion = useCallback((region: AnimeTourism88Region) => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setSelectedRegions((cur) => {
-      const next = new Set(cur);
-      if (next.has(region)) next.delete(region);
-      else next.add(region);
-      return next;
-    });
-    setFlyTick((t) => t + 1);
+  // ─── Point-level "nearby spots" strip (spec 2.3) ───────────────────────
+  // Low-frequency: re-queries only when the coarse user location or the
+  // collection membership changes (Rule 9), not on every map pan/tick.
+  const [nearbySpots, setNearbySpots] = useState<readonly NearbySpot[]>([]);
+  useEffect(() => {
+    if (!userLocation) {
+      setNearbySpots([]);
+      return;
+    }
+    let active = true;
+    getSpotsNear(userLocation, MAP_LOCATE_RADIUS_KM, 40)
+      .then((hits) => {
+        if (!active) return;
+        setNearbySpots(
+          buildNearbySpotsFromIndex(
+            hits,
+            (id) => {
+              const e = getIndexedById(id);
+              return e ? { title: e.title, cn: e.cn, color: e.color } : null;
+            },
+            collectionIds
+          )
+        );
+      })
+      .catch(() => {
+        if (active) setNearbySpots([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [userLocation, collectionIds]);
+
+  const handlePickNearbySpot = useCallback((spot: NearbySpot) => {
+    setFocusedAnimeId(spot.animeId);
+    mapRef.current?.recenter(spot.lat, spot.lng, 15, { animate: true });
   }, []);
 
-  const handleResetToJapan = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setSelectedRegions((cur) => (cur.size === 0 ? cur : new Set()));
-    setFlyTick((t) => t + 1);
-  }, []);
+  // ─── Handlers ──────────────────────────────────────────────────────────
+  // Small clusters delegate to the surface (big ones zoom-to-fit inside the
+  // engine). Fit their bbox; a same-building cluster (degenerate bbox) jumps
+  // past CLUSTER_DISABLE_AT instead so the markers actually separate.
+  const handleClusterPress = useCallback(
+    (members: readonly MapMarker[]) => {
+      if (members.length === 0) return;
+      // Programmatic camera move driven by a cluster tap — pause follow
+      // first (I5) so this content-focus breaks follow instead of fighting it.
+      onUserPan();
+      let south = 90,
+        west = 180,
+        north = -90,
+        east = -180;
+      for (const m of members) {
+        south = Math.min(south, m.lat);
+        north = Math.max(north, m.lat);
+        west = Math.min(west, m.lng);
+        east = Math.max(east, m.lng);
+      }
+      if (north - south < 0.0005 && east - west < 0.0005) {
+        mapRef.current?.recenter(members[0].lat, members[0].lng, 16, { animate: true });
+        return;
+      }
+      mapRef.current?.fitBounds?.({ south, west, north, east }, { animate: true });
+    },
+    [onUserPan]
+  );
 
   // The actual drill-down. Same handler whether the user tapped a marker, the
   // focused card, or a list row. returnTo=map so the detail screen's back
@@ -562,6 +642,29 @@ export default function PilgrimageMapScreen() {
     [navigateToDetail]
   );
 
+  // Long-press quick actions on a hub marker. Scoped to two HONEST actions —
+  // navigate / open detail — because spot-intents and visited are point-keyed;
+  // 收藏/計畫/打卡 on an anime centroid would fabricate state (Rule 8) until
+  // spot-level markers exist.
+  const [quickActionMarker, setQuickActionMarker] = useState<MapMarker | null>(null);
+  const handleMarkerLongPress = useCallback((m: MapMarker) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setQuickActionMarker(m);
+  }, []);
+  const closeQuickActions = useCallback(() => setQuickActionMarker(null), []);
+  const handleQuickNavigate = useCallback(() => {
+    const m = quickActionMarker;
+    if (!m) return;
+    Linking.openURL(buildMapsURL(m.lat, m.lng, m.title)).catch(() => undefined);
+    setQuickActionMarker(null);
+  }, [quickActionMarker]);
+  const handleQuickOpen = useCallback(() => {
+    const m = quickActionMarker;
+    if (!m || m.bangumiId == null) return;
+    setQuickActionMarker(null);
+    handleMarkerPress(m.bangumiId);
+  }, [quickActionMarker, handleMarkerPress]);
+
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.back();
@@ -585,32 +688,10 @@ export default function PilgrimageMapScreen() {
     router.push('/pilgrimage/album');
   }, [router]);
 
-  const handleSearchChange = useCallback((text: string) => setSearchQuery(text), []);
-  const handleSearchClear = useCallback(() => {
+  const handleOpenCamera = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    setSearchQuery('');
-  }, []);
-
-  const handlePickFilter = useCallback((next: HubFilter) => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setHubFilter(next);
-  }, []);
-
-  const handlePickLayout = useCallback((next: 'grid' | 'rows') => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setListLayout(next);
-  }, []);
-
-  const persistMapViewMode = useCallback((next: PilgrimageMapViewMode) => {
-    setMapViewModeState(next);
-    setPilgrimageMapViewMode(next).catch(() => undefined);
-  }, []);
-
-  const flyToFocusedAnime = useCallback(() => {
-    const anime = focusedAnime?.anime;
-    if (!anime || !isValidGeo(anime.geo)) return;
-    mapRef.current?.focus?.({ lat: anime.geo[0], lng: anime.geo[1], zoom: 11 });
-  }, [focusedAnime]);
+    router.push('/pilgrimage/capture');
+  }, [router]);
 
   const flyToUserLocation = useCallback(
     (loc: LatLng | null = userLocation) => {
@@ -627,16 +708,8 @@ export default function PilgrimageMapScreen() {
     persistMapViewMode(next);
     if (next === 'myLocation') {
       if (!flyToUserLocation()) requestPermissionSheet();
-      return;
     }
-    flyToFocusedAnime();
-  }, [
-    flyToFocusedAnime,
-    flyToUserLocation,
-    mapViewMode,
-    persistMapViewMode,
-    requestPermissionSheet,
-  ]);
+  }, [flyToUserLocation, mapViewMode, persistMapViewMode, requestPermissionSheet]);
 
   const handleAllowLocationFromSheet = useCallback(() => {
     dismissPermissionSheet();
@@ -647,7 +720,6 @@ export default function PilgrimageMapScreen() {
   // ─── Bottom-sheet anchor plumbing ──────────────────────────────────────
   const screenHeight = Dimensions.get('window').height;
   const sheetPosition = useSharedValue(screenHeight);
-  const [sheetIndex, setSheetIndex] = useState<number>(1);
 
   const sheetPeekOffset = useMemo(() => {
     return Math.max(
@@ -656,7 +728,6 @@ export default function PilgrimageMapScreen() {
     );
   }, [insets.bottom, screenHeight]);
 
-  const handleSheetIndexChange = useCallback((idx: number) => setSheetIndex(idx), []);
   const initialSheetIndex = initialMode === 'list' ? 2 : 1;
 
   // Anchor floating bottom chrome to the sheet's top edge so it slides with
@@ -672,25 +743,28 @@ export default function PilgrimageMapScreen() {
     };
   });
 
-  // Cycle the focused id when a row tap should preview-without-drilling.
-  // (Currently unused — kept for an eventual "long-press = preview" path.)
-  void sheetIndex;
-
   // ─── Drive the inline map camera (Rule 9 — imperative, off React state) ──
   // Fly to the focused anime when it changes (swap / sheet-row preview) so the
-  // sheet + map track together.
+  // sheet + map track together. This is a programmatic camera move driven by
+  // content focus, not the user — pause follow first (I5, Google Maps
+  // convention: focusing content breaks "follow me").
   useEffect(() => {
     if (mapViewMode !== 'anime') return;
     const anime = focusedAnime?.anime;
     if (anime && isValidGeo(anime.geo)) {
+      onUserPan();
       mapRef.current?.focus?.({ lat: anime.geo[0], lng: anime.geo[1], zoom: 11 });
     }
-  }, [focusedAnime, mapViewMode]);
+  }, [focusedAnime, mapViewMode, onUserPan]);
 
-  useEffect(() => {
-    if (mapViewMode !== 'myLocation' || !userLocation) return;
-    flyToUserLocation(userLocation);
-  }, [flyToUserLocation, mapViewMode, userLocation]);
+  // NOTE: there used to be a `mapViewMode === 'myLocation' && userLocation`
+  // effect here that recentred on every location tick. With the T6 always-on
+  // watcher that fired on every fix and fought any pan the user made while
+  // following, bypassing the follow state machine entirely. The follow
+  // machine already owns continuous recentring (`onFollowLocation` above);
+  // `handleSwitchMapViewMode` (above) does the one-shot recenter when the
+  // user explicitly switches TO myLocation. Do not re-add a myLocation-driven
+  // recenter effect here.
 
   useEffect(() => {
     if (loading || autoPermissionPromptedRef.current) return;
@@ -703,10 +777,13 @@ export default function PilgrimageMapScreen() {
   }, [loading, locatePermission, requestPermissionSheet, userLocation]);
 
   // Fly to a region's bounds on a region-chip tap. `flyBoundsRequest` gets a
-  // fresh identity per tap so re-taps re-run this.
+  // fresh identity per tap so re-taps re-run this. Programmatic camera move —
+  // pause follow first (I5) so a region pick doesn't fight the follow state.
   useEffect(() => {
-    if (flyBoundsRequest) mapRef.current?.fitBounds?.(flyBoundsRequest.bounds);
-  }, [flyBoundsRequest]);
+    if (!flyBoundsRequest) return;
+    onUserPan();
+    mapRef.current?.fitBounds?.(flyBoundsRequest.bounds);
+  }, [flyBoundsRequest, onUserPan]);
 
   return (
     <>
@@ -738,6 +815,8 @@ export default function PilgrimageMapScreen() {
             onMarkerPress={(m) => {
               if (m.bangumiId != null) handleMarkerPress(m.bangumiId);
             }}
+            onMarkerLongPress={handleMarkerLongPress}
+            onClusterPress={handleClusterPress}
             onBoundsChange={handleMapBoundsChange}
             onPanned={onUserPan}
             onLoadError={handleMapLoadError}
@@ -779,6 +858,13 @@ export default function PilgrimageMapScreen() {
                     icon="albums-outline"
                     onPress={handleOpenAlbum}
                     accessibilityLabel={t('pilgrimage.map.openAlbumA11y')}
+                    tint={themeColor}
+                    theme={theme}
+                  />
+                  <RoundHeaderButton
+                    icon="camera-outline"
+                    onPress={handleOpenCamera}
+                    accessibilityLabel={t('pilgrimage.capture.entryA11y')}
                     tint={themeColor}
                     theme={theme}
                   />
@@ -913,10 +999,57 @@ export default function PilgrimageMapScreen() {
               onGoToCollection={handleGoToCollection}
               initialIndex={initialSheetIndex}
               animatedPosition={sheetPosition}
-              onSheetIndexChange={handleSheetIndexChange}
               onAnimePress={handleSheetAnimePress}
               onSwapFocused={handleSwapFocused}
+              nearbySpots={nearbySpots}
+              onPickNearbySpot={handlePickNearbySpot}
             />
+
+            {/* Long-press quick actions — anime-centroid honest actions only
+              (navigate / open detail). See Rule 8 note above handlers. */}
+            <Modal
+              transparent
+              visible={quickActionMarker != null}
+              onRequestClose={closeQuickActions}
+              statusBarTranslucent
+              animationType="fade">
+              <Pressable
+                style={styles.quickActionBackdrop}
+                onPress={closeQuickActions}
+                accessibilityLabel={t('commonUi.dismiss')}
+                accessibilityRole="button">
+                <Pressable
+                  style={[
+                    styles.quickActionSheet,
+                    { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+                  ]}
+                  onPress={() => undefined}>
+                  <ThemedText variant="titleSmall" weight="800" numberOfLines={1}>
+                    {quickActionMarker?.title}
+                  </ThemedText>
+                  <Pressable
+                    onPress={handleQuickNavigate}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
+                    <Ionicons name="navigate-outline" size={18} color={theme.text.primary} />
+                    <ThemedText variant="bodyMedium">
+                      {t('pilgrimage.map.quickAction.navigate')}
+                    </ThemedText>
+                  </Pressable>
+                  {quickActionMarker?.bangumiId != null ? (
+                    <Pressable
+                      onPress={handleQuickOpen}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
+                      <Ionicons name="information-circle-outline" size={18} color={theme.text.primary} />
+                      <ThemedText variant="bodyMedium">
+                        {t('pilgrimage.map.quickAction.openDetail')}
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
+                </Pressable>
+              </Pressable>
+            </Modal>
           </>
         )}
 
@@ -1060,7 +1193,7 @@ function RegionChipStrip({
               variant="captionSmall"
               weight="600"
               style={[chipStyles.chipLabel, active ? { color: accentFg } : null]}>
-              {REGION_88_LABELS[r]}
+              {t(REGION_LABEL_KEY[r])}
             </ThemedText>
           </Pressable>
         );
@@ -1202,6 +1335,26 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+
+    // Long-press marker quick-action sheet (navigate / open detail).
+    quickActionBackdrop: {
+      ...StyleSheet.absoluteFill,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      padding: 16,
+    },
+    quickActionSheet: {
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      padding: 16,
+      gap: 8,
+    },
+    quickActionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: 44,
     },
   });
 }

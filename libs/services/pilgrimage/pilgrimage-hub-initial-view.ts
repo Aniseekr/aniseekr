@@ -9,12 +9,6 @@ const HUB_FOCUS_ZOOM = 11;
 const HUB_USER_ZOOM = 15;
 const JAPAN_OVERVIEW_ZOOM = 5;
 const USER_LOCATION_FRESH_MS = 5 * 60 * 1000;
-const JAPAN_BOUNDS = {
-  south: 24.0,
-  west: 122.9,
-  north: 45.6,
-  east: 146.0,
-} as const;
 const JAPAN_CENTER = { lat: 36.5, lng: 138.0 } as const;
 
 export interface PilgrimageHubInitialView {
@@ -36,7 +30,7 @@ export function resolvePilgrimageHubInitialView({
   now = Date.now(),
 }: PilgrimageHubInitialViewInput): PilgrimageHubInitialView {
   const freshUserLocation = getFreshUserLocation(snapshot, now);
-  if (freshUserLocation && pointInJapan(freshUserLocation)) {
+  if (freshUserLocation) {
     return toView(freshUserLocation.latitude, freshUserLocation.longitude, HUB_USER_ZOOM);
   }
 
@@ -158,15 +152,6 @@ function isValidAnimeGeo(anime: AnitabiBangumi): anime is AnitabiBangumi & {
 
 function isFiniteGeo(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
-}
-
-function pointInJapan(loc: LatLng): boolean {
-  return (
-    loc.latitude >= JAPAN_BOUNDS.south &&
-    loc.latitude <= JAPAN_BOUNDS.north &&
-    loc.longitude >= JAPAN_BOUNDS.west &&
-    loc.longitude <= JAPAN_BOUNDS.east
-  );
 }
 
 function toView(lat: number, lng: number, zoom: number = HUB_FOCUS_ZOOM): PilgrimageHubInitialView {

@@ -95,3 +95,59 @@ export function getPilgrimageDetailBackRoute(params: RouterParams): PilgrimageRo
       return null;
   }
 }
+
+export type MapsPlatform = 'google' | 'apple';
+
+/** Google dir URLs allow up to ~9 intermediate waypoints + 1 destination. */
+const GOOGLE_MAX_WAYPOINTS = 9;
+
+const latLng = (p: readonly [number, number]): string => `${p[0]},${p[1]}`;
+
+/**
+ * Build deep links that route through an ordered list of pilgrimage stops.
+ *
+ * Google: origin is omitted so Maps uses the user's current location; each
+ * segment carries up to 9 waypoints then a final destination. A trip longer
+ * than 10 stops is split into chained segments (the next segment resumes from
+ * the previous segment's last stop). Apple Maps has no multi-stop URL, so we
+ * fall back to one search pin per stop.
+ */
+export function buildMultiStopDirectionsUrl(
+  stops: readonly (readonly [number, number])[],
+  platform: MapsPlatform
+): string[] {
+  if (stops.length === 0) return [];
+
+  if (platform === 'apple') {
+    return stops.map((p) => `https://maps.apple.com/?ll=${latLng(p)}`);
+  }
+
+  // google — chunk into segments of at most (GOOGLE_MAX_WAYPOINTS + 1) stops,
+  // overlapping by one so each segment starts where the previous ended.
+  const segmentSize = GOOGLE_MAX_WAYPOINTS + 1;
+  const urls: string[] = [];
+  let start = 0;
+  while (start < stops.length) {
+    const end = Math.min(start + segmentSize, stops.length);
+    const segment = stops.slice(start, end);
+    if (segment.length < 2) {
+      // A trailing lone stop (only when a segment boundary landed exactly on the
+      // last stop) — link straight to it.
+      urls.push(`https://www.google.com/maps/dir/?api=1&destination=${latLng(segment[0])}`);
+      break;
+    }
+    const destination = latLng(segment[segment.length - 1]);
+    const waypoints = segment
+      .slice(0, segment.length - 1)
+      .map(latLng)
+      // URL-encoded pipe (%7C) — a raw `|` in a query string is technically
+      // legal but several webview/native URL handlers mis-split on it.
+      .join('%7C');
+    urls.push(
+      `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}`
+    );
+    if (end >= stops.length) break;
+    start = end - 1; // resume from this segment's destination
+  }
+  return urls;
+}

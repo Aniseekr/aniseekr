@@ -616,6 +616,13 @@
       "emptyTitle": "這個資料夾還沒有內容",
       "folder": "資料夾",
       "loading": "載入中…",
+      "searchPlaceholder": "搜尋此資料夾",
+      "sort": {
+        "added": "加入順序",
+        "updated": "最近更新",
+        "title": "標題",
+        "rating": "評分"
+      },
       "swipeToLike": "滑動表達喜好",
       "swipeToTriage": "滑動分類 · {count}",
       "unknownTitle": "未知標題"
@@ -643,6 +650,7 @@
         "other": "{count} 個資料夾"
       },
       "libraryStats": "資料庫統計",
+      "metaAnimeCount": "{count} 部動畫",
       "myFolders": "我的資料夾",
       "newFolder": "新增資料夾",
       "recentAnime": "最近的動畫",
@@ -671,6 +679,7 @@
         "closestWithDistance": "最近：{title} · 距離 {distance}",
         "countLabel": "{count} {animeWord} · {tier}",
         "labelAccessibility": "開啟聖地地圖",
+        "nearestSpotCaps": "最近的聖地",
         "noMappedAnime": "尚未有對應動畫——點擊開啟地圖",
         "title": "聖地地圖",
         "withoutLocation": "點擊瀏覽日本各地的聖地"
@@ -686,8 +695,9 @@
       "charactersA11y": "角色",
       "searchA11y": "搜尋",
       "section": {
+        "explore": "探索",
         "featuredSpots": "精選景點",
-        "myCollection": "我的收藏",
+        "myPilgrimage": "我的巡禮",
         "popularAnimes": "熱門動畫",
         "seeAll": "查看全部",
         "viewMap": "查看地圖",
@@ -695,7 +705,7 @@
       },
       "tier": {
         "dayTrip": "一日遊 · 100 公里",
-        "inJapan": "日本境內",
+        "farAway": "遠方聖地",
         "inRegion": "同區 · 500 公里",
         "walking": "步行範圍 · 30 公里"
       },
@@ -966,6 +976,16 @@
     }
   },
   "pilgrimage": {
+    "regions": {
+      "chubu": "中部",
+      "chugoku_shikoku": "中國・四國",
+      "hokkaido_tohoku": "北海道・東北",
+      "kanto": "關東",
+      "kinki": "近畿",
+      "kyushu_okinawa": "九州・沖繩",
+      "other": "其他",
+      "tokyo": "東京"
+    },
     "share": {
       "appMissingBody": "未安裝 {app}。照片已儲存到「照片」，標題文字已複製。",
       "appMissingTitle": "未安裝 {app}",
@@ -995,6 +1015,7 @@
       "foldersByAnime": "依動畫分類",
       "folderSpotsCount": "{count} 個地點",
       "folderSpotsRatio": "{visited}/{total} 個地點",
+      "freeCapturesFolder": "自由拍攝",
       "hoursAgo": "{count} 小時前",
       "justNow": "剛剛",
       "loadingFolder": "載入資料夾中…",
@@ -1016,9 +1037,33 @@
     "camera": {
       "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）"
     },
+    "capture": {
+      "title": "自由拍攝",
+      "permTitle": "需要相機權限",
+      "permBody": "允許相機權限即可拍攝巡禮照片。",
+      "permCta": "開啟設定",
+      "savedToAlbum": "已存入相簿",
+      "mountTitle": "靠近 {name}",
+      "mountBody": "距離 {distance} 公尺 · 要把這張照片掛到此場景嗎？",
+      "mountConfirm": "掛到此場景",
+      "mountDismiss": "留在自由拍攝",
+      "entryA11y": "自由拍攝相機"
+    },
     "detail": {
+      "areaLabel": "區域 {index}（{count} 點）",
+      "bearing": {
+        "n": "北",
+        "ne": "東北",
+        "e": "東",
+        "se": "東南",
+        "s": "南",
+        "sw": "西南",
+        "w": "西",
+        "nw": "西北"
+      },
       "browseFallback": "瀏覽",
       "clearSearchA11y": "清除搜尋",
+      "distanceAway": "距離 {distance}",
       "emptyFilter": "沒有符合此篩選的場景。",
       "emptyNoData": "這部動畫尚無巡禮資料。",
       "emptySearch": "沒有符合的搜尋結果。",
@@ -1032,7 +1077,10 @@
         "visited": "已造訪"
       },
       "goBack": "返回",
+      "nearSpotPrompt": "你在 {name} 附近",
       "openAlbumA11y": "開啟巡禮相簿",
+      "sceneLocation": "場景位置",
+      "sceneOfCount": "第 {index}／{count} 個場景",
       "searchA11y": "搜尋巡禮地點或集數",
       "searchPlaceholder": "搜尋地點或集數",
       "shareA11y": "分享",
@@ -1047,6 +1095,9 @@
         "rows": "列表"
       }
     },
+    "image": {
+      "unavailable": "無法載入圖片"
+    },
     "map": {
       "allJapan": "全日本",
       "clearSearchA11y": "清除搜尋",
@@ -1059,6 +1110,9 @@
         "grid": "格狀",
         "rows": "列表"
       },
+      "locateIdleA11y": "顯示我的位置",
+      "locateFollowingA11y": "停止跟隨我的位置",
+      "locateCompassA11y": "停止指南針模式",
       "locationPromptAllow": "允許位置存取",
       "locationPromptBody": "允許位置存取後，地圖會直接顯示你附近的動畫場景。",
       "locationPromptNotNow": "暫時不要",
@@ -1067,11 +1121,16 @@
       "emptyCollection": "你的收藏中還沒有聖地巡禮景點。",
       "emptyNearby": "附近還沒有動畫。試著拖曳地圖到其他地區看看。",
       "emptySearch": "沒有符合「{query}」的動畫。",
+      "nearbySpotsTitle": "你附近的聖地",
       "goToCollection": "前往收藏",
       "mapLoadError": "無法載入地圖。",
       "offlineBody": "你目前離線或連線中斷。請檢查網路後重試 — 已瀏覽過的區域仍可離線使用。",
       "offlineTitle": "無法載入地圖",
       "openAlbumA11y": "開啟巡禮相簿",
+      "quickAction": {
+        "navigate": "導航到這裡",
+        "openDetail": "查看聖地"
+      },
       "searchA11y": "搜尋動畫",
       "searchPlaceholder": "搜尋動畫或城市",
       "viewModeAnime": "場景位置",
@@ -1101,12 +1160,17 @@
       "buildOwnTitle": "自訂一日行程",
       "daysShort": "{count} 天",
       "daysSuffix": "{count} 天",
+      "emptyBody": "在任一地點點旗標，就會加進你的巡禮清單。",
+      "emptyCta": "去地圖探索",
+      "emptyTitle": "還沒有計畫的地點",
       "featuredBadge": "精選行程",
       "featuredDestinationFallback": "精選目的地",
       "featuredTitleLine": "{title} · {days} 日遊",
       "featuredTripA11y": "精選行程:{title}",
+      "groupProgress": "已走 {visited}/{total}",
       "moreOptionsA11y": "更多選項",
       "multipleAreas": "多個地點",
+      "plannedHeader": "你的巡禮計畫",
       "preset": {
         "aiLabel": "AI 規劃",
         "aiSubtitle": "依你的清單客製",
@@ -1121,6 +1185,8 @@
       "quickPresetsHint": "點選開始規劃",
       "seeAll": "全部",
       "spotsShort": "{count} 個地點",
+      "startTrip": "開始巡禮",
+      "startTripA11y": "開始 {title} 的巡禮",
       "statDestinations": "目的地",
       "statSaved": "已收藏",
       "statVisited": "造訪地點",
@@ -1130,9 +1196,26 @@
       "suggestedSubtitle": "受精選動畫啟發的一日行程",
       "suggestedTitle": "推薦行程",
       "title": "行程規劃",
+      "uncategorizedBody": "在這 {count} 個地點重新點旗標即可歸入行程。",
+      "uncategorizedTitle": "未分類",
       "untitled": "未命名",
       "walkHoursLong": "約 {hours} 小時步行",
       "walkHoursShort": "約 {hours} 小時"
+    },
+    "tourism88": {
+      "entryA11y": "{title}，動畫聖地巡禮 88 選",
+      "moreCities": "+{count} 個城市",
+      "official": "★ 官方"
+    },
+    "trip": {
+      "nextStop": "下一站",
+      "away": "距離 {distance}",
+      "openInMaps": "在 Google Maps 開啟",
+      "openInMapsA11y": "在 Google Maps 開啟此行程",
+      "routeTruncated": "路線較長 — 已在地圖開啟第一段。",
+      "allVisited": "全部走完了",
+      "empty": "這個行程還沒有可定位的地點。",
+      "back": "返回"
     }
   },
   "companion": {
@@ -1292,6 +1375,10 @@
     "exhibits": "展品",
     "failedToLoadStats": "統計載入失敗",
     "favorites": "最愛",
+    "folderItemCount": {
+      "one": "{count} 部",
+      "other": "{count} 部"
+    },
     "folderName": "資料夾名稱",
     "groupAnimeByMoodSeason": "依心情、季度或任何方式整理動畫。",
     "hallOfFame": "名人堂",
@@ -1423,6 +1510,8 @@
     "allowCameraSoYouCan": "允許相機權限,即可對照動畫場景取景。",
     "altitude": "海拔",
     "animateShutter": "快門動畫",
+    "anime": "動畫",
+    "animePilgrimageA11y": "{title} 聖地巡禮",
     "animeTourism88": "動畫旅遊 88 選",
     "apply": "套用",
     "applyCrop": "套用裁切",
@@ -1459,6 +1548,9 @@
     "captureModeSingleHint": "一張清晰照片",
     "captureModeSingleLabel": "照片",
     "character": "角色",
+    "checkIn": "打卡",
+    "checkInPhoto": "打卡並拍照",
+    "checkedIn": "已打卡",
     "classic": "經典",
     "closeCamera": "關閉相機",
     "closeCameraSettings": "關閉相機設定",
@@ -1526,9 +1618,11 @@
     "more": "更多",
     "moreShareOptions": "更多分享選項",
     "navy": "海軍藍",
+    "nearbyAnime": "附近動畫",
     "noPilgrimageSpotsYet": "還沒有巡禮點。",
     "noShotsYet": "還沒有照片",
     "noSpotsYet": "還沒有巡禮點",
+    "openAnimeA11y": "開啟 {title}",
     "openAnitabiHomepage": "開啟 Anitabi 首頁",
     "openArCamera": "開啟 AR 相機",
     "openArCamera2": "開啟 AR 相機",
@@ -1540,6 +1634,7 @@
     "overlayModeA11y": "疊層模式 {mode}",
     "overlayOff": "疊層關閉",
     "overlayOpacity": "疊層不透明度",
+    "photos": "照片",
     "previousOverlayMode": "上一個疊層模式",
     "nextOverlayMode": "下一個疊層模式",
     "peach": "蜜桃色",
@@ -1555,6 +1650,7 @@
     "positionLock": "位置鎖定",
     "positionLocked": "位置已鎖定 — 立即拍攝",
     "precisionAlignment": "精準對位",
+    "progressFraction": "{visited}/{total}",
     "real": "實景",
     "recordedGps": "記錄的 GPS",
     "red": "紅色",
@@ -1572,6 +1668,7 @@
     "sceneGps": "場景 GPS",
     "sceneSpots": "場景巡禮點",
     "scenes": "場景",
+    "scenesCount": "{count} 個場景",
     "selfTimer": "自拍計時",
     "shareToInstagram": "分享到 Instagram",
     "shareToSocial": "分享到社群",
@@ -1585,6 +1682,8 @@
     "silentShutter": "靜音快門",
     "sketch": "素描",
     "sky": "天空藍",
+    "spotFromAnimeA11y": "{spot}，來自《{anime}》",
+    "spotsCount": "{count} 個景點",
     "spotsNearYou": "附近的巡禮點",
     "startArCamera": "啟動 AR 相機",
     "startArCamera2": "啟動 AR 相機",
@@ -1603,6 +1702,7 @@
     "tilt": "俯仰",
     "tiltOffset": "俯仰偏差",
     "tipsToImprove": "改善建議",
+    "unknownTitle": "未知標題",
     "viewFullMapOnAnitabi": "在 Anitabi 查看完整地圖",
     "viewOnAnitabi": "在 Anitabi 查看",
     "visited": "已造訪",

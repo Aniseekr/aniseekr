@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
-import { buildNearbySpots } from '../../../libs/services/pilgrimage/nearby-spots';
+import { buildNearbySpots, buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 
 function point(
   id: string,
@@ -90,5 +91,38 @@ describe('buildNearbySpots', () => {
     );
 
     expect(buildNearbySpots([many], USER, 5)).toHaveLength(5);
+  });
+});
+
+describe('buildNearbySpotsFromIndex', () => {
+  const hits: NearbySpotHit[] = [
+    { pointId: 'p1', bangumiId: 1, lat: 35, lng: 139, name: '駅前', cn: '车站前', image: '/images/points/1/p1.jpg', distanceKm: 5 },
+    { pointId: 'p2', bangumiId: 2, lat: 35, lng: 139, name: 'Shrine', cn: '', image: '/images/points/2/p2.jpg', distanceKm: 1 },
+  ];
+  const lookup = (id: number) =>
+    id === 1
+      ? { title: 'Anime One', cn: '动画一', color: '#111111' }
+      : id === 2
+        ? { title: 'Anime Two', cn: '', color: '' }
+        : null;
+
+  it('normalizes image to an absolute CDN url and prefers cn name', () => {
+    const out = buildNearbySpotsFromIndex(hits, lookup, new Set());
+    const p1 = out.find((s) => s.id === 'p1')!;
+    expect(p1.image).toBe('https://image.anitabi.cn/points/1/p1.jpg?plan=h160');
+    expect(p1.name).toBe('车站前');
+    expect(p1.animeTitle).toBe('动画一');
+    expect(p1.markerId).toBe('1:p1');
+  });
+
+  it('sorts collection anime first, then by distance', () => {
+    const out = buildNearbySpotsFromIndex(hits, lookup, new Set([1]));
+    // bangumi 1 is in the collection so it leads despite being farther (5km > 1km).
+    expect(out.map((s) => s.id)).toEqual(['p1', 'p2']);
+  });
+
+  it('without collection, sorts purely by distance', () => {
+    const out = buildNearbySpotsFromIndex(hits, lookup, new Set());
+    expect(out.map((s) => s.id)).toEqual(['p2', 'p1']);
   });
 });

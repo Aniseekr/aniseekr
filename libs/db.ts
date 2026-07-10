@@ -1,5 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
+import type { LatLngBox, SpotIndexRow } from './services/pilgrimage/spot-index';
+
 const DB_NAME = 'aniseekr.db';
 
 export interface FavoriteItem {
@@ -476,6 +478,17 @@ const DDL = `
         url TEXT NOT NULL,
         updated_at INTEGER NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS anitabi_spots (
+        point_id TEXT PRIMARY KEY NOT NULL,
+        bangumi_id INTEGER NOT NULL,
+        lat REAL NOT NULL,
+        lng REAL NOT NULL,
+        name TEXT,
+        cn TEXT,
+        image TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_anitabi_spots_lat ON anitabi_spots(lat);
     `;
 
 export const LocalDB = {
@@ -671,5 +684,86 @@ export const LocalDB = {
     const db = await openDb();
     const result = await db.runAsync('DELETE FROM pilgrimage_spots WHERE expires_at <= ?', now);
     return result?.changes ?? 0;
+  },
+
+  /**
+   * Replace the entire anitabi_spots table with a fresh hydration payload.
+   * One transaction, chunked multi-row INSERTs (500 rows/statement) so a ~50k
+   * row swap doesn't trip expo-sqlite's variable limit or the "database is
+   * locked" path. Returns the number of rows written.
+   */
+  async hydrateAnitabiSpots(rows: readonly SpotIndexRow[]): Promise<number> {
+    const db = await openDb();
+    const CHUNK = 500;
+    await db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM anitabi_spots');
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const chunk = rows.slice(i, i + CHUNK);
+        if (chunk.length === 0) continue;
+        const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+        const args: SQLite.SQLiteBindValue[] = [];
+        for (const r of chunk) {
+          args.push(r.pointId, r.bangumiId, r.lat, r.lng, r.name, r.cn, r.image);
+        }
+        await db.runAsync(
+          `INSERT OR REPLACE INTO anitabi_spots
+             (point_id, bangumi_id, lat, lng, name, cn, image) VALUES ${placeholders}`,
+          ...args
+        );
+      }
+    });
+    return rows.length;
+  },
+
+  /** Coarse box prefilter (lat + lng BETWEEN). Caller ranks exactly by haversine. */
+  async queryAnitabiSpotsByBox(box: LatLngBox): Promise<SpotIndexRow[]> {
+    const db = await openDb();
+    const rows = await db.getAllAsync<{
+      point_id: string;
+      bangumi_id: number;
+      lat: number;
+      lng: number;
+      name: string | null;
+      cn: string | null;
+      image: string | null;
+    }>(
+      `SELECT point_id, bangumi_id, lat, lng, name, cn, image FROM anitabi_spots
+        WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`,
+      box.minLat,
+      box.maxLat,
+      box.minLng,
+      box.maxLng
+    );
+    return (rows ?? []).map((r) => ({
+      pointId: r.point_id,
+      bangumiId: r.bangumi_id,
+      lat: r.lat,
+      lng: r.lng,
+      name: r.name ?? '',
+      cn: r.cn ?? '',
+      image: r.image ?? '',
+    }));
+  },
+
+  /** Spots inside a map bounding box, capped. Antimeridian-crossing boxes are
+   *  rare for pilgrimage data (all in one hemisphere) — not handled. */
+  async queryAnitabiSpotsInBounds(
+    bbox: { north: number; south: number; east: number; west: number },
+    limit: number
+  ): Promise<SpotIndexRow[]> {
+    return this.queryAnitabiSpotsByBox({
+      minLat: bbox.south,
+      maxLat: bbox.north,
+      minLng: bbox.west,
+      maxLng: bbox.east,
+    }).then((rows) => (limit > 0 ? rows.slice(0, limit) : rows));
+  },
+
+  async getAnitabiSpotCount(): Promise<number> {
+    const db = await openDb();
+    const row = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM anitabi_spots'
+    );
+    return row?.count ?? 0;
   },
 };

@@ -27,6 +27,11 @@ export interface SpotMapViewHandle {
   recenter: (lat: number, lng: number, zoom?: number, opts?: { animate?: boolean }) => void;
   /** Push device heading (or null to clear) into the user puck cone. */
   setHeading: (deg: number | null) => void;
+  /** Fit the camera to a bounding box (used by the detail list's area jump). */
+  fitBounds: (
+    box: { south: number; west: number; north: number; east: number },
+    opts?: { animate?: boolean }
+  ) => void;
 }
 
 export interface SpotMapViewProps {
@@ -126,6 +131,7 @@ function SpotMapViewImpl({
     () => ({
       recenter: (lat, lng, zoom, opts) => maplibreRef.current?.recenter(lat, lng, zoom, opts),
       setHeading: (deg) => maplibreRef.current?.setHeading(deg),
+      fitBounds: (box, opts) => maplibreRef.current?.fitBounds?.(box, opts),
     }),
     []
   );

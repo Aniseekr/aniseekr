@@ -161,6 +161,19 @@ describe('resolvePilgrimageHubInitialView', () => {
     expect(view).toEqual({ center: { lat: 35.68, lng: 139.76 }, zoom: 15 });
   });
 
+  it('centers on a fresh user location outside Japan (Taipei)', () => {
+    const view = resolve({
+      now: 1_000,
+      snapshot: {
+        updatedAt: 1_000,
+        userLocationUpdatedAt: 1_000,
+        userLocation: { latitude: 25.03, longitude: 121.56 },
+      },
+    });
+
+    expect(view).toEqual({ center: { lat: 25.03, lng: 121.56 }, zoom: 15 });
+  });
+
   it('returns the Japan overview when there is no usable candidate', () => {
     expect(
       resolve({

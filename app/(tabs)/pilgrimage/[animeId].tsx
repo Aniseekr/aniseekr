@@ -58,6 +58,8 @@ import {
   type PilgrimageDetailViewPreset,
 } from '../../../libs/services/pilgrimage/pilgrimage-detail-flow';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
+import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
 import {
@@ -75,6 +77,7 @@ import {
   LayoutModeButton,
   PilgrimageDetailLoadingShell,
   PilgrimageDetailSheet,
+  ProximityCheckInBanner,
   RoundHeaderButton,
   SeriesDropdownPill,
   SpotClusterPicker,
@@ -101,6 +104,22 @@ const SHEET_PEEK_FRACTION = 0.16;
 // needs a gap tall enough to stack ABOVE that block — the wide 3-segment
 // toggle reaches the FAB's right-edge column on phone widths.
 const LOCATE_FAB_EDGE_GAP = VIEW_MODE_TOGGLE_HEIGHT + 36 + 8 + 6 + 10;
+
+// Foreground proximity check-in radius (spec 3.5) — distinct from the 150m
+// standalone-capture mount radius in nearest-cached-spot.ts (spec 3.2).
+const PROXIMITY_RADIUS_METERS = 100;
+
+// First-non-EMPTY fallback (mirrors `firstNonEmpty` in
+// pilgrimage-localization.ts, which isn't exported): `??` alone treats a
+// present-but-blank `anime.title` as the final value instead of falling
+// through to `anime.cn`, which would snapshot an empty intent-meta name.
+function firstNonEmptyTitle(...values: (string | null | undefined)[]): string {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
 
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
@@ -212,6 +231,47 @@ export default function PilgrimageDetailScreen() {
     representativeForGroup,
   } = derived;
 
+  // Foreground proximity check-in (spec 3.5): when the live location lands
+  // within 100m of an unvisited spot, offer a one-tap check-in banner. No
+  // background geofence. `userLocation` already updates coarsely (the
+  // tracking hook throttles it — Rule 9), and the ref gate below means this
+  // effect only ever sets state once per spot per session, never on every
+  // GPS tick.
+  const promptedSpotIdsRef = useRef<Set<string>>(new Set());
+  const [proximityTarget, setProximityTarget] = useState<{
+    spot: AnitabiPoint;
+    distanceMeters: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!userLocation) return;
+    const near = nearestUnvisitedWithin(points, visited, userLocation, PROXIMITY_RADIUS_METERS);
+    if (near && !promptedSpotIdsRef.current.has(near.spot.id)) {
+      promptedSpotIdsRef.current.add(near.spot.id);
+      setProximityTarget({ spot: near.spot, distanceMeters: near.distanceMeters });
+    }
+  }, [userLocation, points, visited]);
+  // The banner targets a specific spot snapshot; if that spot gets checked in
+  // some other way while the banner is still up (e.g. the SpotSheet's own
+  // 打卡 button), the banner is stale — clear it instead of leaving it to
+  // offer a now-wrong action.
+  useEffect(() => {
+    if (proximityTarget && visited[proximityTarget.spot.id]) {
+      setProximityTarget(null);
+    }
+  }, [proximityTarget, visited]);
+  const handleProximityCheckIn = useCallback(() => {
+    // Guard against a stale banner: `toggleVisitedPoint` is bidirectional, so
+    // if the spot was already checked in elsewhere while the banner sat open,
+    // tapping it must not reverse (check OUT) a real visit.
+    if (!proximityTarget || visited[proximityTarget.spot.id]) {
+      setProximityTarget(null);
+      return;
+    }
+    toggleVisitedPoint(proximityTarget.spot);
+    setProximityTarget(null);
+  }, [proximityTarget, visited, toggleVisitedPoint]);
+  const handleProximityDismiss = useCallback(() => setProximityTarget(null), []);
+
   const sheet = usePilgrimageSpotSheet({
     groupedSpotByPointId,
     visited,
@@ -294,12 +354,22 @@ export default function PilgrimageDetailScreen() {
   }, []);
 
   const handleToggleSaved = useCallback(
-    (spot: AnitabiPoint) => toggleSpotIntent(spot, 'saved', groupedSpotByPointId),
-    [toggleSpotIntent, groupedSpotByPointId]
+    (spot: AnitabiPoint) =>
+      toggleSpotIntent(spot, 'saved', groupedSpotByPointId, {
+        animeId: anime?.id ?? bangumiId ?? 0,
+        name: firstNonEmptyTitle(anime?.title, anime?.cn),
+        cn: anime?.cn || undefined,
+      }),
+    [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
   );
   const handleTogglePlanned = useCallback(
-    (spot: AnitabiPoint) => toggleSpotIntent(spot, 'planned', groupedSpotByPointId),
-    [toggleSpotIntent, groupedSpotByPointId]
+    (spot: AnitabiPoint) =>
+      toggleSpotIntent(spot, 'planned', groupedSpotByPointId, {
+        animeId: anime?.id ?? bangumiId ?? 0,
+        name: firstNonEmptyTitle(anime?.title, anime?.cn),
+        cn: anime?.cn || undefined,
+      }),
+    [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
   );
 
   const activeViewPreset = getPilgrimageDetailViewPreset(viewMode, listLayout);
@@ -309,6 +379,25 @@ export default function PilgrimageDetailScreen() {
       Haptics.selectionAsync().catch(() => undefined);
       const next = resolvePilgrimageDetailViewPreset(preset);
       setView({ viewMode: next.viewMode, listLayout: next.listLayout });
+    },
+    [setView]
+  );
+
+  // Rows-mode area section header tap — peek the sheet so the map is
+  // dominant, then fit the camera to that area's bounds. A singleton-area
+  // (or otherwise degenerate) box has south===north / west===east, which
+  // fitBounds can't meaningfully zoom to — recenter instead, same guard as
+  // map.tsx's handleClusterPress.
+  const handleAreaPress = useCallback(
+    (area: SpotArea) => {
+      Haptics.selectionAsync().catch(() => undefined);
+      setView({ viewMode: 'map' });
+      const { bounds, center } = area;
+      if (bounds.north - bounds.south < 0.0005 && bounds.east - bounds.west < 0.0005) {
+        spotMapRef.current?.recenter(center.lat, center.lng, 16, { animate: true });
+        return;
+      }
+      spotMapRef.current?.fitBounds(bounds, { animate: true });
     },
     [setView]
   );
@@ -703,11 +792,26 @@ export default function PilgrimageDetailScreen() {
                   ) : null}
                 </View>
               ) : null}
+
+              {proximityTarget ? (
+                <ProximityCheckInBanner
+                  spotName={getPilgrimageSpotTitles(proximityTarget.spot).primary}
+                  distanceMeters={proximityTarget.distanceMeters}
+                  theme={theme}
+                  t={t}
+                  onCheckIn={handleProximityCheckIn}
+                  onDismiss={handleProximityDismiss}
+                />
+              ) : null}
             </View>
 
             {/* Layer 3 — map-side dock for marker / offline toggles. Only in
-                map view, and only when we have a real map underneath. */}
-            {hasMap && viewMode === 'map' && sheetIndex <= 1 ? (
+                map view, and only when we have a real map underneath. Also
+                yields to the proximity check-in banner — the banner grows
+                the top overlay column enough to overlap the dock's pinned
+                position, so the dock hides while the banner is up and
+                returns once it's dismissed or checked in. */}
+            {hasMap && viewMode === 'map' && sheetIndex <= 1 && proximityTarget == null ? (
               <View
                 style={[styles.mapOptionsDock, { top: insets.top + 132 }]}
                 pointerEvents="box-none">
@@ -821,6 +925,7 @@ export default function PilgrimageDetailScreen() {
               onOpenBrowse={handleOpenBrowse}
               onSpotPress={openGroup}
               onToggleVisited={toggleGroupedVisited}
+              onAreaPress={handleAreaPress}
               onOpenMaps={handleOpenMaps}
               onTakeComparison={handleFrameShot}
               representativeForGroup={representativeForGroup}
@@ -863,6 +968,7 @@ export default function PilgrimageDetailScreen() {
           themeColor={themeColor}
           themeColorFg={themeColorFg}
           distanceKm={activeSpotDistance}
+          userLocation={userLocation}
           visitedTarget={activeSpotVisitedTarget}
           visited={activeSpotVisited}
           saved={activeSpotSaved}

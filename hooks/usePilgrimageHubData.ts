@@ -28,6 +28,7 @@ import { getNearbyMapEntries } from '../libs/services/pilgrimage/map-nearby';
 import {
   getPilgrimageHubSnapshot,
   updatePilgrimageHubSnapshot,
+  PERSIST_TTL_MS as HUB_SNAPSHOT_PERSIST_TTL_MS,
 } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { loadVisitedSpotsSync, type VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
 import { loadCapturesSync } from '../libs/services/pilgrimage/captures';
@@ -95,7 +96,11 @@ export function usePilgrimageHubData({
     () => buildSeededPilgrimageAnimes(buildInitialMapSeedIds(focusBangumiId)),
     [focusBangumiId]
   );
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
+  // Stale-while-revalidate: accept a persisted snapshot up to the 24h budget
+  // it's written with, not the tighter 5-min default — a cold start after an
+  // overnight-closed app should still paint the map's collection/featured
+  // markers from disk instead of dropping back to the bundled offline seed.
+  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot(HUB_SNAPSHOT_PERSIST_TTL_MS));
   const hasInitialCollection = Object.prototype.hasOwnProperty.call(
     initialSnapshot ?? {},
     'collectionAnimes'
@@ -124,9 +129,10 @@ export function usePilgrimageHubData({
   );
   const [loading, setLoading] = useState(initialAnimes.length === 0);
   // Seed synchronously from MMKV so visited markers + the capture count are
-  // correct on the first frame; the effects below still reconcile after the
-  // one-time migration.
-  const [visited] = useState<VisitedMap>(loadVisitedSpotsSync);
+  // correct on the first frame. Re-seeded on focus below so a check-in made
+  // on the spot detail screen (or the trip map) shows up on the markers
+  // without leaving this hub screen frozen at its mount-time snapshot.
+  const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
   const [captureCount] = useState(() => Object.keys(loadCapturesSync()).length);
 
   // Lazy-loaded entries from the offline index, keyed by bangumi id and
@@ -260,6 +266,14 @@ export function usePilgrimageHubData({
     useCallback(() => {
       const hasSeenFocus = focusRefreshSeenRef.current;
       focusRefreshSeenRef.current = true;
+
+      // Screens pushed on top (spot detail check-in, the trip map) can
+      // change visited spots in MMKV while the map hub stays mounted
+      // underneath — re-seed on every focus after the first so returning
+      // here shows current markers instead of the value frozen at mount
+      // (mirrors plan.tsx / usePilgrimageHubScreenData).
+      if (hasSeenFocus) setVisited(loadVisitedSpotsSync());
+
       if (
         !shouldRefreshPilgrimageCollectionOnFocus({
           hasInitialCollection,
@@ -279,9 +293,10 @@ export function usePilgrimageHubData({
     }, [hasInitialCollection, refreshCollectionAnimes])
   );
 
-  // `visited` and `captureCount` are seeded synchronously from MMKV in the
-  // useState initializers above. The previous async reconcile was a no-op on
-  // the render path now that reads are sync — drop it to avoid an extra
+  // `captureCount` is seeded synchronously from MMKV in the useState
+  // initializer above and never reconciled — the map hub only ever displays
+  // the count, it doesn't drive marker state, so a one-tick-stale count on
+  // return from another screen is an acceptable trade against an extra
   // re-render of the marker layer.
 
   // Keep the imperative ref aligned with the hook's location so callers that

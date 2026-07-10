@@ -616,6 +616,13 @@
       "emptyTitle": "No items in this folder",
       "folder": "Folder",
       "loading": "Loading…",
+      "searchPlaceholder": "Search this folder",
+      "sort": {
+        "added": "Added",
+        "updated": "Updated",
+        "title": "Title",
+        "rating": "Rating"
+      },
       "swipeToLike": "Swipe to like",
       "swipeToTriage": "Swipe to triage · {count}",
       "unknownTitle": "Unknown Title"
@@ -643,6 +650,7 @@
         "other": "{count} folders"
       },
       "libraryStats": "Library stats",
+      "metaAnimeCount": "{count} anime",
       "myFolders": "My Folders",
       "newFolder": "New folder",
       "recentAnime": "Recent anime",
@@ -671,6 +679,7 @@
         "closestWithDistance": "Closest: {title} · {distance} away",
         "countLabel": "{count} {animeWord} · {tier}",
         "labelAccessibility": "Open pilgrimage map",
+        "nearestSpotCaps": "Nearest sacred site",
         "noMappedAnime": "No mapped anime yet — tap to open the map",
         "title": "Pilgrimage Map",
         "withoutLocation": "Tap to browse pilgrimage spots across Japan"
@@ -686,8 +695,9 @@
       "charactersA11y": "Characters",
       "searchA11y": "Search",
       "section": {
+        "explore": "Explore",
         "featuredSpots": "Featured Spots",
-        "myCollection": "My Collection",
+        "myPilgrimage": "My Pilgrimage",
         "popularAnimes": "Popular Animes",
         "seeAll": "See all",
         "viewMap": "View map",
@@ -695,7 +705,7 @@
       },
       "tier": {
         "dayTrip": "day trip · 100 km",
-        "inJapan": "in Japan",
+        "farAway": "far away",
         "inRegion": "in region · 500 km",
         "walking": "walking · 30 km"
       },
@@ -966,6 +976,16 @@
     }
   },
   "pilgrimage": {
+    "regions": {
+      "chubu": "Chubu",
+      "chugoku_shikoku": "Chugoku / Shikoku",
+      "hokkaido_tohoku": "Hokkaido / Tohoku",
+      "kanto": "Kanto",
+      "kinki": "Kinki",
+      "kyushu_okinawa": "Kyushu / Okinawa",
+      "other": "Other",
+      "tokyo": "Tokyo"
+    },
     "share": {
       "appMissingBody": "{app} isn't installed. Your photo is saved to Photos and the caption is copied.",
       "appMissingTitle": "{app} not installed",
@@ -995,6 +1015,7 @@
       "foldersByAnime": "Folders by anime",
       "folderSpotsCount": "{count} spots",
       "folderSpotsRatio": "{visited}/{total} spots",
+      "freeCapturesFolder": "Free captures",
       "hoursAgo": "{count}h ago",
       "justNow": "Just now",
       "loadingFolder": "Loading folder…",
@@ -1016,9 +1037,33 @@
     "camera": {
       "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)"
     },
+    "capture": {
+      "title": "Free capture",
+      "permTitle": "Camera access needed",
+      "permBody": "Allow camera access to take pilgrimage photos.",
+      "permCta": "Open Settings",
+      "savedToAlbum": "Saved to your album",
+      "mountTitle": "Near {name}",
+      "mountBody": "{distance}m away · attach this photo to the scene?",
+      "mountConfirm": "Attach to scene",
+      "mountDismiss": "Keep as free capture",
+      "entryA11y": "Free capture camera"
+    },
     "detail": {
+      "areaLabel": "Area {index} ({count})",
+      "bearing": {
+        "n": "N",
+        "ne": "NE",
+        "e": "E",
+        "se": "SE",
+        "s": "S",
+        "sw": "SW",
+        "w": "W",
+        "nw": "NW"
+      },
       "browseFallback": "Browse",
       "clearSearchA11y": "Clear search",
+      "distanceAway": "{distance} away",
       "emptyFilter": "No scenes match this filter.",
       "emptyNoData": "No pilgrimage data yet for this anime.",
       "emptySearch": "No spots match this search.",
@@ -1032,7 +1077,10 @@
         "visited": "Visited"
       },
       "goBack": "Go back",
+      "nearSpotPrompt": "You're near {name}",
       "openAlbumA11y": "Open pilgrimage album",
+      "sceneLocation": "Scene location",
+      "sceneOfCount": "{index} of {count} scenes",
       "searchA11y": "Search pilgrimage spots or episodes",
       "searchPlaceholder": "Search spot or EP",
       "shareA11y": "Share",
@@ -1047,6 +1095,9 @@
         "rows": "Rows"
       }
     },
+    "image": {
+      "unavailable": "Image unavailable"
+    },
     "map": {
       "allJapan": "All Japan",
       "clearSearchA11y": "Clear search",
@@ -1059,6 +1110,9 @@
         "grid": "Grid",
         "rows": "Rows"
       },
+      "locateIdleA11y": "Show my location",
+      "locateFollowingA11y": "Stop following my location",
+      "locateCompassA11y": "Stop compass mode",
       "locationPromptAllow": "Allow location",
       "locationPromptBody": "Allow location access to open the map around you and show nearby pilgrimage scenes immediately.",
       "locationPromptNotNow": "Not now",
@@ -1067,11 +1121,16 @@
       "emptyCollection": "No pilgrimage spots in your collection yet.",
       "emptyNearby": "No nearby anime yet. Try panning the map to a different region.",
       "emptySearch": "No anime match \"{query}\".",
+      "nearbySpotsTitle": "Sacred sites near you",
       "goToCollection": "Go to Collection",
       "mapLoadError": "Couldn't load the map.",
       "offlineBody": "You're offline or the connection dropped. Check your network and try again — areas you've already viewed still work offline.",
       "offlineTitle": "Can't load the map",
       "openAlbumA11y": "Open pilgrimage album",
+      "quickAction": {
+        "navigate": "Navigate here",
+        "openDetail": "View sacred site"
+      },
       "searchA11y": "Search anime",
       "searchPlaceholder": "Search anime or city",
       "viewModeAnime": "Scene locations",
@@ -1101,12 +1160,17 @@
       "buildOwnTitle": "Build Your Own 1-Day Plan",
       "daysShort": "{count} day",
       "daysSuffix": "{count}d",
+      "emptyBody": "Tap the flag on any spot to add it to your trip list.",
+      "emptyCta": "Explore the map",
+      "emptyTitle": "No planned spots yet",
       "featuredBadge": "FEATURED TRIP",
       "featuredDestinationFallback": "Featured destination",
       "featuredTitleLine": "{title} · {days}-Day",
       "featuredTripA11y": "Featured trip: {title}",
+      "groupProgress": "{visited}/{total} visited",
       "moreOptionsA11y": "More options",
       "multipleAreas": "Multiple areas",
+      "plannedHeader": "Your planned trips",
       "preset": {
         "aiLabel": "AI Plan",
         "aiSubtitle": "Tailor to your watchlist",
@@ -1121,6 +1185,8 @@
       "quickPresetsHint": "Tap to start a plan",
       "seeAll": "See all",
       "spotsShort": "{count} spots",
+      "startTrip": "Start pilgrimage",
+      "startTripA11y": "Start pilgrimage for {title}",
       "statDestinations": "Destinations",
       "statSaved": "Saved",
       "statVisited": "Spots Visited",
@@ -1130,9 +1196,26 @@
       "suggestedSubtitle": "Curated 1-day plans inspired by featured anime",
       "suggestedTitle": "Suggested Trips",
       "title": "Trip Planner",
+      "uncategorizedBody": "Re-tap the flag on these {count} spots to add them to a trip.",
+      "uncategorizedTitle": "Uncategorized",
       "untitled": "Untitled",
       "walkHoursLong": "~{hours}h walk",
       "walkHoursShort": "~{hours}h"
+    },
+    "tourism88": {
+      "entryA11y": "{title}, Anime Tourism 88 entry",
+      "moreCities": "+{count} cities",
+      "official": "★ Official"
+    },
+    "trip": {
+      "nextStop": "Next stop",
+      "away": "{distance} away",
+      "openInMaps": "Open in Google Maps",
+      "openInMapsA11y": "Open this trip in Google Maps",
+      "routeTruncated": "Long route — opened the first leg in Maps.",
+      "allVisited": "All stops visited",
+      "empty": "This trip has no mappable spots yet.",
+      "back": "Back"
     }
   },
   "companion": {
@@ -1292,6 +1375,10 @@
     "exhibits": "Exhibits",
     "failedToLoadStats": "Failed to load stats",
     "favorites": "Favorites",
+    "folderItemCount": {
+      "one": "{count} item",
+      "other": "{count} items"
+    },
     "folderName": "Folder Name",
     "groupAnimeByMoodSeason": "Group anime by mood, season, or anything you like.",
     "hallOfFame": "Hall of Fame",
@@ -1423,6 +1510,8 @@
     "allowCameraSoYouCan": "Allow camera so you can frame this scene against its anime reference.",
     "altitude": "Altitude",
     "animateShutter": "Animate shutter",
+    "anime": "Anime",
+    "animePilgrimageA11y": "{title} pilgrimage",
     "animeTourism88": "Anime Tourism 88",
     "apply": "Apply",
     "applyCrop": "Apply crop",
@@ -1459,6 +1548,9 @@
     "captureModeSingleHint": "One sharp shot",
     "captureModeSingleLabel": "Photo",
     "character": "Character",
+    "checkIn": "Check in",
+    "checkInPhoto": "Check in + photo",
+    "checkedIn": "Checked in",
     "classic": "Classic",
     "closeCamera": "Close camera",
     "closeCameraSettings": "Close camera settings",
@@ -1526,9 +1618,11 @@
     "more": "More",
     "moreShareOptions": "More share options",
     "navy": "Navy",
+    "nearbyAnime": "Nearby anime",
     "noPilgrimageSpotsYet": "No pilgrimage spots yet.",
     "noShotsYet": "No shots yet",
     "noSpotsYet": "No spots yet",
+    "openAnimeA11y": "Open {title}",
     "openAnitabiHomepage": "Open Anitabi homepage",
     "openArCamera": "Open AR camera",
     "openArCamera2": "Open AR Camera",
@@ -1540,6 +1634,7 @@
     "overlayModeA11y": "Overlay mode {mode}",
     "overlayOff": "Overlay Off",
     "overlayOpacity": "Overlay opacity",
+    "photos": "Photos",
     "previousOverlayMode": "Previous overlay mode",
     "nextOverlayMode": "Next overlay mode",
     "peach": "Peach",
@@ -1555,6 +1650,7 @@
     "positionLock": "Position Lock",
     "positionLocked": "Position locked — shoot now",
     "precisionAlignment": "Precision Alignment",
+    "progressFraction": "{visited}/{total}",
     "real": "Real",
     "recordedGps": "Recorded GPS",
     "red": "Red",
@@ -1572,6 +1668,7 @@
     "sceneGps": "Scene GPS",
     "sceneSpots": "Scene spots",
     "scenes": "Scenes",
+    "scenesCount": "{count} scenes",
     "selfTimer": "Self-timer",
     "shareToInstagram": "Share to Instagram",
     "shareToSocial": "Share to social",
@@ -1585,6 +1682,8 @@
     "silentShutter": "Silent shutter",
     "sketch": "Sketch",
     "sky": "Sky",
+    "spotFromAnimeA11y": "{spot} from {anime}",
+    "spotsCount": "{count} spots",
     "spotsNearYou": "Spots near you",
     "startArCamera": "Start AR camera",
     "startArCamera2": "Start AR Camera",
@@ -1603,6 +1702,7 @@
     "tilt": "Tilt",
     "tiltOffset": "Tilt offset",
     "tipsToImprove": "Tips to improve",
+    "unknownTitle": "Unknown title",
     "viewFullMapOnAnitabi": "View full map on Anitabi",
     "viewOnAnitabi": "View on Anitabi",
     "visited": "Visited",

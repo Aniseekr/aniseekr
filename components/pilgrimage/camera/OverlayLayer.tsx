@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { GestureDetector } from 'react-native-gesture-handler';
 import type { ComposedGesture } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
@@ -109,7 +110,7 @@ function OverlayContent({
   if (mode === 'anime') {
     return (
       <ExpoImage
-        source={{ uri: hiResImageUrl }}
+        source={anitabiImageSource(hiResImageUrl)}
         style={[styles.overlayImage, { width: winW, height: winH, opacity }]}
         contentFit="contain"
         transition={120}
@@ -119,7 +120,7 @@ function OverlayContent({
   const edgeBackdrop =
     mode === 'edge' && edgeSourceOpacity > 0 ? (
       <ExpoImage
-        source={{ uri: hiResImageUrl }}
+        source={anitabiImageSource(hiResImageUrl)}
         style={[
           styles.absoluteOverlayImage,
           { width: winW, height: winH, opacity: opacity * edgeSourceOpacity },

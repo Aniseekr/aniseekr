@@ -6,10 +6,6 @@ export interface PilgrimageCollectionState {
   collectionIds: Set<number>;
 }
 
-export interface PilgrimageCollectionRefresh extends PilgrimageCollectionState {
-  mergedAnimes: AnitabiBangumi[];
-}
-
 export function buildPilgrimageCollectionState(
   entries: readonly CollectionPilgrimageEntry[]
 ): PilgrimageCollectionState {
@@ -40,17 +36,6 @@ export function mergePilgrimageAnimeList(
   }
   if (!changed) return current as AnitabiBangumi[];
   return [...merged.values()].sort((a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0));
-}
-
-export function applyPilgrimageCollectionEntries(
-  currentAnimes: readonly AnitabiBangumi[],
-  entries: readonly CollectionPilgrimageEntry[]
-): PilgrimageCollectionRefresh {
-  const state = buildPilgrimageCollectionState(entries);
-  return {
-    ...state,
-    mergedAnimes: mergePilgrimageAnimeList(currentAnimes, state.collectionAnimes),
-  };
 }
 
 export function shouldRefreshPilgrimageCollectionOnFocus({

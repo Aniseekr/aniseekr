@@ -14,19 +14,15 @@ export function resolvePilgrimageMapInitialMode(
 }
 
 export function shouldLoadPilgrimageMapBounds(bounds: PilgrimageMapBounds): boolean {
-  if (
-    !Number.isFinite(bounds.north) ||
-    !Number.isFinite(bounds.south) ||
-    !Number.isFinite(bounds.east) ||
-    !Number.isFinite(bounds.west) ||
-    bounds.north < bounds.south
-  ) {
-    return false;
-  }
-
-  const latSpan = bounds.north - bounds.south;
-  const lngSpan =
-    bounds.west <= bounds.east ? bounds.east - bounds.west : 360 - bounds.west + bounds.east;
-
-  return latSpan <= 4 && lngSpan <= 5;
+  // Bounds queries hit the local offline index (getAnimeInBounds) / local
+  // SQLite spot index — there's no third-party API to rate-limit, so the old
+  // 4°×5° span gate (which permanently blocked the whole-Japan default view,
+  // see spec 2026-07-03 §1.3) is gone. Only reject a malformed box.
+  return (
+    Number.isFinite(bounds.north) &&
+    Number.isFinite(bounds.south) &&
+    Number.isFinite(bounds.east) &&
+    Number.isFinite(bounds.west) &&
+    bounds.north >= bounds.south
+  );
 }

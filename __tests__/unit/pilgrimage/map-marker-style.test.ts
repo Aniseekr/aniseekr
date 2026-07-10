@@ -76,6 +76,23 @@ describe('resolveMarkerVisual — anime balloon', () => {
   it('shows no badge when pointsLength is absent', () => {
     expect(resolveMarkerVisual(base({ kind: 'anime', color: '#FF5577' })).badge).toBeNull();
   });
+  it('anime centroid honors the visited flag (green progress ring)', () => {
+    const visual = resolveMarkerVisual({
+      id: 'bgm:115908', kind: 'anime', lat: 34.9, lng: 135.8,
+      title: '響け！ユーフォニアム', color: '#4a90d9', pointsLength: 577, visited: true,
+    } as MapMarker);
+    expect(visual.visited).toBe(true);
+    expect(visual.shape).toBe('balloon');
+  });
+});
+
+describe('resolveMarkerVisual — city88 never shows visited', () => {
+  it('city88 markers never show visited', () => {
+    const visual = resolveMarkerVisual({
+      id: '88:1', kind: 'city88', lat: 35, lng: 139, title: 'x', color: '#caa64b', visited: true,
+    } as MapMarker);
+    expect(visual.visited).toBe(false);
+  });
 });
 
 describe('VISITED_COLOR', () => {

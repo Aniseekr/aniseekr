@@ -31,6 +31,8 @@ export { PilgrimageDetailSheet } from './PilgrimageDetailSheet';
 export type { PilgrimageDetailSheetProps } from './PilgrimageDetailSheet';
 export { PilgrimageDetailLoadingShell } from './PilgrimageDetailLoadingShell';
 export type { PilgrimageDetailLoadingShellProps } from './PilgrimageDetailLoadingShell';
+export { ProximityCheckInBanner } from './ProximityCheckInBanner';
+export type { ProximityCheckInBannerProps } from './ProximityCheckInBanner';
 export {
   VIEW_MODE_TOGGLE_HEIGHT,
   makePilgrimageDetailStyles,

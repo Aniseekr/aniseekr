@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import {
+  buildMultiStopDirectionsUrl,
   buildPilgrimageDetailRoute,
   getPilgrimageDetailBackRoute,
   getPilgrimageDetailChromeSeed,
@@ -94,5 +95,45 @@ describe('pilgrimage navigation', () => {
       poster: 'https://lain.bgm.tv/r/400/pic/cover/l/00.jpg',
       themeColor: '#8DC5D8',
     });
+  });
+});
+
+describe('buildMultiStopDirectionsUrl', () => {
+  const g = (lat: number, lng: number) => [lat, lng] as const;
+
+  it('google: single segment with waypoints + final destination', () => {
+    const urls = buildMultiStopDirectionsUrl([g(35, 135), g(35.1, 135.1), g(35.2, 135.2)], 'google');
+    expect(urls).toEqual([
+      'https://www.google.com/maps/dir/?api=1&destination=35.2,135.2&waypoints=35,135%7C35.1,135.1',
+    ]);
+  });
+
+  it('google: two stops → destination only, no waypoints param', () => {
+    expect(buildMultiStopDirectionsUrl([g(1, 2), g(3, 4)], 'google')).toEqual([
+      'https://www.google.com/maps/dir/?api=1&destination=3,4&waypoints=1,2',
+    ]);
+  });
+
+  it('google: >10 stops split into chained segments (<=9 waypoints each)', () => {
+    const stops = Array.from({ length: 12 }, (_, i) => g(i, i));
+    const urls = buildMultiStopDirectionsUrl(stops, 'google');
+    expect(urls.length).toBe(2);
+    // segment 1 ends at stop index 9 (10 stops: 9 waypoints + destination)
+    expect(urls[0]).toContain('destination=9,9');
+    // segment 2 resumes from stop 9 and ends at stop 11
+    expect(urls[1]).toContain('destination=11,11');
+    expect(urls[1]).toContain('waypoints=9,9%7C10,10');
+  });
+
+  it('apple: one search url per stop (no multi-stop support)', () => {
+    expect(buildMultiStopDirectionsUrl([g(35, 135), g(36, 136)], 'apple')).toEqual([
+      'https://maps.apple.com/?ll=35,135',
+      'https://maps.apple.com/?ll=36,136',
+    ]);
+  });
+
+  it('empty stops → empty array', () => {
+    expect(buildMultiStopDirectionsUrl([], 'google')).toEqual([]);
+    expect(buildMultiStopDirectionsUrl([], 'apple')).toEqual([]);
   });
 });

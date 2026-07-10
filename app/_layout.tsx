@@ -30,6 +30,8 @@ import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
+import { hydrateSpotIndex, hydratePointsTop } from '../libs/services/pilgrimage/spot-index-data-service';
+import { hydratePilgrimageHubSnapshotFromCache } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
 import { resolveOnboardingGate } from '../libs/navigation/root-layout-navigation';
@@ -102,6 +104,14 @@ export default function RootLayout() {
         })
         .catch((e) => console.warn('[updateMappings]', e));
       void hydrateAllPilgrimageData().catch((e) => console.warn('[hydratePilgrimage]', e));
+      void hydrateSpotIndex().catch((e) => console.warn('[hydrateSpotIndex]', e));
+      void hydratePointsTop().catch((e) => console.warn('[hydratePointsTop]', e));
+      // Root layout so the warm finishes long before the user reaches the
+      // pilgrimage tab — a pilgrimage/_layout effect would run in the SAME
+      // commit as the hub's useState initializer and always lose that race.
+      void hydratePilgrimageHubSnapshotFromCache().catch((e) =>
+        console.warn('[hydrateHubSnapshot]', e)
+      );
       void CacheManager.getInstance()
         .pruneAll()
         .then(({ totalRemoved }) => {

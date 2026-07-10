@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it, test } from 'bun:test';
 
 import {
   __resetPilgrimageHubCacheForTests,
   getPilgrimageHubSnapshot,
+  hydratePilgrimageHubSnapshotFromCache,
   updatePilgrimageHubSnapshot,
+  PERSIST_TTL_MS,
 } from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
@@ -95,4 +97,74 @@ describe('pilgrimage-hub-cache', () => {
       zoom: 12.5,
     });
   });
+});
+
+const HUB_KEY = 'pilgrimage_hub_snapshot_v1';
+
+function makeFakeCache() {
+  const store = new Map<string, { value: unknown; ts: number; ttl: number }>();
+  return {
+    calls: [] as Array<{ key: string; ttl: number }>,
+    set: async (key: string, value: unknown, ttlMs: number) => {
+      store.set(key, { value, ts: 0, ttl: ttlMs });
+    },
+    getSyncWithMeta: <T,>(key: string, _grace: number) => {
+      const hit = store.get(key);
+      return hit ? { value: hit.value as T, age: 0, isStale: false } : null;
+    },
+    getWithMeta: async <T,>(key: string, _grace: number) => {
+      const hit = store.get(key);
+      return hit ? { value: hit.value as T, age: 0, isStale: false } : null;
+    },
+    seed: (value: unknown) => store.set(HUB_KEY, { value, ts: 0, ttl: 0 }),
+  } as const;
+}
+
+test('updatePilgrimageHubSnapshot persists the full snapshot to the cache (debounced)', async () => {
+  const cache = makeFakeCache();
+  __resetPilgrimageHubCacheForTests({ now: () => 1000, cache: cache as never, debounceMs: 0 });
+  updatePilgrimageHubSnapshot({ userLocation: { latitude: 25, longitude: 121 } });
+  await new Promise((r) => setTimeout(r, 0)); // flush the 0ms debounce
+  const persisted = cache.getSyncWithMeta<{ userLocation: { latitude: number } }>(HUB_KEY, 0);
+  expect(persisted?.value.userLocation.latitude).toBe(25);
+});
+
+test('getPilgrimageHubSnapshot seeds from a warm cache mirror when module snapshot is cold', () => {
+  const cache = makeFakeCache();
+  cache.seed({ collectionAnimes: [], userLocation: null, updatedAt: 1000 });
+  __resetPilgrimageHubCacheForTests({ now: () => 1500, cache: cache as never, debounceMs: 0 });
+  const snap = getPilgrimageHubSnapshot();
+  expect(snap).not.toBeNull();
+  expect(Object.prototype.hasOwnProperty.call(snap ?? {}, 'collectionAnimes')).toBe(true);
+});
+
+test('getPilgrimageHubSnapshot(PERSIST_TTL_MS) accepts a >5min-old persisted snapshot (stale-while-revalidate seed path)', () => {
+  const cache = makeFakeCache();
+  const writtenAt = 0;
+  const sixMinutesLater = 6 * 60 * 1000; // older than the 5-min default, well inside the 24h persist TTL
+  cache.seed({ collectionAnimes: [], userLocation: null, updatedAt: writtenAt });
+  __resetPilgrimageHubCacheForTests({
+    now: () => sixMinutesLater,
+    cache: cache as never,
+    debounceMs: 0,
+  });
+
+  // The tight 5-min default discards it...
+  expect(getPilgrimageHubSnapshot()).toBeNull();
+
+  // ...but a cold module snapshot means the 5-min miss above didn't seed
+  // `snapshot`, so the seed-path call with the persist TTL still finds it.
+  const seeded = getPilgrimageHubSnapshot(PERSIST_TTL_MS);
+  expect(seeded).not.toBeNull();
+  expect(Object.prototype.hasOwnProperty.call(seeded ?? {}, 'collectionAnimes')).toBe(true);
+});
+
+test('hydratePilgrimageHubSnapshotFromCache seeds the module snapshot from SQLite', async () => {
+  const cache = makeFakeCache();
+  cache.seed({ collectionAnimes: [], updatedAt: 2000 });
+  __resetPilgrimageHubCacheForTests({ now: () => 2500, cache: cache as never, debounceMs: 0 });
+  const out = await hydratePilgrimageHubSnapshotFromCache();
+  expect(out).not.toBeNull();
+  // module snapshot now non-null → sync read returns it without touching cache
+  expect(getPilgrimageHubSnapshot()).not.toBeNull();
 });

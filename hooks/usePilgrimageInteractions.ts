@@ -9,19 +9,22 @@
 
 import { useCallback, useState } from 'react';
 import * as Haptics from 'expo-haptics';
+import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import {
   loadCapturesSync,
   type PilgrimageCapture,
 } from '../libs/services/pilgrimage/captures';
 import {
+  applySpotIntentAtomic,
+  buildSpotIntentMeta,
   loadSpotIntentsSync,
-  saveSpotIntents,
   type SpotIntentKind,
   type SpotIntentMap,
 } from '../libs/services/pilgrimage/spot-intents';
 import {
   loadVisitedSpotsSync,
-  saveVisitedSpots,
+  checkInSpot,
+  checkOutSpot,
   type VisitedMap,
 } from '../libs/services/pilgrimage/visited-prefs';
 import type { AnitabiPoint, AnitabiSpot } from '../libs/services/pilgrimage/types';
@@ -46,7 +49,8 @@ export interface UsePilgrimageInteractionsResult {
   toggleSpotIntent: (
     spot: AnitabiPoint,
     intent: SpotIntentKind,
-    groupedSpotByPointId: Map<string, AnitabiSpot>
+    groupedSpotByPointId: Map<string, AnitabiSpot>,
+    animeMeta: { animeId: number; name: string; cn?: string }
   ) => void;
   hasIntentForGroup: (group: AnitabiSpot, intent: SpotIntentKind) => boolean;
   hasIntentForPoint: (
@@ -71,30 +75,44 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
     setCaptures(loadCapturesSync());
   }, []);
 
+  // Persistence routes through the atomic per-spot `checkInSpot`/`checkOutSpot`
+  // APIs (read-modify-write of the v2 timestamp map for ONE spot id), never
+  // the bulk `saveVisitedSpots(map)` round-trip. A stale local snapshot handed
+  // to `saveVisitedSpots` from this hook could clobber a timestamp another
+  // surface just wrote for a different spot; the atomic APIs re-read fresh
+  // storage on every call, so they can't stomp anything. `setVisited` keeps
+  // the local boolean map that the UI renders from in sync in the same tick.
   const toggleVisitedPoint = useCallback((spot: AnitabiPoint) => {
-    Haptics.selectionAsync().catch(() => undefined);
     setVisited((prev) => {
       const next: VisitedMap = { ...prev };
       if (next[spot.id]) {
         delete next[spot.id];
+        hapticsBridge.selection();
+        void checkOutSpot(spot.id);
       } else {
         next[spot.id] = true;
+        hapticsBridge.success(); // check-in finalizes the visit — Rule 7
+        void checkInSpot(spot.id);
       }
-      void saveVisitedSpots(next);
       return next;
     });
   }, []);
 
   const toggleGroupedVisited = useCallback((group: AnitabiSpot) => {
-    Haptics.selectionAsync().catch(() => undefined);
     setVisited((prev) => {
       const anyVisited = group.scenes.some((p) => prev[p.id] === true);
       const next: VisitedMap = { ...prev };
       for (const p of group.scenes) {
-        if (anyVisited) delete next[p.id];
-        else next[p.id] = true;
+        if (anyVisited) {
+          delete next[p.id];
+          void checkOutSpot(p.id);
+        } else {
+          next[p.id] = true;
+          void checkInSpot(p.id);
+        }
       }
-      void saveVisitedSpots(next);
+      if (anyVisited) hapticsBridge.selection();
+      else hapticsBridge.success(); // group checked in — Rule 7
       return next;
     });
   }, []);
@@ -103,23 +121,31 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
     (
       spot: AnitabiPoint,
       intent: SpotIntentKind,
-      groupedSpotByPointId: Map<string, AnitabiSpot>
+      groupedSpotByPointId: Map<string, AnitabiSpot>,
+      animeMeta: { animeId: number; name: string; cn?: string }
     ) => {
       Haptics.selectionAsync().catch(() => undefined);
       const group = groupedSpotByPointId.get(spot.id);
-      const ids = group ? group.scenes.map((p) => p.id) : [spot.id];
+      const points = group ? group.scenes : [spot];
       setSpotIntents((prev) => {
-        const shouldRemove = ids.some((id) => prev[id]?.[intent] === true);
-        const next: SpotIntentMap = { ...prev };
-        for (const id of ids) {
-          const nextIntent = { ...(next[id] ?? {}) };
-          if (shouldRemove) delete nextIntent[intent];
-          else nextIntent[intent] = true;
-          if (nextIntent.saved || nextIntent.planned) next[id] = nextIntent;
-          else delete next[id];
+        const shouldRemove = points.some((p) => prev[p.id]?.[intent] === true);
+        const op = shouldRemove ? 'remove' : 'add';
+        // PERSISTENCE routes through `applySpotIntentAtomic`, which re-reads
+        // a fresh synchronous snapshot from storage per point instead of
+        // trusting `prev` — `prev` is a React-state closure that can be
+        // stale if another surface (e.g. the map's own grouped toggle)
+        // wrote a different spot's intent since this hook's state was last
+        // set. Persisting through a stale `prev` would silently drop that
+        // other write. Same hazard as the visited map above (:79-85).
+        let persisted: SpotIntentMap = prev;
+        for (const p of points) {
+          // Only build (and re-snapshot) meta on add — a remove never reads
+          // it, so building it unconditionally was a wasted allocation per
+          // scene in the group.
+          const meta = op === 'add' ? buildSpotIntentMeta(p, animeMeta) : undefined;
+          persisted = applySpotIntentAtomic(p.id, intent, op, meta);
         }
-        void saveSpotIntents(next);
-        return next;
+        return persisted;
       });
     },
     []

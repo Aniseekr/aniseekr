@@ -19,7 +19,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
@@ -35,6 +34,9 @@ import {
 } from '../../libs/services/pilgrimage/pilgrimage-localization';
 import { StatCell } from './detail/StatCell';
 import { formatDistanceKm } from './detail/_helpers';
+import { SpotImage } from './SpotImage';
+import { NearbySpotRow } from './NearbySpotsSheet';
+import type { NearbySpot } from '../../libs/services/pilgrimage/nearby-spots';
 
 export interface HubAnimeEntry {
   anime: AnitabiBangumi;
@@ -86,6 +88,10 @@ export interface PilgrimageHubSheetProps {
   onSwapFocused: () => void;
   /** Tap the section title's "See all" hint → expand the sheet to full. */
   onExpandRequest?: () => void;
+  /** Point-level nearby spots (spec 2.3). Rendered as a horizontal strip above
+   *  the anime list. Empty/undefined ⇒ no strip. */
+  nearbySpots?: readonly NearbySpot[];
+  onPickNearbySpot?: (spot: NearbySpot) => void;
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
@@ -109,6 +115,8 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     onAnimePress,
     onSwapFocused,
     onExpandRequest,
+    nearbySpots,
+    onPickNearbySpot,
   } = props;
 
   const t = useT();
@@ -168,7 +176,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
   );
   const focusedSubtitle = focusedTitles ? formatPilgrimageSubtitle(focusedTitles) : undefined;
 
-  const sectionTitle = nearbyAnimes.length === 1 ? 'Nearby anime' : 'Nearby animes';
+  const sectionTitle = t('pilgrimageUi.nearbyAnime');
 
   const headerNode = (
     <View style={styles.headerWrap}>
@@ -191,7 +199,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         <StatCell
           icon="movie"
           value={String(stats.nearbyCount)}
-          label={stats.nearbyCount === 1 ? 'Anime' : 'Animes'}
+          label={t('pilgrimageUi.anime')}
           color={themeColor}
           theme={theme}
         />
@@ -215,11 +223,15 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         <StatCell
           icon="photo"
           value={String(stats.photoCount)}
-          label={stats.photoCount === 1 ? 'Photo' : 'Photos'}
+          label={t('pilgrimageUi.photos')}
           color={stats.photoCount > 0 ? themeColor : theme.text.tertiary}
           theme={theme}
         />
       </View>
+
+      {nearbySpots && nearbySpots.length > 0 ? (
+        <NearbySpotsStrip spots={nearbySpots} theme={theme} onPick={onPickNearbySpot} />
+      ) : null}
 
       <View style={styles.sectionTitleRow}>
         <ThemedText variant="titleMedium" weight="800">
@@ -316,13 +328,47 @@ function areEqual(prev: PilgrimageHubSheetProps, next: PilgrimageHubSheetProps):
     prev.onSheetIndexChange === next.onSheetIndexChange &&
     prev.onAnimePress === next.onAnimePress &&
     prev.onSwapFocused === next.onSwapFocused &&
-    prev.onExpandRequest === next.onExpandRequest
+    prev.onExpandRequest === next.onExpandRequest &&
+    prev.nearbySpots === next.nearbySpots &&
+    prev.onPickNearbySpot === next.onPickNearbySpot
   );
 }
 
 export const PilgrimageHubSheet = memo(PilgrimageHubSheetImpl, areEqual);
 
 // ─── Subcomponents (file-local; not exported) ────────────────────────────────
+
+// Point-level "nearby spots" section (spec 2.3). Lives inside the sheet's
+// existing ListHeaderComponent instead of a second bottom sheet — stacking
+// another @gorhom/bottom-sheet would fight the hub sheet for the same
+// bottom-edge gesture/snap anchor. Renders a plain `.map` of up to 6 rows
+// (not a nested FlatList/horizontal scroller) so it can't fight the outer
+// BottomSheetFlatList's own scroll gesture.
+function NearbySpotsStrip({
+  spots,
+  theme,
+  onPick,
+}: {
+  spots: readonly NearbySpot[];
+  theme: ThemePalette;
+  onPick?: (spot: NearbySpot) => void;
+}) {
+  const t = useT();
+  return (
+    <View style={{ paddingBottom: 8, gap: 6 }}>
+      <ThemedText
+        variant="captionSmall"
+        weight="800"
+        tone="secondary"
+        style={{ paddingHorizontal: 4 }}>
+        {t('pilgrimage.map.nearbySpotsTitle')}
+      </ThemedText>
+      {spots.slice(0, 6).map((spot) => (
+        <NearbySpotRow key={spot.markerId} spot={spot} theme={theme} onPress={() => onPick?.(spot)} />
+      ))}
+    </View>
+  );
+}
 
 interface FocusedAnimeCardProps {
   entry: HubAnimeEntry;
@@ -357,30 +403,30 @@ function FocusedAnimeCard({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`Open ${titles?.primary ?? 'anime'}`}
+        accessibilityLabel={t('pilgrimageUi.openAnimeA11y', {
+          title: titles?.primary ?? t('pilgrimageUi.unknownTitle'),
+        })}
         style={({ pressed }) => [styles.focusedBody, pressed && { opacity: 0.92 }]}>
         <View
           style={[
             styles.posterWrap,
             { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
           ]}>
-          {anime.cover ? (
-            <Image source={{ uri: anime.cover }} style={styles.poster} contentFit="cover" />
-          ) : null}
+          <SpotImage uri={anime.cover} style={styles.poster} contentFit="cover" />
           <View style={styles.posterBadge} pointerEvents="none">
             <ThemedText
               variant="captionSmall"
               weight="800"
               numberOfLines={1}
               style={{ color: ON_DARK }}>
-              {anime.pointsLength ?? 0} scenes
+              {t('pilgrimageUi.scenesCount', { count: anime.pointsLength ?? 0 })}
             </ThemedText>
           </View>
         </View>
         <View style={styles.titleColumn}>
           <View style={styles.focusedTitleRow}>
             <ThemedText variant="titleLarge" weight="800" numberOfLines={1} style={{ flex: 1 }}>
-              {titles?.primary ?? 'Unknown Title'}
+              {titles?.primary ?? t('pilgrimageUi.unknownTitle')}
             </ThemedText>
             {entry.fromCollection ? (
               <View
@@ -486,6 +532,7 @@ const HubAnimeRow = memo(function HubAnimeRow({
   styles,
   onPress,
 }: HubAnimeRowProps) {
+  const t = useT();
   const anime = entry.anime;
   const titles = getPilgrimageAnimeTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
@@ -494,16 +541,14 @@ const HubAnimeRow = memo(function HubAnimeRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${titles.primary} pilgrimage`}
+      accessibilityLabel={t('pilgrimageUi.animePilgrimageA11y', { title: titles.primary })}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.88 }]}>
       <View
         style={[
           styles.rowPosterWrap,
           { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
         ]}>
-        {anime.cover ? (
-          <Image source={{ uri: anime.cover }} style={styles.rowPoster} contentFit="cover" />
-        ) : null}
+        <SpotImage uri={anime.cover} style={styles.rowPoster} contentFit="cover" />
         <View style={[styles.rowBadge, { backgroundColor: `${themeColor}E6` }]}>
           <ThemedText
             variant="captionSmall"
@@ -597,6 +642,7 @@ const HubAnimeCard = memo(function HubAnimeCard({
   styles,
   onPress,
 }: HubAnimeCardProps) {
+  const t = useT();
   const anime = entry.anime;
   const titles = getPilgrimageAnimeTitles(anime);
   const distanceText = entry.distanceKm !== undefined ? formatDistanceKm(entry.distanceKm) : null;
@@ -604,22 +650,20 @@ const HubAnimeCard = memo(function HubAnimeCard({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${titles.primary} pilgrimage`}
+      accessibilityLabel={t('pilgrimageUi.animePilgrimageA11y', { title: titles.primary })}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}>
       <View
         style={[
           styles.cardPosterWrap,
           { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
         ]}>
-        {anime.cover ? (
-          <Image source={{ uri: anime.cover }} style={styles.cardPoster} contentFit="cover" />
-        ) : null}
+        <SpotImage uri={anime.cover} style={styles.cardPoster} contentFit="cover" />
         <View style={[styles.cardBadge, { backgroundColor: `${themeColor}E6` }]}>
           <ThemedText
             variant="captionSmall"
             weight="800"
             style={{ color: themeColorFg, fontSize: 10 }}>
-            {anime.pointsLength ?? 0} spots
+            {t('pilgrimageUi.spotsCount', { count: anime.pointsLength ?? 0 })}
           </ThemedText>
         </View>
         {entry.fromCollection ? (

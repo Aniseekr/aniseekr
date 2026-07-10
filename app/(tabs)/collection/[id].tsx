@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, FlatList, StyleSheet, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, FlatList, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { collectionService } from '../../../libs/services/collection/collection-service';
+import {
+  FOLDER_SORT_MODES,
+  sortFolderItems,
+  filterFolderItems,
+  loadFolderSortModeSync,
+  saveFolderSortMode,
+  type FolderSortMode,
+} from '../../../libs/services/collection/folder-sort';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { trackingService } from '../../../libs/services/tracking/tracking-service';
 import { UserRepository } from '../../../libs/repositories/user-repository';
@@ -18,9 +26,9 @@ import {
   type AnimeProgress,
 } from '../../../components/collection/AnimeProgressView';
 import { FolderSwipeDeck } from '../../../components/collection/FolderSwipeDeck';
-import { Skeleton, ThemedText } from '../../../components/themed';
+import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
-import { Radius, Spacing } from '../../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useT } from '../../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../../libs/i18n/use-display-title';
@@ -35,6 +43,7 @@ interface FolderItem {
   score: number;
   notes: string;
   rewatch_count: number;
+  updated_at: number | null;
 }
 
 // Hook-bearing row title: `renderItem` below is a plain closure, so the
@@ -107,6 +116,8 @@ export default function FolderDetailScreen() {
   const [loading, setLoading] = useState(initialItems.length === 0);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
+  const [sortMode, setSortMode] = useState<FolderSortMode>(loadFolderSortModeSync);
+  const [search, setSearch] = useState('');
 
   const loadItems = useCallback(async () => {
     // Only flip the blocking skeleton when we have nothing to render. Warm
@@ -134,6 +145,7 @@ export default function FolderDetailScreen() {
             score: number;
             notes: string | null;
             rewatch_count: number | null;
+            updated_at: number | null;
           }
         >();
         if (favRows.length > 0) {
@@ -146,8 +158,10 @@ export default function FolderDetailScreen() {
             score: number;
             notes: string | null;
             rewatch_count: number | null;
+            updated_at: number | null;
           }>(
-            `SELECT anime_id, progress, total_episodes, status, score, notes, rewatch_count
+            `SELECT anime_id, progress, total_episodes, status, score, notes, rewatch_count,
+                    updated_at
                FROM user_anime
               WHERE anime_id IN (${placeholders})`,
             ...favRows.map((r) => r.id)
@@ -167,6 +181,7 @@ export default function FolderDetailScreen() {
             score: t?.score ?? 0,
             notes: t?.notes ?? '',
             rewatch_count: t?.rewatch_count ?? 0,
+            updated_at: t?.updated_at ?? null,
           };
         });
         folderSnapshotCache.set(id, mapped);
@@ -192,9 +207,10 @@ export default function FolderDetailScreen() {
         score: number;
         notes: string | null;
         rewatch_count: number | null;
+        updated_at: number | null;
       }>(
         `SELECT anime_id, title, image_url, progress, total_episodes, status, score,
-                notes, rewatch_count
+                notes, rewatch_count, updated_at
            FROM user_anime
           WHERE anime_id IN (${placeholders})`,
         ...animeIds
@@ -215,6 +231,7 @@ export default function FolderDetailScreen() {
             score: row.score,
             notes: row.notes ?? '',
             rewatch_count: row.rewatch_count ?? 0,
+            updated_at: row.updated_at ?? null,
           });
         }
       }
@@ -357,6 +374,30 @@ export default function FolderDetailScreen() {
       return next;
     });
   }, [loadItems]);
+
+  const searching = search.trim().length > 0;
+  const visibleItems = useMemo(
+    () => filterFolderItems(sortFolderItems(items, sortMode), search),
+    [items, sortMode, search]
+  );
+
+  const handleSort = useCallback((mode: FolderSortMode) => {
+    hapticsBridge.selection();
+    setSortMode(mode);
+    saveFolderSortMode(mode); // Rule 9: persist inline, no reconciling effect.
+  }, []);
+
+  const sortLabel = useCallback(
+    (mode: FolderSortMode) =>
+      mode === 'added'
+        ? t('tabs.collectionFolderScreen.sort.added')
+        : mode === 'updated'
+          ? t('tabs.collectionFolderScreen.sort.updated')
+          : mode === 'title'
+            ? t('tabs.collectionFolderScreen.sort.title')
+            : t('tabs.collectionFolderScreen.sort.rating'),
+    [t]
+  );
 
   const renderItem = ({ item }: { item: FolderItem }) => (
     <Pressable
@@ -520,6 +561,62 @@ export default function FolderDetailScreen() {
         </Pressable>
       </View>
 
+      {!loading && viewMode === 'list' && items.length > 0 ? (
+        <View style={styles.controls}>
+          <View
+            style={[
+              styles.searchBar,
+              { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+            ]}>
+            <MaterialIcons name="search" size={18} color={theme.text.secondary} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t('tabs.collectionFolderScreen.searchPlaceholder')}
+              placeholderTextColor={theme.text.tertiary}
+              style={[styles.searchInput, { color: theme.text.primary }]}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+            />
+            {search.length > 0 ? (
+              <Pressable onPress={() => setSearch('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={theme.text.tertiary} />
+              </Pressable>
+            ) : null}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.sortRow}>
+            {FOLDER_SORT_MODES.map((mode) => {
+              const active = sortMode === mode;
+              return (
+                <Pressable
+                  key={mode}
+                  onPress={() => handleSort(mode)}
+                  style={[
+                    styles.sortChip,
+                    {
+                      backgroundColor: active ? theme.accent : theme.background.secondary,
+                      borderColor: active ? theme.accent : theme.glassBorder,
+                    },
+                  ]}>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight={active ? '700' : '600'}
+                    style={{
+                      color: active ? readableTextOn(theme.accent) : theme.text.secondary,
+                    }}>
+                    {sortLabel(mode)}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
       {loading ? (
         <Skeleton.PosterGrid
           count={9}
@@ -540,23 +637,32 @@ export default function FolderDetailScreen() {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={visibleItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 140 }]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <MaterialIcons name="folder-open" size={48} color={theme.text.tertiary} />
+              <MaterialIcons
+                name={searching ? 'search-off' : 'folder-open'}
+                size={48}
+                color={theme.text.tertiary}
+              />
               <ThemedText
                 variant="titleMedium"
                 weight="700"
                 align="center"
                 style={{ marginTop: 12 }}>
-                {t('tabs.collectionFolderScreen.emptyTitle')}
+                {searching
+                  ? t('collectionUi.noMatches')
+                  : t('tabs.collectionFolderScreen.emptyTitle')}
               </ThemedText>
               <ThemedText variant="bodySmall" tone="secondary" align="center">
-                {t('tabs.collectionFolderScreen.emptyBody')}
+                {searching
+                  ? t('collectionUi.noMatchingAnimeInYour')
+                  : t('tabs.collectionFolderScreen.emptyBody')}
               </ThemedText>
             </View>
           }
@@ -634,6 +740,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
     gap: Spacing.sm,
+  },
+  controls: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    ...Typography.bodyMedium,
+    paddingVertical: 0,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    paddingVertical: 2,
+  },
+  sortChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   swipeWrap: {
     flex: 1,

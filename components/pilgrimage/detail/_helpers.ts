@@ -68,3 +68,23 @@ export function getPointSourceLabel(point: AnitabiPoint): string | null {
   const label = (point as Partial<PilgrimageSeriesPoint>).sourceLabel;
   return typeof label === 'string' && label.length > 0 ? label : null;
 }
+
+/** Great-circle initial bearing from the user to a spot, degrees 0–360 (north = 0). */
+export function bearingDegrees(
+  from: { latitude: number; longitude: number },
+  to: readonly [number, number]
+): number {
+  const φ1 = (from.latitude * Math.PI) / 180;
+  const φ2 = (to[0] * Math.PI) / 180;
+  const Δλ = ((to[1] - from.longitude) * Math.PI) / 180;
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+export type CardinalKey = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+
+export function cardinalFromBearing(deg: number): CardinalKey {
+  const keys: readonly CardinalKey[] = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+  return keys[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+}

@@ -17,20 +17,21 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Spacing, Radius, Shadow, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../themed';
-import { useT } from '../../libs/i18n';
+import { useT, type TranslationKey } from '../../libs/i18n';
+import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import type {
   AnimeTourism88Region,
   UniqueAnime88Entry,
 } from '../../libs/services/pilgrimage/anime88-repository';
 
-const REGION_LABELS: Record<AnimeTourism88Region, string> = {
-  hokkaido_tohoku: 'Hokkaido / Tohoku',
-  kanto: 'Kanto',
-  tokyo: 'Tokyo',
-  chubu: 'Chubu',
-  kinki: 'Kinki',
-  chugoku_shikoku: 'Chugoku / Shikoku',
-  kyushu_okinawa: 'Kyushu / Okinawa',
+const REGION_LABEL_KEY: Record<AnimeTourism88Region, TranslationKey> = {
+  hokkaido_tohoku: 'pilgrimage.regions.hokkaido_tohoku',
+  kanto: 'pilgrimage.regions.kanto',
+  tokyo: 'pilgrimage.regions.tokyo',
+  chubu: 'pilgrimage.regions.chubu',
+  kinki: 'pilgrimage.regions.kinki',
+  chugoku_shikoku: 'pilgrimage.regions.chugoku_shikoku',
+  kyushu_okinawa: 'pilgrimage.regions.kyushu_okinawa',
 };
 
 export interface Tourism88RailProps {
@@ -62,7 +63,7 @@ export function Tourism88Rail({
         <View style={styles.headerLeft}>
           <View style={styles.officialBadge}>
             <ThemedText variant="captionSmall" weight="800" style={styles.officialBadgeLabel}>
-              ★ Official
+              {t('pilgrimage.tourism88.official')}
             </ThemedText>
           </View>
           <ThemedText variant="titleMedium" weight="700">
@@ -109,21 +110,22 @@ interface Tourism88RailCardProps {
 }
 
 function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Tourism88RailCardProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const primaryEntry = entry.locations[0];
   const cityCount = entry.locations.length;
-  const regionLabel = REGION_LABELS[primaryEntry.region];
+  const regionLabel = t(REGION_LABEL_KEY[primaryEntry.region]);
   const title = entry.titleEn || entry.titleJa;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${title}, Anime Tourism 88 entry`}
+      accessibilityLabel={t('pilgrimage.tourism88.entryA11y', { title })}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.92 }]}>
       <View style={styles.posterWrap}>
         {cover ? (
           <Image
-            source={{ uri: cover }}
+            source={anitabiImageSource(cover)}
             style={styles.poster}
             contentFit="cover"
             transition={180}
@@ -152,7 +154,7 @@ function Tourism88RailCard({ entry, inCollection, cover, onPress, theme }: Touri
         {cityCount > 1 ? (
           <View style={styles.cityCount}>
             <ThemedText variant="captionSmall" weight="700" style={styles.cityCountLabel}>
-              +{cityCount} cities
+              {t('pilgrimage.tourism88.moreCities', { count: cityCount })}
             </ThemedText>
           </View>
         ) : null}

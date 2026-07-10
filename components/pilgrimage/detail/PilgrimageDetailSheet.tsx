@@ -27,6 +27,7 @@ import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ON_DARK, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type {
   AnitabiBangumi,
@@ -40,6 +41,12 @@ import type {
   SpotIntentKind,
   SpotIntentMap,
 } from '../../../libs/services/pilgrimage/spot-intents';
+import {
+  composeAreaRows,
+  groupSpotsIntoAreas,
+  type SpotArea,
+  type SpotAreaRow,
+} from '../../../libs/services/pilgrimage/spot-areas';
 import { SceneTile } from './SceneTile';
 import { SpotRow } from './SpotRow';
 import { StatCell } from './StatCell';
@@ -74,6 +81,8 @@ export interface PilgrimageDetailSheetProps {
   onOpenAnimePoster?: () => void;
   onSpotPress: (group: AnitabiSpot) => void;
   onToggleVisited: (group: AnitabiSpot) => void;
+  /** rows-mode area section header tap — jumps the map to that area's bounds. */
+  onAreaPress?: (area: SpotArea) => void;
   onOpenMaps: (spot: AnitabiPoint) => void;
   onTakeComparison: (spot: AnitabiPoint) => void;
   representativeForGroup: (group: AnitabiSpot) => AnitabiPoint;
@@ -113,6 +122,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     onOpenAnimePoster,
     onSpotPress,
     onToggleVisited,
+    onAreaPress,
     onOpenMaps,
     onTakeComparison,
     representativeForGroup,
@@ -231,6 +241,43 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     ]
   );
 
+  // Rows-mode area section headers — a pure grid-cluster memo over the already
+  // loaded spots (CLAUDE.md Rule 9: no new state/effects). Grid mode never
+  // sections; rows mode only sections when there's more than one area to make
+  // the split worth the header rows. `composeAreaRows` is the pure, unit-
+  // tested helper (spot-areas.ts) that guarantees every spot gets a row even
+  // when `groupSpotsIntoAreas` drops it for having no usable geo — those
+  // spots come back as plain trailing rows after the sectioned ones.
+  const rowData = useMemo<SpotAreaRow[]>(() => {
+    if (listLayout !== 'rows') return [];
+    const areas = groupSpotsIntoAreas(filteredGroupedSpots);
+    return composeAreaRows(filteredGroupedSpots, areas);
+  }, [listLayout, filteredGroupedSpots]);
+
+  const renderRowItem = useCallback(
+    ({ item }: { item: SpotAreaRow }) => {
+      if (item.kind === 'header') {
+        const label = t('pilgrimage.detail.areaLabel', {
+          index: item.areaNumber,
+          count: item.area.spots.length,
+        });
+        return (
+          <Pressable
+            onPress={() => onAreaPress?.(item.area)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.areaHeader, pressed && { opacity: 0.7 }]}>
+            <ThemedText variant="titleSmall" weight="800">
+              {label}
+            </ThemedText>
+            <Ionicons name="map-outline" size={15} color={theme.text.tertiary} />
+          </Pressable>
+        );
+      }
+      return renderRow({ item: item.spot });
+    },
+    [onAreaPress, renderRow, styles.areaHeader, t, theme.text.tertiary]
+  );
+
   const handleIndexChange = useCallback(
     (index: number) => {
       onSheetIndexChange?.(index);
@@ -263,7 +310,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
             pressed && onOpenAnimePoster && { opacity: 0.86 },
           ]}>
           {posterUri ? (
-            <Image source={{ uri: posterUri }} style={styles.poster} contentFit="cover" />
+            <Image source={anitabiImageSource(posterUri)} style={styles.poster} contentFit="cover" />
           ) : null}
           <View style={styles.posterBadge} pointerEvents="none">
             <ThemedText
@@ -387,9 +434,15 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       onChange={handleIndexChange}>
       <BottomSheetFlatList
         key={listKey}
-        data={filteredGroupedSpots as AnitabiSpot[]}
-        keyExtractor={(item) => item.id}
-        renderItem={listLayout === 'grid' ? renderTile : renderRow}
+        data={(listLayout === 'grid' ? (filteredGroupedSpots as AnitabiSpot[]) : rowData) as readonly unknown[] as never[]}
+        keyExtractor={(item: unknown, index: number) =>
+          listLayout === 'grid'
+            ? (item as AnitabiSpot).id
+            : (item as SpotAreaRow).kind === 'header'
+              ? `h:${(item as { area: SpotArea }).area.id}`
+              : `s:${((item as { spot: AnitabiSpot }).spot).id}`
+        }
+        renderItem={listLayout === 'grid' ? (renderTile as never) : (renderRowItem as never)}
         numColumns={numColumns}
         ListHeaderComponent={headerNode}
         ListEmptyComponent={emptyNode}
@@ -431,6 +484,7 @@ function areEqual(
     prev.onOpenAnimePoster === next.onOpenAnimePoster &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onToggleVisited === next.onToggleVisited &&
+    prev.onAreaPress === next.onAreaPress &&
     prev.onOpenMaps === next.onOpenMaps &&
     prev.onTakeComparison === next.onTakeComparison &&
     prev.representativeForGroup === next.representativeForGroup &&
@@ -535,6 +589,13 @@ function makeStyles(theme: ThemePalette) {
     },
     rowCell: {
       paddingBottom: Spacing.sm,
+    },
+    areaHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.xs,
     },
     emptyCard: {
       marginTop: Spacing.lg,

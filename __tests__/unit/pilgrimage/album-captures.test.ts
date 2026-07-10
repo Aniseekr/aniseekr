@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import {
   buildPilgrimageAlbumEntries,
+  FREE_FOLDER_ANIME_ID,
   getCaptureFrameMatchPercent,
 } from '../../../libs/services/pilgrimage/album-captures';
 import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
@@ -113,5 +114,39 @@ describe('pilgrimage album capture entries', () => {
         },
       })
     ).toBe(100);
+  });
+});
+
+describe('free-bucket album entries', () => {
+  const free: PilgrimageCapture = {
+    spotId: 'free-1',
+    uri: 'file:///free.jpg',
+    capturedAt: 100,
+    source: 'camera',
+    userLocation: { latitude: 35.1, longitude: 139.2 },
+  };
+
+  it('emits a free-folder entry for a free capture (no reference scene)', () => {
+    const entries = buildPilgrimageAlbumEntries({ captures: [], free: [free], animes: [] });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].isFree).toBe(true);
+    expect(entries[0].anime.id).toBe(FREE_FOLDER_ANIME_ID);
+    expect(entries[0].spot.image).toBe(''); // no scene image -> single-photo card
+    expect(entries[0].capture.uri).toBe('file:///free.jpg');
+    expect(entries[0].matchPercent).toBeNull();
+  });
+
+  it('keeps free entries separate from known-spot entries and sorts by capturedAt', () => {
+    const spotCap: PilgrimageCapture = {
+      spotId: 's1',
+      uri: 'file:///s1.jpg',
+      capturedAt: 200,
+      animeId: 7,
+      spotImage: 'https://x/scene.jpg',
+      spotName: 'Shrine',
+    };
+    const entries = buildPilgrimageAlbumEntries({ captures: [spotCap], free: [free], animes: [] });
+    expect(entries.map((e) => e.capture.uri)).toEqual(['file:///s1.jpg', 'file:///free.jpg']); // 200 > 100
+    expect(entries.find((e) => e.isFree)?.anime.id).toBe(FREE_FOLDER_ANIME_ID);
   });
 });

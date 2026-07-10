@@ -18,17 +18,33 @@ import BottomSheet, {
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ON_DARK, ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
+import type { TranslationKey } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import {
+  bearingDegrees,
   buildAnitabiMapUrl,
+  cardinalFromBearing,
   formatDistanceKm,
   getPointSourceBangumiId,
   getPointSourceLabel,
   hasValidGeo,
+  type CardinalKey,
 } from './_helpers';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
+
+const BEARING_LABEL_KEY: Record<CardinalKey, TranslationKey> = {
+  n: 'pilgrimage.detail.bearing.n',
+  ne: 'pilgrimage.detail.bearing.ne',
+  e: 'pilgrimage.detail.bearing.e',
+  se: 'pilgrimage.detail.bearing.se',
+  s: 'pilgrimage.detail.bearing.s',
+  sw: 'pilgrimage.detail.bearing.sw',
+  w: 'pilgrimage.detail.bearing.w',
+  nw: 'pilgrimage.detail.bearing.nw',
+};
 
 export interface SpotSheetProps {
   /** When null the sheet is closed. Setting it open animates the sheet up. */
@@ -38,6 +54,8 @@ export interface SpotSheetProps {
   themeColor: string;
   themeColorFg: string;
   distanceKm: number | null;
+  /** User's current coordinates, used to draw a bearing arrow to the spot. */
+  userLocation?: { latitude: number; longitude: number } | null;
   visitedTarget: AnitabiPoint | null;
   visited: boolean;
   saved: boolean;
@@ -68,6 +86,7 @@ function SpotSheetImpl({
   themeColor,
   themeColorFg,
   distanceKm,
+  userLocation = null,
   visitedTarget,
   visited,
   saved,
@@ -136,8 +155,11 @@ function SpotSheetImpl({
     if (spot) onOpenMaps(spot);
   }, [onOpenMaps, spot]);
   const handleStartCamera = useCallback(() => {
-    if (spot) onStartCamera(spot);
-  }, [onStartCamera, spot]);
+    if (spot) {
+      if (!visited) onToggleVisited(visitedTarget ?? spot); // check-in on the way to the camera
+      onStartCamera(spot);
+    }
+  }, [onStartCamera, onToggleVisited, spot, visited, visitedTarget]);
   const handleFrameShot = useCallback(() => {
     if (spot) onFrameShot(spot);
   }, [onFrameShot, spot]);
@@ -176,6 +198,8 @@ function SpotSheetImpl({
       ? Math.max(0, sceneStack.findIndex((scene) => scene.id === spot.id))
       : 0;
   const visitSpot = visitedTarget ?? spot;
+  const bearing =
+    spot && userLocation && hasGeo ? bearingDegrees(userLocation, spot.geo) : null;
 
   return (
     <BottomSheet
@@ -193,7 +217,7 @@ function SpotSheetImpl({
         ) : (
           <>
         <View style={styles.hero}>
-          <Image source={{ uri: spot.image }} style={styles.cover} contentFit="cover" />
+          <Image source={anitabiImageSource(spot.image)} style={styles.cover} contentFit="cover" />
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.76)']}
             style={styles.sheetHeroGradient}
@@ -242,7 +266,7 @@ function SpotSheetImpl({
                     pressed && { opacity: 0.78 },
                   ]}>
                   <Image
-                    source={{ uri: scene.image }}
+                    source={anitabiImageSource(scene.image)}
                     style={styles.sceneThumb}
                     contentFit="cover"
                   />
@@ -279,11 +303,27 @@ function SpotSheetImpl({
           <Ionicons name="location-outline" size={15} color={theme.text.tertiary} />
           <ThemedText variant="bodySmall" tone="secondary">
             {distanceKm != null
-              ? `${formatDistanceKm(distanceKm)} away`
+              ? t('pilgrimage.detail.distanceAway', { distance: formatDistanceKm(distanceKm) })
               : sceneStack.length > 1
-                ? `${activeSceneIndex + 1} of ${sceneStack.length} scenes`
-                : 'Scene location'}
+                ? t('pilgrimage.detail.sceneOfCount', {
+                    index: activeSceneIndex + 1,
+                    count: sceneStack.length,
+                  })
+                : t('pilgrimage.detail.sceneLocation')}
           </ThemedText>
+          {bearing != null && distanceKm != null ? (
+            <>
+              <Ionicons
+                name="arrow-up"
+                size={12}
+                color={theme.text.secondary}
+                style={{ transform: [{ rotate: `${Math.round(bearing)}deg` }] }}
+              />
+              <ThemedText variant="bodySmall" tone="secondary">
+                {t(BEARING_LABEL_KEY[cardinalFromBearing(bearing)])}
+              </ThemedText>
+            </>
+          ) : null}
         </View>
 
         <AnitabiOriginCredit
@@ -311,7 +351,7 @@ function SpotSheetImpl({
               pressed && { opacity: 0.84 },
             ]}>
             <Ionicons
-              name={visited ? 'checkmark-circle' : 'film-outline'}
+              name={visited ? 'checkmark-circle' : 'flag-outline'}
               size={16}
               color={visited ? theme.status.success : theme.text.secondary}
             />
@@ -319,7 +359,7 @@ function SpotSheetImpl({
               variant="bodySmall"
               weight="700"
               style={{ color: visited ? theme.status.success : theme.text.secondary }}>
-              {visited ? 'Visited' : sceneCount > 1 ? `${sceneCount} scenes` : 'Scene'}
+              {visited ? t('pilgrimageUi.checkedIn') : t('pilgrimageUi.checkIn')}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -384,7 +424,7 @@ function SpotSheetImpl({
           ]}>
           <Ionicons name="camera" size={18} color={themeColorFg} />
           <ThemedText variant="bodyMedium" weight="800" style={{ color: themeColorFg }}>
-            {t('pilgrimageUi.startArCamera2')}
+            {visited ? t('pilgrimageUi.startArCamera2') : t('pilgrimageUi.checkInPhoto')}
           </ThemedText>
         </Pressable>
 
@@ -442,6 +482,8 @@ function areEqual(prev: SpotSheetProps, next: SpotSheetProps): boolean {
     prev.themeColor === next.themeColor &&
     prev.themeColorFg === next.themeColorFg &&
     prev.distanceKm === next.distanceKm &&
+    prev.userLocation?.latitude === next.userLocation?.latitude &&
+    prev.userLocation?.longitude === next.userLocation?.longitude &&
     prev.visitedTarget === next.visitedTarget &&
     prev.visited === next.visited &&
     prev.saved === next.saved &&

@@ -1,8 +1,7 @@
 // Pilgrimage hub. Matches japanwalker.pen Screen 1 (q3N3pG):
 // Header (聖地巡禮 + album + search) → Plan your day intro →
-// Nearby hero (170h with grid + scatter pins; opens the See All map) →
-// Popular Animes rail (128x200) → Featured Spots list (72 photo + info +
-// 56 mini map).
+// hero (nearest spot) → 我的巡禮 (the user's collection) → 附近 (nearby/
+// popular rail) → 探索 (Tourism 88 + cross-anime Featured Spots list).
 //
 // The hub is list-only. Map view lives on the See All screen
 // (app/(tabs)/pilgrimage/map.tsx) so users land on a navigable card list
@@ -20,39 +19,21 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
-import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
-import { collectionPilgrimageService } from '../../../libs/services/pilgrimage/collection-pilgrimage-service';
-import { locationService, type LatLng } from '../../../libs/services/pilgrimage/location-service';
-import {
-  loadVisitedSpotsSync,
-  type VisitedMap,
-} from '../../../libs/services/pilgrimage/visited-prefs';
-import {
-  loadSpotIntentsSync,
-  type SpotIntentMap,
-} from '../../../libs/services/pilgrimage/spot-intents';
+import { locationService } from '../../../libs/services/pilgrimage/location-service';
+import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
-import {
-  getPilgrimageHubSnapshot,
-  updatePilgrimageHubSnapshot,
-  type PilgrimageHubSnapshot,
-} from '../../../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
@@ -62,8 +43,6 @@ import {
   getIndexVersion,
   subscribeAnitabiIndex,
 } from '../../../libs/services/pilgrimage/anitabi-index';
-import { buildSeededPilgrimageAnimes } from '../../../libs/services/pilgrimage/pilgrimage-screen-state';
-import { buildPilgrimageCollectionState } from '../../../libs/services/pilgrimage/pilgrimage-hub-collection-state';
 import {
   formatPilgrimageSubtitle,
   getPilgrimageAnimeTitles,
@@ -79,7 +58,15 @@ import {
   type PilgrimageSortKey,
 } from '../../../libs/services/pilgrimage/pilgrimage-collection-sort';
 import { PilgrimageSortPill } from '../../../components/pilgrimage/PilgrimageSortPill';
+import { SpotImage } from '../../../components/pilgrimage/SpotImage';
+import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
+import { normalizeAnitabiImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
+import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 import { useT } from '../../../libs/i18n';
+import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScreenData';
+import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
+import { CacheService } from '../../../libs/services/cache-service';
+import { DETAIL_CACHE_KEY_PREFIX } from '../../../libs/services/pilgrimage/anitabi-service';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -104,7 +91,7 @@ const NEARBY_TIERS_KM: readonly { km: number; labelKey: string }[] = [
   { km: 30, labelKey: 'tabs.pilgrimageScreen.tier.walking' },
   { km: 100, labelKey: 'tabs.pilgrimageScreen.tier.dayTrip' },
   { km: 500, labelKey: 'tabs.pilgrimageScreen.tier.inRegion' },
-  { km: 5000, labelKey: 'tabs.pilgrimageScreen.tier.inJapan' },
+  { km: 5000, labelKey: 'tabs.pilgrimageScreen.tier.farAway' },
 ];
 const FEATURED_SPOT_LIMIT = 6;
 const POPULAR_LIMIT = 14;
@@ -124,231 +111,23 @@ function formatKm(km: number): string {
   return `${Math.round(km)} km`;
 }
 
-function hasSnapshotSlice<K extends keyof PilgrimageHubSnapshot>(
-  snapshot: PilgrimageHubSnapshot | null,
-  key: K
-): boolean {
-  return !!snapshot && Object.prototype.hasOwnProperty.call(snapshot, key);
-}
-
-function buildSeededFeatured(): AnitabiBangumi[] {
-  return buildSeededPilgrimageAnimes(FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId));
-}
-
 export default function PilgrimageHubScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const accentFg = readableTextOn(theme.accent);
   const t = useT();
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot());
-  const hasInitialCollection = hasSnapshotSlice(initialSnapshot, 'collectionAnimes');
-  const hasInitialFeatured = hasSnapshotSlice(initialSnapshot, 'featuredAnimes');
-
-  const [collectionAnimes, setCollectionAnimes] = useState<AnitabiBangumi[]>(
-    () => initialSnapshot?.collectionAnimes ?? []
-  );
-  // Seed featured from the bundled offline index so the rail renders on frame
-  // 1 even on a fresh install (no SQLite cache yet). The HTTP fill-in below
-  // upgrades each entry with `litePoints` as responses stream in. This is
-  // what kills the 30s+ skeleton — first paint now happens in <100ms.
-  const [featuredAnimes, setFeaturedAnimes] = useState<AnitabiBangumi[]>(() => {
-    const cached = initialSnapshot?.featuredAnimes;
-    if (cached && cached.length > 0) return cached;
-    return buildSeededFeatured();
-  });
-  const [collectionLoading, setCollectionLoading] = useState(!hasInitialCollection);
-  // `featuredLoading` now means "still filling in litePoints", not "no cards
-  // at all" — the seed gives us cards from the start. The skeleton below
-  // gates on `animeCards.length === 0`, so it only shows when we genuinely
-  // have nothing to render.
-  const [featuredLoading, setFeaturedLoading] = useState(!hasInitialFeatured);
-  const [visited, setVisited] = useState<VisitedMap>(
-    () => initialSnapshot?.visited ?? loadVisitedSpotsSync()
-  );
-  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
-  const [userLocation, setUserLocation] = useState<LatLng | null>(
-    () => initialSnapshot?.userLocation ?? null
-  );
-  const [error, setError] = useState<string | null>(null);
+  const {
+    collectionAnimes,
+    featuredAnimes,
+    loading,
+    error,
+    visited,
+    spotIntents,
+    userLocation,
+    nearestSpot,
+  } = usePilgrimageHubScreenData();
   const [sortKey, setSortKey] = useState<PilgrimageSortKey>(DEFAULT_PILGRIMAGE_SORT_KEY);
-
-  const loading = collectionLoading || featuredLoading;
-
-  const refreshCollectionAnimes = useCallback(
-    async ({
-      isActive = () => true,
-      clearOnError = false,
-    }: {
-      isActive?: () => boolean;
-      clearOnError?: boolean;
-    } = {}): Promise<number | null> => {
-      try {
-        const entries = await collectionPilgrimageService.getEntries();
-        if (!isActive()) return null;
-        const { collectionAnimes: animes } = buildPilgrimageCollectionState(entries);
-        setCollectionAnimes(animes);
-        updatePilgrimageHubSnapshot({ collectionAnimes: animes });
-        return animes.length;
-      } catch (err: unknown) {
-        if (!isActive()) return null;
-        // Collection failures shouldn't block the hub — featured backfill is
-        // enough to render something useful.
-        console.warn('[PilgrimageHub] collection load failed:', err);
-        if (clearOnError) setCollectionAnimes([]);
-        return null;
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.resolve()
-      .then(() =>
-        refreshCollectionAnimes({
-          isActive: () => !cancelled,
-          clearOnError: !hasInitialCollection,
-        })
-      )
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setCollectionLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [hasInitialCollection, refreshCollectionAnimes]);
-
-  const focusRefreshSeenRef = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (!focusRefreshSeenRef.current) {
-        focusRefreshSeenRef.current = true;
-        return;
-      }
-      let active = true;
-      refreshCollectionAnimes({
-        isActive: () => active,
-      }).catch(() => undefined);
-      return () => {
-        active = false;
-      };
-    }, [refreshCollectionAnimes])
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    setFeaturedLoading(!hasInitialFeatured);
-
-    // Stream the per-anime `/lite` responses in instead of waiting for all
-    // ~30 to settle. The seeded list is rendered first; each successful HTTP
-    // response merges its richer payload (mainly `litePoints`) into state.
-    // setState calls are coalesced via a 200ms batch window so we don't
-    // re-run `allSpots` 30 times in a row on a cold install.
-    const ids = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId);
-    const pending: AnitabiBangumi[] = [];
-    let flushTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const commit = () => {
-      flushTimer = null;
-      if (cancelled || pending.length === 0) return;
-      const batch = pending.splice(0);
-      setFeaturedAnimes((current) => {
-        const byId = new Map(current.map((a) => [a.id, a] as const));
-        for (const fresh of batch) byId.set(fresh.id, fresh);
-        const merged = Array.from(byId.values()).sort(
-          (a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0)
-        );
-        updatePilgrimageHubSnapshot({ featuredAnimes: merged });
-        return merged;
-      });
-    };
-
-    const scheduleCommit = () => {
-      if (flushTimer != null) return;
-      flushTimer = setTimeout(commit, 200);
-    };
-
-    let remaining = ids.length;
-    let anySuccess = false;
-    for (const id of ids) {
-      pilgrimageRepository
-        .getSpotsByBangumiId(id)
-        .then((anime) => {
-          if (cancelled) return;
-          if (anime) {
-            anySuccess = true;
-            pending.push(anime);
-            scheduleCommit();
-          }
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          // Per-anime failures are common (404, transient network) — don't
-          // surface them, just leave the seeded card alone.
-          console.warn('[PilgrimageHub] featured fetch failed:', id, err);
-        })
-        .finally(() => {
-          if (cancelled) return;
-          remaining -= 1;
-          if (remaining === 0) {
-            if (flushTimer != null) {
-              clearTimeout(flushTimer);
-              flushTimer = null;
-            }
-            commit();
-            // Only show the network error when we had no seeded fallback AND
-            // every request failed; otherwise the user already sees cards.
-            if (!anySuccess && !hasInitialFeatured && featuredAnimes.length === 0) {
-              setError(t('tabs.pilgrimageScreen.errorLoadFailed'));
-            } else {
-              setError(null);
-            }
-            setFeaturedLoading(false);
-          }
-        });
-    }
-
-    return () => {
-      cancelled = true;
-      if (flushTimer != null) {
-        clearTimeout(flushTimer);
-        flushTimer = null;
-      }
-    };
-    // featuredAnimes intentionally excluded — only read at error time and the
-    // value at effect-mount is what we want there.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasInitialFeatured]);
-
-  // Visited / spot-intents are seeded synchronously above from MMKV; no
-  // async reconcile needed. The snapshot is also primed from those seeds.
-  useEffect(() => {
-    updatePilgrimageHubSnapshot({ visited });
-    // Only fires once on first mount — `visited` is the seed value and
-    // doesn't change here. Per-spot toggles flow through their own writers.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    locationService
-      .getCurrentLocation()
-      .then((loc) => {
-        if (!cancelled) {
-          setUserLocation(loc ?? null);
-          updatePilgrimageHubSnapshot({ userLocation: loc ?? null });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) updatePilgrimageHubSnapshot({ userLocation: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Merge: collection first, then backfill from featured (deduped by id).
   const animeCards = useMemo<AnimeCard[]>(() => {
@@ -438,7 +217,7 @@ export default function PilgrimageHubScreen() {
   }, [animeCards, userLocation, spotIntents]);
 
   // Walk through tiers until we find a non-empty one, so users outside Japan
-  // still see something meaningful (even if it just says "in Japan" with the
+  // still see something meaningful (even if it just says "far away" with the
   // closest hub).
   const nearby = useMemo<{ tierLabel: string | null; list: AnimeCard[] }>(() => {
     if (!userLocation) return { tierLabel: null, list: [] };
@@ -450,11 +229,16 @@ export default function PilgrimageHubScreen() {
       const within = sorted.filter((c) => (c.distanceKm ?? Infinity) <= tier.km);
       if (within.length > 0) return { tierLabel: t(tier.labelKey), list: within };
     }
-    return { tierLabel: t('tabs.pilgrimageScreen.tier.inJapan'), list: sorted.slice(0, 5) };
+    return { tierLabel: t('tabs.pilgrimageScreen.tier.farAway'), list: sorted.slice(0, 5) };
   }, [animeCards, userLocation, t]);
 
   const nearbyAnime = nearby.list;
   const nearestAnime = nearbyAnime[0] ?? null;
+
+  // `nearestSpot` (nearest single point-level spot for the hero card, spec
+  // 2.4) comes from usePilgrimageHubScreenData — it's derived from
+  // `userLocation`, which the hook already owns.
+  const nearestSpotAnime = nearestSpot ? getIndexedById(nearestSpot.bangumiId) : null;
 
   const featuredSpots = useMemo<FeaturedSpot[]>(() => {
     return rankFeaturedSpotsByPriority(allSpots).slice(0, FEATURED_SPOT_LIMIT);
@@ -489,6 +273,11 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/album');
   }, [router]);
 
+  const handleOpenCamera = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/pilgrimage/capture');
+  }, [router]);
+
   const handleOpenCharacters = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/companion/library');
@@ -515,7 +304,7 @@ export default function PilgrimageHubScreen() {
   // See All screen directly in map mode and centres on the nearest anime.
   const handleHeroPress = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    const focus = nearestAnime?.anime.id ?? null;
+    const focus = nearestSpot?.bangumiId ?? nearestAnime?.anime.id ?? null;
     router.push({
       pathname: '/pilgrimage/map',
       params: {
@@ -523,7 +312,7 @@ export default function PilgrimageHubScreen() {
         ...(focus ? { focus: String(focus) } : {}),
       },
     });
-  }, [nearestAnime, router]);
+  }, [nearestSpot, nearestAnime, router]);
 
   // Popular rail is pure discovery: collection now has its own rail above, so
   // exclude collected anime here to avoid showing them twice. When the
@@ -578,7 +367,7 @@ export default function PilgrimageHubScreen() {
     <View style={styles.root}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.headerBar}>
-          <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
+          <ThemedText variant="titleLarge" weight="700" numberOfLines={1} style={styles.headerTitle}>
             {t('tabs.pilgrimageScreen.title')}
           </ThemedText>
           <View style={styles.headerRight}>
@@ -597,6 +386,14 @@ export default function PilgrimageHubScreen() {
               accessibilityLabel={t('tabs.pilgrimageScreen.myAlbumA11y')}
               style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
               <Ionicons name="albums-outline" size={18} color={theme.text.primary} />
+            </Pressable>
+            <Pressable
+              onPress={handleOpenCamera}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('pilgrimage.capture.entryA11y')}
+              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="camera-outline" size={18} color={theme.text.primary} />
             </Pressable>
             <Pressable
               onPress={handleSearch}
@@ -629,6 +426,10 @@ export default function PilgrimageHubScreen() {
 
           <NearbyHero
             theme={theme}
+            nearestSpot={nearestSpot}
+            nearestSpotAnimeName={
+              nearestSpotAnime ? (nearestSpotAnime.cn || nearestSpotAnime.title) : null
+            }
             nearestAnime={nearestAnime}
             nearbyCount={nearbyAnime.length}
             tierLabel={nearby.tierLabel}
@@ -656,10 +457,17 @@ export default function PilgrimageHubScreen() {
             </View>
           ) : null}
 
+          {/*
+            "我的巡禮" — the user's own collection, promoted to the second
+            slot (right after the nearest-spot hero) so their own progress
+            anchors the hub instead of being buried under discovery rails.
+            Each card's checkmark badge and accent now come from
+            resolveHubAnimeProgress / anime.color inside PopularCard.
+          */}
           {sortedCollectionAnimes.length > 0 ? (
             <View style={styles.section}>
               <SectionHeader
-                title={t('tabs.pilgrimageScreen.section.myCollection')}
+                title={t('tabs.pilgrimageScreen.section.myPilgrimage')}
                 count={sortedCollectionAnimes.length}
                 cta={t('tabs.pilgrimageScreen.section.seeAll')}
                 onCta={handleSeeAllCollection}
@@ -682,8 +490,6 @@ export default function PilgrimageHubScreen() {
                     key={anime.id}
                     anime={anime}
                     visited={visited}
-                    accent={theme.accent}
-                    accentFg={accentFg}
                     theme={theme}
                     fromCollection={false}
                     distanceKm={collectionDistanceKm.get(anime.id)}
@@ -693,14 +499,6 @@ export default function PilgrimageHubScreen() {
               </ScrollView>
             </View>
           ) : null}
-
-          <Tourism88Rail
-            entries={tourism88Entries}
-            collectionBangumiIds={collectionBangumiIds}
-            coversById={tourism88Covers}
-            onPressEntry={handle88EntryPress}
-            onSeeAll={handleSee88All}
-          />
 
           {popularList.length > 0 ? (
             <View style={styles.section}>
@@ -719,8 +517,6 @@ export default function PilgrimageHubScreen() {
                     key={card.anime.id}
                     anime={card.anime}
                     visited={visited}
-                    accent={theme.accent}
-                    accentFg={accentFg}
                     theme={theme}
                     fromCollection={card.fromCollection}
                     distanceKm={card.distanceKm}
@@ -731,27 +527,52 @@ export default function PilgrimageHubScreen() {
             </View>
           ) : null}
 
-          {featuredSpots.length > 0 ? (
+          {/*
+            探索 — everything that isn't the user's own collection or the
+            nearby rail lands here, demoted below the personal sections:
+            the Tourism 88 official list and the cross-anime featured-spots
+            list (ranked by real distance, see rankFeaturedSpotsByPriority).
+          */}
+          {tourism88Entries.length > 0 || featuredSpots.length > 0 ? (
             <View style={styles.section}>
-              <SectionHeader
-                title={t('tabs.pilgrimageScreen.section.featuredSpots')}
-                cta={t('tabs.pilgrimageScreen.section.viewMap')}
-                onCta={handleHeroPress}
-                theme={theme}
+              <ThemedText
+                variant="captionSmall"
+                weight="700"
+                style={[styles.introCaps, { color: theme.accent }]}>
+                {t('tabs.pilgrimageScreen.section.explore')}
+              </ThemedText>
+
+              <Tourism88Rail
+                entries={tourism88Entries}
+                collectionBangumiIds={collectionBangumiIds}
+                coversById={tourism88Covers}
+                onPressEntry={handle88EntryPress}
+                onSeeAll={handleSee88All}
               />
-              <View style={styles.spotList}>
-                {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
-                  <FeaturedSpotRow
-                    key={`${anime.id}:${spot.id}`}
-                    spot={spot}
-                    anime={anime}
-                    distanceKm={distanceKm}
-                    fromCollection={fromCollection}
+
+              {featuredSpots.length > 0 ? (
+                <View style={styles.section}>
+                  <SectionHeader
+                    title={t('tabs.pilgrimageScreen.section.featuredSpots')}
+                    cta={t('tabs.pilgrimageScreen.section.viewMap')}
+                    onCta={handleHeroPress}
                     theme={theme}
-                    onPress={() => handleAnimePress(anime)}
                   />
-                ))}
-              </View>
+                  <View style={styles.spotList}>
+                    {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
+                      <FeaturedSpotRow
+                        key={`${anime.id}:${spot.id}`}
+                        spot={spot}
+                        anime={anime}
+                        distanceKm={distanceKm}
+                        fromCollection={fromCollection}
+                        theme={theme}
+                        onPress={() => handleAnimePress(anime)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -764,6 +585,8 @@ export default function PilgrimageHubScreen() {
 
 function NearbyHero({
   theme,
+  nearestSpot,
+  nearestSpotAnimeName,
   nearestAnime,
   nearbyCount,
   tierLabel,
@@ -771,6 +594,8 @@ function NearbyHero({
   onPress,
 }: {
   theme: ThemePalette;
+  nearestSpot: NearbySpotHit | null;
+  nearestSpotAnimeName: string | null;
   nearestAnime: AnimeCard | null;
   nearbyCount: number;
   tierLabel: string | null;
@@ -778,9 +603,17 @@ function NearbyHero({
   onPress: () => void;
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const fgPin = readableTextOn(theme.accent);
-  const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
   const t = useT();
+  const nearestTitles = nearestAnime ? getPilgrimageAnimeTitles(nearestAnime.anime) : null;
+  // Anitabi CDN serves scene images only at h160/h360/full — h720 404s. The
+  // hub hero renders larger than the h160 thumbnail default, so upgrade it
+  // one step (mirrors the same replace in (rate)/index.tsx's trending card).
+  const spotImageUri = nearestSpot
+    ? normalizeAnitabiImageUrl(nearestSpot.image, nearestSpot.bangumiId).replace(
+        '?plan=h160',
+        '?plan=h360'
+      )
+    : null;
 
   return (
     <Pressable
@@ -788,72 +621,11 @@ function NearbyHero({
       accessibilityRole="button"
       accessibilityLabel={t('tabs.pilgrimageScreen.hero.labelAccessibility')}
       style={({ pressed }) => [styles.heroCard, pressed && { opacity: 0.92 }]}>
-      <View style={styles.heroGrid} pointerEvents="none">
-        {[60, 130, 200, 270, 330].map((x) => (
-          <View
-            key={`v${x}`}
-            style={[styles.gridLineV, { left: x, backgroundColor: theme.glassBorder }]}
-          />
-        ))}
-        {[34, 68, 102, 136].map((y) => (
-          <View
-            key={`h${y}`}
-            style={[styles.gridLineH, { top: y, backgroundColor: theme.glassBorder }]}
-          />
-        ))}
-        <View style={[styles.roadPath, { backgroundColor: theme.glassBorder, opacity: 0.55 }]} />
-      </View>
-
-      {nearestAnime?.anime.cover ? (
-        <Image
-          source={{ uri: nearestAnime.anime.cover }}
-          style={styles.heroCoverArt}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : null}
-
-      <View
-        style={[styles.satPin, { left: 78, top: 48, backgroundColor: theme.background.tertiary }]}
-      />
-      <View
-        style={[
-          styles.satPin,
-          {
-            left: 266,
-            top: 34,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
-            backgroundColor: theme.background.tertiary,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.satPin,
-          {
-            left: 118,
-            top: 118,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
-            backgroundColor: theme.background.tertiary,
-          },
-        ]}
-      />
-
-      <View
-        style={[
-          styles.primaryPin,
-          {
-            backgroundColor: theme.accent,
-            borderColor: theme.background.primary,
-            shadowColor: theme.accent,
-          },
-        ]}>
-        <Ionicons name="location" size={12} color={fgPin} />
-      </View>
+      {spotImageUri ? (
+        <SpotImage uri={spotImageUri} style={styles.heroCoverArt} contentFit="cover" />
+      ) : (
+        <View style={[styles.heroCoverArt, { backgroundColor: theme.background.tertiary }]} />
+      )}
 
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']}
@@ -866,32 +638,26 @@ function NearbyHero({
             <Ionicons name="location" size={11} color={theme.text.primary} />
           </View>
           <ThemedText variant="bodySmall" weight="700">
-            {hasLocation && nearbyCount > 0 && tierLabel
-              ? t('tabs.pilgrimageScreen.hero.countLabel', {
-                  count: String(nearbyCount),
-                  animeWord:
-                    nearbyCount === 1
-                      ? t('tabs.pilgrimageScreen.wordAnime')
-                      : t('tabs.pilgrimageScreen.wordAnimes'),
-                  tier: tierLabel,
-                })
-              : t('tabs.pilgrimageScreen.hero.title')}
+            {t('tabs.pilgrimageScreen.hero.nearestSpotCaps')}
           </ThemedText>
         </View>
         <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
           {hasLocation
-            ? nearestAnime
-              ? nearestAnime.distanceKm !== undefined
-                ? t('tabs.pilgrimageScreen.hero.closestWithDistance', {
-                    title: nearestTitles?.primary ?? '—',
-                    distance: formatKm(nearestAnime.distanceKm),
-                  })
-                : t('tabs.pilgrimageScreen.hero.closest', {
-                    title: nearestTitles?.primary ?? '—',
-                  })
-              : t('tabs.pilgrimageScreen.hero.noMappedAnime')
+            ? nearestSpot
+              ? t('tabs.pilgrimageScreen.hero.closestWithDistance', {
+                  title: nearestSpot.cn || nearestSpot.name,
+                  distance: formatKm(nearestSpot.distanceKm),
+                })
+              : nearestAnime
+                ? t('tabs.pilgrimageScreen.hero.closest', { title: nearestTitles?.primary ?? '—' })
+                : t('tabs.pilgrimageScreen.hero.noMappedAnime')
             : t('tabs.pilgrimageScreen.hero.withoutLocation')}
         </ThemedText>
+        {hasLocation && nearestSpot && nearestSpotAnimeName ? (
+          <ThemedText variant="captionSmall" tone="tertiary" style={{ marginTop: 2 }} numberOfLines={1}>
+            {nearestSpotAnimeName}
+          </ThemedText>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -946,8 +712,6 @@ function SectionHeader({
 function PopularCard({
   anime,
   visited,
-  accent,
-  accentFg,
   theme,
   fromCollection,
   distanceKm,
@@ -955,34 +719,39 @@ function PopularCard({
 }: {
   anime: AnitabiBangumi;
   visited: VisitedMap;
-  accent: string;
-  accentFg: string;
   theme: ThemePalette;
   fromCollection: boolean;
   distanceKm?: number;
   onPress: () => void;
 }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const total = anime.pointsLength ?? 0;
-  const visitedCount = (anime.litePoints ?? []).filter((p) => visited[p.id]).length;
+  // Per-anime accent (map.tsx:491 precedent): `color` can be an empty string
+  // from Anitabi, so `||` falls back to the theme accent honestly instead of
+  // rendering a blank/transparent badge.
+  const accent = anime.color || theme.accent;
+  const accentFg = readableTextOn(accent);
+  // Honest progress (Rule 8): visitedCount ∩ points, with the denominator
+  // only when we hold this anime's full per-anime points list — populated
+  // by opening the detail screen, and boot-seeded for the top-100 by
+  // hydratePointsTop. getSync is a cheap in-memory-mirror read (Rule 10),
+  // safe to call per card on a bounded rail. Absent → "✓{count}" alone.
+  const fullPoints = CacheService.getSync<AnitabiPoint[]>(DETAIL_CACHE_KEY_PREFIX + anime.id);
+  const progress = resolveHubAnimeProgress(anime, visited, fullPoints);
   const titles = getPilgrimageAnimeTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${titles.primary} pilgrimage`}
+      accessibilityLabel={t('pilgrimageUi.animePilgrimageA11y', { title: titles.primary })}
       style={({ pressed }) => [styles.popularCard, pressed && { opacity: 0.9 }]}>
       <View style={styles.popularPosterWrap}>
-        <Image
-          source={{ uri: anime.cover }}
-          style={styles.popularPoster}
-          contentFit="cover"
-          transition={180}
-        />
+        <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
         <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
           <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg, fontSize: 10 }}>
-            {total} spots
+            {t('pilgrimageUi.spotsCount', { count: total })}
           </ThemedText>
         </View>
         {fromCollection ? (
@@ -990,14 +759,19 @@ function PopularCard({
             <Ionicons name="bookmark" size={9} color={readableTextOn(theme.status.info)} />
           </View>
         ) : null}
-        {visitedCount > 0 ? (
+        {progress.visitedCount > 0 ? (
           <View style={styles.popularVisited}>
             <Ionicons name="checkmark" size={10} color={theme.status.success} />
             <ThemedText
               variant="captionSmall"
               weight="700"
               style={{ color: theme.status.success, fontSize: 9 }}>
-              {visitedCount}
+              {progress.total != null
+                ? t('pilgrimageUi.progressFraction', {
+                    visited: progress.visitedCount,
+                    total: progress.total,
+                  })
+                : progress.visitedCount}
             </ThemedText>
           </View>
         ) : null}
@@ -1044,6 +818,7 @@ function FeaturedSpotRow({
   theme: ThemePalette;
   onPress: () => void;
 }) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const spotTitles = getPilgrimageSpotTitles(spot);
   const animeTitles = getPilgrimageAnimeTitles(anime);
@@ -1051,14 +826,12 @@ function FeaturedSpotRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${spotTitles.primary} from ${animeTitles.primary}`}
+      accessibilityLabel={t('pilgrimageUi.spotFromAnimeA11y', {
+        spot: spotTitles.primary,
+        anime: animeTitles.primary,
+      })}
       style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.92 }]}>
-      <Image
-        source={{ uri: spot.image }}
-        style={styles.spotThumb}
-        contentFit="cover"
-        transition={150}
-      />
+      <SpotImage uri={spot.image} style={styles.spotThumb} contentFit="cover" />
       <View style={styles.spotBody}>
         <View style={styles.spotTitleRow}>
           <ThemedText variant="bodySmall" weight="700" numberOfLines={1} style={{ flex: 1 }}>
@@ -1093,13 +866,6 @@ function FeaturedSpotRow({
           </View>
         ) : null}
       </View>
-      <View style={[styles.miniMap, { backgroundColor: theme.background.tertiary }]}>
-        <LinearGradient
-          colors={[`${theme.accent}1F`, 'rgba(0,0,0,0.0)']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={[styles.miniMapPin, { backgroundColor: theme.accent }]} />
-      </View>
     </Pressable>
   );
 }
@@ -1116,7 +882,9 @@ function makeStyles(theme: ThemePalette) {
       paddingBottom: 4,
       gap: 12,
     },
-    headerTitle: { fontSize: 22 },
+    // flexShrink + single line so the 4-button header cluster can't push the
+    // title into unclipped overflow on narrow screens (album.tsx precedent).
+    headerTitle: { fontSize: 22, flexShrink: 1 },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     iconBtn: {
       width: 40,
@@ -1140,46 +908,8 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
-    heroGrid: { ...StyleSheet.absoluteFill },
     heroCoverArt: {
       ...StyleSheet.absoluteFill,
-      opacity: 0.18,
-    },
-    gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, opacity: 0.5 },
-    gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, opacity: 0.5 },
-    roadPath: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 90,
-      height: 2,
-      transform: [{ rotate: '-4deg' }],
-    },
-    satPin: {
-      position: 'absolute',
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      opacity: 0.85,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
-    primaryPin: {
-      position: 'absolute',
-      left: '50%',
-      top: '40%',
-      marginLeft: -14,
-      marginTop: -14,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 3,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.5,
-      shadowRadius: 10,
-      elevation: 6,
     },
     heroOverlay: {
       position: 'absolute',
@@ -1298,16 +1028,5 @@ function makeStyles(theme: ThemePalette) {
     },
     spotMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     spotDistRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-    miniMap: {
-      width: 56,
-      height: 56,
-      borderRadius: 10,
-      overflow: 'hidden',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
-    miniMapPin: { width: 10, height: 10, borderRadius: 5 },
   });
 }

@@ -71,6 +71,7 @@ export type MapRouteKind = 'gpx' | 'tour';
 
 /** A polyline (GPX track / 導覽 leg). Reserved for spec P5/P6; engines may ignore. */
 export interface MapRoute {
+  /** Unique within a route set — source/layer ids derive from it. */
   id: string;
   coords: readonly LatLng[];
   kind: MapRouteKind;
@@ -119,6 +120,8 @@ export interface MapSurfaceProps {
   /** Pixels to lift in-map controls/attribution off the bottom edge. */
   controlsBottomOffset?: number;
   onMarkerPress?: (marker: MapMarker) => void;
+  /** Long-press on a marker → contextual quick actions. */
+  onMarkerLongPress?: (marker: MapMarker) => void;
   onClusterPress?: (markers: readonly MapMarker[]) => void;
   /** Fired the moment the user drags/pinches (drops follow/compass). */
   onPanned?: () => void;

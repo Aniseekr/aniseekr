@@ -15,13 +15,17 @@ export const MAP_THEME_STORAGE_KEY = 'aniseekr.pilgrimage.mapTheme.v1';
 export const MAP_SOURCE_STYLE_OVERRIDE_KEY = 'aniseekr.pilgrimage.mapSource.styleOverride.v1';
 export const PILGRIMAGE_MAP_VIEW_MODE_STORAGE_KEY = 'aniseekr.pilgrimage.mapViewMode.v1';
 export const VISITED_SPOTS_STORAGE_KEY = 'aniseekr.pilgrimage.visited.v1';
+export const VISITED_SPOTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.visited.v2';
 export const SPOT_INTENTS_STORAGE_KEY = 'aniseekr.pilgrimage.spot-intents.v1';
+export const SPOT_INTENTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.spot-intents.v2';
 export const CAPTURES_STORAGE_KEY = '@aniseekr/pilgrimage/captures/v1';
+export const CAPTURES_STORAGE_KEY_V2 = '@aniseekr/pilgrimage/captures/v2';
 export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
 
 // --- Tier 2: pref services ---
 export const USER_PREFS_STORAGE_KEY = 'aniseekr.user.prefs.v1';
 export const COLLECTION_SORT_MODE_STORAGE_KEY = 'aniseekr.collection.sortMode.v1';
+export const COLLECTION_FOLDER_SORT_MODE_STORAGE_KEY = 'aniseekr.collection.folderSortMode.v1';
 export const BANGUMI_PREFS_STORAGE_KEY = 'aniseekr.bangumi.prefs.v1';
 export const BROWSE_SOURCE_STORAGE_KEY = 'aniseekr.browseSource';
 export const ALLOW_R18_STORAGE_KEY = 'aniseekr.allowR18Content';

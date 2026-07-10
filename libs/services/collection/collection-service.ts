@@ -2,6 +2,9 @@ import * as Crypto from 'expo-crypto';
 import { LocalDB } from '../../db';
 import { CollectionFolder } from '../../../types';
 
+// `is_shared` (DB column) / `isShared` & `sharedBy` (type fields) are dormant scaffold:
+// folder sharing has no backend, so these are always false/0 and never surfaced in the UI
+// (see Rule 8). Kept for schema/backup parity — no migration planned.
 const SYSTEM_FOLDERS: Omit<CollectionFolder, 'animeCount' | 'sharedBy' | 'createdAt'>[] = [
   {
     id: 'system_all',
@@ -10,7 +13,7 @@ const SYSTEM_FOLDERS: Omit<CollectionFolder, 'animeCount' | 'sharedBy' | 'create
     isShared: false,
     isSystemFolder: true,
     isR18: false,
-    folderType: 'watching',
+    folderType: 'all',
   },
   {
     id: 'system_watching',
@@ -72,7 +75,10 @@ class CollectionService {
   async createCustomFolder(
     name: string,
     icon: string,
-    isShared: boolean,
+    // Dormant: folder sharing has no backend yet (Rule 8). Callers may omit
+    // this now that `NewFolderData.isShared` is optional; default it here so
+    // creates still write an explicit 0 for the NOT NULL `is_shared` column.
+    isShared: boolean = false,
     isR18: boolean
   ): Promise<CollectionFolder> {
     const db = await LocalDB.getDatabase();
@@ -272,7 +278,9 @@ class CollectionService {
         return rows.map((r) => r.id);
       }
       if (folderId === 'system_all') {
-        const rows = await db.getAllAsync<{ anime_id: string }>('SELECT anime_id FROM user_anime');
+        const rows = await db.getAllAsync<{ anime_id: string }>(
+          'SELECT anime_id FROM user_anime ORDER BY COALESCE(updated_at, 0) DESC'
+        );
         return rows.map((r) => r.anime_id);
       }
 
@@ -287,7 +295,7 @@ class CollectionService {
       const status = statusMap[type] || type;
 
       const rows = await db.getAllAsync<{ anime_id: string }>(
-        'SELECT anime_id FROM user_anime WHERE status = ?',
+        'SELECT anime_id FROM user_anime WHERE status = ? ORDER BY COALESCE(updated_at, 0) DESC',
         status
       );
       return rows.map((r) => r.anime_id);

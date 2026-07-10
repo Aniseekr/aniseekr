@@ -1,15 +1,21 @@
 import type { PilgrimageCapture } from './captures';
 import type { AnitabiBangumi, AnitabiPoint } from './types';
 
+/** Reserved synthetic anime id for the "自由拍攝" (free capture) folder. */
+export const FREE_FOLDER_ANIME_ID = -1;
+
 export interface PilgrimageAlbumEntry {
   capture: PilgrimageCapture;
   spot: AnitabiPoint;
   anime: AnitabiBangumi;
   matchPercent: number | null;
+  /** True for standalone free captures — the album renders a single photo (no comparison). */
+  isFree?: boolean;
 }
 
 interface BuildAlbumEntriesInput {
   captures: readonly PilgrimageCapture[];
+  free?: readonly PilgrimageCapture[];
   animes: readonly AnitabiBangumi[];
 }
 
@@ -22,6 +28,7 @@ export function getCaptureFrameMatchPercent(capture: PilgrimageCapture): number 
 
 export function buildPilgrimageAlbumEntries({
   captures,
+  free = [],
   animes,
 }: BuildAlbumEntriesInput): PilgrimageAlbumEntry[] {
   const entries: PilgrimageAlbumEntry[] = [];
@@ -41,7 +48,40 @@ export function buildPilgrimageAlbumEntries({
     if (fromCapture) entries.push(fromCapture);
   }
 
+  for (const capture of free) {
+    entries.push(buildFreeEntry(capture));
+  }
+
   return entries.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt);
+}
+
+function buildFreeEntry(capture: PilgrimageCapture): PilgrimageAlbumEntry {
+  const geo: [number, number] = capture.userLocation
+    ? [capture.userLocation.latitude, capture.userLocation.longitude]
+    : [0, 0];
+  const spot: AnitabiPoint = {
+    id: capture.spotId,
+    name: '', // no reference scene name — folder label comes from i18n, not this
+    image: '', // empty -> album renders the single captured photo, no comparison
+    ep: 0,
+    s: 0,
+    geo,
+  };
+  const anime: AnitabiBangumi = {
+    id: FREE_FOLDER_ANIME_ID,
+    title: '', // free folder title is an i18n string in album.tsx, never this
+    cn: '',
+    city: '',
+    cover: '',
+    color: '',
+    geo,
+    zoom: 12,
+    modified: capture.capturedAt,
+    litePoints: [spot],
+    pointsLength: 0,
+    imagesLength: 0,
+  };
+  return { capture, spot, anime, matchPercent: null, isFree: true };
 }
 
 function findKnownSpot(

@@ -23,7 +23,7 @@ import { useT } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
 import { ThemedSurface, ThemedText } from '../../../../components/themed';
 import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
-import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
+import { anitabiImageSource, toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { scoreSnapshot } from '../../../../libs/services/pilgrimage/alignment-scoring';
 import {
   buildCaptureSessionShotFromRoute,
@@ -892,7 +892,7 @@ export default function ComparePreviewScreen() {
                 <View style={styles.overlayFlow}>
                   <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                   <Image
-                    source={{ uri: imageUrl }}
+                    source={anitabiImageSource(imageUrl)}
                     style={[
                       styles.fullImage,
                       StyleSheet.absoluteFill,
@@ -915,7 +915,7 @@ export default function ComparePreviewScreen() {
                     <Animated.View style={[styles.sliderClip, sliderClipStyle]}>
                       {stagePx.width > 0 ? (
                         <Image
-                          source={{ uri: imageUrl }}
+                          source={anitabiImageSource(imageUrl)}
                           style={{ width: stagePx.width, height: stagePx.height }}
                           contentFit="cover"
                         />
@@ -1384,7 +1384,9 @@ function LabeledImage({
 }) {
   return (
     <View style={[styles.labelWrap, compact && { flex: 1 }]}>
-      <Image source={{ uri }} style={styles.fullImage} contentFit={contentFit} />
+      {/* anitabiImageSource adds WAF headers for anitabi scene urls and
+          no-ops for local capture uris — safe for both LabeledImage inputs. */}
+      <Image source={anitabiImageSource(uri)} style={styles.fullImage} contentFit={contentFit} />
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']} style={styles.labelGradient} />
       <View style={[styles.labelBadge, { borderColor: accent }]}>
         <View style={[styles.labelDot, { backgroundColor: accent }]} />

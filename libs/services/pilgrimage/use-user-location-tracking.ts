@@ -1,18 +1,31 @@
 // useUserLocationTracking — drives the Google-Maps-style 3-state locate FAB.
 //
 // States (cycled by `cycleState`):
-//   idle      → no live subscriptions. Last known (or last received) location
-//               may still be available in `location` so the map keeps the
-//               user dot visible without burning the GPS.
-//   following → subscribe to GPS; each fix recentres the map at walking zoom.
+//   idle      → puck stays live via a battery-friendly coarse watcher
+//               (subscribeToUpdates with default options) whenever permission
+//               is granted, so it never goes stale — but the map does not
+//               recentre/follow. "idle" means "not following", not "frozen".
+//   following → tightens the same watcher to walking cadence (high accuracy,
+//               10m/3s) and recentres the map at walking zoom on each fix.
 //               No heading subscription (compass is off).
 //   compass   → following + magnetometer/heading subscription. Heading flows
 //               through a ref + delta-gate so we don't re-render React state
 //               at sensor frequency (Rule 9 in CLAUDE.md).
 //
+// Auto-engage (`autoEngage: true`) makes the map default to following: the
+// first time this hook observes granted permission it auto-engages
+// `following` once per mount (see the auto-engage effect below), so opening
+// that map with permission already granted means "the map is on me" without
+// a FAB tap. It defaults to FALSE and is opt-in per surface: the hub map
+// wants this (it's a "where am I" map), but the per-anime detail screen must
+// keep centering on the anime at mount, not yank the camera to the user's
+// location the instant permission happens to be granted.
+//
 // User pan/zoom (`onUserPan`) breaks following/compass back to idle. Map
 // surfaces call it only for real user gestures; programmatic recentres/flyTo
-// moves stay silent so following does not fight itself.
+// moves stay silent so following does not fight itself. Dropping to idle
+// stops the map from recentring, but the coarse watcher above keeps the puck
+// itself moving.
 //
 // Permission handling:
 //   - First user tap: ask the OS (`requestForegroundPermissionsAsync`).
@@ -40,6 +53,7 @@ import { locationService, type LatLng } from './location-service';
 import { sameLatLng } from './pilgrimage-screen-state';
 import {
   resolveLocateFabDecision,
+  shouldAutoEngageFollow,
   type LocateFollowState,
   type LocatePermissionState,
 } from './locate-fab-state';
@@ -83,6 +97,14 @@ export interface UseUserLocationTrackingOptions {
    * / `getLastKnown` to resolve. Captured once at mount.
    */
   initialLocation?: LatLng | null;
+  /**
+   * Opt-in: auto-engage `following` the first time this hook observes granted
+   * permission (once per mount). Defaults to `false` so a surface that merely
+   * wants the user dot (e.g. a detail screen centered on an anime) does not
+   * get its camera yanked to the user's location at mount. The hub map,
+   * which IS a "where am I" surface, passes `true`.
+   */
+  autoEngage?: boolean;
 }
 
 export interface UseUserLocationTrackingResult {
@@ -136,7 +158,7 @@ function mapPermissionStatus(result: {
 export function useUserLocationTracking(
   options: UseUserLocationTrackingOptions = {}
 ): UseUserLocationTrackingResult {
-  const { onFollowLocation, onHeadingChange, initialLocation } = options;
+  const { onFollowLocation, onHeadingChange, initialLocation, autoEngage = false } = options;
 
   const [internal, setInternal] = useState<InternalState>(() => ({
     followState: 'idle',
@@ -187,6 +209,36 @@ export function useUserLocationTracking(
     };
   }, []);
 
+  // ─── Auto-engage follow on first granted permission (once per mount) ────
+  // Opt-in per surface (see `autoEngage` doc on the options type) — a
+  // detail screen that centers on the anime must not have this hook yank
+  // its camera to the user's location just because permission happens to
+  // already be granted.
+  const autoEngagedRef = useRef(false);
+  useEffect(() => {
+    if (!autoEngage) return;
+    if (!shouldAutoEngageFollow({ permission: internal.permission, alreadyEngaged: autoEngagedRef.current })) {
+      return;
+    }
+    autoEngagedRef.current = true;
+    setInternal((prev) =>
+      prev.followState === 'idle' ? { ...prev, followState: 'following' } : prev
+    );
+    locationService
+      .getCurrentLocation()
+      .then((loc) => {
+        if (!loc) return;
+        if (!sameLatLng(locationRef.current, loc)) setLocation(loc);
+        // Re-read the CURRENT follow state, not the value captured when this
+        // promise was kicked off: a cold GPS fix takes 1-5s, and if the user
+        // panned to idle in that window, an unconditional recentre here would
+        // yank the map back out from under them.
+        const fs = followStateRef.current;
+        if (fs === 'following' || fs === 'compass') onFollowLocationRef.current?.(loc, fs);
+      })
+      .catch(() => undefined);
+  }, [autoEngage, internal.permission]);
+
   // ─── Warm-cache hydration ───────────────────────────────────────────────
   // Skip when we already have a value (cache hit during useState init).
   useEffect(() => {
@@ -205,26 +257,32 @@ export function useUserLocationTracking(
     };
   }, []);
 
-  // ─── Location watcher (only while following/compass) ────────────────────
+  // ─── Location watcher (alive whenever permission is granted) ────────────
+  // idle keeps a battery-friendly coarse watcher so the puck stays live;
+  // following/compass tighten to walking cadence for the recentre loop.
   useEffect(() => {
-    if (internal.followState === 'idle') return;
-    const unsubscribe = locationService.subscribeToUpdates((loc) => {
-      if (sameLatLng(locationRef.current, loc)) {
-        // Still fire the follow-recentre callback so a static fix nudges the
-        // map back into frame if the user has manually scrolled off-centre
-        // *but* hasn't dropped follow yet (e.g. on the same gesture).
+    if (internal.permission !== 'granted') return;
+    const follow = internal.followState !== 'idle';
+    const unsubscribe = locationService.subscribeToUpdates(
+      (loc) => {
+        if (sameLatLng(locationRef.current, loc)) {
+          // Still fire the follow-recentre callback so a static fix nudges the
+          // map back into frame if the user has manually scrolled off-centre
+          // *but* hasn't dropped follow yet (e.g. on the same gesture).
+          const cb = onFollowLocationRef.current;
+          const fs = followStateRef.current;
+          if (cb && (fs === 'following' || fs === 'compass')) cb(loc, fs);
+          return;
+        }
+        setLocation(loc);
         const cb = onFollowLocationRef.current;
         const fs = followStateRef.current;
         if (cb && (fs === 'following' || fs === 'compass')) cb(loc, fs);
-        return;
-      }
-      setLocation(loc);
-      const cb = onFollowLocationRef.current;
-      const fs = followStateRef.current;
-      if (cb && (fs === 'following' || fs === 'compass')) cb(loc, fs);
-    });
+      },
+      follow ? { accuracy: 'high', distanceIntervalMeters: 10, timeIntervalMs: 3000 } : {}
+    );
     return unsubscribe;
-  }, [internal.followState]);
+  }, [internal.followState, internal.permission]);
 
   // ─── Heading watcher (only while compass) ───────────────────────────────
   useEffect(() => {
@@ -280,13 +338,27 @@ export function useUserLocationTracking(
           const next = mapPermissionStatus(result);
           setInternal((prev) => (prev.permission === next ? prev : { ...prev, permission: next }));
           if (next === 'granted') {
-            setInternal((prev) => ({ ...prev, followState: 'following' }));
+            // Latch the auto-engage effect too: this request-flow already put
+            // us into following, so a later permission re-check (e.g. app
+            // foreground) must not auto-engage over a user who then cycled
+            // back to idle.
+            autoEngagedRef.current = true;
+            // Guard against the auto-engage effect having already fired *and*
+            // the user having panned to idle in the gap between the OS prompt
+            // resolving and this callback running — same shape as the
+            // auto-engage effect above.
+            setInternal((prev) =>
+              prev.followState === 'idle' ? { ...prev, followState: 'following' } : prev
+            );
             locationService
               .getCurrentLocation()
               .then((loc) => {
                 if (!loc) return;
                 if (!sameLatLng(locationRef.current, loc)) setLocation(loc);
-                onFollowLocationRef.current?.(loc, 'following');
+                // Same gating as the auto-engage effect: fire only if still in
+                // a follow state by the time the fix resolves.
+                const fs = followStateRef.current;
+                if (fs === 'following' || fs === 'compass') onFollowLocationRef.current?.(loc, fs);
               })
               .catch(() => undefined);
           } else if (next === 'blocked' && !sheetShownThisSessionRef.current) {

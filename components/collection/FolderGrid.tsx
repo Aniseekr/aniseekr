@@ -6,8 +6,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedText } from '../themed';
+import { ThemedText, readableTextOn } from '../themed';
 import type { CollectionFolder } from '../../types';
 
 interface FolderGridProps {
@@ -27,6 +28,7 @@ interface FolderCardProps {
 
 function FolderCard({ folder, cover, onPress, onLongPress }: FolderCardProps) {
   const { theme } = useTheme();
+  const t = useT();
 
   return (
     <Pressable
@@ -83,32 +85,22 @@ function FolderCard({ folder, cover, onPress, onLongPress }: FolderCardProps) {
         </ThemedText>
         <View style={styles.metaRow}>
           <ThemedText variant="captionSmall" tone="secondary">
-            {folder.animeCount} {folder.animeCount === 1 ? 'item' : 'items'}
+            {folder.animeCount === 1
+              ? t('collectionUi.folderItemCount.one', { count: String(folder.animeCount) })
+              : t('collectionUi.folderItemCount.other', { count: String(folder.animeCount) })}
           </ThemedText>
           <View style={styles.metaIcons}>
             {folder.isR18 ? (
-              <View
-                style={[
-                  styles.r18Pill,
-                  { backgroundColor: theme.accent },
-                ]}>
+              <View style={[styles.r18Pill, { backgroundColor: theme.accent }]}>
                 <ThemedText
                   variant="captionSmall"
                   weight="700"
-                  style={{ color: theme.background.primary }}>
+                  style={{ color: readableTextOn(theme.accent) }}>
                   18+
                 </ThemedText>
               </View>
             ) : null}
-            {folder.isShared ? (
-              <MaterialIcons name="people" size={14} color={theme.text.tertiary} />
-            ) : (
-              <MaterialIcons
-                name="chevron-right"
-                size={14}
-                color={theme.text.tertiary}
-              />
-            )}
+            <MaterialIcons name="chevron-right" size={14} color={theme.text.tertiary} />
           </View>
         </View>
       </View>
