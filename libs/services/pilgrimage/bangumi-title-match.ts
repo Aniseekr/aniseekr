@@ -11,6 +11,7 @@
 // onto the user's collection entry (CLAUDE.md Rule 8 territory).
 
 import type { BangumiV0Subject } from '../../clients/bangumi-client';
+import { toSimplified } from '../../utils/chinese-converter';
 
 /**
  * Collapse a title to a comparison key: NFKC (full/half width), lowercase,
@@ -19,7 +20,7 @@ import type { BangumiV0Subject } from '../../clients/bangumi-client';
  * "the same title" means.
  */
 export function normalizeTitleKey(value: string): string {
-  return value
+  return toSimplified(value)
     .normalize('NFKC')
     .toLowerCase()
     .replace(/[『』「」《》【】()[\]（）]/g, '')

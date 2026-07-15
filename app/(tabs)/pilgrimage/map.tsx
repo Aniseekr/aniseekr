@@ -22,7 +22,16 @@
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Linking, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  Dimensions,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -65,6 +74,7 @@ import {
 import { resolveMapModeWithClock } from '../../../libs/services/pilgrimage/map-theme-clock';
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { normalizeTitleKey } from '../../../libs/services/pilgrimage/bangumi-title-match';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   getPilgrimageHubSnapshot,
@@ -75,7 +85,10 @@ import { resolvePilgrimageHubInitialView } from '../../../libs/services/pilgrima
 import { resolvePilgrimageMapInitialMode } from '../../../libs/services/pilgrimage/pilgrimage-design-flow';
 import { type PilgrimageMapViewMode } from '../../../libs/services/pilgrimage/map-view-mode-prefs';
 import { usePilgrimageHubData } from '../../../hooks/usePilgrimageHubData';
-import { usePilgrimageMapScreenState, type HubFilter } from '../../../hooks/usePilgrimageMapScreenState';
+import {
+  usePilgrimageMapScreenState,
+  type HubFilter,
+} from '../../../hooks/usePilgrimageMapScreenState';
 import {
   PilgrimageHubSheet,
   type HubAnimeEntry,
@@ -405,24 +418,21 @@ export default function PilgrimageMapScreen() {
 
   // Apply hub filter + search query.
   const filteredEntries = useMemo<HubAnimeEntry[]>(() => {
-    const query = deferredSearchQuery.trim().toLowerCase();
+    const query = normalizeTitleKey(deferredSearchQuery);
     return hubEntries.filter((entry) => {
       if (hubFilter === 'collection' && !entry.fromCollection) return false;
       if (hubFilter === 'official88' && !entry.is88) return false;
       if (query) {
         const titles = getPilgrimageAnimeTitles(entry.anime);
-        const haystack = [
+        const fields = [
           titles.primary,
           titles.original,
           titles.chinese,
           titles.english,
           titles.romaji,
           entry.anime.city,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!haystack.includes(query)) return false;
+        ];
+        if (!fields.some((field) => normalizeTitleKey(field ?? '').includes(query))) return false;
       }
       return true;
     });
@@ -1041,7 +1051,11 @@ export default function PilgrimageMapScreen() {
                       onPress={handleQuickOpen}
                       accessibilityRole="button"
                       style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
-                      <Ionicons name="information-circle-outline" size={18} color={theme.text.primary} />
+                      <Ionicons
+                        name="information-circle-outline"
+                        size={18}
+                        color={theme.text.primary}
+                      />
                       <ThemedText variant="bodyMedium">
                         {t('pilgrimage.map.quickAction.openDetail')}
                       </ThemedText>

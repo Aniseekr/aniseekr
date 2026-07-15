@@ -151,7 +151,12 @@ PILG-009,Pilgrimage,deterministic,P0,Badge renders nothing until loaded,NearbyPi
 PILG-010,Pilgrimage,deterministic,P0,Badge swallows fetch errors,Badge does not throw on fetch failure,error-handling,active
 PILG-011,Pilgrimage,deterministic,P0,Repository falls back to ID mapping,Anime without bangumi id translated via IDMappingService,fallback,active
 PILG-012,Pilgrimage,deterministic,P1,SQLite migration idempotent,init creates pilgrimage_spots table only once,boundary,active
-PILG-013,Pilgrimage,integration,P1,Live anitabi fetch,Live fetch of subject 7157 returns Hyouka pilgrimage data,mapping,active
+PILG-013,Pilgrimage,integration,P1,Live anitabi fetch,Live API-first fetch of subject 7157 returns Yosuga no Sora pilgrimage data,mapping,active
+PILG-014,Pilgrimage,deterministic,P0,Official static data decode,Compact catalog and page payloads join into complete anime point data,mapping,active
+PILG-015,Pilgrimage,deterministic,P0,Reject degraded runtime index,A 9-row generated payload cannot replace an 82-row or 781-row bundled index,fallback,active
+PILG-016,Pilgrimage,deterministic,P0,Localized pilgrimage search,Traditional and Simplified Chinese normalize together and official English titles remain searchable,localization,active
+PILG-017,Pilgrimage,deterministic,P0,Valid image CDN route,Relative image paths resolve to the image CDN and invalid website-image cache values self-heal,error-handling,active
+PILG-018,Pilgrimage,deterministic,P0,API-first regional fallback,Anitabi JSON requests use the API and access website static JSON only after HTTP 403,error-handling,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active

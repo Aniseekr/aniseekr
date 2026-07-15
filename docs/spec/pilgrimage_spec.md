@@ -7,8 +7,20 @@ filming/inspiration locations (聖地巡礼) when the anime has Anitabi data.
 
 ## 2. Data Source: Anitabi
 
-`https://api.anitabi.cn` is a free public API maintained by the anitabi.cn community.
-No authentication required. Linked to anime by Bangumi subject ID.
+Anitabi is maintained by the anitabi.cn community and links anime by Bangumi
+subject ID. JSON requests use `https://api.anitabi.cn` first. Only an explicit
+HTTP 403 falls back to the same official static files as the website:
+
+- `https://www.anitabi.cn/d/g.json` for the complete anime catalog and compact point coordinates.
+- `https://www.anitabi.cn/d/g{page}.json` for per-anime point metadata.
+- `https://img-tc.anitabi.cn/...` for covers and scene images (the origin used
+  by Anitabi's own `www.anitabi.cn` frontend).
+
+No authentication is required. Images use `https://img-tc.anitabi.cn/...`.
+`https://www.anitabi.cn/images/...` is not an image endpoint: it returns the
+website HTML shell with HTTP 200 and must never be handed to an image decoder.
+The legacy `https://image.anitabi.cn/...` origin is WAF-blocked in Japan;
+cached URLs from that origin are rewritten to `img-tc.anitabi.cn`.
 
 ## 3. Types
 
@@ -182,16 +194,24 @@ https://maps.apple.com/?q={lat},{lng}
 https://www.google.com/maps/search/?api=1&query={lat},{lng}
 ```
 
-## 9. Anitabi API Behavior Notes
+## 9. Anitabi Data Behavior Notes
 
-- `/bangumi/{id}/lite` returns 404 if anime has no pilgrimage entries → map to `null`,
-  not an error.
-- `litePoints` has at most ~10 entries; full set is in `/points/detail`.
+- API 404 maps to `null`. API 403 alone activates the static fallback; 429,
+  5xx, decoding failures, and network errors keep their normal error semantics.
+- A Bangumi ID absent from fallback `g.json` also maps to `null`.
+- The static catalog stores point coordinates in groups of four
+  (`id, lat, lng, priority`); the matching `g{page}.json` row supplies names,
+  images, episode markers, folders, and attribution links.
+- `litePoints` is the first 10 displayable points; full detail retains every
+  point with an image.
 - `geo` is sometimes `[0, 0]` for old/incomplete entries → treat as missing.
-- `image` URLs are absolute and from `https://image.anitabi.cn`. They're CDN-cached
-  but slow on first load.
-- `cover` URLs may use `https://image.anitabi.cn/posters/...` — use `expo-image` with
-  `placeholder` for graceful degradation.
+- Relative image paths are resolved against `https://img-tc.anitabi.cn`.
+  Invalid `https://www.anitabi.cn/images/...` values persisted by older builds
+  and legacy `https://image.anitabi.cn/...` values are healed back to the
+  official www image CDN before rendering.
+- Cross-index hydration must reject a candidate with less than 80% of the
+  current entry count. This prevents a partial CI fallback from replacing the
+  complete bundled cross-index.
 
 ## 10. Test Coverage
 
@@ -208,6 +228,11 @@ https://www.google.com/maps/search/?api=1&query={lat},{lng}
 - PILG-011: Pilgrimage repository falls back to ID mapping when bangumi ID absent
 - PILG-012: SQLite schema migration is idempotent
 - PILG-013 (E2E): Anime detail with `bangumi.id` → pilgrimage screen → spot list visible
+- PILG-014: Official static catalog and page payloads decode into complete anime and point data
+- PILG-015: A degraded runtime index cannot replace the bundled index
+- PILG-016: Search folds Traditional/Simplified Chinese and reads official English titles
+- PILG-017: Image URLs stay on the image CDN and invalid website-image cache values self-heal
+- PILG-018: JSON uses the API first and requests official website data only after HTTP 403
 
 ## 11. Future Extensions (out of MVP scope)
 

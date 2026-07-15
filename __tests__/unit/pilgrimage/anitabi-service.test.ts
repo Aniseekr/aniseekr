@@ -81,7 +81,14 @@ const RELATIVE_LITE = {
   pointsLength: 577,
   imagesLength: 500,
   litePoints: [
-    { id: 'pt1', name: '宇治橋', image: '/images/points/115908/pt1.jpg', ep: 1, s: 120, geo: [34.9, 135.8] as [number, number] },
+    {
+      id: 'pt1',
+      name: '宇治橋',
+      image: '/images/points/115908/pt1.jpg',
+      ep: 1,
+      s: 120,
+      geo: [34.9, 135.8] as [number, number],
+    },
   ],
 };
 
@@ -109,15 +116,15 @@ describe('AnitabiService', () => {
   });
 
   it('PILG-001 maps HTTP 404 from getAnimePilgrimage to null', async () => {
-    fetchSpy.mockResolvedValue(fakeResponse(404, { error: 'not found' }));
+    fetchSpy.mockImplementation(async () => fakeResponse(404, { error: 'not found' }));
     const svc = AnitabiService.resetForTests();
 
     const result = await svc.getAnimePilgrimage(SUBJECT_ID);
 
     expect(result).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const url = String((fetchSpy.mock.calls[0] as unknown[])[0]);
-    expect(url).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/lite`);
+    const urls = fetchSpy.mock.calls.map((call: unknown[]) => String(call[0]));
+    expect(urls).toEqual([`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/lite`]);
   });
 
   it('PILG-002 caches the result in memory so a second call does not call fetch', async () => {
@@ -151,7 +158,7 @@ describe('AnitabiService', () => {
   });
 
   it('PILG-003 persists the lite payload into the SQLite pilgrimage_spots table', async () => {
-    fetchSpy.mockResolvedValue(fakeResponse(200, sampleBangumi()));
+    fetchSpy.mockImplementation(async () => fakeResponse(200, sampleBangumi()));
     const svc = AnitabiService.resetForTests();
 
     await svc.getAnimePilgrimage(SUBJECT_ID);
@@ -181,7 +188,9 @@ describe('AnitabiService', () => {
     const urls = fetchSpy.mock.calls.map((c: unknown[]) => String(c[0]));
     expect(urls[0]).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points`);
     expect(
-      urls.some((u: string) => u.startsWith(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points/detail`))
+      urls.some((u: string) =>
+        u.startsWith(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points/detail`)
+      )
     ).toBe(true);
   });
 
@@ -222,7 +231,7 @@ describe('AnitabiService', () => {
   });
 
   it('PILG-008 getDetailedPoints returns [] on 404 and remembers the miss', async () => {
-    fetchSpy.mockResolvedValue(fakeResponse(404, { error: 'not found' }));
+    fetchSpy.mockImplementation(async () => fakeResponse(404, { error: 'not found' }));
     const svc = AnitabiService.resetForTests();
 
     const first = await svc.getDetailedPoints(SUBJECT_ID);
@@ -272,60 +281,90 @@ describe('AnitabiService', () => {
       client: { getLite: async () => ({ ...RELATIVE_LITE }) } as unknown as typeof AnitabiClient,
       db: {
         getPilgrimage: async () => null,
-        savePilgrimage: async (row: PilgrimageSaveInput) => { saved = row; },
+        savePilgrimage: async (row: PilgrimageSaveInput) => {
+          saved = row;
+        },
       } as unknown as typeof LocalDB,
       cache: noopCache,
     });
     const out = await svc.getAnimePilgrimage(115908);
-    expect(out?.litePoints[0]?.image).toBe('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
-    expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
-    expect(saved?.litePointsJson ?? '').toContain('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
+    expect(out?.litePoints[0]?.image).toBe(
+      'https://img-tc.anitabi.cn/points/115908/pt1.jpg?plan=h160'
+    );
+    expect(out?.cover).toBe('https://img-tc.anitabi.cn/bangumi/115908.jpg?plan=h160');
+    expect(saved?.litePointsJson ?? '').toContain(
+      'https://img-tc.anitabi.cn/points/115908/pt1.jpg?plan=h160'
+    );
   });
 
-  test('rowToBangumi heals relative paths cached by older builds (no cache-bust needed)', async () => {
+  test('rowToBangumi heals invalid website image URLs cached by older builds', async () => {
     const row: PilgrimageRow = {
       bangumi_id: 115908,
       title: '響け！ユーフォニアム',
       title_cn: null,
       city: null,
-      cover: '/images/bangumi/115908.jpg',
+      cover: 'https://www.anitabi.cn/images/bangumi/115908.jpg?plan=h160',
       color: null,
       center_lat: 34.89,
       center_lng: 135.8,
       zoom: 12,
       points_length: 577,
       images_length: 500,
-      lite_points_json: JSON.stringify(RELATIVE_LITE.litePoints),
+      lite_points_json: JSON.stringify([
+        {
+          ...RELATIVE_LITE.litePoints[0],
+          image: 'https://www.anitabi.cn/images/points/115908/pt1.jpg?plan=h160',
+        },
+      ]),
       cached_at: 0,
       expires_at: Number.MAX_SAFE_INTEGER,
     };
     const svc = AnitabiService.resetForTests({
-      client: { getLite: async () => { throw new Error('must not hit network'); } } as unknown as typeof AnitabiClient,
-      db: { getPilgrimage: async () => row, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      client: {
+        getLite: async () => {
+          throw new Error('must not hit network');
+        },
+      } as unknown as typeof AnitabiClient,
+      db: {
+        getPilgrimage: async () => row,
+        savePilgrimage: async () => undefined,
+      } as unknown as typeof LocalDB,
       cache: noopCache,
     });
     const out = await svc.getAnimePilgrimage(115908);
-    expect(out?.litePoints[0]?.image).toBe('https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160');
-    expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
+    expect(out?.litePoints[0]?.image).toBe(
+      'https://img-tc.anitabi.cn/points/115908/pt1.jpg?plan=h160'
+    );
+    expect(out?.cover).toBe('https://img-tc.anitabi.cn/bangumi/115908.jpg?plan=h160');
   });
 
   test('lite: expired SQLite row is served when the network fails', async () => {
     const expiredRow: PilgrimageRow = {
       bangumi_id: 42,
       title: 'Stale Anime',
-      title_cn: null, city: null,
+      title_cn: null,
+      city: null,
       cover: 'https://image.anitabi.cn/bangumi/42.jpg?plan=h160',
-      color: null, center_lat: 1, center_lng: 2, zoom: 10,
-      points_length: 3, images_length: 3,
+      color: null,
+      center_lat: 1,
+      center_lng: 2,
+      zoom: 10,
+      points_length: 3,
+      images_length: 3,
       lite_points_json: '[]',
       cached_at: 0,
       expires_at: 1, // long expired
     };
     const svc = AnitabiService.resetForTests({
       client: {
-        getLite: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+        getLite: async () => {
+          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
+        },
       } as unknown as typeof AnitabiClient,
-      db: { getPilgrimage: async () => expiredRow, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      db: {
+        getPilgrimage: async () => expiredRow,
+        savePilgrimage: async () => undefined,
+      } as unknown as typeof LocalDB,
       cache: noopCache,
     });
     const out = await svc.getAnimePilgrimage(42);
@@ -334,14 +373,28 @@ describe('AnitabiService', () => {
 
   test('detail: stale cached points are served when the network fails', async () => {
     const stalePoints = [
-      { id: 'p1', name: '駅前', image: 'https://image.anitabi.cn/points/42/p1.jpg?plan=h160', ep: 1, s: 0, geo: [1, 2] as [number, number] },
+      {
+        id: 'p1',
+        name: '駅前',
+        image: 'https://image.anitabi.cn/points/42/p1.jpg?plan=h160',
+        ep: 1,
+        s: 0,
+        geo: [1, 2] as [number, number],
+      },
     ];
     const svc = AnitabiService.resetForTests({
       client: {
-        getPoints: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
-        getPointsDetail: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+        getPoints: async () => {
+          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
+        },
+        getPointsDetail: async () => {
+          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
+        },
       } as unknown as typeof AnitabiClient,
-      db: { getPilgrimage: async () => null, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      db: {
+        getPilgrimage: async () => null,
+        savePilgrimage: async () => undefined,
+      } as unknown as typeof LocalDB,
       cache: {
         // `get` is kept only for interface compatibility — the production
         // code's stale-if-error path now reads exclusively via `getWithMeta`
@@ -368,10 +421,15 @@ describe('AnitabiService', () => {
     const expiredRow: PilgrimageRow = {
       bangumi_id: STALE_ID,
       title: 'Old Stale Anime',
-      title_cn: null, city: null,
+      title_cn: null,
+      city: null,
       cover: 'https://image.anitabi.cn/bangumi/990003.jpg?plan=h160',
-      color: null, center_lat: 1, center_lng: 2, zoom: 10,
-      points_length: 3, images_length: 3,
+      color: null,
+      center_lat: 1,
+      center_lng: 2,
+      zoom: 10,
+      points_length: 3,
+      images_length: 3,
       lite_points_json: '[]',
       cached_at: 0,
       expires_at: 1, // long expired
@@ -381,13 +439,18 @@ describe('AnitabiService', () => {
     // would trivially get a blank memCache regardless of whether the fix
     // actually avoids memoizing stale serves.
     const client: { getLite: () => Promise<AnitabiBangumi | null> } = {
-      getLite: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+      getLite: async () => {
+        throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
+      },
     };
     const svc = AnitabiService.resetForTests({
       client: client as unknown as typeof AnitabiClient,
       // Fake db returns the same expired row on every call — that's fine,
       // it's the memCache poisoning (not the SQLite mock) under test here.
-      db: { getPilgrimage: async () => expiredRow, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+      db: {
+        getPilgrimage: async () => expiredRow,
+        savePilgrimage: async () => undefined,
+      } as unknown as typeof LocalDB,
       cache: noopCache,
     });
 
@@ -403,11 +466,25 @@ describe('AnitabiService', () => {
     const REGRESSION_ID = 990001;
     const key = DETAIL_CACHE_KEY_PREFIX + REGRESSION_ID;
     const stalePoints: AnitabiPoint[] = [
-      { id: 'r1', name: '駅前', image: 'https://image.anitabi.cn/points/990001/r1.jpg?plan=h160', ep: 1, s: 0, geo: [1, 2] },
+      {
+        id: 'r1',
+        name: '駅前',
+        image: 'https://image.anitabi.cn/points/990001/r1.jpg?plan=h160',
+        ep: 1,
+        s: 0,
+        geo: [1, 2],
+      },
     ];
     const freshRaw: RawAnitabiBangumiPoints = {
       points: [
-        { id: 'r2', name: '新宿', image: 'https://image.anitabi.cn/scenes/990001/r2.jpg', ep: 2, s: 30, geo: [3, 4] },
+        {
+          id: 'r2',
+          name: '新宿',
+          image: 'https://image.anitabi.cn/scenes/990001/r2.jpg',
+          ep: 2,
+          s: 30,
+          geo: [3, 4],
+        },
       ],
     };
 
@@ -446,15 +523,22 @@ describe('AnitabiService', () => {
         getPoints: () => Promise<RawAnitabiBangumiPoints | null>;
         getPointsDetail: () => Promise<unknown>;
       } = {
-        getPoints: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
-        getPointsDetail: async () => { throw new DataSourceError('SERVER_ERROR', 'HTTP 500'); },
+        getPoints: async () => {
+          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
+        },
+        getPointsDetail: async () => {
+          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
+        },
       };
       // ttlMs matches the BASE_TTL_MS used to seed the row above, so the
       // service's own `meta.age > this.ttlMs` staleness check lines up with
       // the "past base TTL, within grace" window we just advanced into.
       const svc = AnitabiService.resetForTests({
         client: client as unknown as typeof AnitabiClient,
-        db: { getPilgrimage: async () => null, savePilgrimage: async () => undefined } as unknown as typeof LocalDB,
+        db: {
+          getPilgrimage: async () => null,
+          savePilgrimage: async () => undefined,
+        } as unknown as typeof LocalDB,
         cache: CacheService,
         ttlMs: BASE_TTL_MS,
       });

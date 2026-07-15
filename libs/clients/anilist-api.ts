@@ -6,6 +6,7 @@
  */
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
+const ANILIST_USER_AGENT = 'Aniseekr/1.0 (https://github.com/Aniseekr)';
 
 export interface AniListUser {
   id: number;
@@ -75,6 +76,7 @@ export class AniListAPI {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'User-Agent': ANILIST_USER_AGENT,
     };
 
     if (this.accessToken) {

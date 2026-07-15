@@ -1,16 +1,15 @@
-// Runtime hydration for the bundled L2 anitabi-index and L3
-// anitabi-cross-index data files.
+// Runtime hydration for the bundled L3 cross-index.
 //
-// The bundled JSONs ship with a small fallback seed so the app works on a
+// The bundled cross-index ships with a complete snapshot so the app works on a
 // fresh install with no network. Once the device is online, this service:
 //
 //   1. Reads the cached file from disk if present and younger than
 //      FRESHNESS_WINDOW_MS — parses + hands to the matching module's
 //      `hydrateFromRuntime`.
-//   2. Otherwise downloads the latest release-asset from Aniseekr-source,
-//      writes it to the FileSystem cache, then hydrates.
+//   2. Otherwise downloads the latest Aniseekr-source release asset, writes it
+//      to the FileSystem cache, then hydrates.
 //
-// Both data sets ship JSON Schemas alongside the asset (linked from the
+// The data set ships a JSON Schema alongside the asset (linked from the
 // payload's `$schema` field). We don't validate at runtime — the build
 // pipeline does that — but consumers can fetch the schema URL to validate
 // independently.
@@ -22,20 +21,11 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
 import {
-  hydrateFromRuntime as hydrateAnitabiIndex,
-  type AnitabiIndexEntry,
-} from './anitabi-index';
-import {
   hydrateFromRuntime as hydrateAnitabiCrossIndex,
+  getCrossIndexSize,
   type AnitabiCrossIndexEntry,
 } from './anitabi-cross-index';
-
-interface AnitabiIndexFile {
-  generatedAt: number;
-  source: string;
-  fallbackUsed?: boolean;
-  entries: AnitabiIndexEntry[];
-}
+import { hasSufficientRuntimeCoverage } from './anitabi-runtime-coverage';
 
 interface AnitabiCrossIndexFile {
   generatedAt: number;
@@ -44,19 +34,16 @@ interface AnitabiCrossIndexFile {
   entries: AnitabiCrossIndexEntry[];
 }
 
-const ANITABI_INDEX_URL =
-  'https://github.com/Aniseekr/Aniseekr-source/releases/download/anitabi-index/anitabi-index.json';
 const ANITABI_CROSS_INDEX_URL =
   'https://github.com/Aniseekr/Aniseekr-source/releases/download/anitabi-cross-index/anitabi-cross-index.json';
 
-const ANITABI_INDEX_FILENAME = 'anitabi-index.runtime.json';
 const ANITABI_CROSS_INDEX_FILENAME = 'anitabi-cross-index.runtime.json';
 
 /**
- * How long an on-disk runtime payload is considered fresh. Both data sets
- * are rebuilt daily by Aniseekr-source CI, but the device copy doesn't need
+ * How long an on-disk runtime payload is considered fresh. The data set is
+ * rebuilt daily by Aniseekr-source CI, but the device copy doesn't need
  * to track that closely — coverage doesn't move much day-to-day. 7 days
- * means each device pulls each asset roughly weekly.
+ * means each device pulls the asset roughly weekly.
  */
 const FRESHNESS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -124,30 +111,24 @@ async function loadFile<T>(url: string, filename: string): Promise<T | null> {
 }
 
 /**
- * Refresh both pilgrimage data files from the Aniseekr-source release assets.
+ * Refresh the pilgrimage cross-index from its network source.
  * Safe to call on every cold launch — short-circuits when the device's cached
  * copies are still fresh. Failures are swallowed (logged), since the bundled
  * fallback keeps the feature working.
  *
- * The two fetches run in parallel. Order of completion doesn't matter: both
- * modules use mutable in-memory maps, so swapping payloads is atomic per
- * module.
+ * The main Anitabi catalog is intentionally not fetched here: API calls must
+ * receive HTTP 403 before the app touches www.anitabi.cn JSON endpoints.
  */
 export async function hydrateAllPilgrimageData(): Promise<void> {
-  await Promise.all([
-    loadFile<AnitabiIndexFile>(ANITABI_INDEX_URL, ANITABI_INDEX_FILENAME).then((f) => {
-      // `fallbackUsed` marks the CI's degraded stub (anitabi API 403'd the
-      // build runner) — it can carry far fewer entries than our bundled seed.
-      // Hydrating it would REPLACE the richer seed and blank out the Tourism 88
-      // rail, so keep the seed until CI ships a real payload again.
-      if (f && Array.isArray(f.entries) && f.entries.length > 0 && !f.fallbackUsed) {
-        hydrateAnitabiIndex(f);
-      }
-    }),
-    loadFile<AnitabiCrossIndexFile>(ANITABI_CROSS_INDEX_URL, ANITABI_CROSS_INDEX_FILENAME).then((f) => {
-      if (f && Array.isArray(f.entries) && f.entries.length > 0) {
-        hydrateAnitabiCrossIndex(f);
-      }
-    }),
-  ]);
+  const file = await loadFile<AnitabiCrossIndexFile>(
+    ANITABI_CROSS_INDEX_URL,
+    ANITABI_CROSS_INDEX_FILENAME
+  );
+  if (
+    file &&
+    Array.isArray(file.entries) &&
+    hasSufficientRuntimeCoverage(getCrossIndexSize(), file.entries.length)
+  ) {
+    hydrateAnitabiCrossIndex(file);
+  }
 }

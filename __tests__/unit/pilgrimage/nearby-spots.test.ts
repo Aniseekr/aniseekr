@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'bun:test';
 
-import { buildNearbySpots, buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
+import {
+  buildNearbySpots,
+  buildNearbySpotsFromIndex,
+} from '../../../libs/services/pilgrimage/nearby-spots';
 import type { AnitabiBangumi, AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 
-function point(
-  id: string,
-  name: string,
-  geo: [number, number],
-  ep = 1
-): AnitabiPoint {
+function point(id: string, name: string, geo: [number, number], ep = 1): AnitabiPoint {
   return { id, name, image: `https://img/${id}.jpg`, ep, s: 0, geo };
 }
 
-function bangumi(id: number, litePoints: AnitabiPoint[], over: Partial<AnitabiBangumi> = {}): AnitabiBangumi {
+function bangumi(
+  id: number,
+  litePoints: AnitabiPoint[],
+  over: Partial<AnitabiBangumi> = {}
+): AnitabiBangumi {
   return {
     id,
     cn: `动画${id}`,
@@ -47,10 +49,7 @@ describe('buildNearbySpots', () => {
   });
 
   it('builds map-unique marker ids and carries anime context', () => {
-    const spots = buildNearbySpots(
-      [bangumi(42, [point('p1', 'Café', [35.681, 139.761])])],
-      USER
-    );
+    const spots = buildNearbySpots([bangumi(42, [point('p1', 'Café', [35.681, 139.761])])], USER);
 
     expect(spots[0].markerId).toBe('42:p1');
     expect(spots[0].animeId).toBe(42);
@@ -85,9 +84,7 @@ describe('buildNearbySpots', () => {
   it('caps the result at maxSpots', () => {
     const many = bangumi(
       9,
-      Array.from({ length: 12 }, (_, i) =>
-        point(`s${i}`, `Spot ${i}`, [35.68 + i * 0.01, 139.76])
-      )
+      Array.from({ length: 12 }, (_, i) => point(`s${i}`, `Spot ${i}`, [35.68 + i * 0.01, 139.76]))
     );
 
     expect(buildNearbySpots([many], USER, 5)).toHaveLength(5);
@@ -96,8 +93,26 @@ describe('buildNearbySpots', () => {
 
 describe('buildNearbySpotsFromIndex', () => {
   const hits: NearbySpotHit[] = [
-    { pointId: 'p1', bangumiId: 1, lat: 35, lng: 139, name: '駅前', cn: '车站前', image: '/images/points/1/p1.jpg', distanceKm: 5 },
-    { pointId: 'p2', bangumiId: 2, lat: 35, lng: 139, name: 'Shrine', cn: '', image: '/images/points/2/p2.jpg', distanceKm: 1 },
+    {
+      pointId: 'p1',
+      bangumiId: 1,
+      lat: 35,
+      lng: 139,
+      name: '駅前',
+      cn: '车站前',
+      image: '/images/points/1/p1.jpg',
+      distanceKm: 5,
+    },
+    {
+      pointId: 'p2',
+      bangumiId: 2,
+      lat: 35,
+      lng: 139,
+      name: 'Shrine',
+      cn: '',
+      image: '/images/points/2/p2.jpg',
+      distanceKm: 1,
+    },
   ];
   const lookup = (id: number) =>
     id === 1
@@ -109,7 +124,7 @@ describe('buildNearbySpotsFromIndex', () => {
   it('normalizes image to an absolute CDN url and prefers cn name', () => {
     const out = buildNearbySpotsFromIndex(hits, lookup, new Set());
     const p1 = out.find((s) => s.id === 'p1')!;
-    expect(p1.image).toBe('https://image.anitabi.cn/points/1/p1.jpg?plan=h160');
+    expect(p1.image).toBe('https://img-tc.anitabi.cn/points/1/p1.jpg?plan=h160');
     expect(p1.name).toBe('车站前');
     expect(p1.animeTitle).toBe('动画一');
     expect(p1.markerId).toBe('1:p1');

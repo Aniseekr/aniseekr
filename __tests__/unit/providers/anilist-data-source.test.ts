@@ -132,6 +132,21 @@ describe('AniListDataSource', () => {
     expect(calls[0].parsedBody.variables).toMatchObject({ search: 'cowboy', page: 1 });
   });
 
+  it('sends an explicit product User-Agent instead of the blocked iOS app User-Agent', async () => {
+    const { ds, calls } = buildSubject(() =>
+      fakeJson({
+        data: { GenreCollection: [] },
+      })
+    );
+
+    await ds.fetchGenres();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].init.headers).toMatchObject({
+      'User-Agent': 'Aniseekr/1.0 (https://github.com/Aniseekr)',
+    });
+  });
+
   it('ANIL-002 fetchAnimeDetail with sourcePlatform=anilist sends id variable', async () => {
     const { ds, calls } = buildSubject(() =>
       fakeJson({

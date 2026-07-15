@@ -32,7 +32,7 @@ describe('normalizeRawPoints', () => {
       [{ id: 'a', name: 'A', image: '/images/points/7157/a.jpg', geo: [1, 2] }],
       BANGUMI_ID
     );
-    expect(out[0].image).toBe('https://image.anitabi.cn/points/7157/a.jpg?plan=h160');
+    expect(out[0].image).toBe('https://img-tc.anitabi.cn/points/7157/a.jpg?plan=h160');
   });
 
   it('drops points with no image, id, or name', () => {
@@ -207,9 +207,7 @@ describe('groupPointsIntoSpots', () => {
   });
 
   it('treats single ungrouped points as one-scene spots', () => {
-    const points: AnitabiPoint[] = [
-      point({ id: 'solo', name: 'Lone Spot', geo: [35.0, 139.0] }),
-    ];
+    const points: AnitabiPoint[] = [point({ id: 'solo', name: 'Lone Spot', geo: [35.0, 139.0] })];
     const spots = groupPointsIntoSpots(points);
     expect(spots.length).toBe(1);
     expect(spots[0].scenes.length).toBe(1);

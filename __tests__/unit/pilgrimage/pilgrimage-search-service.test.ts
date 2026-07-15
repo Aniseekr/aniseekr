@@ -36,6 +36,21 @@ const HYOUKA: AnitabiIndexEntry = {
   builtAt: 0,
 };
 
+const K_ON: AnitabiIndexEntry = {
+  id: 1424,
+  title: 'けいおん！',
+  cn: '轻音少女',
+  titleEnglish: 'K-ON!',
+  city: '豊郷町',
+  cover: '/images/bangumi/1424.jpg',
+  color: '#e7a7b5',
+  lat: 35.2,
+  lng: 136.23,
+  zoom: 13,
+  pointsLength: 42,
+  builtAt: 0,
+};
+
 function fallbackBangumi(): AnitabiBangumi {
   return {
     id: 888,
@@ -65,7 +80,7 @@ describe('PilgrimageSearchService', () => {
       city: '山梨县',
       source: 'anitabi-index',
     });
-    expect(results[0].cover).toBe('https://image.anitabi.cn/bangumi/485936.jpg?plan=h160');
+    expect(results[0].cover).toBe('https://img-tc.anitabi.cn/bangumi/485936.jpg?plan=h160');
   });
 
   it('matches Chinese titles from the local Anitabi index', async () => {
@@ -74,6 +89,29 @@ describe('PilgrimageSearchService', () => {
 
     expect(results.map((r) => r.bangumiId)).toEqual([27364]);
     expect(results[0].pointsLength).toBe(58);
+  });
+
+  it('matches Traditional Chinese against a Simplified Chinese index title', async () => {
+    const service = new PilgrimageSearchService({
+      getIndexed: () => [K_ON],
+      lookupCrossIndex: () => null,
+    });
+
+    const results = await service.search('輕音少女', { includeBangumiFallback: false });
+
+    expect(results.map((r) => r.bangumiId)).toEqual([1424]);
+  });
+
+  it('matches the official Anitabi English title without a cross-index row', async () => {
+    const service = new PilgrimageSearchService({
+      getIndexed: () => [K_ON],
+      lookupCrossIndex: () => null,
+    });
+
+    const results = await service.search('K-ON', { includeBangumiFallback: false });
+
+    expect(results.map((r) => r.bangumiId)).toEqual([1424]);
+    expect(results[0].titleEnglish).toBe('K-ON!');
   });
 
   it('matches English cross-index titles without changing the Bangumi identity', async () => {
@@ -140,5 +178,28 @@ describe('PilgrimageSearchService', () => {
       titleCn: '巡礼番',
       source: 'bangumi-fallback',
     });
+  });
+
+  it('uses a Bangumi candidate already present in the local index without calling Anitabi', async () => {
+    const bangumiClient = {
+      searchSubjects: mock(async () => ({
+        data: [{ id: 1424, name: 'けいおん！', name_cn: '轻音少女' }],
+      })),
+    };
+    const repository = {
+      getSpotsByBangumiId: mock(async () => {
+        throw new Error('the blocked API must not be called for an indexed candidate');
+      }),
+    };
+    const service = new PilgrimageSearchService({
+      bangumiClient,
+      repository,
+      getIndexed: () => [K_ON],
+    });
+
+    const results = await service.search('KyoAni classic');
+
+    expect(results.map((r) => r.bangumiId)).toEqual([1424]);
+    expect(repository.getSpotsByBangumiId).not.toHaveBeenCalled();
   });
 });

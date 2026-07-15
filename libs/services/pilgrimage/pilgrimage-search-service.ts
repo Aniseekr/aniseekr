@@ -102,9 +102,17 @@ export class PilgrimageSearchService {
 
     const results: PilgrimageSearchResult[] = [];
     const seen = new Set<number>();
+    const indexedById = new Map(this.getIndexed().map((entry) => [entry.id, entry]));
     for (const candidate of candidates) {
       if (!isValidSubjectId(candidate.id) || seen.has(candidate.id)) continue;
       seen.add(candidate.id);
+
+      const indexed = indexedById.get(candidate.id);
+      if (indexed) {
+        results.push(resultFromIndex(indexed, this.lookupCrossIndex(candidate.id)));
+        if (results.length >= limit) break;
+        continue;
+      }
 
       let anime: AnitabiBangumi | null;
       try {
@@ -160,6 +168,7 @@ function scoreEntry(
   cross: AnitabiCrossIndexEntry | null
 ): number | null {
   const fields: Array<{ value: string | number | null | undefined; base: number }> = [
+    { value: entry.titleEnglish, base: 0 },
     { value: cross?.titleEnglish, base: 0 },
     { value: cross?.titleRomaji, base: 0 },
     { value: cross?.titleJa, base: 0 },
@@ -194,7 +203,7 @@ function resultFromIndex(
     bangumiId: entry.id,
     title: cross?.titleJa || entry.title,
     titleCn: entry.cn || cross?.titleCn || '',
-    titleEnglish: cross?.titleEnglish || undefined,
+    titleEnglish: cross?.titleEnglish || entry.titleEnglish || undefined,
     titleRomaji: cross?.titleRomaji || undefined,
     city: entry.city,
     cover: normalizeAnitabiImageUrl(entry.cover, entry.id),

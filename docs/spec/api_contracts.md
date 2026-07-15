@@ -389,17 +389,19 @@ See `pilgrimage_spec.md` for full details.
 
 | Property | Value |
 |---|---|
-| Base URL | `https://api.anitabi.cn` |
+| Primary base URL | `https://api.anitabi.cn` |
+| HTTP 403 fallback | `https://www.anitabi.cn/d` |
 | Auth | None |
-| User-Agent | `Aniseekr/1.0` |
-| Rate Limit | Channel `anitabi`: 200ms (no documented limit; conservative) |
 
 ### Endpoints
 
 | Purpose | Method | Path |
 |---|---|---|
-| Lite (cards) | GET | `/bangumi/{bangumiId}/lite` |
-| Full points | GET | `/bangumi/{bangumiId}/points/detail?haveImage=true` |
+| Lite | GET | `/bangumi/{bangumiId}/lite` |
+| Full points | GET | `/bangumi/{bangumiId}/points` |
+| Point attribution | GET | `/bangumi/{bangumiId}/points/detail?haveImage=true` |
+| 403 fallback catalog | GET | `https://www.anitabi.cn/d/g.json` |
+| 403 fallback point page | GET | `https://www.anitabi.cn/d/g{page}.json` |
 | Search bangumi | GET | (uses Bangumi search, not Anitabi) |
 
 ---

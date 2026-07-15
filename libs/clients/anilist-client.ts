@@ -15,6 +15,7 @@ import { rateLimiter } from '../services/rate-limiter';
 import { Logger } from '../utils/logger';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
+const ANILIST_USER_AGENT = 'Aniseekr/1.0 (https://github.com/Aniseekr)';
 
 /**
  * Shape of every AniList GraphQL response. The server always returns either
@@ -218,6 +219,7 @@ export class AniListClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'User-Agent': ANILIST_USER_AGENT,
     };
     if (this.accessToken) {
       headers.Authorization = `Bearer ${this.accessToken}`;
@@ -228,8 +230,7 @@ export class AniListClient {
     for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
       await rateLimiter.waitForAvailability('anilist');
 
-      const controller =
-        typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
       const timer =
         controller !== undefined && this.timeoutMs > 0
           ? setTimeout(() => controller.abort(), this.timeoutMs)

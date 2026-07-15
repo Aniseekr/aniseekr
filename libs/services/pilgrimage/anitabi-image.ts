@@ -1,4 +1,4 @@
-// Anitabi serves scene images via its CDN with a `?plan=hXXX` size token —
+// Anitabi serves scene images with a `?plan=hXXX` size token —
 // `?plan=h160` is the default ~284×160 thumbnail used in lists, maps, and
 // card decks (~12 KB). Dropping the param returns the original 1920×1080
 // frame (~200 KB). Higher `plan=` values like `h720`/`h1080` are NOT served
@@ -10,7 +10,12 @@
 
 import { normalizeBangumiImage } from '../../clients/bangumi-client';
 
-const ANITABI_IMAGE_BASE = 'https://image.anitabi.cn';
+// This is the image origin selected by Anitabi's own frontend on
+// www.anitabi.cn. The legacy image.anitabi.cn origin is WAF-blocked in Japan.
+const ANITABI_IMAGE_ORIGIN = 'https://img-tc.anitabi.cn';
+const BLOCKED_IMAGE_ORIGIN = 'https://image.anitabi.cn';
+const INVALID_WEBSITE_IMAGE_ORIGIN = 'https://www.anitabi.cn';
+const INVALID_WEBSITE_IMAGE_PREFIX = '/images';
 const DEFAULT_THUMBNAIL_PLAN = 'h160';
 
 export function normalizeAnitabiImageUrl(
@@ -18,26 +23,32 @@ export function normalizeAnitabiImageUrl(
   bangumiId: number
 ): string {
   const normalized = normalizeBangumiImage(url);
-  if (!normalized) return withDefaultPlan(`${ANITABI_IMAGE_BASE}/bangumi/${bangumiId}.jpg`);
-  if (normalized.startsWith('//')) return withDefaultPlan(`https:${normalized}`);
+  if (!normalized) return withDefaultPlan(`${ANITABI_IMAGE_ORIGIN}/bangumi/${bangumiId}.jpg`);
+  if (normalized.startsWith('//')) {
+    return withDefaultPlan(rewriteUnavailableImageUrl(`https:${normalized}`));
+  }
   if (normalized.startsWith('/images/')) {
-    return withDefaultPlan(`${ANITABI_IMAGE_BASE}${normalized.slice('/images'.length)}`);
+    return withDefaultPlan(
+      `${ANITABI_IMAGE_ORIGIN}${normalized.slice(INVALID_WEBSITE_IMAGE_PREFIX.length)}`
+    );
   }
   if (normalized.startsWith('/')) {
-    return withDefaultPlan(`${ANITABI_IMAGE_BASE}${normalized}`);
+    return withDefaultPlan(`${ANITABI_IMAGE_ORIGIN}${normalized}`);
   }
-  if (normalized.startsWith(ANITABI_IMAGE_BASE)) return withDefaultPlan(normalized);
-  return normalized;
+  if (normalized.startsWith(ANITABI_IMAGE_ORIGIN)) return withDefaultPlan(normalized);
+  const rewritten = rewriteUnavailableImageUrl(normalized);
+  return rewritten === normalized ? normalized : withDefaultPlan(rewritten);
 }
 
 export function toFullResImageUrl(url: string): string {
   if (!url) return url;
-  const idx = url.search(/[?&]plan=/);
-  if (idx < 0) return url;
-  const sepChar = url[idx];
-  const after = url.indexOf('&', idx + 1);
-  const tail = after < 0 ? '' : url.slice(after);
-  const head = url.slice(0, idx);
+  const accessibleUrl = rewriteUnavailableImageUrl(url);
+  const idx = accessibleUrl.search(/[?&]plan=/);
+  if (idx < 0) return accessibleUrl;
+  const sepChar = accessibleUrl[idx];
+  const after = accessibleUrl.indexOf('&', idx + 1);
+  const tail = after < 0 ? '' : accessibleUrl.slice(after);
+  const head = accessibleUrl.slice(0, idx);
   if (sepChar === '?') {
     return tail ? head + '?' + tail.slice(1) : head;
   }
@@ -50,26 +61,13 @@ function withDefaultPlan(url: string): string {
   return `${url}${separator}plan=${DEFAULT_THUMBNAIL_PLAN}`;
 }
 
-const ANITABI_IMAGE_HOST = 'image.anitabi.cn';
+const LEGACY_ANITABI_IMAGE_HOST = 'image.anitabi.cn';
 
 /**
- * anitabi's CDN sits behind a Cloudflare WAF that 403s obvious non-browser
- * clients (see spec 2026-07-03 §1.1). A referer + mobile-Safari UA keeps us on
- * the allow side — same workaround class as the api.bgm.tv redirect issue
- * documented in [animeId].tsx. Non-anitabi hosts get a bare source.
- */
-export const ANITABI_IMAGE_HEADERS: Record<string, string> = {
-  Referer: 'https://anitabi.cn/',
-  'User-Agent':
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
-};
-
-/**
- * When non-empty, all anitabi CDN images are routed through our own Cloudflare
+ * When non-empty, legacy anitabi CDN images are routed through our Cloudflare
  * Workers proxy (`aniseeker_backend` GET /anitabi/img/*) instead of hitting
- * image.anitabi.cn directly. Empty string = direct connection with the P0
- * Referer+UA headers. Flip this on only after the Workers egress WAF probe
- * passes (see plan 2026-07-03-pilgrimage-p0b Task 4).
+ * image.anitabi.cn directly. The proxy remains disabled because its upstream
+ * is also WAF-blocked; normal rendering uses Anitabi's img-tc origin above.
  */
 export const ANITABI_PROXY_BASE = '';
 
@@ -82,7 +80,7 @@ export function anitabiProxyUri(url: string, base: string = ANITABI_PROXY_BASE):
   if (!base) return null;
   try {
     const u = new URL(url);
-    if (u.host !== ANITABI_IMAGE_HOST) return null;
+    if (u.host !== LEGACY_ANITABI_IMAGE_HOST) return null;
     // Tolerate a trailing slash in the pasted origin — a double slash in the
     // proxy path would silently 404 every image.
     return `${base.replace(/\/+$/, '')}/anitabi/img${u.pathname}${u.search}`;
@@ -92,14 +90,26 @@ export function anitabiProxyUri(url: string, base: string = ANITABI_PROXY_BASE):
 }
 
 export function anitabiImageSource(url: string): { uri: string; headers?: Record<string, string> } {
-  const proxied = anitabiProxyUri(url);
+  const accessibleUrl = rewriteUnavailableImageUrl(url);
+  const proxied = anitabiProxyUri(accessibleUrl);
   if (proxied) return { uri: proxied };
+  return { uri: accessibleUrl };
+}
+
+function rewriteUnavailableImageUrl(url: string): string {
   try {
-    if (new URL(url).host === ANITABI_IMAGE_HOST) {
-      return { uri: url, headers: { ...ANITABI_IMAGE_HEADERS } };
+    const parsed = new URL(url);
+    if (parsed.origin === BLOCKED_IMAGE_ORIGIN) {
+      return `${ANITABI_IMAGE_ORIGIN}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }
+    if (
+      parsed.origin === INVALID_WEBSITE_IMAGE_ORIGIN &&
+      parsed.pathname.startsWith(`${INVALID_WEBSITE_IMAGE_PREFIX}/`)
+    ) {
+      return `${ANITABI_IMAGE_ORIGIN}${parsed.pathname.slice(INVALID_WEBSITE_IMAGE_PREFIX.length)}${parsed.search}${parsed.hash}`;
+    }
+    return url;
   } catch {
-    // not an absolute URL — return bare and let the image layer surface the failure
+    return url;
   }
-  return { uri: url };
 }
