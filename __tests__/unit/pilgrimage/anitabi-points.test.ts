@@ -131,6 +131,22 @@ describe('groupPointsIntoSpots', () => {
     expect(spots[0].scenes.length).toBe(2);
   });
 
+  it('PILG-025 merges same shrine cuts with angle suffixes inside 60m', () => {
+    const points: AnitabiPoint[] = [
+      point({ id: 'a', name: '白鬚神社', geo: [35.311019, 136.016391] }),
+      point({ id: 'b', name: '白鬚神社 別角度', geo: [35.31104, 136.01641] }),
+      point({ id: 'c', name: '白鬚神社（別カット）', geo: [35.31105, 136.01637] }),
+      point({ id: 'd', name: '白鬚神社 アングル', geo: [35.31102, 136.01635] }),
+      point({ id: 'e', name: '白鬚神社 その2', geo: [35.31106, 136.01639] }),
+    ];
+
+    const spots = groupPointsIntoSpots(points);
+
+    expect(spots.length).toBe(1);
+    expect(spots[0].id).toBe('a');
+    expect(spots[0].scenes.map((scene) => scene.id)).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
   it('uses the Chinese title as the grouping key when Anitabi sends a non-string name', () => {
     const points: AnitabiPoint[] = [
       point({

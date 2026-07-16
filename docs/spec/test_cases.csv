@@ -162,6 +162,12 @@ PILG-016,Pilgrimage,deterministic,P0,Localized pilgrimage search,Traditional and
 PILG-017,Pilgrimage,deterministic,P0,Valid image CDN route,Relative image paths resolve to the image CDN and invalid website-image cache values self-heal,error-handling,active
 PILG-018,Pilgrimage,deterministic,P0,API-first regional fallback,Anitabi JSON requests use the API and access website static JSON only after HTTP 403,error-handling,active
 PILG-019,Pilgrimage,deterministic,P0,Fallback unions with local hits,Bangumi fallback always runs and unions with local index hits instead of being suppressed by any weak local match,fallback,active
+PILG-020,Pilgrimage,deterministic,P0,Street view provider chain,iOS uses Look Around first and falls back to Mapillary while Android starts with Mapillary,fallback,active
+PILG-021,Pilgrimage,deterministic,P0,Mapillary token missing disables quietly,Missing EXPO_PUBLIC_MAPILLARY_TOKEN returns null without network I/O,nullability,active
+PILG-022,Pilgrimage,deterministic,P0,Look Around availability cache hit,Resolver reuses cached Look Around availability by rounded coordinate without rechecking native provider,timing,active
+PILG-023,Pilgrimage,deterministic,P0,Mapillary radius then bbox parsing,Mapillary client tries 50m radius then bbox fallback and orders parsed images by distance quality and panorama preference,mapping,active
+PILG-024,Pilgrimage,deterministic,P0,Mapillary errors are null,HTTP 429 network failures and malformed Mapillary payloads return null,error-handling,active
+PILG-025,Pilgrimage,deterministic,P0,Angle suffix scene cuts merge,Loose same-location Anitabi cuts with angle suffixes merge into one spot inside 60m,mapping,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active
