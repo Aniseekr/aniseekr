@@ -136,7 +136,9 @@
       "includeGames": "包含遊戲",
       "includeGamesDesc": "在 Bangumi 日曆顯示電子遊戲",
       "showScore": "突顯評分",
-      "showScoreDesc": "在卡片標題列顯示評分"
+      "showScoreDesc": "在卡片標題列顯示評分",
+      "showEmptySystemFolders": "顯示空的系統資料夾",
+      "showEmptySystemFoldersDesc": "追番中/看完等資料夾即使 0 部也保留顯示"
     },
     "accentColor": {
       "apply": "套用",
@@ -652,6 +654,7 @@
         "other": "{count} 個資料夾"
       },
       "libraryStats": "資料庫統計",
+      "statsLine": "{total} 部 · 追番中 {watching}",
       "metaAnimeCount": "{count} 部動畫",
       "myFolders": "我的資料夾",
       "newFolder": "新增資料夾",

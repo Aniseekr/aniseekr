@@ -73,6 +73,10 @@ export interface UserPrefs {
   allowAdultContent: boolean;
   bangumiIncludeGames: boolean;
   bangumiShowScoreProminently: boolean;
+  // Empty SYSTEM folders (watching/completed/… at count 0) are hidden from
+  // the collection grid by default — they unbalance the 2-column layout.
+  // Custom folders are always visible (a just-created folder must not vanish).
+  showEmptySystemFolders: boolean;
   profileShortcuts: ShortcutId[];
   // Folder targeted by the long-press quick-add on the anime detail page.
   // Stores either a system folder id (e.g. 'system_favorites') or a custom uuid.
@@ -87,6 +91,7 @@ export const DEFAULT_USER_PREFS: UserPrefs = {
   allowAdultContent: false,
   bangumiIncludeGames: false,
   bangumiShowScoreProminently: true,
+  showEmptySystemFolders: false,
   profileShortcuts: [...DEFAULT_PROFILE_SHORTCUTS],
   lastAddedFolderId: 'system_favorites',
   swipe: { ...DEFAULT_SWIPE_PREFS },

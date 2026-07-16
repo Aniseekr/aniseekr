@@ -670,6 +670,13 @@ export default function SettingsScreen() {
               value={prefs.bangumiShowScoreProminently}
               onValueChange={(v) => void updatePref('bangumiShowScoreProminently', v)}
             />
+            <SettingsSwitchRow
+              icon="folder-open-outline"
+              label={t('settings.prefs.showEmptySystemFolders')}
+              description={t('settings.prefs.showEmptySystemFoldersDesc')}
+              value={prefs.showEmptySystemFolders}
+              onValueChange={(v) => void updatePref('showEmptySystemFolders', v)}
+            />
           </SettingsSection>
 
           <SettingsSection title={t('settings.sections.notificationsAbout')}>

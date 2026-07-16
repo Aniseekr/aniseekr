@@ -8,16 +8,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { captureRef } from 'react-native-view-shot';
 import { CollectionHeader } from '../../../components/collection/CollectionHeader';
 import { FolderGrid } from '../../../components/collection/FolderGrid';
-import { CollectionOverviewCard } from '../../../components/collection/CollectionOverviewCard';
-import {
-  CollectionRecentRail,
-  type RecentRailItem,
-} from '../../../components/collection/CollectionRecentRail';
 import {
   CollectionAnimeGrid,
   type CollectionAnimeCardItem,
 } from '../../../components/collection/CollectionAnimeGrid';
-import { CollectionTips } from '../../../components/collection/CollectionTips';
 import { CollectionSearchModal } from '../../../components/collection/CollectionSearchModal';
 import { CollectionFloatingActionBar } from '../../../components/collection/CollectionFloatingActionBar';
 import { ShareImageRenderer } from '../../../components/collection/ShareImageRenderer';
@@ -34,8 +28,9 @@ import {
 } from '../../../libs/services/collection-prefs';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { LocalDB } from '../../../libs/db';
-import { ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
+import { Skeleton, ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { ErrorStateView } from '../../../components/common/ErrorStateView';
+import { loadUserPrefsSync, subscribeUserPrefs } from '../../../libs/services/user-prefs';
 import { useTheme } from '../../../context/ThemeContext';
 import {
   buildShareTemplate,
@@ -53,6 +48,16 @@ type ScreenMode = 'collect' | 'share';
 
 const ANIME_PREVIEW_LIMIT = 6;
 
+// Rule 10: warm re-entries render real folders/anime on frame 1 by seeding
+// state from the last loaded values; the skeleton is cold-launch-only. Module
+// scope survives tab unmount/remount (same pattern as [id].tsx's
+// folderSnapshotCache). Without this, every open flashed "No folders yet" +
+// a wrong "create your first folder" CTA until SQLite resolved.
+let collectionIndexSnapshot: {
+  collections: CollectionFolder[];
+  animeCards: CollectionAnimeCardItem[];
+} | null = null;
+
 type AnimeCardRow = {
   anime_id: string;
   title: string | null;
@@ -60,13 +65,6 @@ type AnimeCardRow = {
   progress: number | null;
   total_episodes: number | null;
   status: string;
-};
-
-type RecentRow = {
-  anime_id: string;
-  title: string | null;
-  image_url: string | null;
-  updated_at: number | null;
 };
 
 async function fetchAnimeCards(): Promise<CollectionAnimeCardItem[]> {
@@ -88,19 +86,6 @@ async function fetchAnimeCards(): Promise<CollectionAnimeCardItem[]> {
   }));
 }
 
-async function fetchRecents(): Promise<RecentRailItem[]> {
-  const db = await LocalDB.getDatabase();
-  const rows = await db.getAllAsync<RecentRow>(
-    'SELECT anime_id, title, image_url, updated_at FROM user_anime WHERE title IS NOT NULL ORDER BY COALESCE(updated_at, 0) DESC LIMIT 10'
-  );
-
-  return rows.map((r) => ({
-    id: r.anime_id,
-    title: r.title || 'Untitled',
-    imageUrl: r.image_url || undefined,
-  }));
-}
-
 function sameCollections(current: CollectionFolder[], next: CollectionFolder[]): boolean {
   return sameArrayBy(current, next, (folder) => [
     folder.id,
@@ -116,10 +101,6 @@ function sameCollections(current: CollectionFolder[], next: CollectionFolder[]):
     folder.sortOrder,
     folder.createdAt.getTime(),
   ]);
-}
-
-function sameRecents(current: RecentRailItem[], next: RecentRailItem[]): boolean {
-  return sameArrayBy(current, next, (item) => [item.id, item.title, item.imageUrl]);
 }
 
 function sameAnimeCards(
@@ -144,11 +125,31 @@ export default function CollectionScreen() {
   // Seed from MMKV so the collection grid renders in the user's chosen sort
   // mode on frame 1 instead of flashing through `newest` first.
   const [sortMode, setSortMode] = useState<SortMode>(loadCollectionSortModeSync);
-  const [collections, setCollections] = useState<CollectionFolder[]>([]);
+  const [collections, setCollections] = useState<CollectionFolder[]>(
+    () => collectionIndexSnapshot?.collections ?? []
+  );
   const [foldersError, setFoldersError] = useState(false);
   const [cardsError, setCardsError] = useState(false);
-  const [recents, setRecents] = useState<RecentRailItem[]>([]);
-  const [animeCards, setAnimeCards] = useState<CollectionAnimeCardItem[]>([]);
+  // False only on a true cold launch — gates the empty states so they can
+  // never render before the first load completes (rule 8: an unloaded
+  // library must not claim to be empty).
+  const [loaded, setLoaded] = useState(() => collectionIndexSnapshot !== null);
+  // Seeded sync (frame 1 correct) and kept live via the prefs subscription so
+  // toggling Settings → 顯示空的系統資料夾 applies without a tab reload.
+  const [showEmptySystemFolders, setShowEmptySystemFolders] = useState(
+    () => loadUserPrefsSync().showEmptySystemFolders
+  );
+
+  useEffect(() => {
+    return subscribeUserPrefs((prefs) => {
+      setShowEmptySystemFolders((prev) =>
+        prev === prefs.showEmptySystemFolders ? prev : prefs.showEmptySystemFolders
+      );
+    });
+  }, []);
+  const [animeCards, setAnimeCards] = useState<CollectionAnimeCardItem[]>(
+    () => collectionIndexSnapshot?.animeCards ?? []
+  );
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [editingFolder, setEditingFolder] = useState<CollectionFolder | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -167,9 +168,8 @@ export default function CollectionScreen() {
   const loadCollectionData = useCallback(async () => {
     const collectionRequestId = ++collectionLoadRef.current;
     const animeCardsRequestId = ++animeCardsLoadRef.current;
-    const [foldersResult, recentsResult, cardsResult] = await Promise.allSettled([
+    const [foldersResult, cardsResult] = await Promise.allSettled([
       collectionService.getFolders(),
-      fetchRecents(),
       fetchAnimeCards(),
     ]);
 
@@ -184,12 +184,6 @@ export default function CollectionScreen() {
         setFoldersError(true);
       }
 
-      if (recentsResult.status === 'fulfilled') {
-        setRecents((prev) => (sameRecents(prev, recentsResult.value) ? prev : recentsResult.value));
-      } else {
-        console.error('Failed to load recents:', recentsResult.reason);
-        setRecents((prev) => (prev.length === 0 ? prev : []));
-      }
     }
 
     if (animeCardsRequestId === animeCardsLoadRef.current) {
@@ -204,13 +198,25 @@ export default function CollectionScreen() {
         setCardsError(true);
       }
     }
+
+    if (collectionRequestId === collectionLoadRef.current) {
+      // Snapshot only fully-loaded data — a failed half must not be replayed
+      // as truth on the next mount.
+      if (foldersResult.status === 'fulfilled' && cardsResult.status === 'fulfilled') {
+        collectionIndexSnapshot = {
+          collections: foldersResult.value,
+          animeCards: cardsResult.value,
+        };
+      }
+      setLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
     loadCollectionData();
   }, [loadCollectionData]);
 
-  // Refresh counts + recents + cards whenever the tab regains focus, so adds
+  // Refresh counts + cards whenever the tab regains focus, so adds
   // from other tabs (e.g. Bangumi wishlist) propagate without a manual pull.
   // The skipFirst ref avoids double-loading on initial mount (the effect
   // above already kicked off the first load).
@@ -386,20 +392,6 @@ export default function CollectionScreen() {
     return counts;
   }, [collections]);
 
-  const overviewStats = useMemo(
-    () => [
-      {
-        label: t('commonUi.watching'),
-        value: categoryCounts.Watching ?? 0,
-        color: theme.accent,
-      },
-      { label: t('common.done'), value: categoryCounts.Done ?? 0 },
-      { label: t('collectionUi.planned'), value: categoryCounts.Planned ?? 0 },
-      { label: t('commonUi.dropped'), value: categoryCounts.Dropped ?? 0 },
-    ],
-    [categoryCounts, theme.accent, t]
-  );
-
   const totalCount = categoryCounts.All ?? 0;
 
   const userFolderCount = useMemo(
@@ -418,15 +410,22 @@ export default function CollectionScreen() {
 
   const visibleFolders = useMemo(() => {
     // Hide the synthetic 'system_all' folder — its count duplicates the
-    // overview card, so showing it as a tile is just noise.
-    const baseFolders = collections.filter((f) => f.id !== 'system_all');
+    // overview card, so showing it as a tile is just noise. Empty SYSTEM
+    // folders are hidden too (they unbalance the grid; they reappear the
+    // moment they gain content). Custom folders always show — a just-created
+    // folder must not vanish.
+    const baseFolders = collections.filter((f) => {
+      if (f.id === 'system_all') return false;
+      if (!showEmptySystemFolders && f.isSystemFolder && f.animeCount === 0) return false;
+      return true;
+    });
     return [...baseFolders].sort((a, b) => {
       if (sortMode === 'newest') return b.createdAt.getTime() - a.createdAt.getTime();
       if (sortMode === 'oldest') return a.createdAt.getTime() - b.createdAt.getTime();
       if (sortMode === 'count') return b.animeCount - a.animeCount;
       return 0;
     });
-  }, [collections, sortMode]);
+  }, [collections, sortMode, showEmptySystemFolders]);
 
   const folderCovers = useMemo(() => {
     const map: { [id: string]: string | undefined } = {};
@@ -545,7 +544,9 @@ export default function CollectionScreen() {
               })}
             </View>
 
-            {visibleFolders.length > 0 ? (
+            {!loaded ? (
+              <Skeleton.PosterGrid count={4} columns={2} aspectRatio={0.85} gap={12} />
+            ) : visibleFolders.length > 0 ? (
               <FolderGrid
                 folders={visibleFolders}
                 covers={folderCovers}
@@ -584,16 +585,16 @@ export default function CollectionScreen() {
             )}
           </View>
 
-          <View style={styles.overviewWrap}>
-            <CollectionOverviewCard total={totalCount} stats={overviewStats} />
-          </View>
-
+          {/* One compact line replaces the old overview card + stats button +
+              tips block — folders and anime stay above the fold. */}
           <View style={styles.statsButtonRow}>
             <Pressable
               onPress={() => {
                 hapticsBridge.tap();
                 router.push('/collection/stats');
               }}
+              accessibilityRole="button"
+              accessibilityLabel={t('tabs.collectionScreen.libraryStats')}
               style={({ pressed }) => [
                 styles.statsButton,
                 {
@@ -604,19 +605,16 @@ export default function CollectionScreen() {
               ]}>
               <MaterialIcons name="bar-chart" size={16} color={theme.accent} />
               <ThemedText variant="titleSmall" weight="600" style={styles.statsButtonLabel}>
+                {t('tabs.collectionScreen.statsLine', {
+                  total: String(totalCount),
+                  watching: String(categoryCounts.Watching ?? 0),
+                })}
+              </ThemedText>
+              <ThemedText variant="captionSmall" tone="secondary" weight="600">
                 {t('tabs.collectionScreen.libraryStats')}
               </ThemedText>
               <MaterialIcons name="chevron-right" size={18} color={theme.text.tertiary} />
             </Pressable>
-          </View>
-
-          <View style={styles.section}>
-            <CollectionTips
-              context={{
-                folderCount: collections.filter((f) => !f.isSystemFolder).length,
-                hasUnrated: false,
-              }}
-            />
           </View>
 
           <View style={styles.section}>
@@ -643,7 +641,9 @@ export default function CollectionScreen() {
                 </Pressable>
               ) : null}
             </View>
-            {animeCards.length > 0 ? (
+            {!loaded ? (
+              <Skeleton.PosterGrid count={2} columns={2} aspectRatio={1.4} gap={12} />
+            ) : animeCards.length > 0 ? (
               <CollectionAnimeGrid
                 items={animeCards.slice(0, ANIME_PREVIEW_LIMIT)}
                 onPressItem={(item) =>
@@ -669,19 +669,6 @@ export default function CollectionScreen() {
             )}
           </View>
 
-          <View style={styles.section}>
-            <CollectionRecentRail
-              items={recents}
-              onPressItem={(item) =>
-                pushAnimeDetail(router, {
-                  id: item.id,
-                  title: item.title,
-                  image: item.imageUrl,
-                })
-              }
-              onPressSeeAll={() => router.push('/(rate)')}
-            />
-          </View>
         </ScrollView>
 
         <CreateFolderModal
@@ -768,9 +755,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 140,
     gap: 14,
-  },
-  overviewWrap: {
-    paddingHorizontal: Spacing.lg,
   },
   statsButtonRow: {
     paddingHorizontal: Spacing.lg,

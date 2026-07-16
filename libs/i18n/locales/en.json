@@ -136,7 +136,9 @@
       "includeGames": "Include games",
       "includeGamesDesc": "Show video games in Bangumi calendar",
       "showScore": "Show score prominently",
-      "showScoreDesc": "Display rating in card header"
+      "showScoreDesc": "Display rating in card header",
+      "showEmptySystemFolders": "Show empty system folders",
+      "showEmptySystemFoldersDesc": "Keep Watching/Completed/… tiles visible even with 0 anime"
     },
     "accentColor": {
       "apply": "Apply",
@@ -652,6 +654,7 @@
         "other": "{count} folders"
       },
       "libraryStats": "Library stats",
+      "statsLine": "{total} anime · {watching} watching",
       "metaAnimeCount": "{count} anime",
       "myFolders": "My Folders",
       "newFolder": "New folder",
