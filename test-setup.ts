@@ -47,6 +47,7 @@ mock.module('react-native-reanimated', () => {
     useAnimatedReaction: () => undefined,
     useAnimatedScrollHandler: (handlers: unknown) => handlers,
     useAnimatedStyle: (fn: () => unknown) => fn(),
+    useReducedMotion: () => false,
     useSharedValue: <T>(value: T) => ({ value }),
     withDelay: <T>(_delayMs: number, value: T) => value,
     withRepeat: <T>(value: T) => value,

@@ -4,6 +4,7 @@
 import { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Colors, Typography } from '../../../../../constants/DesignSystem';
 import type {
   MapMarker,
   MapMarkerMode,
@@ -14,12 +15,13 @@ import {
   type MarkerVisual,
 } from '../../../../../libs/services/pilgrimage/map-engine/marker-style';
 import { anitabiImageSource } from '../../../../../libs/services/pilgrimage/anitabi-image';
+import { sanitizeImageUri } from '../../../spot-image-uri';
 
 // Fixed map-pin chrome. These float over the tiles, not over app surfaces, so
 // they use fixed white chrome + a dark badge chip rather than theme surfaces.
-const CHROME = '#FFFFFF';
-const BADGE_BG = '#262A35';
-const BADGE_FG = '#FFFFFF';
+const CHROME = Colors.text.primary;
+const BADGE_BG = Colors.background.tertiary;
+const BADGE_FG = Colors.text.primary;
 
 export interface NativeMapMarkerProps {
   marker: MapMarker;
@@ -51,16 +53,20 @@ function badgePosition(visual: MarkerVisual) {
 
 function BalloonMarker({ marker, visual }: { marker: MapMarker; visual: MarkerVisual }) {
   const border = visual.visited ? VISITED_COLOR : CHROME;
+  const imageUri = sanitizeImageUri(marker.image);
   return (
     <View style={[styles.balloonBox, { width: visual.width, height: visual.height }]}>
       <View style={[styles.photo, { borderColor: border }]}>
-        {marker.image ? (
-          <Image source={anitabiImageSource(marker.image)} style={styles.photoImg} />
-        ) : (
-          <View style={[styles.photoFallback, { backgroundColor: visual.ringColor }]}>
-            <Text style={styles.photoFallbackPin}>📍</Text>
-          </View>
-        )}
+        <View style={[styles.photoFallback, { backgroundColor: visual.ringColor }]}>
+          <Text style={styles.photoFallbackPin}>📍</Text>
+        </View>
+        {imageUri ? (
+          <Image
+            source={anitabiImageSource(imageUri)}
+            style={styles.photoImg}
+            onError={() => undefined}
+          />
+        ) : null}
       </View>
       <View style={[styles.tail, { borderTopColor: border }]} />
       <View style={[styles.regionDot, { backgroundColor: visual.ringColor }]} />
@@ -122,7 +128,7 @@ const styles = StyleSheet.create({
   },
   photoImg: { width: '100%', height: '100%' },
   photoFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  photoFallbackPin: { fontSize: 20 },
+  photoFallbackPin: { ...Typography.titleLarge, color: CHROME },
   tail: {
     width: 0,
     height: 0,
@@ -152,7 +158,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  star: { color: CHROME, fontSize: 18, lineHeight: 20 },
+  star: { ...Typography.titleLarge, color: CHROME },
   dotBox: { alignItems: 'center', justifyContent: 'center' },
   dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: CHROME },
   badge: {
@@ -166,5 +172,5 @@ const styles = StyleSheet.create({
   },
   badgeTopLeft: { top: -2, left: -2 },
   badgeBottomRight: { right: -2, bottom: 9 },
-  badgeText: { fontSize: 10, fontWeight: '700' },
+  badgeText: { ...Typography.captionSmall, fontWeight: '700' },
 });

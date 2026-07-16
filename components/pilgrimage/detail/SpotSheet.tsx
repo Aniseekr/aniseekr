@@ -5,7 +5,7 @@
 // Phase 3 replaces the underlying <Modal> with @gorhom/bottom-sheet for true
 // drag-to-dismiss + early-close UX.
 
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -23,6 +23,7 @@ import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
+import { useStreetView } from '../../../hooks/useStreetView';
 import {
   bearingDegrees,
   buildAnitabiMapUrl,
@@ -34,6 +35,7 @@ import {
   type CardinalKey,
 } from './_helpers';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
+import { StreetViewCard } from '../street-view/StreetViewCard';
 
 const BEARING_LABEL_KEY: Record<CardinalKey, TranslationKey> = {
   n: 'pilgrimage.detail.bearing.n',
@@ -106,6 +108,12 @@ function SpotSheetImpl({
   const t = useT();
   const styles = useMemo(() => makeSheetStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
+  const sheetIndexRef = useRef(-1);
+  const streetViewGateKey =
+    spot && hasValidGeo(spot.geo) ? `${spot.id}:${spot.geo[0]}:${spot.geo[1]}` : null;
+  const [streetViewEnabledKey, setStreetViewEnabledKey] = useState<string | null>(null);
+  const streetViewEnabled = streetViewEnabledKey === streetViewGateKey;
+  const streetView = useStreetView(spot, { enabled: streetViewEnabled });
   const snapPoints = useMemo(() => ['62%', '92%'], []);
 
   // Open / close the sheet imperatively when `spot` flips. The parent owns the
@@ -115,16 +123,26 @@ function SpotSheetImpl({
   useEffect(() => {
     if (spot) {
       sheetRef.current?.snapToIndex(0);
+      if (sheetIndexRef.current === 0 && streetViewGateKey) {
+        const frame = requestAnimationFrame(() => setStreetViewEnabledKey(streetViewGateKey));
+        return () => cancelAnimationFrame(frame);
+      }
     } else {
       sheetRef.current?.close();
     }
-  }, [spot]);
+  }, [spot, streetViewGateKey]);
 
   const handleSheetChange = useCallback(
     (index: number) => {
-      if (index === -1) onClose();
+      sheetIndexRef.current = index;
+      if (index === -1) {
+        setStreetViewEnabledKey(null);
+        onClose();
+      } else if (streetViewGateKey) {
+        setStreetViewEnabledKey(streetViewGateKey);
+      }
     },
-    [onClose]
+    [onClose, streetViewGateKey]
   );
 
   const renderBackdrop = useCallback(
@@ -195,11 +213,13 @@ function SpotSheetImpl({
   const sceneStack = spot && scenes.length > 0 ? scenes : spot ? [spot] : [];
   const activeSceneIndex =
     spot && sceneStack.length > 0
-      ? Math.max(0, sceneStack.findIndex((scene) => scene.id === spot.id))
+      ? Math.max(
+          0,
+          sceneStack.findIndex((scene) => scene.id === spot.id)
+        )
       : 0;
   const visitSpot = visitedTarget ?? spot;
-  const bearing =
-    spot && userLocation && hasGeo ? bearingDegrees(userLocation, spot.geo) : null;
+  const bearing = spot && userLocation && hasGeo ? bearingDegrees(userLocation, spot.geo) : null;
 
   return (
     <BottomSheet
@@ -216,257 +236,263 @@ function SpotSheetImpl({
           <View />
         ) : (
           <>
-        <View style={styles.hero}>
-          <Image source={anitabiImageSource(spot.image)} style={styles.cover} contentFit="cover" />
-          <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.76)']}
-            style={styles.sheetHeroGradient}
-          />
-          <View style={styles.heroText}>
-            <ThemedText
-              variant="titleLarge"
-              weight="800"
-              numberOfLines={1}
-              style={{ color: ON_DARK }}>
-              {titles.primary}
-            </ThemedText>
-            {titles.secondary ? (
-              <ThemedText
-                variant="bodySmall"
-                numberOfLines={1}
-                style={{ color: 'rgba(255,255,255,0.72)' }}>
-                {titles.secondary}
-              </ThemedText>
-            ) : null}
-          </View>
-          <Pressable onPress={handleClosePress} hitSlop={12} style={styles.closeBtn}>
-            <Ionicons name="close" size={18} color={ON_DARK} />
-          </Pressable>
-        </View>
-
-        {sceneStack.length > 1 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.sceneRail}>
-            {sceneStack.map((scene, index) => {
-              const active = scene.id === spot.id;
-              const sourceLabel = getPointSourceLabel(scene);
-              const epLabel = scene.ep > 0 ? `EP ${scene.ep}` : `#${index + 1}`;
-              return (
-                <Pressable
-                  key={scene.id}
-                  onPress={() => onSelectScene(scene)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`Show scene ${index + 1}`}
-                  style={({ pressed }) => [
-                    styles.sceneThumbBtn,
-                    active ? { borderColor: themeColor } : { borderColor: theme.glassBorder },
-                    pressed && { opacity: 0.78 },
-                  ]}>
-                  <Image
-                    source={anitabiImageSource(scene.image)}
-                    style={styles.sceneThumb}
-                    contentFit="cover"
-                  />
-                  <View style={styles.sceneThumbScrim} />
-                  <View
-                    style={[
-                      styles.sceneIndexPill,
-                      { backgroundColor: active ? themeColor : 'rgba(0,0,0,0.62)' },
-                    ]}>
-                    <ThemedText
-                      variant="captionSmall"
-                      weight="800"
-                      numberOfLines={1}
-                      style={{ color: active ? themeColorFg : ON_DARK }}>
-                      {sourceLabel ? `${sourceLabel} ${epLabel}` : epLabel}
-                    </ThemedText>
-                  </View>
-                  {visited && visitSpot && visitSpot.id === scene.id ? (
-                    <View style={styles.sceneVisitedDot}>
-                      <Ionicons
-                        name="checkmark"
-                        size={10}
-                        color={readableTextOn(theme.status.success)}
-                      />
-                    </View>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        ) : null}
-
-        <View style={styles.distanceRow}>
-          <Ionicons name="location-outline" size={15} color={theme.text.tertiary} />
-          <ThemedText variant="bodySmall" tone="secondary">
-            {distanceKm != null
-              ? t('pilgrimage.detail.distanceAway', { distance: formatDistanceKm(distanceKm) })
-              : sceneStack.length > 1
-                ? t('pilgrimage.detail.sceneOfCount', {
-                    index: activeSceneIndex + 1,
-                    count: sceneStack.length,
-                  })
-                : t('pilgrimage.detail.sceneLocation')}
-          </ThemedText>
-          {bearing != null && distanceKm != null ? (
-            <>
-              <Ionicons
-                name="arrow-up"
-                size={12}
-                color={theme.text.secondary}
-                style={{ transform: [{ rotate: `${Math.round(bearing)}deg` }] }}
+            <View style={styles.hero}>
+              <Image
+                source={anitabiImageSource(spot.image)}
+                style={styles.cover}
+                contentFit="cover"
               />
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.76)']}
+                style={styles.sheetHeroGradient}
+              />
+              <View style={styles.heroText}>
+                <ThemedText
+                  variant="titleLarge"
+                  weight="800"
+                  numberOfLines={1}
+                  style={{ color: ON_DARK }}>
+                  {titles.primary}
+                </ThemedText>
+                {titles.secondary ? (
+                  <ThemedText
+                    variant="bodySmall"
+                    numberOfLines={1}
+                    style={{ color: 'rgba(255,255,255,0.72)' }}>
+                    {titles.secondary}
+                  </ThemedText>
+                ) : null}
+              </View>
+              <Pressable onPress={handleClosePress} hitSlop={12} style={styles.closeBtn}>
+                <Ionicons name="close" size={18} color={ON_DARK} />
+              </Pressable>
+            </View>
+
+            {sceneStack.length > 1 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sceneRail}>
+                {sceneStack.map((scene, index) => {
+                  const active = scene.id === spot.id;
+                  const sourceLabel = getPointSourceLabel(scene);
+                  const epLabel = scene.ep > 0 ? `EP ${scene.ep}` : `#${index + 1}`;
+                  return (
+                    <Pressable
+                      key={scene.id}
+                      onPress={() => onSelectScene(scene)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`Show scene ${index + 1}`}
+                      style={({ pressed }) => [
+                        styles.sceneThumbBtn,
+                        active ? { borderColor: themeColor } : { borderColor: theme.glassBorder },
+                        pressed && { opacity: 0.78 },
+                      ]}>
+                      <Image
+                        source={anitabiImageSource(scene.image)}
+                        style={styles.sceneThumb}
+                        contentFit="cover"
+                      />
+                      <View style={styles.sceneThumbScrim} />
+                      <View
+                        style={[
+                          styles.sceneIndexPill,
+                          { backgroundColor: active ? themeColor : 'rgba(0,0,0,0.62)' },
+                        ]}>
+                        <ThemedText
+                          variant="captionSmall"
+                          weight="800"
+                          numberOfLines={1}
+                          style={{ color: active ? themeColorFg : ON_DARK }}>
+                          {sourceLabel ? `${sourceLabel} ${epLabel}` : epLabel}
+                        </ThemedText>
+                      </View>
+                      {visited && visitSpot && visitSpot.id === scene.id ? (
+                        <View style={styles.sceneVisitedDot}>
+                          <Ionicons
+                            name="checkmark"
+                            size={10}
+                            color={readableTextOn(theme.status.success)}
+                          />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+
+            <View style={styles.distanceRow}>
+              <Ionicons name="location-outline" size={15} color={theme.text.tertiary} />
               <ThemedText variant="bodySmall" tone="secondary">
-                {t(BEARING_LABEL_KEY[cardinalFromBearing(bearing)])}
+                {distanceKm != null
+                  ? t('pilgrimage.detail.distanceAway', { distance: formatDistanceKm(distanceKm) })
+                  : sceneStack.length > 1
+                    ? t('pilgrimage.detail.sceneOfCount', {
+                        index: activeSceneIndex + 1,
+                        count: sceneStack.length,
+                      })
+                    : t('pilgrimage.detail.sceneLocation')}
               </ThemedText>
-            </>
-          ) : null}
-        </View>
+              {bearing != null && distanceKm != null ? (
+                <>
+                  <Ionicons
+                    name="arrow-up"
+                    size={12}
+                    color={theme.text.secondary}
+                    style={{ transform: [{ rotate: `${Math.round(bearing)}deg` }] }}
+                  />
+                  <ThemedText variant="bodySmall" tone="secondary">
+                    {t(BEARING_LABEL_KEY[cardinalFromBearing(bearing)])}
+                  </ThemedText>
+                </>
+              ) : null}
+            </View>
 
-        <AnitabiOriginCredit
-          source={spot}
-          variant="compact"
-          tone="tertiary"
-          textVariant="captionSmall"
-          style={styles.originRow}
-        />
+            <StreetViewCard status={streetView.status} result={streetView.result} />
 
-        <View style={styles.intentActions}>
-          <Pressable
-            onPress={handleToggleVisited}
-            style={({ pressed }) => [
-              styles.intentBtn,
-              visited
-                ? {
-                    backgroundColor: `${theme.status.success}22`,
-                    borderColor: theme.status.success,
-                  }
-                : {
-                    backgroundColor: theme.background.tertiary,
-                    borderColor: theme.glassBorder,
-                  },
-              pressed && { opacity: 0.84 },
-            ]}>
-            <Ionicons
-              name={visited ? 'checkmark-circle' : 'flag-outline'}
-              size={16}
-              color={visited ? theme.status.success : theme.text.secondary}
+            <AnitabiOriginCredit
+              source={spot}
+              variant="compact"
+              tone="tertiary"
+              textVariant="captionSmall"
+              style={styles.originRow}
             />
-            <ThemedText
-              variant="bodySmall"
-              weight="700"
-              style={{ color: visited ? theme.status.success : theme.text.secondary }}>
-              {visited ? t('pilgrimageUi.checkedIn') : t('pilgrimageUi.checkIn')}
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={handleToggleSaved}
-            style={({ pressed }) => [
-              styles.intentBtn,
-              saved
-                ? { backgroundColor: `${theme.status.info}22`, borderColor: theme.status.info }
-                : {
-                    backgroundColor: theme.background.tertiary,
-                    borderColor: theme.glassBorder,
-                  },
-              pressed && { opacity: 0.84 },
-            ]}>
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={16}
-              color={saved ? theme.status.info : theme.text.secondary}
-            />
-            <ThemedText
-              variant="bodySmall"
-              weight="700"
-              style={{ color: saved ? theme.status.info : theme.text.secondary }}>
-              {t('common.save')}
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={handleTogglePlanned}
-            style={({ pressed }) => [
-              styles.intentBtn,
-              planned
-                ? {
-                    backgroundColor: `${theme.status.warning}22`,
-                    borderColor: theme.status.warning,
-                  }
-                : {
-                    backgroundColor: theme.background.tertiary,
-                    borderColor: theme.glassBorder,
-                  },
-              pressed && { opacity: 0.84 },
-            ]}>
-            <Ionicons
-              name={planned ? 'flag' : 'flag-outline'}
-              size={16}
-              color={planned ? theme.status.warning : theme.text.secondary}
-            />
-            <ThemedText
-              variant="bodySmall"
-              weight="700"
-              style={{ color: planned ? theme.status.warning : theme.text.secondary }}>
-              {t('commonUi.plan')}
-            </ThemedText>
-          </Pressable>
-        </View>
 
-        <Pressable
-          onPress={handleStartCamera}
-          style={({ pressed }) => [
-            styles.startCameraBtn,
-            { backgroundColor: themeColor },
-            pressed && { opacity: 0.86 },
-          ]}>
-          <Ionicons name="camera" size={18} color={themeColorFg} />
-          <ThemedText variant="bodyMedium" weight="800" style={{ color: themeColorFg }}>
-            {visited ? t('pilgrimageUi.startArCamera2') : t('pilgrimageUi.checkInPhoto')}
-          </ThemedText>
-        </Pressable>
+            <View style={styles.intentActions}>
+              <Pressable
+                onPress={handleToggleVisited}
+                style={({ pressed }) => [
+                  styles.intentBtn,
+                  visited
+                    ? {
+                        backgroundColor: `${theme.status.success}22`,
+                        borderColor: theme.status.success,
+                      }
+                    : {
+                        backgroundColor: theme.background.tertiary,
+                        borderColor: theme.glassBorder,
+                      },
+                  pressed && { opacity: 0.84 },
+                ]}>
+                <Ionicons
+                  name={visited ? 'checkmark-circle' : 'flag-outline'}
+                  size={16}
+                  color={visited ? theme.status.success : theme.text.secondary}
+                />
+                <ThemedText
+                  variant="bodySmall"
+                  weight="700"
+                  style={{ color: visited ? theme.status.success : theme.text.secondary }}>
+                  {visited ? t('pilgrimageUi.checkedIn') : t('pilgrimageUi.checkIn')}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={handleToggleSaved}
+                style={({ pressed }) => [
+                  styles.intentBtn,
+                  saved
+                    ? { backgroundColor: `${theme.status.info}22`, borderColor: theme.status.info }
+                    : {
+                        backgroundColor: theme.background.tertiary,
+                        borderColor: theme.glassBorder,
+                      },
+                  pressed && { opacity: 0.84 },
+                ]}>
+                <Ionicons
+                  name={saved ? 'bookmark' : 'bookmark-outline'}
+                  size={16}
+                  color={saved ? theme.status.info : theme.text.secondary}
+                />
+                <ThemedText
+                  variant="bodySmall"
+                  weight="700"
+                  style={{ color: saved ? theme.status.info : theme.text.secondary }}>
+                  {t('common.save')}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={handleTogglePlanned}
+                style={({ pressed }) => [
+                  styles.intentBtn,
+                  planned
+                    ? {
+                        backgroundColor: `${theme.status.warning}22`,
+                        borderColor: theme.status.warning,
+                      }
+                    : {
+                        backgroundColor: theme.background.tertiary,
+                        borderColor: theme.glassBorder,
+                      },
+                  pressed && { opacity: 0.84 },
+                ]}>
+                <Ionicons
+                  name={planned ? 'flag' : 'flag-outline'}
+                  size={16}
+                  color={planned ? theme.status.warning : theme.text.secondary}
+                />
+                <ThemedText
+                  variant="bodySmall"
+                  weight="700"
+                  style={{ color: planned ? theme.status.warning : theme.text.secondary }}>
+                  {t('commonUi.plan')}
+                </ThemedText>
+              </Pressable>
+            </View>
 
-        <Pressable
-          onPress={handleFrameShot}
-          style={({ pressed }) => [
-            styles.frameShotBtn,
-            { borderColor: hasCapture ? themeColor : theme.glassBorder },
-            pressed && { opacity: 0.82 },
-          ]}>
-          <Ionicons name="image-outline" size={18} color={theme.text.primary} />
-          <ThemedText variant="bodyMedium" weight="700">
-            {t('pilgrimageUi.photoTipsBestFrame')}
-          </ThemedText>
-        </Pressable>
+            <Pressable
+              onPress={handleStartCamera}
+              style={({ pressed }) => [
+                styles.startCameraBtn,
+                { backgroundColor: themeColor },
+                pressed && { opacity: 0.86 },
+              ]}>
+              <Ionicons name="camera" size={18} color={themeColorFg} />
+              <ThemedText variant="bodyMedium" weight="800" style={{ color: themeColorFg }}>
+                {visited ? t('pilgrimageUi.startArCamera2') : t('pilgrimageUi.checkInPhoto')}
+              </ThemedText>
+            </Pressable>
 
-        <View style={styles.linkRow}>
-          <Pressable
-            onPress={handleOpenMaps}
-            disabled={!hasGeo}
-            style={({ pressed }) => [
-              styles.linkBtn,
-              !hasGeo && { opacity: 0.45 },
-              pressed && hasGeo && { opacity: 0.72 },
-            ]}>
-            <Ionicons name="location-outline" size={15} color={theme.text.tertiary} />
-            <ThemedText variant="bodySmall" weight="700" tone="secondary">
-              {t('pilgrimageUi.openInMaps')}
-            </ThemedText>
-          </Pressable>
-          <View style={[styles.linkDivider, { backgroundColor: theme.glassBorder }]} />
-          <Pressable
-            onPress={handleOpenAnitabi}
-            accessibilityRole="link"
-            accessibilityLabel={t('pilgrimageUi.attributeAndViewOnAnitabi')}
-            style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.72 }]}>
-            <Ionicons name="open-outline" size={15} color={theme.text.tertiary} />
-            <ThemedText variant="bodySmall" weight="700" tone="secondary">
-              {t('pilgrimageUi.attributeToAnitabi')}
-            </ThemedText>
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={handleFrameShot}
+              style={({ pressed }) => [
+                styles.frameShotBtn,
+                { borderColor: hasCapture ? themeColor : theme.glassBorder },
+                pressed && { opacity: 0.82 },
+              ]}>
+              <Ionicons name="image-outline" size={18} color={theme.text.primary} />
+              <ThemedText variant="bodyMedium" weight="700">
+                {t('pilgrimageUi.photoTipsBestFrame')}
+              </ThemedText>
+            </Pressable>
+
+            <View style={styles.linkRow}>
+              <Pressable
+                onPress={handleOpenMaps}
+                disabled={!hasGeo}
+                style={({ pressed }) => [
+                  styles.linkBtn,
+                  !hasGeo && { opacity: 0.45 },
+                  pressed && hasGeo && { opacity: 0.72 },
+                ]}>
+                <Ionicons name="location-outline" size={15} color={theme.text.tertiary} />
+                <ThemedText variant="bodySmall" weight="700" tone="secondary">
+                  {t('pilgrimageUi.openInMaps')}
+                </ThemedText>
+              </Pressable>
+              <View style={[styles.linkDivider, { backgroundColor: theme.glassBorder }]} />
+              <Pressable
+                onPress={handleOpenAnitabi}
+                accessibilityRole="link"
+                accessibilityLabel={t('pilgrimageUi.attributeAndViewOnAnitabi')}
+                style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.72 }]}>
+                <Ionicons name="open-outline" size={15} color={theme.text.tertiary} />
+                <ThemedText variant="bodySmall" weight="700" tone="secondary">
+                  {t('pilgrimageUi.attributeToAnitabi')}
+                </ThemedText>
+              </Pressable>
+            </View>
           </>
         )}
       </BottomSheetView>

@@ -1105,6 +1105,12 @@
     "image": {
       "unavailable": "Image unavailable"
     },
+    "streetView": {
+      "loading": "Loading street view…",
+      "openInGoogleMaps": "Open in Google Maps Street View",
+      "openLookAround": "Open Look Around",
+      "title": "Street View"
+    },
     "map": {
       "allJapan": "All Japan",
       "clearSearchA11y": "Clear search",

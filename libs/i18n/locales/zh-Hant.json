@@ -1105,6 +1105,12 @@
     "image": {
       "unavailable": "無法載入圖片"
     },
+    "streetView": {
+      "loading": "正在載入街景…",
+      "openInGoogleMaps": "在 Google 地圖街景開啟",
+      "openLookAround": "開啟 Look Around",
+      "title": "街景"
+    },
     "map": {
       "allJapan": "全日本",
       "clearSearchA11y": "清除搜尋",
