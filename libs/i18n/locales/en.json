@@ -442,7 +442,7 @@
           "title": "Usage analytics (Microsoft Clarity)"
         },
         "camera": {
-          "body": "The pilgrimage comparison flow uses the camera to capture a scene and, with your permission, saves it to your Photos library so you can share it later. We do not upload photos. EXIF (including GPS, if present) is stripped before saving comparison shots.",
+          "body": "The pilgrimage comparison flow uses the camera to capture a scene and, with your permission, saves it to your Photos library so you can share it later. Comparison photos are not uploaded. If you explicitly choose scene identification, a resized copy of only the selected image is sent directly to trace.moe. The original file and its EXIF metadata are not sent.",
           "title": "Camera & photos"
         },
         "children": {
@@ -474,12 +474,12 @@
           "title": "What we store locally"
         },
         "thirdParty": {
-          "body": "When you connect AniList, MyAnimeList, Bangumi, Annict, Shikimori, Simkl, or Kitsu, requests go directly between your device and that platform. We do not proxy or log those requests. Disconnecting an account in Settings stops all syncing.",
+          "body": "When you connect AniList, MyAnimeList, Bangumi, Annict, Shikimori, Simkl, or Kitsu, requests go directly between your device and that platform. If you explicitly use scene identification after accepting the first-use disclosure, a resized copy of the selected image is sent directly to trace.moe. We do not proxy or log those requests. Disconnecting an account in Settings stops all syncing.",
           "title": "Third-party platforms"
         }
       },
       "subtitle": "What happens to your data",
-      "updated": "Last updated: May 2026"
+      "updated": "Last updated: July 2026"
     },
     "syncHubScreen": {
       "backgroundSync": "Background sync",
@@ -1103,7 +1103,46 @@
       }
     },
     "image": {
+      "sourceLinkA11y": "Image source: {origin}. Opens the contributor link.",
+      "sourceVia": "via {origin}",
       "unavailable": "Image unavailable"
+    },
+    "identify": {
+      "analyzing": "Identifying scene…",
+      "animeLevel": "Anime identified",
+      "chooseAnother": "Choose another screenshot",
+      "chooseScreenshot": "Choose screenshot",
+      "confidence": "{percent}% similarity",
+      "disclosureAllow": "Continue to trace.moe",
+      "disclosureBody": "A resized copy of the image you selected will be sent directly from this device to trace.moe for scene matching. Aniseekr does not keep or proxy the upload.",
+      "disclosureTitle": "Send this image for identification?",
+      "entry": "Identify anime scene",
+      "entryA11y": "Identify an anime scene from a screenshot",
+      "episodeLabel": "Episode {episode}",
+      "episodeLevel": "Episode pilgrimage spots",
+      "errorBody": "The identification service could not complete this request.",
+      "errorTitle": "Couldn't identify this scene",
+      "identifiedLevel": "Anime found",
+      "invalidImageBody": "Choose a clear anime frame and try again.",
+      "invalidImageTitle": "Image could not be searched",
+      "knownMetadata": "Anitabi scene metadata",
+      "noMatchBody": "No trustworthy match reached the required similarity.",
+      "noMatchTitle": "No reliable match",
+      "openAnime": "Open anime",
+      "openPilgrimage": "Open pilgrimage map",
+      "openSpot": "Open this spot",
+      "photoDeniedBody": "Allow photo library access in system settings to choose a screenshot.",
+      "photoDeniedTitle": "Photo access needed",
+      "poweredBy": "Scene matching by trace.moe",
+      "rateLimitedBody": "The shared service is receiving too many requests. Try again after the cooldown.",
+      "rateLimitedTitle": "Identification is cooling down",
+      "scanSceneA11y": "Find this screenshot's anime scene",
+      "sceneLevel": "Timestamp-matched pilgrimage spot",
+      "serviceLimitedBody": "trace.moe has reached a shared quota or concurrency limit. Try again later.",
+      "serviceLimitedTitle": "Identification temporarily limited",
+      "timestampLabel": "{time} into the episode",
+      "timestampMatch": "{seconds}s from the identified frame",
+      "title": "Identify scene"
     },
     "streetView": {
       "loading": "Loading street view…",

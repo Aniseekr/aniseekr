@@ -274,7 +274,53 @@ multi-angle suffixes before comparison:
 
 The 60m threshold and folder-first representative ordering are unchanged.
 
-## 12. Test Coverage
+## 12. Screenshot Scene Identification
+
+Scene identification is a user-triggered bridge between local screenshots,
+trace.moe anime metadata, and Anitabi pilgrimage points. The UI never calls the
+provider directly.
+
+Provider behavior:
+
+- Search requests are serialized through the shared `traceMoe` RateLimiter
+  channel with a 1,000ms minimum interval.
+- HTTP 402 is a shared `service-limited` state because trace.moe conflates
+  quota and concurrency. HTTP 429 registers `Retry-After` (60 seconds when
+  absent) and returns `rate-limited`. Neither status retries automatically.
+- Only the highest-similarity valid result is considered. Similarity below 0.9
+  is `no-match`.
+- `episode` may be a number, string, array, or null. Episode/scene matching
+  requires one unambiguous positive numeric episode.
+- A finite `at` timestamp is preferred. When absent, the midpoint of finite
+  `from` and `to` values is used.
+- Preview URLs are transient display data. They may be carried in memory or as
+  route chrome seeds, but are never written to app storage or the database.
+
+Before upload, the selected image is re-encoded as JPEG and images wider than
+640px are downscaled without upscaling smaller images. Temporary upload files
+are deleted best-effort. The first trace search requires a versioned local
+disclosure acknowledgement; accepting it is the only persisted scene-ID state.
+
+Anitabi match ladder:
+
+- `scene`: episode matches and one or more points with real timestamps are
+  within 15 seconds. Candidates are sorted by absolute timestamp delta.
+- `episode`: episode matches real points but no timestamp is within 15 seconds.
+- `anime`: the mapped work has pilgrimage data but no episode match.
+- `identified`: trace.moe identified an anime but no mapped pilgrimage work is
+  available.
+
+Points with `ep <= 0` or `s <= 0` cannot participate in scene matching. An
+existing Anitabi point with both values uses that metadata directly and does
+not spend a trace.moe request. An incomplete point may be explicitly searched,
+but its known Bangumi identity remains authoritative; a result mapped to a
+different work is rejected.
+
+Navigation carries an optional `focusSpotId` into `/pilgrimage/[animeId]`. The
+detail route consumes a focus once after points are available and must not
+reopen the sheet after the user closes it during that mount.
+
+## 13. Test Coverage
 
 - PILG-001: `AnitabiService.getAnimePilgrimage` returns `null` on 404
 - PILG-002: Caches fetched result in memory (second call no HTTP)
@@ -304,8 +350,18 @@ The 60m threshold and folder-first representative ordering are unchanged.
 - PILG-026: Warm street view cache resolves synchronously so warm opens skip the skeleton
 - PILG-027: Successful empty Mapillary answers are cached; errors are not
 - PILG-028: Look Around scene-unavailable corrects the cached verdict and re-resolves to Mapillary
+- PILG-029: trace.moe results are safely decoded and low-similarity results are rejected
+- PILG-030: trace.moe requests are serialized and map 402/429 without automatic retry
+- PILG-031: AniList results resolve to sorted Anitabi timestamp candidates
+- PILG-032: ambiguous/non-numeric episodes cannot produce episode or scene matches
+- PILG-033: an identified anime remains actionable without pilgrimage data
+- PILG-034: complete Anitabi metadata bypasses trace and fallback rejects cross-anime results
+- PILG-035: `focusSpotId` round-trips and is consumed once
+- PILG-036: upload resize policy caps width and temporary cleanup continues after errors
+- PILG-037: first-use disclosure acknowledgement persists under a versioned key
+- PILG-038: same-episode points outside the scene window remain episode candidates
 
-## 13. Future Extensions (out of MVP scope)
+## 14. Future Extensions (out of MVP scope)
 
 - Embedded `react-native-maps` view
 - "Nearby" mode using `expo-location` to compute distances

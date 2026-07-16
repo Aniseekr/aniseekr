@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
 import type { ThemedTextTone, ThemedTextVariant } from '../../themed/ThemedText';
+import { useT } from '../../../libs/i18n';
 
 export interface AnitabiOriginCreditSource {
   origin?: string | null;
@@ -53,6 +54,7 @@ export function AnitabiOriginCredit({
   color,
   style,
 }: AnitabiOriginCreditProps) {
+  const t = useT();
   const origin = typeof source?.origin === 'string' ? source.origin.trim() : '';
   const originURL = typeof source?.originURL === 'string' ? source.originURL.trim() : '';
 
@@ -64,7 +66,7 @@ export function AnitabiOriginCredit({
 
   if (!origin) return null;
 
-  const label = `via ${origin}`;
+  const label = t('pilgrimage.image.sourceVia', { origin });
   const showIcon = variant === 'compact';
   const iconColor = color ?? undefined;
 
@@ -101,7 +103,7 @@ export function AnitabiOriginCredit({
     <Pressable
       onPress={handlePress}
       accessibilityRole="link"
-      accessibilityLabel={`Image source: ${origin}. Opens originator link.`}
+      accessibilityLabel={t('pilgrimage.image.sourceLinkA11y', { origin })}
       hitSlop={6}
       style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
       {body}

@@ -171,6 +171,16 @@ PILG-025,__tests__/unit/pilgrimage/anitabi-points.test.ts,merges same shrine cut
 PILG-026,__tests__/unit/pilgrimage/street-view-service.test.ts,peeks cached verdicts synchronously for warm opens,covered
 PILG-027,__tests__/unit/pilgrimage/street-view-service.test.ts,caches successful empty Mapillary answers but never errors,covered
 PILG-028,__tests__/unit/pilgrimage/use-street-view.test.ts,scene unavailable corrects the verdict and re-resolves,covered
+PILG-029,__tests__/unit/pilgrimage/scene-id-trace-moe-client.test.ts,decodes valid results and rejects low similarity,covered
+PILG-030,__tests__/unit/pilgrimage/scene-id-trace-moe-client.test.ts,serializes requests and maps shared service limits,covered
+PILG-031,__tests__/unit/pilgrimage/scene-id-service.test.ts,resolves and sorts timestamp candidates,covered
+PILG-032,__tests__/unit/pilgrimage/scene-id-service.test.ts,ambiguous episode falls back honestly,covered
+PILG-033,__tests__/unit/pilgrimage/scene-id-service.test.ts,identified anime survives missing pilgrimage,covered
+PILG-034,__tests__/unit/pilgrimage/scene-id-service.test.ts,known metadata bypass and identity guard,covered
+PILG-035,__tests__/unit/pilgrimage/pilgrimage-navigation.test.ts,focus spot route and one-shot consumption,covered
+PILG-036,__tests__/unit/pilgrimage/scene-image-policy.test.ts,resizes without upscaling and cleans temporary files best-effort,covered
+PILG-037,__tests__/unit/pilgrimage/scene-id-disclosure.test.ts,persists versioned disclosure acknowledgement,covered
+PILG-038,__tests__/unit/pilgrimage/scene-id-service.test.ts,preserves episode candidates outside timestamp window,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending

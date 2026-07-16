@@ -45,8 +45,11 @@ import {
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import {
+  buildPilgrimageSceneIdRoute,
   getPilgrimageDetailBackRoute,
   getPilgrimageDetailChromeSeed,
+  getPilgrimageDetailFocusSpotId,
+  resolvePilgrimageSpotFocus,
 } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   mergePilgrimageSeriesEntries,
@@ -132,6 +135,8 @@ export default function PilgrimageDetailScreen() {
   // lister so we can paint hero + accent before any I/O resolves
   // (CLAUDE.md Rule 10). When the real data arrives it replaces the seed.
   const chromeSeed = useMemo(() => getPilgrimageDetailChromeSeed(params), [params]);
+  const focusSpotId = useMemo(() => getPilgrimageDetailFocusSpotId(params), [params]);
+  const consumedSpotFocusRef = useRef<string | null>(null);
 
   const { view, setView } = usePilgrimageDetailView();
   const {
@@ -299,6 +304,19 @@ export default function PilgrimageDetailScreen() {
     activeSpotHasCapture,
     activeSpotSceneCount,
   } = sheet;
+
+  useEffect(() => {
+    const focusedGroup = focusSpotId ? groupedSpotByPointId.get(focusSpotId) : null;
+    const focusedSpot = focusedGroup?.scenes.find((scene) => scene.id === focusSpotId) ?? null;
+    const resolved = resolvePilgrimageSpotFocus({
+      bangumiId,
+      focusSpotId,
+      spotIsAvailable: focusedSpot !== null,
+      consumedKey: consumedSpotFocusRef.current,
+    });
+    consumedSpotFocusRef.current = resolved.consumedKey;
+    if (resolved.spotId && focusedSpot) openSpot(focusedSpot);
+  }, [bangumiId, focusSpotId, groupedSpotByPointId, openSpot]);
 
   // Track the bottom sheet's current snap index so the floating filter strip
   // and view-mode toggle can hide as the sheet covers them. The sheet
@@ -502,6 +520,27 @@ export default function PilgrimageDetailScreen() {
       });
     },
     [buildCompareParams, closeSheet, router]
+  );
+
+  const handleIdentifyScene = useCallback(
+    (spot: AnitabiPoint) => {
+      const sourceBangumiId = getPointSourceBangumiId(spot) ?? anime?.id ?? bangumiId;
+      if (sourceBangumiId === null) return;
+      const sourceAnime =
+        seriesEntries.find((entry) => entry.anime?.id === sourceBangumiId)?.anime ??
+        (anime?.id === sourceBangumiId ? anime : null);
+      const sourceTitles = sourceAnime ? getPilgrimageAnimeTitles(sourceAnime) : animeTitles;
+      const route = buildPilgrimageSceneIdRoute(spot, {
+        bangumiId: sourceBangumiId,
+        title: sourceTitles?.primary,
+        titleSecondary: sourceTitles?.secondary,
+        poster: sourceAnime?.cover ?? posterUri,
+        themeColor: sourceAnime?.color ?? themeColor,
+      });
+      closeSheet();
+      InteractionManager.runAfterInteractions(() => router.push(route));
+    },
+    [anime, animeTitles, bangumiId, closeSheet, posterUri, router, seriesEntries, themeColor]
   );
 
   const handleSeriesSelect = useCallback(
@@ -734,7 +773,11 @@ export default function PilgrimageDetailScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={t('pilgrimage.series.loadFailedRetryA11y')}
                       style={({ pressed }) => [styles.seriesWarning, pressed && { opacity: 0.7 }]}>
-                      <Ionicons name="cloud-offline-outline" size={14} color={theme.text.secondary} />
+                      <Ionicons
+                        name="cloud-offline-outline"
+                        size={14}
+                        color={theme.text.secondary}
+                      />
                       <ThemedText
                         variant="captionSmall"
                         weight="700"
@@ -983,6 +1026,7 @@ export default function PilgrimageDetailScreen() {
           onOpenMaps={handleOpenMaps}
           onStartCamera={handleStartCamera}
           onFrameShot={handleFrameShot}
+          onIdentifyScene={handleIdentifyScene}
           onSelectScene={openSpot}
         />
 

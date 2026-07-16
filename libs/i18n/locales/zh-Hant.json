@@ -442,7 +442,7 @@
           "title": "使用分析(Microsoft Clarity)"
         },
         "camera": {
-          "body": "聖地巡禮對比流程會使用相機拍攝場景,並在取得你的同意後存進相簿以便分享。我們不會上傳照片。對比照在儲存前會清除 EXIF(含 GPS,如有)。",
+          "body": "聖地巡禮對比流程會使用相機拍攝場景,並在取得你的同意後存進相簿以便分享。一般對比照不會上傳。只有你明確選擇場景辨識時,才會將所選單張圖片的縮小副本直接傳送至 trace.moe;原始檔與 EXIF 資料不會被傳送。",
           "title": "相機與相簿"
         },
         "children": {
@@ -474,12 +474,12 @@
           "title": "本機儲存的內容"
         },
         "thirdParty": {
-          "body": "連結 AniList、MyAnimeList、Bangumi、Annict、Shikimori、Simkl 或 Kitsu 時,請求會直接在你的裝置與該平台之間進行。我們不會代理或記錄這些請求。在「設定」中中斷連結即可停止所有同步。",
+          "body": "連結 AniList、MyAnimeList、Bangumi、Annict、Shikimori、Simkl 或 Kitsu 時,請求會直接在你的裝置與該平台之間進行。若你接受首次使用揭露並明確啟動場景辨識,所選圖片的縮小副本會直接傳送至 trace.moe。我們不會代理或記錄這些請求。在「設定」中中斷連結即可停止所有同步。",
           "title": "第三方平台"
         }
       },
       "subtitle": "你的資料會怎麼處理",
-      "updated": "最後更新:2026 年 5 月"
+      "updated": "最後更新:2026 年 7 月"
     },
     "syncHubScreen": {
       "backgroundSync": "背景同步",
@@ -1103,7 +1103,46 @@
       }
     },
     "image": {
+      "sourceLinkA11y": "圖片來源:{origin}。開啟投稿者連結。",
+      "sourceVia": "圖片來源:{origin}",
       "unavailable": "無法載入圖片"
+    },
+    "identify": {
+      "analyzing": "正在辨識場景…",
+      "animeLevel": "已辨識作品",
+      "chooseAnother": "選擇其他截圖",
+      "chooseScreenshot": "選擇截圖",
+      "confidence": "相似度 {percent}%",
+      "disclosureAllow": "繼續使用 trace.moe",
+      "disclosureBody": "你所選圖片的縮小副本會從本裝置直接傳送至 trace.moe 進行場景比對。Aniseekr 不會保存或代理這次上傳。",
+      "disclosureTitle": "傳送這張圖片進行辨識？",
+      "entry": "辨識動畫場景",
+      "entryA11y": "從截圖辨識動畫場景",
+      "episodeLabel": "第 {episode} 集",
+      "episodeLevel": "本集巡禮地點",
+      "errorBody": "辨識服務無法完成這次請求。",
+      "errorTitle": "無法辨識這個場景",
+      "identifiedLevel": "已找到作品",
+      "invalidImageBody": "請選擇清楚的動畫畫面後再試一次。",
+      "invalidImageTitle": "無法搜尋這張圖片",
+      "knownMetadata": "Anitabi 場景資料",
+      "noMatchBody": "沒有任何結果達到可信的相似度門檻。",
+      "noMatchTitle": "沒有可靠的結果",
+      "openAnime": "開啟動畫",
+      "openPilgrimage": "開啟巡禮地圖",
+      "openSpot": "開啟這個地點",
+      "photoDeniedBody": "請在系統設定中允許相簿權限，以選擇動畫截圖。",
+      "photoDeniedTitle": "需要相簿權限",
+      "poweredBy": "場景比對由 trace.moe 提供",
+      "rateLimitedBody": "共享服務目前請求過多，請在冷卻時間後重試。",
+      "rateLimitedTitle": "辨識服務冷卻中",
+      "scanSceneA11y": "找出這張截圖的動畫場景",
+      "sceneLevel": "時間相符的巡禮地點",
+      "serviceLimitedBody": "trace.moe 已達共享配額或併發限制，請稍後再試。",
+      "serviceLimitedTitle": "辨識服務暫時受限",
+      "timestampLabel": "本集 {time}",
+      "timestampMatch": "與辨識畫面相差 {seconds} 秒",
+      "title": "辨識場景"
     },
     "streetView": {
       "loading": "正在載入街景…",

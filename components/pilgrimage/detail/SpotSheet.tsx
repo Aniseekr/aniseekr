@@ -16,7 +16,7 @@ import BottomSheet, {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ON_DARK, ThemedText, readableTextOn } from '../../themed';
+import { ON_DARK, ThemedIconButton, ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import type { TranslationKey } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
@@ -78,6 +78,7 @@ export interface SpotSheetProps {
   onOpenMaps: (spot: AnitabiPoint) => void;
   onStartCamera: (spot: AnitabiPoint) => void;
   onFrameShot: (spot: AnitabiPoint) => void;
+  onIdentifyScene: (spot: AnitabiPoint) => void;
   onSelectScene: (spot: AnitabiPoint) => void;
 }
 
@@ -103,6 +104,7 @@ function SpotSheetImpl({
   onOpenMaps,
   onStartCamera,
   onFrameShot,
+  onIdentifyScene,
   onSelectScene,
 }: SpotSheetProps) {
   const t = useT();
@@ -181,6 +183,9 @@ function SpotSheetImpl({
   const handleFrameShot = useCallback(() => {
     if (spot) onFrameShot(spot);
   }, [onFrameShot, spot]);
+  const handleIdentifyScene = useCallback(() => {
+    if (spot) onIdentifyScene(spot);
+  }, [onIdentifyScene, spot]);
 
   // Build the Anitabi map URL for the spot. Prefer the parent-supplied
   // bangumiId (the anime detail), fall back to the spot's own series source
@@ -263,6 +268,14 @@ function SpotSheetImpl({
                   </ThemedText>
                 ) : null}
               </View>
+              <ThemedIconButton
+                icon={(color) => <Ionicons name="scan-outline" size={17} color={color} />}
+                accessibilityLabel={t('pilgrimage.identify.scanSceneA11y')}
+                onPress={handleIdentifyScene}
+                variant="solid"
+                accent={themeColor}
+                style={styles.identifyBtn}
+              />
               <Pressable onPress={handleClosePress} hitSlop={12} style={styles.closeBtn}>
                 <Ionicons name="close" size={18} color={ON_DARK} />
               </Pressable>
@@ -528,6 +541,7 @@ function areEqual(prev: SpotSheetProps, next: SpotSheetProps): boolean {
     prev.onOpenMaps === next.onOpenMaps &&
     prev.onStartCamera === next.onStartCamera &&
     prev.onFrameShot === next.onFrameShot &&
+    prev.onIdentifyScene === next.onIdentifyScene &&
     prev.onSelectScene === next.onSelectScene
   );
 }
@@ -579,6 +593,11 @@ function makeSheetStyles(theme: ThemePalette) {
       justifyContent: 'center',
       borderRadius: 16,
       backgroundColor: 'rgba(0,0,0,0.46)',
+    },
+    identifyBtn: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
     },
     sceneRail: {
       gap: 8,

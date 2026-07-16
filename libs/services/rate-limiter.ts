@@ -17,7 +17,8 @@ export type RateLimiterChannel =
   | 'kitsu'
   | 'shikimori'
   | 'simkl'
-  | 'anitabi';
+  | 'anitabi'
+  | 'traceMoe';
 
 export interface RateLimiterChannelConfig {
   minIntervalMs: number;
@@ -32,6 +33,7 @@ const DEFAULT_CHANNELS: Record<RateLimiterChannel, RateLimiterChannelConfig> = {
   shikimori: { minIntervalMs: 200 },
   simkl: { minIntervalMs: 500 },
   anitabi: { minIntervalMs: 200 },
+  traceMoe: { minIntervalMs: 1_000 },
 };
 
 interface ChannelState {
@@ -114,15 +116,15 @@ export class RateLimiter {
       channel,
       current.then(
         () => undefined,
-        () => undefined,
-      ),
+        () => undefined
+      )
     );
     return current;
   }
 
   private async takeSlot(
     channel: RateLimiterChannel,
-    config: RateLimiterChannelConfig,
+    config: RateLimiterChannelConfig
   ): Promise<number> {
     const startedAt = this.nowFn();
     const state = this.state.get(channel);

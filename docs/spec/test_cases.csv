@@ -171,6 +171,16 @@ PILG-025,Pilgrimage,deterministic,P0,Angle suffix scene cuts merge,Loose same-lo
 PILG-026,Pilgrimage,deterministic,P0,Warm street view peek is synchronous,peekStreetView returns cached verdicts from the sync mirror so warm opens never show a skeleton,timing,active
 PILG-027,Pilgrimage,deterministic,P0,Mapillary empty answers cached errors not,Successful empty Mapillary results are cached for the TTL while null errors are never cached,error-handling,active
 PILG-028,Pilgrimage,deterministic,P0,Scene unavailable corrects stale verdict,Look Around scene-unavailable overwrites the cached availability to false and the resolver re-resolves to Mapillary,fallback,active
+PILG-029,Pilgrimage,deterministic,P0,Trace result decoding,Valid trace results normalize episode and timestamp while similarity below 0.9 is rejected,mapping,active
+PILG-030,Pilgrimage,deterministic,P0,Trace rate limit boundaries,Trace requests serialize and HTTP 402 or 429 returns a limited state without automatic retry,timing,active
+PILG-031,Pilgrimage,deterministic,P0,Timestamp candidate matching,AniList maps to Bangumi and matching Anitabi points sort by timestamp delta,mapping,active
+PILG-032,Pilgrimage,deterministic,P0,Ambiguous episode fallback,Ambiguous or non-numeric trace episodes cannot produce episode or scene matches,fallback,active
+PILG-033,Pilgrimage,deterministic,P0,Identified anime without pilgrimage,A valid trace result stays actionable when Bangumi or Anitabi data is absent,nullability,active
+PILG-034,Pilgrimage,deterministic,P0,Known Anitabi identity guard,Complete point metadata bypasses trace and incomplete fallback rejects a different mapped anime,boundary,active
+PILG-035,Pilgrimage,deterministic,P0,Focused SpotSheet route,focusSpotId round-trips through the route and one-shot focus cannot reopen after close,boundary,active
+PILG-036,Pilgrimage,deterministic,P0,Scene upload image policy,Wide images resize to 640px without upscaling and temporary cleanup survives individual delete failures,boundary,active
+PILG-037,Pilgrimage,deterministic,P0,Versioned scene disclosure,Scene identification disclosure acknowledgement persists locally under a versioned key,boundary,active
+PILG-038,Pilgrimage,deterministic,P0,Episode candidate fallback,Same-episode points outside the 15-second timestamp window remain actionable episode candidates,fallback,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active
