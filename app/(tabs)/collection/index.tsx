@@ -35,6 +35,7 @@ import {
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { LocalDB } from '../../../libs/db';
 import { ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
+import { ErrorStateView } from '../../../components/common/ErrorStateView';
 import { useTheme } from '../../../context/ThemeContext';
 import {
   buildShareTemplate,
@@ -144,6 +145,8 @@ export default function CollectionScreen() {
   // mode on frame 1 instead of flashing through `newest` first.
   const [sortMode, setSortMode] = useState<SortMode>(loadCollectionSortModeSync);
   const [collections, setCollections] = useState<CollectionFolder[]>([]);
+  const [foldersError, setFoldersError] = useState(false);
+  const [cardsError, setCardsError] = useState(false);
   const [recents, setRecents] = useState<RecentRailItem[]>([]);
   const [animeCards, setAnimeCards] = useState<CollectionAnimeCardItem[]>([]);
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
@@ -175,8 +178,10 @@ export default function CollectionScreen() {
         setCollections((prev) =>
           sameCollections(prev, foldersResult.value) ? prev : foldersResult.value
         );
+        setFoldersError(false);
       } else {
         console.error('Failed to load collection:', foldersResult.reason);
+        setFoldersError(true);
       }
 
       if (recentsResult.status === 'fulfilled') {
@@ -192,9 +197,11 @@ export default function CollectionScreen() {
         setAnimeCards((prev) =>
           sameAnimeCards(prev, cardsResult.value) ? prev : cardsResult.value
         );
+        setCardsError(false);
       } else {
         console.error('Failed to load anime cards:', cardsResult.reason);
         setAnimeCards((prev) => (prev.length === 0 ? prev : []));
+        setCardsError(true);
       }
     }
   }, []);
@@ -549,6 +556,9 @@ export default function CollectionScreen() {
                   if (!folder.isSystemFolder) handleEditFolder(folder);
                 }}
               />
+            ) : foldersError ? (
+              // Rule 8: a failed folder load must not masquerade as "no folders yet".
+              <ErrorStateView onRetry={loadCollectionData} style={styles.emptyState} />
             ) : (
               <View style={styles.emptyState}>
                 <ThemedText variant="titleMedium" weight="700" align="center">
@@ -644,6 +654,9 @@ export default function CollectionScreen() {
                   })
                 }
               />
+            ) : cardsError ? (
+              // Rule 8: a failed load must not masquerade as "no anime yet".
+              <ErrorStateView onRetry={loadCollectionData} style={styles.emptyAnimeState} />
             ) : (
               <View style={styles.emptyAnimeState}>
                 <ThemedText variant="titleMedium" weight="700" align="center">
@@ -802,13 +815,15 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 40,
+    // Compact: empty sections state a fact and offer the next action — they
+    // shouldn't dominate the scroll (were paddingVertical 40/32).
+    paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
     gap: Spacing.xs,
   },
   emptyAnimeState: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: Spacing.md,
     gap: Spacing.xs,
   },
   emptyAction: {

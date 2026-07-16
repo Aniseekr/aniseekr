@@ -26,9 +26,10 @@ import {
   type AnimeProgress,
 } from '../../../components/collection/AnimeProgressView';
 import { FolderSwipeDeck } from '../../../components/collection/FolderSwipeDeck';
+import { ErrorStateView } from '../../../components/common/ErrorStateView';
 import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
-import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
+import { IconSize, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useT } from '../../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../../libs/i18n/use-display-title';
@@ -114,6 +115,7 @@ export default function FolderDetailScreen() {
   const initialItems = id ? (folderSnapshotCache.get(id) ?? []) : [];
   const [items, setItems] = useState<FolderItem[]>(initialItems);
   const [loading, setLoading] = useState(initialItems.length === 0);
+  const [loadError, setLoadError] = useState(false);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
   const [sortMode, setSortMode] = useState<FolderSortMode>(loadFolderSortModeSync);
@@ -123,6 +125,7 @@ export default function FolderDetailScreen() {
     // Only flip the blocking skeleton when we have nothing to render. Warm
     // re-entries revalidate silently.
     if (!folderSnapshotCache.has(id ?? '')) setLoading(true);
+    setLoadError(false);
     try {
       if (!id) return;
       const db = await LocalDB.getDatabase();
@@ -239,6 +242,7 @@ export default function FolderDetailScreen() {
       setItems(loadedItems);
     } catch (error) {
       console.error('Failed to load folder items:', error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -644,27 +648,32 @@ export default function FolderDetailScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <MaterialIcons
-                name={searching ? 'search-off' : 'folder-open'}
-                size={48}
-                color={theme.text.tertiary}
-              />
-              <ThemedText
-                variant="titleMedium"
-                weight="700"
-                align="center"
-                style={{ marginTop: 12 }}>
-                {searching
-                  ? t('collectionUi.noMatches')
-                  : t('tabs.collectionFolderScreen.emptyTitle')}
-              </ThemedText>
-              <ThemedText variant="bodySmall" tone="secondary" align="center">
-                {searching
-                  ? t('collectionUi.noMatchingAnimeInYour')
-                  : t('tabs.collectionFolderScreen.emptyBody')}
-              </ThemedText>
-            </View>
+            loadError && !searching ? (
+              // Rule 8: a failed load must not masquerade as an empty folder.
+              <ErrorStateView onRetry={loadItems} style={styles.emptyState} />
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialIcons
+                  name={searching ? 'search-off' : 'folder-open'}
+                  size={IconSize.lg}
+                  color={theme.text.tertiary}
+                />
+                <ThemedText
+                  variant="titleMedium"
+                  weight="700"
+                  align="center"
+                  style={{ marginTop: Spacing.xs }}>
+                  {searching
+                    ? t('collectionUi.noMatches')
+                    : t('tabs.collectionFolderScreen.emptyTitle')}
+                </ThemedText>
+                <ThemedText variant="bodySmall" tone="secondary" align="center">
+                  {searching
+                    ? t('collectionUi.noMatchingAnimeInYour')
+                    : t('tabs.collectionFolderScreen.emptyBody')}
+                </ThemedText>
+              </View>
+            )
           }
         />
       )}
@@ -838,7 +847,10 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 80,
-    gap: 4,
+    // Compact: an empty folder is a fact, not a hero moment — don't let it
+    // push the whole screen down (was paddingTop: 80 + a 48px icon).
+    paddingTop: Spacing.xxl,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.xxs,
   },
 });
