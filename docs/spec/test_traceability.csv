@@ -51,6 +51,9 @@ REPO-023,__tests__/unit/repositories/anime-repository.test.ts,no double fetch fo
 REPO-030,__tests__/unit/repositories/anime-repository.test.ts,cancellation on browse switch,covered
 REPO-031,__tests__/unit/repositories/anime-repository.test.ts,translateID same platform passthrough,covered
 REPO-032,__tests__/unit/repositories/anime-repository.test.ts,translateID unknown returns original,covered
+REPO-060,__tests__/unit/repositories/anime-repository.test.ts,CJK search prepends Bangumi-mapped anime missing from AniList results,covered
+REPO-061,__tests__/unit/repositories/anime-repository.test.ts,Bangumi recall seeds name_cn without duplicating present results,covered
+REPO-062,__tests__/unit/repositories/anime-repository.test.ts,Bangumi recall failure returns AniList results unchanged,covered
 DSCFG-001,__tests__/unit/data-source-config.test.ts,default browse source is anilist,covered
 DSCFG-002,__tests__/unit/data-source-config.test.ts,setBrowseSource persists,covered
 DSCFG-003,__tests__/unit/data-source-config.test.ts,init restores from storage,covered
@@ -93,6 +96,7 @@ ANIL-007,__tests__/unit/providers/anilist-data-source.test.ts,genres list with s
 ANIL-008,__tests__/unit/providers/anilist-data-source.test.ts,filters spoiler tags,covered
 ANIL-009,__tests__/integration/anilist-live.test.ts,live search returns results,covered
 ANIL-010,__tests__/integration/anilist-live.test.ts,live detail Cowboy Bebop id 1,covered
+ANIL-011,__tests__/unit/providers/anilist-data-source.test.ts,search query sorts by SEARCH_MATCH so exact matches rank first,covered
 MAL-001,__tests__/unit/providers/jikan-data-source.test.ts,detail by mal id path,covered
 MAL-002,__tests__/unit/providers/jikan-data-source.test.ts,search uses q param,covered
 MAL-003,__tests__/unit/providers/jikan-data-source.test.ts,sfw param appended,covered
@@ -157,6 +161,7 @@ PILG-015,__tests__/unit/pilgrimage/anitabi-runtime-coverage.test.ts,rejects degr
 PILG-016,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,matches localized and official English titles,covered
 PILG-017,__tests__/unit/pilgrimage/anitabi-image.test.ts,keeps CDN URLs and heals invalid website image URLs,covered
 PILG-018,__tests__/unit/pilgrimage/anitabi-client.test.ts,uses website static JSON only after API HTTP 403,covered
+PILG-019,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,unions Bangumi fallback with weak local hits instead of suppressing it,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending
