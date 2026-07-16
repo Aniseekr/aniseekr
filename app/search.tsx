@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +44,7 @@ import { sameArrayBy } from '../libs/utils/state-array';
 
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
 import { SEARCH_RECENT_KEY } from '../libs/services/storage/keys';
+import { readableTextOn } from '../components/themed';
 import { useT } from '../libs/i18n';
 import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
 
@@ -132,8 +135,25 @@ export default function SearchScreen() {
   const [trackedIds, setTrackedIds] = useState<Set<string>>(() => new Set());
   const [bookmarkPendingId, setBookmarkPendingId] = useState<string | null>(null);
   const [bookmarkToast, setBookmarkToast] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const routeQueryRef = useRef(initialQuery);
+
+  // Track the keyboard so the bookmark toast rides above it instead of being
+  // covered (this screen intentionally has no KeyboardAvoidingView — the
+  // full-height list doesn't need one, only the floating toast does).
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) =>
+      setKeyboardHeight(e.endCoordinates.height)
+    );
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRequestRef = useRef(0);
   const resolveRequestRef = useRef(0);
@@ -455,6 +475,12 @@ export default function SearchScreen() {
               autoCorrect={false}
               autoCapitalize="none"
             />
+            {loading && results.length > 0 ? (
+              // Old results stay visible while a new query runs — without this
+              // spinner the screen reads as stale/stuck (the skeleton only
+              // covers the zero-results case).
+              <ActivityIndicator size="small" color={Colors.text.secondary} />
+            ) : null}
             {query.length > 0 ? (
               <Pressable
                 onPress={() => setQuery('')}
@@ -485,44 +511,63 @@ export default function SearchScreen() {
           </View>
         ) : null}
 
-        {query.length > 0 ? (
-          <View style={styles.filterChipsWrap}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterChipsRow}>
-              {FILTER_KEYS.map((f) => {
-                const active = filter === f.key;
-                return (
-                  <Pressable
-                    key={f.key}
-                    onPress={() => handleFilterTap(f.key)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      active ? styles.filterChipActive : styles.filterChipInactive,
-                      pressed && { opacity: 0.85 },
-                    ]}>
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        { color: active ? '#000' : Colors.text.primary },
+        {/* Fixed-height slot: the chip row fades in/out inside it so typing
+            the first character doesn't shove the whole list down (and
+            clearing doesn't shove it back up). */}
+        <View style={styles.filterChipsWrap}>
+          {query.length > 0 ? (
+            <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterChipsRow}>
+                {FILTER_KEYS.map((f) => {
+                  const active = filter === f.key;
+                  return (
+                    <Pressable
+                      key={f.key}
+                      onPress={() => handleFilterTap(f.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        active ? styles.filterChipActive : styles.filterChipInactive,
+                        pressed && { opacity: 0.85 },
                       ]}>
-                      {t(f.labelKey)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        ) : null}
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          {
+                            color: active
+                              ? readableTextOn(Colors.text.primary)
+                              : Colors.text.primary,
+                          },
+                        ]}>
+                        {t(f.labelKey)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Animated.View>
+          ) : null}
+        </View>
 
         {error ? (
-          <ErrorStateView title={t('search.errorTitle')} message={error} onRetry={() => runSearch(query)} />
+          <ErrorStateView
+            title={t('search.errorTitle')}
+            message={error}
+            onRetry={() => runSearch(query)}
+            variant="fullscreen"
+          />
         ) : query.length === 0 ? (
           <ScrollView
-            contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+            contentContainerStyle={[
+              { paddingBottom: insets.bottom + 100 },
+              // The discover prompt centers in the viewport; the recents list
+              // keeps normal top-aligned flow.
+              recent.length === 0 && styles.centerGrow,
+            ]}
             keyboardShouldPersistTaps="handled">
             {recent.length > 0 ? (
               <View style={styles.recentSection}>
@@ -579,11 +624,13 @@ export default function SearchScreen() {
             ))}
           </ScrollView>
         ) : filteredResults.length === 0 ? (
-          <EmptyStateView
-            icon="search-off"
-            title={t('search.noMatchesTitle')}
-            description={t('search.noMatchesDescription', { query })}
-          />
+          <View style={styles.centerFill}>
+            <EmptyStateView
+              icon="search-off"
+              title={t('search.noMatchesTitle')}
+              description={t('search.noMatchesDescription', { query })}
+            />
+          </View>
         ) : (
           <FlatList
             data={filteredResults}
@@ -598,7 +645,9 @@ export default function SearchScreen() {
             ListHeaderComponent={
               <View style={styles.sortRow}>
                 <Text style={styles.resultCount}>
-                  {t('search.resultCount', { count: filteredResults.length })}
+                  {loading
+                    ? t('search.searching')
+                    : t('search.resultCount', { count: filteredResults.length })}
                 </Text>
                 <Pressable
                   onPress={handleSortTap}
@@ -665,7 +714,14 @@ export default function SearchScreen() {
         )}
       </SafeAreaView>
       {bookmarkToast ? (
-        <View style={[styles.toast, { bottom: insets.bottom + Spacing.lg }]}>
+        <View
+          style={[
+            styles.toast,
+            {
+              bottom:
+                keyboardHeight > 0 ? keyboardHeight + Spacing.sm : insets.bottom + Spacing.lg,
+            },
+          ]}>
           <Ionicons name="bookmark" size={16} color={Colors.primary} />
           <Text style={styles.toastText} numberOfLines={2}>
             {bookmarkToast}
@@ -908,7 +964,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterChipsWrap: {
+    // Fixed height so mounting/unmounting the chips never reflows the list
+    // below (34px chip + 12px bottom padding).
+    height: 46,
     paddingBottom: Spacing.sm,
+    justifyContent: 'center',
   },
   filterChipsRow: {
     paddingHorizontal: Spacing.md,
@@ -941,6 +1001,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.sm,
     position: 'relative',
+  },
+  centerFill: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  centerGrow: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   resultCount: {
     color: Colors.text.secondary,
