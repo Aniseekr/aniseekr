@@ -231,6 +231,16 @@ Resolver behavior:
 - When no provider has data, or Mapillary is disabled by a missing token, the
   resolver returns `null` so UI can omit the whole section instead of rendering
   fake content.
+- A synchronous peek (`peekStreetView`) reads the in-memory cache mirror and
+  returns a definite verdict only when the cached entries fully determine the
+  async chain; warm opens therefore paint on the first frame without a
+  skeleton.
+- Successful-but-empty Mapillary answers are cached like hits (`[]`, 24h) so
+  no-coverage spots don't refire radius+bbox on every open; error answers
+  (`null`) are never cached.
+- When the native Look Around preview reports its scene unavailable despite a
+  cached positive verdict, the verdict is overwritten to `false` and the
+  resolver re-runs, falling through to Mapillary.
 
 Mapillary behavior:
 
@@ -284,12 +294,16 @@ The 60m threshold and folder-first representative ordering are unchanged.
 - PILG-016: Search folds Traditional/Simplified Chinese and reads official English titles
 - PILG-017: Image URLs stay on the image CDN and invalid website-image cache values self-heal
 - PILG-018: JSON uses the API first and requests official website data only after HTTP 403
+- PILG-019: Bangumi fallback always unions with local index hits instead of being suppressed
 - PILG-020: Street view resolver uses iOS Look Around first and Mapillary fallback
 - PILG-021: Mapillary token missing silently disables street view metadata
 - PILG-022: Street view resolver caches Look Around availability by coordinate
 - PILG-023: Mapillary client falls back from 50m radius to bbox and orders parsed images
 - PILG-024: Mapillary HTTP/rate-limit/network/decoding failures return `null`
 - PILG-025: Loose Anitabi scene cuts with angle suffixes merge when within 60m
+- PILG-026: Warm street view cache resolves synchronously so warm opens skip the skeleton
+- PILG-027: Successful empty Mapillary answers are cached; errors are not
+- PILG-028: Look Around scene-unavailable corrects the cached verdict and re-resolves to Mapillary
 
 ## 13. Future Extensions (out of MVP scope)
 

@@ -59,4 +59,58 @@ describe('useStreetView state machine', () => {
     expect(state).toEqual({ status: 'ready', result: null, targetKey: spotB });
     expect(shouldStartStreetViewResolve(true, spotB, state)).toBe(false);
   });
+
+  it('PILG-026 seeds ready state from a warm peek without a resolving phase', () => {
+    const targetKey = 'spot-a:35.658000:139.701000';
+
+    const seededHit = reduceStreetViewState(initialStreetViewState, {
+      type: 'spotChanged',
+      targetKey,
+      seeded: LOOK_AROUND_RESULT,
+    });
+    expect(seededHit).toEqual({ status: 'ready', result: LOOK_AROUND_RESULT, targetKey });
+    expect(shouldStartStreetViewResolve(true, targetKey, seededHit)).toBe(false);
+
+    const seededMiss = reduceStreetViewState(initialStreetViewState, {
+      type: 'spotChanged',
+      targetKey,
+      seeded: null,
+    });
+    expect(seededMiss).toEqual({ status: 'ready', result: null, targetKey });
+    expect(shouldStartStreetViewResolve(true, targetKey, seededMiss)).toBe(false);
+
+    const unknown = reduceStreetViewState(initialStreetViewState, {
+      type: 'spotChanged',
+      targetKey,
+      seeded: undefined,
+    });
+    expect(unknown).toEqual({ status: 'idle', result: null, targetKey });
+    expect(shouldStartStreetViewResolve(true, targetKey, unknown)).toBe(true);
+  });
+
+  it('PILG-028 scene unavailable resets a lookaround result so the resolve refires', () => {
+    const targetKey = 'spot-a:35.658000:139.701000';
+    const ready = reduceStreetViewState(initialStreetViewState, {
+      type: 'spotChanged',
+      targetKey,
+      seeded: LOOK_AROUND_RESULT,
+    });
+
+    const reset = reduceStreetViewState(ready, { type: 'lookAroundUnavailable', targetKey });
+    expect(reset).toEqual({ status: 'idle', result: null, targetKey });
+    expect(shouldStartStreetViewResolve(true, targetKey, reset)).toBe(true);
+
+    // Stale key or non-lookaround results are ignored.
+    expect(
+      reduceStreetViewState(ready, { type: 'lookAroundUnavailable', targetKey: 'other' })
+    ).toBe(ready);
+    const mapillaryReady = reduceStreetViewState(initialStreetViewState, {
+      type: 'spotChanged',
+      targetKey,
+      seeded: null,
+    });
+    expect(
+      reduceStreetViewState(mapillaryReady, { type: 'lookAroundUnavailable', targetKey })
+    ).toBe(mapillaryReady);
+  });
 });

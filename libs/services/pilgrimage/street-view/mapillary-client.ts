@@ -1,3 +1,5 @@
+import { formatCoordinate, isFiniteCoordinate } from './coords';
+
 const MAPILLARY_BASE_URL = 'https://graph.mapillary.com/images';
 const SEARCH_RADIUS_M = 50;
 const BBOX_DELTA_DEGREES = 0.0025;
@@ -67,7 +69,9 @@ export class MapillaryClient {
       fetchImpl,
       opts.timeoutMs
     );
-    if (!bbox || bbox.images.length === 0) return null;
+    if (!bbox) return null;
+    // Empty array = both queries answered and there is genuinely no imagery
+    // here — callers cache that miss, unlike null (error / no token).
     return sortImages(bbox.images);
   }
 }
@@ -215,21 +219,6 @@ function finiteNumberOrNull(value: unknown): number | null {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
-}
-
-function isFiniteCoordinate(latitude: number, longitude: number): boolean {
-  return (
-    Number.isFinite(latitude) &&
-    Number.isFinite(longitude) &&
-    latitude >= -90 &&
-    latitude <= 90 &&
-    longitude >= -180 &&
-    longitude <= 180
-  );
-}
-
-function formatCoordinate(value: number): string {
-  return Number(value.toFixed(6)).toString();
 }
 
 function distanceMeters(a: [number, number], b: [number, number]): number {

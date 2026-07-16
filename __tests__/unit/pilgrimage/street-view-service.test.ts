@@ -2,10 +2,14 @@ import { describe, expect, it } from 'bun:test';
 import type { MapillaryImage } from '../../../libs/services/pilgrimage/street-view/mapillary-client';
 import {
   LOOK_AROUND_CACHE_TTL_MS,
+  MAPILLARY_CACHE_TTL_MS,
+  markLookAroundUnavailable,
+  peekStreetView,
   resolveStreetView,
   type LookAroundProvider,
   type StreetViewCache,
   type StreetViewMapillaryClient,
+  type StreetViewSyncCache,
 } from '../../../libs/services/pilgrimage/street-view/street-view-service';
 
 const SAMPLE_IMAGE: MapillaryImage = {
@@ -20,11 +24,15 @@ const SAMPLE_IMAGE: MapillaryImage = {
   distanceMeters: 7,
 };
 
-class MemoryStreetViewCache implements StreetViewCache {
+class MemoryStreetViewCache implements StreetViewCache, StreetViewSyncCache {
   readonly values = new Map<string, unknown>();
   readonly sets: { key: string; value: unknown; ttlMs: number }[] = [];
 
   async get<T>(key: string): Promise<T | null> {
+    return this.getSync<T>(key);
+  }
+
+  getSync<T>(key: string): T | null {
     return this.values.has(key) ? (this.values.get(key) as T) : null;
   }
 
@@ -129,5 +137,127 @@ describe('resolveStreetView', () => {
       value: true,
       ttlMs: LOOK_AROUND_CACHE_TTL_MS,
     });
+  });
+
+  it('PILG-027 caches successful empty Mapillary answers but never errors', async () => {
+    const cache = new MemoryStreetViewCache();
+    const emptyMapillary = mapillaryClient([]);
+
+    const first = await resolveStreetView(35.658, 139.701, {
+      platform: 'android',
+      mapillaryClient: emptyMapillary,
+      cache,
+    });
+    const second = await resolveStreetView(35.658, 139.701, {
+      platform: 'android',
+      mapillaryClient: emptyMapillary,
+      cache,
+    });
+
+    expect(first).toBeNull();
+    expect(second).toBeNull();
+    expect(emptyMapillary.calls).toBe(1);
+    expect(cache.sets[0]).toMatchObject({ value: [], ttlMs: MAPILLARY_CACHE_TTL_MS });
+
+    const errorCache = new MemoryStreetViewCache();
+    const failingMapillary = mapillaryClient(null);
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'android',
+      mapillaryClient: failingMapillary,
+      cache: errorCache,
+    });
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'android',
+      mapillaryClient: failingMapillary,
+      cache: errorCache,
+    });
+
+    expect(errorCache.sets).toHaveLength(0);
+    expect(failingMapillary.calls).toBe(2);
+  });
+});
+
+describe('peekStreetView', () => {
+  it('PILG-026 peeks cached verdicts synchronously for warm opens', async () => {
+    const cache = new MemoryStreetViewCache();
+
+    // Nothing cached: unknown — caller keeps its loading path.
+    expect(peekStreetView(35.658, 139.701, { platform: 'ios', cacheSync: cache })).toBeUndefined();
+    expect(
+      peekStreetView(35.658, 139.701, { platform: 'android', cacheSync: cache })
+    ).toBeUndefined();
+
+    // Warm the caches through the async resolver, then peek.
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'ios',
+      lookAroundProvider: lookAroundProvider(true),
+      mapillaryClient: mapillaryClient([SAMPLE_IMAGE]),
+      cache,
+    });
+    expect(peekStreetView(35.658, 139.701, { platform: 'ios', cacheSync: cache })).toEqual({
+      kind: 'lookaround',
+      latitude: 35.658,
+      longitude: 139.701,
+    });
+
+    const androidCache = new MemoryStreetViewCache();
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'android',
+      mapillaryClient: mapillaryClient([SAMPLE_IMAGE]),
+      cache: androidCache,
+    });
+    const peeked = peekStreetView(35.658, 139.701, {
+      platform: 'android',
+      cacheSync: androidCache,
+    });
+    expect(peeked?.kind).toBe('mapillary');
+
+    // Cached "known none" (lookaround false + empty mapillary) peeks as null.
+    const missCache = new MemoryStreetViewCache();
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'ios',
+      lookAroundProvider: lookAroundProvider(false),
+      mapillaryClient: mapillaryClient([]),
+      cache: missCache,
+    });
+    expect(peekStreetView(35.658, 139.701, { platform: 'ios', cacheSync: missCache })).toBeNull();
+
+    // Cached mapillary alone must not pre-empt an unknown Look Around verdict.
+    const partialCache = new MemoryStreetViewCache();
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'android',
+      mapillaryClient: mapillaryClient([SAMPLE_IMAGE]),
+      cache: partialCache,
+    });
+    expect(
+      peekStreetView(35.658, 139.701, { platform: 'ios', cacheSync: partialCache })
+    ).toBeUndefined();
+  });
+});
+
+describe('markLookAroundUnavailable', () => {
+  it('PILG-028 overwrites the cached verdict so the next resolve falls back', async () => {
+    const cache = new MemoryStreetViewCache();
+    const lookAround = lookAroundProvider(true);
+    const mapillary = mapillaryClient([SAMPLE_IMAGE]);
+
+    await resolveStreetView(35.658, 139.701, {
+      platform: 'ios',
+      lookAroundProvider: lookAround,
+      mapillaryClient: mapillary,
+      cache,
+    });
+    await markLookAroundUnavailable(35.658, 139.701, cache);
+
+    const after = await resolveStreetView(35.658, 139.701, {
+      platform: 'ios',
+      lookAroundProvider: lookAround,
+      mapillaryClient: mapillary,
+      cache,
+    });
+
+    expect(after?.kind).toBe('mapillary');
+    expect(lookAround.calls).toBe(1);
+    expect(cache.sets.at(-1)?.key.startsWith('street-view:mapillary:')).toBe(true);
   });
 });

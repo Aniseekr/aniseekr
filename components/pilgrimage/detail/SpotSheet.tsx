@@ -350,7 +350,11 @@ function SpotSheetImpl({
               ) : null}
             </View>
 
-            <StreetViewCard status={streetView.status} result={streetView.result} />
+            <StreetViewCard
+              status={streetView.status}
+              result={streetView.result}
+              onLookAroundUnavailable={streetView.reportLookAroundUnavailable}
+            />
 
             <AnitabiOriginCredit
               source={spot}

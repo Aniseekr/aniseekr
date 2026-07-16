@@ -14,10 +14,21 @@ import { MapillaryKenBurnsCard } from './MapillaryKenBurnsCard';
 export interface StreetViewCardProps {
   status: 'idle' | 'resolving' | 'ready';
   result: StreetViewResult | null;
+  /**
+   * Invoked when the Look Around preview can't actually load its scene
+   * (stale cached availability). The owner corrects the cache and re-resolves
+   * to Mapillary; without a handler the section just collapses.
+   */
+  onLookAroundUnavailable?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
-function StreetViewCardComponent({ status, result, style }: StreetViewCardProps) {
+function StreetViewCardComponent({
+  status,
+  result,
+  onLookAroundUnavailable,
+  style,
+}: StreetViewCardProps) {
   const { theme } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(), []);
@@ -85,7 +96,7 @@ function StreetViewCardComponent({ status, result, style }: StreetViewCardProps)
           <LookAroundPreviewView
             latitude={result.latitude}
             longitude={result.longitude}
-            onSceneUnavailable={collapse}
+            onSceneUnavailable={onLookAroundUnavailable ?? collapse}
             style={styles.lookAroundPreview}
           />
           <View

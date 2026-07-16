@@ -168,6 +168,9 @@ PILG-022,Pilgrimage,deterministic,P0,Look Around availability cache hit,Resolver
 PILG-023,Pilgrimage,deterministic,P0,Mapillary radius then bbox parsing,Mapillary client tries 50m radius then bbox fallback and orders parsed images by distance quality and panorama preference,mapping,active
 PILG-024,Pilgrimage,deterministic,P0,Mapillary errors are null,HTTP 429 network failures and malformed Mapillary payloads return null,error-handling,active
 PILG-025,Pilgrimage,deterministic,P0,Angle suffix scene cuts merge,Loose same-location Anitabi cuts with angle suffixes merge into one spot inside 60m,mapping,active
+PILG-026,Pilgrimage,deterministic,P0,Warm street view peek is synchronous,peekStreetView returns cached verdicts from the sync mirror so warm opens never show a skeleton,timing,active
+PILG-027,Pilgrimage,deterministic,P0,Mapillary empty answers cached errors not,Successful empty Mapillary results are cached for the TTL while null errors are never cached,error-handling,active
+PILG-028,Pilgrimage,deterministic,P0,Scene unavailable corrects stale verdict,Look Around scene-unavailable overwrites the cached availability to false and the resolver re-resolves to Mapillary,fallback,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active

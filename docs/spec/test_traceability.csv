@@ -168,6 +168,9 @@ PILG-022,__tests__/unit/pilgrimage/street-view-service.test.ts,reuses cached Loo
 PILG-023,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,falls back from radius to bbox and sorts parsed images,covered
 PILG-024,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,returns null for rate limit network and malformed payloads,covered
 PILG-025,__tests__/unit/pilgrimage/anitabi-points.test.ts,merges same shrine cuts with angle suffixes inside 60m,covered
+PILG-026,__tests__/unit/pilgrimage/street-view-service.test.ts,peeks cached verdicts synchronously for warm opens,covered
+PILG-027,__tests__/unit/pilgrimage/street-view-service.test.ts,caches successful empty Mapillary answers but never errors,covered
+PILG-028,__tests__/unit/pilgrimage/use-street-view.test.ts,scene unavailable corrects the verdict and re-resolves,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending
