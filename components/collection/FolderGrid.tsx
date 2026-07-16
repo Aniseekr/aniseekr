@@ -8,7 +8,7 @@ import { Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../themed';
+import { ThemedIconButton, ThemedText, readableTextOn } from '../themed';
 import type { CollectionFolder } from '../../types';
 
 interface FolderGridProps {
@@ -17,6 +17,7 @@ interface FolderGridProps {
   covers?: { [folderId: string]: string | undefined };
   onPressFolder?: (folder: CollectionFolder) => void;
   onLongPressFolder?: (folder: CollectionFolder) => void;
+  onManageFolder?: (folder: CollectionFolder) => void;
 }
 
 interface FolderCardProps {
@@ -24,87 +25,98 @@ interface FolderCardProps {
   cover?: string;
   onPress?: () => void;
   onLongPress?: () => void;
+  onManage?: () => void;
 }
 
-function FolderCard({ folder, cover, onPress, onLongPress }: FolderCardProps) {
+function FolderCard({ folder, cover, onPress, onLongPress, onManage }: FolderCardProps) {
   const { theme } = useTheme();
   const t = useT();
 
   return (
-    <Pressable
-      onPress={() => {
-        hapticsBridge.tap();
-        onPress?.();
-      }}
-      onLongPress={
-        onLongPress
-          ? () => {
-              hapticsBridge.longPress();
-              onLongPress();
-            }
-          : undefined
-      }
-      delayLongPress={350}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
-        {
-          backgroundColor: theme.background.secondary,
-          borderColor: theme.glassBorder,
-          opacity: pressed ? 0.88 : 1,
-        },
+        { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
       ]}>
-      <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]}>
-        {cover ? (
-          <Image source={{ uri: cover }} style={styles.coverImage} contentFit="cover" />
-        ) : (
+      <Pressable
+        onPress={() => {
+          hapticsBridge.tap();
+          onPress?.();
+        }}
+        onLongPress={
+          onLongPress
+            ? () => {
+                hapticsBridge.longPress();
+                onLongPress();
+              }
+            : undefined
+        }
+        delayLongPress={350}
+        style={({ pressed }) => [styles.cardContent, { opacity: pressed ? 0.88 : 1 }]}>
+        <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]}>
+          {cover ? (
+            <Image source={{ uri: cover }} style={styles.coverImage} contentFit="cover" />
+          ) : (
+            <LinearGradient
+              colors={[`${theme.accent}33`, 'transparent']}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           <LinearGradient
-            colors={[`${theme.accent}33`, 'transparent']}
-            style={StyleSheet.absoluteFill}
+            colors={['transparent', 'rgba(0,0,0,0.45)']}
+            style={styles.coverGradient}
+            pointerEvents="none"
           />
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.45)']}
-          style={styles.coverGradient}
-          pointerEvents="none"
-        />
-        <View
-          style={[
-            styles.iconChip,
-            { backgroundColor: `${theme.background.primary}CC` },
-          ]}>
-          <Ionicons
-            name={(folder.icon || 'folder') as keyof typeof Ionicons.glyphMap}
-            size={14}
-            color={theme.text.primary}
-          />
-        </View>
-      </View>
-      <View style={styles.body}>
-        <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
-          {folder.name}
-        </ThemedText>
-        <View style={styles.metaRow}>
-          <ThemedText variant="captionSmall" tone="secondary">
-            {folder.animeCount === 1
-              ? t('collectionUi.folderItemCount.one', { count: String(folder.animeCount) })
-              : t('collectionUi.folderItemCount.other', { count: String(folder.animeCount) })}
-          </ThemedText>
-          <View style={styles.metaIcons}>
-            {folder.isR18 ? (
-              <View style={[styles.r18Pill, { backgroundColor: theme.accent }]}>
-                <ThemedText
-                  variant="captionSmall"
-                  weight="700"
-                  style={{ color: readableTextOn(theme.accent) }}>
-                  18+
-                </ThemedText>
-              </View>
-            ) : null}
-            <MaterialIcons name="chevron-right" size={14} color={theme.text.tertiary} />
+          <View
+            style={[
+              styles.iconChip,
+              { backgroundColor: `${theme.background.primary}CC` },
+            ]}>
+            <Ionicons
+              name={(folder.icon || 'folder') as keyof typeof Ionicons.glyphMap}
+              size={14}
+              color={theme.text.primary}
+            />
           </View>
         </View>
-      </View>
-    </Pressable>
+        <View style={styles.body}>
+          <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
+            {folder.name}
+          </ThemedText>
+          <View style={styles.metaRow}>
+            <ThemedText variant="captionSmall" tone="secondary">
+              {folder.animeCount === 1
+                ? t('collectionUi.folderItemCount.one', { count: String(folder.animeCount) })
+                : t('collectionUi.folderItemCount.other', { count: String(folder.animeCount) })}
+            </ThemedText>
+            <View style={styles.metaIcons}>
+              {folder.isR18 ? (
+                <View style={[styles.r18Pill, { backgroundColor: theme.accent }]}>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="700"
+                    style={{ color: readableTextOn(theme.accent) }}>
+                    18+
+                  </ThemedText>
+                </View>
+              ) : null}
+              <MaterialIcons name="chevron-right" size={14} color={theme.text.tertiary} />
+            </View>
+          </View>
+        </View>
+      </Pressable>
+      {onManage ? (
+        <ThemedIconButton
+          icon={(color) => <Ionicons name="ellipsis-horizontal" size={18} color={color} />}
+          accessibilityLabel={t('collectionUi.manageFolder')}
+          onPress={onManage}
+          size={44}
+          variant="glass"
+          haptic="selection"
+          style={styles.manageButton}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -113,6 +125,7 @@ function FolderGridComponent({
   covers,
   onPressFolder,
   onLongPressFolder,
+  onManageFolder,
 }: FolderGridProps) {
   const rows: CollectionFolder[][] = [];
   for (let i = 0; i < folders.length; i += 2) {
@@ -131,6 +144,11 @@ function FolderGridComponent({
                 onPress={() => onPressFolder?.(folder)}
                 onLongPress={
                   onLongPressFolder ? () => onLongPressFolder(folder) : undefined
+                }
+                onManage={
+                  !folder.isSystemFolder && onManageFolder
+                    ? () => onManageFolder(folder)
+                    : undefined
                 }
               />
             </View>
@@ -157,6 +175,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  cardContent: {
+    flex: 1,
   },
   cover: {
     height: 92,
@@ -204,6 +225,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+  },
+  manageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
   },
 });
 

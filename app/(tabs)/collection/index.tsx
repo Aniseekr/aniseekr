@@ -1,4 +1,4 @@
-import { View, ScrollView, RefreshControl, Pressable, Share, StyleSheet } from 'react-native';
+import { Alert, View, ScrollView, RefreshControl, Pressable, Share, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,10 @@ import { CollectionFolder } from '../../../types';
 import { collectionService } from '../../../libs/services/collection/collection-service';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { CreateFolderModal } from '../../../components/collection/CreateFolderModal';
+import {
+  QuickActionSheet,
+  type QuickAction,
+} from '../../../components/settings/QuickActionSheet';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
   loadCollectionSortModeSync,
@@ -152,6 +156,7 @@ export default function CollectionScreen() {
   );
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [editingFolder, setEditingFolder] = useState<CollectionFolder | null>(null);
+  const [managedFolder, setManagedFolder] = useState<CollectionFolder | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [screenMode, setScreenMode] = useState<ScreenMode>('collect');
   const [shareSource, setShareSource] = useState<ShareSourceItem[]>([]);
@@ -404,6 +409,57 @@ export default function CollectionScreen() {
     setCreateModalVisible(true);
   }, []);
 
+  const handleDeleteFolder = useCallback(
+    (folder: CollectionFolder) => {
+      hapticsBridge.warning();
+      Alert.alert(
+        t('collectionUi.deleteFolderTitle'),
+        t('collectionUi.deleteFolderBody', { name: folder.name }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('common.delete'),
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                try {
+                  await collectionService.deleteFolder(folder.id);
+                  collectionIndexSnapshot = null;
+                  setManagedFolder(null);
+                  await loadCollectionData();
+                  hapticsBridge.success();
+                } catch (error) {
+                  console.error('Failed to delete folder:', error);
+                  Alert.alert(t('collectionUi.deleteFolderFailed'));
+                }
+              })();
+            },
+          },
+        ]
+      );
+    },
+    [loadCollectionData, t]
+  );
+
+  const folderManagementActions = useMemo<QuickAction[]>(() => {
+    if (!managedFolder) return [];
+    return [
+      {
+        key: 'rename',
+        label: t('collectionUi.renameFolder'),
+        icon: 'pencil-outline',
+        onPress: () => handleEditFolder(managedFolder),
+      },
+      {
+        key: 'delete',
+        label: t('collectionUi.deleteFolder'),
+        icon: 'trash-outline',
+        destructive: true,
+        onPress: () => handleDeleteFolder(managedFolder),
+      },
+    ];
+  }, [handleDeleteFolder, handleEditFolder, managedFolder, t]);
+
   const handleSort = useCallback((mode: SortMode) => {
     setSortMode(mode);
   }, []);
@@ -556,6 +612,7 @@ export default function CollectionScreen() {
                 onLongPressFolder={(folder) => {
                   if (!folder.isSystemFolder) handleEditFolder(folder);
                 }}
+                onManageFolder={setManagedFolder}
               />
             ) : foldersError ? (
               // Rule 8: a failed folder load must not masquerade as "no folders yet".
@@ -691,6 +748,13 @@ export default function CollectionScreen() {
                 }
               : undefined
           }
+        />
+
+        <QuickActionSheet
+          visible={managedFolder !== null}
+          onClose={() => setManagedFolder(null)}
+          title={managedFolder?.name ?? t('collectionUi.manageFolder')}
+          actions={folderManagementActions}
         />
 
         <CollectionSearchModal

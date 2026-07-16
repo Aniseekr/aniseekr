@@ -1,6 +1,7 @@
 import { kvGet, kvSet } from '../storage/app-storage';
 import { COLLECTION_FOLDER_SORT_MODE_STORAGE_KEY } from '../storage/keys';
 import { Logger } from '../../utils/logger';
+import { normalizeTitleKey } from '../pilgrimage/bangumi-title-match';
 
 export type FolderSortMode = 'added' | 'updated' | 'title' | 'rating';
 
@@ -36,13 +37,25 @@ export function sortFolderItems<T extends SortableFolderItem>(
   return copy;
 }
 
+/** Match stored and localized titles exactly as the visible title does. */
+export function matchesTitleQuery(
+  storedTitle: string,
+  localizedTitle: string | null | undefined,
+  query: string
+): boolean {
+  const normalizedQuery = normalizeTitleKey(query);
+  if (!normalizedQuery) return true;
+  return [storedTitle, localizedTitle].some((title) =>
+    normalizeTitleKey(title ?? '').includes(normalizedQuery)
+  );
+}
+
 export function filterFolderItems<T extends { title: string }>(
   items: readonly T[],
-  query: string
+  query: string,
+  getLocalizedTitle?: (item: T) => string | null | undefined
 ): T[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [...items];
-  return items.filter((it) => it.title.toLowerCase().includes(q));
+  return items.filter((item) => matchesTitleQuery(item.title, getLocalizedTitle?.(item), query));
 }
 
 /** Synchronous MMKV read — safe for first-frame `useState` initialisers. */

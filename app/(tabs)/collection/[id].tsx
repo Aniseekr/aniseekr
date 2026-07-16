@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, FlatList, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
+import { Alert, View, FlatList, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,12 +27,15 @@ import {
 } from '../../../components/collection/AnimeProgressView';
 import { FolderSwipeDeck } from '../../../components/collection/FolderSwipeDeck';
 import { ErrorStateView } from '../../../components/common/ErrorStateView';
-import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
+import { AnimeStatusBadge } from '../../../components/common/AnimeStatusBadge';
+import { QuickActionSheet } from '../../../components/settings/QuickActionSheet';
+import { Skeleton, ThemedIconButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { IconSize, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useT } from '../../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../../libs/i18n/use-display-title';
+import { titleLocalizationService } from '../../../libs/services/title-localization-service';
 
 interface FolderItem {
   id: string;
@@ -117,9 +120,12 @@ export default function FolderDetailScreen() {
   const [loading, setLoading] = useState(initialItems.length === 0);
   const [loadError, setLoadError] = useState(false);
   const [editingItem, setEditingItem] = useState<FolderItem | null>(null);
+  const [managedItem, setManagedItem] = useState<FolderItem | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
   const [sortMode, setSortMode] = useState<FolderSortMode>(loadFolderSortModeSync);
   const [search, setSearch] = useState('');
+  const [titleCacheVersion, setTitleCacheVersion] = useState(0);
+  const isCustomFolder = !id?.startsWith('system_');
 
   const loadItems = useCallback(async () => {
     // Only flip the blocking skeleton when we have nothing to render. Warm
@@ -366,6 +372,42 @@ export default function FolderDetailScreen() {
     }
   }, []);
 
+  const handleRemoveFromFolder = useCallback(
+    (item: FolderItem) => {
+      hapticsBridge.warning();
+      Alert.alert(
+        t('collectionUi.removeFromFolderTitle'),
+        t('collectionUi.removeFromFolderBody', { title: item.title }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('collectionUi.removeFromFolder'),
+            style: 'destructive',
+            onPress: () => {
+              void (async () => {
+                try {
+                  if (!id) return;
+                  await collectionService.removeFromFolder(item.id, id);
+                  setItems((previous) => {
+                    const next = previous.filter((entry) => entry.id !== item.id);
+                    folderSnapshotCache.set(id, next);
+                    return next;
+                  });
+                  setManagedItem(null);
+                  hapticsBridge.success();
+                } catch (error) {
+                  console.error('Failed to remove anime from folder:', error);
+                  Alert.alert(t('collectionUi.removeFromFolderFailed'));
+                }
+              })();
+            },
+          },
+        ]
+      );
+    },
+    [id, t]
+  );
+
   const toggleViewMode = useCallback(() => {
     hapticsBridge.selection();
     setViewMode((m) => {
@@ -380,10 +422,26 @@ export default function FolderDetailScreen() {
   }, [loadItems]);
 
   const searching = search.trim().length > 0;
-  const visibleItems = useMemo(
-    () => filterFolderItems(sortFolderItems(items, sortMode), search),
-    [items, sortMode, search]
-  );
+  useEffect(() => {
+    if (!searching) return;
+    return titleLocalizationService.subscribe(() => setTitleCacheVersion((v) => v + 1));
+  }, [searching]);
+
+  useEffect(() => {
+    if (!searching || !/[\u3040-\u30ff\u3400-\u9fff]/.test(search)) return;
+    for (const item of items) {
+      titleLocalizationService.ensure('chinese', 'anilist', item.id);
+    }
+  }, [items, search, searching]);
+
+  const visibleItems = useMemo(() => {
+    // Title-localization cache updates are external to React; this
+    // subscription value intentionally invalidates the filtered result.
+    void titleCacheVersion;
+    return filterFolderItems(sortFolderItems(items, sortMode), search, (item) =>
+      titleLocalizationService.getSync('chinese', 'anilist', item.id)
+    );
+  }, [items, sortMode, search, titleCacheVersion]);
 
   const handleSort = useCallback((mode: FolderSortMode) => {
     hapticsBridge.selection();
@@ -471,21 +529,7 @@ export default function FolderDetailScreen() {
           trackColor={theme.background.tertiary}
         />
         <View style={styles.badgeRow}>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: `${theme.accent}26`,
-                borderColor: `${theme.accent}40`,
-              },
-            ]}>
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: theme.accent, textTransform: 'capitalize' }}>
-              {item.status}
-            </ThemedText>
-          </View>
+          <AnimeStatusBadge status={item.status} size="sm" />
           <NearbyPilgrimageBadge
             sourcePlatform="anilist"
             id={item.id}
@@ -493,12 +537,23 @@ export default function FolderDetailScreen() {
           />
         </View>
       </View>
-      <MaterialIcons
-        name="chevron-right"
-        size={20}
-        color={theme.text.tertiary}
-        style={{ alignSelf: 'center' }}
-      />
+      {isCustomFolder ? (
+        <ThemedIconButton
+          icon={(color) => <Ionicons name="ellipsis-vertical" size={18} color={color} />}
+          accessibilityLabel={t('collectionUi.removeFromFolder')}
+          onPress={() => setManagedItem(item)}
+          variant="ghost"
+          size={44}
+          haptic="selection"
+        />
+      ) : (
+        <MaterialIcons
+          name="chevron-right"
+          size={20}
+          color={theme.text.tertiary}
+          style={{ alignSelf: 'center' }}
+        />
+      )}
     </Pressable>
   );
 
@@ -700,6 +755,25 @@ export default function FolderDetailScreen() {
           handleSaveProgress(editingItem.id, next);
         }}
       />
+
+      <QuickActionSheet
+        visible={managedItem !== null}
+        onClose={() => setManagedItem(null)}
+        title={managedItem?.title ?? ''}
+        actions={
+          managedItem
+            ? [
+                {
+                  key: 'remove-from-folder',
+                  label: t('collectionUi.removeFromFolder'),
+                  icon: 'remove-circle-outline',
+                  destructive: true,
+                  onPress: () => handleRemoveFromFolder(managedItem),
+                },
+              ]
+            : []
+        }
+      />
     </View>
   );
 }
@@ -836,13 +910,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
     marginTop: 4,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.chip,
-    borderWidth: 1,
   },
   emptyState: {
     alignItems: 'center',

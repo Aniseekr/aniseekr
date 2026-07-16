@@ -44,6 +44,13 @@ describe('filterFolderItems', () => {
   it('matches title case-insensitively', () => {
     expect(filterFolderItems(rows, 'bOcChI').map((r) => r.id)).toEqual(['a']);
   });
+  it('matches a localized title with simplified/traditional normalization', () => {
+    expect(
+      filterFolderItems(rows, '孤独摇滚', (item) =>
+        item.id === 'a' ? '孤獨搖滾！' : undefined
+      ).map((r) => r.id)
+    ).toEqual(['a']);
+  });
   it('blank query returns all', () => {
     expect(filterFolderItems(rows, '   ').map((r) => r.id)).toEqual(['a', 'b', 'c']);
   });

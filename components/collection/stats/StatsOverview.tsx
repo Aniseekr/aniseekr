@@ -167,7 +167,7 @@ export function StatsOverview({
         icon="bar-chart"
         title={t('collectionUi.noStatsYet')}
         description={t('collectionUi.startAddingAnimeToYour')}
-        actionLabel={emptyActionLabel ?? 'Browse anime'}
+        actionLabel={emptyActionLabel ?? t('collectionUi.browseAnime')}
         onAction={onEmptyAction ?? (() => router.push('/(rate)'))}
       />
     );
