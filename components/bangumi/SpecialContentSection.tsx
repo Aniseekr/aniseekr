@@ -1,11 +1,11 @@
 import { memo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AnimeTitleText } from '../themed';
+import { AnimeTitleText, ThemedText } from '../themed';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { Anime } from '../rate/types';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { IconSize, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { ProgressiveImage } from '../common/ProgressiveImage';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -126,11 +126,16 @@ function SpecialContentCard({
           style={[
             styles.releaseDateBanner,
             { backgroundColor: `${theme.accent}18`, borderColor: `${theme.accent}42` },
-          ]}>
-          <MaterialIcons name="event" size={13} color={theme.accent} />
-          <Text style={[styles.releaseDateText, { color: theme.accent }]} numberOfLines={1}>
-            {releaseDateLabel}
-          </Text>
+          ]}
+          accessibilityLabel={releaseDateLabel}>
+          <MaterialIcons name="event" size={IconSize.sm} color={theme.accent} />
+          <ThemedText
+            variant="titleSmall"
+            weight="700"
+            style={[styles.releaseDateText, { color: theme.accent }]}
+            numberOfLines={1}>
+            {releaseDate}
+          </ThemedText>
         </View>
       ) : null}
       <View style={styles.cardBody}>
@@ -211,18 +216,15 @@ const styles = StyleSheet.create({
   releaseDateBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginHorizontal: Spacing.xs,
-    marginTop: Spacing.xs,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 6,
+    justifyContent: 'center',
+    gap: Spacing.xxs,
+    minHeight: 28,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   releaseDateText: {
-    ...Typography.captionSmall,
-    fontWeight: '700',
-    flex: 1,
+    fontVariant: ['tabular-nums'],
   },
   formatBadge: {
     paddingHorizontal: 6,

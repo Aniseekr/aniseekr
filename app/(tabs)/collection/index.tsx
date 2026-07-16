@@ -448,7 +448,13 @@ export default function CollectionScreen() {
         key: 'rename',
         label: t('collectionUi.renameFolder'),
         icon: 'pencil-outline',
-        onPress: () => handleEditFolder(managedFolder),
+        onPress: () => {
+          // Wait for the action sheet Modal to fully dismiss before presenting
+          // the edit modal — iOS only allows one Modal on-screen at a time
+          // (same workaround as settings.tsx → notification manager).
+          const folder = managedFolder;
+          setTimeout(() => handleEditFolder(folder), 280);
+        },
       },
       {
         key: 'delete',
