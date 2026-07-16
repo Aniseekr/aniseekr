@@ -77,6 +77,9 @@ export interface PilgrimageHubSheetProps {
   filterMode?: 'all' | 'collection' | 'official88';
   /** Tap the empty-collection CTA → navigate to the Collection tab. */
   onGoToCollection?: () => void;
+  /** Tap the empty-search CTA → run the query against the full pilgrimage
+   *  search (local index ∪ Bangumi) instead of only the loaded markers. */
+  onSearchAll?: () => void;
   /** Initial bottom-sheet snap index: 1 = map-first, 2 = list-first. */
   initialIndex?: number;
   /** Shared value the sheet writes its top-edge Y to, so parent chrome can anchor to the sheet's edge. */
@@ -109,6 +112,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     searchQuery,
     filterMode = 'all',
     onGoToCollection,
+    onSearchAll,
     initialIndex = 1,
     animatedPosition,
     onSheetIndexChange,
@@ -280,6 +284,17 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
           style={{ marginTop: Spacing.sm }}
         />
       ) : null}
+      {hasQuery && onSearchAll ? (
+        // The in-page search only filters markers already on the map — offer
+        // the full pilgrimage search (local index ∪ Bangumi) as the way out.
+        <ThemedButton
+          label={t('pilgrimage.map.searchAllAnime')}
+          size="sm"
+          variant="secondary"
+          onPress={onSearchAll}
+          style={{ marginTop: Spacing.sm }}
+        />
+      ) : null}
     </View>
   );
 
@@ -323,6 +338,7 @@ function areEqual(prev: PilgrimageHubSheetProps, next: PilgrimageHubSheetProps):
     prev.searchQuery === next.searchQuery &&
     prev.filterMode === next.filterMode &&
     prev.onGoToCollection === next.onGoToCollection &&
+    prev.onSearchAll === next.onSearchAll &&
     prev.initialIndex === next.initialIndex &&
     prev.animatedPosition === next.animatedPosition &&
     prev.onSheetIndexChange === next.onSheetIndexChange &&

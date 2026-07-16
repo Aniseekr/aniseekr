@@ -37,6 +37,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
+import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { ThemedText, Skeleton, readableTextOn } from '../../../components/themed';
@@ -685,6 +686,17 @@ export default function PilgrimageMapScreen() {
     router.push('/collection');
   }, [router]);
 
+  // The in-page search pill only filters markers already loaded on the map.
+  // When it comes up empty, hand the query to the full pilgrimage search
+  // (local index ∪ Bangumi fallback) instead of dead-ending.
+  const handleSearchAll = useCallback(() => {
+    hapticsBridge.selection();
+    router.push({
+      pathname: '/search',
+      params: { context: 'pilgrimage', q: searchQuery.trim() },
+    });
+  }, [router, searchQuery]);
+
   const handleMapLoadError = useCallback(() => setMapLoadFailed(true), []);
   const handleMapLoadSuccess = useCallback(() => setMapLoadFailed(false), []);
   const handleMapRetry = useCallback(() => {
@@ -1007,6 +1019,7 @@ export default function PilgrimageMapScreen() {
               searchQuery={searchQuery}
               filterMode={hubFilter}
               onGoToCollection={handleGoToCollection}
+              onSearchAll={handleSearchAll}
               initialIndex={initialSheetIndex}
               animatedPosition={sheetPosition}
               onAnimePress={handleSheetAnimePress}

@@ -71,7 +71,7 @@ function fallbackBangumi(): AnitabiBangumi {
 describe('PilgrimageSearchService', () => {
   it('returns Anitabi index matches with Bangumi ids', async () => {
     const service = new PilgrimageSearchService({ getIndexed: () => [MONO, HYOUKA] });
-    const results = await service.search('mono');
+    const results = await service.search('mono', { includeBangumiFallback: false });
 
     expect(results[0]).toMatchObject({
       bangumiId: 485936,
@@ -85,7 +85,7 @@ describe('PilgrimageSearchService', () => {
 
   it('matches Chinese titles from the local Anitabi index', async () => {
     const service = new PilgrimageSearchService({ getIndexed: () => [MONO, HYOUKA] });
-    const results = await service.search('冰菓');
+    const results = await service.search('冰菓', { includeBangumiFallback: false });
 
     expect(results.map((r) => r.bangumiId)).toEqual([27364]);
     expect(results[0].pointsLength).toBe(58);
@@ -178,6 +178,39 @@ describe('PilgrimageSearchService', () => {
       titleCn: '巡礼番',
       source: 'bangumi-fallback',
     });
+  });
+
+  it('PILG-019 unions Bangumi fallback with weak local hits instead of suppressing it', async () => {
+    // '山梨' matches MONO only via its city field (a weak, base-30 hit).
+    // Before the union fix ANY local hit suppressed the Bangumi fallback
+    // entirely, so an anime the bundled snapshot missed could never be found.
+    const bangumiClient = {
+      searchSubjects: mock(async () => ({
+        data: [
+          // Already surfaced locally — must not be re-verified or duplicated.
+          { id: 485936, name: 'mono', name_cn: 'mono女孩' },
+          { id: 888, name: 'Fallback Anime', name_cn: '巡礼番' },
+        ],
+      })),
+    };
+    const repository = {
+      getSpotsByBangumiId: mock(async (id: number) => (id === 888 ? fallbackBangumi() : null)),
+    };
+    const service = new PilgrimageSearchService({
+      bangumiClient,
+      repository,
+      getIndexed: () => [MONO],
+    });
+
+    const results = await service.search('山梨');
+
+    // Local hit first, fallback extra appended — no duplicates.
+    expect(results.map((r) => r.bangumiId)).toEqual([485936, 888]);
+    expect(results[0].source).toBe('anitabi-index');
+    expect(results[1].source).toBe('bangumi-fallback');
+    // Only the genuinely new candidate got the Anitabi verification call.
+    expect(repository.getSpotsByBangumiId).toHaveBeenCalledTimes(1);
+    expect(repository.getSpotsByBangumiId).toHaveBeenCalledWith(888);
   });
 
   it('uses a Bangumi candidate already present in the local index without calling Anitabi', async () => {
