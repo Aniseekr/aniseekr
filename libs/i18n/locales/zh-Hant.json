@@ -604,7 +604,9 @@
         "noUpcomingEpisode": "「{title}」沒有即將播出的集數",
         "reminderCancelled": "已取消提醒",
         "reminderSet": "已為「{title}」設定提醒",
-        "undo": "復原"
+        "skippedForSeason": "本季已略過「{title}」",
+        "undo": "復原",
+        "wantToWatchWithReminder": "已加入「{title}」— 新集數會通知你"
       }
     },
     "collectionFolderScreen": {
@@ -884,6 +886,7 @@
     "recentTermA11y": "搜尋 {term}",
     "resultCount": "{count} 筆結果",
     "resultPilgrimageA11y": "{title},有巡禮地點",
+    "searching": "搜尋中…",
     "sort": {
       "newest": "最新",
       "relevance": "相關度",
@@ -1121,6 +1124,7 @@
       "emptyCollection": "你的收藏中還沒有聖地巡禮景點。",
       "emptyNearby": "附近還沒有動畫。試著拖曳地圖到其他地區看看。",
       "emptySearch": "沒有符合「{query}」的動畫。",
+      "searchAllAnime": "搜尋全部動畫",
       "nearbySpotsTitle": "你附近的聖地",
       "goToCollection": "前往收藏",
       "mapLoadError": "無法載入地圖。",
@@ -1356,6 +1360,10 @@
     "unknownAirDate": "播出日未定",
     "youReAllCaughtUp": "你已全部看完",
     "noMoreAnimeToTriage": "這個檢視沒有更多動畫可整理了。切換季度或篩選條件找更多。",
+    "wantToWatch": "想看",
+    "notInterested": "不想看",
+    "notInterestedA11y": "不想看 — 本季不再顯示",
+    "restoreSkipped": "還原 {count} 部已略過",
     "scheduling": "排程中…"
   },
   "collectionUi": {

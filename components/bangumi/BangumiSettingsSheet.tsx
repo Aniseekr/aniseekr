@@ -39,6 +39,10 @@ interface BangumiSettingsSheetProps {
   onChange: (next: BangumiPreferences) => void;
   onOpenNotifications?: () => void;
   onShare?: () => void;
+  /** "Not interested" swipes recorded for the current season. */
+  skippedCount?: number;
+  /** Restore every skipped anime for the current season. */
+  onRestoreSkipped?: () => void;
 }
 
 function BangumiSettingsSheetComponent({
@@ -51,6 +55,8 @@ function BangumiSettingsSheetComponent({
   onChange,
   onOpenNotifications,
   onShare,
+  skippedCount = 0,
+  onRestoreSkipped,
 }: BangumiSettingsSheetProps) {
   const { theme } = useTheme();
   const t = useT();
@@ -296,6 +302,28 @@ function BangumiSettingsSheetComponent({
                 </Pressable>
               ) : null}
             </View>
+            {skippedCount > 0 && onRestoreSkipped ? (
+              <View style={styles.actionRow}>
+                <Pressable
+                  onPress={() => {
+                    // Haptic fires inside the restore handler.
+                    onRestoreSkipped();
+                  }}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    {
+                      borderColor: theme.glassBorder,
+                      backgroundColor: theme.background.tertiary,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}>
+                  <MaterialIcons name="visibility" size={18} color={theme.text.primary} />
+                  <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
+                    {t('bangumiTab.restoreSkipped', { count: String(skippedCount) })}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
           </SafeAreaView>
         </Animated.View>
       </Animated.View>

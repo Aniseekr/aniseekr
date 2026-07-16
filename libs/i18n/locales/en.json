@@ -604,7 +604,9 @@
         "noUpcomingEpisode": "No upcoming episode scheduled for \"{title}\"",
         "reminderCancelled": "Reminder cancelled",
         "reminderSet": "Reminder set for \"{title}\"",
-        "undo": "Undo"
+        "skippedForSeason": "Skipped \"{title}\" this season",
+        "undo": "Undo",
+        "wantToWatchWithReminder": "Added \"{title}\" — you'll be notified of new episodes"
       }
     },
     "collectionFolderScreen": {
@@ -884,6 +886,7 @@
     "recentTermA11y": "Search {term}",
     "resultCount": "{count} results",
     "resultPilgrimageA11y": "{title}, pilgrimage available",
+    "searching": "Searching…",
     "sort": {
       "newest": "Newest",
       "relevance": "Relevance",
@@ -1123,6 +1126,7 @@
       "emptySearch": "No anime match \"{query}\".",
       "nearbySpotsTitle": "Sacred sites near you",
       "goToCollection": "Go to Collection",
+      "searchAllAnime": "Search all anime",
       "mapLoadError": "Couldn't load the map.",
       "offlineBody": "You're offline or the connection dropped. Check your network and try again — areas you've already viewed still work offline.",
       "offlineTitle": "Can't load the map",
@@ -1356,6 +1360,10 @@
     "unknownAirDate": "Unknown Air Date",
     "youReAllCaughtUp": "You're all caught up",
     "noMoreAnimeToTriage": "No more anime to triage in this view. Switch seasons or filters to find more.",
+    "wantToWatch": "Want to watch",
+    "notInterested": "Not interested",
+    "notInterestedA11y": "Not interested — hide this season",
+    "restoreSkipped": "Restore {count} skipped",
     "scheduling": "Scheduling…"
   },
   "collectionUi": {

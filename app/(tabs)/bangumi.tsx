@@ -1,7 +1,7 @@
 // Bangumi seasonal screen — calendar mode uses the iOS-style focus-day carousel
 // with a sticky today section on top, plus a list mode fallback.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -44,6 +44,12 @@ import {
   loadBangumiPrefsSync,
   saveBangumiPrefs,
 } from '../../libs/services/bangumi-prefs';
+import {
+  addSeasonSkip,
+  clearSeasonSkips,
+  loadSeasonSkipsSync,
+  removeSeasonSkip,
+} from '../../libs/services/bangumi/season-skip-store';
 import { loadUserPrefs, loadUserPrefsSync, patchUserPrefs } from '../../libs/services/user-prefs';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
@@ -202,6 +208,13 @@ export default function BangumiScreen() {
     actionLabel?: string;
     onAction?: () => void;
   } | null>(null);
+  // Persistent "not interested" skips for the card deck. `skipTick` bumps on
+  // every skip/undo so the live count stays fresh; `skipEpoch` bumps only on
+  // restore, remounting the deck so restored cards actually reappear. The
+  // filter set itself snapshots per mount — re-filtering mid-run would shift
+  // the deck's internal index under the user's fingers.
+  const [skipTick, bumpSkipTick] = useReducer((x: number) => x + 1, 0);
+  const [skipEpoch, bumpSkipEpoch] = useReducer((x: number) => x + 1, 0);
   const hydratedRef = useRef(false);
   const shareCardRef = useRef<View>(null);
 
@@ -288,6 +301,84 @@ export default function BangumiScreen() {
     },
     [t]
   );
+
+  // Deck right swipe: 想看 implies notify — one gesture adds to the wishlist
+  // AND schedules the next-episode reminder (unless bangumi notifications are
+  // off). Undo reverses exactly what THIS swipe did: an already-tracked show
+  // keeps its status (never watching→planned clobber), a pre-existing
+  // reminder is never cancelled by undo.
+  const handleSwipeWant = useCallback(
+    async (anime: Anime) => {
+      try {
+        const prior = await trackingService.getStatus(anime.id);
+        if (!prior) {
+          await trackingService.upsertTracking({
+            animeId: anime.id,
+            status: 'planned',
+            title: anime.title,
+            imageUrl: anime.image,
+            totalEpisodes: anime.episodes,
+          });
+        }
+        let reminderId: string | null = null;
+        if (prefs.notificationsEnabled && !animeNotificationService.isAnimeScheduled(anime.id)) {
+          reminderId = await animeNotificationService
+            .scheduleAnimeNotification(anime)
+            .catch(() => null);
+        }
+        hapticsBridge.success();
+        setSnackbar({
+          key: Date.now(),
+          message: reminderId
+            ? t('tabs.bangumiScreen.snackbar.wantToWatchWithReminder', { title: anime.title })
+            : t('tabs.bangumiScreen.snackbar.addedToWishlist', { title: anime.title }),
+          icon: 'bookmark-added',
+          actionLabel: t('tabs.bangumiScreen.snackbar.undo'),
+          onAction: () => {
+            if (!prior) void trackingService.removeTracking(anime.id);
+            if (reminderId) void animeNotificationService.cancelAnimeNotification(anime.id);
+          },
+        });
+      } catch (e) {
+        console.warn('[bangumi] swipe want-to-watch failed', e);
+        hapticsBridge.warning();
+        setSnackbar({
+          key: Date.now(),
+          message: t('tabs.bangumiScreen.snackbar.couldntAddToWishlist'),
+          icon: 'error-outline',
+        });
+      }
+    },
+    [prefs.notificationsEnabled, t]
+  );
+
+  // Deck left swipe: not interested — persisted per season so the triage deck
+  // converges instead of resurfacing rejected shows every visit. Undo removes
+  // the persisted skip (the card itself has already advanced).
+  const handleSwipeSkip = useCallback(
+    (anime: Anime) => {
+      addSeasonSkip(selectedSeason, selectedYear, anime.id);
+      bumpSkipTick();
+      setSnackbar({
+        key: Date.now(),
+        message: t('tabs.bangumiScreen.snackbar.skippedForSeason', { title: anime.title }),
+        icon: 'visibility-off',
+        actionLabel: t('tabs.bangumiScreen.snackbar.undo'),
+        onAction: () => {
+          removeSeasonSkip(selectedSeason, selectedYear, anime.id);
+          bumpSkipTick();
+        },
+      });
+    },
+    [selectedSeason, selectedYear, t]
+  );
+
+  const handleRestoreSkipped = useCallback(() => {
+    hapticsBridge.selection();
+    clearSeasonSkips(selectedSeason, selectedYear);
+    bumpSkipTick();
+    bumpSkipEpoch();
+  }, [selectedSeason, selectedYear]);
 
   const handleToggleReminder = useCallback(
     async (anime: Anime, currentlyScheduled: boolean) => {
@@ -468,6 +559,30 @@ export default function BangumiScreen() {
       return true;
     });
   }, [rawAnime, typeFilter, filterMode, trackedIds]);
+
+  // Snapshot of persisted skips for the deck run (see skipTick/skipEpoch note).
+  // Calendar/list views intentionally keep skipped shows — they are a schedule
+  // overview, not a triage queue.
+  const deckSkips = useMemo(
+    () => (viewMode === 'cards' ? loadSeasonSkipsSync(selectedSeason, selectedYear) : null),
+    // skipEpoch is an invalidation token for the MMKV read — the linter can't
+    // see the external store behind loadSeasonSkipsSync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewMode, selectedSeason, selectedYear, skipEpoch]
+  );
+  const deckAnime = useMemo(
+    () =>
+      deckSkips && deckSkips.size > 0
+        ? filteredAnime.filter((a) => !deckSkips.has(a.id))
+        : filteredAnime,
+    [filteredAnime, deckSkips]
+  );
+  const skippedCount = useMemo(
+    () => loadSeasonSkipsSync(selectedSeason, selectedYear).size,
+    // skipTick/skipEpoch invalidate the MMKV read (see above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedSeason, selectedYear, skipTick, skipEpoch]
+  );
 
   const groupedAnime = useMemo<DailyAnime[]>(() => {
     const days = [
@@ -719,6 +834,8 @@ export default function BangumiScreen() {
           onAdultContentChange={handleAdultContentChange}
           onClose={() => setShowSettings(false)}
           onChange={handleSettingsChange}
+          skippedCount={skippedCount}
+          onRestoreSkipped={handleRestoreSkipped}
           onOpenNotifications={() => {
             setShowSettings(false);
             // Wait for the settings Modal to fully dismiss before presenting the
@@ -798,12 +915,12 @@ export default function BangumiScreen() {
               <BangumiCardDeckSkeleton />
             ) : (
               <BangumiCardDeck
-                key={`${selectedSeason}-${selectedYear}-${filterMode}-${typeFilter}`}
-                anime={filteredAnime}
-                onSwipeRemind={(a) =>
-                  handleToggleReminder(a, animeNotificationService.isAnimeScheduled(a.id))
-                }
-                onSwipePlan={handleQuickAddWishlist}
+                key={`${selectedSeason}-${selectedYear}-${filterMode}-${typeFilter}-${skipEpoch}`}
+                anime={deckAnime}
+                onSwipeSkip={handleSwipeSkip}
+                onSwipeWant={handleSwipeWant}
+                skippedCount={skippedCount}
+                onRestoreSkipped={handleRestoreSkipped}
               />
             )}
           </View>
