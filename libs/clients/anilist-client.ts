@@ -446,7 +446,7 @@ export class AniListClient {
     const query = `
       query ($page: Int, $perPage: Int, $search: String, $isAdult: Boolean) {
         Page(page: $page, perPage: $perPage) {
-          media(search: $search, type: ANIME, isAdult: $isAdult, sort: [POPULARITY_DESC]) {
+          media(search: $search, type: ANIME, isAdult: $isAdult, sort: [SEARCH_MATCH]) {
             ...mediaFields
             description
             startDate { year month day }
@@ -459,6 +459,35 @@ export class AniListClient {
       page,
       perPage,
       search,
+      ...adultQueryVariables(options),
+    });
+    return data.Page.media;
+  }
+
+  /**
+   * Batch-fetch specific anime by AniList id (one request). Used by the
+   * Bangumi CJK recall merge to pull in matches AniList's own search missed.
+   */
+  static async getAnimeByIds(
+    ids: number[],
+    options: AniListLegacyQueryOptions = {}
+  ): Promise<AniListAnime[]> {
+    if (ids.length === 0) return [];
+    const query = `
+      query ($ids: [Int], $perPage: Int, $isAdult: Boolean) {
+        Page(page: 1, perPage: $perPage) {
+          media(id_in: $ids, type: ANIME, isAdult: $isAdult) {
+            ...mediaFields
+            description
+            startDate { year month day }
+          }
+        }
+      }
+      ${MEDIA_FRAGMENT}
+    `;
+    const data = await AniListClient.getDefaultInstance().query<AniListPage<AniListAnime>>(query, {
+      ids,
+      perPage: ids.length,
       ...adultQueryVariables(options),
     });
     return data.Page.media;

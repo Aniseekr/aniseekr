@@ -184,6 +184,27 @@ export class TitleLocalizationService {
     });
   }
 
+  /**
+   * Warm the cache with a title we already hold (e.g. a Bangumi search hit
+   * that carries name_cn) so render paths resolve it synchronously instead of
+   * fetching. Never clobbers an existing positive value; notifies subscribers
+   * so visible rows re-resolve immediately.
+   */
+  async seed(
+    lang: LocalizedTitleLanguage,
+    platform: PlatformType,
+    id: string,
+    title: string
+  ): Promise<void> {
+    const trimmed = title.trim();
+    if (!id || !trimmed) return;
+    const key = cacheKey(lang, platform, id);
+    const existing = this.cache.getSync<CachedTitle>(key);
+    if (existing?.v) return;
+    await this.cache.set(key, { v: trimmed } satisfies CachedTitle, HIT_TTL_MS);
+    this.emit();
+  }
+
   private async isMappingReady(): Promise<boolean> {
     if (this.mappingReadyMemo) return true;
     const t = await this.idMapping.getLastUpdateTime();

@@ -159,7 +159,7 @@ const MEDIA_FIELDS = `
 const SEARCH_QUERY = `
   query ($search: String, $page: Int, $perPage: Int = 20, $isAdult: Boolean) {
     Page(page: $page, perPage: $perPage) {
-      media(search: $search, type: ANIME, isAdult: $isAdult, sort: [POPULARITY_DESC]) {
+      media(search: $search, type: ANIME, isAdult: $isAdult, sort: [SEARCH_MATCH]) {
         ${MEDIA_FIELDS}
       }
     }

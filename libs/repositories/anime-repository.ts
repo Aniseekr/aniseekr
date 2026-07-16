@@ -20,6 +20,8 @@
 
 import type { Anime, Genre, Photo } from '../../components/rate/types';
 import { AniListClient, type AniListAnime } from '../clients/anilist-client';
+import { BangumiClient, type BangumiV0Subject } from '../clients/bangumi-client';
+import { titleLocalizationService } from '../services/title-localization-service';
 import { LocalDB } from '../db';
 import {
   IMAGE_PRIORITY,
@@ -1011,9 +1013,15 @@ export class AnimeRepository {
     // variant pair so 「工作細胞」 and 「工作细胞」 share results.
     const variants = expandSearchVariants(query);
     const cacheQuery = variants.length > 1 ? [...variants].sort().join('|') : query;
-    const cacheKey = `search_${cacheQuery}_${page}_r${r18CacheFlag()}`;
+    // v2: search sort changed POPULARITY_DESC → SEARCH_MATCH; old entries hold stale order.
+    const cacheKey = `search_v2_${cacheQuery}_${page}_r${r18CacheFlag()}`;
     const cached = await CacheService.get<AniListAnime[]>(cacheKey);
     if (cached) return cached.map(mapAniListToAnime);
+
+    // Kick the Bangumi CJK recall search BEFORE awaiting AniList so both run
+    // concurrently — the merge then costs only the slower of the two.
+    const bangumiSubjects =
+      page === 1 && CJK_QUERY_RE.test(query) ? searchBangumiSubjects(variants) : null;
 
     let data: AniListAnime[];
     if (variants.length === 1) {
@@ -1040,6 +1048,9 @@ export class AnimeRepository {
           data.push(item);
         }
       }
+    }
+    if (bangumiSubjects) {
+      data = await mergeBangumiCnRecall(await bangumiSubjects, data);
     }
     await CacheService.set(cacheKey, data, LEGACY_SEARCH_CACHE_TTL_MS);
     return data.map(mapAniListToAnime);
@@ -1266,6 +1277,108 @@ async function revalidateSeasonalPage(
     Logger.warn('[AnimeRepository] background revalidate failed', err);
   } finally {
     inFlightSeasonalRevalidations.delete(cacheKey);
+  }
+}
+
+// Kana + CJK ideograph ranges — queries that benefit from Bangumi's native
+// CJK index. Latin-only queries stay AniList-only (no extra request).
+const CJK_QUERY_RE = /[぀-ヿ㐀-䶿一-鿿]/;
+const BANGUMI_RECALL_CANDIDATES = 5;
+const BANGUMI_RECALL_MAX_PREPEND = 3;
+
+/**
+ * Search Bangumi for every S↔T query variant concurrently — Bangumi's index
+ * is largely Simplified, so a Traditional-only query would otherwise miss.
+ * Per-variant failures are swallowed (recall assist must never break search);
+ * results keep variant order (original query first) and dedupe by subject id.
+ */
+async function searchBangumiSubjects(variants: string[]): Promise<BangumiV0Subject[]> {
+  const lists = await Promise.all(
+    variants.map((v) =>
+      BangumiClient.searchSubjects(v, 1)
+        .then((res) => res.data ?? [])
+        .catch((err) => {
+          Logger.warn(`[AnimeRepository] bangumi recall variant '${v}' failed`, err);
+          return [] as BangumiV0Subject[];
+        })
+    )
+  );
+  const seen = new Set<number>();
+  const merged: BangumiV0Subject[] = [];
+  for (const list of lists) {
+    for (const subject of list) {
+      if (!subject?.id || seen.has(subject.id)) continue;
+      seen.add(subject.id);
+      merged.push(subject);
+    }
+  }
+  return merged;
+}
+
+/**
+ * CJK recall assist (REPO-060..062). AniList's search misses many titles
+ * queried by their Chinese/Japanese names; Bangumi's `sort: match` search is
+ * the native index for those. Map its top hits back into AniList ids, then:
+ *
+ *  - seed each hit's `name_cn` into the title-localization cache so result
+ *    rows render the Chinese title synchronously (no async English→Chinese
+ *    flip — the "search drift" bug), and
+ *  - batch-fetch hits AniList's own search did not return and surface them
+ *    first (Bangumi matched them for the exact CJK query).
+ *
+ * Never throws: any failure returns the AniList results untouched — the
+ * assist may only ever add recall.
+ */
+async function mergeBangumiCnRecall(
+  allSubjects: BangumiV0Subject[],
+  aniListResults: AniListAnime[]
+): Promise<AniListAnime[]> {
+  try {
+    const subjects = allSubjects.slice(0, BANGUMI_RECALL_CANDIDATES);
+    if (subjects.length === 0) return aniListResults;
+
+    const present = new Set(aniListResults.map((m) => m.id));
+    const missing: number[] = [];
+    const nameCnByAnilistId = new Map<number, string>();
+
+    for (const subject of subjects) {
+      const mapped = await idMappingService.mapID('bangumi', String(subject.id), 'anilist');
+      const anilistId = mapped == null ? null : Number(mapped);
+      if (!anilistId || !Number.isFinite(anilistId)) continue;
+
+      const nameCn = subject.name_cn?.trim();
+      if (nameCn && !nameCnByAnilistId.has(anilistId)) {
+        nameCnByAnilistId.set(anilistId, nameCn);
+      }
+      if (
+        !present.has(anilistId) &&
+        !missing.includes(anilistId) &&
+        missing.length < BANGUMI_RECALL_MAX_PREPEND
+      ) {
+        missing.push(anilistId);
+      }
+    }
+
+    await Promise.all(
+      [...nameCnByAnilistId].map(([anilistId, nameCn]) =>
+        titleLocalizationService.seed('chinese', 'anilist', String(anilistId), nameCn)
+      )
+    );
+
+    if (missing.length === 0) return aniListResults;
+    const fetched = filterAniListAnime(
+      await AniListClient.getAnimeByIds(missing, legacyAniListOptions())
+    );
+    if (fetched.length === 0) return aniListResults;
+    // Preserve Bangumi's match order among the prepends.
+    const order = new Map(missing.map((id, i) => [id, i]));
+    fetched.sort(
+      (a, b) => (order.get(a.id) ?? missing.length) - (order.get(b.id) ?? missing.length)
+    );
+    return [...fetched, ...aniListResults];
+  } catch (err) {
+    Logger.warn('[AnimeRepository] bangumi CN recall merge failed', err);
+    return aniListResults;
   }
 }
 

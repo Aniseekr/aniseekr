@@ -2,7 +2,7 @@
  * Deterministic unit tests for the new `AnimeRepository` orchestrator.
  *
  * Spec cases: REPO-001..005, REPO-010..013, REPO-020, REPO-021..023, REPO-030,
- * REPO-031, REPO-032, REPO-050.
+ * REPO-031, REPO-032, REPO-050, REPO-060..062.
  *
  * All data sources are mocked via constructor injection. The shared
  * `QueryClient` and `CacheService` singletons are reset between tests so
@@ -27,6 +27,8 @@ import { dataSourceConfig } from '../../../libs/services/data-source-config';
 import { UnifiedAnimeItem } from '../../../libs/models/unified-anime-item';
 import { queryClient } from '../../../libs/services/query-client';
 import { IDMappingService, idMappingService } from '../../../libs/services/sync/id-mapping-service';
+import { BangumiClient } from '../../../libs/clients/bangumi-client';
+import { titleLocalizationService } from '../../../libs/services/title-localization-service';
 import type { PlatformType } from '../../../libs/services/auth/types';
 
 interface FetchCall {
@@ -716,5 +718,106 @@ describe('AnimeRepository', () => {
 
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(genres.map((genre) => genre.displayName)).toEqual(['Action', 'Comedy']);
+  });
+
+  // -------- Bangumi CJK recall merge (REPO-060..062) --------
+  //
+  // AniList's search misses many titles queried by Chinese/Japanese names.
+  // For CJK queries the legacy facade also searches Bangumi (native CJK
+  // index) and maps its hits back into AniList ids. Fake Bangumi subject ids
+  // (999999xxx) are used so the bundled anitabi cross-index never matches and
+  // resolution deterministically flows through the mocked idMappingService.
+
+  function wireAniListSearchAndBatch(): { calls: FetchCall[] } {
+    const calls: FetchCall[] = [];
+    const fetchImpl = mock(async (url: string | URL | Request, init?: RequestInit) => {
+      const parsedBody = JSON.parse((init?.body as string) ?? '{}') as FetchCall['parsedBody'];
+      calls.push({ url: String(url), init, parsedBody });
+      if (parsedBody.query.includes('id_in')) {
+        return fakeJson({
+          data: {
+            Page: {
+              media: [
+                makeAniListAnime({
+                  id: 555,
+                  title: { romaji: 'Hidden Gem', english: null, native: 'モノ' },
+                }),
+              ],
+            },
+          },
+        });
+      }
+      return fakeJson({
+        data: {
+          Page: {
+            media: [
+              makeAniListAnime({ id: 1, title: { romaji: 'Popular', english: null, native: null } }),
+            ],
+          },
+        },
+      });
+    });
+    AniListClient.__setDefaultForTests(
+      new AniListClient({ fetchImpl: fetchImpl as unknown as typeof fetch })
+    );
+    return { calls };
+  }
+
+  it('REPO-060 CJK search prepends Bangumi-mapped anime missing from AniList results', async () => {
+    const { calls } = wireAniListSearchAndBatch();
+    const searchSpy = spyOn(BangumiClient, 'searchSubjects').mockResolvedValue({
+      data: [{ id: 999999001, type: 2, name: 'モノ', name_cn: '隱藏神作' } as never],
+    });
+    const mapSpy = spyOn(idMappingService, 'mapID').mockResolvedValue(555);
+
+    try {
+      const results = await AnimeRepository.searchAnime('隱藏神作', 1);
+
+      expect(searchSpy).toHaveBeenCalledWith('隱藏神作', 1);
+      expect(mapSpy).toHaveBeenCalledWith('bangumi', '999999001', 'anilist');
+      // The mapped-but-missing anime is batch-fetched and surfaces first.
+      expect(results.map((a) => a.title)).toEqual(['Hidden Gem', 'Popular']);
+      const batchCall = calls.find((c) => c.parsedBody.query.includes('id_in'));
+      expect(batchCall?.parsedBody.variables).toMatchObject({ ids: [555] });
+    } finally {
+      searchSpy.mockRestore();
+      mapSpy.mockRestore();
+    }
+  });
+
+  it('REPO-061 Bangumi recall seeds name_cn without duplicating present results', async () => {
+    const { calls } = wireAniListSearchAndBatch();
+    const searchSpy = spyOn(BangumiClient, 'searchSubjects').mockResolvedValue({
+      data: [{ id: 999999002, type: 2, name: 'ポピュラー', name_cn: '人氣作' } as never],
+    });
+    // Maps to id 1, which AniList's own results already contain.
+    const mapSpy = spyOn(idMappingService, 'mapID').mockResolvedValue(1);
+
+    try {
+      const results = await AnimeRepository.searchAnime('人氣作', 1);
+
+      expect(results.map((a) => a.title)).toEqual(['Popular']);
+      expect(calls.some((c) => c.parsedBody.query.includes('id_in'))).toBe(false);
+      // name_cn lands in the localization cache so rows render Chinese
+      // synchronously — no async English→Chinese flip.
+      expect(titleLocalizationService.getSync('chinese', 'anilist', '1')).toBe('人氣作');
+    } finally {
+      searchSpy.mockRestore();
+      mapSpy.mockRestore();
+    }
+  });
+
+  it('REPO-062 Bangumi recall failure returns AniList results unchanged', async () => {
+    wireAniListSearchAndBatch();
+    const searchSpy = spyOn(BangumiClient, 'searchSubjects').mockRejectedValue(
+      new Error('bangumi down')
+    );
+
+    try {
+      const results = await AnimeRepository.searchAnime('壞掉的搜尋', 1);
+      expect(results.map((a) => a.title)).toEqual(['Popular']);
+    } finally {
+      searchSpy.mockRestore();
+    }
   });
 });
