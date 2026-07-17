@@ -74,6 +74,7 @@ import { LocateFab } from '../../../components/pilgrimage/LocateFab';
 import { LocationPermissionSheet } from '../../../components/pilgrimage/LocationPermissionSheet';
 import { usePilgrimageInteractions } from '../../../hooks/usePilgrimageInteractions';
 import { usePilgrimageDerivedSpots } from '../../../hooks/usePilgrimageDerivedSpots';
+import { usePilgrimageDetailIntel } from '../../../hooks/usePilgrimageDetailIntel';
 import { usePilgrimageSpotSheet } from '../../../hooks/usePilgrimageSpotSheet';
 import {
   FilterCyclePill,
@@ -304,6 +305,10 @@ export default function PilgrimageDetailScreen() {
     activeSpotHasCapture,
     activeSpotSceneCount,
   } = sheet;
+
+  // Curated local-intel (best time / shops / events) for the open spot. Sync
+  // bundled reads — no effect on first paint (Rule 10).
+  const spotIntel = usePilgrimageDetailIntel(anime?.id ?? bangumiId ?? null, activeSpot);
 
   useEffect(() => {
     const focusedGroup = focusSpotId ? groupedSpotByPointId.get(focusSpotId) : null;
@@ -1018,6 +1023,7 @@ export default function PilgrimageDetailScreen() {
           planned={activeSpotPlanned}
           hasCapture={activeSpotHasCapture}
           anitabiBangumiId={anime?.id ?? bangumiId ?? null}
+          intel={spotIntel}
           theme={theme}
           onClose={closeSheet}
           onToggleVisited={toggleVisitedPoint}

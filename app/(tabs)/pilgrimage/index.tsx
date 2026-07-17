@@ -29,6 +29,7 @@ import { locationService } from '../../../libs/services/pilgrimage/location-serv
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
 import { Skeleton, ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
+import { IntelEventsRail } from '../../../components/pilgrimage/IntelEventsRail';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
@@ -484,6 +485,13 @@ export default function PilgrimageHubScreen() {
               </ScrollView>
             </View>
           ) : null}
+
+          {/*
+            近期活動 — curated collab events / festivals (spec §13). The rail
+            component owns its own sync data reads and hides itself when no
+            event is active, upcoming, or unannounced-in-horizon.
+          */}
+          <IntelEventsRail theme={theme} />
 
           {popularList.length > 0 ? (
             <View style={styles.section}>

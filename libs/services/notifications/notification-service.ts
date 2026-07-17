@@ -10,12 +10,14 @@ export type NotificationKind =
   | 'daily_digest'
   | 'movie_drop'
   | 'achievement_unlock'
-  | 'sync_complete';
+  | 'sync_complete'
+  | 'pilgrimage_event';
 
 export interface NotificationPreferences {
   episodeReminders: boolean;
   dailyDigest: boolean;
   achievementAlerts: boolean;
+  pilgrimageEventReminders: boolean;
   leadTimeMinutes: number;
 }
 
@@ -23,6 +25,7 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
   episodeReminders: true,
   dailyDigest: false,
   achievementAlerts: true,
+  pilgrimageEventReminders: true,
   leadTimeMinutes: 15,
 };
 
@@ -38,6 +41,9 @@ function pickValidPreferences(value: unknown): Partial<NotificationPreferences> 
     out.dailyDigest = value.weeklyDigest;
   }
   if (typeof value.achievementAlerts === 'boolean') out.achievementAlerts = value.achievementAlerts;
+  if (typeof value.pilgrimageEventReminders === 'boolean') {
+    out.pilgrimageEventReminders = value.pilgrimageEventReminders;
+  }
   if (typeof value.leadTimeMinutes === 'number' && Number.isFinite(value.leadTimeMinutes)) {
     out.leadTimeMinutes = value.leadTimeMinutes;
   }
@@ -233,6 +239,45 @@ export class NotificationService {
       kind: 'episode_reminder',
       refId: animeId,
       title,
+      scheduledAt: fireAt.getTime(),
+    });
+    return id;
+  }
+
+  /**
+   * One-shot reminder for a pilgrimage collab event (spec §13). `fireAt` comes
+   * from computeEventReminderTrigger — this method only owns the OS side.
+   */
+  async schedulePilgrimageEventReminder(
+    eventId: string,
+    animeId: string,
+    title: string,
+    body: string,
+    fireAt: Date
+  ): Promise<string | null> {
+    if (fireAt.getTime() <= Date.now() + 1_000) return null;
+
+    await this.cancelByRef('pilgrimage_event', eventId);
+
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: { kind: 'pilgrimage_event', animeId, eventId },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: new Date(fireAt.getTime()),
+        channelId: Platform.OS === 'android' ? 'default' : undefined,
+      },
+    });
+
+    await this.recordSchedule({
+      id,
+      kind: 'pilgrimage_event',
+      refId: eventId,
+      title,
+      body,
       scheduledAt: fireAt.getTime(),
     });
     return id;

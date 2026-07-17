@@ -318,6 +318,14 @@ export default function NotificationsScreen() {
           onChange={(v) => update({ ...prefs, achievementAlerts: v })}
           icon="emoji-events"
         />
+        <Divider />
+        <ToggleSwitchRow
+          label={t('settings.notificationsScreen.pilgrimageEventReminders')}
+          description={t('settings.notificationsScreen.pilgrimageEventRemindersDesc')}
+          value={prefs.pilgrimageEventReminders}
+          onChange={(v) => update({ ...prefs, pilgrimageEventReminders: v })}
+          icon="place"
+        />
       </SettingsSection>
 
       <SettingsSection title={t('settings.notificationsScreen.section.leadTime')}>

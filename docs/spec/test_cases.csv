@@ -181,6 +181,19 @@ PILG-035,Pilgrimage,deterministic,P0,Focused SpotSheet route,focusSpotId round-t
 PILG-036,Pilgrimage,deterministic,P0,Scene upload image policy,Wide images resize to 640px without upscaling and temporary cleanup survives individual delete failures,boundary,active
 PILG-037,Pilgrimage,deterministic,P0,Versioned scene disclosure,Scene identification disclosure acknowledgement persists locally under a versioned key,boundary,active
 PILG-038,Pilgrimage,deterministic,P0,Episode candidate fallback,Same-episode points outside the 15-second timestamp window remain actionable episode candidates,fallback,active
+PILG-039,Pilgrimage,deterministic,P0,Local intel dataset loading,Bundled dataset envelope parses with entries partitioned by kind and provenance-missing entries dropped,nullability,active
+PILG-040,Pilgrimage,deterministic,P0,Fixed event date-state boundaries,Fixed schedules transition upcoming/active/ended with end-of-day-inclusive endsAt in the event timezone,boundary,active
+PILG-041,Pilgrimage,deterministic,P0,Annual recurrence and unannounced,Annual schedules pick the latest confirmed occurrence and fall back to unannounced or ended without synthesizing dates,fallback,active
+PILG-042,Pilgrimage,deterministic,P0,Solar reference values,Sunrise and sunset match NOAA reference values within two minutes and polar latitudes return an explicit polar flag,boundary,active
+PILG-043,Pilgrimage,deterministic,P0,Golden hour window formatting,Evening golden hour precedes sunset and ranges format as HH:mm in the spot timezone with fixed-offset fallback,boundary,active
+PILG-044,Pilgrimage,deterministic,P0,Viewing hint resolution precedence,Exact bangumiId-qualified spotRefs beat geo proximity and radiusM bounds near-matching,mapping,active
+PILG-045,Pilgrimage,deterministic,P0,Shop queries,Shops filter by bangumiId and geo queries sort by distance within the requested radius,mapping,active
+PILG-046,Pilgrimage,deterministic,P0,Event reminder trigger computation,Reminders fire 09:00 local the day before start with past-slot fallback and started events are unschedulable,timing,active
+PILG-047,Pilgrimage,deterministic,P0,Reminder preference gating,pilgrimageEventReminders validates through preference merging and a disabled preference blocks scheduling,boundary,active
+PILG-048,Pilgrimage,deterministic,P0,Pilgrimage event notification routing,pilgrimage_event notification taps route to the pilgrimage detail with the event parameter and missing anime id routes nowhere,mapping,active
+PILG-049,Pilgrimage,deterministic,P0,Local intel runtime hydration,Runtime hydration swaps data with version bump and subscriber notify while low-coverage payloads are rejected,fallback,active
+PILG-050,Pilgrimage,deterministic,P0,Local intel localization,LocalizedText resolves by language priority with zh-Hans to zh-Hant conversion and TranslationSource tagging,mapping,active
+PILG-051,Pilgrimage,deterministic,P0,Hub rail event ordering,Hub rail orders active then dated upcoming then unannounced-in-horizon events deduplicated by event id,mapping,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active

@@ -320,7 +320,82 @@ Navigation carries an optional `focusSpotId` into `/pilgrimage/[animeId]`. The
 detail route consumes a focus once after points are available and must not
 reopen the sheet after the user closes it during that mount.
 
-## 13. Test Coverage
+## 13. Local Intel Layer
+
+The local intel layer surfaces curated locality data around pilgrimage spots —
+anime-tied shops, collab events (stamp rallies, festivals, collab cafes), and
+best-viewing hints — plus real solar timing computed from spot coordinates.
+All curated content is human-verified: every entry carries provenance
+(`sourceUrl`, `verifiedAt`) and entries missing `id`, `kind`, `sourceUrl`, or
+`verifiedAt` are dropped during load. The layer never fabricates data: ended
+events can never present as active, unannounced festival dates are shown as
+"date TBA", and displayed time windows come from real solar math.
+
+Dataset and loading:
+
+- One bundled dataset `local-intel.data.json` with the standard envelope
+  (`generatedAt`, `source`, `count`, `entries[]`, optional `$schema`).
+- Entries are a discriminated union on `kind`: `shop`, `event`, `viewing_hint`.
+  The loader lazily `require()`s the bundle on first access, partitions by
+  kind, and memoizes. Queries are synchronous (frame-1 safe).
+- Entries link to anime via `bangumiIds[]` (a work can span multiple Bangumi
+  subjects) and optionally to Anitabi points via bangumiId-qualified
+  `spotRefs` (point ids are only stable within one anime). Geo proximity
+  (per-entry `radiusM`, default 250m) is the fallback anchor; an exact
+  `spotRefs` match always beats proximity.
+- `hydrateLocalIntelFromRuntime(file)` swaps in a runtime payload (future
+  server sync), guarded by the shared runtime-coverage ratio so a degraded
+  payload cannot replace the bundled seed. Hydration bumps a version counter
+  and notifies subscribers.
+
+Event scheduling is a pure date-state machine over `now`:
+
+- `fixed` schedules compare `now` against `[startsAt 00:00, endsAt 23:59:59]`
+  in the event timezone (date-only strings are end-of-day inclusive).
+  States: `upcoming` (with days-until), `active`, `ended`.
+- `annual` schedules carry `typicalMonth` plus zero or more per-year
+  `confirmed` occurrences. The latest relevant confirmed occurrence wins;
+  when only past occurrences exist the state is `unannounced` (rendered as
+  "held annually in month N · dates TBA" — a date is never synthesized).
+  `discontinued` forces `ended`.
+- `ongoing` schedules model permanent programs with no end date; they are
+  always `active` and are never reminder-schedulable (there is no start to
+  remind about).
+- Hub-rail ordering: `active` events first, then dated `upcoming` by start
+  date, then `unannounced` annuals whose `typicalMonth` falls within the
+  horizon (default 90 days), deduplicated by event id.
+
+Solar timing (`solar.ts`) implements the NOAA sunrise/sunset algorithm as
+pure functions with no dependencies: sunrise, sunset, solar noon, and the
+morning/evening golden-hour windows (sun altitude between the horizon and
++6°) for a lat/lng and civil date. Polar edge cases return an explicit
+`polar` flag instead of fabricated times. Formatting uses
+`Intl.DateTimeFormat` with a fixed-offset fallback (Asia/Tokyo = UTC+9, no
+DST) so correctness never depends on Hermes `Intl` support. Every spot may
+display its computed golden-hour window; spots with a curated viewing hint
+upgrade to the full best-time card. Computed windows reuse the
+`{ jp, en, range }` display shape from scene analysis but are flagged
+`computed: true`.
+
+Event reminders reuse the notification stack:
+
+- New `NotificationKind` `pilgrimage_event`; per-event scheduling via
+  `cancelByRef`-compatible refs; preference gate `pilgrimageEventReminders`
+  (default on) validated through the standard preference validator.
+- Trigger time is 09:00 event-local on the day before `startsAt`. If that
+  slot has passed but the event has not started, the trigger falls back to
+  now + 5 minutes. Events already started or ended cannot be scheduled;
+  only `upcoming` occurrences are schedulable.
+- Notification taps route to `/pilgrimage/{animeId}?intelEvent={eventId}`;
+  a missing anime id routes nowhere.
+
+Localized text on entries uses `{ ja, en?, zhHant?, zhHans? }` with `ja`
+canonical. Resolution follows the user's title-language priority; `zhHans`
+converts to Traditional via OpenCC when `zhHant` is absent. Resolved values
+are tagged with their `TranslationSource` so the UI never misrepresents
+machine translation as native text.
+
+## 14. Test Coverage
 
 - PILG-001: `AnitabiService.getAnimePilgrimage` returns `null` on 404
 - PILG-002: Caches fetched result in memory (second call no HTTP)
@@ -360,8 +435,21 @@ reopen the sheet after the user closes it during that mount.
 - PILG-036: upload resize policy caps width and temporary cleanup continues after errors
 - PILG-037: first-use disclosure acknowledgement persists under a versioned key
 - PILG-038: same-episode points outside the scene window remain episode candidates
+- PILG-039: local intel dataset loads, partitions by kind, and drops entries missing provenance
+- PILG-040: fixed event date-state transitions honor end-of-day-inclusive endsAt in the event timezone
+- PILG-041: annual recurrence picks the latest confirmed occurrence, falls back to unannounced, and never synthesizes dates
+- PILG-042: solar sunrise/sunset match NOAA reference values within tolerance and polar latitudes return an explicit flag
+- PILG-043: golden-hour windows precede sunset and format as HH:mm with a fixed-offset timezone fallback
+- PILG-044: viewing-hint resolution prefers exact spotRefs over geo proximity with radius boundaries
+- PILG-045: shop queries filter by bangumiId and sort geo results by distance within radius
+- PILG-046: event reminder triggers fire day-before 09:00 local with past-slot fallback and reject started events
+- PILG-047: pilgrimageEventReminders preference validates and gates scheduling
+- PILG-048: pilgrimage_event notification taps route to the pilgrimage detail with the event parameter
+- PILG-049: runtime hydration swaps data, bumps version, notifies subscribers, and rejects low-coverage payloads
+- PILG-050: localized intel text resolves by language priority with zh-Hans→zh-Hant conversion and source tagging
+- PILG-051: hub rail orders active, dated upcoming, then unannounced-in-horizon events deduplicated by id
 
-## 14. Future Extensions (out of MVP scope)
+## 15. Future Extensions (out of MVP scope)
 
 - Embedded `react-native-maps` view
 - "Nearby" mode using `expo-location` to compute distances

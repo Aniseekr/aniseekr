@@ -47,6 +47,7 @@ import {
   type SpotArea,
   type SpotAreaRow,
 } from '../../../libs/services/pilgrimage/spot-areas';
+import { IntelEventsList } from './IntelEventsList';
 import { SceneTile } from './SceneTile';
 import { SpotRow } from './SpotRow';
 import { StatCell } from './StatCell';
@@ -391,6 +392,15 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
           />
         </View>
       ) : null}
+
+      {/* Curated collab events for this anime (spec §13) — self-contained
+          sync reads, hides itself when nothing is active or upcoming. */}
+      <IntelEventsList
+        bangumiId={anime?.id ?? null}
+        theme={theme}
+        themeColor={themeColor}
+        title={t('pilgrimageUi.intel.events')}
+      />
 
       <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="footer" />
 

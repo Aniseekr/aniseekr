@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
+import { IntelEventsList } from '../../../components/pilgrimage/detail/IntelEventsList';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 import {
   loadSpotIntentsSync,
@@ -221,6 +222,16 @@ function PlannedGroupCard({ group, visited, theme, onStart }: PlannedGroupCardPr
           </View>
         ))}
       </ScrollView>
+
+      {/* Events overlapping this trip's anime (spec §13) — trips carry no
+          dates, so "overlapping" = same anime and not ended. Reminder bell
+          schedules a day-before local notification. */}
+      <IntelEventsList
+        bangumiId={group.animeId}
+        theme={theme}
+        themeColor={accent}
+        title={t('pilgrimageUi.intel.planEvents')}
+      />
 
       <ThemedButton
         label={t('pilgrimage.plan.startTrip')}

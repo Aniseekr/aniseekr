@@ -181,6 +181,19 @@ PILG-035,__tests__/unit/pilgrimage/pilgrimage-navigation.test.ts,focus spot rout
 PILG-036,__tests__/unit/pilgrimage/scene-image-policy.test.ts,resizes without upscaling and cleans temporary files best-effort,covered
 PILG-037,__tests__/unit/pilgrimage/scene-id-disclosure.test.ts,persists versioned disclosure acknowledgement,covered
 PILG-038,__tests__/unit/pilgrimage/scene-id-service.test.ts,preserves episode candidates outside timestamp window,covered
+PILG-039,__tests__/unit/pilgrimage/local-intel-repository.test.ts,loads dataset partitioned by kind and drops provenance-missing entries,covered
+PILG-040,__tests__/unit/pilgrimage/local-intel-event-schedule.test.ts,fixed schedule transitions with end-of-day-inclusive endsAt,covered
+PILG-041,__tests__/unit/pilgrimage/local-intel-event-schedule.test.ts,annual recurrence resolves confirmed unannounced and discontinued states,covered
+PILG-042,__tests__/unit/pilgrimage/local-intel-solar.test.ts,matches NOAA reference sunrise and sunset with polar flag,covered
+PILG-043,__tests__/unit/pilgrimage/local-intel-solar.test.ts,golden hour precedes sunset and formats with fixed-offset fallback,covered
+PILG-044,__tests__/unit/pilgrimage/local-intel-repository.test.ts,viewing hint spotRef precedence over geo proximity,covered
+PILG-045,__tests__/unit/pilgrimage/local-intel-repository.test.ts,shop queries filter by anime and sort by distance,covered
+PILG-046,__tests__/unit/pilgrimage/local-intel-event-reminders.test.ts,computes day-before trigger with fallback and rejects started events,covered
+PILG-047,__tests__/unit/pilgrimage/local-intel-event-reminders.test.ts,preference validation gates reminder scheduling,covered
+PILG-048,__tests__/unit/streaming-notification-route.test.ts,routes pilgrimage_event taps to pilgrimage detail,covered
+PILG-049,__tests__/unit/pilgrimage/local-intel-repository.test.ts,runtime hydration swaps notifies and rejects low coverage,covered
+PILG-050,__tests__/unit/pilgrimage/local-intel-localization.test.ts,resolves localized text by priority with conversion and source tag,covered
+PILG-051,__tests__/unit/pilgrimage/local-intel-repository.test.ts,hub rail ordering and dedupe,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending
