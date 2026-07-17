@@ -18,6 +18,7 @@ export type RateLimiterChannel =
   | 'shikimori'
   | 'simkl'
   | 'anitabi'
+  | 'rss'
   | 'traceMoe';
 
 export interface RateLimiterChannelConfig {
@@ -33,6 +34,7 @@ const DEFAULT_CHANNELS: Record<RateLimiterChannel, RateLimiterChannelConfig> = {
   shikimori: { minIntervalMs: 200 },
   simkl: { minIntervalMs: 500 },
   anitabi: { minIntervalMs: 200 },
+  rss: { minIntervalMs: 250 },
   traceMoe: { minIntervalMs: 1_000 },
 };
 

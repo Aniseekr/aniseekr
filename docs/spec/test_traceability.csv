@@ -194,6 +194,16 @@ PILG-048,__tests__/unit/streaming-notification-route.test.ts,routes pilgrimage_e
 PILG-049,__tests__/unit/pilgrimage/local-intel-repository.test.ts,runtime hydration swaps notifies and rejects low coverage,covered
 PILG-050,__tests__/unit/pilgrimage/local-intel-localization.test.ts,resolves localized text by priority with conversion and source tag,covered
 PILG-051,__tests__/unit/pilgrimage/local-intel-repository.test.ts,hub rail ordering and dedupe,covered
+PILG-052,__tests__/unit/pilgrimage/event-date-block.test.ts,derives date block per state and language,covered
+NEWS-001,__tests__/unit/news/feed-parser.test.ts,parses rss2 items with cdata and entities,covered
+NEWS-002,__tests__/unit/news/feed-parser.test.ts,parses atom entries with alternate link,covered
+NEWS-003,__tests__/unit/news/feed-parser.test.ts,parses rdf items with dc date,covered
+NEWS-004,__tests__/unit/news/feed-parser.test.ts,tolerates malformed xml and missing fields,covered
+NEWS-005,__tests__/unit/news/news-sources.test.ts,loads dataset drops invalid dedupes and exposes recommended,covered
+NEWS-006,__tests__/unit/news/news-follows.test.ts,resolves recommended default and reduces follow set,covered
+NEWS-007,__tests__/unit/news/news-stream.test.ts,merges sorts dedupes and isolates source failures,covered
+NEWS-008,__tests__/unit/news/news-stream.test.ts,serves fresh and stale caches with independent ttls,covered
+NEWS-009,__tests__/unit/news/rss-client.test.ts,normalizes http errors to data source error,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending

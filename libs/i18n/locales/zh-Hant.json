@@ -60,6 +60,31 @@
     "helpTranslateTitle": "幫忙翻譯 Aniseekr",
     "helpTranslateBody": "Aniseekr 是開源專案，翻譯由社群貢獻。請參考 CONTRIBUTING.md 了解如何新增或改善語言。"
   },
+  "news": {
+    "title": "動畫新聞",
+    "subtitle": "追蹤動畫、活動與聖地巡禮來源",
+    "hubEntry": "動畫新聞動態",
+    "hubEntryA11y": "開啟動畫新聞動態",
+    "manageSources": "管理來源",
+    "openArticle": "開啟文章",
+    "sourcesTitle": "新聞來源",
+    "sourcesSubtitle": "選擇要出現在動態中的 RSS 來源",
+    "recommended": "推薦",
+    "follow": "追蹤",
+    "following": "追蹤中",
+    "undated": "沒有日期",
+    "emptyTitle": "尚無文章",
+    "emptyBody": "請至少追蹤一個來源，然後重新整理動態。",
+    "errorTitle": "無法載入新聞",
+    "errorBody": "若有快取文章，仍會繼續顯示。",
+    "category": {
+      "pilgrimage": "聖地巡禮",
+      "news": "新聞",
+      "event": "活動",
+      "goods": "周邊商品",
+      "industry": "產業"
+    }
+  },
   "onboarding": {
     "skip": "略過",
     "skipA11y": "略過導覽",

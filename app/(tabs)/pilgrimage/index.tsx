@@ -276,6 +276,11 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/identify');
   }, [router]);
 
+  const handleOpenNews = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/pilgrimage/news');
+  }, [router]);
+
   const handleOpenCharacters = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/companion/library');
@@ -548,6 +553,17 @@ export default function PilgrimageHubScreen() {
               accessibilityLabel={t('pilgrimage.identify.entryA11y')}
               onPress={handleIdentifyScene}
               icon={<Ionicons name="scan-outline" size={18} color={readableTextOn(theme.accent)} />}
+              shape="rounded"
+              fullWidth
+            />
+
+            <ThemedButton
+              label={t('news.hubEntry')}
+              accessibilityLabel={t('news.hubEntryA11y')}
+              onPress={handleOpenNews}
+              icon={
+                <Ionicons name="newspaper-outline" size={18} color={readableTextOn(theme.accent)} />
+              }
               shape="rounded"
               fullWidth
             />

@@ -60,6 +60,31 @@
     "helpTranslateTitle": "Help translate Aniseekr",
     "helpTranslateBody": "Aniseekr is open source — translations are community contributions. See CONTRIBUTING.md for how to add or improve a language."
   },
+  "news": {
+    "title": "Anime news",
+    "subtitle": "Follow anime, event, and pilgrimage sources",
+    "hubEntry": "Anime news feed",
+    "hubEntryA11y": "Open anime news feed",
+    "manageSources": "Manage sources",
+    "openArticle": "Open article",
+    "sourcesTitle": "News sources",
+    "sourcesSubtitle": "Choose which feeds appear in your stream",
+    "recommended": "Recommended",
+    "follow": "Follow",
+    "following": "Following",
+    "undated": "No date",
+    "emptyTitle": "No articles yet",
+    "emptyBody": "Follow at least one source, then refresh the stream.",
+    "errorTitle": "Could not load news",
+    "errorBody": "Cached articles will stay visible when available.",
+    "category": {
+      "pilgrimage": "Pilgrimage",
+      "news": "News",
+      "event": "Events",
+      "goods": "Goods",
+      "industry": "Industry"
+    }
+  },
   "onboarding": {
     "skip": "Skip",
     "skipA11y": "Skip onboarding",

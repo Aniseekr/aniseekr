@@ -3,13 +3,15 @@
 // Self-contained: sync bundled reads, subscribes to runtime hydration, and
 // renders nothing when no event is relevant.
 
-import React, { useCallback, useMemo, useState , useSyncExternalStore } from 'react';
+import React, { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Radius, Spacing } from '../../constants/DesignSystem';
-import { ThemedText } from '../themed';
-import { useT } from '../../libs/i18n';
+import { listItemEnter } from '../../libs/animations/presets';
+import { ThemedText, readableTextOn } from '../themed';
+import { useI18n, useT } from '../../libs/i18n';
 import type { ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
@@ -23,7 +25,7 @@ import {
 import { resolveLocalIntelText } from '../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import { buildPilgrimageDetailRoute } from '../../libs/services/pilgrimage/pilgrimage-navigation';
 import { getPilgrimageAnimeTitles } from '../../libs/services/pilgrimage/pilgrimage-localization';
-import { EventStateChip } from './detail/IntelEventBanner';
+import { deriveEventDateBlock, type EventDateBlock } from './event-date-block';
 
 interface RailRow extends HubRailEvent {
   cover: string | null;
@@ -33,6 +35,7 @@ interface RailRow extends HubRailEvent {
 
 export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
   const t = useT();
+  const { language } = useI18n();
   const router = useRouter();
   const version = useSyncExternalStore(
     subscribeLocalIntel,
@@ -81,9 +84,11 @@ export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}>
-        {rows.map((row) => (
+        {rows.map((row, index) => {
+          const dateBlock = deriveEventDateBlock(row.state, language);
+          return (
+          <Animated.View key={row.event.id} entering={index < 8 ? listItemEnter(index) : undefined}>
           <Pressable
-            key={row.event.id}
             onPress={() => handlePress(row)}
             accessibilityRole="button"
             accessibilityLabel={resolveLocalIntelText(row.event.name).value}
@@ -92,17 +97,19 @@ export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
               { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
               pressed && { opacity: 0.84 },
             ]}>
-            {row.cover ? (
-              <Image
-                source={anitabiImageSource(row.cover)}
-                style={styles.cover}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]} />
-            )}
+            <DateBlock block={dateBlock} theme={theme} />
+            <View style={styles.mediaWrap}>
+              {row.cover ? (
+                <Image
+                  source={anitabiImageSource(row.cover)}
+                  style={styles.cover}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]} />
+              )}
+            </View>
             <View style={styles.cardBody}>
-              <EventStateChip state={row.state} theme={theme} />
               <ThemedText variant="bodySmall" weight="700" numberOfLines={2}>
                 {resolveLocalIntelText(row.event.name).value}
               </ThemedText>
@@ -113,8 +120,44 @@ export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
               ) : null}
             </View>
           </Pressable>
-        ))}
+          </Animated.View>
+          );
+        })}
       </ScrollView>
+    </View>
+  );
+}
+
+function DateBlock({ block, theme }: { block: EventDateBlock; theme: ThemePalette }) {
+  const active = block.emphasis === 'active';
+  const upcoming = block.emphasis === 'upcoming';
+  const foreground = active ? readableTextOn(theme.accent) : theme.text.primary;
+  const backgroundColor = active ? theme.accent : theme.background.tertiary;
+  return (
+    <View
+      style={[
+        styles.dateBlock,
+        {
+          backgroundColor,
+          borderColor: active ? theme.accent : theme.glassBorder,
+        },
+      ]}>
+      <ThemedText
+        variant="captionSmall"
+        weight="800"
+        align="center"
+        style={{ color: active ? foreground : theme.text.tertiary }}>
+        {block.top}
+      </ThemedText>
+      {block.main ? (
+        <ThemedText
+          variant="titleLarge"
+          weight="800"
+          align="center"
+          style={{ color: upcoming ? theme.accent : foreground }}>
+          {block.main}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
@@ -131,18 +174,35 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.screenPadding,
   },
   card: {
-    width: 168,
+    width: 246,
+    minHeight: 112,
+    flexDirection: 'row',
+    alignItems: 'stretch',
     borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
   },
+  dateBlock: {
+    width: 64,
+    borderRightWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.xs,
+  },
+  mediaWrap: {
+    width: 72,
+  },
   cover: {
     width: '100%',
-    height: 84,
+    height: '100%',
   },
   cardBody: {
+    flex: 1,
     padding: Spacing.sm,
     gap: 6,
     alignItems: 'flex-start',
+    justifyContent: 'center',
+    minWidth: 0,
   },
 });

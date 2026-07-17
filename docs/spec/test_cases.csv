@@ -194,6 +194,16 @@ PILG-048,Pilgrimage,deterministic,P0,Pilgrimage event notification routing,pilgr
 PILG-049,Pilgrimage,deterministic,P0,Local intel runtime hydration,Runtime hydration swaps data with version bump and subscriber notify while low-coverage payloads are rejected,fallback,active
 PILG-050,Pilgrimage,deterministic,P0,Local intel localization,LocalizedText resolves by language priority with zh-Hans to zh-Hant conversion and TranslationSource tagging,mapping,active
 PILG-051,Pilgrimage,deterministic,P0,Hub rail event ordering,Hub rail orders active then dated upcoming then unannounced-in-horizon events deduplicated by event id,mapping,active
+PILG-052,Pilgrimage,deterministic,P0,Event date block derivation,deriveEventDateBlock returns the right top main and emphasis for active upcoming ongoing and unannounced states across languages,mapping,active
+NEWS-001,News,deterministic,P0,RSS2 feed parse,RSS 2.0 items parse guid link title pubDate and description with CDATA and HTML entities decoded,mapping,active
+NEWS-002,News,deterministic,P0,Atom feed parse,Atom entries parse id title updated and the alternate link,mapping,active
+NEWS-003,News,deterministic,P0,RDF feed parse,RSS 1.0 RDF items parse title link description and dc date,mapping,active
+NEWS-004,News,deterministic,P0,Parser tolerance,Malformed XML returns empty missing guid falls back to link missing date yields zero and unaddressable items are dropped without throwing,error-handling,active
+NEWS-005,News,deterministic,P0,Source dataset loading,News source dataset loads drops entries missing id feedUrl or verifiedAt dedupes by id and exposes the recommended set,nullability,active
+NEWS-006,News,deterministic,P0,Follow set semantics,Uninitialized follow set resolves to recommended follow and unfollow reducers work empty set is distinct stale ids sanitize and persistence roundtrips,boundary,active
+NEWS-007,News,deterministic,P0,Merged stream,Merged stream orders articles by publishedAt descending dedupes by link and one failing source does not poison the others,mapping,active
+NEWS-008,News,deterministic,P0,Stream cache,Fresh cache returns cached value stale returns value flagged for refresh and per-source TTLs are independent,timing,active
+NEWS-009,News,deterministic,P0,RSS client error normalization,rss-client maps 429 to rate-limited 5xx to server-error and timeout or network failure to network-error,error-handling,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active
