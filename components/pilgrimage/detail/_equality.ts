@@ -36,6 +36,7 @@ export interface SceneTileEqualityProps extends ThemedProps {
   planned: boolean;
   hasCapture: boolean;
   captureUri: string | null;
+  entryIndex?: number;
   onPress: (spot: AnitabiPoint) => void;
   onToggleVisited: (spot: AnitabiPoint) => void;
   onTakeComparison: (spot: AnitabiPoint) => void;
@@ -58,6 +59,7 @@ export function sceneTilePropsEqual(
     prev.planned === next.planned &&
     prev.hasCapture === next.hasCapture &&
     prev.captureUri === next.captureUri &&
+    prev.entryIndex === next.entryIndex &&
     prev.theme === next.theme &&
     prev.onPress === next.onPress &&
     prev.onToggleVisited === next.onToggleVisited &&

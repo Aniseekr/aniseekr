@@ -32,7 +32,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -104,6 +104,7 @@ import { buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nea
 import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
 import { MAP_LOCATE_RADIUS_KM } from '../../../libs/services/pilgrimage/map-nearby';
 import type { NearbySpot } from '../../../libs/services/pilgrimage/nearby-spots';
+import { fabEnter, fabExit, overlayEnter } from '../../../libs/animations/presets';
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
 // Values point into the shared `pilgrimage.regions.*` catalog so this rail,
@@ -469,7 +470,7 @@ export default function PilgrimageMapScreen() {
     if (focusedAnimeId === null) return;
     const inList = filteredEntries.some((e) => e.anime.id === focusedAnimeId);
     if (!inList) setFocusedAnimeId(null);
-  }, [filteredEntries, focusedAnimeId]);
+  }, [filteredEntries, focusedAnimeId, setFocusedAnimeId]);
 
   const handleSwapFocused = useCallback(() => {
     if (filteredEntries.length < 2) return;
@@ -480,7 +481,7 @@ export default function PilgrimageMapScreen() {
       const next = idx < 0 ? 1 : (idx + 1) % ids.length;
       return ids[next] ?? null;
     });
-  }, [filteredEntries]);
+  }, [filteredEntries, setFocusedAnimeId]);
 
   // ─── Marker building ───────────────────────────────────────────────────
   // Hub map shows centroids for filteredEntries (so the user's filter and
@@ -555,10 +556,7 @@ export default function PilgrimageMapScreen() {
   // collection membership changes (Rule 9), not on every map pan/tick.
   const [nearbySpots, setNearbySpots] = useState<readonly NearbySpot[]>([]);
   useEffect(() => {
-    if (!userLocation) {
-      setNearbySpots([]);
-      return;
-    }
+    if (!userLocation) return;
     let active = true;
     getSpotsNear(userLocation, MAP_LOCATE_RADIUS_KM, 40)
       .then((hits) => {
@@ -582,10 +580,15 @@ export default function PilgrimageMapScreen() {
     };
   }, [userLocation, collectionIds]);
 
-  const handlePickNearbySpot = useCallback((spot: NearbySpot) => {
-    setFocusedAnimeId(spot.animeId);
-    mapRef.current?.recenter(spot.lat, spot.lng, 15, { animate: true });
-  }, []);
+  const visibleNearbySpots = userLocation ? nearbySpots : [];
+
+  const handlePickNearbySpot = useCallback(
+    (spot: NearbySpot) => {
+      setFocusedAnimeId(spot.animeId);
+      mapRef.current?.recenter(spot.lat, spot.lng, 15, { animate: true });
+    },
+    [setFocusedAnimeId]
+  );
 
   // ─── Handlers ──────────────────────────────────────────────────────────
   // Small clusters delegate to the surface (big ones zoom-to-fit inside the
@@ -645,7 +648,7 @@ export default function PilgrimageMapScreen() {
       const anime = knownAnimes.find((a) => a.id === bangumiId) ?? null;
       navigateToDetail(bangumiId, anime);
     },
-    [knownAnimes, navigateToDetail]
+    [knownAnimes, navigateToDetail, setFocusedAnimeId]
   );
 
   const handleSheetAnimePress = useCallback(
@@ -752,19 +755,6 @@ export default function PilgrimageMapScreen() {
 
   const initialSheetIndex = initialMode === 'list' ? 2 : 1;
 
-  // Anchor floating bottom chrome to the sheet's top edge so it slides with
-  // the sheet rather than getting buried at mid snap. Hidden once the sheet
-  // covers the top half of the screen (full snap) so it doesn't float over
-  // the anime list scroll area.
-  const chromeAnimatedStyle = useAnimatedStyle(() => {
-    const bottom = Math.max(screenHeight - sheetPosition.value + 6, sheetPeekOffset);
-    const hidden = sheetPosition.value < screenHeight * 0.18;
-    return {
-      bottom,
-      opacity: hidden ? 0 : 1,
-    };
-  });
-
   // ─── Drive the inline map camera (Rule 9 — imperative, off React state) ──
   // Fly to the focused anime when it changes (swap / sheet-row preview) so the
   // sheet + map track together. This is a programmatic camera move driven by
@@ -807,6 +797,81 @@ export default function PilgrimageMapScreen() {
     mapRef.current?.fitBounds?.(flyBoundsRequest.bounds);
   }, [flyBoundsRequest, onUserPan]);
 
+  // Memoized so PilgrimageHubSheet's `areEqual` memo isn't defeated by a fresh
+  // JSX identity every render — the sheet only re-renders when a control's
+  // actual input changes.
+  const hubHeaderControls = useMemo(
+    () => (
+      <>
+        <FilterPill
+          label={t('pilgrimage.map.filter.all')}
+          active={hubFilter === 'all'}
+          badge={filterCounts.all}
+          themeColor={themeColor}
+          themeColorFg={themeColorFg}
+          theme={theme}
+          onPress={() => handlePickFilter('all')}
+        />
+        <FilterPill
+          label={t('pilgrimage.map.filter.collection')}
+          active={hubFilter === 'collection'}
+          badge={filterCounts.collection}
+          themeColor={themeColor}
+          themeColorFg={themeColorFg}
+          theme={theme}
+          icon="bookmark"
+          onPress={() => handlePickFilter('collection')}
+        />
+        <FilterPill
+          label={t('pilgrimage.map.filter.official88')}
+          active={hubFilter === 'official88'}
+          badge={filterCounts.official88}
+          themeColor={themeColor}
+          themeColorFg={themeColorFg}
+          theme={theme}
+          onPress={() => handlePickFilter('official88')}
+        />
+        <View style={styles.viewModeBar}>
+          <LayoutToggleSegment
+            icon="reorder-three"
+            label={t('pilgrimage.map.layout.rows')}
+            count={filteredEntries.length}
+            active={listLayout === 'rows'}
+            themeColor={themeColor}
+            themeColorFg={themeColorFg}
+            theme={theme}
+            styles={styles}
+            onPress={() => handlePickLayout('rows')}
+          />
+          <LayoutToggleSegment
+            icon="apps"
+            label={t('pilgrimage.map.layout.grid')}
+            count={filteredEntries.length}
+            active={listLayout === 'grid'}
+            themeColor={themeColor}
+            themeColorFg={themeColorFg}
+            theme={theme}
+            styles={styles}
+            onPress={() => handlePickLayout('grid')}
+          />
+        </View>
+      </>
+    ),
+    [
+      t,
+      hubFilter,
+      filterCounts,
+      listLayout,
+      filteredEntries.length,
+      theme,
+      themeColor,
+      themeColorFg,
+      styles,
+      handlePickFilter,
+      handlePickLayout,
+    ]
+  );
+
   return (
     <>
       <Stack.Screen
@@ -846,7 +911,11 @@ export default function PilgrimageMapScreen() {
           />
         </View>
 
-        {mapLoadFailed ? <MapOfflineOverlay onRetry={handleMapRetry} /> : null}
+        {mapLoadFailed ? (
+          <Animated.View entering={FadeIn} style={StyleSheet.absoluteFill}>
+            <MapOfflineOverlay onRetry={handleMapRetry} />
+          </Animated.View>
+        ) : null}
 
         {loading ? (
           <View style={styles.loadingBox}>
@@ -855,7 +924,10 @@ export default function PilgrimageMapScreen() {
         ) : (
           <>
             {/* Layer 2 — floating top overlay (back / album + search + region chips). */}
-            <View style={styles.topOverlay} pointerEvents="box-none">
+            <Animated.View
+              entering={overlayEnter()}
+              style={styles.topOverlay}
+              pointerEvents="box-none">
               <View style={styles.headerActions}>
                 <RoundHeaderButton
                   icon="chevron-back"
@@ -926,84 +998,20 @@ export default function PilgrimageMapScreen() {
                 onPickRegion={handlePickRegion}
                 onResetToJapan={handleResetToJapan}
               />
-            </View>
-
-            {/* Layer 3+4 — floating bottom chrome anchored to the sheet's top
-              edge. Filter chips + layout toggle in a single Animated.View. */}
-            <Animated.View
-              style={[styles.bottomChromeWrap, chromeAnimatedStyle]}
-              pointerEvents="box-none">
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipRow}>
-                <FilterPill
-                  label={t('pilgrimage.map.filter.all')}
-                  active={hubFilter === 'all'}
-                  badge={filterCounts.all}
-                  themeColor={themeColor}
-                  themeColorFg={themeColorFg}
-                  theme={theme}
-                  onPress={() => handlePickFilter('all')}
-                />
-                <FilterPill
-                  label={t('pilgrimage.map.filter.collection')}
-                  active={hubFilter === 'collection'}
-                  badge={filterCounts.collection}
-                  themeColor={themeColor}
-                  themeColorFg={themeColorFg}
-                  theme={theme}
-                  icon="bookmark"
-                  onPress={() => handlePickFilter('collection')}
-                />
-                <FilterPill
-                  label={t('pilgrimage.map.filter.official88')}
-                  active={hubFilter === 'official88'}
-                  badge={filterCounts.official88}
-                  themeColor={themeColor}
-                  themeColorFg={themeColorFg}
-                  theme={theme}
-                  onPress={() => handlePickFilter('official88')}
-                />
-              </ScrollView>
-              <View style={styles.viewModeWrapInner}>
-                <View style={styles.viewModeBar}>
-                  <LayoutToggleSegment
-                    icon="reorder-three"
-                    label={t('pilgrimage.map.layout.rows')}
-                    count={filteredEntries.length}
-                    active={listLayout === 'rows'}
-                    themeColor={themeColor}
-                    themeColorFg={themeColorFg}
-                    theme={theme}
-                    styles={styles}
-                    onPress={() => handlePickLayout('rows')}
-                  />
-                  <LayoutToggleSegment
-                    icon="apps"
-                    label={t('pilgrimage.map.layout.grid')}
-                    count={filteredEntries.length}
-                    active={listLayout === 'grid'}
-                    themeColor={themeColor}
-                    themeColorFg={themeColorFg}
-                    theme={theme}
-                    styles={styles}
-                    onPress={() => handlePickLayout('grid')}
-                  />
-                </View>
-              </View>
             </Animated.View>
 
             {/* Locate FAB — anchors to the sheet so it never sits behind the
               handle, and drives idle / following / compass via the hook. */}
-            <LocateFab
-              state={locateState}
-              onPress={cycleState}
-              sheetAnimatedPosition={sheetPosition}
-              screenHeight={screenHeight}
-              bottomInset={sheetPeekOffset}
-              loading={isRequestingPermission}
-            />
+            <Animated.View entering={fabEnter()} exiting={fabExit()} pointerEvents="box-none">
+              <LocateFab
+                state={locateState}
+                onPress={cycleState}
+                sheetAnimatedPosition={sheetPosition}
+                screenHeight={screenHeight}
+                bottomInset={sheetPeekOffset}
+                loading={isRequestingPermission}
+              />
+            </Animated.View>
 
             {/* Layer 5 — persistent pull-up sheet with focused-anime card,
               hub stats and the nearby anime list. */}
@@ -1024,8 +1032,9 @@ export default function PilgrimageMapScreen() {
               animatedPosition={sheetPosition}
               onAnimePress={handleSheetAnimePress}
               onSwapFocused={handleSwapFocused}
-              nearbySpots={nearbySpots}
+              nearbySpots={visibleNearbySpots}
               onPickNearbySpot={handlePickNearbySpot}
+              headerControls={hubHeaderControls}
             />
 
             {/* Long-press quick actions — anime-centroid honest actions only
@@ -1041,40 +1050,48 @@ export default function PilgrimageMapScreen() {
                 onPress={closeQuickActions}
                 accessibilityLabel={t('commonUi.dismiss')}
                 accessibilityRole="button">
-                <Pressable
-                  style={[
-                    styles.quickActionSheet,
-                    { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
-                  ]}
-                  onPress={() => undefined}>
-                  <ThemedText variant="titleSmall" weight="800" numberOfLines={1}>
-                    {quickActionMarker?.title}
-                  </ThemedText>
+                <Animated.View entering={overlayEnter()}>
                   <Pressable
-                    onPress={handleQuickNavigate}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
-                    <Ionicons name="navigate-outline" size={18} color={theme.text.primary} />
-                    <ThemedText variant="bodyMedium">
-                      {t('pilgrimage.map.quickAction.navigate')}
+                    style={[
+                      styles.quickActionSheet,
+                      {
+                        backgroundColor: theme.background.secondary,
+                        borderColor: theme.glassBorder,
+                      },
+                    ]}
+                    onPress={() => undefined}>
+                    <ThemedText variant="titleSmall" weight="800" numberOfLines={1}>
+                      {quickActionMarker?.title}
                     </ThemedText>
-                  </Pressable>
-                  {quickActionMarker?.bangumiId != null ? (
                     <Pressable
-                      onPress={handleQuickOpen}
+                      onPress={handleQuickNavigate}
                       accessibilityRole="button"
                       style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
-                      <Ionicons
-                        name="information-circle-outline"
-                        size={18}
-                        color={theme.text.primary}
-                      />
+                      <Ionicons name="navigate-outline" size={18} color={theme.text.primary} />
                       <ThemedText variant="bodyMedium">
-                        {t('pilgrimage.map.quickAction.openDetail')}
+                        {t('pilgrimage.map.quickAction.navigate')}
                       </ThemedText>
                     </Pressable>
-                  ) : null}
-                </Pressable>
+                    {quickActionMarker?.bangumiId != null ? (
+                      <Pressable
+                        onPress={handleQuickOpen}
+                        accessibilityRole="button"
+                        style={({ pressed }) => [
+                          styles.quickActionRow,
+                          pressed && { opacity: 0.7 },
+                        ]}>
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={18}
+                          color={theme.text.primary}
+                        />
+                        <ThemedText variant="bodyMedium">
+                          {t('pilgrimage.map.quickAction.openDetail')}
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
+                  </Pressable>
+                </Animated.View>
               </Pressable>
             </Modal>
           </>
@@ -1321,21 +1338,6 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       justifyContent: 'center',
     },
 
-    // Floating bottom chrome — anchored to the sheet's top edge.
-    bottomChromeWrap: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      paddingHorizontal: Spacing.screenPadding,
-      gap: Spacing.xs,
-    },
-    chipRow: {
-      gap: Spacing.xs,
-      paddingRight: Spacing.xs,
-    },
-    viewModeWrapInner: {
-      alignItems: 'center',
-    },
     viewModeBar: {
       flexDirection: 'row',
       alignItems: 'center',

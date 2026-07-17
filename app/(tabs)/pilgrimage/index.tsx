@@ -19,12 +19,14 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
+import { Typography } from '../../../constants/DesignSystem';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
@@ -58,6 +60,7 @@ import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScree
 import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
 import { CacheService } from '../../../libs/services/cache-service';
 import { DETAIL_CACHE_KEY_PREFIX } from '../../../libs/services/pilgrimage/anitabi-service';
+import { listItemEnter, overlayEnter } from '../../../libs/animations/presets';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -471,16 +474,19 @@ export default function PilgrimageHubScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.popularRow}>
-                {sortedCollectionAnimes.map((anime) => (
-                  <PopularCard
+                {sortedCollectionAnimes.map((anime, index) => (
+                  <Animated.View
                     key={anime.id}
-                    anime={anime}
-                    visited={visited}
-                    theme={theme}
-                    fromCollection={false}
-                    distanceKm={collectionDistanceKm.get(anime.id)}
-                    onPress={() => handleAnimePress(anime)}
-                  />
+                    entering={index < 8 ? listItemEnter(index) : undefined}>
+                    <PopularCard
+                      anime={anime}
+                      visited={visited}
+                      theme={theme}
+                      fromCollection={false}
+                      distanceKm={collectionDistanceKm.get(anime.id)}
+                      onPress={() => handleAnimePress(anime)}
+                    />
+                  </Animated.View>
                 ))}
               </ScrollView>
             </View>
@@ -505,16 +511,19 @@ export default function PilgrimageHubScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.popularRow}>
-                {popularList.map((card) => (
-                  <PopularCard
+                {popularList.map((card, index) => (
+                  <Animated.View
                     key={card.anime.id}
-                    anime={card.anime}
-                    visited={visited}
-                    theme={theme}
-                    fromCollection={card.fromCollection}
-                    distanceKm={card.distanceKm}
-                    onPress={() => handleAnimePress(card.anime)}
-                  />
+                    entering={index < 8 ? listItemEnter(index) : undefined}>
+                    <PopularCard
+                      anime={card.anime}
+                      visited={visited}
+                      theme={theme}
+                      fromCollection={card.fromCollection}
+                      distanceKm={card.distanceKm}
+                      onPress={() => handleAnimePress(card.anime)}
+                    />
+                  </Animated.View>
                 ))}
               </ScrollView>
             </View>
@@ -561,16 +570,19 @@ export default function PilgrimageHubScreen() {
                   theme={theme}
                 />
                 <View style={styles.spotList}>
-                  {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
-                    <FeaturedSpotRow
+                  {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }, index) => (
+                    <Animated.View
                       key={`${anime.id}:${spot.id}`}
-                      spot={spot}
-                      anime={anime}
-                      distanceKm={distanceKm}
-                      fromCollection={fromCollection}
-                      theme={theme}
-                      onPress={() => handleAnimePress(anime)}
-                    />
+                      entering={index < 8 ? listItemEnter(index) : undefined}>
+                      <FeaturedSpotRow
+                        spot={spot}
+                        anime={anime}
+                        distanceKm={distanceKm}
+                        fromCollection={fromCollection}
+                        theme={theme}
+                        onPress={() => handleAnimePress(anime)}
+                      />
+                    </Animated.View>
                   ))}
                 </View>
               </View>
@@ -685,7 +697,7 @@ function SectionHeader({
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
-    <View style={styles.sectionHeader}>
+    <Animated.View entering={overlayEnter()} style={styles.sectionHeader}>
       <View style={styles.sectionHeaderLeft}>
         <ThemedText variant="titleMedium" weight="700">
           {title}
@@ -710,7 +722,7 @@ function SectionHeader({
           </Pressable>
         ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -755,7 +767,7 @@ function PopularCard({
       <View style={styles.popularPosterWrap}>
         <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
         <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
-          <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg, fontSize: 10 }}>
+          <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
             {t('pilgrimageUi.spotsCount', { count: total })}
           </ThemedText>
         </View>
@@ -767,10 +779,7 @@ function PopularCard({
         {progress.visitedCount > 0 ? (
           <View style={styles.popularVisited}>
             <Ionicons name="checkmark" size={10} color={theme.status.success} />
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: theme.status.success, fontSize: 9 }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: theme.status.success }}>
               {progress.total != null
                 ? t('pilgrimageUi.progressFraction', {
                     visited: progress.visitedCount,
@@ -782,7 +791,7 @@ function PopularCard({
         ) : null}
       </View>
       <View style={styles.popularMeta}>
-        <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
+        <ThemedText variant="captionSmall" weight="700" numberOfLines={1}>
           {titles.primary}
         </ThemedText>
         {subtitle ? (
@@ -790,7 +799,7 @@ function PopularCard({
             variant="captionSmall"
             tone="secondary"
             numberOfLines={1}
-            style={{ fontSize: 10 }}>
+            style={styles.compactCaption}>
             {subtitle}
           </ThemedText>
         ) : null}
@@ -798,7 +807,7 @@ function PopularCard({
           variant="captionSmall"
           tone="tertiary"
           numberOfLines={1}
-          style={{ fontSize: 10 }}>
+          style={styles.compactCaption}>
           {distanceKm !== undefined
             ? `${formatKm(distanceKm)} · ${anime.city || '—'}`
             : anime.city || '—'}
@@ -889,7 +898,7 @@ function makeStyles(theme: ThemePalette) {
     },
     // flexShrink + single line so the 4-button header cluster can't push the
     // title into unclipped overflow on narrow screens (album.tsx precedent).
-    headerTitle: { fontSize: 22, flexShrink: 1 },
+    headerTitle: { ...Typography.headlineMedium, flexShrink: 1 },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     iconBtn: {
       width: 40,
@@ -903,7 +912,8 @@ function makeStyles(theme: ThemePalette) {
     },
     scrollContent: { paddingHorizontal: 20, paddingTop: 20, gap: 22 },
     intro: { gap: 4 },
-    introCaps: { letterSpacing: 1.2, fontSize: 12 },
+    introCaps: { ...Typography.captionSmall, letterSpacing: 1.2 },
+    compactCaption: Typography.captionSmall,
     introBody: { lineHeight: 18 },
     heroCard: {
       height: 170,

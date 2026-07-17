@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing share auto-match state model is out of scope for the Phase 2 motion pass. */
 // Builds a branded share image with both the anime reference and the user's
 // shot. The user picks a template (visual style) and ratio (target platform);
 // react-native-view-shot captures the rendered card into a PNG that the
@@ -16,13 +17,14 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated from 'react-native-reanimated';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../../../components/themed';
+import { ON_DARK, ThemedText, readableTextOn } from '../../../../components/themed';
 import {
   formatShareLocation,
   getShareEpisode,
@@ -73,6 +75,7 @@ import {
   type SharePlatform,
 } from '../../../../libs/services/pilgrimage/share-intents';
 import { useT } from '../../../../libs/i18n';
+import { listItemEnterDown, toastEnter, toastExit } from '../../../../libs/animations/presets';
 
 export default function ShareComparisonScreen() {
   const router = useRouter();
@@ -141,7 +144,6 @@ export default function ShareComparisonScreen() {
 
   useEffect(() => {
     if (!autoMatchEnabled || !imageUrl || !effectiveShotUri) {
-      setAutoMatchMatrix(null);
       return;
     }
     let cancelled = false;
@@ -186,7 +188,9 @@ export default function ShareComparisonScreen() {
   }, [autoWarpEnabled, tiltDeg, headingDeltaDeg]);
 
   // Final matrix priority: auto match (when ready) overrides preset filter.
-  const filterMatrix = autoMatchEnabled && autoMatchMatrix ? autoMatchMatrix : presetMatrix;
+  const effectiveAutoMatchMatrix =
+    autoMatchEnabled && imageUrl && effectiveShotUri ? autoMatchMatrix : null;
+  const filterMatrix = effectiveAutoMatchMatrix ? effectiveAutoMatchMatrix : presetMatrix;
 
   const cardRef = useRef<View>(null);
   const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
@@ -400,7 +404,7 @@ export default function ShareComparisonScreen() {
             </View>
           </View>
 
-          <View style={styles.ratioRow}>
+          <Animated.View entering={listItemEnterDown(0)} style={styles.ratioRow}>
             {SHARE_RATIOS.map((r) => {
               const active = r.id === ratio;
               return (
@@ -439,110 +443,114 @@ export default function ShareComparisonScreen() {
                 </Pressable>
               );
             })}
-          </View>
+          </Animated.View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.templateRow}>
-            {SHARE_TEMPLATES.map((tpl) => {
-              const active = tpl.id === template;
-              const tplLabel = t(tpl.label);
-              return (
-                <Pressable
-                  key={tpl.id}
-                  onPress={() => {
-                    hapticsBridge.selection();
-                    setTemplate(tpl.id);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Template ${tplLabel}`}
-                  accessibilityState={{ selected: active }}
-                  style={({ pressed }) => [
-                    styles.templateChip,
-                    {
-                      backgroundColor: active ? accent : theme.background.secondary,
-                      borderColor: active ? accent : theme.glassBorder,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}>
-                  <ThemedText
-                    variant="bodySmall"
-                    weight="700"
-                    style={{ color: active ? accentFg : theme.text.primary }}>
-                    {tpl.emoji} {tplLabel}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <Animated.View entering={listItemEnterDown(1)}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.templateRow}>
+              {SHARE_TEMPLATES.map((tpl) => {
+                const active = tpl.id === template;
+                const tplLabel = t(tpl.label);
+                return (
+                  <Pressable
+                    key={tpl.id}
+                    onPress={() => {
+                      hapticsBridge.selection();
+                      setTemplate(tpl.id);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Template ${tplLabel}`}
+                    accessibilityState={{ selected: active }}
+                    style={({ pressed }) => [
+                      styles.templateChip,
+                      {
+                        backgroundColor: active ? accent : theme.background.secondary,
+                        borderColor: active ? accent : theme.glassBorder,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}>
+                    <ThemedText
+                      variant="bodySmall"
+                      weight="700"
+                      style={{ color: active ? accentFg : theme.text.primary }}>
+                      {tpl.emoji} {tplLabel}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
 
-          <ShareComposerControls
-            theme={theme}
-            accent={accent}
-            swapOrder={swapOrder}
-            onSwapOrderChange={setSwapOrder}
-            customBg={customBg}
-            onCustomBgChange={setCustomBg}
-            watermarkInput={watermarkInput}
-            onWatermarkInputChange={setWatermarkInput}
-            watermarkPosition={watermarkPosition}
-            onWatermarkPositionChange={setWatermarkPosition}
-            watermarkOpacity={watermarkOpacity}
-            onWatermarkOpacityChange={setWatermarkOpacity}
-            watermarkColor={watermarkColor}
-            onWatermarkColorChange={setWatermarkColor}
-            watermarkFont={watermarkFont}
-            onWatermarkFontChange={setWatermarkFont}
-            exportResolution={exportResolution}
-            onExportResolutionChange={setExportResolution}
-            filterPreset={filterPreset}
-            onFilterPresetChange={setFilterPreset}
-            filterIntensity={filterIntensity}
-            onFilterIntensityChange={setFilterIntensity}
-            onOpenCrop={() => setCropOpen(true)}
-            cropApplied={!!croppedShotUri}
-            autoMatchEnabled={autoMatchEnabled}
-            autoMatchLoading={autoMatchLoading}
-            autoMatchAvailable={!!(imageUrl && effectiveShotUri)}
-            onAutoMatchChange={setAutoMatchEnabled}
-            autoWarpEnabled={autoWarpEnabled}
-            autoWarpAvailable={autoWarpAvailable}
-            onAutoWarpChange={setAutoWarpEnabled}
-            manualWarpApplied={!!manualWarpCorners}
-            onOpenManualWarp={() => setWarpOpen(true)}
-            onResetManualWarp={() => setManualWarpCorners(null)}
-          />
+          <Animated.View entering={listItemEnterDown(2)}>
+            <ShareComposerControls
+              theme={theme}
+              accent={accent}
+              swapOrder={swapOrder}
+              onSwapOrderChange={setSwapOrder}
+              customBg={customBg}
+              onCustomBgChange={setCustomBg}
+              watermarkInput={watermarkInput}
+              onWatermarkInputChange={setWatermarkInput}
+              watermarkPosition={watermarkPosition}
+              onWatermarkPositionChange={setWatermarkPosition}
+              watermarkOpacity={watermarkOpacity}
+              onWatermarkOpacityChange={setWatermarkOpacity}
+              watermarkColor={watermarkColor}
+              onWatermarkColorChange={setWatermarkColor}
+              watermarkFont={watermarkFont}
+              onWatermarkFontChange={setWatermarkFont}
+              exportResolution={exportResolution}
+              onExportResolutionChange={setExportResolution}
+              filterPreset={filterPreset}
+              onFilterPresetChange={setFilterPreset}
+              filterIntensity={filterIntensity}
+              onFilterIntensityChange={setFilterIntensity}
+              onOpenCrop={() => setCropOpen(true)}
+              cropApplied={!!croppedShotUri}
+              autoMatchEnabled={autoMatchEnabled}
+              autoMatchLoading={autoMatchLoading}
+              autoMatchAvailable={!!(imageUrl && effectiveShotUri)}
+              onAutoMatchChange={setAutoMatchEnabled}
+              autoWarpEnabled={autoWarpEnabled}
+              autoWarpAvailable={autoWarpAvailable}
+              onAutoWarpChange={setAutoWarpEnabled}
+              manualWarpApplied={!!manualWarpCorners}
+              onOpenManualWarp={() => setWarpOpen(true)}
+              onResetManualWarp={() => setManualWarpCorners(null)}
+            />
 
-          <View style={styles.toggleGroup}>
-            <ToggleRow
-              icon="trophy-outline"
-              tone={theme.status.success}
-              label={t('pilgrimageUi.showMatchScore')}
-              subtitle={t('pilgrimageUi.includeComparisonScore')}
-              value={showScore}
-              onChange={setShowScore}
-              theme={theme}
-            />
-            <ToggleRow
-              icon="location-outline"
-              tone={theme.accent}
-              label={t('pilgrimageUi.showLocation')}
-              subtitle={t('pilgrimageUi.includeCaptureCoordinates')}
-              value={showLocation}
-              onChange={setShowLocation}
-              theme={theme}
-            />
-            <ToggleRow
-              icon="calendar-outline"
-              tone={theme.secondary}
-              label={t('pilgrimageUi.showDate')}
-              subtitle={t('pilgrimageUi.includeDate')}
-              value={showDate}
-              onChange={setShowDate}
-              theme={theme}
-            />
-          </View>
+            <View style={styles.toggleGroup}>
+              <ToggleRow
+                icon="trophy-outline"
+                tone={theme.status.success}
+                label={t('pilgrimageUi.showMatchScore')}
+                subtitle={t('pilgrimageUi.includeComparisonScore')}
+                value={showScore}
+                onChange={setShowScore}
+                theme={theme}
+              />
+              <ToggleRow
+                icon="location-outline"
+                tone={theme.accent}
+                label={t('pilgrimageUi.showLocation')}
+                subtitle={t('pilgrimageUi.includeCaptureCoordinates')}
+                value={showLocation}
+                onChange={setShowLocation}
+                theme={theme}
+              />
+              <ToggleRow
+                icon="calendar-outline"
+                tone={theme.secondary}
+                label={t('pilgrimageUi.showDate')}
+                subtitle={t('pilgrimageUi.includeDate')}
+                value={showDate}
+                onChange={setShowDate}
+                theme={theme}
+              />
+            </View>
+          </Animated.View>
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: bottomPad(insets) }]}>
@@ -550,21 +558,21 @@ export default function ShareComparisonScreen() {
             <SocialBtn
               icon="logo-instagram"
               label="IG"
-              gradient={['#FFB86A', '#FF4F8F', '#9B3BFF']}
+              gradient={['rgb(255,184,106)', 'rgb(255,79,143)', 'rgb(155,59,255)']}
               onPress={() => performShare('instagram')}
               accessibilityLabel={t('pilgrimageUi.shareToInstagram')}
             />
             <SocialBtn
               icon="logo-twitter"
               label="X"
-              gradient={['#1DA1F2', '#0E72B5']}
+              gradient={['rgb(29,161,242)', 'rgb(14,114,181)']}
               onPress={() => performShare('twitter')}
               accessibilityLabel={t('pilgrimageUi.shareToXTwitter')}
             />
             <SocialBtn
               icon="chatbubble-ellipses"
               label="LINE"
-              gradient={['#10D966', '#0BBC55']}
+              gradient={['rgb(16,217,102)', 'rgb(11,188,85)']}
               onPress={() => performShare('line')}
               accessibilityLabel={t('pilgrimageUi.shareViaLine')}
             />
@@ -592,7 +600,11 @@ export default function ShareComparisonScreen() {
         </View>
 
         {toast ? (
-          <View pointerEvents="none" style={[styles.toastWrap, { bottom: insets.bottom + 168 }]}>
+          <Animated.View
+            entering={toastEnter()}
+            exiting={toastExit()}
+            pointerEvents="none"
+            style={[styles.toastWrap, { bottom: insets.bottom + 168 }]}>
             <View
               style={[
                 styles.toast,
@@ -602,7 +614,7 @@ export default function ShareComparisonScreen() {
                 {toast}
               </ThemedText>
             </View>
-          </View>
+          </Animated.View>
         ) : null}
       </SafeAreaView>
 
@@ -721,11 +733,11 @@ function SocialBtn({
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <Ionicons name={icon} size={20} color="#fff" />
+      <Ionicons name={icon} size={20} color={ON_DARK} />
       <ThemedText
         variant="captionSmall"
         weight="700"
-        style={{ color: '#fff', marginTop: 2, letterSpacing: 0.5 }}>
+        style={{ color: ON_DARK, marginTop: 2, letterSpacing: 0.5 }}>
         {label}
       </ThemedText>
     </Pressable>
@@ -772,7 +784,7 @@ function makeStyles(theme: ThemePalette) {
     },
     cardShadow: {
       borderRadius: 4,
-      shadowColor: '#000',
+      shadowColor: 'rgb(0,0,0)',
       shadowOpacity: 0.3,
       shadowRadius: 16,
       shadowOffset: { width: 0, height: 8 },

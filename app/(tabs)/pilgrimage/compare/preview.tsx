@@ -1,29 +1,32 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/immutability -- Existing compare preview state/gesture model is out of scope for the Phase 2 motion pass. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { bottomPad, Size } from '../../../../constants/DesignSystem';
+import { bottomPad, Size, Typography } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { useT } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import { ThemedSurface, ThemedText } from '../../../../components/themed';
+import {
+  ON_DARK,
+  readableTextOn,
+  Skeleton,
+  ThemedSurface,
+  ThemedText,
+} from '../../../../components/themed';
 import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
-import { anitabiImageSource, toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
+import {
+  anitabiImageSource,
+  toFullResImageUrl,
+} from '../../../../libs/services/pilgrimage/anitabi-image';
 import { scoreSnapshot } from '../../../../libs/services/pilgrimage/alignment-scoring';
 import {
   buildCaptureSessionShotFromRoute,
@@ -535,8 +538,7 @@ export default function ComparePreviewScreen() {
       matchScore: frameMatch?.total != null ? Math.round(frameMatch.total * 100) : null,
       frameValid: frameMatch ? frameMatch.valid : null,
       frameReason: frameMatch?.reason ?? null,
-      positionScore:
-        positionScore?.total != null ? Math.round(positionScore.total * 100) : null,
+      positionScore: positionScore?.total != null ? Math.round(positionScore.total * 100) : null,
     });
     router.push({
       pathname: '/pilgrimage/compare/share',
@@ -626,8 +628,11 @@ export default function ComparePreviewScreen() {
               ]}
               accessibilityRole="button"
               accessibilityLabel={t('pilgrimageUi.retake')}>
-              <Ionicons name="camera" size={18} color="#000" />
-              <ThemedText variant="bodyMedium" weight="700" style={{ color: '#000' }}>
+              <Ionicons name="camera" size={18} color={readableTextOn(themeColor)} />
+              <ThemedText
+                variant="bodyMedium"
+                weight="700"
+                style={{ color: readableTextOn(themeColor) }}>
                 {t('pilgrimageUi.retake')}
               </ThemedText>
             </Pressable>
@@ -783,7 +788,9 @@ export default function ComparePreviewScreen() {
               </View>
               <View style={styles.overallWrap}>
                 {frameLoading ? (
-                  <ActivityIndicator size="small" color={theme.accent} />
+                  <Animated.View entering={FadeIn}>
+                    <Skeleton.Block width={58} height={36} borderRadius={12} />
+                  </Animated.View>
                 ) : frameMatch?.total != null ? (
                   <>
                     <ThemedText
@@ -839,7 +846,7 @@ export default function ComparePreviewScreen() {
                   <ThemedText
                     variant="bodySmall"
                     weight={active ? '700' : '500'}
-                    style={{ color: active ? '#000' : theme.text.primary }}>
+                    style={{ color: active ? readableTextOn(themeColor) : theme.text.primary }}>
                     {label}
                   </ThemedText>
                 </Pressable>
@@ -876,7 +883,12 @@ export default function ComparePreviewScreen() {
               ) : mode === 'sideBySide' ? (
                 <View style={styles.sideFlow}>
                   <View style={styles.sideHalf}>
-                    <LabeledImage uri={imageUrl} label={t('commonUi.anime')} accent={themeColor} compact />
+                    <LabeledImage
+                      uri={imageUrl}
+                      label={t('commonUi.anime')}
+                      accent={themeColor}
+                      compact
+                    />
                   </View>
                   <View style={styles.sideHalf}>
                     <LabeledImage
@@ -893,11 +905,7 @@ export default function ComparePreviewScreen() {
                   <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                   <Image
                     source={anitabiImageSource(imageUrl)}
-                    style={[
-                      styles.fullImage,
-                      StyleSheet.absoluteFill,
-                      { opacity: overlayOpacity },
-                    ]}
+                    style={[styles.fullImage, StyleSheet.absoluteFill, { opacity: overlayOpacity }]}
                     contentFit="cover"
                   />
                   <View style={styles.overlayControls}>
@@ -911,7 +919,11 @@ export default function ComparePreviewScreen() {
               ) : mode === 'slider' ? (
                 <GestureDetector gesture={sliderPan}>
                   <View style={styles.sliderFlow}>
-                    <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
+                    <Image
+                      source={{ uri: shotUri }}
+                      style={styles.fullImage}
+                      contentFit="contain"
+                    />
                     <Animated.View style={[styles.sliderClip, sliderClipStyle]}>
                       {stagePx.width > 0 ? (
                         <Image
@@ -925,17 +937,25 @@ export default function ComparePreviewScreen() {
                       style={[styles.sliderHandle, sliderHandleStyle]}
                       pointerEvents="none">
                       <View style={[styles.sliderKnob, { backgroundColor: themeColor }]}>
-                        <Ionicons name="chevron-back" size={12} color="#000" />
-                        <Ionicons name="chevron-forward" size={12} color="#000" />
+                        <Ionicons
+                          name="chevron-back"
+                          size={12}
+                          color={readableTextOn(themeColor)}
+                        />
+                        <Ionicons
+                          name="chevron-forward"
+                          size={12}
+                          color={readableTextOn(themeColor)}
+                        />
                       </View>
                     </Animated.View>
                     <View style={[styles.sliderHint, styles.sliderHintLeft]}>
-                      <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
+                      <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
                         {t('commonUi.anime')}
                       </ThemedText>
                     </View>
                     <View style={[styles.sliderHint, styles.sliderHintRight]}>
-                      <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
+                      <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
                         {t('pilgrimageUi.yours')}
                       </ThemedText>
                     </View>
@@ -950,7 +970,7 @@ export default function ComparePreviewScreen() {
                   <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="cover" />
                   <View style={[styles.fullModeBadge, { borderColor: themeColor }]}>
                     <View style={[styles.labelDot, { backgroundColor: themeColor }]} />
-                    <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
+                    <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
                       Your shot · Full
                     </ThemedText>
                   </View>
@@ -1156,11 +1176,20 @@ export default function ComparePreviewScreen() {
               selectedCount > 0 ? `Save ${selectedCount} shots to library` : 'Save to library'
             }>
             {saving ? (
-              <ActivityIndicator size="small" color="#000" />
+              <Animated.View entering={FadeIn}>
+                <Skeleton.Block width={18} height={18} borderRadius={9} />
+              </Animated.View>
             ) : (
-              <Ionicons name={saved ? 'checkmark' : 'download'} size={18} color="#000" />
+              <Ionicons
+                name={saved ? 'checkmark' : 'download'}
+                size={18}
+                color={readableTextOn(themeColor)}
+              />
             )}
-            <ThemedText variant="bodyMedium" weight="700" style={{ color: '#000' }}>
+            <ThemedText
+              variant="bodyMedium"
+              weight="700"
+              style={{ color: readableTextOn(themeColor) }}>
               {saved ? 'Saved' : selectedCount > 1 ? `Save ${selectedCount}` : 'Save'}
             </ThemedText>
           </Pressable>
@@ -1226,10 +1255,7 @@ function Filmstrip({
               <Image source={{ uri: shot.uri }} style={styles.thumbImage} contentFit="cover" />
               {sourceBadge ? (
                 <View style={[styles.thumbModeBadge, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                  <ThemedText
-                    variant="captionSmall"
-                    weight="700"
-                    style={{ color: '#fff', fontSize: 9 }}>
+                  <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
                     {sourceBadge}
                   </ThemedText>
                 </View>
@@ -1248,7 +1274,9 @@ function Filmstrip({
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
               accessibilityLabel={selected ? 'Deselect shot' : 'Select shot'}>
-              {selected ? <Ionicons name="checkmark" size={14} color="#000" /> : null}
+              {selected ? (
+                <Ionicons name="checkmark" size={14} color={readableTextOn(accent)} />
+              ) : null}
             </Pressable>
             {canDelete ? (
               <Pressable
@@ -1257,7 +1285,7 @@ function Filmstrip({
                 style={[styles.thumbDelete, { backgroundColor: 'rgba(0,0,0,0.6)' }]}
                 accessibilityRole="button"
                 accessibilityLabel={t('pilgrimageUi.deleteShot')}>
-                <Ionicons name="close" size={13} color="#fff" />
+                <Ionicons name="close" size={13} color={ON_DARK} />
               </Pressable>
             ) : null}
           </View>
@@ -1390,7 +1418,7 @@ function LabeledImage({
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']} style={styles.labelGradient} />
       <View style={[styles.labelBadge, { borderColor: accent }]}>
         <View style={[styles.labelDot, { backgroundColor: accent }]} />
-        <ThemedText variant="captionSmall" weight="700" style={{ color: '#fff' }}>
+        <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
           {label}
         </ThemedText>
       </View>
@@ -1460,7 +1488,7 @@ function OpacityBar({
             <ThemedText
               variant="captionSmall"
               weight="700"
-              style={{ color: active ? '#000' : '#fff' }}>
+              style={{ color: active ? readableTextOn(accent) : ON_DARK }}>
               {Math.round(stop * 100)}%
             </ThemedText>
           </Pressable>
@@ -1648,8 +1676,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
-    lineHeight: 20,
+    ...Typography.bodyMedium,
   },
   exifCardWrap: {
     marginHorizontal: 16,

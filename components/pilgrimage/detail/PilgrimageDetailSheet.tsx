@@ -37,10 +37,7 @@ import type {
 import type { PilgrimageDisplayTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
-import type {
-  SpotIntentKind,
-  SpotIntentMap,
-} from '../../../libs/services/pilgrimage/spot-intents';
+import type { SpotIntentKind, SpotIntentMap } from '../../../libs/services/pilgrimage/spot-intents';
 import {
   composeAreaRows,
   groupSpotsIntoAreas,
@@ -115,7 +112,6 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     theme,
     visited,
     captures,
-    spotIntents: _spotIntents,
     emptyMessage,
     animatedPosition,
     onSheetIndexChange,
@@ -161,7 +157,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
   );
 
   const renderTile = useCallback(
-    ({ item: gs }: { item: AnitabiSpot }) => {
+    ({ item: gs, index }: { item: AnitabiSpot; index: number }) => {
       const rep = representativeForGroup(gs);
       const captured = gs.scenes.find((p) => captures[p.id]);
       return (
@@ -177,6 +173,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
             planned={hasIntentForGroup(gs, 'planned')}
             hasCapture={!!captured}
             captureUri={captured ? (captures[captured.id]?.uri ?? null) : null}
+            entryIndex={index}
             theme={theme}
             onPress={handleTilePress}
             onToggleVisited={handleTileToggleVisited}
@@ -289,12 +286,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
   const listKey = listLayout;
   const numColumns = listLayout === 'grid' ? 2 : 1;
 
-  const subtitleLine = useMemo(() => {
-    const parts: string[] = [];
-    if (animeSubtitle) parts.push(animeSubtitle);
-    else if (anime?.city) parts.push(anime.city);
-    return parts.join(' ');
-  }, [animeSubtitle, anime?.city]);
+  const subtitleLine = animeSubtitle ?? anime?.city ?? '';
 
   const visitedLabel = userStats.visitedCount === 1 ? 'Visited' : 'Visited';
   const photosLabel = userStats.capturedCount === 1 ? 'Photo' : 'Photos';
@@ -311,7 +303,11 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
             pressed && onOpenAnimePoster && { opacity: 0.86 },
           ]}>
           {posterUri ? (
-            <Image source={anitabiImageSource(posterUri)} style={styles.poster} contentFit="cover" />
+            <Image
+              source={anitabiImageSource(posterUri)}
+              style={styles.poster}
+              contentFit="cover"
+            />
           ) : null}
           <View style={styles.posterBadge} pointerEvents="none">
             <ThemedText
@@ -427,9 +423,10 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     </View>
   );
 
-  const footerNode = filteredGroupedSpots.length > 0 ? (
-    <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="footer" />
-  ) : null;
+  const footerNode =
+    filteredGroupedSpots.length > 0 ? (
+      <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="footer" />
+    ) : null;
 
   return (
     <BottomSheet
@@ -444,13 +441,17 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       onChange={handleIndexChange}>
       <BottomSheetFlatList
         key={listKey}
-        data={(listLayout === 'grid' ? (filteredGroupedSpots as AnitabiSpot[]) : rowData) as readonly unknown[] as never[]}
+        data={
+          (listLayout === 'grid'
+            ? (filteredGroupedSpots as AnitabiSpot[])
+            : rowData) as readonly unknown[] as never[]
+        }
         keyExtractor={(item: unknown, index: number) =>
           listLayout === 'grid'
             ? (item as AnitabiSpot).id
             : (item as SpotAreaRow).kind === 'header'
               ? `h:${(item as { area: SpotArea }).area.id}`
-              : `s:${((item as { spot: AnitabiSpot }).spot).id}`
+              : `s:${(item as { spot: AnitabiSpot }).spot.id}`
         }
         renderItem={listLayout === 'grid' ? (renderTile as never) : (renderRowItem as never)}
         numColumns={numColumns}
@@ -465,10 +466,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
   );
 }
 
-function areEqual(
-  prev: PilgrimageDetailSheetProps,
-  next: PilgrimageDetailSheetProps
-): boolean {
+function areEqual(prev: PilgrimageDetailSheetProps, next: PilgrimageDetailSheetProps): boolean {
   return (
     prev.anime === next.anime &&
     prev.animeTitles === next.animeTitles &&

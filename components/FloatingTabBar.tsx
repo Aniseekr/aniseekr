@@ -24,6 +24,7 @@ import {
   FLOATING_TAB_BAR_HIDE_DURATION_MS,
   FLOATING_TAB_BAR_SHOW_DURATION_MS,
 } from '../libs/navigation/floating-tab-bar-animation';
+import { Springs } from '../libs/animations/presets';
 
 const PILL_HORIZONTAL_MARGIN = 16;
 const PILL_INNER_PADDING = 8;
@@ -34,8 +35,6 @@ const LABEL_TRAILING_PAD = 14;
 const ACTIVE_ICON_SIZE = 18;
 const INACTIVE_ICON_SIZE = 20;
 
-const FOCUS_SPRING = { damping: 20, stiffness: 220, mass: 0.6 } as const;
-const PRESS_IN_SPRING = { damping: 14, stiffness: 320 } as const;
 const PRESS_OUT_SPRING = { damping: 12, stiffness: 280 } as const;
 // Slide far enough that the elevation shadow on Android also clears the screen.
 const HIDE_TRANSLATE_Y = 120;
@@ -197,7 +196,7 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   const activeBorder = `${theme.accent}73`;
 
   useEffect(() => {
-    focusProgress.value = withSpring(isFocused ? 1 : 0, FOCUS_SPRING);
+    focusProgress.value = withSpring(isFocused ? 1 : 0, Springs.focus);
   }, [isFocused, focusProgress]);
 
   const expandedWidth =
@@ -223,7 +222,7 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   }));
 
   const handlePressIn = () => {
-    pressScale.value = withSpring(0.94, PRESS_IN_SPRING);
+    pressScale.value = withSpring(0.94, Springs.press);
   };
   const handlePressOut = () => {
     pressScale.value = withSpring(1, PRESS_OUT_SPRING);

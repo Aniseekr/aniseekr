@@ -10,6 +10,7 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
 import { CameraChrome } from './cameraChrome';
+import { toastEnter, toastExit } from '../../../libs/animations/presets';
 
 export interface CamSwitchToastValue {
   icon: keyof typeof Ionicons.glyphMap;
@@ -55,7 +56,11 @@ export default function CamSwitchToast({ toast, themeColor }: CamSwitchToastProp
   if (!toast) return null;
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.pill, animStyle]}>
+    <Animated.View
+      entering={toastEnter()}
+      exiting={toastExit()}
+      pointerEvents="none"
+      style={[styles.pill, animStyle]}>
       <View style={[styles.iconBadge, { backgroundColor: themeColor }]}>
         <Ionicons name={toast.icon} size={14} color={readableTextOn(themeColor)} />
       </View>

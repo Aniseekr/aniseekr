@@ -8,9 +8,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { readableTextOn, ThemedText } from '../../themed';
+import { ON_DARK, readableTextOn, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { CameraChrome } from './cameraChrome';
+import { toastEnter, toastExit } from '../../../libs/animations/presets';
 
 /**
  * A fresh object identity each time auto-capture fires re-triggers the toast —
@@ -61,7 +62,11 @@ export default function AutoCaptureToast({ toast, themeColor }: AutoCaptureToast
   if (!toast) return null;
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.toast, animatedStyle]}>
+    <Animated.View
+      entering={toastEnter()}
+      exiting={toastExit()}
+      pointerEvents="none"
+      style={[styles.toast, animatedStyle]}>
       <View style={[styles.iconBadge, { backgroundColor: themeColor }]}>
         <Ionicons name="sparkles-outline" size={15} color={readableTextOn(themeColor)} />
       </View>
@@ -93,5 +98,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { color: '#fff' },
+  label: { color: ON_DARK },
 });

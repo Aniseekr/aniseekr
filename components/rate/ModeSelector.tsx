@@ -17,6 +17,7 @@ import Animated, {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { Springs } from '../../libs/animations/presets';
 import { readableTextOn } from '../themed';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -43,7 +44,6 @@ const PILL_INNER_PADDING = 6;
 const PILL_HEIGHT = 50;
 const INDICATOR_INSET = 4;
 const SPRING = { damping: 22, stiffness: 240, mass: 0.7 } as const;
-const PRESS_IN_SPRING = { damping: 16, stiffness: 320 } as const;
 const PRESS_OUT_SPRING = { damping: 14, stiffness: 280 } as const;
 
 function ModeSelectorComponent<T extends string = string>({
@@ -56,7 +56,8 @@ function ModeSelectorComponent<T extends string = string>({
   const { theme, effectiveMode } = useTheme();
   const resolvedAccent = accentColor ?? theme.accent;
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const blurTint = effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
+  const blurTint =
+    effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
   const { width: screenWidth } = useWindowDimensions();
   const innerWidth = Math.max(0, screenWidth - horizontalMargin * 2 - PILL_INNER_PADDING * 2);
   const segmentWidth = options.length > 0 ? innerWidth / options.length : 0;
@@ -80,7 +81,7 @@ function ModeSelectorComponent<T extends string = string>({
   }));
 
   const handlePressIn = () => {
-    pressScale.value = withSpring(0.97, PRESS_IN_SPRING);
+    pressScale.value = withSpring(0.97, Springs.press);
   };
   const handlePressOut = () => {
     pressScale.value = withSpring(1, PRESS_OUT_SPRING);

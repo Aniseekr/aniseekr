@@ -38,6 +38,7 @@ mock.module('react-native-reanimated', () => {
     FadeIn: animationBuilder,
     FadeInDown: animationBuilder,
     FadeInUp: animationBuilder,
+    FadeOutUp: animationBuilder,
     FadeOut: animationBuilder,
     FadeOutDown: animationBuilder,
     ZoomIn: animationBuilder,

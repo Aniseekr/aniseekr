@@ -88,7 +88,7 @@ describe('PilgrimageHubSheet — nearby spots strip wiring', () => {
 
   it('reuses the revived NearbySpotRow instead of a new row implementation', () => {
     expect(HUB_SHEET_SOURCE).toMatch(/import \{ NearbySpotRow \} from '\.\/NearbySpotsSheet';/);
-    expect(HUB_SHEET_SOURCE).toMatch(/<NearbySpotRow key=\{spot\.markerId\}/);
+    expect(HUB_SHEET_SOURCE).toMatch(/<NearbySpotRow\s+key=\{spot\.markerId\}/);
   });
 
   it('caps the strip at 6 rows (no nested horizontal scroller inside the sheet list)', () => {

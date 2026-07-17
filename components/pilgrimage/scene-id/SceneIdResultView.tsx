@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 
@@ -15,6 +16,7 @@ import type {
 } from '../../../libs/services/pilgrimage/scene-id/scene-id-service';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { ThemedButton, ThemedSurface, ThemedText, readableTextOn } from '../../themed';
+import { listItemEnter } from '../../../libs/animations/presets';
 
 interface SceneIdResultViewProps {
   imageUri: string;
@@ -85,7 +87,7 @@ function SceneIdResultViewComponent({
       <View style={styles.content}>
         <Image source={imageSource} style={styles.heroImage} contentFit="cover" />
         <AnitabiOriginCredit source={sourcePoint} variant="inline" />
-        <View style={styles.emptyState}>
+        <Animated.View entering={FadeIn} style={styles.emptyState}>
           <View style={[styles.statusIcon, { backgroundColor: `${theme.status.warning}20` }]}>
             <Ionicons name="search-outline" size={24} color={theme.status.warning} />
           </View>
@@ -95,7 +97,7 @@ function SceneIdResultViewComponent({
           <ThemedText variant="bodyMedium" tone="secondary" align="center">
             {t(copy.body)}
           </ThemedText>
-        </View>
+        </Animated.View>
         <ThemedButton
           label={t('pilgrimage.identify.chooseAnother')}
           onPress={onChooseAnother}
@@ -127,12 +129,12 @@ function SceneIdResultViewComponent({
 
       {result.candidates.length > 0 ? (
         <View style={styles.candidateList}>
-          {result.candidates.map((candidate) => (
-            <CandidateRow
+          {result.candidates.map((candidate, index) => (
+            <Animated.View
               key={candidate.spot.id}
-              candidate={candidate}
-              onPress={() => onOpenSpot(candidate.spot)}
-            />
+              entering={index < 8 ? listItemEnter(index) : undefined}>
+              <CandidateRow candidate={candidate} onPress={() => onOpenSpot(candidate.spot)} />
+            </Animated.View>
           ))}
         </View>
       ) : result.level !== 'identified' && result.bangumiId !== null ? (

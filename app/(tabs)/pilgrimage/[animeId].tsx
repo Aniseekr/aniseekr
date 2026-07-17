@@ -66,6 +66,13 @@ import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proxim
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
 import {
+  bannerEnter,
+  bannerExit,
+  fabEnter,
+  fabExit,
+  overlayEnter,
+} from '../../../libs/animations/presets';
+import {
   LOCATE_FAB_COMPASS_ZOOM,
   LOCATE_FAB_ZOOM,
   useUserLocationTracking,
@@ -256,26 +263,22 @@ export default function PilgrimageDetailScreen() {
       setProximityTarget({ spot: near.spot, distanceMeters: near.distanceMeters });
     }
   }, [userLocation, points, visited]);
-  // The banner targets a specific spot snapshot; if that spot gets checked in
-  // some other way while the banner is still up (e.g. the SpotSheet's own
-  // 打卡 button), the banner is stale — clear it instead of leaving it to
-  // offer a now-wrong action.
-  useEffect(() => {
-    if (proximityTarget && visited[proximityTarget.spot.id]) {
-      setProximityTarget(null);
-    }
-  }, [proximityTarget, visited]);
+  // The banner targets a specific spot snapshot. If that spot gets checked in
+  // some other way while the banner is still up, derive it away instead of
+  // synchronously clearing state from an effect.
+  const visibleProximityTarget =
+    proximityTarget && !visited[proximityTarget.spot.id] ? proximityTarget : null;
   const handleProximityCheckIn = useCallback(() => {
     // Guard against a stale banner: `toggleVisitedPoint` is bidirectional, so
     // if the spot was already checked in elsewhere while the banner sat open,
     // tapping it must not reverse (check OUT) a real visit.
-    if (!proximityTarget || visited[proximityTarget.spot.id]) {
+    if (!visibleProximityTarget) {
       setProximityTarget(null);
       return;
     }
-    toggleVisitedPoint(proximityTarget.spot);
+    toggleVisitedPoint(visibleProximityTarget.spot);
     setProximityTarget(null);
-  }, [proximityTarget, visited, toggleVisitedPoint]);
+  }, [visibleProximityTarget, toggleVisitedPoint]);
   const handleProximityDismiss = useCallback(() => setProximityTarget(null), []);
 
   const sheet = usePilgrimageSpotSheet({
@@ -327,13 +330,6 @@ export default function PilgrimageDetailScreen() {
   // and view-mode toggle can hide as the sheet covers them. The sheet
   // controls itself; we only react to its onChange to fade the chrome.
   const [sheetIndex, setSheetIndex] = useState<number>(viewMode === 'map' ? 0 : 1);
-
-  useEffect(() => {
-    // Keep the floating chrome's "ghost" snap in sync when the user flips
-    // the view mode toggle (the sheet itself also snaps via an effect inside
-    // PilgrimageDetailSheet).
-    setSheetIndex(viewMode === 'map' ? 0 : 1);
-  }, [viewMode]);
 
   // Keep the map's chip-strip selection in sync with the current filtered
   // pointset. If the previous pick was filtered out, fall back to the first
@@ -750,7 +746,10 @@ export default function PilgrimageDetailScreen() {
             {/* Layer 2 — top-floating chrome (header / search). Series picker
                 lives inline next to the back button now (compact dropdown
                 pill instead of a horizontal scroll row). */}
-            <View style={styles.topOverlay} pointerEvents="box-none">
+            <Animated.View
+              entering={overlayEnter()}
+              style={styles.topOverlay}
+              pointerEvents="box-none">
               <View style={styles.headerActions}>
                 <View style={styles.headerLeftGroup}>
                   <RoundHeaderButton
@@ -841,17 +840,19 @@ export default function PilgrimageDetailScreen() {
                 </View>
               ) : null}
 
-              {proximityTarget ? (
-                <ProximityCheckInBanner
-                  spotName={getPilgrimageSpotTitles(proximityTarget.spot).primary}
-                  distanceMeters={proximityTarget.distanceMeters}
-                  theme={theme}
-                  t={t}
-                  onCheckIn={handleProximityCheckIn}
-                  onDismiss={handleProximityDismiss}
-                />
+              {visibleProximityTarget ? (
+                <Animated.View entering={bannerEnter()} exiting={bannerExit()}>
+                  <ProximityCheckInBanner
+                    spotName={getPilgrimageSpotTitles(visibleProximityTarget.spot).primary}
+                    distanceMeters={visibleProximityTarget.distanceMeters}
+                    theme={theme}
+                    t={t}
+                    onCheckIn={handleProximityCheckIn}
+                    onDismiss={handleProximityDismiss}
+                  />
+                </Animated.View>
               ) : null}
-            </View>
+            </Animated.View>
 
             {/* Layer 3 — map-side dock for marker / offline toggles. Only in
                 map view, and only when we have a real map underneath. Also
@@ -859,7 +860,7 @@ export default function PilgrimageDetailScreen() {
                 the top overlay column enough to overlap the dock's pinned
                 position, so the dock hides while the banner is up and
                 returns once it's dismissed or checked in. */}
-            {hasMap && viewMode === 'map' && sheetIndex <= 1 && proximityTarget == null ? (
+            {hasMap && viewMode === 'map' && sheetIndex <= 1 && visibleProximityTarget == null ? (
               <View
                 style={[styles.mapOptionsDock, { top: insets.top + 132 }]}
                 pointerEvents="box-none">
@@ -894,6 +895,7 @@ export default function PilgrimageDetailScreen() {
                 at full snap so it doesn't float over the scene grid. */}
             {anime ? (
               <Animated.View
+                entering={overlayEnter()}
                 style={[styles.bottomChromeWrap, chromeAnimatedStyle]}
                 pointerEvents="box-none">
                 <View style={styles.filterCycleRow}>
@@ -988,15 +990,17 @@ export default function PilgrimageDetailScreen() {
                 behind the drag handle, and fades itself out at the full snap
                 when the sheet covers the visible map. */}
             {hasMap ? (
-              <LocateFab
-                state={tracking.state}
-                onPress={tracking.cycleState}
-                sheetAnimatedPosition={sheetPosition}
-                screenHeight={screenHeight}
-                bottomInset={sheetPeekOffset}
-                edgeGap={LOCATE_FAB_EDGE_GAP}
-                loading={tracking.isRequestingPermission}
-              />
+              <Animated.View entering={fabEnter()} exiting={fabExit()} pointerEvents="box-none">
+                <LocateFab
+                  state={tracking.state}
+                  onPress={tracking.cycleState}
+                  sheetAnimatedPosition={sheetPosition}
+                  screenHeight={screenHeight}
+                  bottomInset={sheetPeekOffset}
+                  edgeGap={LOCATE_FAB_EDGE_GAP}
+                  loading={tracking.isRequestingPermission}
+                />
+              </Animated.View>
             ) : null}
           </>
         )}

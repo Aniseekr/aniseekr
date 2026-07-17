@@ -16,8 +16,8 @@
 //   • mid   (~58%) — focused anime card + stats + first rows of nearby list
 //   • full  (~92%) — everything visible
 
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { memo, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -95,6 +95,7 @@ export interface PilgrimageHubSheetProps {
    *  the anime list. Empty/undefined ⇒ no strip. */
   nearbySpots?: readonly NearbySpot[];
   onPickNearbySpot?: (spot: NearbySpot) => void;
+  headerControls?: ReactNode;
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
@@ -121,6 +122,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     onExpandRequest,
     nearbySpots,
     onPickNearbySpot,
+    headerControls,
   } = props;
 
   const t = useT();
@@ -184,6 +186,15 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
 
   const headerNode = (
     <View style={styles.headerWrap}>
+      {headerControls ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.headerControlsRow}>
+          {headerControls}
+        </ScrollView>
+      ) : null}
+
       {focusedAnime ? (
         <FocusedAnimeCard
           entry={focusedAnime}
@@ -346,7 +357,8 @@ function areEqual(prev: PilgrimageHubSheetProps, next: PilgrimageHubSheetProps):
     prev.onSwapFocused === next.onSwapFocused &&
     prev.onExpandRequest === next.onExpandRequest &&
     prev.nearbySpots === next.nearbySpots &&
-    prev.onPickNearbySpot === next.onPickNearbySpot
+    prev.onPickNearbySpot === next.onPickNearbySpot &&
+    prev.headerControls === next.headerControls
   );
 }
 
@@ -380,7 +392,12 @@ function NearbySpotsStrip({
         {t('pilgrimage.map.nearbySpotsTitle')}
       </ThemedText>
       {spots.slice(0, 6).map((spot) => (
-        <NearbySpotRow key={spot.markerId} spot={spot} theme={theme} onPress={() => onPick?.(spot)} />
+        <NearbySpotRow
+          key={spot.markerId}
+          spot={spot}
+          theme={theme}
+          onPress={() => onPick?.(spot)}
+        />
       ))}
     </View>
   );
@@ -566,10 +583,7 @@ const HubAnimeRow = memo(function HubAnimeRow({
         ]}>
         <SpotImage uri={anime.cover} style={styles.rowPoster} contentFit="cover" />
         <View style={[styles.rowBadge, { backgroundColor: `${themeColor}E6` }]}>
-          <ThemedText
-            variant="captionSmall"
-            weight="800"
-            style={{ color: themeColorFg, fontSize: 10 }}>
+          <ThemedText variant="captionSmall" weight="800" style={{ color: themeColorFg }}>
             {anime.pointsLength ?? 0}
           </ThemedText>
         </View>
@@ -675,29 +689,19 @@ const HubAnimeCard = memo(function HubAnimeCard({
         ]}>
         <SpotImage uri={anime.cover} style={styles.cardPoster} contentFit="cover" />
         <View style={[styles.cardBadge, { backgroundColor: `${themeColor}E6` }]}>
-          <ThemedText
-            variant="captionSmall"
-            weight="800"
-            style={{ color: themeColorFg, fontSize: 10 }}>
+          <ThemedText variant="captionSmall" weight="800" style={{ color: themeColorFg }}>
             {t('pilgrimageUi.spotsCount', { count: anime.pointsLength ?? 0 })}
           </ThemedText>
         </View>
         {entry.fromCollection ? (
-          <View
-            style={[
-              styles.cardCollection,
-              { backgroundColor: `${theme.status.info}D9` },
-            ]}>
+          <View style={[styles.cardCollection, { backgroundColor: `${theme.status.info}D9` }]}>
             <Ionicons name="bookmark" size={9} color={readableTextOn(theme.status.info)} />
           </View>
         ) : null}
         {entry.visitedCount > 0 ? (
           <View style={styles.cardVisited}>
             <Ionicons name="checkmark" size={10} color={theme.status.success} />
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: theme.status.success, fontSize: 9 }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: theme.status.success }}>
               {entry.visitedCount}
             </ThemedText>
           </View>
@@ -735,6 +739,11 @@ function makeStyles(theme: ThemePalette) {
     headerWrap: {
       gap: Spacing.md,
       paddingBottom: Spacing.md,
+    },
+    headerControlsRow: {
+      gap: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      paddingRight: Spacing.screenPadding,
     },
 
     // Focused anime card — mirrors detail screen's title block but with a

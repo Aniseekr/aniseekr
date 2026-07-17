@@ -4,7 +4,8 @@
 // "Standing by" placeholder, no fake countdown.
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ThemedText } from '../../themed';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { ON_DARK, ThemedText } from '../../themed';
 
 export interface AutoCaptureBadgeProps {
   /** ms remaining before fire; null = not arming, render nothing. */
@@ -26,7 +27,9 @@ function AutoCaptureBadgeComponent({ remainingMs, sustainMs, themeColor }: AutoC
   const seconds = (safeRemaining / 1000).toFixed(1);
 
   return (
-    <View
+    <Animated.View
+      entering={FadeIn}
+      exiting={FadeOut}
       style={styles.pill}
       accessibilityRole="progressbar"
       accessibilityLabel={`Auto capture in ${seconds} seconds`}
@@ -39,13 +42,10 @@ function AutoCaptureBadgeComponent({ remainingMs, sustainMs, themeColor }: AutoC
       </View>
       <View style={styles.barTrack}>
         <View
-          style={[
-            styles.barFill,
-            { backgroundColor: themeColor, width: `${progress * 100}%` },
-          ]}
+          style={[styles.barFill, { backgroundColor: themeColor, width: `${progress * 100}%` }]}
         />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   label: {
     // White against the dark scrim — analogous to the ON_DARK constant in
     // themed/contrast.ts. Hardcoded because the scrim is always dark.
-    color: '#FFFFFF',
+    color: ON_DARK,
     textAlign: 'center',
   },
   barTrack: {
