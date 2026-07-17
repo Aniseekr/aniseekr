@@ -16,7 +16,7 @@ import BottomSheet, {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ON_DARK, ThemedText, readableTextOn } from '../../themed';
+import { ON_DARK, ThemedIconButton, ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import type { TranslationKey } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
@@ -36,6 +36,15 @@ import {
 } from './_helpers';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
 import { StreetViewCard } from '../street-view/StreetViewCard';
+import { BestTimeCard } from './BestTimeCard';
+import { IntelEventBanner } from './IntelEventBanner';
+import { IntelShopsSection } from './IntelShopsSection';
+import type { SpotSheetIntel } from '../../../hooks/usePilgrimageDetailIntel';
+import {
+  intelLinkUrl,
+  type LocalIntelEvent,
+  type LocalIntelShop,
+} from '../../../libs/services/pilgrimage/local-intel/types';
 
 const BEARING_LABEL_KEY: Record<CardinalKey, TranslationKey> = {
   n: 'pilgrimage.detail.bearing.n',
@@ -70,6 +79,11 @@ export interface SpotSheetProps {
    * `sourceBangumiId` (series cross-link) when this is null.
    */
   anitabiBangumiId?: number | null;
+  /**
+   * Curated local-intel for this spot (best time / shops / event). All values
+   * are web-verified data or real solar math — never placeholders (Rule 8).
+   */
+  intel?: SpotSheetIntel | null;
   theme: ThemePalette;
   onClose: () => void;
   onToggleVisited: (spot: AnitabiPoint) => void;
@@ -78,6 +92,7 @@ export interface SpotSheetProps {
   onOpenMaps: (spot: AnitabiPoint) => void;
   onStartCamera: (spot: AnitabiPoint) => void;
   onFrameShot: (spot: AnitabiPoint) => void;
+  onIdentifyScene: (spot: AnitabiPoint) => void;
   onSelectScene: (spot: AnitabiPoint) => void;
 }
 
@@ -95,6 +110,7 @@ function SpotSheetImpl({
   planned,
   hasCapture,
   anitabiBangumiId = null,
+  intel = null,
   theme,
   onClose,
   onToggleVisited,
@@ -103,6 +119,7 @@ function SpotSheetImpl({
   onOpenMaps,
   onStartCamera,
   onFrameShot,
+  onIdentifyScene,
   onSelectScene,
 }: SpotSheetProps) {
   const t = useT();
@@ -181,6 +198,9 @@ function SpotSheetImpl({
   const handleFrameShot = useCallback(() => {
     if (spot) onFrameShot(spot);
   }, [onFrameShot, spot]);
+  const handleIdentifyScene = useCallback(() => {
+    if (spot) onIdentifyScene(spot);
+  }, [onIdentifyScene, spot]);
 
   // Build the Anitabi map URL for the spot. Prefer the parent-supplied
   // bangumiId (the anime detail), fall back to the spot's own series source
@@ -200,6 +220,12 @@ function SpotSheetImpl({
   const handleOpenAnitabi = useCallback(() => {
     Linking.openURL(anitabiUrl).catch(() => undefined);
   }, [anitabiUrl]);
+  const handleOpenShop = useCallback((shop: LocalIntelShop) => {
+    Linking.openURL(intelLinkUrl(shop)).catch(() => undefined);
+  }, []);
+  const handleOpenEvent = useCallback((event: LocalIntelEvent) => {
+    Linking.openURL(intelLinkUrl(event)).catch(() => undefined);
+  }, []);
 
   // The BottomSheet element is rendered EXACTLY ONCE per parent mount: swapping
   // between a "closed" and "open" instance based on whether `spot` is null was
@@ -263,6 +289,14 @@ function SpotSheetImpl({
                   </ThemedText>
                 ) : null}
               </View>
+              <ThemedIconButton
+                icon={(color) => <Ionicons name="scan-outline" size={17} color={color} />}
+                accessibilityLabel={t('pilgrimage.identify.scanSceneA11y')}
+                onPress={handleIdentifyScene}
+                variant="solid"
+                accent={themeColor}
+                style={styles.identifyBtn}
+              />
               <Pressable onPress={handleClosePress} hitSlop={12} style={styles.closeBtn}>
                 <Ionicons name="close" size={18} color={ON_DARK} />
               </Pressable>
@@ -350,11 +384,33 @@ function SpotSheetImpl({
               ) : null}
             </View>
 
+            {intel ? (
+              <BestTimeCard
+                bestTime={intel.bestTime}
+                hint={intel.hint}
+                themeColor={themeColor}
+                theme={theme}
+              />
+            ) : null}
+
             <StreetViewCard
               status={streetView.status}
               result={streetView.result}
               onLookAroundUnavailable={streetView.reportLookAroundUnavailable}
             />
+
+            {intel?.event ? (
+              <IntelEventBanner
+                event={intel.event.event}
+                state={intel.event.state}
+                theme={theme}
+                onOpenEvent={handleOpenEvent}
+              />
+            ) : null}
+
+            {intel && intel.shopRows.length > 0 ? (
+              <IntelShopsSection rows={intel.shopRows} theme={theme} onOpenShop={handleOpenShop} />
+            ) : null}
 
             <AnitabiOriginCredit
               source={spot}
@@ -504,9 +560,24 @@ function SpotSheetImpl({
   );
 }
 
+function intelEqual(a: SpotSheetIntel | null | undefined, b: SpotSheetIntel | null | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  return (
+    a.bestTime?.range === b.bestTime?.range &&
+    a.bestTime?.dayOffset === b.bestTime?.dayOffset &&
+    a.hint?.id === b.hint?.id &&
+    a.shopRows.length === b.shopRows.length &&
+    a.shopRows.every((row, i) => row.shop.id === b.shopRows[i]?.shop.id) &&
+    a.event?.event.id === b.event?.event.id &&
+    a.event?.state.state === b.event?.state.state
+  );
+}
+
 function areEqual(prev: SpotSheetProps, next: SpotSheetProps): boolean {
   return (
     prev.spot === next.spot &&
+    intelEqual(prev.intel, next.intel) &&
     prev.scenes === next.scenes &&
     prev.sceneCount === next.sceneCount &&
     prev.themeColor === next.themeColor &&
@@ -528,6 +599,7 @@ function areEqual(prev: SpotSheetProps, next: SpotSheetProps): boolean {
     prev.onOpenMaps === next.onOpenMaps &&
     prev.onStartCamera === next.onStartCamera &&
     prev.onFrameShot === next.onFrameShot &&
+    prev.onIdentifyScene === next.onIdentifyScene &&
     prev.onSelectScene === next.onSelectScene
   );
 }
@@ -579,6 +651,11 @@ function makeSheetStyles(theme: ThemePalette) {
       justifyContent: 'center',
       borderRadius: 16,
       backgroundColor: 'rgba(0,0,0,0.46)',
+    },
+    identifyBtn: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
     },
     sceneRail: {
       gap: 8,

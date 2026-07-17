@@ -1,0 +1,294 @@
+{
+  "generatedAt": 1784255024000,
+  "source": "hand-curated (docs/spec/pilgrimage_spec.md §13); every entry web-verified at verifiedAt",
+  "count": 11,
+  "entries": [
+    {
+      "kind": "viewing_hint",
+      "id": "bentenjima-torii-sunset",
+      "bangumiIds": [262897],
+      "name": {
+        "ja": "弁天島 赤鳥居の夕陽",
+        "en": "Bentenjima Red Torii Sunset",
+        "zhHant": "弁天島紅鳥居夕陽"
+      },
+      "description": {
+        "ja": "浜名湖の浅瀬に立つ観光シンボルタワー（1973年建立）。『ゆるキャン△ SEASON 2』第3話でリンが訪れた。",
+        "en": "The 1973 tourism symbol tower standing in the Lake Hamana shallows, visited by Rin in Yuru Camp Season 2 Episode 3.",
+        "zhHant": "立於濱名湖淺灘的觀光象徵塔（1973 年建立），《搖曳露營△ SEASON 2》第 3 話中凜曾造訪。"
+      },
+      "geo": [34.6882045, 137.6036704],
+      "hint": "sunset",
+      "bestMonths": [11, 12, 1],
+      "note": {
+        "ja": "冬至の前後約1ヶ月、夕陽が鳥居の中央に沈む（静岡県選定「遠江八景」）。鳥居は老朽化により再整備検討中（2026年時点で現存）。",
+        "en": "For about a month either side of the winter solstice the sun sets through the torii's centre (an official 'Eight Views of Totomi' selection). The aging torii still stands as of 2026 while redevelopment is under review.",
+        "zhHant": "冬至前後約一個月，夕陽會落在鳥居正中央（靜岡縣選定「遠江八景」之一）。鳥居因老化正在檢討再整備，2026 年時仍現存。"
+      },
+      "radiusM": 400,
+      "sourceUrl": "https://www.inhamamatsu.com/japanese/recommend/torii-and-sunset.php",
+      "officialUrl": "https://www.city.hamamatsu.shizuoka.jp/kanko/bentenjima-kaihinkouen/saiseibi.html",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "kaishunro",
+      "bangumiIds": [262897],
+      "category": "hotel",
+      "name": {
+        "ja": "浜名湖弁天島温泉 開春楼",
+        "en": "Kaishunro (Bentenjima Onsen)",
+        "zhHant": "濱名湖弁天島溫泉 開春樓"
+      },
+      "description": {
+        "ja": "弁天島駅近くの温泉旅館。日帰り入浴の提供状況は変動があるため事前確認推奨。",
+        "en": "Hot-spring ryokan near Bentenjima Station. Day-use bathing availability varies — check ahead.",
+        "zhHant": "弁天島車站附近的溫泉旅館。純泡湯的開放狀況不定，建議先確認。"
+      },
+      "animeConnection": {
+        "ja": "『ゆるキャン△ SEASON 2』でリンが浜名湖を望む風呂に入った旅館。",
+        "en": "The ryokan where Rin bathes overlooking Lake Hamana in Yuru Camp Season 2.",
+        "zhHant": "《搖曳露營△ SEASON 2》中凜眺望濱名湖泡湯的旅館。"
+      },
+      "geo": [34.6896, 137.6089],
+      "sourceUrl": "https://hayagumo.xyz/yuru-camp-bentenjima/",
+      "officialUrl": "http://www.benten-kaishunro.com/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "shizuhana",
+      "bangumiIds": [262897],
+      "category": "goods",
+      "name": {
+        "ja": "しず花",
+        "en": "Shizuhana",
+        "zhHant": "しず花"
+      },
+      "description": {
+        "ja": "舘山寺温泉の和菓子店。看板商品「いちごの雫」は冬季限定（12〜3月頃）。",
+        "en": "Wagashi shop at Kanzanji Onsen. Its signature 'Ichigo no Shizuku' is winter-only (around Dec–Mar).",
+        "zhHant": "舘山寺溫泉的和菓子店。招牌「いちごの雫」為冬季限定（約 12〜3 月）。"
+      },
+      "animeConnection": {
+        "ja": "『ゆるキャン△ SEASON 2』の「いちごのきらめき」のモデルとなった苺大福。",
+        "en": "Its strawberry daifuku is the model for 'Ichigo no Kirameki' in Yuru Camp Season 2.",
+        "zhHant": "《搖曳露營△ SEASON 2》中「いちごのきらめき」草莓大福的原型。"
+      },
+      "geo": [34.7629, 137.6608],
+      "sourceUrl": "https://hayagumo.xyz/yuru-camp-bentenjima/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "yasudaya-ryokan",
+      "bangumiIds": [165553, 210272, 234295],
+      "category": "hotel",
+      "name": {
+        "ja": "安田屋旅館",
+        "en": "Yasudaya Ryokan",
+        "zhHant": "安田屋旅館"
+      },
+      "description": {
+        "ja": "内浦三津の老舗旅館（登録有形文化財）。館内にラブライブ！コーナーがあり、日帰り入浴も可能。",
+        "en": "Historic ryokan in Uchiura Mito (registered tangible cultural property) with a Love Live! corner and day-use bathing.",
+        "zhHant": "內浦三津的老字號旅館（登錄有形文化財），館內設有 LoveLive! 專區，也可純泡湯。"
+      },
+      "animeConnection": {
+        "ja": "千歌の実家の旅館「十千万」のモデル。",
+        "en": "The model for Chika's family inn 'Tochiman'.",
+        "zhHant": "千歌老家旅館「十千萬」的原型。"
+      },
+      "hours": "日帰り入浴 12:00–14:00 / 18:00–20:00",
+      "geo": [35.0219, 138.8983],
+      "sourceUrl": "https://numazukanko.jp/feature/yasudaya-ryokan/top",
+      "officialUrl": "http://mitoyasudaya.com/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "shougetsu",
+      "bangumiIds": [165553, 210272],
+      "category": "cafe",
+      "name": {
+        "ja": "松月",
+        "en": "Shougetsu",
+        "zhHant": "松月"
+      },
+      "description": {
+        "ja": "内浦三津の和菓子店・カフェ。千歌の好物にちなんだ「みかんどら焼き」を販売。",
+        "en": "Wagashi shop and café in Uchiura Mito selling mikan dorayaki, a nod to Chika's favourite mandarins.",
+        "zhHant": "內浦三津的和菓子店兼咖啡廳，販售呼應千歌最愛蜜柑的「蜜柑銅鑼燒」。"
+      },
+      "animeConnection": {
+        "ja": "1期6話でAqoursがケーキを食べたカフェ。CYaRonのドラマ「松月を探して」にも登場。",
+        "en": "The café where Aqours eat cake in Season 1 Episode 6; also referenced in CYaRon's voice drama.",
+        "zhHant": "第一季第 6 話 Aqours 吃蛋糕的咖啡廳，也出現在 CYaRon 的廣播劇中。"
+      },
+      "geo": [35.0232, 138.8989],
+      "sourceUrl": "https://www.shougetsu-web.com/",
+      "officialUrl": "https://www.shougetsu-web.com/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "gamers-numazu",
+      "bangumiIds": [165553, 210272, 234295],
+      "category": "goods",
+      "name": {
+        "ja": "ゲーマーズ沼津店",
+        "en": "Gamers Numazu",
+        "zhHant": "Gamers 沼津店"
+      },
+      "description": {
+        "ja": "沼津駅南口から徒歩5分の公式タイアップショップ。通称「ヌーマーズ」。",
+        "en": "Official tie-up shop five minutes' walk from Numazu Station's south exit, nicknamed 'Numers'.",
+        "zhHant": "距沼津車站南口步行 5 分鐘的官方合作商店，暱稱「ヌーマーズ」。"
+      },
+      "animeConnection": {
+        "ja": "ラブライブ！サンシャイン!!の公式タイアップショップとして限定グッズ・パネルを展開。",
+        "en": "Runs exclusive Love Live! Sunshine!! goods and character panels as the official tie-up shop.",
+        "zhHant": "作為 LoveLive! Sunshine!! 官方合作店，常設限定周邊與角色立牌。"
+      },
+      "geo": [35.0937, 138.8628],
+      "sourceUrl": "https://www.gamers.co.jp/shop/detail.php?id=11",
+      "officialUrl": "https://www.gamers.co.jp/shop/detail.php?id=11",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "awashima-hotel",
+      "bangumiIds": [165553, 210272, 234295],
+      "category": "hotel",
+      "name": {
+        "ja": "淡島ホテル",
+        "en": "Awashima Hotel",
+        "zhHant": "淡島飯店"
+      },
+      "description": {
+        "ja": "淡島に建つリゾートホテル。船でのみアクセス可能。",
+        "en": "Resort hotel on Awashima island, reachable only by boat.",
+        "zhHant": "位於淡島上的度假飯店，僅能搭船前往。"
+      },
+      "animeConnection": {
+        "ja": "鞠莉の実家「ホテル小原」のモデル。",
+        "en": "The model for Mari's family 'Hotel Ohara'.",
+        "zhHant": "鞠莉老家「小原飯店」的原型。"
+      },
+      "geo": [35.0249, 138.8864],
+      "sourceUrl": "https://www.awashimahotel.com/",
+      "officialUrl": "https://www.awashimahotel.com/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "shop",
+      "id": "kifune-shoten",
+      "bangumiIds": [22759],
+      "category": "goods",
+      "name": {
+        "ja": "喜船商店",
+        "en": "Kifune Shoten",
+        "zhHant": "喜船商店"
+      },
+      "description": {
+        "ja": "湯涌温泉街の商店。ぼんぼり祭り公式グッズの先行販売を行ってきた。",
+        "en": "Shop on the Yuwaku Onsen street known for advance sales of official Bonbori Festival goods.",
+        "zhHant": "湯涌溫泉街上的商店，長期先行販售ぼんぼり祭典官方周邊。"
+      },
+      "animeConnection": {
+        "ja": "花咲くいろは×ぼんぼり祭りコラボグッズの取扱店。",
+        "en": "Carries Hanasaku Iroha × Bonbori Festival collaboration goods.",
+        "zhHant": "販售《花開物語》×ぼんぼり祭典聯名周邊的店家。"
+      },
+      "geo": [36.4875, 136.7568],
+      "sourceUrl": "https://prtimes.jp/main/html/rd/p/000000565.000099047.html",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "event",
+      "id": "yuwaku-bonbori-matsuri",
+      "bangumiIds": [22759],
+      "category": "festival",
+      "name": {
+        "ja": "湯涌ぼんぼり祭り",
+        "en": "Yuwaku Bonbori Festival",
+        "zhHant": "湯涌ぼんぼり祭典"
+      },
+      "description": {
+        "ja": "『花咲くいろは』の劇中祭りが現実になった、2011年から続く湯涌温泉の年次祭り。ぼんぼり行列や奉納上映が行われる。",
+        "en": "The annual Yuwaku Onsen festival born from Hanasaku Iroha's in-story festival, held since 2011 with a bonbori lantern procession.",
+        "zhHant": "源自《花開物語》劇中祭典、自 2011 年延續至今的湯涌溫泉年度祭典，有雪洞燈籠遊行等活動。"
+      },
+      "venue": {
+        "ja": "湯涌温泉街",
+        "en": "Yuwaku Onsen",
+        "zhHant": "湯涌溫泉街"
+      },
+      "geo": [36.4878, 136.7575],
+      "schedule": {
+        "kind": "annual",
+        "typicalMonth": 10,
+        "confirmed": [
+          { "year": 2025, "startsAt": "2025-10-18", "endsAt": "2025-10-18" },
+          { "year": 2026, "startsAt": "2026-10-17", "endsAt": "2026-10-17" }
+        ]
+      },
+      "sourceUrl": "https://yuwaku.gr.jp/bonbori/archives/2026/04/17/3111",
+      "officialUrl": "https://yuwaku.gr.jp/bonbori/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "event",
+      "id": "yuwaku-bonbori-lighting-2026",
+      "bangumiIds": [22759],
+      "category": "festival",
+      "name": {
+        "ja": "ぼんぼり点灯式 2026",
+        "en": "Bonbori Lighting Ceremony 2026",
+        "zhHant": "ぼんぼり點燈儀式 2026"
+      },
+      "description": {
+        "ja": "本祭に先立ち湯涌温泉街のぼんぼりに灯を入れる点灯式。",
+        "en": "The ceremony lighting the bonbori lanterns along the Yuwaku Onsen street ahead of the main festival.",
+        "zhHant": "本祭前為湯涌溫泉街的雪洞燈籠點燈的儀式。"
+      },
+      "venue": {
+        "ja": "湯涌温泉街",
+        "en": "Yuwaku Onsen",
+        "zhHant": "湯涌溫泉街"
+      },
+      "geo": [36.4878, 136.7575],
+      "schedule": {
+        "kind": "fixed",
+        "startsAt": "2026-07-19",
+        "endsAt": "2026-07-19"
+      },
+      "sourceUrl": "https://yuwaku.gr.jp/bonbori/archives/2026/04/17/3111",
+      "officialUrl": "https://yuwaku.gr.jp/bonbori/",
+      "verifiedAt": "2026-07-17"
+    },
+    {
+      "kind": "event",
+      "id": "numazu-machiaruki-stamp",
+      "bangumiIds": [165553, 210272, 234295],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "沼津まちあるきスタンプ",
+        "en": "Numazu Machiaruki Stamp",
+        "zhHant": "沼津街歩集章"
+      },
+      "description": {
+        "ja": "沼津市内130店舗以上がキャラクター別のスタンプを設置する常設スタンプラリー。スタンプ帳は500円。",
+        "en": "A permanent stamp rally across 130+ Numazu shops, each hosting a character stamp. Stamp book ¥500.",
+        "zhHant": "沼津市內超過 130 間店家常設的角色集章活動，集章本 500 日圓。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "ongoing"
+      },
+      "sourceUrl": "https://www.llsunshine-numazu.jp/",
+      "officialUrl": "https://www.llsunshine-numazu.jp/",
+      "verifiedAt": "2026-07-17"
+    }
+  ]
+}

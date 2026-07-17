@@ -28,7 +28,8 @@ import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
-import { Skeleton, ThemedText, readableTextOn } from '../../../components/themed';
+import { Skeleton, ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
+import { IntelEventsRail } from '../../../components/pilgrimage/IntelEventsRail';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
@@ -268,6 +269,10 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/capture');
   }, [router]);
 
+  const handleIdentifyScene = useCallback(() => {
+    router.push('/pilgrimage/identify');
+  }, [router]);
+
   const handleOpenCharacters = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/companion/library');
@@ -344,7 +349,11 @@ export default function PilgrimageHubScreen() {
     <View style={styles.root}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.headerBar}>
-          <ThemedText variant="titleLarge" weight="700" numberOfLines={1} style={styles.headerTitle}>
+          <ThemedText
+            variant="titleLarge"
+            weight="700"
+            numberOfLines={1}
+            style={styles.headerTitle}>
             {t('tabs.pilgrimageScreen.title')}
           </ThemedText>
           <View style={styles.headerRight}>
@@ -405,7 +414,7 @@ export default function PilgrimageHubScreen() {
             theme={theme}
             nearestSpot={nearestSpot}
             nearestSpotAnimeName={
-              nearestSpotAnime ? (nearestSpotAnime.cn || nearestSpotAnime.title) : null
+              nearestSpotAnime ? nearestSpotAnime.cn || nearestSpotAnime.title : null
             }
             nearestAnime={nearestAnime}
             nearbyCount={nearbyAnime.length}
@@ -477,6 +486,13 @@ export default function PilgrimageHubScreen() {
             </View>
           ) : null}
 
+          {/*
+            近期活動 — curated collab events / festivals (spec §13). The rail
+            component owns its own sync data reads and hides itself when no
+            event is active, upcoming, or unannounced-in-horizon.
+          */}
+          <IntelEventsRail theme={theme} />
+
           {popularList.length > 0 ? (
             <View style={styles.section}>
               <SectionHeader
@@ -510,47 +526,56 @@ export default function PilgrimageHubScreen() {
             the Tourism 88 official list and the cross-anime featured-spots
             list (ranked by real distance, see rankFeaturedSpotsByPriority).
           */}
-          {tourism88Entries.length > 0 || featuredSpots.length > 0 ? (
-            <View style={styles.section}>
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                style={[styles.introCaps, { color: theme.accent }]}>
-                {t('tabs.pilgrimageScreen.section.explore')}
-              </ThemedText>
+          <View style={styles.section}>
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={[styles.introCaps, { color: theme.accent }]}>
+              {t('tabs.pilgrimageScreen.section.explore')}
+            </ThemedText>
 
+            <ThemedButton
+              label={t('pilgrimage.identify.entry')}
+              accessibilityLabel={t('pilgrimage.identify.entryA11y')}
+              onPress={handleIdentifyScene}
+              icon={<Ionicons name="scan-outline" size={18} color={readableTextOn(theme.accent)} />}
+              shape="rounded"
+              fullWidth
+            />
+
+            {tourism88Entries.length > 0 ? (
               <Tourism88Rail
                 entries={tourism88Entries}
                 collectionBangumiIds={collectionBangumiIds}
                 onPressEntry={handle88EntryPress}
                 onSeeAll={handleSee88All}
               />
+            ) : null}
 
-              {featuredSpots.length > 0 ? (
-                <View style={styles.section}>
-                  <SectionHeader
-                    title={t('tabs.pilgrimageScreen.section.featuredSpots')}
-                    cta={t('tabs.pilgrimageScreen.section.viewMap')}
-                    onCta={handleHeroPress}
-                    theme={theme}
-                  />
-                  <View style={styles.spotList}>
-                    {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
-                      <FeaturedSpotRow
-                        key={`${anime.id}:${spot.id}`}
-                        spot={spot}
-                        anime={anime}
-                        distanceKm={distanceKm}
-                        fromCollection={fromCollection}
-                        theme={theme}
-                        onPress={() => handleAnimePress(anime)}
-                      />
-                    ))}
-                  </View>
+            {featuredSpots.length > 0 ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t('tabs.pilgrimageScreen.section.featuredSpots')}
+                  cta={t('tabs.pilgrimageScreen.section.viewMap')}
+                  onCta={handleHeroPress}
+                  theme={theme}
+                />
+                <View style={styles.spotList}>
+                  {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
+                    <FeaturedSpotRow
+                      key={`${anime.id}:${spot.id}`}
+                      spot={spot}
+                      anime={anime}
+                      distanceKm={distanceKm}
+                      fromCollection={fromCollection}
+                      theme={theme}
+                      onPress={() => handleAnimePress(anime)}
+                    />
+                  ))}
                 </View>
-              ) : null}
-            </View>
-          ) : null}
+              </View>
+            ) : null}
+          </View>
 
           <AnitabiAttributionFooter bangumiId={null} variant="footer" />
         </ScrollView>
@@ -630,7 +655,11 @@ function NearbyHero({
             : t('tabs.pilgrimageScreen.hero.withoutLocation')}
         </ThemedText>
         {hasLocation && nearestSpot && nearestSpotAnimeName ? (
-          <ThemedText variant="captionSmall" tone="tertiary" style={{ marginTop: 2 }} numberOfLines={1}>
+          <ThemedText
+            variant="captionSmall"
+            tone="tertiary"
+            style={{ marginTop: 2 }}
+            numberOfLines={1}>
             {nearestSpotAnimeName}
           </ThemedText>
         ) : null}

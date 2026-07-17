@@ -3,8 +3,12 @@ import { describe, expect, it } from 'bun:test';
 import {
   buildMultiStopDirectionsUrl,
   buildPilgrimageDetailRoute,
+  buildPilgrimageSceneIdRoute,
+  getPilgrimageSceneIdSeed,
   getPilgrimageDetailBackRoute,
   getPilgrimageDetailChromeSeed,
+  getPilgrimageDetailFocusSpotId,
+  resolvePilgrimageSpotFocus,
 } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 describe('pilgrimage navigation', () => {
@@ -96,13 +100,96 @@ describe('pilgrimage navigation', () => {
       themeColor: '#8DC5D8',
     });
   });
+
+  it('PILG-035 round-trips focusSpotId and consumes the available focus once', () => {
+    const route = buildPilgrimageDetailRoute(485936, {
+      returnTo: 'hub',
+      focusSpotId: 'spot-42',
+    });
+    const focusSpotId = getPilgrimageDetailFocusSpotId(route.params ?? {});
+    expect(focusSpotId).toBe('spot-42');
+
+    const beforeLoad = resolvePilgrimageSpotFocus({
+      bangumiId: 485936,
+      focusSpotId,
+      spotIsAvailable: false,
+      consumedKey: null,
+    });
+    expect(beforeLoad).toEqual({ spotId: null, consumedKey: null });
+
+    const firstOpen = resolvePilgrimageSpotFocus({
+      bangumiId: 485936,
+      focusSpotId,
+      spotIsAvailable: true,
+      consumedKey: beforeLoad.consumedKey,
+    });
+    expect(firstOpen).toEqual({
+      spotId: 'spot-42',
+      consumedKey: '485936:spot-42',
+    });
+
+    const afterClose = resolvePilgrimageSpotFocus({
+      bangumiId: 485936,
+      focusSpotId,
+      spotIsAvailable: true,
+      consumedKey: firstOpen.consumedKey,
+    });
+    expect(afterClose).toEqual({
+      spotId: null,
+      consumedKey: '485936:spot-42',
+    });
+
+    const identifyRoute = buildPilgrimageSceneIdRoute(
+      {
+        id: 'spot-42',
+        name: 'Station crossing',
+        cn: '車站平交道',
+        image: 'https://img.example/spot-42.jpg',
+        ep: 4,
+        s: 101,
+        geo: [35.1, 139.2],
+        origin: 'Frame contributor',
+        originURL: 'https://example.com/frame',
+      },
+      {
+        bangumiId: 485936,
+        title: 'Test Anime',
+        titleSecondary: '測試動畫',
+        poster: 'https://img.example/poster.jpg',
+        themeColor: '#336699',
+      }
+    );
+    expect(getPilgrimageSceneIdSeed(identifyRoute.params ?? {})).toEqual({
+      bangumiId: 485936,
+      point: {
+        id: 'spot-42',
+        name: 'Station crossing',
+        cn: '車站平交道',
+        image: 'https://img.example/spot-42.jpg',
+        ep: 4,
+        s: 101,
+        geo: [35.1, 139.2],
+        origin: 'Frame contributor',
+        originURL: 'https://example.com/frame',
+      },
+      chrome: {
+        title: 'Test Anime',
+        titleSecondary: '測試動畫',
+        poster: 'https://img.example/poster.jpg',
+        themeColor: '#336699',
+      },
+    });
+  });
 });
 
 describe('buildMultiStopDirectionsUrl', () => {
   const g = (lat: number, lng: number) => [lat, lng] as const;
 
   it('google: single segment with waypoints + final destination', () => {
-    const urls = buildMultiStopDirectionsUrl([g(35, 135), g(35.1, 135.1), g(35.2, 135.2)], 'google');
+    const urls = buildMultiStopDirectionsUrl(
+      [g(35, 135), g(35.1, 135.1), g(35.2, 135.2)],
+      'google'
+    );
     expect(urls).toEqual([
       'https://www.google.com/maps/dir/?api=1&destination=35.2,135.2&waypoints=35,135%7C35.1,135.1',
     ]);

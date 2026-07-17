@@ -46,6 +46,14 @@ export function routeForNotificationResponse(
       if (!id) return null;
       return `/anime/${id}`;
     }
+    case 'pilgrimage_event': {
+      const id = typeof data.animeId === 'string' ? data.animeId.trim() : '';
+      if (!id) return null;
+      const eventId = typeof data.eventId === 'string' ? data.eventId.trim() : '';
+      return eventId
+        ? `/pilgrimage/${id}?intelEvent=${encodeURIComponent(eventId)}`
+        : `/pilgrimage/${id}`;
+    }
     default:
       return null;
   }
