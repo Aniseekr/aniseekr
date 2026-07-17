@@ -21,6 +21,7 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
 } from 'react-native-reanimated';
+import { listItemEnter } from '../../libs/animations/presets';
 import { Anime } from '../rate/types';
 import { pushAnimeDetail, prefetchAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import {
@@ -28,7 +29,7 @@ import {
   useIsAnimeScheduled,
 } from '../../modules/notifications/animeNotificationService';
 import { NearbyPilgrimageBadge } from '../pilgrimage/NearbyPilgrimageBadge';
-import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 
@@ -39,7 +40,7 @@ interface AnimeListGroup {
 
 type FlashRow =
   | { kind: 'header'; key: string; day: string }
-  | { kind: 'anime'; key: string; anime: Anime };
+  | { kind: 'anime'; key: string; anime: Anime; entryIndex?: number };
 
 interface AnimeListProps {
   listViewData: AnimeListGroup[];
@@ -51,10 +52,17 @@ interface AnimeListProps {
 
 function flattenGroups(groups: AnimeListGroup[]): FlashRow[] {
   const out: FlashRow[] = [];
+  let animeIndex = 0;
   for (const g of groups) {
     out.push({ kind: 'header', key: `h:${g.day}`, day: g.day });
     for (const anime of g.anime) {
-      out.push({ kind: 'anime', key: anime.id, anime });
+      out.push({
+        kind: 'anime',
+        key: anime.id,
+        anime,
+        entryIndex: animeIndex < 8 ? animeIndex : undefined,
+      });
+      animeIndex += 1;
     }
   }
   return out;
@@ -79,7 +87,12 @@ export const AnimeList = memo(function AnimeList({
       }
       // Wrap so each row has its own animated swipe context without the
       // FlashList recycling that into a different anime.
-      return <View>{renderAnimeCard(item.anime)}</View>;
+      const row = <View>{renderAnimeCard(item.anime)}</View>;
+      return item.entryIndex !== undefined ? (
+        <Animated.View entering={listItemEnter(item.entryIndex)}>{row}</Animated.View>
+      ) : (
+        row
+      );
     },
     [renderAnimeCard, styles.sectionTitle]
   );
@@ -281,8 +294,7 @@ function AnimeRowCardImpl({
                     color={isTracked ? theme.accent : theme.text.primary}
                     style={{ marginRight: 4 }}
                   />
-                  <Text
-                    style={[styles.addButtonText, isTracked && styles.addButtonTextActive]}>
+                  <Text style={[styles.addButtonText, isTracked && styles.addButtonTextActive]}>
                     {isTracked ? 'Tracking' : 'Track'}
                   </Text>
                 </Pressable>
@@ -364,7 +376,7 @@ const makeStyles = (theme: ThemePalette) =>
       overflow: 'hidden',
       ...Platform.select({
         ios: {
-          shadowColor: '#000',
+          shadowColor: Colors.background.primary,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.18,
           shadowRadius: 8,

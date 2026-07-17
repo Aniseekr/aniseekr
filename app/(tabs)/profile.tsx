@@ -1,8 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing profile loaders populate local state on mount; Phase 3 only themes refresh and adds entry motion. */
 import { View, ScrollView, RefreshControl, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
@@ -16,11 +18,7 @@ import { UserRepository, UserProfile } from '../../libs/repositories/user-reposi
 import { gachaService } from '../../libs/services/gacha-service';
 import { authService } from '../../libs/services/auth/auth-service';
 import { PLATFORM_CONFIGS, PlatformType } from '../../libs/services/auth/types';
-import {
-  DEFAULT_USER_PREFS,
-  loadUserPrefsSync,
-  patchUserPrefs,
-} from '../../libs/services/user-prefs';
+import { loadUserPrefsSync, patchUserPrefs } from '../../libs/services/user-prefs';
 import { normalizeProfileShortcuts, type ShortcutId } from '../../libs/services/profile-shortcuts';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -28,6 +26,7 @@ import { Radius, Spacing } from '../../constants/DesignSystem';
 import { FeatureFlags } from '../../constants/FeatureFlags';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
+import { listItemEnter } from '../../libs/animations/presets';
 
 const PLATFORM_INITIAL: Record<PlatformType, string> = {
   anilist: 'A',
@@ -196,7 +195,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              tintColor={theme.text.primary}
+              tintColor={theme.accent}
               refreshing={refreshing}
               onRefresh={onRefresh}
               colors={[theme.accent]}
@@ -207,94 +206,96 @@ export default function ProfileScreen() {
           {user === null && !refreshing ? (
             <Skeleton.Profile />
           ) : (
-            <ThemedSurface
-              variant="card"
-              radius={Radius.card}
-              style={[styles.profileCard, { borderColor: theme.glassBorder }]}>
-              <View
-                style={[
-                  styles.avatarRing,
-                  {
-                    backgroundColor: theme.background.primary,
-                    borderColor: theme.accent,
-                  },
-                ]}>
-                {headerAvatar ? (
-                  <Image source={{ uri: headerAvatar }} style={styles.avatarImage} />
-                ) : (
-                  <Ionicons name="person" size={36} color={theme.accent} />
-                )}
-              </View>
+            <Animated.View entering={listItemEnter(0)}>
+              <ThemedSurface
+                variant="card"
+                radius={Radius.card}
+                style={[styles.profileCard, { borderColor: theme.glassBorder }]}>
+                <View
+                  style={[
+                    styles.avatarRing,
+                    {
+                      backgroundColor: theme.background.primary,
+                      borderColor: theme.accent,
+                    },
+                  ]}>
+                  {headerAvatar ? (
+                    <Image source={{ uri: headerAvatar }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={36} color={theme.accent} />
+                  )}
+                </View>
 
-              <Pressable
-                onPress={handleEditName}
-                disabled={!isEditable}
-                style={({ pressed }) => [
-                  styles.nameRow,
-                  pressed && isEditable && { opacity: 0.7 },
-                ]}>
-                <ThemedText variant="titleLarge" weight="700">
-                  {headerUsername}
-                </ThemedText>
-                {isEditable ? (
-                  <MaterialIcons name="edit" size={16} color={theme.text.tertiary} />
-                ) : null}
-                {FeatureFlags.PREMIUM_ENABLED && isPro ? (
-                  <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
-                    <FontAwesome5 name="crown" size={10} color={ctaFg} />
+                <Pressable
+                  onPress={handleEditName}
+                  disabled={!isEditable}
+                  style={({ pressed }) => [
+                    styles.nameRow,
+                    pressed && isEditable && { opacity: 0.7 },
+                  ]}>
+                  <ThemedText variant="titleLarge" weight="700">
+                    {headerUsername}
+                  </ThemedText>
+                  {isEditable ? (
+                    <MaterialIcons name="edit" size={16} color={theme.text.tertiary} />
+                  ) : null}
+                  {FeatureFlags.PREMIUM_ENABLED && isPro ? (
+                    <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
+                      <FontAwesome5 name="crown" size={10} color={ctaFg} />
+                      <ThemedText
+                        variant="captionSmall"
+                        weight="800"
+                        style={[styles.proBadgeText, { color: ctaFg }]}>
+                        PRO
+                      </ThemedText>
+                    </View>
+                  ) : null}
+                </Pressable>
+
+                <View
+                  style={[
+                    styles.currencyPill,
+                    {
+                      backgroundColor: theme.background.tertiary,
+                      borderColor: theme.glassBorder,
+                    },
+                  ]}>
+                  <View
+                    style={[
+                      styles.betaTag,
+                      {
+                        backgroundColor: theme.accent + '24',
+                        borderColor: theme.accent + '66',
+                      },
+                    ]}>
                     <ThemedText
                       variant="captionSmall"
                       weight="800"
-                      style={[styles.proBadgeText, { color: ctaFg }]}>
-                      PRO
+                      style={[styles.betaTagText, { color: theme.accent }]}>
+                      BETA
                     </ThemedText>
                   </View>
-                ) : null}
-              </Pressable>
-
-              <View
-                style={[
-                  styles.currencyPill,
-                  {
-                    backgroundColor: theme.background.tertiary,
-                    borderColor: theme.glassBorder,
-                  },
-                ]}>
-                <View
-                  style={[
-                    styles.betaTag,
-                    {
-                      backgroundColor: theme.accent + '24',
-                      borderColor: theme.accent + '66',
-                    },
-                  ]}>
-                  <ThemedText
-                    variant="captionSmall"
-                    weight="800"
-                    style={[styles.betaTagText, { color: theme.accent }]}>
-                    BETA
-                  </ThemedText>
+                  <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
+                  <View style={styles.currencyItem}>
+                    <MaterialIcons name="monetization-on" size={16} color={theme.status.warning} />
+                    <ThemedText variant="bodyMedium" weight="600">
+                      {coins}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
+                  <View style={styles.currencyItem}>
+                    <MaterialIcons name="diamond" size={16} color={theme.status.info} />
+                    <ThemedText variant="bodyMedium" weight="600">
+                      {shards}
+                    </ThemedText>
+                  </View>
                 </View>
-                <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
-                <View style={styles.currencyItem}>
-                  <MaterialIcons name="monetization-on" size={16} color="#FFD60A" />
-                  <ThemedText variant="bodyMedium" weight="600">
-                    {coins}
-                  </ThemedText>
-                </View>
-                <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
-                <View style={styles.currencyItem}>
-                  <MaterialIcons name="diamond" size={16} color="#06B6D4" />
-                  <ThemedText variant="bodyMedium" weight="600">
-                    {shards}
-                  </ThemedText>
-                </View>
-              </View>
-            </ThemedSurface>
+              </ThemedSurface>
+            </Animated.View>
           )}
 
           {/* Stats Row */}
-          <View style={styles.statsRow}>
+          <Animated.View entering={listItemEnter(1)} style={styles.statsRow}>
             <StatTile
               value={watchedValue}
               label={t('tabs.profileScreen.statLabel.cards')}
@@ -319,118 +320,128 @@ export default function ProfileScreen() {
                 router.push('/collection/stats/top-favorites');
               }}
             />
-          </View>
+          </Animated.View>
 
           {/* Library Stats Hero */}
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              router.push('/collection/stats');
-            }}
-            style={({ pressed }) => [styles.statsHero, pressed && { opacity: 0.92 }]}>
-            <LinearGradient
-              colors={[theme.accent + 'CC', theme.accentDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.statsHeroContent}>
-              <View style={[styles.statsHeroIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-                <MaterialIcons name="bar-chart" size={20} color={ctaFg} />
+          <Animated.View entering={listItemEnter(2)}>
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                router.push('/collection/stats');
+              }}
+              style={({ pressed }) => [styles.statsHero, pressed && { opacity: 0.92 }]}>
+              <LinearGradient
+                colors={[theme.accent + 'CC', theme.accentDark]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.statsHeroContent}>
+                <View style={[styles.statsHeroIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+                  <MaterialIcons name="bar-chart" size={20} color={ctaFg} />
+                </View>
+                <View style={styles.statsHeroText}>
+                  <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
+                    {t('tabs.profileScreen.statsHero.title')}
+                  </ThemedText>
+                  <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
+                    {t('tabs.profileScreen.statsHero.subtitle')}
+                  </ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={ctaFg} />
               </View>
-              <View style={styles.statsHeroText}>
-                <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
-                  {t('tabs.profileScreen.statsHero.title')}
-                </ThemedText>
-                <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
-                  {t('tabs.profileScreen.statsHero.subtitle')}
-                </ThemedText>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={ctaFg} />
-            </View>
-          </Pressable>
+            </Pressable>
+          </Animated.View>
 
           {/* Premium CTA — hidden while FeatureFlags.PREMIUM_ENABLED is false */}
           {FeatureFlags.PREMIUM_ENABLED ? (
-            <Pressable
-              onPress={handleOpenPremium}
-              style={({ pressed }) => [styles.premiumCta, pressed && { opacity: 0.92 }]}>
-              <LinearGradient
-                colors={[theme.accent, theme.accentDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.premiumCtaContent}>
-                <View style={styles.premiumCtaText}>
-                  <View style={styles.premiumTitleRow}>
-                    <Ionicons name="sparkles" size={16} color={ctaFg} />
+            <Animated.View entering={listItemEnter(3)}>
+              <Pressable
+                onPress={handleOpenPremium}
+                style={({ pressed }) => [styles.premiumCta, pressed && { opacity: 0.92 }]}>
+                <LinearGradient
+                  colors={[theme.accent, theme.accentDark]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.premiumCtaContent}>
+                  <View style={styles.premiumCtaText}>
+                    <View style={styles.premiumTitleRow}>
+                      <Ionicons name="sparkles" size={16} color={ctaFg} />
+                      <ThemedText
+                        variant="titleMedium"
+                        weight="700"
+                        style={[styles.premiumTitle, { color: ctaFg }]}>
+                        {isPro
+                          ? t('tabs.profileScreen.premium.active')
+                          : t('tabs.profileScreen.premium.unlock')}
+                      </ThemedText>
+                    </View>
                     <ThemedText
-                      variant="titleMedium"
-                      weight="700"
-                      style={[styles.premiumTitle, { color: ctaFg }]}>
+                      variant="bodySmall"
+                      style={[styles.premiumSubtitle, { color: ctaFg, opacity: 0.85 }]}>
                       {isPro
-                        ? t('tabs.profileScreen.premium.active')
-                        : t('tabs.profileScreen.premium.unlock')}
+                        ? t('tabs.profileScreen.premium.manageSubtitle')
+                        : t('tabs.profileScreen.premium.unlockSubtitle')}
                     </ThemedText>
                   </View>
-                  <ThemedText
-                    variant="bodySmall"
-                    style={[styles.premiumSubtitle, { color: ctaFg, opacity: 0.85 }]}>
-                    {isPro
-                      ? t('tabs.profileScreen.premium.manageSubtitle')
-                      : t('tabs.profileScreen.premium.unlockSubtitle')}
-                  </ThemedText>
+                  <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
+                    <ThemedText
+                      variant="titleSmall"
+                      weight="700"
+                      style={{ color: theme.text.primary }}>
+                      {isPro
+                        ? t('tabs.profileScreen.premium.manage')
+                        : t('tabs.profileScreen.premium.upgrade')}
+                    </ThemedText>
+                  </View>
                 </View>
-                <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
-                  <ThemedText
-                    variant="titleSmall"
-                    weight="700"
-                    style={{ color: theme.text.primary }}>
-                    {isPro
-                      ? t('tabs.profileScreen.premium.manage')
-                      : t('tabs.profileScreen.premium.upgrade')}
-                  </ThemedText>
-                </View>
-              </View>
-            </Pressable>
+              </Pressable>
+            </Animated.View>
           ) : null}
 
           {/* Quick Shortcuts */}
-          <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
+          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 4 : 3)}>
+            <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
+          </Animated.View>
 
           {/* Settings Row */}
-          <Pressable
-            onPress={handleOpenSettings}
-            style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
-            <ThemedSurface
-              variant="card"
-              radius={Radius.lg}
-              style={[styles.settingsRow, { borderColor: theme.glassBorder }]}>
-              <View
-                style={[styles.settingsIconWrap, { backgroundColor: theme.background.tertiary }]}>
-                <Ionicons name="settings-outline" size={18} color={theme.text.primary} />
-              </View>
-              <View style={styles.settingsLabel}>
-                <ThemedText variant="titleSmall" weight="600">
-                  {t('tabs.profileScreen.settings')}
-                </ThemedText>
-                <ThemedText variant="bodySmall" tone="tertiary">
-                  {t('tabs.profileScreen.settingsSubtitle')}
-                </ThemedText>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.text.secondary} />
-            </ThemedSurface>
-          </Pressable>
+          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 5 : 4)}>
+            <Pressable
+              onPress={handleOpenSettings}
+              style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
+              <ThemedSurface
+                variant="card"
+                radius={Radius.lg}
+                style={[styles.settingsRow, { borderColor: theme.glassBorder }]}>
+                <View
+                  style={[styles.settingsIconWrap, { backgroundColor: theme.background.tertiary }]}>
+                  <Ionicons name="settings-outline" size={18} color={theme.text.primary} />
+                </View>
+                <View style={styles.settingsLabel}>
+                  <ThemedText variant="titleSmall" weight="600">
+                    {t('tabs.profileScreen.settings')}
+                  </ThemedText>
+                  <ThemedText variant="bodySmall" tone="tertiary">
+                    {t('tabs.profileScreen.settingsSubtitle')}
+                  </ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.text.secondary} />
+              </ThemedSurface>
+            </Pressable>
+          </Animated.View>
 
           {connectedPlatforms.length > 0 ? (
-            <View style={styles.platformsSection}>
+            <Animated.View
+              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}
+              style={styles.platformsSection}>
               <PlatformSwitcher
                 platforms={switcherPlatforms}
                 selected={selectedPlatform}
                 onSelect={handleSelectPlatform}
               />
-            </View>
+            </Animated.View>
           ) : null}
         </ScrollView>
       </SafeAreaView>

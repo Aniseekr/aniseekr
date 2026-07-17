@@ -1,6 +1,6 @@
+/* eslint-disable no-restricted-syntax -- Existing screen styles predate token lint; Phase 3 only swaps loading motion and list entry animation. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Keyboard,
   Platform,
@@ -21,7 +21,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Anime } from '../components/rate/types';
 import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../libs/utils/navigate-to-anime';
-import { ShimmerEffect } from '../components/common/ShimmerEffect';
 import { EmptyStateView } from '../components/common/EmptyStateView';
 import { ErrorStateView } from '../components/common/ErrorStateView';
 import { Colors, IconSize, Radius, Spacing, Typography } from '../constants/DesignSystem';
@@ -44,9 +43,10 @@ import { sameArrayBy } from '../libs/utils/state-array';
 
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
 import { SEARCH_RECENT_KEY } from '../libs/services/storage/keys';
-import { readableTextOn } from '../components/themed';
+import { Skeleton, readableTextOn } from '../components/themed';
 import { useT } from '../libs/i18n';
 import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
+import { listItemEnter } from '../libs/animations/presets';
 
 const MAX_RECENT = 8;
 
@@ -479,7 +479,7 @@ export default function SearchScreen() {
               // Old results stay visible while a new query runs — without this
               // spinner the screen reads as stale/stuck (the skeleton only
               // covers the zero-results case).
-              <ActivityIndicator size="small" color={Colors.text.secondary} />
+              <Skeleton.Block width={18} height={18} borderRadius={9} />
             ) : null}
             {query.length > 0 ? (
               <Pressable
@@ -608,20 +608,7 @@ export default function SearchScreen() {
               paddingBottom: insets.bottom + 100,
             }}
             keyboardShouldPersistTaps="handled">
-            <View style={styles.sortRow}>
-              <ShimmerEffect width={80} height={12} />
-              <ShimmerEffect width={90} height={12} />
-            </View>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <View key={i} style={styles.skeletonRow}>
-                <ShimmerEffect width={64} height={88} borderRadius={10} />
-                <View style={{ flex: 1, gap: 8 }}>
-                  <ShimmerEffect width="80%" height={16} />
-                  <ShimmerEffect width="50%" height={12} />
-                  <ShimmerEffect width="35%" height={12} />
-                </View>
-              </View>
-            ))}
+            <Skeleton.AnimeCardList count={6} />
           </ScrollView>
         ) : filteredResults.length === 0 ? (
           <View style={styles.centerFill}>
@@ -689,24 +676,31 @@ export default function SearchScreen() {
                 ) : null}
               </View>
             }
-            renderItem={({ item }) => (
-              <ResultCard
-                anime={item}
-                pending={resolvingId === item.id}
-                hasPilgrimage={
-                  item.hasPilgrimage === true ||
-                  lookupBangumiByPlatformId('anilist', item.id) !== null
-                }
-                isBookmarked={trackedIds.has(item.id)}
-                bookmarkPending={bookmarkPendingId === item.id}
-                onPress={() => handleSelect(item)}
-                onBookmarkPress={() => handleBookmarkToggle(item)}
-              />
-            )}
+            renderItem={({ item, index }) => {
+              const card = (
+                <ResultCard
+                  anime={item}
+                  pending={resolvingId === item.id}
+                  hasPilgrimage={
+                    item.hasPilgrimage === true ||
+                    lookupBangumiByPlatformId('anilist', item.id) !== null
+                  }
+                  isBookmarked={trackedIds.has(item.id)}
+                  bookmarkPending={bookmarkPendingId === item.id}
+                  onPress={() => handleSelect(item)}
+                  onBookmarkPress={() => handleBookmarkToggle(item)}
+                />
+              );
+              return index < 8 ? (
+                <Animated.View entering={listItemEnter(index)}>{card}</Animated.View>
+              ) : (
+                card
+              );
+            }}
             ListFooterComponent={
               loading ? (
                 <View style={styles.footerLoader}>
-                  <ActivityIndicator color={Colors.primary} />
+                  <Skeleton.AnimeCardList count={2} />
                 </View>
               ) : null
             }
@@ -718,8 +712,7 @@ export default function SearchScreen() {
           style={[
             styles.toast,
             {
-              bottom:
-                keyboardHeight > 0 ? keyboardHeight + Spacing.sm : insets.bottom + Spacing.lg,
+              bottom: keyboardHeight > 0 ? keyboardHeight + Spacing.sm : insets.bottom + Spacing.lg,
             },
           ]}>
           <Ionicons name="bookmark" size={16} color={Colors.primary} />
@@ -1103,12 +1096,6 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: 13,
     fontWeight: '500',
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-    alignItems: 'center',
   },
   resultCard: {
     flexDirection: 'row',

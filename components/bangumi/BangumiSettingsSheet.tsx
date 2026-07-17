@@ -1,14 +1,14 @@
 import { memo, useCallback } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
 import { useT } from '../../libs/i18n';
+import { ON_DARK, ThemedBottomSheet, readableTextOn } from '../themed';
 
 export type BangumiViewMode = 'calendar' | 'list' | 'cards';
 export type BangumiBaseViewMode = 'calendar' | 'list';
@@ -60,6 +60,7 @@ function BangumiSettingsSheetComponent({
 }: BangumiSettingsSheetProps) {
   const { theme } = useTheme();
   const t = useT();
+  const activeFg = readableTextOn(theme.accent);
 
   const update = useCallback(
     <K extends keyof BangumiPreferences>(key: K, value: BangumiPreferences[K]) => {
@@ -83,251 +84,230 @@ function BangumiSettingsSheetComponent({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Animated.View
-        entering={FadeIn.duration(160)}
-        exiting={FadeOut.duration(160)}
-        style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View
-          entering={FadeInUp.duration(220)}
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
-            },
-          ]}>
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.handle} />
-            <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>
-                {t('bangumiTab.bangumiOptions')}
-              </Text>
-              <Pressable onPress={onClose} hitSlop={12}>
-                <MaterialIcons name="close" size={22} color={theme.text.secondary} />
+    <ThemedBottomSheet visible={visible} onClose={onClose}>
+      <SafeAreaView edges={['bottom']}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: theme.text.primary }]}>
+            {t('bangumiTab.bangumiOptions')}
+          </Text>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <MaterialIcons name="close" size={22} color={theme.text.secondary} />
+          </Pressable>
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          {t('commonUi.dataSource')}
+        </Text>
+        <View style={styles.sourceRow}>
+          <BrowseSourceChip
+            onPress={() => {
+              hapticsBridge.tap();
+              onClose();
+              router.push('/(setting)/data-source');
+            }}
+          />
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          {t('bangumiTab.viewMode')}
+        </Text>
+        <View style={styles.segmented}>
+          {(['calendar', 'list'] as BangumiBaseViewMode[]).map((mode) => {
+            // Swipe-mode (cards) lives on the header toggle; settings only
+            // picks the base view that swipe falls back to when exited.
+            const active = preferences.baseViewMode === mode;
+            return (
+              <Pressable
+                key={mode}
+                onPress={() => setBaseViewMode(mode)}
+                style={({ pressed }) => [
+                  styles.segmentItem,
+                  {
+                    backgroundColor: active ? theme.accent : theme.background.tertiary,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <MaterialIcons
+                  name={mode === 'calendar' ? 'calendar-today' : 'view-list'}
+                  size={18}
+                  color={active ? activeFg : theme.text.primary}
+                />
+                <Text
+                  style={[styles.segmentLabel, { color: active ? activeFg : theme.text.primary }]}>
+                  {mode === 'calendar' ? t('bangumiTab.calendar') : t('bangumiTab.list')}
+                </Text>
               </Pressable>
-            </View>
+            );
+          })}
+        </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              {t('commonUi.dataSource')}
-            </Text>
-            <View style={styles.sourceRow}>
-              <BrowseSourceChip
-                onPress={() => {
-                  hapticsBridge.tap();
-                  onClose();
-                  router.push('/(setting)/data-source');
-                }}
-              />
-            </View>
+        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          {t('bangumiTab.filter')}
+        </Text>
+        <View style={styles.segmented}>
+          {(['tracking', 'all'] as BangumiFilterMode[]).map((mode) => {
+            const active = preferences.filterMode === mode;
+            return (
+              <Pressable
+                key={mode}
+                onPress={() => update('filterMode', mode)}
+                style={({ pressed }) => [
+                  styles.segmentItem,
+                  {
+                    backgroundColor: active ? theme.accent : theme.background.tertiary,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <Text
+                  style={[styles.segmentLabel, { color: active ? activeFg : theme.text.primary }]}>
+                  {mode === 'tracking' ? t('bangumiTab.tracking') : t('bangumiTab.allSeries')}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              {t('bangumiTab.viewMode')}
-            </Text>
-            <View style={styles.segmented}>
-              {(['calendar', 'list'] as BangumiBaseViewMode[]).map((mode) => {
-                // Swipe-mode (cards) lives on the header toggle; settings only
-                // picks the base view that swipe falls back to when exited.
-                const active = preferences.baseViewMode === mode;
-                return (
-                  <Pressable
-                    key={mode}
-                    onPress={() => setBaseViewMode(mode)}
-                    style={({ pressed }) => [
-                      styles.segmentItem,
-                      {
-                        backgroundColor: active ? theme.accent : theme.background.tertiary,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}>
-                    <MaterialIcons
-                      name={mode === 'calendar' ? 'calendar-today' : 'view-list'}
-                      size={18}
-                      color={active ? '#0E0A06' : theme.text.primary}
-                    />
-                    <Text
-                      style={[
-                        styles.segmentLabel,
-                        { color: active ? '#0E0A06' : theme.text.primary },
-                      ]}>
-                      {mode === 'calendar' ? t('bangumiTab.calendar') : t('bangumiTab.list')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              {t('bangumiTab.filter')}
-            </Text>
-            <View style={styles.segmented}>
-              {(['tracking', 'all'] as BangumiFilterMode[]).map((mode) => {
-                const active = preferences.filterMode === mode;
-                return (
-                  <Pressable
-                    key={mode}
-                    onPress={() => update('filterMode', mode)}
-                    style={({ pressed }) => [
-                      styles.segmentItem,
-                      {
-                        backgroundColor: active ? theme.accent : theme.background.tertiary,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}>
-                    <Text
-                      style={[
-                        styles.segmentLabel,
-                        { color: active ? '#0E0A06' : theme.text.primary },
-                      ]}>
-                      {mode === 'tracking' ? t('bangumiTab.tracking') : t('bangumiTab.allSeries')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-              {t('bangumiTab.type')}
-            </Text>
-            <View style={styles.segmented}>
-              {(
-                [
-                  { key: 'all', icon: 'apps', label: t('commonUi.all') },
-                  { key: 'tv', icon: 'tv', label: 'TV' },
-                  { key: 'movie', icon: 'movie', label: t('bangumiTab.movie') },
-                  { key: 'ova', icon: 'videocam', label: 'OVA' },
-                  { key: 'special', icon: 'star', label: t('bangumiTab.special') },
-                ] as {
-                  key: BangumiTypeFilter;
-                  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-                  label: string;
-                }[]
-              ).map((item) => {
-                const active = preferences.typeFilter === item.key;
-                return (
-                  <Pressable
-                    key={item.key}
-                    onPress={() => update('typeFilter', item.key)}
-                    style={({ pressed }) => [
-                      styles.typeSegmentItem,
-                      {
-                        backgroundColor: active ? theme.accent : theme.background.tertiary,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}>
-                    <MaterialIcons
-                      name={item.icon}
-                      size={16}
-                      color={active ? '#0E0A06' : theme.text.primary}
-                    />
-                    <Text
-                      style={[
-                        styles.typeSegmentLabel,
-                        { color: active ? '#0E0A06' : theme.text.primary },
-                      ]}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <ToggleRow
-              icon="visibility"
-              label={t('bangumiTab.showUndatedEntries')}
-              description={t('bangumiTab.displaySeriesWithUnknownAir')}
-              value={preferences.showUnknownDays}
-              onChange={(v) => update('showUnknownDays', v)}
-            />
-            <ToggleRow
-              icon="notifications-active"
-              label={t('bangumiTab.episodeReminders')}
-              description={t('bangumiTab.getNotifiedBeforeEachEpisode')}
-              value={preferences.notificationsEnabled}
-              onChange={(v) => update('notificationsEnabled', v)}
-            />
-            <ToggleRow
-              icon="explicit"
-              label={t('bangumiTab.showAdultContent')}
-              description={t('bangumiTab.revealR18SeriesInSeasonal')}
-              value={adultContent}
-              onChange={onAdultContentChange}
-            />
-
-            <View style={styles.actionRow}>
-              {onOpenNotifications ? (
-                <Pressable
-                  onPress={() => {
-                    hapticsBridge.tap();
-                    onOpenNotifications();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    {
-                      borderColor: theme.glassBorder,
-                      backgroundColor: theme.background.tertiary,
-                      opacity: pressed ? 0.85 : 1,
-                    },
+        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          {t('bangumiTab.type')}
+        </Text>
+        <View style={styles.segmented}>
+          {(
+            [
+              { key: 'all', icon: 'apps', label: t('commonUi.all') },
+              { key: 'tv', icon: 'tv', label: 'TV' },
+              { key: 'movie', icon: 'movie', label: t('bangumiTab.movie') },
+              { key: 'ova', icon: 'videocam', label: 'OVA' },
+              { key: 'special', icon: 'star', label: t('bangumiTab.special') },
+            ] as {
+              key: BangumiTypeFilter;
+              icon: React.ComponentProps<typeof MaterialIcons>['name'];
+              label: string;
+            }[]
+          ).map((item) => {
+            const active = preferences.typeFilter === item.key;
+            return (
+              <Pressable
+                key={item.key}
+                onPress={() => update('typeFilter', item.key)}
+                style={({ pressed }) => [
+                  styles.typeSegmentItem,
+                  {
+                    backgroundColor: active ? theme.accent : theme.background.tertiary,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <MaterialIcons
+                  name={item.icon}
+                  size={16}
+                  color={active ? activeFg : theme.text.primary}
+                />
+                <Text
+                  style={[
+                    styles.typeSegmentLabel,
+                    { color: active ? activeFg : theme.text.primary },
                   ]}>
-                  <MaterialIcons name="notifications" size={18} color={theme.text.primary} />
-                  <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
-                    {t('bangumiTab.manageReminders')}
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <ToggleRow
+          icon="visibility"
+          label={t('bangumiTab.showUndatedEntries')}
+          description={t('bangumiTab.displaySeriesWithUnknownAir')}
+          value={preferences.showUnknownDays}
+          onChange={(v) => update('showUnknownDays', v)}
+        />
+        <ToggleRow
+          icon="notifications-active"
+          label={t('bangumiTab.episodeReminders')}
+          description={t('bangumiTab.getNotifiedBeforeEachEpisode')}
+          value={preferences.notificationsEnabled}
+          onChange={(v) => update('notificationsEnabled', v)}
+        />
+        <ToggleRow
+          icon="explicit"
+          label={t('bangumiTab.showAdultContent')}
+          description={t('bangumiTab.revealR18SeriesInSeasonal')}
+          value={adultContent}
+          onChange={onAdultContentChange}
+        />
+
+        <View style={styles.actionRow}>
+          {onOpenNotifications ? (
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                onOpenNotifications();
+              }}
+              style={({ pressed }) => [
+                styles.actionButton,
+                {
+                  borderColor: theme.glassBorder,
+                  backgroundColor: theme.background.tertiary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <MaterialIcons name="notifications" size={18} color={theme.text.primary} />
+              <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
+                {t('bangumiTab.manageReminders')}
+              </Text>
+              {pendingNotifications > 0 ? (
+                <View style={[styles.badge, { backgroundColor: theme.accent }]}>
+                  <Text style={[styles.badgeText, { color: activeFg }]}>
+                    {pendingNotifications}
                   </Text>
-                  {pendingNotifications > 0 ? (
-                    <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-                      <Text style={styles.badgeText}>{pendingNotifications}</Text>
-                    </View>
-                  ) : null}
-                </Pressable>
+                </View>
               ) : null}
-              {onShare ? (
-                <Pressable
-                  onPress={() => {
-                    hapticsBridge.tap();
-                    onShare();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    {
-                      borderColor: theme.glassBorder,
-                      backgroundColor: theme.background.tertiary,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}>
-                  <MaterialIcons name="ios-share" size={18} color={theme.text.primary} />
-                  <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
-                    {t('bangumiTab.shareSchedule')}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-            {skippedCount > 0 && onRestoreSkipped ? (
-              <View style={styles.actionRow}>
-                <Pressable
-                  onPress={() => {
-                    // Haptic fires inside the restore handler.
-                    onRestoreSkipped();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    {
-                      borderColor: theme.glassBorder,
-                      backgroundColor: theme.background.tertiary,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}>
-                  <MaterialIcons name="visibility" size={18} color={theme.text.primary} />
-                  <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
-                    {t('bangumiTab.restoreSkipped', { count: String(skippedCount) })}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
-          </SafeAreaView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+            </Pressable>
+          ) : null}
+          {onShare ? (
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                onShare();
+              }}
+              style={({ pressed }) => [
+                styles.actionButton,
+                {
+                  borderColor: theme.glassBorder,
+                  backgroundColor: theme.background.tertiary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <MaterialIcons name="ios-share" size={18} color={theme.text.primary} />
+              <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
+                {t('bangumiTab.shareSchedule')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {skippedCount > 0 && onRestoreSkipped ? (
+          <View style={styles.actionRow}>
+            <Pressable
+              onPress={() => {
+                // Haptic fires inside the restore handler.
+                onRestoreSkipped();
+              }}
+              style={({ pressed }) => [
+                styles.actionButton,
+                {
+                  borderColor: theme.glassBorder,
+                  backgroundColor: theme.background.tertiary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <MaterialIcons name="visibility" size={18} color={theme.text.primary} />
+              <Text style={[styles.actionLabel, { color: theme.text.primary }]}>
+                {t('bangumiTab.restoreSkipped', { count: String(skippedCount) })}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </SafeAreaView>
+    </ThemedBottomSheet>
   );
 }
 
@@ -365,7 +345,7 @@ function ToggleRow({
           onChange(v);
         }}
         trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
+        thumbColor={value ? ON_DARK : theme.text.tertiary}
       />
     </View>
   );
@@ -382,27 +362,6 @@ export const DEFAULT_BANGUMI_PREFS: BangumiPreferences = {
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -502,9 +461,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   badgeText: {
-    fontSize: 11,
+    ...Typography.captionSmall,
     fontWeight: '700',
-    color: '#0E0A06',
   },
 });
 

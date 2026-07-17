@@ -1,7 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing open-load/reset effect; Phase 3 only replaces the sheet shell. */
 import { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,15 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { collectionService } from '../../libs/services/collection/collection-service';
 import { CollectionFolder } from '../../types';
 import { asIoniconsName } from '../../libs/utils/icon-types';
-import { sheetEnter } from '../../libs/animations/presets';
 import { useT } from '../../libs/i18n';
+import { ThemedBottomSheet, readableTextOn } from '../themed';
 
 const ICON_OPTIONS = [
   'folder',
@@ -53,6 +52,7 @@ function FolderPickerComponent({
 }: FolderPickerProps) {
   const { theme } = useTheme();
   const t = useT();
+  const activeFg = readableTextOn(theme.accent);
   const [folders, setFolders] = useState<CollectionFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
@@ -121,226 +121,188 @@ function FolderPickerComponent({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <Animated.View
-          entering={FadeIn.duration(160)}
-          exiting={FadeOut.duration(160)}
-          style={styles.backdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          <Animated.View
-            entering={sheetEnter()}
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-              },
-            ]}>
-            <SafeAreaView edges={['bottom']} style={{ maxHeight: '90%' }}>
-              <View style={styles.handle} />
-              <View style={styles.headerRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.title, { color: theme.text.primary }]}>
-                    {t('rate.addToFolder')}
-                  </Text>
-                  <Text
-                    style={[styles.subtitle, { color: theme.text.secondary }]}
-                    numberOfLines={1}>
-                    {animeTitle}
-                  </Text>
-                </View>
-                <Pressable onPress={onClose} hitSlop={12}>
-                  <MaterialIcons name="close" size={22} color={theme.text.secondary} />
-                </Pressable>
-              </View>
+    <ThemedBottomSheet visible={visible} onClose={onClose} maxHeightPct={0.9}>
+      <KeyboardAvoidingView behavior="padding">
+        <SafeAreaView edges={['bottom']}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: theme.text.primary }]}>
+                {t('rate.addToFolder')}
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.text.secondary }]} numberOfLines={1}>
+                {animeTitle}
+              </Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <MaterialIcons name="close" size={22} color={theme.text.secondary} />
+            </Pressable>
+          </View>
 
-              {showCreate ? (
-                <View>
-                  <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                    {t('rate.newFolderName')}
-                  </Text>
-                  <TextInput
-                    value={newName}
-                    onChangeText={setNewName}
-                    placeholder="e.g. Best of 2025"
-                    placeholderTextColor={theme.text.tertiary}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme.background.tertiary,
-                        borderColor: theme.glassBorder,
-                        color: theme.text.primary,
-                      },
-                    ]}
-                  />
-                  <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                    {t('commonUi.icon')}
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.iconRow}>
-                    {ICON_OPTIONS.map((icon) => {
-                      const active = icon === newIcon;
-                      return (
-                        <Pressable
-                          key={icon}
-                          onPress={() => {
-                            hapticsBridge.selection();
-                            setNewIcon(icon);
-                          }}
-                          style={[
-                            styles.iconBubble,
-                            {
-                              backgroundColor: active ? theme.accent : theme.background.tertiary,
-                              borderColor: active ? theme.accent : theme.glassBorder,
-                            },
-                          ]}>
-                          <Ionicons
-                            name={icon}
-                            size={20}
-                            color={active ? '#0E0A06' : theme.text.primary}
-                          />
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                  <Pressable
-                    onPress={() => {
-                      hapticsBridge.selection();
-                      setNewR18(!newR18);
-                    }}
-                    style={[styles.r18Row, { borderColor: theme.glassBorder }]}>
-                    <MaterialIcons
-                      name={newR18 ? 'check-box' : 'check-box-outline-blank'}
-                      size={20}
-                      color={newR18 ? theme.accent : theme.text.tertiary}
-                    />
-                    <Text style={[styles.r18Label, { color: theme.text.primary }]}>
-                      {t('rate.folderContainsR18Content')}
-                    </Text>
-                  </Pressable>
-
-                  <View style={styles.footerRow}>
+          {showCreate ? (
+            <View>
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                {t('rate.newFolderName')}
+              </Text>
+              <TextInput
+                value={newName}
+                onChangeText={setNewName}
+                placeholder="e.g. Best of 2025"
+                placeholderTextColor={theme.text.tertiary}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.background.tertiary,
+                    borderColor: theme.glassBorder,
+                    color: theme.text.primary,
+                  },
+                ]}
+              />
+              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                {t('commonUi.icon')}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.iconRow}>
+                {ICON_OPTIONS.map((icon) => {
+                  const active = icon === newIcon;
+                  return (
                     <Pressable
-                      onPress={() => setShowCreate(false)}
+                      key={icon}
+                      onPress={() => {
+                        hapticsBridge.selection();
+                        setNewIcon(icon);
+                      }}
                       style={[
-                        styles.footerButton,
-                        styles.cancelButton,
-                        { borderColor: theme.glassBorder },
-                      ]}>
-                      <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
-                        {t('common.back')}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      disabled={!newName.trim() || adding !== null}
-                      onPress={handleCreateAndAdd}
-                      style={({ pressed }) => [
-                        styles.footerButton,
+                        styles.iconBubble,
                         {
-                          backgroundColor: theme.accent,
-                          opacity: !newName.trim() || adding !== null ? 0.5 : pressed ? 0.85 : 1,
+                          backgroundColor: active ? theme.accent : theme.background.tertiary,
+                          borderColor: active ? theme.accent : theme.glassBorder,
                         },
                       ]}>
-                      {adding === '__new' ? (
-                        <ActivityIndicator color="#0E0A06" />
-                      ) : (
-                        <Text style={styles.confirmLabel}>{t('rate.createAdd')}</Text>
-                      )}
+                      <Ionicons
+                        name={icon}
+                        size={20}
+                        color={active ? activeFg : theme.text.primary}
+                      />
                     </Pressable>
-                  </View>
+                  );
+                })}
+              </ScrollView>
+              <Pressable
+                onPress={() => {
+                  hapticsBridge.selection();
+                  setNewR18(!newR18);
+                }}
+                style={[styles.r18Row, { borderColor: theme.glassBorder }]}>
+                <MaterialIcons
+                  name={newR18 ? 'check-box' : 'check-box-outline-blank'}
+                  size={20}
+                  color={newR18 ? theme.accent : theme.text.tertiary}
+                />
+                <Text style={[styles.r18Label, { color: theme.text.primary }]}>
+                  {t('rate.folderContainsR18Content')}
+                </Text>
+              </Pressable>
+
+              <View style={styles.footerRow}>
+                <Pressable
+                  onPress={() => setShowCreate(false)}
+                  style={[
+                    styles.footerButton,
+                    styles.cancelButton,
+                    { borderColor: theme.glassBorder },
+                  ]}>
+                  <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
+                    {t('common.back')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  disabled={!newName.trim() || adding !== null}
+                  onPress={handleCreateAndAdd}
+                  style={({ pressed }) => [
+                    styles.footerButton,
+                    {
+                      backgroundColor: theme.accent,
+                      opacity: !newName.trim() || adding !== null ? 0.5 : pressed ? 0.85 : 1,
+                    },
+                  ]}>
+                  {adding === '__new' ? (
+                    <ActivityIndicator color={activeFg} />
+                  ) : (
+                    <Text style={[styles.confirmLabel, { color: activeFg }]}>
+                      {t('rate.createAdd')}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <>
+              {loading ? (
+                <View style={styles.loadingWrap}>
+                  <ActivityIndicator color={theme.accent} />
                 </View>
               ) : (
-                <>
-                  {loading ? (
-                    <View style={styles.loadingWrap}>
-                      <ActivityIndicator color={theme.accent} />
-                    </View>
-                  ) : (
-                    <ScrollView style={{ maxHeight: 360 }}>
-                      {folders.map((folder) => (
-                        <Pressable
-                          key={folder.id}
-                          onPress={() => handleAdd(folder)}
-                          disabled={adding !== null}
-                          style={({ pressed }) => [
-                            styles.folderRow,
-                            {
-                              backgroundColor: theme.background.tertiary,
-                              borderColor: theme.glassBorder,
-                              opacity: pressed ? 0.85 : 1,
-                            },
-                          ]}>
-                          <View
-                            style={[styles.folderIcon, { backgroundColor: theme.accent + '24' }]}>
-                            <Ionicons
-                              name={asIoniconsName(folder.icon)}
-                              size={20}
-                              color={theme.accent}
-                            />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[styles.folderName, { color: theme.text.primary }]}>
-                              {folder.name}
-                            </Text>
-                            <Text style={[styles.folderMeta, { color: theme.text.tertiary }]}>
-                              {folder.isSystemFolder ? 'System' : 'Custom'}
-                              {folder.isR18 ? ' · R18' : ''}
-                            </Text>
-                          </View>
-                          {adding === folder.id ? (
-                            <ActivityIndicator color={theme.accent} />
-                          ) : (
-                            <MaterialIcons name="add-circle" size={22} color={theme.accent} />
-                          )}
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  )}
-                  <Pressable
-                    onPress={() => {
-                      hapticsBridge.tap();
-                      setShowCreate(true);
-                    }}
-                    style={[styles.createNew, { borderColor: theme.glassBorder }]}>
-                    <MaterialIcons name="create-new-folder" size={20} color={theme.accent} />
-                    <Text style={[styles.createNewLabel, { color: theme.accent }]}>
-                      {t('rate.createNewFolder')}
-                    </Text>
-                  </Pressable>
-                </>
+                <ScrollView style={{ maxHeight: 360 }}>
+                  {folders.map((folder) => (
+                    <Pressable
+                      key={folder.id}
+                      onPress={() => handleAdd(folder)}
+                      disabled={adding !== null}
+                      style={({ pressed }) => [
+                        styles.folderRow,
+                        {
+                          backgroundColor: theme.background.tertiary,
+                          borderColor: theme.glassBorder,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}>
+                      <View style={[styles.folderIcon, { backgroundColor: theme.accent + '24' }]}>
+                        <Ionicons
+                          name={asIoniconsName(folder.icon)}
+                          size={20}
+                          color={theme.accent}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.folderName, { color: theme.text.primary }]}>
+                          {folder.name}
+                        </Text>
+                        <Text style={[styles.folderMeta, { color: theme.text.tertiary }]}>
+                          {folder.isSystemFolder ? 'System' : 'Custom'}
+                          {folder.isR18 ? ' · R18' : ''}
+                        </Text>
+                      </View>
+                      {adding === folder.id ? (
+                        <ActivityIndicator color={theme.accent} />
+                      ) : (
+                        <MaterialIcons name="add-circle" size={22} color={theme.accent} />
+                      )}
+                    </Pressable>
+                  ))}
+                </ScrollView>
               )}
-            </SafeAreaView>
-          </Animated.View>
-        </Animated.View>
+              <Pressable
+                onPress={() => {
+                  hapticsBridge.tap();
+                  setShowCreate(true);
+                }}
+                style={[styles.createNew, { borderColor: theme.glassBorder }]}>
+                <MaterialIcons name="create-new-folder" size={20} color={theme.accent} />
+                <Text style={[styles.createNewLabel, { color: theme.accent }]}>
+                  {t('rate.createNewFolder')}
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </SafeAreaView>
       </KeyboardAvoidingView>
-    </Modal>
+    </ThemedBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -450,7 +412,6 @@ const styles = StyleSheet.create({
   },
   confirmLabel: {
     ...Typography.titleMedium,
-    color: '#0E0A06',
     fontWeight: '700',
   },
 });

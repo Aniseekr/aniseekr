@@ -2,21 +2,17 @@
 // tab's [This Week | All Time] pill but paginates further (top 50) and offers
 // a richer rank row. Range is hydrated from `?range=week|all` query params so
 // the section the user tapped lands focused.
+/* eslint-disable no-restricted-syntax -- Existing screen styles predate token lint; Phase 3 only adds first-mount card motion. */
+/* eslint-disable react-hooks/set-state-in-effect -- Existing range loader state model; Phase 3 keeps data flow unchanged. */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Animated from 'react-native-reanimated';
 import { readableTextOn, Skeleton } from '../components/themed';
 import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../libs/utils/navigate-to-anime';
@@ -26,6 +22,7 @@ import { FontFamily, Radius, Spacing, Typography } from '../constants/DesignSyst
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import { useT } from '../libs/i18n';
 import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
+import { listItemEnter } from '../libs/animations/presets';
 
 type TrendRange = 'week' | 'all';
 
@@ -115,13 +112,12 @@ export default function TrendingScreen() {
   }, [loadRange, range]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: Anime; index: number }) => (
-      <TrendingListRow
-        anime={item}
-        rank={index + 1}
-        onPress={() => handleAnimePress(item)}
-      />
-    ),
+    ({ item, index }: { item: Anime; index: number }) => {
+      const row = (
+        <TrendingListRow anime={item} rank={index + 1} onPress={() => handleAnimePress(item)} />
+      );
+      return index < 8 ? <Animated.View entering={listItemEnter(index)}>{row}</Animated.View> : row;
+    },
     [handleAnimePress]
   );
 
@@ -181,7 +177,7 @@ export default function TrendingScreen() {
             ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
             refreshControl={
               <RefreshControl
-                tintColor={theme.text.primary}
+                tintColor={theme.accent}
                 refreshing={loading && list.length > 0}
                 onRefresh={handleRefresh}
               />
@@ -224,9 +220,7 @@ function RangePill({ options, value, onChange }: RangePillProps) {
             <Text
               style={[
                 styles.rangePillText,
-                active
-                  ? { color: activeFg, fontWeight: '700' }
-                  : { color: theme.text.secondary },
+                active ? { color: activeFg, fontWeight: '700' } : { color: theme.text.secondary },
               ]}>
               {opt.label}
             </Text>
@@ -256,11 +250,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
       accessibilityRole="button"
       accessibilityLabel={t('trending.rankA11y', { rank, title: displayTitle })}>
-      <Text
-        style={[
-          styles.rankNumber,
-          isTop3 && { color: theme.accent },
-        ]}>
+      <Text style={[styles.rankNumber, isTop3 && { color: theme.accent }]}>
         {String(rank).padStart(2, '0')}
       </Text>
       <Image
@@ -281,9 +271,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
           ) : anime.type ? (
             <Text style={styles.tag}>{anime.type}</Text>
           ) : null}
-          {anime.startDate?.year ? (
-            <Text style={styles.tag}>· {anime.startDate.year}</Text>
-          ) : null}
+          {anime.startDate?.year ? <Text style={styles.tag}>· {anime.startDate.year}</Text> : null}
           {score ? (
             <View style={styles.score}>
               <Ionicons name="star" size={11} color={theme.accent} />
