@@ -1,12 +1,14 @@
-// Pure HTTP wrapper for the Anitabi public API (https://api.anitabi.cn).
-// Domain logic (caching, fallback, ID resolution) lives in
-// libs/services/pilgrimage/ — this module only knows how to make requests.
+// Anitabi transport facade. The JSON API remains the primary source. When it
+// explicitly returns HTTP 403 (the regional Cloudflare block seen in Japan),
+// requests fall back to the official static files used by anitabi.cn itself.
 
 import type {
   AnitabiBangumi,
   RawAnitabiBangumiPoints,
   RawAnitabiPointsDetail,
 } from '../services/pilgrimage/types';
+import { normalizeLiteBangumi } from '../services/pilgrimage/anitabi-points';
+import { AnitabiStaticClient } from './anitabi-static-client';
 
 const ANITABI_BASE_URL = 'https://api.anitabi.cn';
 const USER_AGENT = 'Aniseekr/1.0';
@@ -17,7 +19,7 @@ const USER_AGENT = 'Aniseekr/1.0';
  * The global DataSourceError lives under libs/services/data-sources/, which is
  * owned by another agent and not yet present. To keep the pilgrimage module
  * self-contained we ship a compatible local copy that mirrors the spec
- * contract (see spec/architecture.md §7).
+ * contract (see docs/spec/architecture.md §7).
  */
 export type AnitabiErrorCode =
   | 'NOT_FOUND'
@@ -33,12 +35,14 @@ export class DataSourceError extends Error {
   readonly code: AnitabiErrorCode;
   readonly platform: 'anitabi';
   readonly cause?: unknown;
-  constructor(code: AnitabiErrorCode, message: string, cause?: unknown) {
+  readonly status?: number;
+  constructor(code: AnitabiErrorCode, message: string, cause?: unknown, status?: number) {
     super(message);
     this.name = 'DataSourceError';
     this.code = code;
     this.platform = 'anitabi';
     this.cause = cause;
+    this.status = status;
   }
 }
 
@@ -51,15 +55,25 @@ interface FetchOptions {
 
 export class AnitabiClient {
   /**
-   * GET /bangumi/{id}/lite — small payload with sample points.
-   * Returns null when the anime has no pilgrimage entry (HTTP 404).
+   * Load the anime container and sample points from the API. A 403 retries via
+   * official static data. Returns null when the primary API returns 404.
    */
   static async getLite(bangumiId: number, opts: FetchOptions = {}): Promise<AnitabiBangumi | null> {
-    return AnitabiClient.request<AnitabiBangumi>(`/bangumi/${bangumiId}/lite`, opts);
+    try {
+      const bangumi = await AnitabiClient.request<AnitabiBangumi>(
+        `/bangumi/${bangumiId}/lite`,
+        opts
+      );
+      return bangumi ? normalizeLiteBangumi(bangumi) : null;
+    } catch (err) {
+      if (!isForbidden(err)) throw err;
+      console.warn('[AnitabiClient] API returned 403; using official static lite source');
+      return (await AnitabiStaticClient.getBangumi(bangumiId, opts))?.anime ?? null;
+    }
   }
 
   /**
-   * GET /bangumi/{id}/points — the COMPLETE point list for an anime.
+   * Load the COMPLETE point list for an anime.
    *
    * This is deliberately NOT `/points/detail`: that endpoint returns a
    * server-side-deduplicated subset (~22–80% of the real points — e.g. ぼっち
@@ -74,15 +88,22 @@ export class AnitabiClient {
     bangumiId: number,
     opts: FetchOptions = {}
   ): Promise<RawAnitabiBangumiPoints | null> {
-    return AnitabiClient.request<RawAnitabiBangumiPoints>(`/bangumi/${bangumiId}/points`, opts);
+    try {
+      return await AnitabiClient.request<RawAnitabiBangumiPoints>(
+        `/bangumi/${bangumiId}/points`,
+        opts
+      );
+    } catch (err) {
+      if (!isForbidden(err)) throw err;
+      console.warn('[AnitabiClient] API returned 403; using official static points source');
+      const decoded = await AnitabiStaticClient.getBangumi(bangumiId, opts);
+      return decoded ? { points: decoded.points } : null;
+    }
   }
 
   /**
-   * GET /bangumi/{id}/points/detail?haveImage=true — server-deduplicated point
-   * subset that, unlike `/points`, includes per-point `originURL` (the Google
-   * Maps / blog link of the screenshot's source). Used as a side-channel to
-   * enrich the `/points` payload with attribution links for CC BY-NC-SA 4.0
-   * compliance.
+   * Load point attribution details. Official static rows already contain the
+   * origin link and are decoded only when the API returns HTTP 403.
    *
    * Returns null when the anime has no pilgrimage entry (HTTP 404).
    */
@@ -90,10 +111,17 @@ export class AnitabiClient {
     bangumiId: number,
     opts: FetchOptions = {}
   ): Promise<RawAnitabiPointsDetail | null> {
-    return AnitabiClient.request<RawAnitabiPointsDetail>(
-      `/bangumi/${bangumiId}/points/detail?haveImage=true`,
-      opts
-    );
+    try {
+      return await AnitabiClient.request<RawAnitabiPointsDetail>(
+        `/bangumi/${bangumiId}/points/detail?haveImage=true`,
+        opts
+      );
+    } catch (err) {
+      if (!isForbidden(err)) throw err;
+      console.warn('[AnitabiClient] API returned 403; using official static detail source');
+      const decoded = await AnitabiStaticClient.getBangumi(bangumiId, opts);
+      return decoded?.points ?? null;
+    }
   }
 
   private static async request<T>(path: string, opts: FetchOptions): Promise<T | null> {
@@ -139,7 +167,9 @@ export class AnitabiClient {
     if (!response.ok) {
       throw new DataSourceError(
         response.status >= 500 ? 'SERVER_ERROR' : 'UNKNOWN',
-        `Anitabi request failed: HTTP ${response.status}`
+        `Anitabi request failed: HTTP ${response.status}`,
+        undefined,
+        response.status
       );
     }
 
@@ -153,4 +183,8 @@ export class AnitabiClient {
       );
     }
   }
+}
+
+function isForbidden(error: unknown): error is DataSourceError {
+  return error instanceof DataSourceError && error.status === 403;
 }

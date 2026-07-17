@@ -15,6 +15,7 @@ import { rateLimiter } from '../services/rate-limiter';
 import { Logger } from '../utils/logger';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
+const ANILIST_USER_AGENT = 'Aniseekr/1.0 (https://github.com/Aniseekr)';
 
 /**
  * Shape of every AniList GraphQL response. The server always returns either
@@ -218,6 +219,7 @@ export class AniListClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'User-Agent': ANILIST_USER_AGENT,
     };
     if (this.accessToken) {
       headers.Authorization = `Bearer ${this.accessToken}`;
@@ -228,8 +230,7 @@ export class AniListClient {
     for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
       await rateLimiter.waitForAvailability('anilist');
 
-      const controller =
-        typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
       const timer =
         controller !== undefined && this.timeoutMs > 0
           ? setTimeout(() => controller.abort(), this.timeoutMs)
@@ -445,7 +446,7 @@ export class AniListClient {
     const query = `
       query ($page: Int, $perPage: Int, $search: String, $isAdult: Boolean) {
         Page(page: $page, perPage: $perPage) {
-          media(search: $search, type: ANIME, isAdult: $isAdult, sort: [POPULARITY_DESC]) {
+          media(search: $search, type: ANIME, isAdult: $isAdult, sort: [SEARCH_MATCH]) {
             ...mediaFields
             description
             startDate { year month day }
@@ -458,6 +459,35 @@ export class AniListClient {
       page,
       perPage,
       search,
+      ...adultQueryVariables(options),
+    });
+    return data.Page.media;
+  }
+
+  /**
+   * Batch-fetch specific anime by AniList id (one request). Used by the
+   * Bangumi CJK recall merge to pull in matches AniList's own search missed.
+   */
+  static async getAnimeByIds(
+    ids: number[],
+    options: AniListLegacyQueryOptions = {}
+  ): Promise<AniListAnime[]> {
+    if (ids.length === 0) return [];
+    const query = `
+      query ($ids: [Int], $perPage: Int, $isAdult: Boolean) {
+        Page(page: 1, perPage: $perPage) {
+          media(id_in: $ids, type: ANIME, isAdult: $isAdult) {
+            ...mediaFields
+            description
+            startDate { year month day }
+          }
+        }
+      }
+      ${MEDIA_FRAGMENT}
+    `;
+    const data = await AniListClient.getDefaultInstance().query<AniListPage<AniListAnime>>(query, {
+      ids,
+      perPage: ids.length,
       ...adultQueryVariables(options),
     });
     return data.Page.media;

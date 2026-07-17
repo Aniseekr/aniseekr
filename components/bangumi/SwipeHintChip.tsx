@@ -31,9 +31,9 @@ export function SwipeHintChip({ onDismiss }: SwipeHintChipProps) {
         <MaterialIcons name="swap-horiz" size={14} color={theme.accent} />
       </View>
       <Text style={styles.label} numberOfLines={1}>
-        <Text style={styles.labelEmphasis}>{`← ${t('bangumiTab.remind')}`}</Text>
+        <Text style={styles.labelEmphasis}>{`← ${t('bangumiTab.notInterested')}`}</Text>
         <Text style={styles.labelDivider}>  ·  </Text>
-        <Text style={styles.labelEmphasis}>{`${t('commonUi.plan')} →`}</Text>
+        <Text style={styles.labelEmphasis}>{`${t('bangumiTab.wantToWatch')} →`}</Text>
       </Text>
       <Pressable
         onPress={handleDismiss}

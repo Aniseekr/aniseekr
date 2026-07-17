@@ -39,7 +39,7 @@ function normalize(status: string): AnimeStatus {
   if (v === 'on_air' || v === 'airing' || v === 'currently_airing') return 'watching';
   if (v === 'finished_airing' || v === 'finished') return 'completed';
   if (v === 'paused') return 'on_hold';
-  if (v === 'plan_to_watch' || v === 'plan') return 'planning';
+  if (v === 'plan_to_watch' || v === 'plan' || v === 'planned') return 'planning';
   return 'unknown';
 }
 

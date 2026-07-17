@@ -8,14 +8,18 @@
 //     own `imagesLength` excludes them too.
 //   - groupPointsIntoSpots: AnitabiPoint[] -> AnitabiSpot[]. Anitabi returns
 //     one point per *scene-cut*, so a single shrine is often 5+ points sharing
-//     a name. This collapses cuts of the same location into one spot.
+//     a normalized name. This collapses cuts of the same location into one spot.
 
 import { normalizeAnitabiImageUrl } from './anitabi-image';
 import type { AnitabiBangumi, AnitabiPoint, AnitabiSpot, RawAnitabiPoint } from './types';
 
-/** Two cuts with the same name within this many metres are treated as one spot. */
+/** Two cuts with the same normalized name within this many metres are treated as one spot. */
 const PROXIMITY_MERGE_M = 60;
 const EARTH_RADIUS_M = 6_371_000;
+const BRACKETED_ANGLE_SUFFIX_RE =
+  /[\s　_-]*[\(（［\[][^)）\]］]*(?:別角度|別カット|アングル|その\s*\d+)[^)）\]］]*[\)）\]］]\s*$/iu;
+const ANGLE_WORD_SUFFIX_RE = /[\s　_-]*(?:別角度|別カット|アングル|その\s*\d+)\s*$/iu;
+const TRAILING_NUMBER_SUFFIX_RE = /[\s　_-]*(?:\d+|[①②③④⑤⑥⑦⑧⑨⑩])\s*$/u;
 
 /**
  * Narrow a raw `/points` payload into clean {@link AnitabiPoint}s.
@@ -69,7 +73,7 @@ export function normalizeRawPoints(
  *   1. Anitabi's own folder structure — points sharing an `fid` (and the
  *      `isFolder` parent whose `id` equals that `fid`) are one location.
  *   2. Fallback for anime with no folders (e.g. ゆるキャン): points with the
- *      same name within {@link PROXIMITY_MERGE_M} metres of each other.
+ *      same normalized name within {@link PROXIMITY_MERGE_M} metres of each other.
  *
  * Output order is stable: spots ordered by the earliest input appearance of
  * any member; scenes within a spot ordered folder-parent-first then input
@@ -188,11 +192,7 @@ function coerceGeo(value: unknown): [number, number] {
 }
 
 function hasGeo(geo: [number, number]): boolean {
-  return (
-    Number.isFinite(geo[0]) &&
-    Number.isFinite(geo[1]) &&
-    !(geo[0] === 0 && geo[1] === 0)
-  );
+  return Number.isFinite(geo[0]) && Number.isFinite(geo[1]) && !(geo[0] === 0 && geo[1] === 0);
 }
 
 function pointNameKey(point: AnitabiPoint): string | null {
@@ -201,8 +201,22 @@ function pointNameKey(point: AnitabiPoint): string | null {
 
 function textKey(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const key = value.normalize('NFKC').trim().toLowerCase();
+  const key = stripAngleSuffixes(value.normalize('NFKC')).trim().toLowerCase();
   return key.length > 0 ? key : null;
+}
+
+function stripAngleSuffixes(value: string): string {
+  let key = value.trim();
+  let previous = '';
+  while (key !== previous) {
+    previous = key;
+    key = key
+      .replace(BRACKETED_ANGLE_SUFFIX_RE, '')
+      .replace(ANGLE_WORD_SUFFIX_RE, '')
+      .replace(TRAILING_NUMBER_SUFFIX_RE, '')
+      .trim();
+  }
+  return key;
 }
 
 function displayName(point: AnitabiPoint): string {

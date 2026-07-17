@@ -178,18 +178,14 @@ describe('anitabi-index', () => {
         west: 0,
       })
     ).toEqual([]);
-    expect(
-      indexModule.getAnimeNear({ lat: Number.NaN, lng: 0, radiusKm: 100 })
-    ).toEqual([]);
-    expect(
-      indexModule.getAnimeNear({ lat: 0, lng: 0, radiusKm: 0 })
-    ).toEqual([]);
+    expect(indexModule.getAnimeNear({ lat: Number.NaN, lng: 0, radiusKm: 100 })).toEqual([]);
+    expect(indexModule.getAnimeNear({ lat: 0, lng: 0, radiusKm: 0 })).toEqual([]);
   });
 
   it('PILG-IDX-009 rejects bounds with inverted lat', () => {
-    expect(
-      indexModule.getAnimeInBounds({ north: 0, south: 10, east: 180, west: -180 })
-    ).toEqual([]);
+    expect(indexModule.getAnimeInBounds({ north: 0, south: 10, east: 180, west: -180 })).toEqual(
+      []
+    );
   });
 
   it('PILG-IDX-010 notifies subscribers and normalizes covers after runtime hydration', () => {
@@ -213,7 +209,7 @@ describe('anitabi-index', () => {
     expect(indexModule.getIndexVersion()).toBe(before + 1);
     expect(notifications).toBe(1);
     expect(indexModule.getAllIndexed()[0].cover).toBe(
-      'https://image.anitabi.cn/bangumi/1.jpg?plan=h160'
+      'https://img-tc.anitabi.cn/bangumi/1.jpg?plan=h160'
     );
 
     unsubscribe();

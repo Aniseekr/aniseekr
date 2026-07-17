@@ -1,10 +1,14 @@
-// Tinder-style swipe deck for bangumi: left swipe = remind, right swipe = plan.
-// Tap a card to open the anime detail. Falls back to action buttons for users
-// who prefer not to swipe (also serves as a discoverability cue on first run).
+// Tinder-style swipe deck for bangumi: new-season triage is binary.
+// Right swipe = want to watch (adds to wishlist AND schedules the episode
+// reminder — notify is a consequence of wanting, not a separate action).
+// Left swipe = not interested (persisted per season so the deck converges;
+// undoable via snackbar / empty-state restore). Tap opens the anime detail.
+// Action buttons mirror the gestures for users who prefer not to swipe
+// (also serves as a discoverability cue on first run).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
-import { AnimeTitleText } from '../themed';
+import { AnimeTitleText, ThemedButton, readableTextOn } from '../themed';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -25,7 +29,6 @@ import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { readableTextOn } from '../themed';
 import { useT } from '../../libs/i18n';
 import {
   OUTGOING_CARD_LIFETIME_MS,
@@ -63,11 +66,22 @@ const RESET_SPRING_CONFIG = {
 
 interface BangumiCardDeckProps {
   anime: Anime[];
-  onSwipeRemind: (anime: Anime) => void;
-  onSwipePlan: (anime: Anime) => void;
+  /** Left swipe — not interested this season (persisted, undoable). */
+  onSwipeSkip: (anime: Anime) => void;
+  /** Right swipe — want to watch (wishlist + episode reminder). */
+  onSwipeWant: (anime: Anime) => void;
+  /** Skips already recorded for this season — drives the restore affordance. */
+  skippedCount?: number;
+  onRestoreSkipped?: () => void;
 }
 
-export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCardDeckProps) {
+export function BangumiCardDeck({
+  anime,
+  onSwipeSkip,
+  onSwipeWant,
+  skippedCount = 0,
+  onRestoreSkipped,
+}: BangumiCardDeckProps) {
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
@@ -80,27 +94,27 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
   const outgoingKeysRef = useRef(new Set<string>());
   const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistenceTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  const onSwipeRemindRef = useRef(onSwipeRemind);
-  const onSwipePlanRef = useRef(onSwipePlan);
+  const onSwipeSkipRef = useRef(onSwipeSkip);
+  const onSwipeWantRef = useRef(onSwipeWant);
 
   animeRef.current = anime;
   indexRef.current = index;
-  onSwipeRemindRef.current = onSwipeRemind;
-  onSwipePlanRef.current = onSwipePlan;
+  onSwipeSkipRef.current = onSwipeSkip;
+  onSwipeWantRef.current = onSwipeWant;
 
   const current = anime[index];
   const windowEntries = useMemo(
     () => computeBangumiDeckWindow({ items: anime, topIndex: index, outgoing }),
     [anime, index, outgoing]
   );
-  const planFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
+  const wantFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
 
   const queueSwipeSideEffect = useCallback((direction: 'left' | 'right', item: Anime) => {
     const timer = setTimeout(() => {
       persistenceTimersRef.current.delete(timer);
       InteractionManager.runAfterInteractions(() => {
-        if (direction === 'left') onSwipeRemindRef.current(item);
-        else onSwipePlanRef.current(item);
+        if (direction === 'left') onSwipeSkipRef.current(item);
+        else onSwipeWantRef.current(item);
       });
     }, SWIPE_PERSISTENCE_DELAY_MS);
     persistenceTimersRef.current.add(timer);
@@ -170,9 +184,15 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
           <Ionicons name="checkmark-done" size={36} color={theme.accent} />
         </View>
         <Text style={styles.emptyTitle}>{t('bangumiTab.youReAllCaughtUp')}</Text>
-        <Text style={styles.emptySubtitle}>
-          {t('bangumiTab.noMoreAnimeToTriage')}
-        </Text>
+        <Text style={styles.emptySubtitle}>{t('bangumiTab.noMoreAnimeToTriage')}</Text>
+        {skippedCount > 0 && onRestoreSkipped ? (
+          <ThemedButton
+            variant="ghost"
+            size="sm"
+            label={t('bangumiTab.restoreSkipped', { count: String(skippedCount) })}
+            onPress={onRestoreSkipped}
+          />
+        ) : null}
       </View>
     );
   }
@@ -216,24 +236,24 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
         <View style={styles.actionRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('bangumiTab.setReminder')}
+            accessibilityLabel={t('bangumiTab.notInterestedA11y')}
             onPress={() => {
               hapticsBridge.selection();
               advance('left');
             }}
             style={({ pressed }) => [
               styles.actionButton,
-              styles.actionRemind,
+              styles.actionSkip,
               pressed && { opacity: 0.85 },
             ]}>
-            <MaterialIcons name="notifications-active" size={18} color={theme.status.info} />
-            <Text style={[styles.actionLabel, { color: theme.status.info }]}>
-              {t('bangumiTab.remind')}
+            <MaterialIcons name="close" size={18} color={theme.status.error} />
+            <Text style={[styles.actionLabel, { color: theme.status.error }]}>
+              {t('bangumiTab.notInterested')}
             </Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('bangumiTab.addToPlan')}
+            accessibilityLabel={t('bangumiTab.wantToWatch')}
             onPress={() => {
               hapticsBridge.success();
               advance('right');
@@ -243,8 +263,10 @@ export function BangumiCardDeck({ anime, onSwipeRemind, onSwipePlan }: BangumiCa
               { backgroundColor: theme.accent, borderColor: theme.accent },
               pressed && { opacity: 0.9 },
             ]}>
-            <MaterialIcons name="bookmark-add" size={18} color={planFg} />
-            <Text style={[styles.actionLabel, { color: planFg }]}>{t('commonUi.plan')}</Text>
+            <MaterialIcons name="bookmark-add" size={18} color={wantFg} />
+            <Text style={[styles.actionLabel, { color: wantFg }]}>
+              {t('bangumiTab.wantToWatch')}
+            </Text>
           </Pressable>
         </View>
       ) : null}
@@ -344,11 +366,11 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
     ],
   }));
 
-  const remindOverlay = useAnimatedStyle(() => ({
+  const skipOverlay = useAnimatedStyle(() => ({
     opacity: interpolate(-translateX.value, [20, 110], [0, 1], Extrapolation.CLAMP),
   }));
 
-  const planOverlay = useAnimatedStyle(() => ({
+  const wantOverlay = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.value, [20, 110], [0, 1], Extrapolation.CLAMP),
   }));
 
@@ -389,23 +411,25 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
         </Pressable>
 
         <Animated.View
-          style={[styles.indicator, styles.indicatorLeft, remindOverlay]}
+          style={[styles.indicator, styles.indicatorLeft, skipOverlay]}
           pointerEvents="none">
-          <View style={[styles.indicatorBubble, { borderColor: theme.status.info }]}>
-            <MaterialIcons name="notifications-active" size={28} color={theme.status.info} />
+          <View style={[styles.indicatorBubble, { borderColor: theme.status.error }]}>
+            <MaterialIcons name="close" size={28} color={theme.status.error} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.status.info }]}>
-            {t('bangumiTab.remind')}
+          <Text style={[styles.indicatorLabel, { color: theme.status.error }]}>
+            {t('bangumiTab.notInterested')}
           </Text>
         </Animated.View>
 
         <Animated.View
-          style={[styles.indicator, styles.indicatorRight, planOverlay]}
+          style={[styles.indicator, styles.indicatorRight, wantOverlay]}
           pointerEvents="none">
           <View style={[styles.indicatorBubble, { borderColor: theme.accent }]}>
             <MaterialIcons name="bookmark-add" size={28} color={theme.accent} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>{t('commonUi.plan')}</Text>
+          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>
+            {t('bangumiTab.wantToWatch')}
+          </Text>
         </Animated.View>
       </Animated.View>
     </GestureDetector>
@@ -587,7 +611,7 @@ const makeStyles = (theme: ThemePalette) =>
       borderRadius: Radius.full,
       borderWidth: 1,
     },
-    actionRemind: {
+    actionSkip: {
       backgroundColor: theme.background.secondary,
       borderColor: theme.glassBorder,
     },

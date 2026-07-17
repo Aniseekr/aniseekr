@@ -136,7 +136,9 @@
       "includeGames": "包含遊戲",
       "includeGamesDesc": "在 Bangumi 日曆顯示電子遊戲",
       "showScore": "突顯評分",
-      "showScoreDesc": "在卡片標題列顯示評分"
+      "showScoreDesc": "在卡片標題列顯示評分",
+      "showEmptySystemFolders": "顯示空的系統資料夾",
+      "showEmptySystemFoldersDesc": "追番中/看完等資料夾即使 0 部也保留顯示"
     },
     "accentColor": {
       "apply": "套用",
@@ -597,6 +599,7 @@
       "errorLoadFailed": "本季載入失敗。下拉重新整理。",
       "movieAndSpecialsSubtitle": "本季共 {count} 部上映",
       "movieAndSpecialsTitle": "電影與特別篇",
+      "releaseDate": "上映 {date}",
       "retry": "重試",
       "snackbar": {
         "addedToWishlist": "已將「{title}」加入想看清單",
@@ -604,7 +607,9 @@
         "noUpcomingEpisode": "「{title}」沒有即將播出的集數",
         "reminderCancelled": "已取消提醒",
         "reminderSet": "已為「{title}」設定提醒",
-        "undo": "復原"
+        "skippedForSeason": "本季已略過「{title}」",
+        "undo": "復原",
+        "wantToWatchWithReminder": "已加入「{title}」— 新集數會通知你"
       }
     },
     "collectionFolderScreen": {
@@ -650,6 +655,7 @@
         "other": "{count} 個資料夾"
       },
       "libraryStats": "資料庫統計",
+      "statsLine": "{total} 部 · 追番中 {watching}",
       "metaAnimeCount": "{count} 部動畫",
       "myFolders": "我的資料夾",
       "newFolder": "新增資料夾",
@@ -884,6 +890,7 @@
     "recentTermA11y": "搜尋 {term}",
     "resultCount": "{count} 筆結果",
     "resultPilgrimageA11y": "{title},有巡禮地點",
+    "searching": "搜尋中…",
     "sort": {
       "newest": "最新",
       "relevance": "相關度",
@@ -1098,6 +1105,12 @@
     "image": {
       "unavailable": "無法載入圖片"
     },
+    "streetView": {
+      "loading": "正在載入街景…",
+      "openInGoogleMaps": "在 Google 地圖街景開啟",
+      "openLookAround": "開啟 Look Around",
+      "title": "街景"
+    },
     "map": {
       "allJapan": "全日本",
       "clearSearchA11y": "清除搜尋",
@@ -1121,6 +1134,7 @@
       "emptyCollection": "你的收藏中還沒有聖地巡禮景點。",
       "emptyNearby": "附近還沒有動畫。試著拖曳地圖到其他地區看看。",
       "emptySearch": "沒有符合「{query}」的動畫。",
+      "searchAllAnime": "搜尋全部動畫",
       "nearbySpotsTitle": "你附近的聖地",
       "goToCollection": "前往收藏",
       "mapLoadError": "無法載入地圖。",
@@ -1356,6 +1370,10 @@
     "unknownAirDate": "播出日未定",
     "youReAllCaughtUp": "你已全部看完",
     "noMoreAnimeToTriage": "這個檢視沒有更多動畫可整理了。切換季度或篩選條件找更多。",
+    "wantToWatch": "想看",
+    "notInterested": "不想看",
+    "notInterestedA11y": "不想看 — 本季不再顯示",
+    "restoreSkipped": "還原 {count} 部已略過",
     "scheduling": "排程中…"
   },
   "collectionUi": {
@@ -1366,6 +1384,7 @@
     "animePersona": "動畫人格",
     "avgScore": "平均分數",
     "byStatus": "依狀態",
+    "browseAnime": "瀏覽動畫",
     "clear": "清除",
     "containsR18Content": "含 R18 內容",
     "createYourFirstFolder": "建立你的第一個資料夾",
@@ -1430,6 +1449,18 @@
     "yourSavedAnimeLibrary": "你收藏的動畫庫",
     "yourWatchingYearRecapped": "回顧你這一年的觀影",
     "editFolder": "編輯資料夾",
+    "manageFolder": "管理資料夾",
+    "renameFolder": "重新命名資料夾",
+    "deleteFolder": "刪除資料夾",
+    "deleteFolderTitle": "刪除資料夾？",
+    "deleteFolderBody": "要刪除「{name}」嗎？資料庫內的動畫不會被刪除。",
+    "deleteFolderFailed": "無法刪除這個資料夾",
+    "removeFromFolder": "移出資料夾",
+    "removeFromFolderTitle": "移出資料夾？",
+    "removeFromFolderBody": "要將「{title}」移出這個資料夾嗎？",
+    "removeFromFolderFailed": "無法將這部動畫移出資料夾",
+    "systemFolder": "系統資料夾",
+    "noMatchingAnimeForQuery": "收藏中沒有符合「{query}」的動畫。",
     "createFolder": "建立資料夾",
     "saveChanges": "儲存變更",
     "havenTWatchedYet": "還沒看",

@@ -2,7 +2,7 @@
  * Deterministic unit tests for `AniListDataSource`.
  *
  * Spec cases: ANIL-001, ANIL-002, ANIL-003, ANIL-004, ANIL-005, ANIL-006,
- * ANIL-007, ANIL-008, ANIL-009.
+ * ANIL-007, ANIL-008, ANIL-009, ANIL-011.
  *
  * All HTTP is mocked. Each test asserts both:
  *   - the GraphQL query/variables sent to AniList match the contract
@@ -130,6 +130,35 @@ describe('AniListDataSource', () => {
     expect(calls[0].url).toBe('https://graphql.anilist.co');
     expect(calls[0].parsedBody.query).toContain('media(search: $search');
     expect(calls[0].parsedBody.variables).toMatchObject({ search: 'cowboy', page: 1 });
+  });
+
+  it('ANIL-011 search query sorts by SEARCH_MATCH so exact matches rank first', async () => {
+    const { ds, calls } = buildSubject(() =>
+      fakeJson({ data: { Page: { media: [] } } })
+    );
+
+    await ds.searchAnime('mono', 1);
+
+    expect(calls).toHaveLength(1);
+    // POPULARITY_DESC buried exact matches (e.g. "mono" ranked #6 behind
+    // unrelated-but-popular partial matches); SEARCH_MATCH ranks them first.
+    expect(calls[0].parsedBody.query).toContain('sort: [SEARCH_MATCH]');
+    expect(calls[0].parsedBody.query).not.toContain('sort: [POPULARITY_DESC]');
+  });
+
+  it('sends an explicit product User-Agent instead of the blocked iOS app User-Agent', async () => {
+    const { ds, calls } = buildSubject(() =>
+      fakeJson({
+        data: { GenreCollection: [] },
+      })
+    );
+
+    await ds.fetchGenres();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].init.headers).toMatchObject({
+      'User-Agent': 'Aniseekr/1.0 (https://github.com/Aniseekr)',
+    });
   });
 
   it('ANIL-002 fetchAnimeDetail with sourcePlatform=anilist sends id variable', async () => {

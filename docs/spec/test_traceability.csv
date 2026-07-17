@@ -51,6 +51,9 @@ REPO-023,__tests__/unit/repositories/anime-repository.test.ts,no double fetch fo
 REPO-030,__tests__/unit/repositories/anime-repository.test.ts,cancellation on browse switch,covered
 REPO-031,__tests__/unit/repositories/anime-repository.test.ts,translateID same platform passthrough,covered
 REPO-032,__tests__/unit/repositories/anime-repository.test.ts,translateID unknown returns original,covered
+REPO-060,__tests__/unit/repositories/anime-repository.test.ts,CJK search prepends Bangumi-mapped anime missing from AniList results,covered
+REPO-061,__tests__/unit/repositories/anime-repository.test.ts,Bangumi recall seeds name_cn without duplicating present results,covered
+REPO-062,__tests__/unit/repositories/anime-repository.test.ts,Bangumi recall failure returns AniList results unchanged,covered
 DSCFG-001,__tests__/unit/data-source-config.test.ts,default browse source is anilist,covered
 DSCFG-002,__tests__/unit/data-source-config.test.ts,setBrowseSource persists,covered
 DSCFG-003,__tests__/unit/data-source-config.test.ts,init restores from storage,covered
@@ -93,6 +96,7 @@ ANIL-007,__tests__/unit/providers/anilist-data-source.test.ts,genres list with s
 ANIL-008,__tests__/unit/providers/anilist-data-source.test.ts,filters spoiler tags,covered
 ANIL-009,__tests__/integration/anilist-live.test.ts,live search returns results,covered
 ANIL-010,__tests__/integration/anilist-live.test.ts,live detail Cowboy Bebop id 1,covered
+ANIL-011,__tests__/unit/providers/anilist-data-source.test.ts,search query sorts by SEARCH_MATCH so exact matches rank first,covered
 MAL-001,__tests__/unit/providers/jikan-data-source.test.ts,detail by mal id path,covered
 MAL-002,__tests__/unit/providers/jikan-data-source.test.ts,search uses q param,covered
 MAL-003,__tests__/unit/providers/jikan-data-source.test.ts,sfw param appended,covered
@@ -151,7 +155,22 @@ PILG-009,__tests__/unit/pilgrimage/nearby-pilgrimage-badge.test.tsx,renders noth
 PILG-010,__tests__/unit/pilgrimage/nearby-pilgrimage-badge.test.tsx,swallows fetch errors,covered
 PILG-011,__tests__/unit/pilgrimage/pilgrimage-repository.test.ts,falls back to id mapping,covered
 PILG-012,__tests__/unit/pilgrimage/pilgrimage-repository.test.ts,sqlite migration idempotent,covered
-PILG-013,__tests__/integration/anitabi-live.test.ts,live fetch subject 7157,covered
+PILG-013,__tests__/integration/anitabi-live.test.ts,live API-first fetch subject 7157,covered
+PILG-014,__tests__/unit/pilgrimage/anitabi-static-data.test.ts,decodes and joins official static payloads,covered
+PILG-015,__tests__/unit/pilgrimage/anitabi-runtime-coverage.test.ts,rejects degraded runtime coverage,covered
+PILG-016,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,matches localized and official English titles,covered
+PILG-017,__tests__/unit/pilgrimage/anitabi-image.test.ts,keeps CDN URLs and heals invalid website image URLs,covered
+PILG-018,__tests__/unit/pilgrimage/anitabi-client.test.ts,uses website static JSON only after API HTTP 403,covered
+PILG-019,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,unions Bangumi fallback with weak local hits instead of suppressing it,covered
+PILG-020,__tests__/unit/pilgrimage/street-view-service.test.ts,resolves Look Around first on iOS and falls back to Mapillary,covered
+PILG-021,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,missing token returns null without fetch,covered
+PILG-022,__tests__/unit/pilgrimage/street-view-service.test.ts,reuses cached Look Around availability without provider call,covered
+PILG-023,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,falls back from radius to bbox and sorts parsed images,covered
+PILG-024,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,returns null for rate limit network and malformed payloads,covered
+PILG-025,__tests__/unit/pilgrimage/anitabi-points.test.ts,merges same shrine cuts with angle suffixes inside 60m,covered
+PILG-026,__tests__/unit/pilgrimage/street-view-service.test.ts,peeks cached verdicts synchronously for warm opens,covered
+PILG-027,__tests__/unit/pilgrimage/street-view-service.test.ts,caches successful empty Mapillary answers but never errors,covered
+PILG-028,__tests__/unit/pilgrimage/use-street-view.test.ts,scene unavailable corrects the verdict and re-resolves,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending

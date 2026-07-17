@@ -6,4 +6,4 @@ annict,https://api.annict.com/v1,oauth2_required,500,true,true,false,false,false
 kitsu,https://kitsu.io/api/edge,none,333,true,true,true,true,false,true,true,false,false,false,false,none,false,true,false,numeric,0-100,JSON:API format; offset pagination
 shikimori,https://shikimori.one/api,oauth2_optional,200,true,true,true,true,true,true,true,false,false,false,false,none,false,true,true,numeric,0-10,Russian-language site; image base prefix needed
 simkl,https://api.simkl.com,apikey,500,true,true,true,true,false,false,false,false,false,false,false,none,false,true,false,numeric,0-10,Cross-platform IDs in response
-anitabi,https://api.anitabi.cn,none,200,false,true,false,false,false,false,false,false,false,false,false,none,true,true,false,numeric,n/a,Pilgrimage-only; linked by Bangumi ID
+anitabi,https://api.anitabi.cn,none,200,true,true,false,false,false,false,false,false,false,false,false,www.anitabi.cn/d,true,true,false,numeric,n/a,Pilgrimage-only; linked by Bangumi ID; official static fallback only on HTTP 403

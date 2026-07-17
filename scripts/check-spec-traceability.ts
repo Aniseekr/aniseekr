@@ -1,13 +1,14 @@
 #!/usr/bin/env bun
-// Verifies every active case in spec/test_cases.csv has at least one mapping in spec/test_traceability.csv.
+// Verifies every active case in docs/spec/test_cases.csv has at least one mapping in
+// docs/spec/test_traceability.csv.
 // Exits 1 with a list of unmapped cases. Used by `bun run spec:check`.
 
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 const ROOT = resolve(import.meta.dir, '..');
-const CASES = resolve(ROOT, 'spec/test_cases.csv');
-const TRACE = resolve(ROOT, 'spec/test_traceability.csv');
+const CASES = resolve(ROOT, 'docs/spec/test_cases.csv');
+const TRACE = resolve(ROOT, 'docs/spec/test_traceability.csv');
 
 function parseCsv(path: string): Record<string, string>[] {
   const txt = readFileSync(path, 'utf8').trim();

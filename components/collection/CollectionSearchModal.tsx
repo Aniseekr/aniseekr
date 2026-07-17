@@ -23,6 +23,8 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { CollectionFolder } from '../../types';
 import { LocalDB } from '../../libs/db';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
+import { matchesTitleQuery } from '../../libs/services/collection/folder-sort';
+import { titleLocalizationService } from '../../libs/services/title-localization-service';
 
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
 import { COLLECTION_SEARCH_RECENTS_KEY } from '../../libs/services/storage/keys';
@@ -83,6 +85,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
   const [recent, setRecent] = useState<string[]>(readCollectionRecentsSync);
   const [animeIndex, setAnimeIndex] = useState<AnimeIndexEntry[]>([]);
   const [indexReady, setIndexReady] = useState(false);
+  const [titleCacheVersion, setTitleCacheVersion] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -201,6 +204,11 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
   }, [visible, folders]);
 
   useEffect(() => {
+    if (!visible || !debouncedQuery) return;
+    return titleLocalizationService.subscribe(() => setTitleCacheVersion((v) => v + 1));
+  }, [debouncedQuery, visible]);
+
+  useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedQuery(query.trim());
@@ -216,26 +224,37 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
 
   const folderHits = useMemo<FolderHit[]>(() => {
     if (!debouncedQuery) return [];
-    const q = debouncedQuery.toLowerCase();
     return folders.flatMap((f) =>
-      f.name.toLowerCase().includes(q) ? [{ type: 'folder' as const, folder: f }] : []
+      matchesTitleQuery(f.name, undefined, debouncedQuery)
+        ? [{ type: 'folder' as const, folder: f }]
+        : []
     );
   }, [debouncedQuery, folders]);
 
   const animeHits = useMemo<AnimeHit[]>(() => {
+    // Title-localization cache updates are external to React; this
+    // subscription value intentionally invalidates the search result.
+    void titleCacheVersion;
     if (!debouncedQuery) return [];
-    const q = debouncedQuery.toLowerCase();
     const seen = new Set<string>();
     const out: AnimeHit[] = [];
     for (const entry of animeIndex) {
-      if (!entry.title.toLowerCase().includes(q)) continue;
+      const localizedTitle = titleLocalizationService.getSync('chinese', 'anilist', entry.id);
+      if (!matchesTitleQuery(entry.title, localizedTitle, debouncedQuery)) continue;
       if (seen.has(entry.id)) continue;
       seen.add(entry.id);
       out.push({ type: 'anime', anime: entry });
       if (out.length >= 50) break;
     }
     return out;
-  }, [debouncedQuery, animeIndex]);
+  }, [debouncedQuery, animeIndex, titleCacheVersion]);
+
+  useEffect(() => {
+    if (!visible || !/[\u3040-\u30ff\u3400-\u9fff]/.test(debouncedQuery)) return;
+    for (const entry of animeIndex) {
+      titleLocalizationService.ensure('chinese', 'anilist', entry.id);
+    }
+  }, [animeIndex, debouncedQuery, visible]);
 
   const recordRecent = useCallback(
     (term: string) => {
@@ -448,7 +467,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
                 {t('collectionUi.noMatches')}
               </Text>
               <Text style={[styles.emptyHintBody, { color: theme.text.secondary }]}>
-                Nothing in your collection for &ldquo;{debouncedQuery}&rdquo;.
+                {t('collectionUi.noMatchingAnimeForQuery', { query: debouncedQuery })}
               </Text>
             </View>
           ) : (
@@ -501,9 +520,14 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
                           {folder.name}
                         </Text>
                         <Text style={[styles.rowSubtitle, { color: theme.text.secondary }]}>
-                          {folder.animeCount} item
-                          {folder.animeCount === 1 ? '' : 's'}
-                          {folder.isSystemFolder ? ' · System folder' : ''}
+                          {folder.animeCount === 1
+                            ? t('collectionUi.folderItemCount.one', {
+                                count: String(folder.animeCount),
+                              })
+                            : t('collectionUi.folderItemCount.other', {
+                                count: String(folder.animeCount),
+                              })}
+                          {folder.isSystemFolder ? ` · ${t('collectionUi.systemFolder')}` : ''}
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />

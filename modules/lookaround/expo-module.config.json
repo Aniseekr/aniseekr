@@ -1,0 +1,8 @@
+{
+  "platforms": ["ios"],
+  "ios": {
+    "modules": ["AniseekrLookAroundModule"],
+    "podspecPath": "ios/AniseekrLookAround.podspec",
+    "swiftModuleName": "AniseekrLookAround"
+  }
+}

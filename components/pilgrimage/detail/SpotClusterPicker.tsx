@@ -5,7 +5,6 @@
 
 import React, { memo, useCallback, useMemo } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
@@ -13,8 +12,8 @@ import { ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
+import { SpotImage } from '../SpotImage';
 import { formatDistanceKm, getPointSourceLabel } from './_helpers';
 
 export interface SpotClusterPickerProps {
@@ -57,18 +56,16 @@ function SpotClusterPickerImpl({
           accessibilityRole="button"
           accessibilityLabel={`Open ${titles.primary}`}>
           <View style={[styles.thumbWrap, { borderColor: themeColor }]}>
-            <Image
-              source={anitabiImageSource(spot.image)}
+            <SpotImage
+              uri={spot.image}
               style={styles.thumb}
               contentFit="cover"
-              transition={120}
+              recyclingKey={spot.id}
+              fallbackIconSize={18}
             />
             {spot.ep > 0 ? (
               <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
-                <ThemedText
-                  variant="captionSmall"
-                  weight="800"
-                  style={{ color: themeColorFg }}>
+                <ThemedText variant="captionSmall" weight="800" style={{ color: themeColorFg }}>
                   {sourceLabel ? `${sourceLabel} · ` : ''}EP {spot.ep}
                 </ThemedText>
               </View>

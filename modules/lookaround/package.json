@@ -1,0 +1,9 @@
+{
+  "name": "aniseekr-lookaround",
+  "version": "0.1.0",
+  "description": "AniSeekr iOS Look Around Expo module",
+  "license": "Apache-2.0",
+  "private": true,
+  "main": "src/index.ts",
+  "react-native": "src/index.ts"
+}

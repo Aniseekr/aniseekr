@@ -7,8 +7,20 @@ filming/inspiration locations (聖地巡礼) when the anime has Anitabi data.
 
 ## 2. Data Source: Anitabi
 
-`https://api.anitabi.cn` is a free public API maintained by the anitabi.cn community.
-No authentication required. Linked to anime by Bangumi subject ID.
+Anitabi is maintained by the anitabi.cn community and links anime by Bangumi
+subject ID. JSON requests use `https://api.anitabi.cn` first. Only an explicit
+HTTP 403 falls back to the same official static files as the website:
+
+- `https://www.anitabi.cn/d/g.json` for the complete anime catalog and compact point coordinates.
+- `https://www.anitabi.cn/d/g{page}.json` for per-anime point metadata.
+- `https://img-tc.anitabi.cn/...` for covers and scene images (the origin used
+  by Anitabi's own `www.anitabi.cn` frontend).
+
+No authentication is required. Images use `https://img-tc.anitabi.cn/...`.
+`https://www.anitabi.cn/images/...` is not an image endpoint: it returns the
+website HTML shell with HTTP 200 and must never be handed to an image decoder.
+The legacy `https://image.anitabi.cn/...` origin is WAF-blocked in Japan;
+cached URLs from that origin are rewritten to `img-tc.anitabi.cn`.
 
 ## 3. Types
 
@@ -182,18 +194,87 @@ https://maps.apple.com/?q={lat},{lng}
 https://www.google.com/maps/search/?api=1&query={lat},{lng}
 ```
 
-## 9. Anitabi API Behavior Notes
+## 9. Anitabi Data Behavior Notes
 
-- `/bangumi/{id}/lite` returns 404 if anime has no pilgrimage entries → map to `null`,
-  not an error.
-- `litePoints` has at most ~10 entries; full set is in `/points/detail`.
+- API 404 maps to `null`. API 403 alone activates the static fallback; 429,
+  5xx, decoding failures, and network errors keep their normal error semantics.
+- A Bangumi ID absent from fallback `g.json` also maps to `null`.
+- The static catalog stores point coordinates in groups of four
+  (`id, lat, lng, priority`); the matching `g{page}.json` row supplies names,
+  images, episode markers, folders, and attribution links.
+- `litePoints` is the first 10 displayable points; full detail retains every
+  point with an image.
 - `geo` is sometimes `[0, 0]` for old/incomplete entries → treat as missing.
-- `image` URLs are absolute and from `https://image.anitabi.cn`. They're CDN-cached
-  but slow on first load.
-- `cover` URLs may use `https://image.anitabi.cn/posters/...` — use `expo-image` with
-  `placeholder` for graceful degradation.
+- Relative image paths are resolved against `https://img-tc.anitabi.cn`.
+  Invalid `https://www.anitabi.cn/images/...` values persisted by older builds
+  and legacy `https://image.anitabi.cn/...` values are healed back to the
+  official www image CDN before rendering.
+- Cross-index hydration must reject a candidate with less than 80% of the
+  current entry count. This prevents a partial CI fallback from replacing the
+  complete bundled cross-index.
 
-## 10. Test Coverage
+## 10. Street View Data
+
+Spot-level street view availability is resolved lazily through a pure
+TypeScript resolver before any native or UI surface renders a preview.
+
+Resolver behavior:
+
+- iOS first asks an injected Look Around provider whether Apple has a nearby
+  scene. A positive answer returns a `lookaround` result without calling
+  Mapillary.
+- A negative iOS answer falls back to Mapillary. Android and other platforms
+  skip Look Around and use Mapillary directly.
+- Look Around availability is cached by rounded coordinate for 30 days.
+- Mapillary metadata is cached by rounded coordinate for 24 hours because
+  thumbnail URLs are signed and can expire.
+- When no provider has data, or Mapillary is disabled by a missing token, the
+  resolver returns `null` so UI can omit the whole section instead of rendering
+  fake content.
+- A synchronous peek (`peekStreetView`) reads the in-memory cache mirror and
+  returns a definite verdict only when the cached entries fully determine the
+  async chain; warm opens therefore paint on the first frame without a
+  skeleton.
+- Successful-but-empty Mapillary answers are cached like hits (`[]`, 24h) so
+  no-coverage spots don't refire radius+bbox on every open; error answers
+  (`null`) are never cached.
+- When the native Look Around preview reports its scene unavailable despite a
+  cached positive verdict, the verdict is overwritten to `false` and the
+  resolver re-runs, falling through to Mapillary.
+
+Mapillary behavior:
+
+- Requests use `process.env.EXPO_PUBLIC_MAPILLARY_TOKEN`; missing token returns
+  `null` without network I/O.
+- Search uses a 50m radius first. If that returns no parseable images, it tries
+  a bbox of ±0.0025° around the coordinate to recover from slightly offset
+  Anitabi points.
+- Parsed image metadata includes thumbnail URL, coordinate, compass angle,
+  panorama flag, quality score, capture date, and distance from the spot.
+- Images are ordered by nearest distance, then higher quality score, then
+  panorama preference.
+- HTTP 429, network failures, and malformed payloads return `null`.
+
+## 11. Multi-angle Spot Grouping
+
+`groupPointsIntoSpots` treats Anitabi folders as authoritative. For loose
+points that have no folder metadata, it groups same-location cuts only when the
+normalized names match and the representative coordinates are within 60m.
+
+Loose-point name normalization folds Unicode with NFKC and strips common
+multi-angle suffixes before comparison:
+
+- `別角度`
+- `別カット`
+- `アングル`
+- `その[0-9]+`
+- trailing ASCII or full-width digits
+- trailing circled numerals such as `①②③`
+- trailing bracketed notes such as `（別角度）`
+
+The 60m threshold and folder-first representative ordering are unchanged.
+
+## 12. Test Coverage
 
 - PILG-001: `AnitabiService.getAnimePilgrimage` returns `null` on 404
 - PILG-002: Caches fetched result in memory (second call no HTTP)
@@ -208,8 +289,23 @@ https://www.google.com/maps/search/?api=1&query={lat},{lng}
 - PILG-011: Pilgrimage repository falls back to ID mapping when bangumi ID absent
 - PILG-012: SQLite schema migration is idempotent
 - PILG-013 (E2E): Anime detail with `bangumi.id` → pilgrimage screen → spot list visible
+- PILG-014: Official static catalog and page payloads decode into complete anime and point data
+- PILG-015: A degraded runtime index cannot replace the bundled index
+- PILG-016: Search folds Traditional/Simplified Chinese and reads official English titles
+- PILG-017: Image URLs stay on the image CDN and invalid website-image cache values self-heal
+- PILG-018: JSON uses the API first and requests official website data only after HTTP 403
+- PILG-019: Bangumi fallback always unions with local index hits instead of being suppressed
+- PILG-020: Street view resolver uses iOS Look Around first and Mapillary fallback
+- PILG-021: Mapillary token missing silently disables street view metadata
+- PILG-022: Street view resolver caches Look Around availability by coordinate
+- PILG-023: Mapillary client falls back from 50m radius to bbox and orders parsed images
+- PILG-024: Mapillary HTTP/rate-limit/network/decoding failures return `null`
+- PILG-025: Loose Anitabi scene cuts with angle suffixes merge when within 60m
+- PILG-026: Warm street view cache resolves synchronously so warm opens skip the skeleton
+- PILG-027: Successful empty Mapillary answers are cached; errors are not
+- PILG-028: Look Around scene-unavailable corrects the cached verdict and re-resolves to Mapillary
 
-## 11. Future Extensions (out of MVP scope)
+## 13. Future Extensions (out of MVP scope)
 
 - Embedded `react-native-maps` view
 - "Nearby" mode using `expo-location` to compute distances

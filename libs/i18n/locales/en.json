@@ -136,7 +136,9 @@
       "includeGames": "Include games",
       "includeGamesDesc": "Show video games in Bangumi calendar",
       "showScore": "Show score prominently",
-      "showScoreDesc": "Display rating in card header"
+      "showScoreDesc": "Display rating in card header",
+      "showEmptySystemFolders": "Show empty system folders",
+      "showEmptySystemFoldersDesc": "Keep Watching/Completed/… tiles visible even with 0 anime"
     },
     "accentColor": {
       "apply": "Apply",
@@ -597,6 +599,7 @@
       "errorLoadFailed": "Couldn't load this season. Pull to retry.",
       "movieAndSpecialsSubtitle": "{count} releases this season",
       "movieAndSpecialsTitle": "Movies & specials",
+      "releaseDate": "Releases {date}",
       "retry": "Retry",
       "snackbar": {
         "addedToWishlist": "Added \"{title}\" to Wishlist",
@@ -604,7 +607,9 @@
         "noUpcomingEpisode": "No upcoming episode scheduled for \"{title}\"",
         "reminderCancelled": "Reminder cancelled",
         "reminderSet": "Reminder set for \"{title}\"",
-        "undo": "Undo"
+        "skippedForSeason": "Skipped \"{title}\" this season",
+        "undo": "Undo",
+        "wantToWatchWithReminder": "Added \"{title}\" — you'll be notified of new episodes"
       }
     },
     "collectionFolderScreen": {
@@ -650,6 +655,7 @@
         "other": "{count} folders"
       },
       "libraryStats": "Library stats",
+      "statsLine": "{total} anime · {watching} watching",
       "metaAnimeCount": "{count} anime",
       "myFolders": "My Folders",
       "newFolder": "New folder",
@@ -884,6 +890,7 @@
     "recentTermA11y": "Search {term}",
     "resultCount": "{count} results",
     "resultPilgrimageA11y": "{title}, pilgrimage available",
+    "searching": "Searching…",
     "sort": {
       "newest": "Newest",
       "relevance": "Relevance",
@@ -1098,6 +1105,12 @@
     "image": {
       "unavailable": "Image unavailable"
     },
+    "streetView": {
+      "loading": "Loading street view…",
+      "openInGoogleMaps": "Open in Google Maps Street View",
+      "openLookAround": "Open Look Around",
+      "title": "Street View"
+    },
     "map": {
       "allJapan": "All Japan",
       "clearSearchA11y": "Clear search",
@@ -1123,6 +1136,7 @@
       "emptySearch": "No anime match \"{query}\".",
       "nearbySpotsTitle": "Sacred sites near you",
       "goToCollection": "Go to Collection",
+      "searchAllAnime": "Search all anime",
       "mapLoadError": "Couldn't load the map.",
       "offlineBody": "You're offline or the connection dropped. Check your network and try again — areas you've already viewed still work offline.",
       "offlineTitle": "Can't load the map",
@@ -1356,6 +1370,10 @@
     "unknownAirDate": "Unknown Air Date",
     "youReAllCaughtUp": "You're all caught up",
     "noMoreAnimeToTriage": "No more anime to triage in this view. Switch seasons or filters to find more.",
+    "wantToWatch": "Want to watch",
+    "notInterested": "Not interested",
+    "notInterestedA11y": "Not interested — hide this season",
+    "restoreSkipped": "Restore {count} skipped",
     "scheduling": "Scheduling…"
   },
   "collectionUi": {
@@ -1366,6 +1384,7 @@
     "animePersona": "Anime Persona",
     "avgScore": "Avg score",
     "byStatus": "By Status",
+    "browseAnime": "Browse anime",
     "clear": "Clear",
     "containsR18Content": "Contains R18 content",
     "createYourFirstFolder": "Create your first folder",
@@ -1430,6 +1449,18 @@
     "yourSavedAnimeLibrary": "Your saved anime library",
     "yourWatchingYearRecapped": "Your watching year, recapped",
     "editFolder": "Edit folder",
+    "manageFolder": "Manage folder",
+    "renameFolder": "Rename folder",
+    "deleteFolder": "Delete folder",
+    "deleteFolderTitle": "Delete folder?",
+    "deleteFolderBody": "Delete \"{name}\"? Its anime will stay in your library.",
+    "deleteFolderFailed": "Couldn't delete this folder",
+    "removeFromFolder": "Remove from folder",
+    "removeFromFolderTitle": "Remove from folder?",
+    "removeFromFolderBody": "Remove \"{title}\" from this folder?",
+    "removeFromFolderFailed": "Couldn't remove this anime from the folder",
+    "systemFolder": "System folder",
+    "noMatchingAnimeForQuery": "Nothing in your collection for “{query}”.",
     "createFolder": "Create Folder",
     "saveChanges": "Save changes",
     "havenTWatchedYet": "Haven't watched yet",

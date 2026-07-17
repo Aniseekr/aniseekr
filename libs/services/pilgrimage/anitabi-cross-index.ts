@@ -124,6 +124,10 @@ export function lookupByBangumiId(bangumiId: number): AnitabiCrossIndexEntry | n
   return byBangumi.get(bangumiId) ?? null;
 }
 
+export function getCrossIndexSize(): number {
+  return ensureBuilt().entries.length;
+}
+
 function lookupByAnilistId(anilistId: number): AnitabiCrossIndexEntry | null {
   if (!Number.isFinite(anilistId) || anilistId <= 0) return null;
   ensureBuilt();

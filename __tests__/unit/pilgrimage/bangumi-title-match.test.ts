@@ -29,6 +29,10 @@ describe('normalizeTitleKey', () => {
   it('returns empty string for punctuation-only input', () => {
     expect(normalizeTitleKey('!?・—')).toBe('');
   });
+
+  it('folds Traditional and Simplified Chinese to the same key', () => {
+    expect(normalizeTitleKey('輕音少女')).toBe(normalizeTitleKey('轻音少女'));
+  });
 });
 
 describe('pickBangumiSubjectByTitle', () => {
@@ -65,9 +69,10 @@ describe('pickBangumiSubjectByTitle', () => {
   });
 
   it('tolerates payloads that omit type (server-side filtered)', () => {
-    const match = pickBangumiSubjectByTitle([subject({ id: 7, type: undefined, name: 'mono' })], [
-      'mono',
-    ]);
+    const match = pickBangumiSubjectByTitle(
+      [subject({ id: 7, type: undefined, name: 'mono' })],
+      ['mono']
+    );
     expect(match?.id).toBe(7);
   });
 

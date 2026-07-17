@@ -51,7 +51,9 @@ interface ScoredEntry {
 }
 
 const DEFAULT_LIMIT = 20;
-const FALLBACK_CANDIDATE_LIMIT = 10;
+// Only candidates NOT already surfaced locally cost an Anitabi verification
+// call, so a slightly deeper fallback scan is cheap post-union.
+const FALLBACK_CANDIDATE_LIMIT = 15;
 
 export class PilgrimageSearchService {
   private readonly getIndexed: () => readonly AnitabiIndexEntry[];
@@ -77,16 +79,26 @@ export class PilgrimageSearchService {
       limit,
       this.lookupCrossIndex
     );
-    if (local.length > 0 || options.includeBangumiFallback === false) {
+    // PILG-019: the fallback used to be gated on `local.length === 0`, so any
+    // weak local hit (a city-substring match) suppressed the broader Bangumi
+    // search and anime missing from the bundled snapshot became unfindable.
+    // Union instead: local hits first, fallback fills the remainder.
+    if (local.length >= limit || options.includeBangumiFallback === false) {
       return local;
     }
 
-    return this.searchBangumiFallback(trimmed, limit);
+    const extras = await this.searchBangumiFallback(
+      trimmed,
+      limit - local.length,
+      new Set(local.map((result) => result.bangumiId))
+    );
+    return [...local, ...extras];
   }
 
   private async searchBangumiFallback(
     query: string,
-    limit: number
+    limit: number,
+    excludeIds: ReadonlySet<number> = new Set()
   ): Promise<PilgrimageSearchResult[]> {
     let response: BangumiV0SearchResponse;
     try {
@@ -101,10 +113,18 @@ export class PilgrimageSearchService {
       .slice(0, FALLBACK_CANDIDATE_LIMIT);
 
     const results: PilgrimageSearchResult[] = [];
-    const seen = new Set<number>();
+    const seen = new Set<number>(excludeIds);
+    const indexedById = new Map(this.getIndexed().map((entry) => [entry.id, entry]));
     for (const candidate of candidates) {
       if (!isValidSubjectId(candidate.id) || seen.has(candidate.id)) continue;
       seen.add(candidate.id);
+
+      const indexed = indexedById.get(candidate.id);
+      if (indexed) {
+        results.push(resultFromIndex(indexed, this.lookupCrossIndex(candidate.id)));
+        if (results.length >= limit) break;
+        continue;
+      }
 
       let anime: AnitabiBangumi | null;
       try {
@@ -159,7 +179,8 @@ function scoreEntry(
   query: string,
   cross: AnitabiCrossIndexEntry | null
 ): number | null {
-  const fields: Array<{ value: string | number | null | undefined; base: number }> = [
+  const fields: { value: string | number | null | undefined; base: number }[] = [
+    { value: entry.titleEnglish, base: 0 },
     { value: cross?.titleEnglish, base: 0 },
     { value: cross?.titleRomaji, base: 0 },
     { value: cross?.titleJa, base: 0 },
@@ -194,7 +215,7 @@ function resultFromIndex(
     bangumiId: entry.id,
     title: cross?.titleJa || entry.title,
     titleCn: entry.cn || cross?.titleCn || '',
-    titleEnglish: cross?.titleEnglish || undefined,
+    titleEnglish: cross?.titleEnglish || entry.titleEnglish || undefined,
     titleRomaji: cross?.titleRomaji || undefined,
     city: entry.city,
     cover: normalizeAnitabiImageUrl(entry.cover, entry.id),

@@ -1,12 +1,9 @@
 // Index of anime centres anitabi.cn has pilgrimage data for.
 //
-// Two-tier loading:
-//   1. Cold start: bundled JSON below (small fallback seed, always available
-//      offline).
-//   2. Runtime hydration: anitabi-data-service downloads the latest version
-//      from Aniseekr-source's `anitabi-index` GitHub Release alias asset
-//      (built daily from api.anitabi.cn/bangumi) and calls
-//      `hydrateFromRuntime()` to swap in the larger payload (~781 entries).
+// Cold start uses the complete bundled snapshot generated from Anitabi's
+// official static catalog. Runtime hydration remains available as an internal
+// seam, but startup deliberately does not fetch www JSON: the transport may
+// access those endpoints only after the primary API returns HTTP 403.
 //
 // Lookup APIs stay sync — they always read whichever file is currently
 // active. Callers don't need to know whether they're seeing the bundled or
@@ -21,6 +18,8 @@ export interface AnitabiIndexEntry {
   title: string;
   /** Chinese title (empty when Anitabi has none). */
   cn: string;
+  /** Official English title from Anitabi's static catalog, when present. */
+  titleEnglish?: string;
   /** Primary city/prefecture, empty when unknown. */
   city: string;
   /** Cover image URL (Anitabi CDN). */

@@ -51,6 +51,9 @@ REPO-023,Repository,deterministic,P0,Media no fallback when MAL source,Empty res
 REPO-030,Repository,deterministic,P0,Cancellation on browse switch,Mid-flight seasonal fetch throws when browse source changes,error-handling,active
 REPO-031,Repository,deterministic,P1,Translate ID same platform,translateID returns same ID when source equals target,boundary,active
 REPO-032,Repository,deterministic,P1,Translate ID unknown returns original,translateID returns original ID when mapping unknown,fallback,active
+REPO-060,Repository,deterministic,P0,CJK search prepends Bangumi recall,CJK query searches Bangumi in parallel and prepends mapped AniList anime missing from AniList results,mapping,active
+REPO-061,Repository,deterministic,P0,Bangumi recall seeds Chinese titles,Bangumi hits already in AniList results are not duplicated and their name_cn seeds the title localization cache,localization,active
+REPO-062,Repository,deterministic,P0,Bangumi recall failure non-fatal,Bangumi search failure returns AniList results unchanged,error-handling,active
 DSCFG-001,DataSourceConfig,deterministic,P0,Default browse source AniList,Default browseSource is anilist before any user change,fallback,active
 DSCFG-002,DataSourceConfig,deterministic,P0,Persists via AsyncStorage,setBrowseSource writes to storage,mapping,active
 DSCFG-003,DataSourceConfig,deterministic,P0,Restores on init,init reads stored browseSource,mapping,active
@@ -93,6 +96,7 @@ ANIL-007,AniList,deterministic,P0,Genres list,Genres collection returned as orde
 ANIL-008,AniList,deterministic,P0,Tags filter spoilers,Tags with isMediaSpoiler true are excluded,mapping,active
 ANIL-009,AniList,integration,P1,Live search returns results,Live search for keyword Naruto returns array,timing,active
 ANIL-010,AniList,integration,P1,Live detail Cowboy Bebop,Live fetch id 1 returns Cowboy Bebop,mapping,active
+ANIL-011,AniList,deterministic,P0,Search sorts by match relevance,searchAnime GraphQL uses sort SEARCH_MATCH so exact matches rank first,mapping,active
 MAL-001,MAL,deterministic,P0,Detail by mal id,fetchAnimeDetail uses path /anime/{id},mapping,active
 MAL-002,MAL,deterministic,P0,Search uses q param,searchAnime uses ?q query param,mapping,active
 MAL-003,MAL,deterministic,P0,SFW param when filter on,SFW true appends ?sfw to search,mapping,active
@@ -151,7 +155,22 @@ PILG-009,Pilgrimage,deterministic,P0,Badge renders nothing until loaded,NearbyPi
 PILG-010,Pilgrimage,deterministic,P0,Badge swallows fetch errors,Badge does not throw on fetch failure,error-handling,active
 PILG-011,Pilgrimage,deterministic,P0,Repository falls back to ID mapping,Anime without bangumi id translated via IDMappingService,fallback,active
 PILG-012,Pilgrimage,deterministic,P1,SQLite migration idempotent,init creates pilgrimage_spots table only once,boundary,active
-PILG-013,Pilgrimage,integration,P1,Live anitabi fetch,Live fetch of subject 7157 returns Hyouka pilgrimage data,mapping,active
+PILG-013,Pilgrimage,integration,P1,Live anitabi fetch,Live API-first fetch of subject 7157 returns Yosuga no Sora pilgrimage data,mapping,active
+PILG-014,Pilgrimage,deterministic,P0,Official static data decode,Compact catalog and page payloads join into complete anime point data,mapping,active
+PILG-015,Pilgrimage,deterministic,P0,Reject degraded runtime index,A 9-row generated payload cannot replace an 82-row or 781-row bundled index,fallback,active
+PILG-016,Pilgrimage,deterministic,P0,Localized pilgrimage search,Traditional and Simplified Chinese normalize together and official English titles remain searchable,localization,active
+PILG-017,Pilgrimage,deterministic,P0,Valid image CDN route,Relative image paths resolve to the image CDN and invalid website-image cache values self-heal,error-handling,active
+PILG-018,Pilgrimage,deterministic,P0,API-first regional fallback,Anitabi JSON requests use the API and access website static JSON only after HTTP 403,error-handling,active
+PILG-019,Pilgrimage,deterministic,P0,Fallback unions with local hits,Bangumi fallback always runs and unions with local index hits instead of being suppressed by any weak local match,fallback,active
+PILG-020,Pilgrimage,deterministic,P0,Street view provider chain,iOS uses Look Around first and falls back to Mapillary while Android starts with Mapillary,fallback,active
+PILG-021,Pilgrimage,deterministic,P0,Mapillary token missing disables quietly,Missing EXPO_PUBLIC_MAPILLARY_TOKEN returns null without network I/O,nullability,active
+PILG-022,Pilgrimage,deterministic,P0,Look Around availability cache hit,Resolver reuses cached Look Around availability by rounded coordinate without rechecking native provider,timing,active
+PILG-023,Pilgrimage,deterministic,P0,Mapillary radius then bbox parsing,Mapillary client tries 50m radius then bbox fallback and orders parsed images by distance quality and panorama preference,mapping,active
+PILG-024,Pilgrimage,deterministic,P0,Mapillary errors are null,HTTP 429 network failures and malformed Mapillary payloads return null,error-handling,active
+PILG-025,Pilgrimage,deterministic,P0,Angle suffix scene cuts merge,Loose same-location Anitabi cuts with angle suffixes merge into one spot inside 60m,mapping,active
+PILG-026,Pilgrimage,deterministic,P0,Warm street view peek is synchronous,peekStreetView returns cached verdicts from the sync mirror so warm opens never show a skeleton,timing,active
+PILG-027,Pilgrimage,deterministic,P0,Mapillary empty answers cached errors not,Successful empty Mapillary results are cached for the TTL while null errors are never cached,error-handling,active
+PILG-028,Pilgrimage,deterministic,P0,Scene unavailable corrects stale verdict,Look Around scene-unavailable overwrites the cached availability to false and the resolver re-resolves to Mapillary,fallback,active
 SYNC-001,Sync,deterministic,P0,Sync engine initial state idle,Sync engine starts isSyncing false,boundary,active
 SYNC-002,Sync,deterministic,P0,Sync progress starts zero,syncProgress starts at 0,boundary,active
 SYNC-003,Sync,deterministic,P0,Sync proceeds despite one failure,One platform failure does not stop other platforms,error-handling,active

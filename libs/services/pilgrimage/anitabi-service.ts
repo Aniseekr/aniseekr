@@ -1,5 +1,5 @@
 // Singleton service that fronts the Anitabi HTTP client with both an
-// in-memory and a SQLite-backed cache. Spec: spec/pilgrimage_spec.md §4–§6.
+// in-memory and a SQLite-backed cache. Spec: docs/spec/pilgrimage_spec.md §4–§6.
 
 import { LocalDB, type PilgrimageRow, type PilgrimageSaveInput } from '../../db';
 import { AnitabiClient, DataSourceError } from '../../clients/anitabi-client';
