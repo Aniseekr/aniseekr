@@ -51,6 +51,8 @@ export interface AnimeTourism88Entry {
   anilistPopularity?: number | null;
   /** AniList mean score 0..100 (null when unresolved). */
   anilistMeanScore?: number | null;
+  /** Direct Bangumi CDN cover URL, resolved offline to avoid API redirects. */
+  posterUrl?: string;
   /** Free-form note when AniList match used fallback/substring; surface to admin tooling. */
   anilistReviewNote?: string;
 }
@@ -83,6 +85,8 @@ export interface UniqueAnime88Entry {
   bangumiId: number;
   titleJa: string;
   titleEn: string;
+  /** Direct Bangumi CDN cover URL when bundled for this anime. */
+  posterUrl?: string;
   /** Every 88 row that maps to this bangumi id (1..N rows). */
   locations: AnimeTourism88Entry[];
   /** Distinct regions this anime touches. */
@@ -115,9 +119,7 @@ export function get88EntriesByBangumiId(
 }
 
 /** Rows whose region matches. Region ids are the 7-group taxonomy. */
-export function get88EntriesByRegion(
-  region: AnimeTourism88Region
-): AnimeTourism88Entry[] {
+export function get88EntriesByRegion(region: AnimeTourism88Region): AnimeTourism88Entry[] {
   return getData().entries.filter((e) => e.region === region);
 }
 
@@ -176,6 +178,7 @@ export function getUnique88Anime(): UniqueAnime88Entry[] {
         bangumiId,
         titleJa: entry.titleJa,
         titleEn: entry.titleEn,
+        posterUrl: entry.posterUrl,
         locations: [entry],
         regions: [entry.region],
         anilistPopularity: popularity,
