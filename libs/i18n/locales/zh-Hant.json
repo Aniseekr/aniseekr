@@ -73,6 +73,17 @@
     "follow": "追蹤",
     "following": "追蹤中",
     "undated": "沒有日期",
+    "openArticleFailed": "無法開啟文章",
+    "invalidArticleUrl": "這篇文章連結目前無法使用。",
+    "relative": {
+      "justNow": "剛剛",
+      "minutes": "{count} 分鐘前",
+      "hours": "{count} 小時前",
+      "days": "{count} 天前",
+      "inMinutes": "{count} 分鐘後",
+      "inHours": "{count} 小時後",
+      "inDays": "{count} 天後"
+    },
     "emptyTitle": "尚無文章",
     "emptyBody": "請至少追蹤一個來源，然後重新整理動態。",
     "errorTitle": "無法載入新聞",

@@ -39,7 +39,9 @@ let fetchXml: FetchXml = (source) => RssClient.fetch(source.feedUrl);
 let now = () => Date.now();
 
 export function getStreamSync(): NewsStreamSnapshot {
-  const rows = readCachedSources((key) => cache.getSyncWithMeta<NewsArticle[]>(key, STALE_GRACE_MS));
+  const rows = readCachedSources((key) =>
+    cache.getSyncWithMeta<NewsArticle[]>(key, STALE_GRACE_MS)
+  );
   return buildSnapshot(rows);
 }
 
@@ -50,11 +52,27 @@ export async function refreshStream(): Promise<NewsStreamSnapshot> {
       try {
         const xml = await fetchXml(source);
         const articles = parseFeed(xml, source.id);
+        if (articles.length === 0) {
+          const fallback = await cache.getWithMeta<NewsArticle[]>(
+            cacheKey(source.id),
+            STALE_GRACE_MS
+          );
+          if (fallback?.value.length) {
+            return {
+              sourceId: source.id,
+              articles: fallback.value,
+              isStale: fallback.isStale,
+            };
+          }
+        }
         await Promise.resolve(cache.set(cacheKey(source.id), articles, FRESH_TTL_MS));
         return { sourceId: source.id, articles, isStale: false };
       } catch (err) {
         Logger.warn(`[NewsStream] source failed: ${source.id}`, err);
-        const fallback = await cache.getWithMeta<NewsArticle[]>(cacheKey(source.id), STALE_GRACE_MS);
+        const fallback = await cache.getWithMeta<NewsArticle[]>(
+          cacheKey(source.id),
+          STALE_GRACE_MS
+        );
         return {
           sourceId: source.id,
           articles: fallback?.value ?? [],
@@ -123,8 +141,8 @@ export function __resetNewsStreamForTests(opts?: {
     return;
   }
   cache = {
-    getSyncWithMeta: <T,>(key: string) => mapMeta<T>(opts.cache!, opts.staleIds, key),
-    getWithMeta: async <T,>(key: string) => mapMeta<T>(opts.cache!, opts.staleIds, key),
+    getSyncWithMeta: <T>(key: string) => mapMeta<T>(opts.cache!, opts.staleIds, key),
+    getWithMeta: async <T>(key: string) => mapMeta<T>(opts.cache!, opts.staleIds, key),
     set: (key: string, value: unknown) => {
       opts.cache!.set(sourceIdFromKey(key), value as NewsArticle[]);
     },

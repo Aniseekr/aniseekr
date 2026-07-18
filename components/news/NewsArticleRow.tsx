@@ -25,12 +25,16 @@ export function NewsArticleRow({
   const t = useT();
   const [imageHidden, setImageHidden] = useState(false);
   const styles = useMemo(() => makeStyles(), []);
+  const imageSource = useMemo(
+    () => (article.thumbnailUrl ? newsImageSource(article.thumbnailUrl) : null),
+    [article.thumbnailUrl]
+  );
 
   return (
     <ThemedSurface padded={Spacing.md} radius={Radius.lg} style={styles.row}>
-      {!imageHidden && article.thumbnailUrl ? (
+      {!imageHidden && imageSource ? (
         <Image
-          source={newsImageSource(article.thumbnailUrl)}
+          source={imageSource}
           style={styles.thumb}
           contentFit="cover"
           onError={() => setImageHidden(true)}

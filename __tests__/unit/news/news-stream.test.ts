@@ -74,4 +74,19 @@ describe('news stream', () => {
     expect(stream.articles.map((item) => item.id)).toEqual(['b', 'a']);
     expect(stream.staleSourceIds).toEqual(['alpha']);
   });
+
+  it('keeps a non-empty cached source when refresh parses no articles', async () => {
+    const cache = new Map<string, NewsArticle[]>();
+    cache.set('alpha', [article('alpha', 'cached', 'https://example.com/cached', 2)]);
+    __resetNewsStreamForTests({
+      cache,
+      fetchXml: async () => '<rss><channel></channel></rss>',
+    });
+    saveFollowedSourceIds(['alpha']);
+
+    const stream = await refreshStream();
+
+    expect(stream.articles.map((item) => item.id)).toEqual(['cached']);
+    expect(cache.get('alpha')?.map((item) => item.id)).toEqual(['cached']);
+  });
 });

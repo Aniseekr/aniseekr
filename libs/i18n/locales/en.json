@@ -73,6 +73,17 @@
     "follow": "Follow",
     "following": "Following",
     "undated": "No date",
+    "openArticleFailed": "Could not open article",
+    "invalidArticleUrl": "This article link is not available.",
+    "relative": {
+      "justNow": "just now",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago",
+      "inMinutes": "in {count}m",
+      "inHours": "in {count}h",
+      "inDays": "in {count}d"
+    },
     "emptyTitle": "No articles yet",
     "emptyBody": "Follow at least one source, then refresh the stream.",
     "errorTitle": "Could not load news",

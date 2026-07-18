@@ -1,35 +1,64 @@
 import { useCallback, useMemo } from 'react';
-import { Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated from 'react-native-reanimated';
 
 import { NewsArticleRow } from '../../../../components/news/NewsArticleRow';
-import { Skeleton, ThemedButton, ThemedIconButton, ThemedText } from '../../../../components/themed';
+import {
+  Skeleton,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+} from '../../../../components/themed';
 import { Radius, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
 import { useNewsStream } from '../../../../hooks/useNewsStream';
-import { useI18n, useT } from '../../../../libs/i18n';
+import { useT } from '../../../../libs/i18n';
 import { getNewsSource } from '../../../../libs/services/news/news-sources';
 import { listItemEnter } from '../../../../libs/animations/presets';
+import { formatNewsRelativeTime } from '../../../../libs/services/news/news-relative-time';
+import { isSafeArticleUrl } from '../../../../libs/services/news/news-url';
 
 export default function NewsStreamScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
-  const { language } = useI18n();
   const t = useT();
   const styles = useMemo(() => makeStyles(), []);
   const { snapshot, loading, refreshing, error, refresh } = useNewsStream();
 
   const relativeTime = useCallback(
-    (publishedAt: number) => formatRelativeTime(publishedAt, language, t),
-    [language, t]
+    (publishedAt: number) => formatNewsRelativeTime(publishedAt, t),
+    [t]
+  );
+
+  const openArticle = useCallback(
+    async (url: string) => {
+      if (!isSafeArticleUrl(url)) {
+        Alert.alert(t('news.openArticleFailed'), t('news.invalidArticleUrl'));
+        return;
+      }
+
+      try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (!canOpen) {
+          Alert.alert(t('news.openArticleFailed'), t('news.invalidArticleUrl'));
+          return;
+        }
+        await Linking.openURL(url);
+      } catch {
+        Alert.alert(t('news.openArticleFailed'), t('news.invalidArticleUrl'));
+      }
+    },
+    [t]
   );
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.background.primary }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.background.primary }]}
+      edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <ThemedIconButton
@@ -98,25 +127,13 @@ export default function NewsStreamScreen() {
               article={article}
               source={getNewsSource(article.sourceId)}
               relativeTime={relativeTime(article.publishedAt)}
-              onOpen={() => Linking.openURL(article.link)}
+              onOpen={() => openArticle(article.link)}
             />
           </Animated.View>
         ))}
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function formatRelativeTime(publishedAt: number, language: string, t: ReturnType<typeof useT>): string {
-  if (publishedAt <= 0) return t('news.undated');
-  const diffMs = Date.now() - publishedAt;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  const rtf = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
-  if (Math.abs(diffMs) < hour) return rtf.format(-Math.max(1, Math.round(diffMs / minute)), 'minute');
-  if (Math.abs(diffMs) < day) return rtf.format(-Math.round(diffMs / hour), 'hour');
-  return rtf.format(-Math.round(diffMs / day), 'day');
 }
 
 function makeStyles() {
