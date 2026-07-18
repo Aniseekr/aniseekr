@@ -1,7 +1,7 @@
 {
-  "generatedAt": 1784255024000,
+  "generatedAt": 1784332800000,
   "source": "hand-curated (docs/spec/pilgrimage_spec.md §13); every entry web-verified at verifiedAt",
-  "count": 11,
+  "count": 17,
   "entries": [
     {
       "kind": "viewing_hint",
@@ -229,8 +229,16 @@
         "kind": "annual",
         "typicalMonth": 10,
         "confirmed": [
-          { "year": 2025, "startsAt": "2025-10-18", "endsAt": "2025-10-18" },
-          { "year": 2026, "startsAt": "2026-10-17", "endsAt": "2026-10-17" }
+          {
+            "year": 2025,
+            "startsAt": "2025-10-18",
+            "endsAt": "2025-10-18"
+          },
+          {
+            "year": 2026,
+            "startsAt": "2026-10-17",
+            "endsAt": "2026-10-17"
+          }
         ]
       },
       "sourceUrl": "https://yuwaku.gr.jp/bonbori/archives/2026/04/17/3111",
@@ -288,7 +296,1638 @@
       },
       "sourceUrl": "https://www.llsunshine-numazu.jp/",
       "officialUrl": "https://www.llsunshine-numazu.jp/",
-      "verifiedAt": "2026-07-17"
+      "verifiedAt": "2026-07-17",
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "ゲーマーズ沼津店"
+          },
+          "geo": [35.10157, 138.856807],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "安田屋旅館"
+          },
+          "geo": [35.020424, 138.897573],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "和洋菓子松月"
+          },
+          "geo": [35.022259, 138.897925],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "SUN!SUN!サンシャインCAFE"
+          },
+          "geo": [35.101993, 138.85974],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "オーシャン ビュー フジミ"
+          },
+          "geo": [35.024921, 138.785853],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "淡島ホテル"
+          },
+          "geo": [35.035569, 138.886633],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "伊豆・三津シーパラダイス"
+          },
+          "geo": [35.019483, 138.895966],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "三の浦総合案内所"
+          },
+          "geo": [35.017716, 138.893394],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "㈱千鳥観光汽船"
+          },
+          "geo": [35.02111, 138.897731],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "JAふじ伊豆 緑茶館ぬまづ"
+          },
+          "geo": [35.083155, 138.869577],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "あわしまマリンパーク"
+          },
+          "geo": [35.033052, 138.893556],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "つじ写真館"
+          },
+          "geo": [35.096953, 138.857443],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "JEWELRY＆WATCH 市川"
+          },
+          "geo": [35.096591, 138.858317],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "浜忠"
+          },
+          "geo": [35.098125, 138.858202],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "旅館　浜の家"
+          },
+          "geo": [35.020868, 138.897674],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "マルサン書店"
+          },
+          "geo": [35.10074, 138.858482],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "仲見世商店街"
+          },
+          "geo": [35.100309, 138.85804],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "モスバーガー 富士急沼津店"
+          },
+          "geo": [35.10201, 138.860483],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "セブンイレブン 伊豆・三津シーパラダイス前店"
+          },
+          "geo": [35.021958, 138.897459],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "駿陽荘 やま弥"
+          },
+          "geo": [35.019499, 138.860342],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "東海バス沼津営業所"
+          },
+          "geo": [35.102279, 138.860691],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "大瀬館"
+          },
+          "geo": [35.024134, 138.786384],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "グランマ"
+          },
+          "geo": [35.097567, 138.858073],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "びゅうお"
+          },
+          "geo": [35.08137, 138.854661],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "欧蘭陀館"
+          },
+          "geo": [35.090777, 138.858059],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "伊豆箱根鉄道"
+          },
+          "geo": [35.03984, 138.947322],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "内浦漁協直営 いけすや"
+          },
+          "geo": [35.026522, 138.896212],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "<![CDATA[HAMBURGER & CAFE 沼津バーガー]]>"
+          },
+          "geo": [35.083846, 138.858154],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "すしの磯丸 沼津みなと店"
+          },
+          "geo": [35.083528, 138.857787],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津港 魚永"
+          },
+          "geo": [35.083143, 138.858552],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ほさか"
+          },
+          "geo": [35.101258, 138.858657],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "マルサンホビー"
+          },
+          "geo": [35.097773, 138.858068],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "イシバシプラザ"
+          },
+          "geo": [35.107992, 138.858105],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "魚がし鮨 流れ鮨沼津店"
+          },
+          "geo": [35.102241, 138.858328],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津駅ビル アントレ"
+          },
+          "geo": [35.102706, 138.860356],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "マルカ"
+          },
+          "geo": [35.017427, 138.886892],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "<![CDATA[TONY'S HONOLULU]]>"
+          },
+          "geo": [35.081146, 138.855657],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津アーケード名店街"
+          },
+          "geo": [35.098337, 138.857017],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "布澤呉服店"
+          },
+          "geo": [35.096781, 138.858201],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "大黒屋"
+          },
+          "geo": [35.097173, 138.856659],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "マルキュウ魚健"
+          },
+          "geo": [35.082178, 138.857672],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "阿見屋パーキング"
+          },
+          "geo": [35.097713, 138.858705],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ファミリーマート沼津下香貫店"
+          },
+          "geo": [35.076665, 138.872541],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "食堂・ひもの販売　あじや"
+          },
+          "geo": [35.083771, 138.857469],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ふみ野"
+          },
+          "geo": [35.083175, 138.858557],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "とさわや"
+          },
+          "geo": [35.022913, 138.898393],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "OH!MOS（農業組合法人おもす）"
+          },
+          "geo": [35.017144, 138.888261],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "海のステージ。"
+          },
+          "geo": [35.019432, 138.879731],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "辻宗商店"
+          },
+          "geo": [35.025526, 138.898479],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "赤から　沼津店"
+          },
+          "geo": [35.104978, 138.862159],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "海鮮丼と魚河岸定食\nかもめ丸"
+          },
+          "geo": [35.08281, 138.857912],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "総合事務用品（株）フヂイ"
+          },
+          "geo": [35.096621, 138.857725],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "雅心苑リヴァージュ"
+          },
+          "geo": [35.074958, 138.870794],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ロットン"
+          },
+          "geo": [35.097517, 138.85859],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津グランドホテル"
+          },
+          "geo": [35.100587, 138.860726],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "アキシン商店"
+          },
+          "geo": [35.033784, 138.894838],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "アベリー"
+          },
+          "geo": [35.100096, 138.858079],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津・湯河原温泉 万葉の湯"
+          },
+          "geo": [35.135079, 138.871641],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "マルニ茶業　沼津みなと新鮮館"
+          },
+          "geo": [35.083739, 138.857361],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "アニメイト　沼津店"
+          },
+          "geo": [35.101712, 138.858041],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "松浦酒店"
+          },
+          "geo": [35.099529, 138.859081],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津リバーサイドホテル"
+          },
+          "geo": [35.096936, 138.858445],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "おさかな食堂やまや"
+          },
+          "geo": [35.024138, 138.899123],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "（有）大田呉服店"
+          },
+          "geo": [35.104825, 138.858473],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "旅館　はまゆう荘"
+          },
+          "geo": [35.023908, 138.786498],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "（株）赤池カーコミュニケーツシステムズ"
+          },
+          "geo": [35.092849, 138.854874],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ザ・ブルーウォーター（ＴＨＥ・ＢＬＵＥＷＡＴＥＲ）"
+          },
+          "geo": [35.095101, 138.857812],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "漁師寿し 網元 武田丸"
+          },
+          "geo": [35.082152, 138.858588],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "遠藤新聞舗"
+          },
+          "geo": [35.101031, 138.857184],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "玉子焼 木村屋"
+          },
+          "geo": [35.082292, 138.858301],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "杉長水産"
+          },
+          "geo": [35.085808, 138.856802],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "道の駅 くるら戸田"
+          },
+          "geo": [34.971345, 138.786619],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "Coffee 桜"
+          },
+          "geo": [35.093046, 138.85152],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "鮨庵さいとう 本店"
+          },
+          "geo": [35.083406, 138.858668],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津ラクーン"
+          },
+          "geo": [35.10152, 138.859544],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ＣＢカレーキッチン"
+          },
+          "geo": [35.079038, 138.876068],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "THE 3RD PLANET BiVi沼津店"
+          },
+          "geo": [35.10404, 138.861082],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "千鳥ひものセンター"
+          },
+          "geo": [35.084098, 138.85709],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津御用邸記念公園"
+          },
+          "geo": [35.072566, 138.872769],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ホテル沼津キャッスル"
+          },
+          "geo": [35.108764, 138.866884],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "内浦漁業協同組合"
+          },
+          "geo": [35.023108, 138.898113],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "カラオケ ラジオシティー 沼津駅北店"
+          },
+          "geo": [35.104961, 138.862078],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "石田茶業（資） 北口支店"
+          },
+          "geo": [35.105617, 138.860173],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "しーらかんすCafé"
+          },
+          "geo": [35.083888, 138.85745],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "サスナカ長澤水産"
+          },
+          "geo": [35.053071, 138.884147],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "増米"
+          },
+          "geo": [35.049734, 138.885672],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ダイワロイネットホテルぬまづ"
+          },
+          "geo": [35.104107, 138.861738],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津大手町商店街"
+          },
+          "geo": [35.10068, 138.859267],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "岡田金魚店"
+          },
+          "geo": [35.095756, 138.856385],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "富士急シティバス"
+          },
+          "geo": [35.102019, 138.860675],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ミニストップ 沼津内浦店"
+          },
+          "geo": [35.028125, 138.893072],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "翠泉閣"
+          },
+          "geo": [35.075375, 138.881354],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ジャンボエンチョー　沼津店"
+          },
+          "geo": [35.079953, 138.871267],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "アーケードフルーツ"
+          },
+          "geo": [35.096859, 138.857093],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "大瀬崎民宿はごろも荘"
+          },
+          "geo": [35.024557, 138.786045],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ココチホテル沼津"
+          },
+          "geo": [35.104195, 138.858907],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "伊豆箱根タクシー"
+          },
+          "geo": [35.039861, 138.947318],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ヤマカ水産直売所"
+          },
+          "geo": [35.065221, 138.881736],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "肉バル＆ワイン ベルサイユのバル"
+          },
+          "geo": [35.098579, 138.858338],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津市芹沢光治良記念館"
+          },
+          "geo": [35.0756, 138.862348],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "桃中軒"
+          },
+          "geo": [35.102614, 138.859637],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "café　うみいろ"
+          },
+          "geo": [35.084226, 138.856484],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "カルクル沼津店"
+          },
+          "geo": [35.100269, 138.858696],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "イトーヨーカドー沼津店"
+          },
+          "geo": [35.108155, 138.858152],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "高島時計・メガネ・宝石店"
+          },
+          "geo": [35.096861, 138.85118],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "有限会社 大谷油店"
+          },
+          "geo": [35.014262, 138.847224],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "NPO法人 沼津観光協会"
+          },
+          "geo": [35.102731, 138.859553],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "千本一"
+          },
+          "geo": [35.082864, 138.857896],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "駿河の味　どんむす"
+          },
+          "geo": [35.08229, 138.858439],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "弥次喜多 平町店"
+          },
+          "geo": [35.09975, 138.868543],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ドールハウスKIMURA"
+          },
+          "geo": [35.10021, 138.85756],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "開運処　むさしや"
+          },
+          "geo": [35.094509, 138.856088],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "グランマ シーサイド店"
+          },
+          "geo": [35.04815, 138.886015],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "テレビのイマイ"
+          },
+          "geo": [35.098629, 138.857818],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "戸田観光協会"
+          },
+          "geo": [34.97297, 138.77722],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "モスバーガーららぽーと沼津店"
+          },
+          "geo": [35.12042, 138.841906],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "オフィスグルー"
+          },
+          "geo": [35.115115, 138.831758],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ラブライブ！サンシャイン!!\nプレミアムショップ"
+          },
+          "geo": [35.103956, 138.860899],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "明治茶館"
+          },
+          "geo": [35.120624, 138.857148],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "古安"
+          },
+          "geo": [35.096311, 138.856624],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ジョリーアンジュ"
+          },
+          "geo": [35.10507, 138.859351],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "伊豆箱根バス"
+          },
+          "geo": [35.102255, 138.860914],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "渡辺商店"
+          },
+          "geo": [35.099026, 138.852385],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "キングノーブル"
+          },
+          "geo": [35.097649, 138.858188],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "りぐる"
+          },
+          "geo": [35.100728, 138.859277],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "第一生命保険   沼津支社"
+          },
+          "geo": [35.101365, 138.861357],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "尾鷲酒店"
+          },
+          "geo": [35.019071, 138.809919],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津日枝神社"
+          },
+          "geo": [35.101205, 138.868857],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津市歴史民俗資料館"
+          },
+          "geo": [35.0714, 138.873187],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "焼きそば ゆきちゃん"
+          },
+          "geo": [35.132705, 138.76856],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "ハイクリエイト"
+          },
+          "geo": [35.100149, 138.858191],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "三交イン 沼津駅前"
+          },
+          "geo": [35.101028, 138.858776],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "シネマサンシャイン沼津"
+          },
+          "geo": [35.104003, 138.860966],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "とりう"
+          },
+          "geo": [35.101284, 138.859],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "沼津ラクーンよしもと劇場"
+          },
+          "geo": [35.101517, 138.859445],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        },
+        {
+          "name": {
+            "ja": "石窯パン工房 しゃんぴによん 添地店"
+          },
+          "geo": [35.101892, 138.856242],
+          "sourceUrl": "https://www.llsunshine-numazu.jp/worldwide/index.html"
+        }
+      ]
+    },
+    {
+      "kind": "event",
+      "id": "yuru-meguri-stamp",
+      "bangumiIds": [207195, 262897, 405785],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "ゆるキャン△／ゆる巡りスタンプ",
+        "en": "Yuru Camp Yurumeguri Stamp Rally",
+        "zhHant": "搖曳露營△ ゆる巡り集章"
+      },
+      "description": {
+        "ja": "『ゆるキャン△』ゆかりの山梨・静岡の施設を巡る公式スタンプ企画。",
+        "en": "An official Yuru Camp stamp program across related facilities in Yamanashi and Shizuoka.",
+        "zhHant": "巡遊《搖曳露營△》相關山梨、靜岡設施的官方集章企劃。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "ongoing"
+      },
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "身延山ロープウェイ"
+          },
+          "address": "山梨県南巨摩郡身延町身延字上の山4226-2",
+          "geo": [35.384991, 138.413788],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "浩庵キャンプ場"
+          },
+          "address": "山梨県南巨摩郡身延町中ノ倉2926",
+          "geo": [35.473095, 138.564758],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "笛吹川フルーツ公園"
+          },
+          "address": "山梨県山梨市江曽原1488番地",
+          "geo": [35.702126, 138.665771],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "富士山レーダードーム館"
+          },
+          "address": "山梨県富士吉田市新屋3-7-2",
+          "geo": [35.458172, 138.803375],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "道の駅 富士吉田"
+          },
+          "address": "山梨県富士吉田市新屋3-7-3",
+          "geo": [35.458633, 138.802582],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "常幸院"
+          },
+          "address": "山梨県南巨摩郡身延町常葉439",
+          "geo": [35.437622, 138.491684],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "川窪書店"
+          },
+          "address": "山梨県南巨摩郡身延町下山1837-4",
+          "geo": [35.418892, 138.439026],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "武州屋"
+          },
+          "address": "山梨県南巨摩郡身延町身延3850-1",
+          "geo": [35.375111, 138.429321],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "道の駅 しもべ"
+          },
+          "address": "山梨県南巨摩郡身延町古関4231",
+          "geo": [35.472012, 138.522705],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "セルバ みのぶ店"
+          },
+          "address": "山梨県南巨摩郡身延町飯富2309-200",
+          "geo": [35.43515, 138.435043],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "三沢屋石油"
+          },
+          "address": "山梨県南巨摩郡身延町常葉3264",
+          "geo": [35.437622, 138.491684],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "山梨水晶本店"
+          },
+          "address": "山梨県南巨摩郡身延町角打3124",
+          "geo": [35.36087, 138.45285],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "ニュー梅月"
+          },
+          "address": "山梨県南巨摩郡身延町常葉7023",
+          "geo": [35.437622, 138.491684],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "YAMANASHI BUNKA KAIKAN 1966 (YBS山梨放送)"
+          },
+          "address": "山梨県甲府市北口2-6-10 山日YBS本社2F",
+          "geo": [35.668056, 138.570923],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "山梨スズキ販売(株) スズキアリーナ甲府東"
+          },
+          "address": "山梨県甲府市和戸町166",
+          "geo": [35.650417, 138.614365],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "栄昇堂"
+          },
+          "address": "山梨県南巨摩郡身延町角打3024",
+          "geo": [35.359417, 138.450943],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "園林"
+          },
+          "address": "山梨県南巨摩郡身延町身延3722",
+          "geo": [35.375111, 138.429321],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "道の駅 とみざわ"
+          },
+          "address": "山梨県南巨摩郡南部町福士28507番地の1",
+          "geo": [35.219273, 138.441086],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "Black Smith Outdoorfield"
+          },
+          "address": "山梨県南巨摩郡南部町十島1111",
+          "geo": [35.229652, 138.52092],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "天竜浜名湖鉄道"
+          },
+          "address": "静岡県浜松市天竜区二俣町阿蔵114-2",
+          "geo": [34.859779, 137.819901],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "大井川鐵道"
+          },
+          "address": "静岡県島田市金谷東2丁目1844-1",
+          "geo": [34.825447, 138.1371],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "渚園キャンプ場"
+          },
+          "address": "静岡県浜松市中央区舞阪町弁天島5005-1",
+          "geo": [34.69936, 137.606384],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "南部町営 奥山温泉"
+          },
+          "address": "山梨県南巨摩郡南部町福士26842番地",
+          "geo": [35.219273, 138.441086],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "天城わさびの里"
+          },
+          "address": "静岡県伊豆市湯ヶ島892-6 道の駅「天城越え」内",
+          "geo": [34.866508, 138.9207],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "道の駅 くるら戸田"
+          },
+          "address": "静岡県沼津市戸田1294-3",
+          "geo": [34.964218, 138.800659],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        },
+        {
+          "name": {
+            "ja": "道の駅 開国下田みなと"
+          },
+          "address": "静岡県下田市外ヶ岡1-1",
+          "geo": [34.674786, 138.95105],
+          "sourceUrl": "https://yurumeguristamp.com/spot/"
+        }
+      ],
+      "sourceUrl": "https://yurumeguristamp.com/spot/",
+      "officialUrl": "https://yurumeguristamp.com/spot/",
+      "verifiedAt": "2026-07-18"
+    },
+    {
+      "kind": "event",
+      "id": "oarai-gup-mini-event-stamp",
+      "bangumiIds": [40310, 72266],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "大洗ガルパン ミニイベント スタンプラリー",
+        "en": "Oarai Girls und Panzer Mini Event Stamp Rally",
+        "zhHant": "大洗少女與戰車迷你活動集章"
+      },
+      "description": {
+        "ja": "大洗町観光協会が案内する『ガールズ&パンツァー』8か所中6か所を巡るスタンプラリー。",
+        "en": "An Oarai Tourism Association Girls und Panzer rally asking visitors to stamp 6 of 8 locations.",
+        "zhHant": "大洗觀光協會介紹的《少女與戰車》8 處中集滿 6 處的集章活動。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "ongoing",
+        "since": "2014-08-08"
+      },
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "大洗シーサイドステーション"
+          },
+          "address": "茨城県東茨城郡大洗町港中央11-2",
+          "geo": [36.309238, 140.568924],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_3126/"
+        },
+        {
+          "name": {
+            "ja": "大洗ガルパンギャラリー"
+          },
+          "address": "茨城県東茨城郡大洗町港中央11-2 大洗シーサイドステーション2F",
+          "geo": [36.309238, 140.568924],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_3157/"
+        },
+        {
+          "name": {
+            "ja": "大洗マリンタワー"
+          },
+          "address": "茨城県東茨城郡大洗町港中央10",
+          "geo": [36.310379, 140.570724],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_3127/"
+        },
+        {
+          "name": {
+            "ja": "茨城県信用組合大洗支店"
+          },
+          "address": "茨城県東茨城郡大洗町磯浜町641-2",
+          "geo": [36.31501, 140.575531],
+          "sourceUrl": "https://www.kenshinbank.co.jp/area/kenou/index.html"
+        },
+        {
+          "name": {
+            "ja": "大洗ホテル"
+          },
+          "address": "茨城県東茨城郡大洗町磯浜町6881",
+          "geo": [36.311722, 140.568909],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_2896/"
+        },
+        {
+          "name": {
+            "ja": "アクアワールド大洗"
+          },
+          "address": "茨城県東茨城郡大洗町磯浜町8252-3",
+          "geo": [36.3241, 140.588028],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_3105/"
+        },
+        {
+          "name": {
+            "ja": "大洗磯前神社"
+          },
+          "address": "茨城県東茨城郡大洗町磯浜町6890",
+          "geo": [36.315758, 140.587097],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_2917/"
+        },
+        {
+          "name": {
+            "ja": "大洗駅（うみまちテラス）"
+          },
+          "address": "茨城県東茨城郡大洗町桜道301",
+          "geo": [36.315166, 140.562668],
+          "sourceUrl": "https://www.oarai-info.jp/spot/postid_3158/"
+        }
+      ],
+      "sourceUrl": "https://www.oarai-info.jp/essay/postid_4868/",
+      "officialUrl": "https://www.oarai-info.jp/essay/postid_4868/",
+      "verifiedAt": "2026-07-18"
+    },
+    {
+      "kind": "event",
+      "id": "ll-sunshine-jr-central-stamp",
+      "bangumiIds": [165553, 210272, 234295],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "JR東海オリジナル ラブライブ！サンシャイン!! スタンプラリー",
+        "en": "JR Central Love Live! Sunshine!! Original Stamp Rally",
+        "zhHant": "JR東海 Love Live! Sunshine!! 原創集章"
+      },
+      "description": {
+        "ja": "沼津の街で9つのJR東海オリジナル『ラブライブ！サンシャイン!!』スタンプを集める企画。",
+        "en": "A Numazu walking campaign collecting nine JR Central original Love Live! Sunshine!! stamps.",
+        "zhHant": "在沼津市區收集 9 個 JR 東海原創《Love Live! Sunshine!!》印章的活動。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "ongoing"
+      },
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "沼津観光案内所"
+          },
+          "address": "静岡県沼津市大手町1-1-1 アントレ2階",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "シネマサンシャイン沼津"
+          },
+          "address": "静岡県沼津市大手町1-1-5 BiVi沼津4F",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "プラサヴェルデ"
+          },
+          "address": "静岡県沼津市大手町1-1-4",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "ゲーマーズ沼津店"
+          },
+          "address": "静岡県沼津市添地町72 青秀ビル1階",
+          "geo": [35.101505, 138.856827],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "沼津リバーサイドホテル"
+          },
+          "address": "静岡県沼津市上土町100-1",
+          "geo": [35.097504, 138.858673],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "沼津港大型展望水門 びゅうお"
+          },
+          "address": "静岡県沼津市本字千本1905-27",
+          "geo": [35.096767, 138.847366],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "沼津御用邸記念公園"
+          },
+          "address": "静岡県沼津市下香貫島郷2802-1",
+          "geo": [35.076717, 138.871735],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "あわしまマリンパーク"
+          },
+          "address": "静岡県沼津市内浦重寺186",
+          "geo": [35.033142, 138.888184],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        },
+        {
+          "name": {
+            "ja": "三の浦総合案内所"
+          },
+          "address": "静岡県沼津市内浦長浜83-124",
+          "geo": [35.016956, 138.891922],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/"
+        }
+      ],
+      "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/",
+      "officialUrl": "https://recommend.jr-central.co.jp/oshi-tabi/lovelive_sunshine/stamprally/",
+      "verifiedAt": "2026-07-18"
+    },
+    {
+      "kind": "event",
+      "id": "yohane-jr-central-numazu-stamp",
+      "bangumiIds": [165553, 210272],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "幻日のヨハネ 沼津周遊スタンプラリー",
+        "en": "Yohane the Parhelion Numazu Stamp Rally",
+        "zhHant": "幻日夜羽 沼津周遊集章"
+      },
+      "description": {
+        "ja": "JR東海と『幻日のヨハネ』の期間限定コラボとして実施された沼津10か所のスタンプラリー。",
+        "en": "A JR Central × Yohane the Parhelion limited-time collaboration stamp rally across 10 Numazu spots.",
+        "zhHant": "JR東海與《幻日夜羽》期間限定合作的沼津 10 處集章活動。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "fixed",
+        "startsAt": "2023-11-03",
+        "endsAt": "2023-12-25"
+      },
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "沼津駅北口（改札外）"
+          },
+          "address": "静岡県沼津市大手町1丁目1",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "沼津観光案内所"
+          },
+          "address": "静岡県沼津市大手町1丁目1-1 沼津駅ビルアントレ2階",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "シネマサンシャイン沼津"
+          },
+          "address": "静岡県沼津市大手町1丁目1-5 BiVi4F",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "プラサヴェルデ"
+          },
+          "address": "静岡県沼津市大手町1丁目1-4",
+          "geo": [35.103424, 138.861343],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "ゲーマーズ沼津店"
+          },
+          "address": "静岡県沼津市添地町72 青秀ビル1階",
+          "geo": [35.101505, 138.856827],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "沼津リバーサイドホテル"
+          },
+          "address": "静岡県沼津市上土町100-1",
+          "geo": [35.097504, 138.858673],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "沼津港大型展望水門「びゅうお」"
+          },
+          "address": "静岡県沼津市千本1905-27",
+          "geo": [35.083679, 138.857895],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "沼津御用邸記念公園"
+          },
+          "address": "静岡県沼津市下香貫島郷2802-1",
+          "geo": [35.076717, 138.871735],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "あわしまマリンパーク"
+          },
+          "address": "静岡県沼津市内浦重寺186",
+          "geo": [35.033142, 138.888184],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        },
+        {
+          "name": {
+            "ja": "三の浦総合案内所"
+          },
+          "address": "静岡県沼津市内浦長浜83-124",
+          "geo": [35.016956, 138.891922],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/"
+        }
+      ],
+      "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/",
+      "officialUrl": "https://recommend.jr-central.co.jp/oshi-tabi/yohane/",
+      "verifiedAt": "2026-07-18"
+    },
+    {
+      "kind": "event",
+      "id": "jujutsu-jr-central-nagoya-stamp",
+      "bangumiIds": [238887, 369304],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "JR東海×呪術廻戦 じゅじゅ探訪 in 名古屋 デジタルスタンプラリー",
+        "en": "JR Central × Jujutsu Kaisen Jujutanbo in Nagoya Stamp Rally",
+        "zhHant": "JR東海×咒術迴戰 名古屋咒咒探訪數位集章"
+      },
+      "description": {
+        "ja": "JR東海「推し旅」の『呪術廻戦』名古屋市内デジタルスタンプラリー。",
+        "en": "A JR Central Oshi-tabi Jujutsu Kaisen digital stamp rally around Nagoya.",
+        "zhHant": "JR東海「推し旅」《咒術迴戰》名古屋市內數位集章活動。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "annual",
+        "typicalMonth": 5,
+        "confirmed": []
+      },
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "名古屋駅"
+          },
+          "address": "愛知県名古屋市中村区名駅一丁目1番4号",
+          "geo": [35.17075, 136.883423],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html"
+        },
+        {
+          "name": {
+            "ja": "名古屋城"
+          },
+          "address": "愛知県名古屋市中区本丸1番1号",
+          "geo": [35.18449, 136.897583],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html"
+        },
+        {
+          "name": {
+            "ja": "金シャチ横丁 義直ゾーン"
+          },
+          "address": "愛知県名古屋市中区三の丸1丁目2番3号",
+          "geo": [35.182224, 136.89917],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html"
+        },
+        {
+          "name": {
+            "ja": "名城公園"
+          },
+          "address": "愛知県名古屋市北区名城1丁目2-25",
+          "geo": [35.189415, 136.903809],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html"
+        },
+        {
+          "name": {
+            "ja": "上野天満宮"
+          },
+          "address": "愛知県名古屋市千種区赤坂町4-89",
+          "geo": [35.180855, 136.957047],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html"
+        },
+        {
+          "name": {
+            "ja": "中部電力ミライタワー"
+          },
+          "address": "愛知県名古屋市中区錦三丁目6番15号先",
+          "geo": [35.172157, 136.90773],
+          "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html"
+        }
+      ],
+      "sourceUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html",
+      "officialUrl": "https://recommend.jr-central.co.jp/oshi-tabi/jujutanbo03/nagoya.html",
+      "verifiedAt": "2026-07-18"
+    },
+    {
+      "kind": "event",
+      "id": "watakon-chiyoda-sakura-stamp-2026",
+      "bangumiIds": [377125, 551304],
+      "category": "stamp_rally",
+      "name": {
+        "ja": "千代田のさくらまつり×わたしの幸せな結婚 スタンプラリー",
+        "en": "Chiyoda Sakura Festival × My Happy Marriage Stamp Rally",
+        "zhHant": "千代田櫻花祭×我的幸福婚約集章"
+      },
+      "description": {
+        "ja": "千代田区観光協会主催、千代田区内5か所とゴールを巡る『わたしの幸せな結婚』コラボスタンプラリー。",
+        "en": "A Chiyoda Tourism Association My Happy Marriage collaboration rally across five Chiyoda stamp points plus the goal.",
+        "zhHant": "千代田區觀光協會主辦，巡遊區內 5 個章點與終點的《我的幸福婚約》合作集章活動。"
+      },
+      "geo": null,
+      "schedule": {
+        "kind": "fixed",
+        "startsAt": "2026-03-11",
+        "endsAt": "2026-04-22"
+      },
+      "stampSpots": [
+        {
+          "name": {
+            "ja": "飯田橋サクラテラス"
+          },
+          "address": "東京都千代田区富士見2-10-2",
+          "geo": [35.699116, 139.744629],
+          "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/"
+        },
+        {
+          "name": {
+            "ja": "エキュートエディション飯田橋"
+          },
+          "address": "東京都千代田区飯田橋4-17-27",
+          "geo": [35.700886, 139.746704],
+          "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/"
+        },
+        {
+          "name": {
+            "ja": "東京大神宮"
+          },
+          "address": "東京都千代田区富士見2-4-1",
+          "geo": [35.699528, 139.746902],
+          "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/"
+        },
+        {
+          "name": {
+            "ja": "九段会館テラス"
+          },
+          "address": "東京都千代田区九段南1-6-5",
+          "geo": [35.69471, 139.751511],
+          "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/"
+        },
+        {
+          "name": {
+            "ja": "国立公文書館"
+          },
+          "address": "東京都千代田区北の丸公園3-2",
+          "geo": [35.690361, 139.75444],
+          "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/"
+        },
+        {
+          "name": {
+            "ja": "千代田区観光案内所"
+          },
+          "address": "東京都千代田区九段南1-6-17",
+          "geo": [35.693642, 139.753052],
+          "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/"
+        }
+      ],
+      "sourceUrl": "https://visit-chiyoda.tokyo/sakura/watakon/",
+      "officialUrl": "https://visit-chiyoda.tokyo/sakura/watakon/",
+      "verifiedAt": "2026-07-18"
     }
   ]
 }
