@@ -16,7 +16,6 @@ import Animated from 'react-native-reanimated';
 import { LocalityAttributionFooter } from '../../../../components/pilgrimage/common/LocalityAttributionFooter';
 import {
   LOCALITY_CARD_RADIUS,
-  LocalityCardDecor,
   LocalityMiniStamp,
   localityCategoryIcon,
   localityEventAccent,
@@ -123,7 +122,6 @@ function EventNotFound() {
       <View style={styles.notFound}>
         <Animated.View entering={bannerEnter()} style={styles.notFoundCardWrap}>
           <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.notFoundCard}>
-            <LocalityCardDecor accent={theme.accent} tape="center" />
             <Ionicons name="calendar-outline" size={36} color={theme.text.tertiary} />
             <ThemedText variant="titleLarge" weight="800" align="center">
               {t('pilgrimageUi.eventDetail.notFoundTitle')}
@@ -267,7 +265,6 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
               <LinearGradient
                 colors={theme.gradient}
                 style={[styles.hero, { borderColor: accent }]}>
-                <LocalityCardDecor accent={accent} tape="center" gradient={false} />
                 <View style={styles.heroTopRow}>
                   <View style={[styles.categoryStamp, { borderColor: accent }]}>
                     <Ionicons
@@ -350,7 +347,6 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
             {stampStops.length > 0 ? (
               <Animated.View entering={listItemEnter(1, 40)}>
                 <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.progressCard}>
-                  <LocalityCardDecor accent={accent} tape="left" />
                   <View style={styles.sectionTitleRow}>
                     <LocalityMiniStamp accent={accent} icon="ticket-outline" size="sm" />
                     <ThemedText variant="titleMedium" weight="800" style={styles.sectionTitle}>
@@ -382,7 +378,6 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
             {markers.length > 0 ? (
               <Animated.View entering={listItemEnter(2, 40)}>
                 <ThemedSurface padded={0} radius={LOCALITY_CARD_RADIUS} style={styles.mapCard}>
-                  <LocalityCardDecor accent={accent} tape="right" />
                   <View style={styles.mapHeading}>
                     <Ionicons name="map-outline" size={18} color={accent} />
                     <ThemedText variant="titleMedium" weight="800">
@@ -415,7 +410,6 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
             </Animated.View>
             {stops.length === 0 ? (
               <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.emptyStops}>
-                <LocalityCardDecor accent={accent} tape="none" />
                 <Ionicons name="location-outline" size={24} color={theme.text.tertiary} />
                 <ThemedText variant="bodySmall" tone="secondary" align="center">
                   {t('pilgrimageUi.eventDetail.noStops')}
@@ -458,7 +452,6 @@ function StopCard({
         padded
         radius={LOCALITY_CARD_RADIUS}
         style={[styles.stopCard, { borderColor: collected ? accent : theme.glassBorder }]}>
-        <LocalityCardDecor accent={accent} tape="none" />
         <View style={styles.stopTopRow}>
           <View
             style={[
@@ -644,18 +637,18 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   animeCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
-  progressCard: { position: 'relative', gap: Spacing.sm, ...Shadow.subtle },
+  progressCard: { gap: Spacing.sm, ...Shadow.subtle },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sectionTitle: { flex: 1 },
   progressTrack: { height: Spacing.xs, borderRadius: Radius.full, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: Radius.full },
-  mapCard: { position: 'relative', gap: Spacing.sm, ...Shadow.subtle },
+  mapCard: { gap: Spacing.sm, ...Shadow.subtle },
   mapHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   mapFrame: { height: 300, position: 'relative' },
   mapLegend: { position: 'absolute', left: Spacing.sm, bottom: Spacing.sm },
@@ -666,8 +659,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingTop: Spacing.sm,
   },
-  emptyStops: { position: 'relative', alignItems: 'center', gap: Spacing.sm },
-  stopCard: { position: 'relative', gap: Spacing.md, ...Shadow.subtle },
+  emptyStops: { alignItems: 'center', gap: Spacing.sm },
+  stopCard: { gap: Spacing.md, ...Shadow.subtle },
   stopTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   stopNumber: {
     width: 34,
@@ -688,7 +681,6 @@ const styles = StyleSheet.create({
   notFoundHeader: { paddingHorizontal: Spacing.sm },
   notFoundCardWrap: { alignSelf: 'stretch' },
   notFoundCard: {
-    position: 'relative',
     alignItems: 'center',
     gap: Spacing.md,
     ...Shadow.medium,

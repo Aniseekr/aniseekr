@@ -2,7 +2,6 @@ import type { ComponentProps } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { IconSize, Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
@@ -25,47 +24,6 @@ export function localityCategoryIcon(
   if (category === 'collab_cafe') return 'cafe-outline';
   if (category === 'exhibition') return 'easel-outline';
   return 'calendar-outline';
-}
-
-export function LocalityCardDecor({
-  accent,
-  tape = 'right',
-  gradient = true,
-}: {
-  accent: string;
-  tape?: 'none' | 'left' | 'center' | 'right';
-  gradient?: boolean;
-}) {
-  const { theme } = useTheme();
-  return (
-    <>
-      {gradient ? (
-        <LinearGradient
-          colors={theme.gradient}
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, styles.gradient]}
-        />
-      ) : null}
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <View style={[styles.corner, styles.cornerTopLeft, { borderColor: accent }]} />
-        <View style={[styles.corner, styles.cornerBottomRight, { borderColor: accent }]} />
-      </View>
-      {tape !== 'none' ? (
-        <View
-          pointerEvents="none"
-          style={[
-            styles.washiTape,
-            tape === 'left'
-              ? styles.tapeLeft
-              : tape === 'center'
-                ? styles.tapeCenter
-                : styles.tapeRight,
-            { backgroundColor: accent },
-          ]}
-        />
-      ) : null}
-    </>
-  );
 }
 
 export function LocalityMiniStamp({
@@ -111,38 +69,6 @@ export function LocalityMiniStamp({
 }
 
 const styles = StyleSheet.create({
-  gradient: { opacity: 0.14 },
-  corner: {
-    position: 'absolute',
-    width: Spacing.lg,
-    height: Spacing.lg,
-    opacity: 0.42,
-  },
-  cornerTopLeft: {
-    top: Spacing.xs,
-    left: Spacing.xs,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderTopLeftRadius: Radius.sm,
-  },
-  cornerBottomRight: {
-    right: Spacing.xs,
-    bottom: Spacing.xs,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderBottomRightRadius: Radius.sm,
-  },
-  washiTape: {
-    position: 'absolute',
-    top: Spacing.xs,
-    width: Size.avatarLarge,
-    height: Spacing.xs,
-    borderRadius: Radius.sm,
-    opacity: 0.48,
-  },
-  tapeLeft: { left: Spacing.xl, transform: [{ rotate: '-2deg' }] },
-  tapeCenter: { alignSelf: 'center', transform: [{ rotate: '1deg' }] },
-  tapeRight: { right: Spacing.xl, transform: [{ rotate: '-1deg' }] },
   miniStamp: {
     borderRadius: Radius.full,
     borderWidth: 2,

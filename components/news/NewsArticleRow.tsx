@@ -9,11 +9,7 @@ import { useI18n, useT } from '../../libs/i18n';
 import type { NewsArticle, NewsSource } from '../../libs/services/news/types';
 import { newsImageSource } from '../../libs/services/news/news-image';
 import { resolveLocalIntelText } from '../../libs/services/pilgrimage/local-intel/local-intel-localization';
-import {
-  LOCALITY_CARD_RADIUS,
-  LocalityCardDecor,
-  LocalityMiniStamp,
-} from '../pilgrimage/common/LocalityAesthetic';
+import { LOCALITY_CARD_RADIUS, LocalityMiniStamp } from '../pilgrimage/common/LocalityAesthetic';
 import { ThemedButton, ThemedSurface, ThemedText } from '../themed';
 
 export function NewsArticleRow({
@@ -40,7 +36,6 @@ export function NewsArticleRow({
 
   return (
     <ThemedSurface padded={Spacing.md} radius={LOCALITY_CARD_RADIUS} style={styles.row}>
-      <LocalityCardDecor accent={theme.status.info} tape="right" />
       {!imageHidden && imageSource ? (
         <View style={[styles.thumbFrame, { borderColor: theme.status.info }]}>
           <Image
@@ -90,10 +85,8 @@ export function NewsArticleRow({
 function makeStyles() {
   return StyleSheet.create({
     row: {
-      position: 'relative',
       flexDirection: 'row',
       gap: Spacing.md,
-      paddingTop: Spacing.lg,
       ...Shadow.subtle,
     },
     thumbFrame: {

@@ -19,7 +19,6 @@ import { LocalityAttributionFooter } from '../../../../components/pilgrimage/com
 import {
   LOCALITY_CARD_RADIUS,
   LOCALITY_INNER_RADIUS,
-  LocalityCardDecor,
   LocalityMiniStamp,
   localityCategoryIcon,
   localityEventAccent,
@@ -299,7 +298,6 @@ export default function LocalityHubScreen() {
         showsVerticalScrollIndicator={false}>
         <Animated.View entering={bannerEnter()}>
           <ThemedSurface padded={Spacing.xs} radius={LOCALITY_CARD_RADIUS} style={styles.tabFrame}>
-            <LocalityCardDecor accent={theme.accent} tape="center" />
             <ModeSelector
               options={tabs}
               value={activeTab}
@@ -362,12 +360,7 @@ export default function LocalityHubScreen() {
                 />
               ))}
             </ScrollView>
-            <ThemedSurface
-              variant="outlined"
-              padded
-              radius={LOCALITY_INNER_RADIUS}
-              style={styles.tagNote}>
-              <LocalityCardDecor accent={theme.secondary} tape="none" />
+            <ThemedSurface variant="outlined" padded radius={LOCALITY_INNER_RADIUS}>
               <ThemedText variant="captionSmall" tone="tertiary">
                 {t('news.tags.scopeNote')}
               </ThemedText>
@@ -398,7 +391,6 @@ export default function LocalityHubScreen() {
               padded
               radius={LOCALITY_INNER_RADIUS}
               style={styles.calendarSelectionHeader}>
-              <LocalityCardDecor accent={theme.accent} tape="none" />
               <View style={styles.calendarSelectionCopy}>
                 <ThemedText variant="captionSmall" tone="tertiary" weight="800">
                   {t('news.calendar.selectedDate')}
@@ -459,7 +451,6 @@ function EventList({
   if (rows.length === 0) {
     return (
       <ThemedSurface variant="outlined" padded radius={LOCALITY_CARD_RADIUS} style={styles.empty}>
-        <LocalityCardDecor accent={theme.accent} tape="center" />
         <Ionicons name="calendar-outline" size={28} color={theme.text.tertiary} />
         <ThemedText variant="bodyMedium" weight="800" align="center">
           {emptyTitle}
@@ -522,7 +513,6 @@ function EventRowCard({
       accessibilityLabel={eventName.value}
       style={({ pressed }) => [pressed && styles.pressed]}>
       <ThemedSurface padded={0} radius={LOCALITY_CARD_RADIUS} style={styles.eventCard}>
-        <LocalityCardDecor accent={accent} tape="left" />
         <View style={styles.eventMainRow}>
           <DateBlock block={dateBlock} accent={accent} theme={theme} />
           <LocalityMiniStamp
@@ -652,7 +642,6 @@ function NewsList({
       {loading && snapshot.articles.length === 0 ? <Skeleton.ListRow count={6} /> : null}
       {error && snapshot.articles.length === 0 ? (
         <ThemedSurface variant="outlined" padded radius={LOCALITY_CARD_RADIUS} style={styles.empty}>
-          <LocalityCardDecor accent={theme.status.warning} tape="center" />
           <Ionicons name="warning-outline" size={28} color={theme.status.warning} />
           <ThemedText variant="bodyMedium" weight="800" align="center">
             {t('news.errorTitle')}
@@ -665,7 +654,6 @@ function NewsList({
       ) : null}
       {!loading && snapshot.articles.length === 0 && !error ? (
         <ThemedSurface variant="outlined" padded radius={LOCALITY_CARD_RADIUS} style={styles.empty}>
-          <LocalityCardDecor accent={theme.status.info} tape="center" />
           <Ionicons name="newspaper-outline" size={28} color={theme.text.tertiary} />
           <ThemedText variant="bodyMedium" weight="800" align="center">
             {t('news.emptyTitle')}
@@ -731,23 +719,20 @@ function makeStyles() {
     headerText: { flex: 1, minWidth: 0 },
     scroller: { flex: 1 },
     content: { padding: Spacing.screenPadding, gap: Spacing.md },
-    tabFrame: { position: 'relative', ...Shadow.subtle },
+    tabFrame: { ...Shadow.subtle },
     chipRow: { gap: Spacing.sm, paddingRight: Spacing.screenPadding },
     empty: {
       alignItems: 'center',
       gap: Spacing.sm,
-      position: 'relative',
     },
-    tagNote: { position: 'relative' },
     eventList: { gap: Spacing.sm },
-    eventCard: { position: 'relative', ...Shadow.subtle },
+    eventCard: { ...Shadow.subtle },
     eventMainRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.sm,
       padding: Spacing.md,
       paddingBottom: Spacing.sm,
-      paddingTop: Spacing.lg,
     },
     eventBody: { flex: 1, gap: Spacing.xxs, minWidth: 0 },
     eventMetaRow: {
@@ -777,7 +762,6 @@ function makeStyles() {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.sm,
-      position: 'relative',
     },
     calendarSelectionCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
     calendarCountChip: {

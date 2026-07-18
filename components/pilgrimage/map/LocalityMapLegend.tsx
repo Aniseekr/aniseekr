@@ -6,11 +6,7 @@ import { Radius, Shadow, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT, type TranslationKey } from '../../../libs/i18n';
 import { readableTextOn, ThemedText } from '../../themed';
-import {
-  LOCALITY_CARD_RADIUS,
-  LocalityCardDecor,
-  localityMarkerPalette,
-} from '../common/LocalityAesthetic';
+import { LOCALITY_CARD_RADIUS, localityMarkerPalette } from '../common/LocalityAesthetic';
 
 export type LegendKind = 'scene' | 'stamp' | 'shop' | 'festival' | 'area';
 
@@ -56,7 +52,6 @@ export function LocalityMapLegend({
         },
         style,
       ]}>
-      <LocalityCardDecor accent={theme.accent} tape="none" />
       {kinds.map((kind) => (
         <View key={kind} style={styles.item}>
           <LegendSwatch kind={kind} color={colors[kind]} />
@@ -99,7 +94,6 @@ function LegendSwatch({ kind, color }: { kind: LegendKind; color: string }) {
 
 const styles = StyleSheet.create({
   legend: {
-    position: 'relative',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
@@ -108,7 +102,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     opacity: 0.94,
-    overflow: 'hidden',
     ...Shadow.subtle,
   },
   item: {

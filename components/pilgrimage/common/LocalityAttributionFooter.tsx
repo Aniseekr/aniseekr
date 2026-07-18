@@ -19,7 +19,7 @@ import type {
   IntelProvenance,
 } from '../../../libs/services/pilgrimage/locality/types';
 import { ThemedText } from '../../themed';
-import { LOCALITY_INNER_RADIUS, LocalityCardDecor, LocalityMiniStamp } from './LocalityAesthetic';
+import { LOCALITY_INNER_RADIUS, LocalityMiniStamp } from './LocalityAesthetic';
 
 export interface LocalityAttributionFooterProps {
   provenance: EntityProvenance | readonly IntelProvenance[];
@@ -47,7 +47,6 @@ export function LocalityAttributionFooter({
         variant === 'footer' && styles.footer,
         style,
       ]}>
-      <LocalityCardDecor accent={theme.accent} tape={variant === 'footer' ? 'left' : 'none'} />
       {provenance.map((credit, index) => {
         const sourceName = resolveLocalIntelText(credit.sourceName, language).value;
         const copyright = credit.copyrightNotice
@@ -140,8 +139,6 @@ function AttributionCredit({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    overflow: 'hidden',
     gap: Spacing.xs,
     borderWidth: 1,
     borderRadius: LOCALITY_INNER_RADIUS,
@@ -149,8 +146,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   footer: {
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   credit: {
     gap: Spacing.xxs,

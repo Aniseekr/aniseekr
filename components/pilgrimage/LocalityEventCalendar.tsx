@@ -13,7 +13,6 @@ import type { IsoDate } from '../../libs/services/pilgrimage/locality/types';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
   LOCALITY_CARD_RADIUS,
-  LocalityCardDecor,
   LocalityMiniStamp,
   localityCategoryIcon,
 } from './common/LocalityAesthetic';
@@ -78,8 +77,6 @@ function LocalityEventCalendarComponent({
   return (
     <Animated.View entering={bannerEnter()}>
       <ThemedSurface padded={0} radius={LOCALITY_CARD_RADIUS} style={styles.surface}>
-        <LocalityCardDecor accent={theme.secondary} tape="right" />
-
         <View style={styles.header}>
           <View style={styles.monthCopy}>
             <ThemedText variant="captionSmall" tone="tertiary" weight="800">
@@ -322,8 +319,6 @@ function toIsoDate(year: number, month: number, day: number): IsoDate {
 
 const styles = StyleSheet.create({
   surface: {
-    position: 'relative',
-    overflow: 'hidden',
     paddingBottom: Spacing.md,
     ...Shadow.subtle,
   },
@@ -332,7 +327,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   monthCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
   monthNav: { flexDirection: 'row', alignItems: 'center' },
