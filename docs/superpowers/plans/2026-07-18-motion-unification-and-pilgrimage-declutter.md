@@ -223,8 +223,78 @@ decorative grabber styles outside `components/themed/sheet/`.
    `feat(motion): phase N — <summary>`... actually do NOT commit — leave the
    working tree for the reviewer; the reviewer commits after verification.
 
+## Phase 4 — ThemedBottomSheet hardening (grilled 2026-07-18, decisions locked)
+
+Phases 0–3 shipped on `feat/motion-unification` (a2ad1bc + 669b6fc). A grilling
+pass on the resulting design surfaced 2 real defects + 2 polish decisions. All
+four are in `components/themed/sheet/` — no caller-side churn except the
+scrollable-body opt-out flag. Feature parity binding.
+
+### 4.1 Drag scoped to the handle/header, NOT the whole panel (defect fix)
+
+Today `ThemedBottomSheet` wraps the entire panel (incl. any child
+ScrollView/FlatList) in one `Gesture.Pan`, with zero gesture coordination.
+Sheets with internal scroll (`AddTrackingSheet`, `FolderPicker`,
+`CameraSettingsSheet`, `SpotClusterPicker`) fight: dragging a mid-scrolled list
+downward drags the sheet toward dismiss instead of scrolling.
+
+**Decision:** attach the `GestureDetector` only to the `SheetHandle` (+ an
+optional non-scrolling header slot), never around the scroll body. Scroll
+content is then completely free of the pan — the native iOS sheet behavior.
+Dismiss = drag the handle, tap the backdrop, or Android back. Accept that you
+can't dismiss by dragging the list body itself.
+
+### 4.2 Default `maxHeightPct = 0.9` + internal scrollable body (defect fix)
+
+Callers with no `maxHeightPct` (`BangumiSettingsSheet`, `ImageDisplaySettingsSheet`,
+`QuickActionSheet`) overflow off the top for tall content with no scroll.
+
+**Decision:** `ThemedBottomSheet` defaults `maxHeightPct = 0.9` and wraps
+`children` in a `ScrollView` by default so content never overflows regardless of
+caller. Add `scrollable?: boolean` (default `true`); callers that already own a
+ScrollView/FlatList pass `scrollable={false}` to avoid double-nesting
+(`AddTrackingSheet`, `FolderPicker`, `CameraSettingsSheet`, `SpotClusterPicker`).
+
+### 4.3 Slide-down exit (polish)
+
+`animationType="fade"` cuts off the elastic drag-dismiss slide.
+
+**Decision:** Modal `animationType="none"`; drive both directions with
+Reanimated — enter `FadeInUp` (via `sheetEnter()`), exit slide-down + fade. Keep
+the Modal mounted through the exit (internal `mounted` state or delayed unmount)
+so the drag-dismiss elastic finishes before unmount. Add the exit preset to
+`libs/animations/presets.ts` (`sheetExit`).
+
+### 4.4 Two sheet systems coexist — align the feel (consistency, minor)
+
+`@gorhom/bottom-sheet` stays for the 3 pilgrimage snap-point sheets;
+`ThemedBottomSheet` for the 16 simple dismiss modals. **Decision:** keep both,
+but align the backdrop dim opacity, handle bar size/color, and corner radius so
+the two systems feel like one. No functional change.
+
+### Phase 4 constraints
+
+- Behavior parity: every swapped sheet keeps its handlers, controls, keyboard
+  handling (`react-native-keyboard-controller`, `KeyboardProvider` already at
+  `app/_layout.tsx:202`) and content. Only the drag/scroll/exit mechanics change.
+- Update `__tests__/unit/themed-sheet.test.ts` for the handle-only gesture and
+  the `scrollable` prop; keep the backdrop-dismiss assertion.
+- Verify gate unchanged: typecheck + test:unit + spec:check + scoped
+  eslint/prettier on changed files. No commit — reviewer commits.
+
+### Verify-on-device (not code changes — QA checklist)
+
+- Keyboard: focus the TextInput in `EditDisplayNameSheet` / `FolderPicker` /
+  `YearPickerSheet` / `AnimeProgressView` inside the Modal and confirm the field
+  lifts above the keyboard (RN Modal renders outside the root view tree — the
+  keyboard-controller Modal path needs a real-device check).
+- Scroll: mid-scroll a long `FolderPicker` / `AddTrackingSheet` list and confirm
+  drag scrolls the list, only the handle dismisses.
+
 ## Follow-ups explicitly out of scope
 
 - `compare/share.tsx` state refactor (25 useState → reducer).
 - `map.tsx` / `preview.tsx` file-size reduction beyond what the pill-move buys.
 - Light-mode surface palette (tracked separately in CLAUDE.md).
+- Repo-wide lint debt (887 pre-existing errors, incl. react-hooks/immutability
+  false positives on Reanimated shared-value writes).
