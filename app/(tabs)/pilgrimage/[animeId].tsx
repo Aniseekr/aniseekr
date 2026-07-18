@@ -17,7 +17,14 @@
 // `components/pilgrimage/detail/`. We do not add new top-level `useState`s
 // here without first asking whether the value belongs in a hook or a child.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   Dimensions,
   InteractionManager,
@@ -45,6 +52,7 @@ import {
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import {
+  buildPilgrimageEventDetailRoute,
   buildPilgrimageSceneIdRoute,
   getPilgrimageDetailBackRoute,
   getPilgrimageDetailChromeSeed,
@@ -103,7 +111,16 @@ import {
   type FilterCyclePillState,
   type SpotMapViewHandle,
 } from '../../../components/pilgrimage/detail';
-import { useT } from '../../../libs/i18n';
+import { useI18n, useT } from '../../../libs/i18n';
+import { LocalityMapLegend } from '../../../components/pilgrimage/map/LocalityMapLegend';
+import { localityMarkerPalette } from '../../../components/pilgrimage/common/LocalityAesthetic';
+import type { MapMarker } from '../../../components/pilgrimage/map';
+import { get88EntriesWithCoords } from '../../../libs/services/pilgrimage/anime88-repository';
+import {
+  buildAnime88AreaMarkers,
+  buildCanonicalLocalityMarkers,
+} from '../../../libs/services/pilgrimage/locality/map-markers';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
 
 // Sheet snap heights as fractions of the screen — kept in lockstep with the
 // snap-points array in PilgrimageDetailSheet. We use them to position the
@@ -132,6 +149,16 @@ function firstNonEmptyTitle(...values: (string | null | undefined)[]): string {
   return '';
 }
 
+const ANIME_88_AREA_ENTRIES = get88EntriesWithCoords();
+
+function subscribeLocality(listener: () => void): () => void {
+  return localityRepository.subscribe(listener);
+}
+
+function getLocalitySnapshot() {
+  return localityRepository.getSnapshot();
+}
+
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
   const bangumiId = getNumberParam(params, 'animeId');
@@ -139,6 +166,12 @@ export default function PilgrimageDetailScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const t = useT();
+  const { language } = useI18n();
+  const localitySnapshot = useSyncExternalStore(
+    subscribeLocality,
+    getLocalitySnapshot,
+    getLocalitySnapshot
+  );
   // Frame-1 chrome seed (title / poster / themeColor) carried in by the
   // lister so we can paint hero + accent before any I/O resolves
   // (CLAUDE.md Rule 10). When the real data arrives it replaces the seed.
@@ -186,6 +219,21 @@ export default function PilgrimageDetailScreen() {
   const styles = useMemo(() => makePilgrimageDetailStyles(theme, insets.top), [theme, insets.top]);
   const animeTitles = useMemo(() => (anime ? getPilgrimageAnimeTitles(anime) : null), [anime]);
   const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
+  const localityAnimeId = anime?.id ?? bangumiId;
+  const localityMarkers = useMemo<MapMarker[]>(() => {
+    void localitySnapshot;
+    if (localityAnimeId === null) return [];
+    const roleMarkers = buildCanonicalLocalityMarkers(
+      localityRepository,
+      localityMarkerPalette(theme),
+      { animeId: localityAnimeId, language }
+    );
+    const areaMarkers = buildAnime88AreaMarkers(
+      ANIME_88_AREA_ENTRIES.filter((entry) => entry.externalIds.bangumi === localityAnimeId),
+      theme.status.info
+    );
+    return [...roleMarkers, ...areaMarkers];
+  }, [language, localityAnimeId, localitySnapshot, theme]);
 
   // Tracking hook drives the locate FAB + the map's user dot + cone. The ref
   // points at SpotMapView so location ticks and heading deltas push straight to
@@ -371,6 +419,19 @@ export default function PilgrimageDetailScreen() {
     Haptics.selectionAsync().catch(() => undefined);
     Linking.openURL(buildMapsURL(spot.geo[0], spot.geo[1], spot.name)).catch(() => undefined);
   }, []);
+
+  const handleLocalityMarkerPress = useCallback(
+    (marker: MapMarker) => {
+      if (marker.eventId) {
+        router.push(buildPilgrimageEventDetailRoute(marker.eventId));
+        return;
+      }
+      if (marker.precision === 'exact') {
+        Linking.openURL(buildMapsURL(marker.lat, marker.lng, marker.title)).catch(() => undefined);
+      }
+    },
+    [router]
+  );
 
   const handleToggleSaved = useCallback(
     (spot: AnitabiPoint) =>
@@ -678,8 +739,10 @@ export default function PilgrimageDetailScreen() {
     };
   });
 
-  const isEmpty = !loading && !error && (!anime || points.length === 0);
-  const hasMap = !!anime && hasValidGeo(anime.geo) && points.length > 0;
+  const isEmpty =
+    !loading && !error && (!anime || (points.length === 0 && localityMarkers.length === 0));
+  const hasMap =
+    localityMarkers.length > 0 || (!!anime && hasValidGeo(anime.geo) && points.length > 0);
 
   return (
     <>
@@ -722,6 +785,7 @@ export default function PilgrimageDetailScreen() {
                 <SpotMapView
                   ref={spotMapRef}
                   spots={filteredPoints}
+                  localityMarkers={localityMarkers}
                   visited={visited}
                   ringColor={themeColor}
                   userLocation={userLocation}
@@ -734,6 +798,7 @@ export default function PilgrimageDetailScreen() {
                   theme={theme}
                   onSpotPress={openSpot}
                   onClusterPick={openCluster}
+                  onLocalityMarkerPress={handleLocalityMarkerPress}
                   onUserPan={tracking.onUserPan}
                   style={styles.mapBackgroundInner}
                 />
@@ -741,6 +806,11 @@ export default function PilgrimageDetailScreen() {
                 <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
               )}
               <View style={styles.mapScrim} pointerEvents="none" />
+              {localityMarkers.length > 0 ? (
+                <LocalityMapLegend
+                  style={[styles.localityLegend, { bottom: sheetPeekOffset + 108 }]}
+                />
+              ) : null}
             </View>
 
             {/* Layer 2 — top-floating chrome (header / search). Series picker

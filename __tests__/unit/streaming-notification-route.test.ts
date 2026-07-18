@@ -41,15 +41,17 @@ describe('routeForNotificationResponse', () => {
   it('SN-005 episode_reminder without animeId returns null (cannot navigate)', () => {
     expect(routeForNotificationResponse(fake({ kind: 'episode_reminder' }))).toBeNull();
     // Empty string is rejected too — no fake row.
-    expect(routeForNotificationResponse(fake({ kind: 'episode_reminder', animeId: '' }))).toBeNull();
+    expect(
+      routeForNotificationResponse(fake({ kind: 'episode_reminder', animeId: '' }))
+    ).toBeNull();
   });
 
-  it('PILG-048 pilgrimage_event routes to the pilgrimage detail with the event param', () => {
+  it('PILG-048 pilgrimage_event routes to the first-class event detail when eventId exists', () => {
     expect(
       routeForNotificationResponse(
         fake({ kind: 'pilgrimage_event', animeId: '22759', eventId: 'yuwaku-bonbori-matsuri' })
       )
-    ).toBe('/pilgrimage/22759?intelEvent=yuwaku-bonbori-matsuri');
+    ).toBe('/pilgrimage/event/yuwaku-bonbori-matsuri');
     // Event id is optional — the anime's pilgrimage page is still the target.
     expect(routeForNotificationResponse(fake({ kind: 'pilgrimage_event', animeId: '22759' }))).toBe(
       '/pilgrimage/22759'

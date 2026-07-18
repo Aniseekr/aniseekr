@@ -46,6 +46,11 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
       ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.18)',
     },
+    localityLegend: {
+      position: 'absolute',
+      left: Spacing.screenPadding,
+      right: Spacing.screenPadding,
+    },
 
     // Floating top-overlay stack (back/album/share + search + chip rows).
     topOverlay: {

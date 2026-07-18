@@ -3,11 +3,17 @@ import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Radius, Spacing } from '../../constants/DesignSystem';
+import { Radius, Shadow, Size, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import { useT } from '../../libs/i18n';
+import { useI18n, useT } from '../../libs/i18n';
 import type { NewsArticle, NewsSource } from '../../libs/services/news/types';
 import { newsImageSource } from '../../libs/services/news/news-image';
+import { resolveLocalIntelText } from '../../libs/services/pilgrimage/local-intel/local-intel-localization';
+import {
+  LOCALITY_CARD_RADIUS,
+  LocalityCardDecor,
+  LocalityMiniStamp,
+} from '../pilgrimage/common/LocalityAesthetic';
 import { ThemedButton, ThemedSurface, ThemedText } from '../themed';
 
 export function NewsArticleRow({
@@ -22,6 +28,7 @@ export function NewsArticleRow({
   onOpen: () => void;
 }) {
   const { theme } = useTheme();
+  const { language } = useI18n();
   const t = useT();
   const [imageHidden, setImageHidden] = useState(false);
   const styles = useMemo(() => makeStyles(), []);
@@ -29,23 +36,29 @@ export function NewsArticleRow({
     () => (article.thumbnailUrl ? newsImageSource(article.thumbnailUrl) : null),
     [article.thumbnailUrl]
   );
+  const sourceName = source ? resolveLocalIntelText(source.name, language).value : null;
 
   return (
-    <ThemedSurface padded={Spacing.md} radius={Radius.lg} style={styles.row}>
+    <ThemedSurface padded={Spacing.md} radius={LOCALITY_CARD_RADIUS} style={styles.row}>
+      <LocalityCardDecor accent={theme.status.info} tape="right" />
       {!imageHidden && imageSource ? (
-        <Image
-          source={imageSource}
-          style={styles.thumb}
-          contentFit="cover"
-          onError={() => setImageHidden(true)}
-        />
-      ) : null}
+        <View style={[styles.thumbFrame, { borderColor: theme.status.info }]}>
+          <Image
+            source={imageSource}
+            style={styles.thumb}
+            contentFit="cover"
+            onError={() => setImageHidden(true)}
+          />
+        </View>
+      ) : (
+        <LocalityMiniStamp accent={theme.status.info} icon="newspaper-outline" />
+      )}
       <View style={styles.body}>
         <View style={styles.metaRow}>
-          {source ? (
+          {sourceName ? (
             <View style={[styles.chip, { backgroundColor: theme.background.tertiary }]}>
               <ThemedText variant="captionSmall" weight="700" numberOfLines={1}>
-                {source.name.en ?? source.name.ja}
+                {sourceName}
               </ThemedText>
             </View>
           ) : null}
@@ -77,13 +90,24 @@ export function NewsArticleRow({
 function makeStyles() {
   return StyleSheet.create({
     row: {
+      position: 'relative',
       flexDirection: 'row',
       gap: Spacing.md,
+      paddingTop: Spacing.lg,
+      ...Shadow.subtle,
+    },
+    thumbFrame: {
+      width: Size.cardSmall,
+      height: Size.cardSmall,
+      borderRadius: Radius.md,
+      borderWidth: 1.5,
+      padding: Spacing.xxs,
+      transform: [{ rotate: '-1deg' }],
     },
     thumb: {
-      width: 86,
-      height: 86,
-      borderRadius: Radius.md,
+      width: '100%',
+      height: '100%',
+      borderRadius: Radius.sm,
     },
     body: {
       flex: 1,

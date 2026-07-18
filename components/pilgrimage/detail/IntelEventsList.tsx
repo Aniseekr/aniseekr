@@ -2,8 +2,9 @@
 // header and the Plan screen. Self-contained: sync bundled reads + the
 // notification facade's sync mirror, so parents stay memo-friendly.
 
-import React, { useCallback, useMemo, useState , useSyncExternalStore } from 'react';
+import React, { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
@@ -22,8 +23,11 @@ import {
   type HubRailEvent,
 } from '../../../libs/services/pilgrimage/local-intel/local-intel-repository';
 import { resolveLocalIntelText } from '../../../libs/services/pilgrimage/local-intel/local-intel-localization';
-import { intelLinkUrl } from '../../../libs/services/pilgrimage/local-intel/types';
 import { EventStateChip } from './IntelEventBanner';
+import { LocalityAttributionFooter } from '../common/LocalityAttributionFooter';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
+import type { EventId } from '../../../libs/services/pilgrimage/locality/types';
+import { buildPilgrimageEventDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 function EventRow({
   row,
@@ -35,12 +39,14 @@ function EventRow({
   themeColor: string;
 }) {
   const t = useT();
+  const router = useRouter();
   const scheduled = useIsEventReminderScheduled(row.event.id);
   const canRemind = row.state.state === 'upcoming' || scheduled;
+  const canonicalEvent = localityRepository.getEventById(row.event.id as EventId);
 
   const handleOpen = useCallback(() => {
-    Linking.openURL(intelLinkUrl(row.event)).catch(() => undefined);
-  }, [row.event]);
+    router.push(buildPilgrimageEventDetailRoute(row.event.id));
+  }, [router, row.event.id]);
 
   const handleToggleReminder = useCallback(async () => {
     hapticsBridge.selection();
@@ -50,7 +56,7 @@ function EventRow({
       row.state,
       occurrence
         ? { body: t('pilgrimageUi.intel.reminderBody', { date: occurrence.startsAt }) }
-        : undefined,
+        : undefined
     );
     if (result === 'scheduled') hapticsBridge.success();
     if (result === 'permission-denied') {
@@ -72,11 +78,15 @@ function EventRow({
       ]}>
       <Pressable
         onPress={handleOpen}
-        accessibilityRole="link"
+        accessibilityRole="button"
         accessibilityLabel={resolveLocalIntelText(row.event.name).value}
         style={({ pressed }) => [styles.rowBody, pressed && { opacity: 0.82 }]}>
         <View style={styles.chipRow}>
-          <EventStateChip state={row.state} theme={theme} />
+          <EventStateChip
+            state={row.state}
+            theme={theme}
+            ongoing={row.event.schedule.kind === 'ongoing'}
+          />
           {row.state.state === 'upcoming' ? (
             <ThemedText variant="captionSmall" tone="secondary">
               {row.state.occurrence.startsAt}
@@ -89,6 +99,9 @@ function EventRow({
         <ThemedText variant="captionSmall" tone="secondary" numberOfLines={2}>
           {resolveLocalIntelText(row.event.description).value}
         </ThemedText>
+        {canonicalEvent ? (
+          <LocalityAttributionFooter provenance={canonicalEvent.provenance} variant="compact" />
+        ) : null}
       </Pressable>
       {canRemind ? (
         <Pressable
@@ -126,7 +139,7 @@ export function IntelEventsList({
   const version = useSyncExternalStore(
     subscribeLocalIntel,
     getLocalIntelVersion,
-    getLocalIntelVersion,
+    getLocalIntelVersion
   );
   const [now] = useState(() => new Date());
 

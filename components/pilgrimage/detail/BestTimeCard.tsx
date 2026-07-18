@@ -15,6 +15,8 @@ import { resolveLocalIntelText } from '../../../libs/services/pilgrimage/local-i
 import type { LocalIntelViewingHint } from '../../../libs/services/pilgrimage/local-intel/types';
 import { formatMonthLabel, pickBestTimeLabel } from './intel-format';
 import { IntelProvenanceLine } from './IntelProvenanceLine';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
+import type { PlaceId } from '../../../libs/services/pilgrimage/locality/types';
 
 const HINT_ICON: Record<LocalIntelViewingHint['hint'], keyof typeof Ionicons.glyphMap> = {
   sunset: 'partly-sunny-outline',
@@ -42,6 +44,9 @@ export function BestTimeCard({
 
   const icon = hint ? HINT_ICON[hint.hint] : 'sunny-outline';
   const note = hint ? resolveLocalIntelText(hint.note) : null;
+  const canonicalGuide = hint
+    ? localityRepository.getPlaceGuides(hint.id as PlaceId).find((guide) => guide.id === hint.id)
+    : null;
 
   // Compact line: real golden hour, no curated hint for this spot.
   if (!hint) {
@@ -117,7 +122,12 @@ export function BestTimeCard({
             {t('pilgrimageUi.intel.computedBadge')}
           </ThemedText>
         ) : null}
-        <IntelProvenanceLine verifiedAt={hint.verifiedAt} theme={theme} showLinkHint={false} />
+        <IntelProvenanceLine
+          verifiedAt={hint.verifiedAt}
+          theme={theme}
+          showLinkHint={false}
+          provenance={canonicalGuide?.provenance}
+        />
       </View>
     </View>
   );

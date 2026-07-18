@@ -8,6 +8,27 @@ export interface PilgrimageRoute {
   params?: Record<string, string>;
 }
 
+export interface PilgrimageEventDetailChromeSeed {
+  name?: string | null;
+  animeTitle?: string | null;
+  poster?: string | null;
+}
+
+export function buildPilgrimageEventDetailRoute(
+  eventId: string,
+  seed: PilgrimageEventDetailChromeSeed = {}
+): PilgrimageRoute {
+  const params: Record<string, string> = { eventId };
+  if (seed.name) params.name = seed.name;
+  if (seed.animeTitle) params.animeTitle = seed.animeTitle;
+  if (seed.poster) params.poster = seed.poster;
+  return { pathname: '/pilgrimage/event/[eventId]', params };
+}
+
+export function getPilgrimageEventDetailId(params: RouterParams): string | null {
+  return getStringParam(params, 'eventId');
+}
+
 /**
  * Optional frame-1 chrome carried via route params so the detail screen can
  * paint hero + title + accent before any I/O resolves (CLAUDE.md Rule 10).

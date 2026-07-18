@@ -54,3 +54,19 @@ export function getCityCentroid(
   if (!prefecture || !city) return null;
   return getIndex().get(`${prefecture}\t${city}`) ?? null;
 }
+
+/**
+ * Derived map anchor for a prefecture-wide administrative label. This is not
+ * an exact visitable coordinate: callers must render it as an AREA marker.
+ */
+export function getPrefectureAreaAnchor(
+  prefecture: string | null | undefined
+): { lat: number; lng: number } | null {
+  if (!prefecture) return null;
+  const entries = getData().entries.filter((entry) => entry.prefecture === prefecture);
+  if (entries.length === 0) return null;
+  return {
+    lat: entries.reduce((sum, entry) => sum + entry.lat, 0) / entries.length,
+    lng: entries.reduce((sum, entry) => sum + entry.lng, 0) / entries.length,
+  };
+}

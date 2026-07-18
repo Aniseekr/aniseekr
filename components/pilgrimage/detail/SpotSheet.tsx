@@ -15,6 +15,7 @@ import BottomSheet, {
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
+import { useRouter } from 'expo-router';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ON_DARK, ThemedIconButton, ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
@@ -45,6 +46,7 @@ import {
   type LocalIntelEvent,
   type LocalIntelShop,
 } from '../../../libs/services/pilgrimage/local-intel/types';
+import { buildPilgrimageEventDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 const BEARING_LABEL_KEY: Record<CardinalKey, TranslationKey> = {
   n: 'pilgrimage.detail.bearing.n',
@@ -122,6 +124,7 @@ function SpotSheetImpl({
   onIdentifyScene,
   onSelectScene,
 }: SpotSheetProps) {
+  const router = useRouter();
   const t = useT();
   const styles = useMemo(() => makeSheetStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
@@ -223,9 +226,12 @@ function SpotSheetImpl({
   const handleOpenShop = useCallback((shop: LocalIntelShop) => {
     Linking.openURL(intelLinkUrl(shop)).catch(() => undefined);
   }, []);
-  const handleOpenEvent = useCallback((event: LocalIntelEvent) => {
-    Linking.openURL(intelLinkUrl(event)).catch(() => undefined);
-  }, []);
+  const handleOpenEvent = useCallback(
+    (event: LocalIntelEvent) => {
+      router.push(buildPilgrimageEventDetailRoute(event.id));
+    },
+    [router]
+  );
 
   // The BottomSheet element is rendered EXACTLY ONCE per parent mount: swapping
   // between a "closed" and "open" instance based on whether `spot` is null was
@@ -560,7 +566,10 @@ function SpotSheetImpl({
   );
 }
 
-function intelEqual(a: SpotSheetIntel | null | undefined, b: SpotSheetIntel | null | undefined): boolean {
+function intelEqual(
+  a: SpotSheetIntel | null | undefined,
+  b: SpotSheetIntel | null | undefined
+): boolean {
   if (a === b) return true;
   if (!a || !b) return !a && !b;
   return (

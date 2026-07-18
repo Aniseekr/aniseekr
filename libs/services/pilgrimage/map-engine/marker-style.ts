@@ -3,10 +3,7 @@
 // without a native render.
 import type { MapMarker, MapMarkerMode } from './types';
 
-/** Visited-state green (border/tail/badge turn this colour). */
-export const VISITED_COLOR = '#34A853';
-
-export type MarkerShape = 'balloon' | 'dot' | 'gold88';
+export type MarkerShape = 'balloon' | 'dot' | 'gold88' | 'stamp' | 'shop' | 'festival' | 'area';
 
 export interface MarkerBadge {
   text: string;
@@ -33,6 +30,8 @@ export interface MarkerVisual {
 const BALLOON = { width: 48, height: 57, anchor: 'bottom' as const };
 const DOT = { width: 24, height: 24, anchor: 'center' as const };
 const GOLD88 = { width: 36, height: 45, anchor: 'bottom' as const };
+const LOCALITY_PIN = { width: 40, height: 48, anchor: 'bottom' as const };
+const AREA = { width: 112, height: 36, anchor: 'center' as const };
 
 /**
  * Resolve a neutral marker to its on-map visual. `defaultMode` is the surface's
@@ -50,6 +49,28 @@ export function resolveMarkerVisual(
       visited: false,
       badge: m.eightyEightId != null ? { text: `#${m.eightyEightId}`, kind: 'id88' } : null,
       showStar: true,
+    };
+  }
+
+  if (m.kind === 'area') {
+    return {
+      shape: 'area',
+      ...AREA,
+      ringColor: m.color,
+      visited: false,
+      badge: null,
+      showStar: false,
+    };
+  }
+
+  if (m.kind === 'stamp' || m.kind === 'shop' || m.kind === 'festival') {
+    return {
+      shape: m.kind,
+      ...LOCALITY_PIN,
+      ringColor: m.color,
+      visited: m.kind === 'stamp' && !!m.visited,
+      badge: null,
+      showStar: false,
     };
   }
 

@@ -1,4 +1,6 @@
 import { hasSufficientRuntimeCoverage } from '../pilgrimage/anitabi-runtime-coverage';
+import { localityRepository } from '../pilgrimage/locality/locality-repository';
+import type { LocalityDataEnvelope } from '../pilgrimage/locality/types';
 import type { NewsSource, NewsSourceFile } from './types';
 
 interface SourceState {
@@ -7,9 +9,17 @@ interface SourceState {
   recommendedIds: string[];
 }
 
-let STATE: SourceState | null = null;
+let overrideState: SourceState | null = null;
+let canonicalCache: { snapshot: LocalityDataEnvelope; state: SourceState } | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
+
+localityRepository.subscribe(() => {
+  if (overrideState) return;
+  canonicalCache = null;
+  version += 1;
+  for (const listener of listeners) listener();
+});
 
 function normalize(file: NewsSourceFile): SourceState {
   const seen = new Set<string>();
@@ -31,10 +41,12 @@ function normalize(file: NewsSourceFile): SourceState {
 }
 
 function ensureBuilt(): SourceState {
-  if (STATE) return STATE;
-  const mod = require('./news-sources.data.json');
-  STATE = normalize((mod?.default ?? mod) as NewsSourceFile);
-  return STATE;
+  if (overrideState) return overrideState;
+  const snapshot = localityRepository.getSnapshot();
+  if (canonicalCache?.snapshot === snapshot) return canonicalCache.state;
+  const state = projectCanonicalNewsSources(snapshot);
+  canonicalCache = { snapshot, state };
+  return state;
 }
 
 export function getAllNewsSources(): readonly NewsSource[] {
@@ -54,7 +66,7 @@ export function hydrateNewsSourcesFromRuntime(file: NewsSourceFile): void {
   const current = ensureBuilt();
   const candidate = normalize(file);
   if (!hasSufficientRuntimeCoverage(current.entries.length, candidate.entries.length)) return;
-  STATE = candidate;
+  overrideState = candidate;
   version += 1;
   for (const listener of listeners) listener();
 }
@@ -69,7 +81,30 @@ export function getNewsSourcesVersion(): number {
 }
 
 export function __resetNewsSourcesForTests(file?: NewsSourceFile): void {
-  STATE = file ? normalize(file) : null;
+  overrideState = file ? normalize(file) : null;
+  canonicalCache = null;
   version = 0;
   listeners.clear();
+}
+
+function projectCanonicalNewsSources(snapshot: LocalityDataEnvelope): SourceState {
+  const entries: NewsSource[] = Object.values(snapshot.entities.newsSources).map((source) => ({
+    id: source.id,
+    name: source.name,
+    feedUrl: source.feedUrl,
+    homepageUrl: source.homepageUrl,
+    category: source.category,
+    language: source.language,
+    format: source.format,
+    recommended: source.recommended,
+    frequency: source.frequency,
+    verifiedAt: source.provenance[0].verifiedAt,
+    ...(source.operationalNotes ? { notes: source.operationalNotes } : {}),
+  }));
+  return normalize({
+    generatedAt: Date.parse(snapshot.generatedAt),
+    source: 'canonical-locality-v1',
+    count: entries.length,
+    entries,
+  });
 }

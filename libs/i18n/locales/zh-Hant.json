@@ -61,26 +61,52 @@
     "helpTranslateBody": "Aniseekr 是開源專案，翻譯由社群貢獻。請參考 CONTRIBUTING.md 了解如何新增或改善語言。"
   },
   "news": {
-    "title": "動畫新聞",
-    "subtitle": "追蹤動畫、活動與聖地巡禮來源",
-    "hubEntry": "動畫新聞動態",
-    "hubEntryA11y": "開啟動畫新聞動態",
+    "title": "聖地資訊",
+    "subtitle": "活動、在地景點與已驗證來源",
+    "hubEntry": "在地活動與新聞",
+    "hubEntryA11y": "開啟聖地活動與新聞",
     "manageSources": "管理來源",
+    "openMap": "開啟聖地地圖",
     "openArticle": "開啟文章",
     "tabs": {
       "event": "活動",
       "tag": "標籤",
+      "calendar": "日曆",
       "news": "新聞"
     },
     "events": {
       "emptyTitle": "目前沒有即將到來的活動",
-      "emptyBody": "本機收錄的聖地巡禮活動正在進行或即將開始時，會顯示在這裡。"
+      "emptyBody": "已驗證的聖地巡禮活動正在進行、常設或即將開始時，會顯示在這裡。",
+      "stopCount": "{count} 個停靠點",
+      "locationMore": "{location}，另有 {count} 處"
     },
     "tags": {
       "allWorks": "全部作品",
       "scopeNote": "作品篩選只使用已驗證的活動連結；新聞文章必須真的帶有作品連結才會出現在這裡。",
       "emptyTitle": "沒有連結的活動",
       "emptyBody": "目前沒有本機活動連結到這部作品。沒有已驗證作品標籤的新聞文章不會被附加到這裡。"
+    },
+    "calendar": {
+      "title": "活動日曆",
+      "previousMonth": "上個月",
+      "nextMonth": "下個月",
+      "today": "今天",
+      "markerLegend": "以動畫封面小印章圈出已確認的活動日期。",
+      "selectedDate": "所選日期",
+      "eventCount": "{count} 個活動",
+      "emptyDayTitle": "這天沒有已定日期的活動",
+      "emptyDayBody": "這一天沒有已確認日期、且正在進行或即將開始的活動。",
+      "unplacedNote": "另有 {count} 個常設或日期未定活動保留在「活動」頁，並未被指定虛構的日曆日期。",
+      "dayA11y": "{date}，{count} 個活動",
+      "weekdays": {
+        "sun": "日",
+        "mon": "一",
+        "tue": "二",
+        "wed": "三",
+        "thu": "四",
+        "fri": "五",
+        "sat": "六"
+      }
     },
     "eventCategory": {
       "stampRally": "集章",
@@ -1629,6 +1655,11 @@
     "serverUrl": "伺服器網址"
   },
   "pilgrimageUi": {
+    "attribution": {
+      "license": "授權：{license}",
+      "openSourceA11y": "開啟來源：{source}",
+      "verifiedAt": "驗證於 {date}"
+    },
     "accuracy": "精確度",
     "accuracyAndSafetyChecks": "精確度與安全檢查",
     "addWhereWhyOrWhat": "記下地點、原因,或這張照片想記住的事",
@@ -1735,6 +1766,7 @@
       "computedBadge": "依此地實際日照計算",
       "eventActive": "進行中",
       "eventEnded": "已結束",
+      "eventOngoing": "常設",
       "eventUpcoming": "{days} 天後",
       "events": "在地活動",
       "nearbyShops": "周邊聖地店家",
@@ -1748,6 +1780,35 @@
       "tomorrow": "明日",
       "upcomingEvents": "活動與祭典",
       "verifiedAt": "資訊驗證於 {date}"
+    },
+    "eventDetail": {
+      "animeTie": "動畫連結",
+      "collect": "收集印章",
+      "collected": "已收集",
+      "dateRange": "{start} – {end}",
+      "dateTba": "未定",
+      "locationUnavailable": "未標示區域",
+      "map": "停靠點地圖",
+      "noStops": "這個活動目前沒有已驗證的實體停靠點。",
+      "notFoundBody": "目前的在地資料庫中找不到這個活動。",
+      "notFoundTitle": "活動無法使用",
+      "openGoogleMaps": "在 Google 地圖開啟",
+      "openGoogleMapsA11y": "在 Google 地圖開啟 {stop}",
+      "permanent": "常設",
+      "progress": "集章進度",
+      "progressValue": "已收集 {collected} / {total}",
+      "schedule": "活動期間",
+      "screenTitle": "活動與企劃",
+      "since": "常設・始於 {date}",
+      "stops": "停靠點清單",
+      "uncollect": "移除印章"
+    },
+    "mapLegend": {
+      "area": "區域・非精確地點",
+      "festival": "祭典",
+      "scene": "場景",
+      "shop": "店家",
+      "stamp": "集章點"
     },
     "includeComparisonScore": "附上對照分數",
     "includeDate": "附上日期",

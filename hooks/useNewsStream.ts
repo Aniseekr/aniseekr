@@ -5,14 +5,8 @@ import {
   refreshStream,
   type NewsStreamSnapshot,
 } from '../libs/services/news/news-stream';
-import {
-  getNewsSourcesVersion,
-  subscribeNewsSources,
-} from '../libs/services/news/news-sources';
-import {
-  getNewsFollowsVersion,
-  subscribeNewsFollows,
-} from '../libs/services/news/news-follows';
+import { getNewsSourcesVersion, subscribeNewsSources } from '../libs/services/news/news-sources';
+import { getNewsFollowsVersion, subscribeNewsFollows } from '../libs/services/news/news-follows';
 
 function subscribeNewsStore(listener: () => void): () => void {
   const unsubSources = subscribeNewsSources(listener);
@@ -31,7 +25,7 @@ function getNewsStoreVersion(): string {
   return `${getNewsSourcesVersion()}:${getNewsFollowsVersion()}`;
 }
 
-export function useNewsStream() {
+export function useNewsStream({ enabled = true }: { enabled?: boolean } = {}) {
   const version = useSyncExternalStore(
     subscribeNewsStore,
     getNewsStoreVersion,
@@ -43,6 +37,7 @@ export function useNewsStream() {
   const [error, setError] = useState<Error | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     setRefreshing(true);
     try {
       const next = await refreshStream();
@@ -54,14 +49,21 @@ export function useNewsStream() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     const timer = setTimeout(() => {
       void refresh();
     }, 0);
     return () => clearTimeout(timer);
-  }, [refresh, version]);
+  }, [enabled, refresh, version]);
 
-  return { snapshot, loading, refreshing, error, refresh };
+  return {
+    snapshot,
+    loading: enabled && loading,
+    refreshing: enabled && refreshing,
+    error,
+    refresh,
+  };
 }

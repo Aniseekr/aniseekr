@@ -24,7 +24,9 @@ export interface Viewport {
   zoom: number;
 }
 
-export type MapMarkerKind = 'anime' | 'spot' | 'city88';
+export type MapMarkerKind = 'anime' | 'spot' | 'city88' | 'stamp' | 'shop' | 'festival' | 'area';
+
+export type MapMarkerPrecision = 'exact' | 'area';
 
 export type MapMarkerMode = 'bubble' | 'dot';
 
@@ -44,6 +46,13 @@ export interface MapMarker {
   /** Ring / accent colour (hex). */
   color: string;
   visited?: boolean;
+  /** Exact Place pin vs administrative label anchor. */
+  precision?: MapMarkerPrecision;
+  /** Canonical navigation identities for locality overlays. */
+  placeId?: string;
+  roleId?: string;
+  eventId?: string;
+  areaId?: string;
   // --- anime / city88 ---
   /** Source Bangumi subject id. */
   bangumiId?: number;

@@ -4,7 +4,7 @@
 // stay legible.
 
 import { memo, useEffect, useMemo } from 'react';
-import { View, Text, Pressable, Platform, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
   interpolateColor,
@@ -15,7 +15,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
+import { FontFamily, Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { Springs } from '../../libs/animations/presets';
 import { readableTextOn } from '../themed';
@@ -36,6 +36,8 @@ interface ModeSelectorProps<T extends string = string> {
   horizontalMargin?: number;
   /** Indicator fill colour. Defaults to brand primary. */
   accentColor?: string;
+  /** Tighter labels and no active arrow for four-segment controls on compact screens. */
+  compact?: boolean;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -52,6 +54,7 @@ function ModeSelectorComponent<T extends string = string>({
   onChange,
   horizontalMargin = 16,
   accentColor,
+  compact = false,
 }: ModeSelectorProps<T>) {
   const { theme, effectiveMode } = useTheme();
   const resolvedAccent = accentColor ?? theme.accent;
@@ -81,9 +84,11 @@ function ModeSelectorComponent<T extends string = string>({
   }));
 
   const handlePressIn = () => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated SharedValues are intentionally mutable.
     pressScale.value = withSpring(0.97, Springs.press);
   };
   const handlePressOut = () => {
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated SharedValues are intentionally mutable.
     pressScale.value = withSpring(1, PRESS_OUT_SPRING);
   };
 
@@ -115,6 +120,7 @@ function ModeSelectorComponent<T extends string = string>({
             index={index}
             translateX={translateX}
             segmentWidth={segmentWidth}
+            compact={compact}
             onPress={() => onChange(option.value)}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
@@ -134,6 +140,7 @@ interface SegmentProps {
   index: number;
   translateX: SharedValue<number>;
   segmentWidth: number;
+  compact: boolean;
   onPress: () => void;
   onPressIn: () => void;
   onPressOut: () => void;
@@ -148,6 +155,7 @@ function Segment({
   index,
   translateX,
   segmentWidth,
+  compact,
   onPress,
   onPressIn,
   onPressOut,
@@ -192,12 +200,12 @@ function Segment({
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      style={styles.segment}
+      style={[styles.segment, compact ? styles.compactSegment : undefined]}
       accessibilityRole="button"
       accessibilityState={{ selected: isActive }}
-      accessibilityLabel={`${option.label} mode`}>
+      accessibilityLabel={option.label}>
       {option.icon ? (
-        <View style={styles.iconWrap}>
+        <View style={[styles.iconWrap, compact ? styles.compactIconWrap : undefined]}>
           <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, inactiveIconWrap]}>
             <Ionicons name={option.icon} size={16} color={inactiveIconColor} />
           </Animated.View>
@@ -206,12 +214,16 @@ function Segment({
           </Animated.View>
         </View>
       ) : null}
-      <Animated.Text style={[styles.label, labelStyle]} allowFontScaling={false}>
+      <Animated.Text
+        style={[styles.label, compact ? styles.compactLabel : undefined, labelStyle]}
+        allowFontScaling={false}>
         {option.label}
       </Animated.Text>
-      <Animated.View style={[styles.arrow, arrowStyle]} pointerEvents="none">
-        <Ionicons name="arrow-forward" size={13} color={activeFg} />
-      </Animated.View>
+      {!compact ? (
+        <Animated.View style={[styles.arrow, arrowStyle]} pointerEvents="none">
+          <Ionicons name="arrow-forward" size={13} color={activeFg} />
+        </Animated.View>
+      ) : null}
     </AnimatedPressable>
   );
 }
@@ -256,21 +268,31 @@ const makeStyles = (theme: ThemePalette) =>
       gap: 6,
       paddingHorizontal: 8,
     },
+    compactSegment: {
+      gap: Spacing.xxs,
+      paddingHorizontal: Spacing.xxs,
+    },
     iconWrap: {
       width: 18,
       height: 18,
       alignItems: 'center',
       justifyContent: 'center',
     },
+    compactIconWrap: { width: 16 },
     iconCenter: {
       alignItems: 'center',
       justifyContent: 'center',
     },
     label: {
-      fontSize: 14,
+      ...Typography.titleSmall,
       fontWeight: '700',
       fontFamily: FontFamily.rounded,
       letterSpacing: 0.2,
+    },
+    compactLabel: {
+      ...Typography.caption,
+      fontWeight: '700',
+      fontFamily: FontFamily.rounded,
     },
     arrow: {
       marginLeft: 2,

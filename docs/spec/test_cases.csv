@@ -190,11 +190,18 @@ PILG-044,Pilgrimage,deterministic,P0,Viewing hint resolution precedence,Exact ba
 PILG-045,Pilgrimage,deterministic,P0,Shop queries,Shops filter by bangumiId and geo queries sort by distance within the requested radius,mapping,active
 PILG-046,Pilgrimage,deterministic,P0,Event reminder trigger computation,Reminders fire 09:00 local the day before start with past-slot fallback and started events are unschedulable,timing,active
 PILG-047,Pilgrimage,deterministic,P0,Reminder preference gating,pilgrimageEventReminders validates through preference merging and a disabled preference blocks scheduling,boundary,active
-PILG-048,Pilgrimage,deterministic,P0,Pilgrimage event notification routing,pilgrimage_event notification taps route to the pilgrimage detail with the event parameter and missing anime id routes nowhere,mapping,active
+PILG-048,Pilgrimage,deterministic,P0,Pilgrimage event notification routing,pilgrimage_event notification taps open first-class event detail when eventId exists and otherwise fall back to anime detail,mapping,active
 PILG-049,Pilgrimage,deterministic,P0,Local intel runtime hydration,Runtime hydration swaps data with version bump and subscriber notify while low-coverage payloads are rejected,fallback,active
 PILG-050,Pilgrimage,deterministic,P0,Local intel localization,LocalizedText resolves by language priority with zh-Hans to zh-Hant conversion and TranslationSource tagging,mapping,active
 PILG-051,Pilgrimage,deterministic,P0,Hub rail event ordering,Hub rail orders active then dated upcoming then unannounced-in-horizon events deduplicated by event id,mapping,active
-PILG-052,Pilgrimage,deterministic,P0,Event date block derivation,deriveEventDateBlock returns the right top main and emphasis for active upcoming ongoing and unannounced states across languages,mapping,active
+PILG-052,Pilgrimage,deterministic,P0,Event date block derivation,deriveEventDateBlock returns the right top main and emphasis for active upcoming ongoing ended and unannounced states across languages,mapping,active
+PILG-053,Pilgrimage,deterministic,P0,Canonical locality conservation,Canonical migration preserves 11 original local-intel records 7 rallies 201 stop memberships 124 coordinate-free Anime Tourism 88 destinations and 17 news sources,mapping,active
+PILG-054,Pilgrimage,deterministic,P0,Canonical locality identity and validation,Gamers Numazu resolves to one reviewed Place with four roles and merged provenance while invalid role anime links or refresh snapshots never replace valid data,boundary,active
+PILG-055,Pilgrimage,deterministic,P0,Anitabi scene projection,Scene projection delegates to the existing detailed-point and grouping pipeline and remains an overlay outside the bundled snapshot,mapping,active
+PILG-056,Pilgrimage,deterministic,P0,Canonical event detail wiring,Event detail joins campaign stops and festival venues to canonical Places map targets provenance and the first-class event route,mapping,active
+PILG-057,Pilgrimage,deterministic,P0,Stamp-stop progress persistence,Stamp collection persists by namespaced canonical role id without colliding with scene point state,boundary,active
+PILG-058,Pilgrimage,deterministic,P0,Typed locality map markers,Stamp shop and festival roles render as distinct exact pins while Anime Tourism 88 rows remain labelled non-visitable areas,mapping,active
+PILG-059,Pilgrimage,deterministic,P0,Canonical event calendar mapping,Active and upcoming real occurrence windows expand to requested-month day keys while ongoing unannounced and ended events never receive a date,mapping,active
 NEWS-001,News,deterministic,P0,RSS2 feed parse,RSS 2.0 items parse guid link title pubDate and description with CDATA and HTML entities decoded,mapping,active
 NEWS-002,News,deterministic,P0,Atom feed parse,Atom entries parse id title updated and the alternate link,mapping,active
 NEWS-003,News,deterministic,P0,RDF feed parse,RSS 1.0 RDF items parse title link description and dc date,mapping,active

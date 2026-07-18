@@ -21,7 +21,7 @@
 // Route params:
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Dimensions,
   Linking,
@@ -52,12 +52,11 @@ import { LocationPermissionSheet } from '../../../components/pilgrimage/Location
 import {
   ANIME_TOURISM_88_REGIONS,
   get88EntriesWithCoords,
+  getAll88Entries,
   type AnimeTourism88Region,
-  type AnimeTourism88EntryWithCoords,
 } from '../../../libs/services/pilgrimage/anime88-repository';
 import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import { OFFICIAL_88_GOLD } from '../../../libs/services/pilgrimage/region-color';
 import {
   MapSurface,
   type BBox,
@@ -66,6 +65,8 @@ import {
   type Viewport,
 } from '../../../components/pilgrimage/map';
 import { MapOfflineOverlay } from '../../../components/pilgrimage/MapOfflineOverlay';
+import { LocalityMapLegend } from '../../../components/pilgrimage/map/LocalityMapLegend';
+import { localityMarkerPalette } from '../../../components/pilgrimage/common/LocalityAesthetic';
 import { CLUSTER_DISABLE_AT } from '../../../libs/services/pilgrimage/map-engine/cluster-style';
 import {
   loadMapStyleOverrideSync,
@@ -76,7 +77,10 @@ import { resolveMapModeWithClock } from '../../../libs/services/pilgrimage/map-t
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { normalizeTitleKey } from '../../../libs/services/pilgrimage/bangumi-title-match';
-import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import {
+  buildPilgrimageDetailRoute,
+  buildPilgrimageEventDetailRoute,
+} from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   getPilgrimageHubSnapshot,
   updatePilgrimageHubSnapshot,
@@ -98,13 +102,18 @@ import {
 import { RoundHeaderButton } from '../../../components/pilgrimage/detail/RoundHeaderButton';
 import { FilterPill } from '../../../components/pilgrimage/detail/FilterPill';
 import { buildMapsURL } from '../../../components/pilgrimage/detail';
-import { useT, type TranslationKey } from '../../../libs/i18n';
+import { useI18n, useT, type TranslationKey } from '../../../libs/i18n';
 import { getSpotsNear } from '../../../libs/services/pilgrimage/spot-index-service';
 import { buildNearbySpotsFromIndex } from '../../../libs/services/pilgrimage/nearby-spots';
 import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
 import { MAP_LOCATE_RADIUS_KM } from '../../../libs/services/pilgrimage/map-nearby';
 import type { NearbySpot } from '../../../libs/services/pilgrimage/nearby-spots';
 import { fabEnter, fabExit, overlayEnter } from '../../../libs/animations/presets';
+import {
+  buildAnime88AreaMarkers,
+  buildCanonicalLocalityMarkers,
+} from '../../../libs/services/pilgrimage/locality/map-markers';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
 // Values point into the shared `pilgrimage.regions.*` catalog so this rail,
@@ -158,26 +167,12 @@ const JAPAN_BOUNDS: BBox = {
   east: 146.0,
 };
 
-function build88Markers(entries: readonly AnimeTourism88EntryWithCoords[]): MapMarker[] {
-  const out: MapMarker[] = [];
-  for (const e of entries) {
-    const bangumi = e.externalIds.bangumi;
-    if (typeof bangumi !== 'number') continue;
-    out.push({
-      id: `88:${e.id}`,
-      kind: 'city88',
-      bangumiId: bangumi,
-      lat: e.lat,
-      lng: e.lng,
-      image: '',
-      title: e.titleEn || e.titleJa,
-      city: `${e.prefecture ?? ''}${e.city}`,
-      pointsLength: 0,
-      color: OFFICIAL_88_GOLD,
-      eightyEightId: e.id,
-    });
-  }
-  return out;
+function subscribeLocality(listener: () => void): () => void {
+  return localityRepository.subscribe(listener);
+}
+
+function getLocalitySnapshot() {
+  return localityRepository.getSnapshot();
 }
 
 function isValidGeo(geo: readonly [number, number] | null | undefined): boolean {
@@ -196,6 +191,7 @@ export default function PilgrimageMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
+  const { language } = useI18n();
   const params = useLocalSearchParams();
   const initialMode = useMemo(() => resolvePilgrimageMapInitialMode(params.mode), [params.mode]);
   const focusBangumiIdParam = getNumberParam(params, 'focus');
@@ -362,18 +358,26 @@ export default function PilgrimageMapScreen() {
   );
 
   // ─── Derived: 88-selection lookup ──────────────────────────────────────
-  const all88WithCoords = useMemo(() => get88EntriesWithCoords(), []);
+  const all88Entries = useMemo(() => getAll88Entries(), []);
+  // City-only 88 rows are administrative destinations, not visitable pins.
+  // This stays empty until an area explicitly promotes a verified exact Place.
+  const area88Entries = useMemo(() => get88EntriesWithCoords(), []);
+  const localitySnapshot = useSyncExternalStore(
+    subscribeLocality,
+    getLocalitySnapshot,
+    getLocalitySnapshot
+  );
 
   // Map from 88-entry bangumi id → eightyEightId so we can flag 88-selected
   // anime in the hub list and on the focused card.
   const eightyEightIdByBangumiId = useMemo(() => {
     const map = new Map<number, number>();
-    for (const e of all88WithCoords) {
+    for (const e of all88Entries) {
       const bid = e.externalIds.bangumi;
       if (typeof bid === 'number') map.set(bid, e.id);
     }
     return map;
-  }, [all88WithCoords]);
+  }, [all88Entries]);
 
   // Build hub entries: collection / 88 / distance / visited counts.
   // The list is sorted by:
@@ -484,13 +488,8 @@ export default function PilgrimageMapScreen() {
   }, [filteredEntries, setFocusedAnimeId]);
 
   // ─── Marker building ───────────────────────────────────────────────────
-  // Hub map shows centroids for filteredEntries (so the user's filter and
-  // search apply to what's visible on the map too). The Official 88 chip on
-  // the *top* region row swaps the underlying marker set to the gold 88 city
-  // pins — that filter is on top of the hub filter (it's about which entries
-  // we visualise on the map, while the hub filter is about which animes are
-  // in the sheet list).
-  const official88Mode = hubFilter === 'official88';
+  // Hub map keeps all locality layers additive: scene centroids, exact typed
+  // PlaceRole pins, and honest administrative AREA labels for Anime 88.
 
   const baseAnitabiMarkers = useMemo<MapMarker[]>(() => {
     const out: MapMarker[] = [];
@@ -516,14 +515,25 @@ export default function PilgrimageMapScreen() {
     return out;
   }, [filteredEntries, theme.accent]);
 
-  const markers = useMemo<MapMarker[]>(() => {
-    if (!official88Mode) return baseAnitabiMarkers;
-    const filtered =
+  const localityRoleMarkers = useMemo(() => {
+    void localitySnapshot;
+    return buildCanonicalLocalityMarkers(localityRepository, localityMarkerPalette(theme), {
+      language,
+    });
+  }, [language, localitySnapshot, theme]);
+
+  const areaMarkers = useMemo(() => {
+    const entries =
       selectedRegions.size > 0
-        ? all88WithCoords.filter((e) => selectedRegions.has(e.region))
-        : all88WithCoords;
-    return build88Markers(filtered);
-  }, [official88Mode, selectedRegions, all88WithCoords, baseAnitabiMarkers]);
+        ? area88Entries.filter((entry) => selectedRegions.has(entry.region))
+        : area88Entries;
+    return buildAnime88AreaMarkers(entries, theme.status.info);
+  }, [area88Entries, selectedRegions, theme.status.info]);
+
+  const markers = useMemo<MapMarker[]>(
+    () => [...baseAnitabiMarkers, ...localityRoleMarkers, ...areaMarkers],
+    [areaMarkers, baseAnitabiMarkers, localityRoleMarkers]
+  );
 
   // Camera-fly request derived from the selected regions + flyTick. Whole-Japan
   // when none are selected; the union of their bounds otherwise. flyTick
@@ -640,7 +650,7 @@ export default function PilgrimageMapScreen() {
     [router]
   );
 
-  const handleMarkerPress = useCallback(
+  const handleAnimeMarkerPress = useCallback(
     (bangumiId: number) => {
       // Tapping a marker focuses the card AND drills in. This is the fastest
       // path to detail for users who already know which marker they want.
@@ -649,6 +659,21 @@ export default function PilgrimageMapScreen() {
       navigateToDetail(bangumiId, anime);
     },
     [knownAnimes, navigateToDetail, setFocusedAnimeId]
+  );
+
+  const handleMapMarkerPress = useCallback(
+    (marker: MapMarker) => {
+      if (marker.eventId) {
+        router.push(buildPilgrimageEventDetailRoute(marker.eventId));
+        return;
+      }
+      if (marker.kind === 'shop' && marker.precision === 'exact') {
+        Linking.openURL(buildMapsURL(marker.lat, marker.lng, marker.title)).catch(() => undefined);
+        return;
+      }
+      if (marker.bangumiId != null) handleAnimeMarkerPress(marker.bangumiId);
+    },
+    [handleAnimeMarkerPress, router]
   );
 
   const handleSheetAnimePress = useCallback(
@@ -668,16 +693,20 @@ export default function PilgrimageMapScreen() {
   const closeQuickActions = useCallback(() => setQuickActionMarker(null), []);
   const handleQuickNavigate = useCallback(() => {
     const m = quickActionMarker;
-    if (!m) return;
+    if (!m || m.precision === 'area') return;
     Linking.openURL(buildMapsURL(m.lat, m.lng, m.title)).catch(() => undefined);
     setQuickActionMarker(null);
   }, [quickActionMarker]);
   const handleQuickOpen = useCallback(() => {
     const m = quickActionMarker;
-    if (!m || m.bangumiId == null) return;
+    if (!m || (m.bangumiId == null && !m.eventId)) return;
     setQuickActionMarker(null);
-    handleMarkerPress(m.bangumiId);
-  }, [quickActionMarker, handleMarkerPress]);
+    if (m.eventId) {
+      router.push(buildPilgrimageEventDetailRoute(m.eventId));
+    } else if (m.bangumiId != null) {
+      handleAnimeMarkerPress(m.bangumiId);
+    }
+  }, [handleAnimeMarkerPress, quickActionMarker, router]);
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -899,9 +928,7 @@ export default function PilgrimageMapScreen() {
             center={initialView.center}
             zoom={initialView.zoom}
             clusterDisableAtZoom={CLUSTER_DISABLE_AT.hub}
-            onMarkerPress={(m) => {
-              if (m.bangumiId != null) handleMarkerPress(m.bangumiId);
-            }}
+            onMarkerPress={handleMapMarkerPress}
             onMarkerLongPress={handleMarkerLongPress}
             onClusterPress={handleClusterPress}
             onBoundsChange={handleMapBoundsChange}
@@ -923,6 +950,7 @@ export default function PilgrimageMapScreen() {
           </View>
         ) : (
           <>
+            <LocalityMapLegend style={styles.localityLegend} />
             {/* Layer 2 — floating top overlay (back / album + search + region chips). */}
             <Animated.View
               entering={overlayEnter()}
@@ -1063,16 +1091,21 @@ export default function PilgrimageMapScreen() {
                     <ThemedText variant="titleSmall" weight="800" numberOfLines={1}>
                       {quickActionMarker?.title}
                     </ThemedText>
-                    <Pressable
-                      onPress={handleQuickNavigate}
-                      accessibilityRole="button"
-                      style={({ pressed }) => [styles.quickActionRow, pressed && { opacity: 0.7 }]}>
-                      <Ionicons name="navigate-outline" size={18} color={theme.text.primary} />
-                      <ThemedText variant="bodyMedium">
-                        {t('pilgrimage.map.quickAction.navigate')}
-                      </ThemedText>
-                    </Pressable>
-                    {quickActionMarker?.bangumiId != null ? (
+                    {quickActionMarker?.precision !== 'area' ? (
+                      <Pressable
+                        onPress={handleQuickNavigate}
+                        accessibilityRole="button"
+                        style={({ pressed }) => [
+                          styles.quickActionRow,
+                          pressed && { opacity: 0.7 },
+                        ]}>
+                        <Ionicons name="navigate-outline" size={18} color={theme.text.primary} />
+                        <ThemedText variant="bodyMedium">
+                          {t('pilgrimage.map.quickAction.navigate')}
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
+                    {quickActionMarker?.bangumiId != null || quickActionMarker?.eventId ? (
                       <Pressable
                         onPress={handleQuickOpen}
                         accessibilityRole="button"
@@ -1299,6 +1332,12 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       paddingTop: topInset + Spacing.xs,
       paddingHorizontal: Spacing.screenPadding,
       gap: Spacing.sm,
+    },
+    localityLegend: {
+      position: 'absolute',
+      top: topInset + 176,
+      left: Spacing.screenPadding,
+      right: Spacing.screenPadding,
     },
     headerActions: {
       flexDirection: 'row',

@@ -18,7 +18,7 @@ currently has none).
 
 1. **Unified typed Spot model** — one geo entity for all:
    `Spot { id, type: 'scene'|'stamp'|'shop'|'festival', geo, animeIds[], name,
-   source(provenance), ...typeSpecific }`. Map / list / calendar / collection
+source(provenance), ...typeSpecific }`. Map / list / calendar / collection
    read this one source. Scene spots keep coming from the anitabi index but are
    projected into this shape; stamp/shop/festival come from the curated event
    data. This is the Phase-D backend-ready architecture (normalized, stable ids,
@@ -71,6 +71,31 @@ currently has none).
   (stamps + shops + festivals + anime88 exact coords); Codex integrates.
 - **P5 Anime-aesthetic polish pass** across the hub (ui-polish skill).
 
+### Build progress (uncommitted chain)
+
+- **P1a complete:** canonical Place / PlaceRole / Event schema and repository
+  interfaces.
+- **P1b implemented:** deterministic migration + validation + bundled loader +
+  swappable repository + Anitabi scene projection + compatibility-reader
+  cutover. Conservation result: 203 Places / 209 bundled roles / 9 events / 124
+  area destinations / 1 guide / 17 news sources; all 201 stamp memberships
+  survive. `gamers-numazu` is one Place with four roles and four source credits.
+- **Next:** P2. Per user direction, do not commit or run the batch code review
+  between phases; review once after P5.
+
+## Review gates (must verify before batch commit — user-reported)
+
+- **Stamp landmarks MUST render distinctly on the map** (user observed they
+  don't). Wiring exists end-to-end: `migration.ts` (stampSpots→Place geo +
+  stamp_stop role) → `locality/map-markers.ts` `buildCanonicalLocalityMarkers`
+  (kind: stamp/shop/festival) → `map.tsx` merges into `markers` → `MapSurface` →
+  `NativeMapMarker` distinct visuals. Verify on device that: (a) migrated stamp
+  places actually carry geo (not filtered by `if(!place.geo)`), (b) the stamp
+  markers are visually DISTINCT from scene pins, (c) they appear on BOTH the hub
+  map and the anime-detail map. If P5's marker polish doesn't deliver this,
+  Codex gets a targeted follow-up (do NOT run it concurrently with P5 — same
+  files).
+
 ## Constraints
 
 - CLAUDE.md rules 1–11 binding (esp. rule 8 real data + provenance, rule 10
@@ -81,6 +106,48 @@ currently has none).
 - Sequence to avoid working-tree conflicts (data-model, list, calendar, hub all
   overlap) — one phase lands + reviewed before the next.
 
+## Gap-review findings → phase mapping (Codex review, 2026-07-18)
+
+**Reframing insight (Critical):** the 201 committed stamp stops are DEAD DATA —
+no production reader (`stampSpots` read nowhere; event taps open generic anime
+detail `news/index.tsx:133`; `SpotMapView` only accepts `AnitabiPoint[]`). And
+the same place duplicates across roles (Gamers Numazu = shop `data.json:134` AND
+stamp stop `:300`, divergent coords). So the model AND a surface are both needed.
+
+Mapping:
+
+- **P1 (canonical model + loader)** ← findings 1, 3, 9. A canonical **Place**
+  identity (stable id, geo, provenance) that accumulates typed **roles**
+  (scene / stamp-stop / shop / festival-venue) and anime links, above the
+  Anitabi + local-intel ingestion. Events/campaigns become first-class entities
+  with stable ids + occurrence date windows; `schemaVersion`; swappable loader.
+  Dedupe co-located places (Gamers Numazu).
+- **P2 (event detail + list + map)** ← findings 2, 5, 6, 8. First-class
+  **event/campaign detail route** (stop list + map layer + per-stop "open in
+  Google Maps" + collected progress). Retire the horizontal rail → occurrence/
+  range-queried vertical list with date/venue/anime/stop-count/status. Map
+  markers type-distinct (scene vs stamp vs shop vs festival). **Anime88: city-
+  only records render as labelled AREAS/city destinations, NOT precise pins**
+  (rule 8 — centroids must not read as official visitable points); promote to a
+  pin only with a verified exact coord.
+- **P2 (attribution)** ← finding 7. Show source identity + link + verifiedAt +
+  license beside every event/stop/program/article (extend `IntelProvenanceLine`
+  / `AnitabiAttributionFooter` beyond Anitabi-only).
+- **P3 (calendar)** ← finding 4. Month calendar sharing date/anime/category/
+  selection state with the list + map (one event surface, three modes).
+- **P4 (data)** ← findings 8, 11. More JP events; per-stop anime ties; resolve
+  shops by explicit anime↔place relation first, proximity only as labelled
+  secondary (finding 11 — proximity-only can show a wrong-anime shop).
+- **Cross-cutting** ← findings 10, 12. News↔anime/event/place relations (tag
+  cross-link); fix rule-10 (news stream must start only on the News tab, not
+  before tab selection) + rule-11 (hardcoded 常設/Always/未定/TBA in
+  `event-date-block.ts:10`; zhHant-ignoring source names) — centralize
+  locale-aware formatting.
+
+Screen rename: the hub is still `NewsStreamScreen` with News-title/source-mgmt
+(finding 9) — becomes the 聖地資訊 locality hub (ties to the earlier 聖地資訊
+title rename).
+
 ## Pending inputs
-- Codex gap-review (running) — fold its ranked findings into P1–P5.
-- Claude data research for P4 (more JP events + anime88 coords).
+
+- Claude data research for P4 (more JP events + anime88 exact coords).

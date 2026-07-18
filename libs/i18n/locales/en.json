@@ -61,26 +61,52 @@
     "helpTranslateBody": "Aniseekr is open source — translations are community contributions. See CONTRIBUTING.md for how to add or improve a language."
   },
   "news": {
-    "title": "Anime news",
-    "subtitle": "Follow anime, event, and pilgrimage sources",
-    "hubEntry": "Anime news feed",
-    "hubEntryA11y": "Open anime news feed",
+    "title": "Pilgrimage intel",
+    "subtitle": "Events, places, and verified local sources",
+    "hubEntry": "Local events & news",
+    "hubEntryA11y": "Open pilgrimage events and news",
     "manageSources": "Manage sources",
+    "openMap": "Open pilgrimage map",
     "openArticle": "Open article",
     "tabs": {
       "event": "Events",
       "tag": "Tags",
+      "calendar": "Calendar",
       "news": "News"
     },
     "events": {
       "emptyTitle": "No upcoming events",
-      "emptyBody": "Bundled pilgrimage events will appear here when they are active or coming soon."
+      "emptyBody": "Verified pilgrimage events will appear here when they are active, permanent, or coming soon.",
+      "stopCount": "{count} stops",
+      "locationMore": "{location} +{count} more"
     },
     "tags": {
       "allWorks": "All works",
       "scopeNote": "Work filters use verified event links. News articles only appear here when source data carries a real work link.",
       "emptyTitle": "No linked events",
       "emptyBody": "No bundled events are linked to this work yet. News articles without a verified work tag are not attached here."
+    },
+    "calendar": {
+      "title": "Event calendar",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "markerLegend": "Anime cover stamps circle verified event days.",
+      "selectedDate": "Selected day",
+      "eventCount": "{count} events",
+      "emptyDayTitle": "No dated events",
+      "emptyDayBody": "No active or upcoming event has a confirmed occurrence on this day.",
+      "unplacedNote": "{count} permanent or date-TBA events stay labelled in Events and are not assigned a calendar day.",
+      "dayA11y": "{date}, {count} events",
+      "weekdays": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      }
     },
     "eventCategory": {
       "stampRally": "Stamp",
@@ -1629,6 +1655,11 @@
     "serverUrl": "Server URL"
   },
   "pilgrimageUi": {
+    "attribution": {
+      "license": "License: {license}",
+      "openSourceA11y": "Open source: {source}",
+      "verifiedAt": "Verified {date}"
+    },
     "accuracy": "Accuracy",
     "accuracyAndSafetyChecks": "Accuracy and safety checks",
     "addWhereWhyOrWhat": "Add where, why, or what to remember about this shot",
@@ -1735,6 +1766,7 @@
       "computedBadge": "Real sun times for this spot",
       "eventActive": "On now",
       "eventEnded": "Ended",
+      "eventOngoing": "Permanent",
       "eventUpcoming": "In {days}d",
       "events": "Local events",
       "nearbyShops": "Anime-tied places nearby",
@@ -1748,6 +1780,35 @@
       "tomorrow": "Tomorrow",
       "upcomingEvents": "Events & festivals",
       "verifiedAt": "Verified {date}"
+    },
+    "eventDetail": {
+      "animeTie": "Anime connection",
+      "collect": "Collect stamp",
+      "collected": "Collected",
+      "dateRange": "{start} – {end}",
+      "dateTba": "TBA",
+      "locationUnavailable": "Area not specified",
+      "map": "Stop map",
+      "noStops": "No verified physical stops are attached to this event.",
+      "notFoundBody": "This event is not available in the current locality repository.",
+      "notFoundTitle": "Event unavailable",
+      "openGoogleMaps": "Open in Google Maps",
+      "openGoogleMapsA11y": "Open {stop} in Google Maps",
+      "permanent": "Permanent",
+      "progress": "Campaign progress",
+      "progressValue": "{collected} of {total} collected",
+      "schedule": "Schedule",
+      "screenTitle": "Event & campaign",
+      "since": "Permanent · since {date}",
+      "stops": "Stop list",
+      "uncollect": "Remove stamp"
+    },
+    "mapLegend": {
+      "area": "Area · not exact",
+      "festival": "Festival",
+      "scene": "Scene",
+      "shop": "Shop",
+      "stamp": "Stamp stop"
     },
     "includeComparisonScore": "Include comparison score",
     "includeDate": "Include date",

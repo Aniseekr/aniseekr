@@ -15,11 +15,15 @@
 import { kvGet, kvSet } from '../storage/app-storage';
 import { VISITED_SPOTS_STORAGE_KEY, VISITED_SPOTS_STORAGE_KEY_V2 } from '../storage/keys';
 import { Logger } from '../../utils/logger';
+import type { RoleId } from './locality/types';
 
 /** Boolean view — unchanged public type consumed across the pilgrimage UI. */
 export type VisitedMap = Record<string, true>;
 /** spotId -> epoch ms of check-in. `0` marks a spot migrated from v1 (time unknown). */
 export type VisitedAtMap = Record<string, number>;
+export type StampStopVisitedMap = Record<string, true>;
+
+const STAMP_STOP_VISITED_PREFIX = 'locality:stamp-stop-role:';
 
 function sanitizeAt(parsed: unknown): VisitedAtMap {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
@@ -136,4 +140,32 @@ export async function checkOutSpot(spotId: string): Promise<void> {
   } catch (err) {
     Logger.warn('[VisitedPrefs] checkOut failed', err);
   }
+}
+
+function stampStopStorageKey(roleId: RoleId): string {
+  return `${STAMP_STOP_VISITED_PREFIX}${roleId}`;
+}
+
+/** Synchronous role-id view used to seed campaign progress on frame one. */
+export function loadVisitedStampStopsSync(): StampStopVisitedMap {
+  const at = loadVisitedAtSync();
+  const out: StampStopVisitedMap = {};
+  for (const key of Object.keys(at)) {
+    if (!key.startsWith(STAMP_STOP_VISITED_PREFIX)) continue;
+    const roleId = key.slice(STAMP_STOP_VISITED_PREFIX.length);
+    if (roleId) out[roleId] = true;
+  }
+  return out;
+}
+
+export function stampStopVisitedAtSync(roleId: RoleId): number | null {
+  return visitedAtSync(stampStopStorageKey(roleId));
+}
+
+export async function checkInStampStop(roleId: RoleId, at: number = Date.now()): Promise<void> {
+  await checkInSpot(stampStopStorageKey(roleId), at);
+}
+
+export async function checkOutStampStop(roleId: RoleId): Promise<void> {
+  await checkOutSpot(stampStopStorageKey(roleId));
 }

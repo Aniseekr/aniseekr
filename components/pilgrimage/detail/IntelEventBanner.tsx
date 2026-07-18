@@ -14,14 +14,18 @@ import { resolveLocalIntelText } from '../../../libs/services/pilgrimage/local-i
 import type { LocalIntelEvent } from '../../../libs/services/pilgrimage/local-intel/types';
 import { formatMonthLabel } from './intel-format';
 import { IntelProvenanceLine } from './IntelProvenanceLine';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
+import type { EventId } from '../../../libs/services/pilgrimage/locality/types';
 
 /** Date-state chip. Reused by the SpotSheet banner, detail sheet, and Plan rows. */
 export function EventStateChip({
   state,
   theme,
+  ongoing = false,
 }: {
   state: EventDateState;
   theme: ThemePalette;
+  ongoing?: boolean;
 }) {
   const t = useT();
   const { language } = useI18n();
@@ -30,7 +34,7 @@ export function EventStateChip({
   let color: string;
   switch (state.state) {
     case 'active':
-      label = t('pilgrimageUi.intel.eventActive');
+      label = ongoing ? t('pilgrimageUi.intel.eventOngoing') : t('pilgrimageUi.intel.eventActive');
       color = theme.status.success;
       break;
     case 'upcoming':
@@ -79,11 +83,12 @@ export function IntelEventBanner({
   onOpenEvent: (event: LocalIntelEvent) => void;
 }) {
   const dates = occurrenceLabel(state);
+  const canonicalEvent = localityRepository.getEventById(event.id as EventId);
 
   return (
     <Pressable
       onPress={() => onOpenEvent(event)}
-      accessibilityRole="link"
+      accessibilityRole="button"
       accessibilityLabel={resolveLocalIntelText(event.name).value}
       style={({ pressed }) => [
         styles.banner,
@@ -91,14 +96,14 @@ export function IntelEventBanner({
         pressed && { opacity: 0.82 },
       ]}>
       <View style={styles.topRow}>
-        <EventStateChip state={state} theme={theme} />
+        <EventStateChip state={state} theme={theme} ongoing={event.schedule.kind === 'ongoing'} />
         {dates ? (
           <ThemedText variant="captionSmall" tone="secondary">
             {dates}
           </ThemedText>
         ) : null}
         <Ionicons
-          name="open-outline"
+          name="chevron-forward"
           size={13}
           color={theme.text.tertiary}
           style={styles.openIcon}
@@ -110,7 +115,12 @@ export function IntelEventBanner({
       <ThemedText variant="captionSmall" tone="secondary" numberOfLines={2}>
         {resolveLocalIntelText(event.description).value}
       </ThemedText>
-      <IntelProvenanceLine verifiedAt={event.verifiedAt} theme={theme} showLinkHint={false} />
+      <IntelProvenanceLine
+        verifiedAt={event.verifiedAt}
+        theme={theme}
+        showLinkHint={false}
+        provenance={canonicalEvent?.provenance}
+      />
     </Pressable>
   );
 }

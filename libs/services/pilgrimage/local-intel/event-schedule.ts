@@ -5,7 +5,7 @@
 // officially confirmed resolves to `unannounced` — a date is never invented.
 
 import { wallDateToInstant } from './timezone';
-import type { EventOccurrence, LocalIntelEvent } from './types';
+import type { EventOccurrence, EventSchedule } from './types';
 import { DEFAULT_SPOT_TIMEZONE } from './types';
 
 export type EventDateState =
@@ -31,13 +31,19 @@ function resolveOccurrence(occurrence: EventOccurrence, now: Date, tz: string): 
   const end = wallDateToInstant(occurrence.endsAt, tz, true);
   if (!start || !end) return { state: 'ended' };
   if (now.getTime() < start.getTime()) {
-    return { state: 'upcoming', startsInDays: Math.ceil((start.getTime() - now.getTime()) / DAY_MS) };
+    return {
+      state: 'upcoming',
+      startsInDays: Math.ceil((start.getTime() - now.getTime()) / DAY_MS),
+    };
   }
   if (now.getTime() <= end.getTime()) return { state: 'active' };
   return { state: 'ended' };
 }
 
-export function resolveEventDateState(event: LocalIntelEvent, now: Date): EventDateState {
+export function resolveEventDateState(
+  event: { schedule: EventSchedule; timezone?: string },
+  now: Date
+): EventDateState {
   const tz = event.timezone ?? DEFAULT_SPOT_TIMEZONE;
   const schedule = event.schedule;
 
