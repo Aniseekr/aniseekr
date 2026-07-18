@@ -8,6 +8,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { listItemEnter } from '../../libs/animations/presets';
 import { ThemedText, readableTextOn } from '../themed';
@@ -33,14 +34,19 @@ interface RailRow extends HubRailEvent {
   bangumiId: number | null;
 }
 
-export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
+interface IntelEventsRailProps {
+  theme: ThemePalette;
+  collectionBangumiIds?: ReadonlySet<number>;
+}
+
+export function IntelEventsRail({ theme, collectionBangumiIds }: IntelEventsRailProps) {
   const t = useT();
   const { language } = useI18n();
   const router = useRouter();
   const version = useSyncExternalStore(
     subscribeLocalIntel,
     getLocalIntelVersion,
-    getLocalIntelVersion,
+    getLocalIntelVersion
   );
   // Captured on mount: the rail's now. Fresh enough for day-granular states.
   const [now] = useState(() => new Date());
@@ -67,10 +73,10 @@ export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
         buildPilgrimageDetailRoute(row.bangumiId, {
           title: row.animeTitle ?? undefined,
           poster: row.cover ?? undefined,
-        }),
+        })
       );
     },
-    [router],
+    [router]
   );
 
   if (rows.length === 0) return null;
@@ -86,41 +92,61 @@ export function IntelEventsRail({ theme }: { theme: ThemePalette }) {
         contentContainerStyle={styles.row}>
         {rows.map((row, index) => {
           const dateBlock = deriveEventDateBlock(row.state, language);
+          const inCollection =
+            row.bangumiId !== null && (collectionBangumiIds?.has(row.bangumiId) ?? false);
           return (
-          <Animated.View key={row.event.id} entering={index < 8 ? listItemEnter(index) : undefined}>
-          <Pressable
-            onPress={() => handlePress(row)}
-            accessibilityRole="button"
-            accessibilityLabel={resolveLocalIntelText(row.event.name).value}
-            style={({ pressed }) => [
-              styles.card,
-              { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
-              pressed && { opacity: 0.84 },
-            ]}>
-            <DateBlock block={dateBlock} theme={theme} />
-            <View style={styles.mediaWrap}>
-              {row.cover ? (
-                <Image
-                  source={anitabiImageSource(row.cover)}
-                  style={styles.cover}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]} />
-              )}
-            </View>
-            <View style={styles.cardBody}>
-              <ThemedText variant="bodySmall" weight="700" numberOfLines={2}>
-                {resolveLocalIntelText(row.event.name).value}
-              </ThemedText>
-              {row.animeTitle ? (
-                <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-                  {row.animeTitle}
-                </ThemedText>
-              ) : null}
-            </View>
-          </Pressable>
-          </Animated.View>
+            <Animated.View
+              key={row.event.id}
+              entering={index < 8 ? listItemEnter(index) : undefined}>
+              <Pressable
+                onPress={() => handlePress(row)}
+                accessibilityRole="button"
+                accessibilityLabel={resolveLocalIntelText(row.event.name).value}
+                style={({ pressed }) => [
+                  styles.card,
+                  { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+                  pressed && { opacity: 0.84 },
+                ]}>
+                <DateBlock block={dateBlock} theme={theme} />
+                <View style={styles.mediaWrap}>
+                  {row.cover ? (
+                    <Image
+                      source={anitabiImageSource(row.cover)}
+                      style={styles.cover}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]} />
+                  )}
+                  {inCollection ? (
+                    <View
+                      style={[
+                        styles.collectedBadge,
+                        {
+                          backgroundColor: theme.status.success,
+                          borderColor: theme.background.primary,
+                        },
+                      ]}>
+                      <Ionicons
+                        name="checkmark"
+                        size={10}
+                        color={readableTextOn(theme.status.success)}
+                      />
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.cardBody}>
+                  <ThemedText variant="bodySmall" weight="700" numberOfLines={2}>
+                    {resolveLocalIntelText(row.event.name).value}
+                  </ThemedText>
+                  {row.animeTitle ? (
+                    <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
+                      {row.animeTitle}
+                    </ThemedText>
+                  ) : null}
+                </View>
+              </Pressable>
+            </Animated.View>
           );
         })}
       </ScrollView>
@@ -175,7 +201,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 246,
-    minHeight: 112,
+    // Definite height (not minHeight): the media column's `height: '100%'`
+    // needs a resolvable parent height, otherwise the remote image's intrinsic
+    // size leaks through and the whole rail explodes vertically.
+    height: 112,
     flexDirection: 'row',
     alignItems: 'stretch',
     borderRadius: Radius.lg,
@@ -196,6 +225,17 @@ const styles = StyleSheet.create({
   cover: {
     width: '100%',
     height: '100%',
+  },
+  collectedBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
   },
   cardBody: {
     flex: 1,

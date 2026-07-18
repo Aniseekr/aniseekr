@@ -502,7 +502,7 @@ export default function PilgrimageHubScreen() {
             component owns its own sync data reads and hides itself when no
             event is active, upcoming, or unannounced-in-horizon.
           */}
-          <IntelEventsRail theme={theme} />
+          <IntelEventsRail theme={theme} collectionBangumiIds={collectionBangumiIds} />
 
           {popularList.length > 0 ? (
             <View style={styles.section}>
