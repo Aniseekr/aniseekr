@@ -67,6 +67,28 @@
     "hubEntryA11y": "Open anime news feed",
     "manageSources": "Manage sources",
     "openArticle": "Open article",
+    "tabs": {
+      "event": "Events",
+      "tag": "Tags",
+      "news": "News"
+    },
+    "events": {
+      "emptyTitle": "No upcoming events",
+      "emptyBody": "Bundled pilgrimage events will appear here when they are active or coming soon."
+    },
+    "tags": {
+      "allWorks": "All works",
+      "scopeNote": "Work filters use verified event links. News articles only appear here when source data carries a real work link.",
+      "emptyTitle": "No linked events",
+      "emptyBody": "No bundled events are linked to this work yet. News articles without a verified work tag are not attached here."
+    },
+    "eventCategory": {
+      "stampRally": "Stamp",
+      "festival": "Festival",
+      "collabCafe": "Cafe",
+      "exhibition": "Exhibition",
+      "other": "Event"
+    },
     "sourcesTitle": "News sources",
     "sourcesSubtitle": "Choose which feeds appear in your stream",
     "recommended": "Recommended",

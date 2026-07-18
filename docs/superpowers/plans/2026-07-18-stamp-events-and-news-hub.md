@@ -89,6 +89,64 @@ optional layer toggle), NOT a wholly separate screen. On the anime detail map,
 stamp points are an additive overlay layer on top of the existing scene spots,
 not a replacement.
 
+## Phase B addendum — anime88 + more rallies (aligned 2026-07-18)
+
+- **anime88**: the app already has `anime-tourism-88.data.json` (124 entries,
+  work + prefecture/city + external ids, NO exact coords) surfaced only via
+  `Tourism88Rail`. Surface these in the consolidated hub too (as an "88 official
+  pilgrimage" category), each linking to the anime detail; navigate-by-city, NO
+  fake pins (rule 8). Claude researches the 88 official stamp-passport exact
+  coordinates in the background and adds pins progressively as verified.
+- **More rallies**: Claude web-researches additional real, documented anime
+  stamp rallies + spots/coords (Codex shell DNS is blocked — see
+  [[codex-implements-claude-reviews]]); Codex integrates the supplied dataset.
+- Data-supply → Codex-integration split; integration sequenced AFTER Phase A.
+
+### anime88 image bug (diagnosed 2026-07-18) — Codex fixes
+Root cause: `Tourism88Rail` loads posters from `bangumiSubjectImageUrl(id)` =
+`https://api.bgm.tv/v0/subjects/{id}/image?type=large`, which is a **302 redirect
+to `lain.bgm.tv`** through the **rate-limited Bangumi API**. Under the rail's
+burst load, some redirects 429/fail → intermittent blank posters ("偶爾不出現"),
+and the raw `expo-image` has no `onError` fallback (silent blank).
+Fix (Codex): (1) add a `posterUrl` field to `anime-tourism-88.data.json` with the
+DIRECT `lain.bgm.tv` CDN url — Claude has resolved all 88 (job tmp
+`anime88-poster-urls.json`, 88/88 ok) — and load that instead of the API redirect;
+(2) add an `onError` fallback (themed placeholder / one retry, never a silent
+blank — rule 8 error state). Apply the same direct-CDN pattern anywhere else that
+feeds `bangumiSubjectImageUrl` into many concurrent images.
+
+## Phase D — Backend-ready data architecture (Codex builds; Claude reviews)
+
+Aligned 2026-07-18. Reorganize the event+stamp+news data into a clean,
+migration-ready architecture so a later move to a backend/`Aniseekr-source`
+release is a source swap, not a rewrite. **anitabi scene-spot index is NOT
+touched** (it has its own pipeline).
+
+Requirements (locked):
+- **Backend-API shape**: normalized entities with **stable ids** and a top-level
+  **`schemaVersion`**. Events, stampRallies, stampSpots, newsSources as distinct
+  entity collections, referenced by id (not deeply nested duplication).
+- **Loader boundary**: a single loader/repository module that today reads the
+  bundled JSON but can later swap to a remote source **without any UI change** —
+  the app imports from the loader, never from the raw JSON.
+- **Provenance preserved** on every entity (sourceUrl/verifiedAt — rule 8).
+- Migrate the current `local-intel.data.json` events/stamps + `news-sources.data.json`
+  into the new shape; keep all existing readers (IntelEventsRail,
+  getHubRailEvents, news stream, the new news hub tabs) working by pointing them
+  at the loader. No behavior change, no data loss (11 originals + 7 rallies +
+  201 stamp spots must all survive).
+- Add a schema/round-trip unit test + keep spec:check green.
+
+Sequencing: do Phase D AFTER Phase A (news tabs) lands and is reviewed — both
+touch the news screen + data readers, so running them together conflicts.
+
+## Phase A addendum — screen title
+
+Rename the news hub's screen/title from "News" to **聖地資訊** (Pilgrimage Info):
+the screen is now Events + Tags + News, not just news. Add/adjust the i18n key
+(en first: e.g. `news.hubTitle` = "Pilgrimage Info"; zh-Hant = "聖地資訊"); update
+the Stack title + any header. Fold into the Phase A review pass.
+
 ## Verify gate (unchanged)
 typecheck + test:unit + spec:check + scoped eslint/prettier on changed files.
 Repo-wide `bun run lint` is broken (887 pre-existing) — do not use it.

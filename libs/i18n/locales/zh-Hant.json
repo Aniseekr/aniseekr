@@ -67,6 +67,28 @@
     "hubEntryA11y": "開啟動畫新聞動態",
     "manageSources": "管理來源",
     "openArticle": "開啟文章",
+    "tabs": {
+      "event": "活動",
+      "tag": "標籤",
+      "news": "新聞"
+    },
+    "events": {
+      "emptyTitle": "目前沒有即將到來的活動",
+      "emptyBody": "本機收錄的聖地巡禮活動正在進行或即將開始時，會顯示在這裡。"
+    },
+    "tags": {
+      "allWorks": "全部作品",
+      "scopeNote": "作品篩選只使用已驗證的活動連結；新聞文章必須真的帶有作品連結才會出現在這裡。",
+      "emptyTitle": "沒有連結的活動",
+      "emptyBody": "目前沒有本機活動連結到這部作品。沒有已驗證作品標籤的新聞文章不會被附加到這裡。"
+    },
+    "eventCategory": {
+      "stampRally": "集章",
+      "festival": "祭典",
+      "collabCafe": "咖啡廳",
+      "exhibition": "展覽",
+      "other": "活動"
+    },
     "sourcesTitle": "新聞來源",
     "sourcesSubtitle": "選擇要出現在動態中的 RSS 來源",
     "recommended": "推薦",
