@@ -10,6 +10,7 @@ import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-n
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraPermission } from 'react-native-vision-camera';
 import { bottomPad } from '../../../../constants/DesignSystem';
@@ -33,6 +34,7 @@ import {
 } from '../../../../libs/services/pilgrimage/scene-analysis';
 import { anitabiImageSource } from '../../../../libs/services/pilgrimage/anitabi-image';
 import { getStringParam } from '../../../../libs/utils/route-params';
+import { listItemEnter } from '../../../../libs/animations/presets';
 
 const WARN_ICONS: Record<WarningItem['icon'], React.ComponentProps<typeof Ionicons>['name']> = {
   sunny: 'sunny',
@@ -139,7 +141,7 @@ export default function PhotoTipsScreen() {
       pathname: '/pilgrimage/compare/[spotId]',
       params: { ...params },
     });
-  }, [router, params, hasPermission, canRequestPermission, requestPermission, requesting]);
+  }, [router, params, hasPermission, canRequestPermission, requestPermission, requesting, t]);
 
   const handleHelp = useCallback(() => {
     hapticsBridge.tap();
@@ -167,12 +169,15 @@ export default function PhotoTipsScreen() {
             <ThemedText
               variant="titleSmall"
               weight="700"
-              style={{ fontSize: 15, textDecorationLine: 'underline' }}>
+              style={{ textDecorationLine: 'underline' }}>
               {t('pilgrimageUi.photoTips')}
             </ThemedText>
             <View style={styles.locChip}>
               <Ionicons name="location" size={10} color={accent} />
-              <ThemedText weight="500" style={{ color: theme.text.tertiary, fontSize: 10 }}>
+              <ThemedText
+                variant="captionSmall"
+                weight="500"
+                style={{ color: theme.text.tertiary }}>
                 {sceneName}
               </ThemedText>
             </View>
@@ -204,10 +209,10 @@ export default function PhotoTipsScreen() {
               <View style={styles.referenceChip}>
                 <Ionicons name="film" size={12} color={theme.status.warning} />
                 <ThemedText
+                  variant="captionSmall"
                   weight="700"
                   style={{
                     color: theme.status.warning,
-                    fontSize: 9,
                     letterSpacing: 1,
                   }}>
                   REFERENCE
@@ -225,18 +230,16 @@ export default function PhotoTipsScreen() {
                 variant="captionSmall"
                 style={{
                   color: theme.text.tertiary,
-                  fontSize: 11,
-                  lineHeight: 16,
                 }}>
                 {sceneName}
               </ThemedText>
               {palette.length > 0 ? (
                 <View style={styles.paletteRow}>
                   <ThemedText
+                    variant="captionSmall"
                     weight="600"
                     style={{
                       color: theme.text.tertiary,
-                      fontSize: 9,
                       letterSpacing: 1,
                     }}>
                     PALETTE
@@ -257,10 +260,10 @@ export default function PhotoTipsScreen() {
                   </View>
                   {mood ? (
                     <ThemedText
+                      variant="captionSmall"
                       weight="500"
                       style={{
                         color: theme.text.secondary,
-                        fontSize: 10,
                       }}>
                       · {mood.en}
                     </ThemedText>
@@ -353,49 +356,55 @@ export default function PhotoTipsScreen() {
             theme={theme}
           />
           <View style={styles.tipsList}>
-            <CompoTipRow
-              number={1}
-              accent={accent}
-              accentFg={accentFg}
-              theme={theme}
-              title={focal ? `Place the subject ${focal.en}` : 'Use the rule of thirds'}
-              body={
-                focal
-                  ? `Anchor the subject at the ${focal.en} third-line intersection.`
-                  : 'Align the main subject with a third-line intersection for cinematic balance.'
-              }
-              variant="thirds"
-              focalLeftPct={focal?.leftPct}
-              focalTopPct={focal?.topPct}
-            />
+            <Animated.View entering={listItemEnter(0)}>
+              <CompoTipRow
+                number={1}
+                accent={accent}
+                accentFg={accentFg}
+                theme={theme}
+                title={focal ? `Place the subject ${focal.en}` : 'Use the rule of thirds'}
+                body={
+                  focal
+                    ? `Anchor the subject at the ${focal.en} third-line intersection.`
+                    : 'Align the main subject with a third-line intersection for cinematic balance.'
+                }
+                variant="thirds"
+                focalLeftPct={focal?.leftPct}
+                focalTopPct={focal?.topPct}
+              />
+            </Animated.View>
             <View style={styles.tipDivider} />
-            <CompoTipRow
-              number={2}
-              accent={accent}
-              accentFg={accentFg}
-              theme={theme}
-              title={t('pilgrimageUi.keepTheAnimeCameraAngle')}
-              body={
-                cameraAngle
-                  ? `Match the anime — ${cameraAngle.en.toLowerCase()} shot, ${cameraAngle.light.toLowerCase()}.`
-                  : 'Match the camera height and tilt in the reference frame.'
-              }
-              variant="angle"
-            />
+            <Animated.View entering={listItemEnter(1)}>
+              <CompoTipRow
+                number={2}
+                accent={accent}
+                accentFg={accentFg}
+                theme={theme}
+                title={t('pilgrimageUi.keepTheAnimeCameraAngle')}
+                body={
+                  cameraAngle
+                    ? `Match the anime — ${cameraAngle.en.toLowerCase()} shot, ${cameraAngle.light.toLowerCase()}.`
+                    : 'Match the camera height and tilt in the reference frame.'
+                }
+                variant="angle"
+              />
+            </Animated.View>
             <View style={styles.tipDivider} />
-            <CompoTipRow
-              number={3}
-              accent={accent}
-              accentFg={accentFg}
-              theme={theme}
-              title={aspect ? `Suggested ratio ${aspect.ratio}` : 'Include the landmark'}
-              body={
-                aspect && contrast
-                  ? `${aspect.en} · ${contrast.en.toLowerCase()}${exposure && exposure.ev !== '0' ? ` · suggest ${exposure.ev} EV` : ''}.`
-                  : 'Keep the recognisable landmark and its surrounding edges inside the frame.'
-              }
-              variant="frame"
-            />
+            <Animated.View entering={listItemEnter(2)}>
+              <CompoTipRow
+                number={3}
+                accent={accent}
+                accentFg={accentFg}
+                theme={theme}
+                title={aspect ? `Suggested ratio ${aspect.ratio}` : 'Include the landmark'}
+                body={
+                  aspect && contrast
+                    ? `${aspect.en} · ${contrast.en.toLowerCase()}${exposure && exposure.ev !== '0' ? ` · suggest ${exposure.ev} EV` : ''}.`
+                    : 'Keep the recognisable landmark and its surrounding edges inside the frame.'
+                }
+                variant="frame"
+              />
+            </Animated.View>
           </View>
 
           {/* Things to Avoid */}
@@ -412,7 +421,12 @@ export default function PhotoTipsScreen() {
               return (
                 <Fragment key={`${w.icon}-${i}`}>
                   {i > 0 ? <View style={styles.warnDivider} /> : null}
-                  <WarnRow icon={WARN_ICONS[w.icon]} theme={theme} title={warnTitle} body={w.body} />
+                  <WarnRow
+                    icon={WARN_ICONS[w.icon]}
+                    theme={theme}
+                    title={warnTitle}
+                    body={w.body}
+                  />
                   {i === arr.length - 1 ? null : null}
                 </Fragment>
               );
@@ -439,14 +453,14 @@ export default function PhotoTipsScreen() {
             ]}>
             <Ionicons name="camera" size={20} color={accentFg} />
             <View style={{ alignItems: 'center', gap: 1 }}>
-              <ThemedText weight="700" style={{ color: accentFg, fontSize: 14 }}>
+              <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
                 {t('pilgrimageUi.startArCamera2')}
               </ThemedText>
               <ThemedText
+                variant="captionSmall"
                 weight="600"
                 style={{
                   color: `${accentFg}99`,
-                  fontSize: 10,
                   letterSpacing: 0.6,
                 }}>
                 {t('pilgrimageUi.alignWithScene')}
@@ -503,12 +517,12 @@ function SectionHeader({
     <View style={sectionHeaderStyles.wrap}>
       <View style={sectionHeaderStyles.left}>
         <Ionicons name={iconName} size={16} color={iconColor} />
-        <ThemedText weight="700" style={{ fontSize: 14 }}>
+        <ThemedText variant="bodySmall" weight="700">
           {title}
         </ThemedText>
       </View>
       {subtitle ? (
-        <ThemedText weight="500" style={{ color: theme.text.tertiary, fontSize: 11 }}>
+        <ThemedText variant="captionSmall" weight="500" style={{ color: theme.text.tertiary }}>
           {subtitle}
         </ThemedText>
       ) : null}
@@ -558,14 +572,14 @@ function TipTile({
         <View style={[styles.tileIcon, { backgroundColor: `${tone}26` }]}>
           <Ionicons name={icon} size={14} color={tone} />
         </View>
-        <ThemedText weight="600" style={{ color: theme.text.secondary, fontSize: 12 }}>
+        <ThemedText variant="captionSmall" weight="600" style={{ color: theme.text.secondary }}>
           {label}
         </ThemedText>
       </View>
-      <ThemedText weight="700" style={{ fontSize: 16, color: valueColor }}>
+      <ThemedText variant="titleSmall" weight="700" style={{ color: valueColor }}>
         {value}
       </ThemedText>
-      <ThemedText weight="500" style={{ color: subtitleColor, fontSize: 11 }}>
+      <ThemedText variant="captionSmall" weight="500" style={{ color: subtitleColor }}>
         {subtitle}
       </ThemedText>
     </View>
@@ -608,7 +622,7 @@ function CompoTipRow({
       <View style={styles.tipBody}>
         <View style={styles.tipTitleRow}>
           <View style={[styles.numberBadge, { backgroundColor: accent }]}>
-            <ThemedText weight="700" style={{ color: accentFg, fontSize: 11 }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
               {number}
             </ThemedText>
           </View>

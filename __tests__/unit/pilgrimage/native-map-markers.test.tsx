@@ -53,6 +53,33 @@ describe('NativeMapMarker', () => {
     expect(text).toContain('★');
     expect(text).toContain('#7');
   });
+
+  it('PILG-058 renders stamp, shop, and festival pins with distinct icon geometry', () => {
+    const stamp = render(NativeMapMarker, {
+      marker: marker({ kind: 'stamp', visited: true, title: 'Stamp stop' }),
+    });
+    const shop = render(NativeMapMarker, {
+      marker: marker({ kind: 'shop', title: 'Shop' }),
+    });
+    const festival = render(NativeMapMarker, {
+      marker: marker({ kind: 'festival', title: 'Festival' }),
+    });
+
+    expect(findAll(stamp, (node) => node.props.name === 'ticket-outline').length).toBe(1);
+    expect(findAll(stamp, (node) => node.props.name === 'checkmark').length).toBe(1);
+    expect(findAll(shop, (node) => node.props.name === 'storefront-outline').length).toBe(1);
+    expect(findAll(festival, (node) => node.props.name === 'sparkles-outline').length).toBe(1);
+  });
+
+  it('PILG-058 renders Anime88 city-only data as a labelled area, not a pin', () => {
+    const area = render(NativeMapMarker, {
+      marker: marker({ kind: 'area', precision: 'area', title: 'Numazu area' }),
+    });
+
+    expect(getAllText(area)).toContain('Numazu area');
+    expect(findAll(area, (node) => node.props.name === 'map-outline').length).toBe(1);
+    expect(findAll(area, (node) => node.props.name === 'navigate-outline').length).toBe(0);
+  });
 });
 
 describe('ClusterBubble', () => {

@@ -1,31 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo, useEffect } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  Extrapolation,
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  interpolate,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { memo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Radius, Shadow, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
-import {
-  readableTextOn,
-  ThemedButton,
-  ThemedSurface,
-  ThemedText,
-} from '../themed';
+import { readableTextOn, ThemedButton, ThemedBottomSheet, ThemedText } from '../themed';
 import { PersonalizedPickState } from './types';
 
 type Props = {
@@ -36,71 +18,11 @@ type Props = {
   onRefresh?: () => void;
 };
 
-const DRAG_THRESHOLD = 100;
-const VELOCITY_THRESHOLD = 800;
-const ELASTIC_LIMIT = 200;
-const ELASTIC_FACTOR = 0.4;
-const DISMISS_TARGET = 600;
-const SHEET_SPRING_CONFIG = { damping: 20, stiffness: 220, mass: 0.9 };
-
 function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRefresh }: Props) {
   const { theme } = useTheme();
   const t = useT();
-  const translateY = useSharedValue(0);
-  const hasThresholdHaptic = useSharedValue(false);
-
-  useEffect(() => {
-    if (visible) {
-      translateY.value = 0;
-      hasThresholdHaptic.value = false;
-    }
-  }, [visible, translateY, hasThresholdHaptic]);
-
-  const pan = Gesture.Pan()
-    .onUpdate((event) => {
-      const raw = Math.max(0, event.translationY);
-      if (raw <= ELASTIC_LIMIT) {
-        translateY.value = raw;
-      } else {
-        const overshoot = raw - ELASTIC_LIMIT;
-        translateY.value = ELASTIC_LIMIT + overshoot * ELASTIC_FACTOR;
-      }
-    })
-    .onEnd((event) => {
-      const shouldDismiss =
-        translateY.value > DRAG_THRESHOLD || event.velocityY > VELOCITY_THRESHOLD;
-      if (shouldDismiss) {
-        translateY.value = withSpring(DISMISS_TARGET, SHEET_SPRING_CONFIG);
-        scheduleOnRN(onClose);
-      } else {
-        translateY.value = withSpring(0, SHEET_SPRING_CONFIG);
-      }
-      hasThresholdHaptic.value = false;
-    });
-
-  useAnimatedReaction(
-    () => translateY.value > DRAG_THRESHOLD,
-    (crossed, previous) => {
-      if (crossed && !previous && !hasThresholdHaptic.value) {
-        hasThresholdHaptic.value = true;
-        scheduleOnRN(hapticsBridge.swipeThreshold);
-      } else if (!crossed && previous) {
-        hasThresholdHaptic.value = false;
-      }
-    }
-  );
-
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: translateY.value },
-      { scale: interpolate(translateY.value, [0, 400], [1, 0.94], Extrapolation.CLAMP) },
-    ],
-    opacity: interpolate(translateY.value, [0, 400], [1, 0.3], Extrapolation.CLAMP),
-  }));
 
   const handleClose = () => {
-    translateY.value = 0;
-    hasThresholdHaptic.value = false;
     onClose();
   };
 
@@ -137,68 +59,44 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      {/*
-       * Backdrop is a sibling (absoluteFill) behind the sheet, NOT a parent.
-       * The previous nesting made every empty pixel inside the sheet relay its
-       * press up to the backdrop's onPress, dismissing the modal when the user
-       * tapped on padding or a non-Pressable region of the card.
-       */}
-      <View style={styles.root}>
+    <ThemedBottomSheet visible={visible} onClose={handleClose}>
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          <View
+            style={[
+              styles.iconBubble,
+              { backgroundColor: theme.accent + '22', borderColor: theme.accent + '55' },
+            ]}>
+            <Ionicons name="sparkles" size={14} color={theme.accent} />
+          </View>
+          <View>
+            <ThemedText variant="titleLarge" weight="700">
+              {t('rate.forYou')}
+            </ThemedText>
+            <ThemedText variant="caption" tone="tertiary">
+              {t('rate.pickedFromYourTaste')}
+            </ThemedText>
+          </View>
+        </View>
         <Pressable
-          style={[StyleSheet.absoluteFill, styles.backdrop]}
           onPress={handleClose}
+          hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel={t('commonUi.dismiss')}
-        />
-        <GestureDetector gesture={pan}>
-          <Animated.View entering={FadeInUp.duration(220)} style={[sheetStyle, styles.sheetWrap]}>
-            <ThemedSurface variant="sheet" radius={Radius.xxl} style={styles.sheet}>
-              <View
-                style={[styles.handle, { backgroundColor: theme.text.tertiary }]}
-                accessibilityElementsHidden
-              />
-              <View style={styles.headerRow}>
-                <View style={styles.headerLeft}>
-                  <View
-                    style={[
-                      styles.iconBubble,
-                      { backgroundColor: theme.accent + '22', borderColor: theme.accent + '55' },
-                    ]}>
-                    <Ionicons name="sparkles" size={14} color={theme.accent} />
-                  </View>
-                  <View>
-                    <ThemedText variant="titleLarge" weight="700">
-                      {t('rate.forYou')}
-                    </ThemedText>
-                    <ThemedText variant="caption" tone="tertiary">
-                      {t('rate.pickedFromYourTaste')}
-                    </ThemedText>
-                  </View>
-                </View>
-                <Pressable
-                  onPress={handleClose}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('common.close')}
-                  style={({ pressed }) => [
-                    styles.closeBtn,
-                    {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <Ionicons name="close" size={16} color={theme.text.secondary} />
-                </Pressable>
-              </View>
-
-              {renderBody()}
-            </ThemedSurface>
-          </Animated.View>
-        </GestureDetector>
+          accessibilityLabel={t('common.close')}
+          style={({ pressed }) => [
+            styles.closeBtn,
+            {
+              backgroundColor: theme.background.tertiary,
+              borderColor: theme.glassBorder,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}>
+          <Ionicons name="close" size={16} color={theme.text.secondary} />
+        </Pressable>
       </View>
-    </Modal>
+
+      {renderBody()}
+    </ThemedBottomSheet>
   );
 }
 
@@ -276,18 +174,13 @@ function PickContent({
               ) : null}
               <View style={styles.chipsRow}>
                 {data.matchedTags.slice(0, 3).map((tag, i) => (
-                  <Animated.View
-                    key={tag}
-                    entering={FadeInDown.delay(140 + i * 50).duration(220)}>
+                  <Animated.View key={tag} entering={FadeInDown.delay(140 + i * 50).duration(220)}>
                     <View
                       style={[
                         styles.tagChip,
                         { backgroundColor: accent + '1F', borderColor: accent + '40' },
                       ]}>
-                      <ThemedText
-                        variant="captionSmall"
-                        weight="600"
-                        style={{ color: accent }}>
+                      <ThemedText variant="captionSmall" weight="600" style={{ color: accent }}>
                         {tag}
                       </ThemedText>
                     </View>
@@ -429,7 +322,12 @@ function NoMatchState({ onRefresh }: { onRefresh?: () => void }) {
       </ThemedText>
       {onRefresh ? (
         <View style={{ marginTop: Spacing.lg }}>
-          <ThemedButton label={t('rate.tryAgain')} onPress={onRefresh} variant="secondary" size="md" />
+          <ThemedButton
+            label={t('rate.tryAgain')}
+            onPress={onRefresh}
+            variant="secondary"
+            size="md"
+          />
         </View>
       ) : null}
     </Animated.View>
@@ -448,7 +346,12 @@ function ErrorState({ onRefresh }: { onRefresh?: () => void }) {
       </ThemedText>
       {onRefresh ? (
         <View style={{ marginTop: Spacing.lg }}>
-          <ThemedButton label={t('rate.tryAgain')} onPress={onRefresh} variant="secondary" size="md" />
+          <ThemedButton
+            label={t('rate.tryAgain')}
+            onPress={onRefresh}
+            variant="secondary"
+            size="md"
+          />
         </View>
       ) : null}
     </Animated.View>
@@ -461,30 +364,6 @@ function formatScore(raw: number): string {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  sheetWrap: {
-    paddingHorizontal: Spacing.xs,
-    paddingBottom: Spacing.xs,
-  },
-  sheet: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xl,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.5,
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

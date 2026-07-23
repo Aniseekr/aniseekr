@@ -7,6 +7,7 @@
 
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +20,7 @@ import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-im
 import { formatDistanceKm, getPointSourceLabel } from './_helpers';
 import { sceneTilePropsEqual } from './_equality';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
+import { listItemEnter } from '../../../libs/animations/presets';
 
 export interface SceneTileProps {
   /** Representative scene of the location (its first cut). */
@@ -33,6 +35,7 @@ export interface SceneTileProps {
   planned: boolean;
   hasCapture: boolean;
   captureUri: string | null;
+  entryIndex?: number;
   theme: ThemePalette;
   onPress: (spot: AnitabiPoint) => void;
   onToggleVisited: (spot: AnitabiPoint) => void;
@@ -50,6 +53,7 @@ function SceneTileImpl({
   planned,
   hasCapture,
   captureUri,
+  entryIndex,
   theme,
   onPress,
   onToggleVisited,
@@ -79,7 +83,7 @@ function SceneTileImpl({
     Haptics.selectionAsync().catch(() => undefined);
     onToggleVisited(spot);
   }, [onToggleVisited, spot]);
-  return (
+  const tile = (
     <Pressable
       onPress={handlePress}
       onLongPress={handleLongPress}
@@ -171,6 +175,9 @@ function SceneTileImpl({
       </Pressable>
     </Pressable>
   );
+
+  if (entryIndex === undefined || entryIndex >= 8) return tile;
+  return <Animated.View entering={listItemEnter(entryIndex)}>{tile}</Animated.View>;
 }
 
 // Tiles are pure renders of `spot.id + display flags + handlers`. The equality

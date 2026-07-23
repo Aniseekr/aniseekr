@@ -7,14 +7,19 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { appStorage, __resetAppStorageForTests } from '../../../libs/services/storage/app-storage';
 import { VISITED_SPOTS_STORAGE_KEY } from '../../../libs/services/storage/keys';
 import {
+  checkInStampStop,
   loadVisitedSpots,
   loadVisitedSpotsSync,
+  loadVisitedStampStopsSync,
   saveVisitedSpots,
   loadVisitedAtSync,
+  stampStopVisitedAtSync,
   visitedAtSync,
   checkInSpot,
   checkOutSpot,
+  checkOutStampStop,
 } from '../../../libs/services/pilgrimage/visited-prefs';
+import type { RoleId } from '../../../libs/services/pilgrimage/locality/types';
 
 beforeEach(() => {
   appStorage.clearAll();
@@ -62,7 +67,7 @@ describe('visited timestamps v2 (打卡)', () => {
     const first = visitedAtSync('spotA');
     await new Promise((r) => setTimeout(r, 2));
     await saveVisitedSpots({ spotA: true, spotB: true }); // spotA unchanged, spotB new
-    expect(visitedAtSync('spotA')).toBe(first);           // NOT re-stamped
+    expect(visitedAtSync('spotA')).toBe(first); // NOT re-stamped
     expect(visitedAtSync('spotB')).not.toBeNull();
   });
 
@@ -131,5 +136,28 @@ describe('atomic check-in / check-out (打卡)', () => {
   it('checkInSpot accepts an explicit `at` timestamp', async () => {
     await checkInSpot('spotA', 12345);
     expect(visitedAtSync('spotA')).toBe(12345);
+  });
+});
+
+describe('stamp-stop collection persistence', () => {
+  const roleId = 'stamp-stop:test-campaign:test-place' as RoleId;
+
+  it('PILG-057 persists canonical stamp-stop role ids and exposes a synchronous progress map', async () => {
+    await checkInStampStop(roleId, 12345);
+
+    expect(loadVisitedStampStopsSync()).toEqual({ [roleId]: true });
+    expect(stampStopVisitedAtSync(roleId)).toBe(12345);
+
+    await checkOutStampStop(roleId);
+    expect(loadVisitedStampStopsSync()).toEqual({});
+    expect(stampStopVisitedAtSync(roleId)).toBeNull();
+  });
+
+  it('PILG-057 namespaces a role collection from a scene point with the same raw id', async () => {
+    await checkInSpot(roleId, 100);
+    await checkInStampStop(roleId, 200);
+
+    expect(visitedAtSync(roleId)).toBe(100);
+    expect(stampStopVisitedAtSync(roleId)).toBe(200);
   });
 });

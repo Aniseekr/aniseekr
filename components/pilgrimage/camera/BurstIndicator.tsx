@@ -9,6 +9,7 @@
 // is responsible for stacking it on top of the shutter Pressable.
 
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText } from '../../themed/ThemedText';
 
@@ -52,14 +53,18 @@ export default function BurstIndicator({ captured, total, themeColor }: BurstInd
   });
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <Animated.View
+      entering={FadeIn}
+      exiting={FadeOut}
+      style={styles.container}
+      pointerEvents="none">
       <View style={styles.ring}>{dots}</View>
       <View style={styles.labelWrap}>
         <ThemedText variant="captionSmall" weight="700" align="center" style={styles.label}>
           {filledCount}/{safeTotal}
         </ThemedText>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

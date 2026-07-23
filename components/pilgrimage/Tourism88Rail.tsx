@@ -2,7 +2,7 @@
 // pilgrimage hub. Sorted by AniList popularity descending; multi-city anime
 // collapse to one card with a "+N cities" tag.
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -111,6 +111,8 @@ function Tourism88RailCard({ entry, inCollection, onPress, theme }: Tourism88Rai
   const cityCount = entry.locations.length;
   const regionLabel = t(REGION_LABEL_KEY[primaryEntry.region]);
   const title = entry.titleEn || entry.titleJa;
+  const posterUri = entry.posterUrl ?? bangumiSubjectImageUrl(entry.bangumiId);
+  const [posterFailed, setPosterFailed] = useState(false);
   return (
     <Pressable
       onPress={onPress}
@@ -118,18 +120,20 @@ function Tourism88RailCard({ entry, inCollection, onPress, theme }: Tourism88Rai
       accessibilityLabel={t('pilgrimage.tourism88.entryA11y', { title })}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.92 }]}>
       <View style={styles.posterWrap}>
-        {/* Poster from Bangumi (2:3, not Cloudflare-blocked) keyed by the 88
-            list's bangumiId — every entry has one, so no placeholder branch.
-            anitabi's CDN 403s non-browser clients and serves 16:9 scene stills,
-            so it's unusable here (see build-anitabi-index dependency risk).
-            posterWrap's own background shows through while the image loads. */}
-        <Image
-          source={{ uri: bangumiSubjectImageUrl(entry.bangumiId) }}
-          style={styles.poster}
-          contentFit="cover"
-          transition={180}
-          cachePolicy="memory-disk"
-        />
+        {posterFailed ? (
+          <View style={styles.posterPlaceholder}>
+            <Ionicons name="image-outline" size={24} color={theme.text.tertiary} />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: posterUri }}
+            style={styles.poster}
+            contentFit="cover"
+            transition={180}
+            cachePolicy="memory-disk"
+            onError={() => setPosterFailed(true)}
+          />
+        )}
         <View style={styles.idChip}>
           <ThemedText variant="captionSmall" weight="800" style={styles.idChipLabel}>
             ★ #{primaryEntry.id}
@@ -193,7 +197,6 @@ function makeStyles(theme: ThemePalette) {
     officialBadgeLabel: {
       ...Typography.captionSmall,
       color: officialAccentFg,
-      fontSize: 10,
       letterSpacing: 0.3,
     },
     seeAll: {
@@ -222,6 +225,13 @@ function makeStyles(theme: ThemePalette) {
       width: '100%',
       height: '100%',
     },
+    posterPlaceholder: {
+      width: '100%',
+      height: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.background.tertiary,
+    },
     idChip: {
       position: 'absolute',
       top: 6,
@@ -234,7 +244,6 @@ function makeStyles(theme: ThemePalette) {
     idChipLabel: {
       ...Typography.captionSmall,
       color: officialAccentFg,
-      fontSize: 10,
       letterSpacing: 0.2,
     },
     collectedBadge: {
@@ -262,20 +271,16 @@ function makeStyles(theme: ThemePalette) {
     cityCountLabel: {
       ...Typography.captionSmall,
       color: theme.text.primary,
-      fontSize: 9,
     },
     meta: {
       marginTop: 6,
     },
     title: {
-      ...Typography.captionSmall,
+      ...Typography.caption,
       color: theme.text.primary,
-      fontSize: 12,
-      lineHeight: 14,
     },
     subtitle: {
       ...Typography.captionSmall,
-      fontSize: 10,
       marginTop: 2,
     },
   });

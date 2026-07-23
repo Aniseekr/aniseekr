@@ -8,9 +8,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Magnetometer } from 'expo-sensors';
-import { Radius, Spacing, bottomPad } from '../../../../constants/DesignSystem';
+import { Radius, bottomPad } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { useT } from '../../../../libs/i18n';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
@@ -21,6 +22,7 @@ import {
 } from '../../../../libs/services/pilgrimage/location-service';
 import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
 import { anitabiImageSource } from '../../../../libs/services/pilgrimage/anitabi-image';
+import { listItemEnter } from '../../../../libs/animations/presets';
 
 function bearingBetween(from: LatLng, to: LatLng): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -54,7 +56,6 @@ export default function GpsAlignScreen() {
   const imageUrl = getStringParam(params, 'imageUrl');
   const targetLat = getNumberParam(params, 'spotLat');
   const targetLng = getNumberParam(params, 'spotLng');
-  const hasTarget = targetLat !== null && targetLng !== null;
 
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [heading, setHeading] = useState<number | null>(null);
@@ -232,7 +233,10 @@ export default function GpsAlignScreen() {
                       transform: [{ rotate: `${headingDelta}deg` }, { translateY: -86 }],
                     },
                   ]}>
-                  <ThemedText variant="captionSmall" weight="700" style={{ color: '#000' }}>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="700"
+                    style={{ color: readableTextOn(theme.status.warning) }}>
                     SPOT
                   </ThemedText>
                 </View>
@@ -277,41 +281,43 @@ export default function GpsAlignScreen() {
           <SectionHeader
             title={t('pilgrimageUi.calibrationSteps')}
             subtitle={t('pilgrimageUi.gpsAndCompassChecks')}
-            theme={theme}
           />
           <View style={styles.stepList}>
-            <StepRow
-              done={!!userLocation}
-              accent={accent}
-              theme={theme}
-              title={t('pilgrimageUi.enableGps')}
-              subtitle="Accuracy ≤ 25 m"
-            />
-            <StepRow
-              done={heading != null}
-              accent={accent}
-              theme={theme}
-              title={t('pilgrimageUi.calibrateCompass')}
-              subtitle={t('pilgrimageUi.waveThePhoneInA')}
-            />
-            <StepRow
-              done={!!(distance != null && distance < 0.05)}
-              accent={accent}
-              theme={theme}
-              title={t('pilgrimageUi.walkToTheSpot')}
-              subtitle={
-                distance != null
-                  ? `${(distance * 1000).toFixed(0)} m to target`
-                  : 'Move closer to the marked location'
-              }
-            />
-            <StepRow
-              done={false}
-              accent={accent}
-              theme={theme}
-              title={t('pilgrimageUi.openArCamera')}
-              subtitle="When you're aligned, launch capture"
-            />
+            {[
+              {
+                done: !!userLocation,
+                title: t('pilgrimageUi.enableGps'),
+                subtitle: 'Accuracy ≤ 25 m',
+              },
+              {
+                done: heading != null,
+                title: t('pilgrimageUi.calibrateCompass'),
+                subtitle: t('pilgrimageUi.waveThePhoneInA'),
+              },
+              {
+                done: !!(distance != null && distance < 0.05),
+                title: t('pilgrimageUi.walkToTheSpot'),
+                subtitle:
+                  distance != null
+                    ? `${(distance * 1000).toFixed(0)} m to target`
+                    : 'Move closer to the marked location',
+              },
+              {
+                done: false,
+                title: t('pilgrimageUi.openArCamera'),
+                subtitle: "When you're aligned, launch capture",
+              },
+            ].map((step, index) => (
+              <Animated.View key={step.title} entering={listItemEnter(index)}>
+                <StepRow
+                  done={step.done}
+                  accent={accent}
+                  theme={theme}
+                  title={step.title}
+                  subtitle={step.subtitle}
+                />
+              </Animated.View>
+            ))}
           </View>
         </ScrollView>
 
@@ -338,16 +344,7 @@ export default function GpsAlignScreen() {
   );
 }
 
-function SectionHeader({
-  title,
-  subtitle,
-  theme,
-}: {
-  title: string;
-  subtitle?: string;
-  theme: ThemePalette;
-}) {
-  const _ = theme;
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={{ gap: 2 }}>
       <ThemedText variant="titleMedium" weight="700">

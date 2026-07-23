@@ -17,6 +17,8 @@
 // `offlineOnly` is accepted but not yet enforced here.
 import { useCallback, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Colors } from '../../../../constants/DesignSystem';
+import { useTheme } from '../../../../context/ThemeContext';
 import {
   Map as MapLibreMap,
   Camera,
@@ -51,7 +53,7 @@ import {
   useClusteredMarkers,
   type ClusterViewport,
 } from '../../../../libs/services/pilgrimage/map-engine/use-clustered-markers';
-import { NativeMapMarker } from './markers/NativeMapMarker';
+import { NativeMapMarker, type MarkerChrome } from './markers/NativeMapMarker';
 import { ClusterBubble } from './markers/ClusterBubble';
 import { UserPuck } from './markers/UserPuck';
 
@@ -60,7 +62,7 @@ const DEFAULT_CENTER: [number, number] = [138.0, 36.5];
 /** Recompute clusters + emit bounds only on settle, not per frame (Rule 9). */
 const BOUNDS_DEBOUNCE_MS = 300;
 /** Fallback route colour when a MapRoute carries no `color`. */
-const DEFAULT_ROUTE_COLOR = '#4a90d9';
+const DEFAULT_ROUTE_COLOR = Colors.accent;
 
 export function MapLibreEngine({
   markers,
@@ -82,6 +84,7 @@ export function MapLibreEngine({
   onLoadSuccess,
   ref,
 }: MapSurfaceProps & { ref?: Ref<MapSurfaceHandle> }) {
+  const { theme } = useTheme();
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +95,16 @@ export function MapLibreEngine({
   // path so the locate FAB and visited toggles don't churn the parent (Rule 9).
   const [heading, setHeadingState] = useState<number | null>(user?.heading ?? null);
   const [visitedOverride, setVisitedOverride] = useState<readonly string[] | null>(null);
+
+  const markerChrome = useMemo<MarkerChrome>(
+    () => ({
+      chrome: theme.text.primary,
+      badgeBackground: theme.background.tertiary,
+      badgeForeground: theme.text.primary,
+      visited: theme.status.success,
+    }),
+    [theme]
+  );
 
   const byId = useMemo(() => {
     const map = new Map<string, MapMarker>();
@@ -105,7 +118,9 @@ export function MapLibreEngine({
     const ids = visitedOverride ?? visitedIds;
     if (!ids) return markers;
     const set = new Set(ids);
-    return markers.map((m) => (m.kind === 'spot' ? { ...m, visited: set.has(m.id) } : m));
+    return markers.map((m) =>
+      m.kind === 'spot' || m.kind === 'stamp' ? { ...m, visited: set.has(m.id) } : m
+    );
   }, [markers, visitedIds, visitedOverride]);
 
   const { index, items } = useClusteredMarkers(effectiveMarkers, viewport, {
@@ -241,6 +256,7 @@ export function MapLibreEngine({
               <NativeMapMarker
                 marker={m}
                 defaultMode={markerMode}
+                chrome={markerChrome}
                 onPress={onMarkerPress}
                 onLongPress={onMarkerLongPress}
               />

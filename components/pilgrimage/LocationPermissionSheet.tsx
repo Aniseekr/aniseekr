@@ -11,12 +11,12 @@
 // that competes with the existing pilgrimage sheets.
 
 import { memo } from 'react';
-import { Modal, Pressable, StyleSheet, View, Linking } from 'react-native';
+import { StyleSheet, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
-import { Radius, Spacing } from '../../constants/DesignSystem';
-import { ThemedButton, ThemedSurface, ThemedText } from '../themed';
+import { Spacing } from '../../constants/DesignSystem';
+import { ThemedBottomSheet, ThemedButton, ThemedText } from '../themed';
 import { useT } from '../../libs/i18n';
 
 export interface LocationPermissionSheetProps {
@@ -51,69 +51,33 @@ function LocationPermissionSheetComponent({
   const handlePrimaryPress = onPrimaryPress ?? handleOpenSettings;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onDismiss}
-      statusBarTranslucent>
-      <View style={styles.backdrop}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={onDismiss}
-          accessibilityLabel={t('commonUi.dismiss')}
-        />
-        <View style={styles.sheetWrap} pointerEvents="box-none">
-          <ThemedSurface variant="elevated" padded style={styles.sheet}>
-            <SafeAreaView edges={['bottom']}>
-              <View style={[styles.iconBubble, { backgroundColor: `${theme.accent}22` }]}>
-                <Ionicons name="location" size={22} color={theme.accent} />
-              </View>
-              <ThemedText variant="titleMedium" weight="700" align="center" style={styles.title}>
-                {resolvedTitle}
-              </ThemedText>
-              <ThemedText variant="bodyMedium" tone="secondary" align="center" style={styles.body}>
-                {body}
-              </ThemedText>
-              <View style={styles.actions}>
-                <ThemedButton
-                  label={primaryLabel}
-                  onPress={handlePrimaryPress}
-                  size="lg"
-                  fullWidth
-                />
-                <ThemedButton
-                  label={resolvedSecondaryLabel}
-                  onPress={onDismiss}
-                  size="lg"
-                  fullWidth
-                  variant="ghost"
-                />
-              </View>
-            </SafeAreaView>
-          </ThemedSurface>
+    <ThemedBottomSheet visible={visible} onClose={onDismiss}>
+      <SafeAreaView edges={['bottom']}>
+        <View style={[styles.iconBubble, { backgroundColor: `${theme.accent}22` }]}>
+          <Ionicons name="location" size={22} color={theme.accent} />
         </View>
-      </View>
-    </Modal>
+        <ThemedText variant="titleMedium" weight="700" align="center" style={styles.title}>
+          {resolvedTitle}
+        </ThemedText>
+        <ThemedText variant="bodyMedium" tone="secondary" align="center" style={styles.body}>
+          {body}
+        </ThemedText>
+        <View style={styles.actions}>
+          <ThemedButton label={primaryLabel} onPress={handlePrimaryPress} size="lg" fullWidth />
+          <ThemedButton
+            label={resolvedSecondaryLabel}
+            onPress={onDismiss}
+            size="lg"
+            fullWidth
+            variant="ghost"
+          />
+        </View>
+      </SafeAreaView>
+    </ThemedBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheetWrap: {
-    width: '100%',
-  },
-  sheet: {
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
-  },
   iconBubble: {
     alignSelf: 'center',
     width: 48,

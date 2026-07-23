@@ -4,11 +4,11 @@
 // list animates out.
 
 import React, { memo, useCallback, useMemo } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ThemedText } from '../../themed';
+import { ThemedBottomSheet, ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
@@ -106,34 +106,28 @@ function SpotClusterPickerImpl({
   );
   if (!spots || spots.length === 0) return null;
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.handle} />
-            <View style={styles.headerRow}>
-              <ThemedText variant="titleMedium" weight="700">
-                {spots.length} scenes here
-              </ThemedText>
-              <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-                <Ionicons name="close" size={20} color={theme.text.secondary} />
-              </Pressable>
-            </View>
-            <FlatList
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              data={spots}
-              keyExtractor={keyExtractor}
-              initialNumToRender={12}
-              windowSize={9}
-              renderItem={renderItem}
-            />
-          </SafeAreaView>
+    <ThemedBottomSheet visible maxHeightPct={0.7} onClose={onClose}>
+      <SafeAreaView edges={['bottom']}>
+        <View style={styles.headerRow}>
+          <ThemedText variant="titleMedium" weight="700">
+            {spots.length} scenes here
+          </ThemedText>
+          <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+            <Ionicons name="close" size={20} color={theme.text.secondary} />
+          </Pressable>
         </View>
-      </View>
-    </Modal>
+        <FlatList
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          data={spots}
+          keyExtractor={keyExtractor}
+          initialNumToRender={12}
+          windowSize={9}
+          renderItem={renderItem}
+        />
+      </SafeAreaView>
+    </ThemedBottomSheet>
   );
 }
 
@@ -154,30 +148,6 @@ export const SpotClusterPicker = memo(SpotClusterPickerImpl, areEqual);
 
 function makePickerStyles(theme: ThemePalette) {
   return StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      justifyContent: 'flex-end',
-    },
-    sheet: {
-      backgroundColor: theme.background.secondary,
-      borderTopLeftRadius: Radius.xxl,
-      borderTopRightRadius: Radius.xxl,
-      borderColor: theme.glassBorder,
-      borderTopWidth: 1,
-      paddingHorizontal: Spacing.screenPadding,
-      paddingTop: 8,
-      paddingBottom: Spacing.sm,
-      maxHeight: '70%',
-    },
-    handle: {
-      alignSelf: 'center',
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.glassBorder,
-      marginBottom: Spacing.xs,
-    },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',

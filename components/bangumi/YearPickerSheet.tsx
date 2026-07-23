@@ -1,13 +1,14 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing open-reset effect; Phase 3 only replaces the sheet shell. */
 import { memo, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
+import { ThemedBottomSheet } from '../themed';
 
 interface YearPickerSheetProps {
   visible: boolean;
@@ -52,165 +53,127 @@ function YearPickerSheetComponent({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <Animated.View
-          entering={FadeIn.duration(160)}
-          exiting={FadeOut.duration(160)}
-          style={styles.backdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          <Animated.View
-            entering={FadeInUp.duration(220)}
+    <ThemedBottomSheet visible={visible} onClose={onClose}>
+      <KeyboardAvoidingView behavior="padding">
+        <SafeAreaView edges={['bottom']}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, { color: theme.text.primary }]}>
+              {t('bangumiTab.pickAYear')}
+            </Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <MaterialIcons name="close" size={22} color={theme.text.secondary} />
+            </Pressable>
+          </View>
+
+          <View
             style={[
-              styles.sheet,
+              styles.searchBar,
               {
-                backgroundColor: theme.background.secondary,
+                backgroundColor: theme.background.tertiary,
                 borderColor: theme.glassBorder,
               },
             ]}>
-            <SafeAreaView edges={['bottom']}>
-              <View style={styles.handle} />
-              <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>
-                  {t('bangumiTab.pickAYear')}
-                </Text>
-                <Pressable onPress={onClose} hitSlop={12}>
-                  <MaterialIcons name="close" size={22} color={theme.text.secondary} />
-                </Pressable>
-              </View>
+            <MaterialIcons name="search" size={18} color={theme.text.tertiary} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t('bangumiTab.filterByYear')}
+              placeholderTextColor={theme.text.tertiary}
+              keyboardType="number-pad"
+              style={[styles.searchInput, { color: theme.text.primary }]}
+            />
+          </View>
 
-              <View
-                style={[
-                  styles.searchBar,
-                  {
-                    backgroundColor: theme.background.tertiary,
-                    borderColor: theme.glassBorder,
-                  },
-                ]}>
-                <MaterialIcons name="search" size={18} color={theme.text.tertiary} />
-                <TextInput
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder={t('bangumiTab.filterByYear')}
-                  placeholderTextColor={theme.text.tertiary}
-                  keyboardType="number-pad"
-                  style={[styles.searchInput, { color: theme.text.primary }]}
-                />
-              </View>
-
-              <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
-                {filteredYears.map((y) => {
-                  const isSelected = y === selectedYear;
-                  return (
-                    <Pressable
-                      key={y}
-                      onPress={() => handleSelect(y)}
-                      style={({ pressed }) => [
-                        styles.yearRow,
-                        {
-                          backgroundColor: isSelected ? theme.accent + '20' : 'transparent',
-                          opacity: pressed ? 0.7 : 1,
-                        },
-                      ]}>
-                      <Text
-                        style={[
-                          styles.yearText,
-                          {
-                            color: isSelected ? theme.accent : theme.text.primary,
-                            fontWeight: isSelected ? '700' : '500',
-                          },
-                        ]}>
-                        {y}
-                      </Text>
-                      {isSelected ? (
-                        <MaterialIcons name="check-circle" size={20} color={theme.accent} />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-                {filteredYears.length === 0 ? (
-                  <Text style={[styles.empty, { color: theme.text.tertiary }]}>
-                    {t('bangumiTab.noMatches')}
+          <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+            {filteredYears.map((y) => {
+              const isSelected = y === selectedYear;
+              return (
+                <Pressable
+                  key={y}
+                  onPress={() => handleSelect(y)}
+                  style={({ pressed }) => [
+                    styles.yearRow,
+                    {
+                      backgroundColor: isSelected ? theme.accent + '20' : 'transparent',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.yearText,
+                      {
+                        color: isSelected ? theme.accent : theme.text.primary,
+                        fontWeight: isSelected ? '700' : '500',
+                      },
+                    ]}>
+                    {y}
                   </Text>
-                ) : null}
-              </ScrollView>
+                  {isSelected ? (
+                    <MaterialIcons name="check-circle" size={20} color={theme.accent} />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+            {filteredYears.length === 0 ? (
+              <Text style={[styles.empty, { color: theme.text.tertiary }]}>
+                {t('bangumiTab.noMatches')}
+              </Text>
+            ) : null}
+          </ScrollView>
 
-              {onPrevYear || onNextYear ? (
-                <View style={styles.quickRow}>
-                  {onPrevYear ? (
-                    <Pressable
-                      onPress={() => {
-                        hapticsBridge.selection();
-                        onPrevYear();
-                        onClose();
-                      }}
-                      style={({ pressed }) => [
-                        styles.quickButton,
-                        {
-                          borderColor: theme.glassBorder,
-                          backgroundColor: theme.background.tertiary,
-                          opacity: pressed ? 0.85 : 1,
-                        },
-                      ]}>
-                      <MaterialIcons name="arrow-back" size={18} color={theme.text.primary} />
-                      <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
-                        {t('bangumiTab.previousYear')}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                  {onNextYear ? (
-                    <Pressable
-                      onPress={() => {
-                        hapticsBridge.selection();
-                        onNextYear();
-                        onClose();
-                      }}
-                      style={({ pressed }) => [
-                        styles.quickButton,
-                        {
-                          borderColor: theme.glassBorder,
-                          backgroundColor: theme.background.tertiary,
-                          opacity: pressed ? 0.85 : 1,
-                        },
-                      ]}>
-                      <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
-                        {t('bangumiTab.nextYear')}
-                      </Text>
-                      <MaterialIcons name="arrow-forward" size={18} color={theme.text.primary} />
-                    </Pressable>
-                  ) : null}
-                </View>
+          {onPrevYear || onNextYear ? (
+            <View style={styles.quickRow}>
+              {onPrevYear ? (
+                <Pressable
+                  onPress={() => {
+                    hapticsBridge.selection();
+                    onPrevYear();
+                    onClose();
+                  }}
+                  style={({ pressed }) => [
+                    styles.quickButton,
+                    {
+                      borderColor: theme.glassBorder,
+                      backgroundColor: theme.background.tertiary,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}>
+                  <MaterialIcons name="arrow-back" size={18} color={theme.text.primary} />
+                  <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
+                    {t('bangumiTab.previousYear')}
+                  </Text>
+                </Pressable>
               ) : null}
-            </SafeAreaView>
-          </Animated.View>
-        </Animated.View>
+              {onNextYear ? (
+                <Pressable
+                  onPress={() => {
+                    hapticsBridge.selection();
+                    onNextYear();
+                    onClose();
+                  }}
+                  style={({ pressed }) => [
+                    styles.quickButton,
+                    {
+                      borderColor: theme.glassBorder,
+                      backgroundColor: theme.background.tertiary,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}>
+                  <Text style={[styles.quickLabel, { color: theme.text.primary }]}>
+                    {t('bangumiTab.nextYear')}
+                  </Text>
+                  <MaterialIcons name="arrow-forward" size={18} color={theme.text.primary} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </SafeAreaView>
       </KeyboardAvoidingView>
-    </Modal>
+    </ThemedBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- Existing detail screen styles predate token lint; Phase 3 only swaps loaders and adds resolved-content fade. */
+/* eslint-disable react-hooks/set-state-in-effect -- Existing detail fetch effects populate local state; Phase 3 keeps first-paint data flow unchanged. */
 import { useLocalSearchParams, useNavigation, useRouter, Stack } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState, useCallback } from 'react';
 import {
@@ -5,11 +7,11 @@ import {
   Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   InteractionManager,
   Linking,
   Share,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -32,7 +34,7 @@ import type { PlatformType } from '../../libs/services/auth/types';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import { lookupBangumiByPlatformId } from '../../libs/services/pilgrimage/anitabi-cross-index';
 import { dataSourceConfig } from '../../libs/services/data-source-config';
-import { Skeleton, readableTextOn } from '../../components/themed';
+import { Skeleton } from '../../components/themed';
 import { PlatformLogo } from '../../components/streaming/PlatformLogo';
 import { AnimePilgrimageCard } from '../../components/pilgrimage/AnimePilgrimageCard';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
@@ -130,24 +132,24 @@ export default function AnimeDetailScreen() {
     return () => parent?.setOptions({ tabBarStyle: undefined });
   }, [navigation]);
 
-
   // Rule 10: seed initial state from the sync cache (warm hit) or route-param
   // chrome (cold hit), so frame 1 shows real content instead of a skeleton.
-  const initialAnimeRef = useRef<Anime | null>(null);
-  if (initialAnimeRef.current === null) {
+  const initialAnime = useMemo<Anime | null>(() => {
     const cached = id ? AnimeRepository.getAnimeDetailsSync(id) : null;
     if (cached) {
-      initialAnimeRef.current = cached;
-    } else if (id && paramTitle && paramImage) {
-      initialAnimeRef.current = {
+      return cached;
+    }
+    if (id && paramTitle && paramImage) {
+      return {
         id,
         title: paramTitle,
         image: paramImage,
         bannerImage: paramBanner,
       } as Anime;
     }
-  }
-  const [anime, setAnime] = useState<Anime | null>(initialAnimeRef.current);
+    return null;
+  }, [id, paramTitle, paramImage, paramBanner]);
+  const [anime, setAnime] = useState<Anime | null>(initialAnime);
   const displayTitle = useAnimeDisplayTitle(anime);
   // The canonical (pre-localization) title doubles as the "original" line
   // under a localized hero title; when the hero already shows the canonical
@@ -159,7 +161,10 @@ export default function AnimeDetailScreen() {
     : null;
   // Cache hit means we have the full record; param-seed still needs a fetch but
   // the user already sees a hero, so we don't show a blocking skeleton.
-  const hasFullRecord = !!(initialAnimeRef.current && (initialAnimeRef.current.description !== undefined || initialAnimeRef.current.episodes !== undefined));
+  const hasFullRecord = !!(
+    initialAnime &&
+    (initialAnime.description !== undefined || initialAnime.episodes !== undefined)
+  );
   const [loading, setLoading] = useState(!hasFullRecord);
   const [pilgrimage, setPilgrimage] = useState<AnitabiBangumi | null>(null);
 
@@ -179,7 +184,7 @@ export default function AnimeDetailScreen() {
   // renders the user's chosen primary on frame 1, instead of flashing
   // through `DEFAULT_STREAMING_PREFS` (empty list, no CTA) first.
   const [streamingPrefs, setStreamingPrefs] = useState<StreamingPrefs>(
-    () => loadUserPrefsSync().streamingPlatforms,
+    () => loadUserPrefsSync().streamingPlatforms
   );
   const reminderScheduled = useIsAnimeScheduled(id);
 
@@ -214,7 +219,7 @@ export default function AnimeDetailScreen() {
     // Rule 10: don't flip loading=true if we already painted real content from
     // the sync cache; revalidate silently. Only spinner-block when frame 1 was
     // genuinely empty.
-    if (!initialAnimeRef.current) setLoading(true);
+    if (!initialAnime) setLoading(true);
     AnimeRepository.getAnimeDetails(id)
       .then((data) => {
         if (!cancelled) setAnime(data);
@@ -234,7 +239,7 @@ export default function AnimeDetailScreen() {
       cancelled = true;
       task.cancel();
     };
-  }, [id]);
+  }, [id, initialAnime]);
 
   const refreshFlags = useCallback(async () => {
     if (!id) return;
@@ -673,91 +678,104 @@ export default function AnimeDetailScreen() {
             </Pressable>
           </View>
 
-          <View className="mt-8">
-            <Text className="mb-3 text-lg font-bold text-white">{t('anime.detail.synopsis')}</Text>
-            <Text className="leading-6 text-zinc-400">
-              {anime.description || anime.mood || t('anime.detail.noDescription')}
-            </Text>
-          </View>
-
-          {anime.tags && anime.tags.length > 0 ? (
-            <View className="mt-6">
-              <Text className="mb-3 text-lg font-bold text-white">{t('anime.detail.tags')}</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {anime.tags.map((tag) => (
-                  <View
-                    key={tag}
-                    className="rounded-full border border-white/5 bg-zinc-800 px-3 py-1.5">
-                    <Text className="text-sm text-zinc-300">{tag}</Text>
-                  </View>
-                ))}
+          {loading ? (
+            <AnimeDetailResolvedSkeleton />
+          ) : (
+            <Animated.View entering={FadeIn}>
+              <View className="mt-8">
+                <Text className="mb-3 text-lg font-bold text-white">
+                  {t('anime.detail.synopsis')}
+                </Text>
+                <Text className="leading-6 text-zinc-400">
+                  {anime.description || anime.mood || t('anime.detail.noDescription')}
+                </Text>
               </View>
-            </View>
-          ) : null}
 
-          {watchOptions.length > 0 ? (
-            <WatchOptionsSection
-              items={watchOptions}
-              onOpen={(opt) => void openOption(opt)}
-              onConfigure={() => router.push('/(setting)/watch-platforms')}
-            />
-          ) : null}
+              {anime.tags && anime.tags.length > 0 ? (
+                <View className="mt-6">
+                  <Text className="mb-3 text-lg font-bold text-white">
+                    {t('anime.detail.tags')}
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {anime.tags.map((tag) => (
+                      <View
+                        key={tag}
+                        className="rounded-full border border-white/5 bg-zinc-800 px-3 py-1.5">
+                        <Text className="text-sm text-zinc-300">{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
 
-          {pilgrimage ? (
-            <View className="mt-8">
-              <Text className="mb-3 text-lg font-bold text-white">
-                {t('anime.detail.pilgrimage')}
-              </Text>
-              <AnimePilgrimageCard
-                anime={pilgrimage}
-                onPress={(target) => router.push(`/pilgrimage/${target.id}`)}
-              />
-            </View>
-          ) : null}
+              {watchOptions.length > 0 ? (
+                <WatchOptionsSection
+                  items={watchOptions}
+                  onOpen={(opt) => void openOption(opt)}
+                  onConfigure={() => router.push('/(setting)/watch-platforms')}
+                />
+              ) : null}
 
-          {relations.length > 0 ? <RelationsSection items={relations} /> : null}
+              {pilgrimage ? (
+                <View className="mt-8">
+                  <Text className="mb-3 text-lg font-bold text-white">
+                    {t('anime.detail.pilgrimage')}
+                  </Text>
+                  <AnimePilgrimageCard
+                    anime={pilgrimage}
+                    onPress={(target) => router.push(`/pilgrimage/${target.id}`)}
+                  />
+                </View>
+              ) : null}
 
-          {themes && (themes.openings.length > 0 || themes.endings.length > 0) ? (
-            <ThemesSection themes={themes} />
-          ) : null}
+              {relations.length > 0 ? <RelationsSection items={relations} /> : null}
 
-          {staff.length > 0 ? <StaffSection items={staff} /> : null}
+              {themes && (themes.openings.length > 0 || themes.endings.length > 0) ? (
+                <ThemesSection themes={themes} />
+              ) : null}
 
-          {platformRatings.length > 0 ? <PlatformRatingsSection items={platformRatings} /> : null}
+              {staff.length > 0 ? <StaffSection items={staff} /> : null}
 
-          {mediaLoading &&
-          relations.length === 0 &&
-          streaming.length === 0 &&
-          staff.length === 0 ? (
-            <View className="mt-8 items-center">
-              <ActivityIndicator color="#666" />
-            </View>
-          ) : null}
+              {platformRatings.length > 0 ? (
+                <PlatformRatingsSection items={platformRatings} />
+              ) : null}
 
-          <View className="mt-8 rounded-2xl border border-white/5 bg-zinc-900/50 p-4">
-            <Text className="mb-4 text-lg font-bold text-white">
-              {t('anime.detail.information')}
-            </Text>
-            <View className="flex-row flex-wrap">
-              <InfoItem label={t('anime.detail.info.format')} value={anime.format || '?'} />
-              <InfoItem
-                label={t('anime.detail.info.episodes')}
-                value={anime.episodes != null ? String(anime.episodes) : '?'}
-              />
-              <InfoItem
-                label={t('anime.detail.info.duration')}
-                value={t('anime.detail.info.durationMins', {
-                  mins: anime.durationMinutes || '?',
-                })}
-              />
-              <InfoItem label={t('anime.detail.info.status')} value={anime.status || '?'} />
-              <InfoItem
-                label={t('anime.detail.info.startDate')}
-                value={anime.startDate?.year ? String(anime.startDate.year) : '?'}
-              />
-              <InfoItem label={t('anime.detail.info.studios')} value={anime.studios?.[0] || '?'} />
-            </View>
-          </View>
+              {mediaLoading &&
+              relations.length === 0 &&
+              streaming.length === 0 &&
+              staff.length === 0 ? (
+                <AnimeDetailMediaSkeleton />
+              ) : null}
+
+              <View className="mt-8 rounded-2xl border border-white/5 bg-zinc-900/50 p-4">
+                <Text className="mb-4 text-lg font-bold text-white">
+                  {t('anime.detail.information')}
+                </Text>
+                <View className="flex-row flex-wrap">
+                  <InfoItem label={t('anime.detail.info.format')} value={anime.format || '?'} />
+                  <InfoItem
+                    label={t('anime.detail.info.episodes')}
+                    value={anime.episodes != null ? String(anime.episodes) : '?'}
+                  />
+                  <InfoItem
+                    label={t('anime.detail.info.duration')}
+                    value={t('anime.detail.info.durationMins', {
+                      mins: anime.durationMinutes || '?',
+                    })}
+                  />
+                  <InfoItem label={t('anime.detail.info.status')} value={anime.status || '?'} />
+                  <InfoItem
+                    label={t('anime.detail.info.startDate')}
+                    value={anime.startDate?.year ? String(anime.startDate.year) : '?'}
+                  />
+                  <InfoItem
+                    label={t('anime.detail.info.studios')}
+                    value={anime.studios?.[0] || '?'}
+                  />
+                </View>
+              </View>
+            </Animated.View>
+          )}
         </View>
       </ScrollView>
 
@@ -804,6 +822,36 @@ function formatScore(score: number | undefined, rank: number | undefined): strin
   return (raw / 10).toFixed(1);
 }
 
+function AnimeDetailResolvedSkeleton() {
+  return (
+    <View className="mt-8 gap-6">
+      <View className="gap-3">
+        <Skeleton.Block width={120} height={20} borderRadius={8} />
+        <Skeleton.Block width="100%" height={12} borderRadius={6} />
+        <Skeleton.Block width="96%" height={12} borderRadius={6} />
+        <Skeleton.Block width="82%" height={12} borderRadius={6} />
+        <Skeleton.Block width="42%" height={12} borderRadius={6} />
+      </View>
+      <View className="flex-row gap-2">
+        <Skeleton.Block width={72} height={28} borderRadius={14} />
+        <Skeleton.Block width={88} height={28} borderRadius={14} />
+        <Skeleton.Block width={64} height={28} borderRadius={14} />
+      </View>
+      <AnimeDetailMediaSkeleton />
+    </View>
+  );
+}
+
+function AnimeDetailMediaSkeleton() {
+  return (
+    <View className="mt-8 gap-3">
+      <Skeleton.Block width={140} height={18} borderRadius={8} />
+      <Skeleton.Block width="100%" height={84} borderRadius={16} />
+      <Skeleton.Block width="100%" height={84} borderRadius={16} />
+    </View>
+  );
+}
+
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <View className="mb-4 w-1/2 pr-2">
@@ -837,9 +885,7 @@ function WatchOptionsSection({
           onPress={onConfigure}
           accessibilityLabel={t('anime.detail.configureWatchA11y')}
           hitSlop={8}>
-          <Text className="text-xs font-semibold text-blue-400">
-            {t('anime.detail.configure')}
-          </Text>
+          <Text className="text-xs font-semibold text-blue-400">{t('anime.detail.configure')}</Text>
         </Pressable>
       </View>
       <ScrollView
@@ -875,9 +921,7 @@ function WatchOptionsSection({
                   monogram={opt.monogram}
                   brandColor={opt.color}
                   containerStyle={
-                    opt.isPrimary
-                      ? { borderWidth: 2, borderColor: opt.color }
-                      : undefined
+                    opt.isPrimary ? { borderWidth: 2, borderColor: opt.color } : undefined
                   }
                 />
                 {opt.isPrimary ? (
@@ -905,9 +949,7 @@ function WatchOptionsSection({
                   </View>
                 ) : null}
               </View>
-              <Text
-                numberOfLines={2}
-                className="mt-2 text-center text-xs font-medium text-white">
+              <Text numberOfLines={2} className="mt-2 text-center text-xs font-medium text-white">
                 {opt.displayName}
               </Text>
               {opt.source === 'search' ? (

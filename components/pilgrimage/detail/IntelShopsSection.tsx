@@ -16,6 +16,8 @@ import type {
 } from '../../../libs/services/pilgrimage/local-intel/types';
 import { formatDistanceKm } from './_helpers';
 import { IntelProvenanceLine } from './IntelProvenanceLine';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
+import type { RoleId } from '../../../libs/services/pilgrimage/locality/types';
 
 export interface NearbyShopRow {
   shop: LocalIntelShop;
@@ -50,6 +52,9 @@ export function IntelShopsSection({
       </ThemedText>
       {rows.map(({ shop, distanceKm }) => {
         const connection = resolveLocalIntelText(shop.animeConnection);
+        const canonicalRole = localityRepository.getRoles({
+          ids: [`shop:${shop.id}` as RoleId],
+        })[0];
         return (
           <Pressable
             key={shop.id}
@@ -83,7 +88,11 @@ export function IntelShopsSection({
               <ThemedText variant="captionSmall" tone="secondary" numberOfLines={2}>
                 {connection.value}
               </ThemedText>
-              <IntelProvenanceLine verifiedAt={shop.verifiedAt} theme={theme} />
+              <IntelProvenanceLine
+                verifiedAt={shop.verifiedAt}
+                theme={theme}
+                provenance={canonicalRole?.provenance}
+              />
             </View>
           </Pressable>
         );

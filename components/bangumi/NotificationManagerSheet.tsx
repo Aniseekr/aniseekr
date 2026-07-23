@@ -1,7 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing open-load effect; Phase 3 only replaces the sheet shell. */
 import { memo, useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -11,12 +11,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { EmptyStateView } from '../common/EmptyStateView';
+import { ThemedBottomSheet } from '../themed';
 import { notificationService } from '../../libs/services/notifications/notification-service';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
 import { useT } from '../../libs/i18n';
@@ -139,160 +139,120 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Animated.View
-        entering={FadeIn.duration(160)}
-        exiting={FadeOut.duration(160)}
-        style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View
-          entering={FadeInUp.duration(220)}
-          style={[
-            styles.sheet,
+    <ThemedBottomSheet visible={visible} onClose={onClose}>
+      <SafeAreaView edges={['bottom']}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, { color: theme.text.primary }]}>
+              {t('bangumiTab.reminders')}
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
+              {pending.length} pending notification{pending.length === 1 ? '' : 's'}
+            </Text>
+          </View>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <MaterialIcons name="close" size={22} color={theme.text.secondary} />
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={handleSendTest}
+          disabled={testing}
+          style={({ pressed }) => [
+            styles.testButton,
             {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
+              backgroundColor: theme.accent + '1A',
+              borderColor: theme.accent + '55',
+              opacity: testing ? 0.6 : pressed ? 0.7 : 1,
             },
           ]}>
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.handle} />
-            <View style={styles.headerRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.title, { color: theme.text.primary }]}>
-                  {t('bangumiTab.reminders')}
-                </Text>
-                <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
-                  {pending.length} pending notification{pending.length === 1 ? '' : 's'}
-                </Text>
-              </View>
-              <Pressable onPress={onClose} hitSlop={12}>
-                <MaterialIcons name="close" size={22} color={theme.text.secondary} />
-              </Pressable>
-            </View>
+          {testing ? (
+            <ActivityIndicator size="small" color={theme.accent} />
+          ) : (
+            <MaterialIcons name="notifications-active" size={18} color={theme.accent} />
+          )}
+          <Text style={[styles.testLabel, { color: theme.accent }]}>
+            {testing
+              ? t('bangumiTab.scheduling')
+              : `Send test reminder (${TEST_REMINDER_DELAY_SECONDS}s)`}
+          </Text>
+        </Pressable>
 
-            <Pressable
-              onPress={handleSendTest}
-              disabled={testing}
-              style={({ pressed }) => [
-                styles.testButton,
-                {
-                  backgroundColor: theme.accent + '1A',
-                  borderColor: theme.accent + '55',
-                  opacity: testing ? 0.6 : pressed ? 0.7 : 1,
-                },
-              ]}>
-              {testing ? (
-                <ActivityIndicator size="small" color={theme.accent} />
-              ) : (
-                <MaterialIcons name="notifications-active" size={18} color={theme.accent} />
-              )}
-              <Text style={[styles.testLabel, { color: theme.accent }]}>
-                {testing ? t('bangumiTab.scheduling') : `Send test reminder (${TEST_REMINDER_DELAY_SECONDS}s)`}
-              </Text>
-            </Pressable>
-
-            {loading ? (
-              <View style={styles.loaderWrap}>
-                <ActivityIndicator color={theme.accent} />
-              </View>
-            ) : pending.length === 0 ? (
-              <EmptyStateView
-                icon="notifications-none"
-                title={t('bangumiTab.noPendingReminders')}
-                description={t('bangumiTab.tapTheBellOnAn')}
-              />
-            ) : (
-              <>
-                <ScrollView style={{ maxHeight: 400 }}>
-                  {pending.map((n) => (
-                    <View
-                      key={n.identifier}
-                      style={[
-                        styles.row,
-                        {
-                          backgroundColor: theme.background.tertiary,
-                          borderColor: theme.glassBorder,
-                        },
-                      ]}>
-                      <View style={[styles.icon, { backgroundColor: theme.accent + '24' }]}>
-                        <MaterialIcons name="notifications-active" size={20} color={theme.accent} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={[styles.rowTitle, { color: theme.text.primary }]}
-                          numberOfLines={1}>
-                          {n.title}
-                        </Text>
-                        <Text
-                          style={[styles.rowBody, { color: theme.text.secondary }]}
-                          numberOfLines={2}>
-                          {n.body}
-                        </Text>
-                        {n.scheduledFor ? (
-                          <Text style={[styles.scheduled, { color: theme.text.tertiary }]}>
-                            {n.scheduledFor.toLocaleString()}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Pressable
-                        onPress={() => handleDelete(n.identifier)}
-                        hitSlop={8}
-                        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                        <MaterialIcons
-                          name="delete-outline"
-                          size={22}
-                          color={theme.text.secondary}
-                        />
-                      </Pressable>
-                    </View>
-                  ))}
-                </ScrollView>
-                <Pressable
-                  onPress={handleClearAll}
-                  style={({ pressed }) => [
-                    styles.clearAllButton,
+        {loading ? (
+          <View style={styles.loaderWrap}>
+            <ActivityIndicator color={theme.accent} />
+          </View>
+        ) : pending.length === 0 ? (
+          <EmptyStateView
+            icon="notifications-none"
+            title={t('bangumiTab.noPendingReminders')}
+            description={t('bangumiTab.tapTheBellOnAn')}
+          />
+        ) : (
+          <>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {pending.map((n) => (
+                <View
+                  key={n.identifier}
+                  style={[
+                    styles.row,
                     {
-                      backgroundColor: theme.status.error + '12',
-                      borderColor: theme.status.error + '33',
-                      opacity: pressed ? 0.7 : 1,
+                      backgroundColor: theme.background.tertiary,
+                      borderColor: theme.glassBorder,
                     },
                   ]}>
-                  <MaterialIcons name="delete-sweep" size={18} color={theme.status.error} />
-                  <Text style={[styles.clearAllLabel, { color: theme.status.error }]}>
-                    {t('bangumiTab.clearAll')}
-                  </Text>
-                </Pressable>
-              </>
-            )}
-          </SafeAreaView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+                  <View style={[styles.icon, { backgroundColor: theme.accent + '24' }]}>
+                    <MaterialIcons name="notifications-active" size={20} color={theme.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.rowTitle, { color: theme.text.primary }]}
+                      numberOfLines={1}>
+                      {n.title}
+                    </Text>
+                    <Text
+                      style={[styles.rowBody, { color: theme.text.secondary }]}
+                      numberOfLines={2}>
+                      {n.body}
+                    </Text>
+                    {n.scheduledFor ? (
+                      <Text style={[styles.scheduled, { color: theme.text.tertiary }]}>
+                        {n.scheduledFor.toLocaleString()}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Pressable
+                    onPress={() => handleDelete(n.identifier)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                    <MaterialIcons name="delete-outline" size={22} color={theme.text.secondary} />
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => [
+                styles.clearAllButton,
+                {
+                  backgroundColor: theme.status.error + '12',
+                  borderColor: theme.status.error + '33',
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}>
+              <MaterialIcons name="delete-sweep" size={18} color={theme.status.error} />
+              <Text style={[styles.clearAllLabel, { color: theme.status.error }]}>
+                {t('bangumiTab.clearAll')}
+              </Text>
+            </Pressable>
+          </>
+        )}
+      </SafeAreaView>
+    </ThemedBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

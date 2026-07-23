@@ -3,15 +3,37 @@ import { describe, expect, it } from 'bun:test';
 import {
   buildMultiStopDirectionsUrl,
   buildPilgrimageDetailRoute,
+  buildPilgrimageEventDetailRoute,
   buildPilgrimageSceneIdRoute,
   getPilgrimageSceneIdSeed,
   getPilgrimageDetailBackRoute,
   getPilgrimageDetailChromeSeed,
   getPilgrimageDetailFocusSpotId,
+  getPilgrimageEventDetailId,
   resolvePilgrimageSpotFocus,
 } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 describe('pilgrimage navigation', () => {
+  it('PILG-056 routes event rows to the first-class event detail destination', () => {
+    const route = buildPilgrimageEventDetailRoute('numazu-machiaruki-stamp', {
+      name: 'Numazu stamp campaign',
+      animeTitle: 'Love Live! Sunshine!!',
+      poster: 'https://img.example/poster.jpg',
+    });
+
+    expect(route).toEqual({
+      pathname: '/pilgrimage/event/[eventId]',
+      params: {
+        eventId: 'numazu-machiaruki-stamp',
+        name: 'Numazu stamp campaign',
+        animeTitle: 'Love Live! Sunshine!!',
+        poster: 'https://img.example/poster.jpg',
+      },
+    });
+    expect(getPilgrimageEventDetailId(route.params ?? {})).toBe('numazu-machiaruki-stamp');
+    expect(getPilgrimageEventDetailId({ eventId: '' })).toBeNull();
+  });
+
   it('routes search results to detail with an explicit search return target', () => {
     expect(
       buildPilgrimageDetailRoute(485936, {

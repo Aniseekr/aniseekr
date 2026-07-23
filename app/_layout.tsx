@@ -2,16 +2,7 @@ import '../libs/services/setup/crypto-polyfill';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '../global.css';
-import { installPromiseRejectionFilter } from '../libs/services/setup/promise-rejection-filter';
-
-// Re-enable RN's promise rejection tracker with a benign-pattern filter.
-// Currently swallows the CameraX zoom-supersession cancellation that
-// VisionCamera's high-frequency zoom updater triggers on every gesture
-// frame. See `promise-rejection-filter.ts` for the rationale and the
-// strict list of allowed patterns. Top-level call so it runs before any
-// component renders and emits its first setZoom.
-installPromiseRejectionFilter();
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Stack, useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
 import { InteractionManager, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -30,7 +21,6 @@ import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
 import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
-import { hydrateSpotIndex, hydratePointsTop } from '../libs/services/pilgrimage/spot-index-data-service';
 import { hydratePilgrimageHubSnapshotFromCache } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
@@ -39,6 +29,15 @@ import {
   markFirstScreenInteractive,
   markRootModuleEvaluated,
 } from '../libs/services/perf/startup-trace';
+import { installPromiseRejectionFilter } from '../libs/services/setup/promise-rejection-filter';
+
+// Re-enable RN's promise rejection tracker with a benign-pattern filter.
+// Currently swallows the CameraX zoom-supersession cancellation that
+// VisionCamera's high-frequency zoom updater triggers on every gesture
+// frame. See `promise-rejection-filter.ts` for the rationale and the
+// strict list of allowed patterns. Top-level call so it runs before any
+// component renders and emits its first setZoom.
+installPromiseRejectionFilter();
 
 // Stamp the cold-start timeline as soon as the root module finishes
 // evaluating — everything above this line is part of the bundle-eval cost.
@@ -48,23 +47,21 @@ export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const navigationRef = useNavigationContainerRef();
-  const [rootNavigationReady, setRootNavigationReady] = useState(false);
+  const subscribeRootNavigationReady = useCallback(
+    (onStoreChange: () => void) => navigationRef.addListener('ready', onStoreChange),
+    [navigationRef]
+  );
+  const getRootNavigationReady = useCallback(() => navigationRef.isReady(), [navigationRef]);
+  const rootNavigationReady = useSyncExternalStore(
+    subscribeRootNavigationReady,
+    getRootNavigationReady,
+    () => false
+  );
   // MMKV makes this preference available synchronously, but navigation side
   // effects still need to wait until Expo Router's NavigationContainer is ready.
   const onboardingDoneRef = useRef(isOnboardingCompleteSync());
   const onboardingGateRanRef = useRef(false);
   const coldLaunchNotificationHandledRef = useRef(false);
-
-  useEffect(() => {
-    if (navigationRef.isReady()) {
-      setRootNavigationReady(true);
-      return;
-    }
-    const unsubscribe = navigationRef.addListener('ready', () => {
-      setRootNavigationReady(true);
-    });
-    return unsubscribe;
-  }, [navigationRef]);
 
   // Cold-start TTI: stamp `firstScreenInteractive` one frame after the
   // navigation container reports ready, so the measure includes the first
@@ -104,8 +101,9 @@ export default function RootLayout() {
         })
         .catch((e) => console.warn('[updateMappings]', e));
       void hydrateAllPilgrimageData().catch((e) => console.warn('[hydratePilgrimage]', e));
-      void hydrateSpotIndex().catch((e) => console.warn('[hydrateSpotIndex]', e));
-      void hydratePointsTop().catch((e) => console.warn('[hydratePointsTop]', e));
+      // No spot-index/points-top hydrators: api.anitabi.cn is WAF-403 and those
+      // release assets were discontinued (see the pilgrimage WAF risk note).
+      // Bundled indexes are permanent; boot must not issue guaranteed 404s.
       // Root layout so the warm finishes long before the user reaches the
       // pilgrimage tab — a pilgrimage/_layout effect would run in the SAME
       // commit as the hub's useState initializer and always lose that race.

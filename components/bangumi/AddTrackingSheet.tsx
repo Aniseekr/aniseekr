@@ -1,9 +1,9 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing open-reset effect; Phase 3 only replaces the sheet shell. */
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { AnimeTitleText } from '../themed';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AnimeTitleText, ThemedBottomSheet, readableTextOn } from '../themed';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { Anime } from '../rate/types';
 import { RatingSlider } from '../common/RatingSlider';
 import { Spacing, Typography } from '../../constants/DesignSystem';
@@ -47,6 +47,7 @@ interface AddTrackingSheetProps {
 function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrackingSheetProps) {
   const { theme } = useTheme();
   const t = useT();
+  const activeFg = readableTextOn(theme.accent);
   const [status, setStatus] = useState<UiStatus>('watching');
   const [score, setScore] = useState(7);
   const [progress, setProgress] = useState(0);
@@ -119,258 +120,218 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
   if (!anime) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Animated.View
-        entering={FadeIn.duration(160)}
-        exiting={FadeOut.duration(160)}
-        style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <Animated.View
-          entering={FadeInUp.duration(220)}
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
-            },
-          ]}>
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.handle} />
-
-            <View style={styles.headerRow}>
-              <View style={styles.headerInfo}>
-                <Image source={{ uri: anime.image }} style={styles.cover} />
-                <View style={styles.headerText}>
-                  <AnimeTitleText
-                    anime={anime}
-                    style={[styles.title, { color: theme.text.primary }]}
-                    numberOfLines={2}
-                  />
-                  {anime.studios?.[0] || seasonLabel ? (
-                    <Text
-                      style={[styles.subtitle, { color: theme.text.secondary }]}
-                      numberOfLines={1}>
-                      {[anime.studios?.[0], seasonLabel].filter(Boolean).join(' · ')}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-              <Pressable onPress={onClose} hitSlop={12}>
-                <MaterialIcons name="close" size={22} color={theme.text.secondary} />
-              </Pressable>
+    <ThemedBottomSheet visible={visible} onClose={onClose} maxHeightPct={0.9}>
+      <SafeAreaView edges={['bottom']}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerInfo}>
+            <Image source={{ uri: anime.image }} style={styles.cover} />
+            <View style={styles.headerText}>
+              <AnimeTitleText
+                anime={anime}
+                style={[styles.title, { color: theme.text.primary }]}
+                numberOfLines={2}
+              />
+              {anime.studios?.[0] || seasonLabel ? (
+                <Text style={[styles.subtitle, { color: theme.text.secondary }]} numberOfLines={1}>
+                  {[anime.studios?.[0], seasonLabel].filter(Boolean).join(' · ')}
+                </Text>
+              ) : null}
             </View>
+          </View>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <MaterialIcons name="close" size={22} color={theme.text.secondary} />
+          </Pressable>
+        </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                {t('commonUi.status')}
-              </Text>
-              <View style={styles.statusRow}>
-                {STATUS_OPTIONS.map((opt) => {
-                  const active = status === opt.key;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      onPress={() => {
-                        hapticsBridge.selection();
-                        setStatus(opt.key);
-                      }}
-                      style={({ pressed }) => [
-                        styles.statusChip,
-                        {
-                          backgroundColor: active ? theme.accent : theme.background.tertiary,
-                          borderColor: active ? theme.accent : theme.glassBorder,
-                          opacity: pressed ? 0.85 : 1,
-                        },
-                      ]}>
-                      <MaterialIcons
-                        name={opt.icon}
-                        size={16}
-                        color={active ? '#0E0A06' : theme.text.primary}
-                      />
-                      <Text
-                        style={[
-                          styles.statusChipLabel,
-                          { color: active ? '#0E0A06' : theme.text.primary },
-                        ]}>
-                        {t(opt.labelKey)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                {t('commonUi.score')}
-              </Text>
-              <View style={styles.scoreRow}>
-                <Text style={[styles.scoreValue, { color: theme.accent }]}>{score.toFixed(1)}</Text>
-                <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
-              </View>
-              <RatingSlider value={score} onChange={setScore} width={320} step={0.5} />
-
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                {t('commonUi.episodes')}
-              </Text>
-              <View style={styles.stepperRow}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            {t('commonUi.status')}
+          </Text>
+          <View style={styles.statusRow}>
+            {STATUS_OPTIONS.map((opt) => {
+              const active = status === opt.key;
+              return (
                 <Pressable
-                  onPress={decrementProgress}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <MaterialIcons name="remove" size={20} color={theme.text.primary} />
-                </Pressable>
-                <View
-                  style={[
-                    styles.stepperValue,
-                    {
-                      borderColor: theme.glassBorder,
-                      backgroundColor: theme.background.tertiary,
-                    },
-                  ]}>
-                  <Text style={[styles.stepperText, { color: theme.text.primary }]}>
-                    {progress}
-                    {totalEpisodes ? ` / ${totalEpisodes}` : ''}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={incrementProgress}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <MaterialIcons name="add" size={20} color={theme.text.primary} />
-                </Pressable>
-              </View>
-
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                {t('bangumiTab.folder')}
-              </Text>
-              <View style={styles.folderRow}>
-                <Pressable
+                  key={opt.key}
                   onPress={() => {
                     hapticsBridge.selection();
-                    setSelectedFolderId(null);
+                    setStatus(opt.key);
+                  }}
+                  style={({ pressed }) => [
+                    styles.statusChip,
+                    {
+                      backgroundColor: active ? theme.accent : theme.background.tertiary,
+                      borderColor: active ? theme.accent : theme.glassBorder,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}>
+                  <MaterialIcons
+                    name={opt.icon}
+                    size={16}
+                    color={active ? activeFg : theme.text.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.statusChipLabel,
+                      { color: active ? activeFg : theme.text.primary },
+                    ]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            {t('commonUi.score')}
+          </Text>
+          <View style={styles.scoreRow}>
+            <Text style={[styles.scoreValue, { color: theme.accent }]}>{score.toFixed(1)}</Text>
+            <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
+          </View>
+          <RatingSlider value={score} onChange={setScore} width={320} step={0.5} />
+
+          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            {t('commonUi.episodes')}
+          </Text>
+          <View style={styles.stepperRow}>
+            <Pressable
+              onPress={decrementProgress}
+              style={({ pressed }) => [
+                styles.stepperButton,
+                {
+                  backgroundColor: theme.background.tertiary,
+                  borderColor: theme.glassBorder,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}>
+              <MaterialIcons name="remove" size={20} color={theme.text.primary} />
+            </Pressable>
+            <View
+              style={[
+                styles.stepperValue,
+                {
+                  borderColor: theme.glassBorder,
+                  backgroundColor: theme.background.tertiary,
+                },
+              ]}>
+              <Text style={[styles.stepperText, { color: theme.text.primary }]}>
+                {progress}
+                {totalEpisodes ? ` / ${totalEpisodes}` : ''}
+              </Text>
+            </View>
+            <Pressable
+              onPress={incrementProgress}
+              style={({ pressed }) => [
+                styles.stepperButton,
+                {
+                  backgroundColor: theme.background.tertiary,
+                  borderColor: theme.glassBorder,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}>
+              <MaterialIcons name="add" size={20} color={theme.text.primary} />
+            </Pressable>
+          </View>
+
+          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            {t('bangumiTab.folder')}
+          </Text>
+          <View style={styles.folderRow}>
+            <Pressable
+              onPress={() => {
+                hapticsBridge.selection();
+                setSelectedFolderId(null);
+              }}
+              style={({ pressed }) => [
+                styles.folderChip,
+                {
+                  backgroundColor:
+                    selectedFolderId === null ? theme.accent : theme.background.tertiary,
+                  borderColor: selectedFolderId === null ? theme.accent : theme.glassBorder,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.folderChipLabel,
+                  {
+                    color: selectedFolderId === null ? activeFg : theme.text.primary,
+                  },
+                ]}>
+                {t('bangumiTab.defaultFolder')}
+              </Text>
+            </Pressable>
+            {folders.map((f) => {
+              const active = selectedFolderId === f.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => {
+                    hapticsBridge.selection();
+                    setSelectedFolderId(f.id);
                   }}
                   style={({ pressed }) => [
                     styles.folderChip,
                     {
-                      backgroundColor:
-                        selectedFolderId === null ? theme.accent : theme.background.tertiary,
-                      borderColor: selectedFolderId === null ? theme.accent : theme.glassBorder,
+                      backgroundColor: active ? theme.accent : theme.background.tertiary,
+                      borderColor: active ? theme.accent : theme.glassBorder,
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}>
                   <Text
                     style={[
                       styles.folderChipLabel,
-                      {
-                        color: selectedFolderId === null ? '#0E0A06' : theme.text.primary,
-                      },
+                      { color: active ? activeFg : theme.text.primary },
                     ]}>
-                    {t('bangumiTab.defaultFolder')}
+                    {f.name}
                   </Text>
                 </Pressable>
-                {folders.map((f) => {
-                  const active = selectedFolderId === f.id;
-                  return (
-                    <Pressable
-                      key={f.id}
-                      onPress={() => {
-                        hapticsBridge.selection();
-                        setSelectedFolderId(f.id);
-                      }}
-                      style={({ pressed }) => [
-                        styles.folderChip,
-                        {
-                          backgroundColor: active ? theme.accent : theme.background.tertiary,
-                          borderColor: active ? theme.accent : theme.glassBorder,
-                          opacity: pressed ? 0.85 : 1,
-                        },
-                      ]}>
-                      <Text
-                        style={[
-                          styles.folderChipLabel,
-                          { color: active ? '#0E0A06' : theme.text.primary },
-                        ]}>
-                        {f.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
+              );
+            })}
+          </View>
+        </ScrollView>
 
-            <View style={styles.buttonRow}>
-              <Pressable
-                onPress={() => {
-                  hapticsBridge.tap();
-                  onClose();
-                }}
-                style={({ pressed }) => [
-                  styles.button,
-                  {
-                    borderColor: theme.glassBorder,
-                    backgroundColor: theme.background.tertiary,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}>
-                <Text style={[styles.buttonLabel, { color: theme.text.primary }]}>
-                  {t('common.cancel')}
-                </Text>
-              </Pressable>
-              <Pressable
-                disabled={saving}
-                onPress={handleSave}
-                style={({ pressed }) => [
-                  styles.button,
-                  styles.saveButton,
-                  {
-                    backgroundColor: theme.accent,
-                    opacity: pressed || saving ? 0.85 : 1,
-                  },
-                ]}>
-                <Text style={styles.saveLabel}>{saving ? t('commonUi.saving') : t('common.save')}</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+        <View style={styles.buttonRow}>
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              onClose();
+            }}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                borderColor: theme.glassBorder,
+                backgroundColor: theme.background.tertiary,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}>
+            <Text style={[styles.buttonLabel, { color: theme.text.primary }]}>
+              {t('common.cancel')}
+            </Text>
+          </Pressable>
+          <Pressable
+            disabled={saving}
+            onPress={handleSave}
+            style={({ pressed }) => [
+              styles.button,
+              styles.saveButton,
+              {
+                backgroundColor: theme.accent,
+                opacity: pressed || saving ? 0.85 : 1,
+              },
+            ]}>
+            <Text style={[styles.saveLabel, { color: activeFg }]}>
+              {saving ? t('commonUi.saving') : t('common.save')}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </ThemedBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
-    maxHeight: '90%',
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -436,11 +397,11 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.xs,
   },
   scoreValue: {
-    fontSize: 36,
+    ...Typography.headlineLarge,
     fontWeight: '800',
   },
   scoreMax: {
-    fontSize: 16,
+    ...Typography.bodyLarge,
     fontWeight: '600',
   },
   stepperRow: {
@@ -504,7 +465,6 @@ const styles = StyleSheet.create({
   },
   saveLabel: {
     ...Typography.titleMedium,
-    color: '#0E0A06',
     fontWeight: '700',
   },
 });

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { readableTextOn, ThemedSurface, ThemedText } from '../../themed';
+import { readableTextOn, ThemedBottomSheet, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
@@ -81,115 +81,99 @@ export default function CameraSettingsSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-      statusBarTranslucent>
-      <View style={styles.root}>
+    <ThemedBottomSheet visible={visible} onClose={onClose} maxHeightPct={0.85}>
+      <View style={styles.header}>
+        <ThemedText variant="titleLarge" weight="700">
+          {t('pilgrimageUi.cameraSettings')}
+        </ThemedText>
         <Pressable
-          // Tappable scrim closes the sheet when the user taps outside it.
-          style={StyleSheet.absoluteFill}
           onPress={onClose}
+          hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel={t('pilgrimageUi.dismissCameraSettings')}
-        />
-        <ThemedSurface variant="elevated" radius={0} style={styles.sheet}>
-          <View style={styles.header}>
-            <ThemedText variant="titleLarge" weight="700">
-              {t('pilgrimageUi.cameraSettings')}
-            </ThemedText>
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={t('pilgrimageUi.closeCameraSettings')}
-              style={({ pressed }) => [
-                styles.closeBtn,
-                { borderColor: theme.glassBorder, backgroundColor: theme.background.tertiary },
-                pressed && { opacity: 0.7 },
-              ]}>
-              <Ionicons name="close" size={18} color={theme.text.primary} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}>
-            <SettingsSection title={t('pilgrimageUi.captureMode')}>
-              <SegmentedRow
-                options={CAPTURE_MODES.map((m) => ({ value: m, label: CAPTURE_MODE_LABEL[m] }))}
-                value={captureMode}
-                onSelect={(m) => {
-                  hapticsBridge.selection();
-                  onCaptureModeChange(m);
-                }}
-              />
-              <ThemedText variant="caption" tone="secondary">
-                {t(CAPTURE_MODE_HELP_TEXT_KEY)}
-              </ThemedText>
-            </SettingsSection>
-
-            <SettingsSection title={t('pilgrimageUi.aspectRatio')}>
-              <SegmentedRow
-                options={ASPECT_RATIOS.map((a) => ({ value: a, label: ASPECT_LABEL[a] }))}
-                value={aspect}
-                onSelect={(a) => {
-                  hapticsBridge.selection();
-                  onAspectChange(a);
-                }}
-              />
-            </SettingsSection>
-
-            <SettingsSection title={t('pilgrimageUi.resolution')}>
-              <SegmentedRow
-                options={RESOLUTION_TIERS.map((t) => ({ value: t, label: RESOLUTION_LABEL[t] }))}
-                value={settings.resolutionTier}
-                onSelect={(v) => handleSelect('resolutionTier', v)}
-              />
-              <ThemedText variant="caption" tone="secondary">
-                4K keeps the most detail. 2K captures faster and uses less storage.
-              </ThemedText>
-            </SettingsSection>
-
-            <SettingsSection title={t('pilgrimageUi.selfTimer')}>
-              <SegmentedRow
-                options={COUNTDOWN_SECONDS.map((s) => ({ value: s, label: COUNTDOWN_LABEL[s] }))}
-                value={settings.countdownSeconds}
-                onSelect={(v) => handleSelect('countdownSeconds', v)}
-              />
-            </SettingsSection>
-
-            <SwitchRow
-              label={t('pilgrimageUi.silentShutter')}
-              description={SILENT_SHUTTER_HELP_TEXT}
-              value={settings.mute}
-              onValueChange={(v) => handleSwitch('mute', v)}
-            />
-            <SwitchRow
-              label={t('pilgrimageUi.mirrorFrontCamera')}
-              description={t('pilgrimageUi.flipSelfiePreviewHorizontally')}
-              value={settings.mirror}
-              onValueChange={(v) => handleSwitch('mirror', v)}
-            />
-            <SwitchRow
-              label={t('pilgrimageUi.animateShutter')}
-              description={t('pilgrimageUi.showTheShutterPulseOn')}
-              value={settings.animateShutter}
-              onValueChange={(v) => handleSwitch('animateShutter', v)}
-            />
-            <SwitchRow
-              label={t('pilgrimageUi.autoCaptureWhenAligned')}
-              description={t('pilgrimageUi.fireShutterAutomaticallyAt95')}
-              value={settings.autoCapture}
-              onValueChange={(v) => handleSwitch('autoCapture', v)}
-            />
-          </ScrollView>
-        </ThemedSurface>
+          accessibilityLabel={t('pilgrimageUi.closeCameraSettings')}
+          style={({ pressed }) => [
+            styles.closeBtn,
+            { borderColor: theme.glassBorder, backgroundColor: theme.background.tertiary },
+            pressed && { opacity: 0.7 },
+          ]}>
+          <Ionicons name="close" size={18} color={theme.text.primary} />
+        </Pressable>
       </View>
-    </Modal>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        <SettingsSection title={t('pilgrimageUi.captureMode')}>
+          <SegmentedRow
+            options={CAPTURE_MODES.map((m) => ({ value: m, label: CAPTURE_MODE_LABEL[m] }))}
+            value={captureMode}
+            onSelect={(m) => {
+              hapticsBridge.selection();
+              onCaptureModeChange(m);
+            }}
+          />
+          <ThemedText variant="caption" tone="secondary">
+            {t(CAPTURE_MODE_HELP_TEXT_KEY)}
+          </ThemedText>
+        </SettingsSection>
+
+        <SettingsSection title={t('pilgrimageUi.aspectRatio')}>
+          <SegmentedRow
+            options={ASPECT_RATIOS.map((a) => ({ value: a, label: ASPECT_LABEL[a] }))}
+            value={aspect}
+            onSelect={(a) => {
+              hapticsBridge.selection();
+              onAspectChange(a);
+            }}
+          />
+        </SettingsSection>
+
+        <SettingsSection title={t('pilgrimageUi.resolution')}>
+          <SegmentedRow
+            options={RESOLUTION_TIERS.map((t) => ({ value: t, label: RESOLUTION_LABEL[t] }))}
+            value={settings.resolutionTier}
+            onSelect={(v) => handleSelect('resolutionTier', v)}
+          />
+          <ThemedText variant="caption" tone="secondary">
+            4K keeps the most detail. 2K captures faster and uses less storage.
+          </ThemedText>
+        </SettingsSection>
+
+        <SettingsSection title={t('pilgrimageUi.selfTimer')}>
+          <SegmentedRow
+            options={COUNTDOWN_SECONDS.map((s) => ({ value: s, label: COUNTDOWN_LABEL[s] }))}
+            value={settings.countdownSeconds}
+            onSelect={(v) => handleSelect('countdownSeconds', v)}
+          />
+        </SettingsSection>
+
+        <SwitchRow
+          label={t('pilgrimageUi.silentShutter')}
+          description={SILENT_SHUTTER_HELP_TEXT}
+          value={settings.mute}
+          onValueChange={(v) => handleSwitch('mute', v)}
+        />
+        <SwitchRow
+          label={t('pilgrimageUi.mirrorFrontCamera')}
+          description={t('pilgrimageUi.flipSelfiePreviewHorizontally')}
+          value={settings.mirror}
+          onValueChange={(v) => handleSwitch('mirror', v)}
+        />
+        <SwitchRow
+          label={t('pilgrimageUi.animateShutter')}
+          description={t('pilgrimageUi.showTheShutterPulseOn')}
+          value={settings.animateShutter}
+          onValueChange={(v) => handleSwitch('animateShutter', v)}
+        />
+        <SwitchRow
+          label={t('pilgrimageUi.autoCaptureWhenAligned')}
+          description={t('pilgrimageUi.fireShutterAutomaticallyAt95')}
+          value={settings.autoCapture}
+          onValueChange={(v) => handleSwitch('autoCapture', v)}
+        />
+      </ScrollView>
+    </ThemedBottomSheet>
   );
 }
 
@@ -313,21 +297,6 @@ function SwitchRow({ label, description, value, onValueChange }: SwitchRowProps)
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    // Backdrop scrim — translucent black sits over the camera preview so the
-    // sheet has visual separation. The Pressable absoluteFill above provides
-    // the dismiss-on-outside-tap behaviour; the colour lives on the wrapper.
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  sheet: {
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xxl,
-    maxHeight: '85%',
-  },
   // `flexShrink: 1` lets the ScrollView collapse to whatever space remains
   // inside the sheet's `maxHeight: '85%'` cap so its content actually scrolls
   // instead of being clipped by the sheet's `overflow: 'hidden'`. Without it

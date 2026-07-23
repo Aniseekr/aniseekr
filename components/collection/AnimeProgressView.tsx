@@ -1,9 +1,9 @@
+/* eslint-disable react-hooks/set-state-in-effect -- Existing open-reset effect; Phase 3 only replaces the sheet shell. */
 import { memo, useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import type { TranslationKey } from '../../libs/i18n';
@@ -11,6 +11,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
 import { AnimeStatus, AnimeStatusBadge } from '../common/AnimeStatusBadge';
+import { ThemedBottomSheet, readableTextOn } from '../themed';
 
 export interface AnimeProgress {
   status: AnimeStatus;
@@ -63,6 +64,7 @@ function AnimeProgressViewComponent({
 }: AnimeProgressViewProps) {
   const { theme } = useTheme();
   const t = useT();
+  const activeFg = readableTextOn(theme.accent);
   const [draft, setDraft] = useState<AnimeProgress>(progress ?? DEFAULT_PROGRESS);
 
   useEffect(() => {
@@ -86,242 +88,202 @@ function AnimeProgressViewComponent({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        <Animated.View
-          entering={FadeIn.duration(160)}
-          exiting={FadeOut.duration(160)}
-          style={styles.backdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          <Animated.View
-            entering={FadeInUp.duration(220)}
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-              },
-            ]}>
-            <SafeAreaView edges={['bottom']} style={{ maxHeight: '92%' }}>
-              <View style={styles.handle} />
-              <View style={styles.headerRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.title, { color: theme.text.primary }]}>
-                    {t('collectionUi.trackProgress')}
-                  </Text>
-                  <Text
-                    style={[styles.subtitle, { color: theme.text.secondary }]}
-                    numberOfLines={1}>
-                    {animeTitle}
-                  </Text>
-                </View>
-                <AnimeStatusBadge status={draft.status} />
-              </View>
+    <ThemedBottomSheet visible={visible} onClose={onClose} maxHeightPct={0.92}>
+      <KeyboardAvoidingView behavior="padding">
+        <SafeAreaView edges={['bottom']}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: theme.text.primary }]}>
+                {t('collectionUi.trackProgress')}
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.text.secondary }]} numberOfLines={1}>
+                {animeTitle}
+              </Text>
+            </View>
+            <AnimeStatusBadge status={draft.status} />
+          </View>
 
-              <KeyboardAwareScrollView
-                showsVerticalScrollIndicator={false}
-                bottomOffset={20}
-                keyboardShouldPersistTaps="handled">
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                  {t('commonUi.status')}
-                </Text>
-                <View style={styles.statusGrid}>
-                  {STATUS_OPTIONS.map((opt) => {
-                    const active = draft.status === opt.key;
-                    return (
-                      <Pressable
-                        key={opt.key}
-                        onPress={() => update('status', opt.key)}
-                        style={({ pressed }) => [
-                          styles.statusItem,
-                          {
-                            backgroundColor: active ? theme.accent : theme.background.tertiary,
-                            borderColor: active ? theme.accent : theme.glassBorder,
-                            opacity: pressed ? 0.85 : 1,
-                          },
-                        ]}>
-                        <MaterialIcons
-                          name={opt.icon}
-                          size={18}
-                          color={active ? '#0E0A06' : theme.text.primary}
-                        />
-                        <Text
-                          style={[
-                            styles.statusLabel,
-                            { color: active ? '#0E0A06' : theme.text.primary },
-                          ]}>
-                          {t(opt.labelKey)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                {draft.status !== 'planning' ? (
-                  <>
-                    <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                      {t('commonUi.episodes')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.counterRow,
-                        {
-                          backgroundColor: theme.background.tertiary,
-                          borderColor: theme.glassBorder,
-                        },
-                      ]}>
-                      <Pressable
-                        onPress={() => handleEpisodesDelta(-1)}
-                        style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
-                        <MaterialIcons name="remove" size={20} color={theme.text.primary} />
-                      </Pressable>
-                      <View style={{ flex: 1, alignItems: 'center' }}>
-                        <Text style={[styles.counterValue, { color: theme.text.primary }]}>
-                          {draft.episodesWatched}
-                          {totalEpisodes ? (
-                            <Text style={[styles.counterTotal, { color: theme.text.tertiary }]}>
-                              {' '}
-                              / {totalEpisodes}
-                            </Text>
-                          ) : null}
-                        </Text>
-                      </View>
-                      <Pressable
-                        onPress={() => handleEpisodesDelta(1)}
-                        style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
-                        <MaterialIcons name="add" size={20} color={theme.text.primary} />
-                      </Pressable>
-                    </View>
-                  </>
-                ) : null}
-
-                {draft.status === 'rewatching' ? (
-                  <>
-                    <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                      {t('collectionUi.rewatches')}
-                    </Text>
-                    <View
-                      style={[
-                        styles.counterRow,
-                        {
-                          backgroundColor: theme.background.tertiary,
-                          borderColor: theme.glassBorder,
-                        },
-                      ]}>
-                      <Pressable
-                        onPress={() =>
-                          update(
-                            'rewatchCount',
-                            Math.max(0, (draft.rewatchCount ?? 0) - 1)
-                          )
-                        }
-                        style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
-                        <MaterialIcons name="remove" size={20} color={theme.text.primary} />
-                      </Pressable>
-                      <View style={{ flex: 1, alignItems: 'center' }}>
-                        <Text style={[styles.counterValue, { color: theme.text.primary }]}>
-                          {draft.rewatchCount ?? 0}
-                        </Text>
-                      </View>
-                      <Pressable
-                        onPress={() => update('rewatchCount', (draft.rewatchCount ?? 0) + 1)}
-                        style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
-                        <MaterialIcons name="add" size={20} color={theme.text.primary} />
-                      </Pressable>
-                    </View>
-                  </>
-                ) : null}
-
-                {draft.status !== 'planning' ? (
-                  <>
-                    <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                      {t('commonUi.score')}
-                    </Text>
-                    <View style={styles.scoreRow}>
-                      <Text style={[styles.scoreValue, { color: theme.accent }]}>
-                        {draft.score.toFixed(1)}
-                      </Text>
-                      <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
-                    </View>
-                    <RatingSlider
-                      value={draft.score}
-                      onChange={(v) => update('score', v)}
-                      width={300}
-                      step={0.5}
+          <KeyboardAwareScrollView
+            showsVerticalScrollIndicator={false}
+            bottomOffset={20}
+            keyboardShouldPersistTaps="handled">
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('commonUi.status')}
+            </Text>
+            <View style={styles.statusGrid}>
+              {STATUS_OPTIONS.map((opt) => {
+                const active = draft.status === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => update('status', opt.key)}
+                    style={({ pressed }) => [
+                      styles.statusItem,
+                      {
+                        backgroundColor: active ? theme.accent : theme.background.tertiary,
+                        borderColor: active ? theme.accent : theme.glassBorder,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}>
+                    <MaterialIcons
+                      name={opt.icon}
+                      size={18}
+                      color={active ? activeFg : theme.text.primary}
                     />
-                  </>
-                ) : null}
+                    <Text
+                      style={[
+                        styles.statusLabel,
+                        { color: active ? activeFg : theme.text.primary },
+                      ]}>
+                      {t(opt.labelKey)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
+            {draft.status !== 'planning' ? (
+              <>
                 <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-                  {t('collectionUi.notes')}
+                  {t('commonUi.episodes')}
                 </Text>
-                <TextInput
-                  value={draft.notes}
-                  onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}
-                  placeholder={t('collectionUi.personalNotes')}
-                  placeholderTextColor={theme.text.tertiary}
-                  multiline
+                <View
                   style={[
-                    styles.notesInput,
+                    styles.counterRow,
                     {
                       backgroundColor: theme.background.tertiary,
                       borderColor: theme.glassBorder,
-                      color: theme.text.primary,
                     },
-                  ]}
-                />
-              </KeyboardAwareScrollView>
+                  ]}>
+                  <Pressable
+                    onPress={() => handleEpisodesDelta(-1)}
+                    style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
+                    <MaterialIcons name="remove" size={20} color={theme.text.primary} />
+                  </Pressable>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={[styles.counterValue, { color: theme.text.primary }]}>
+                      {draft.episodesWatched}
+                      {totalEpisodes ? (
+                        <Text style={[styles.counterTotal, { color: theme.text.tertiary }]}>
+                          {' '}
+                          / {totalEpisodes}
+                        </Text>
+                      ) : null}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => handleEpisodesDelta(1)}
+                    style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
+                    <MaterialIcons name="add" size={20} color={theme.text.primary} />
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
 
-              <View style={styles.footerRow}>
-                <Pressable
-                  onPress={onClose}
-                  style={({ pressed }) => [
-                    styles.footerButton,
-                    styles.cancelButton,
-                    { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
+            {draft.status === 'rewatching' ? (
+              <>
+                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                  {t('collectionUi.rewatches')}
+                </Text>
+                <View
+                  style={[
+                    styles.counterRow,
+                    {
+                      backgroundColor: theme.background.tertiary,
+                      borderColor: theme.glassBorder,
+                    },
                   ]}>
-                  <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
-                    {t('common.cancel')}
+                  <Pressable
+                    onPress={() =>
+                      update('rewatchCount', Math.max(0, (draft.rewatchCount ?? 0) - 1))
+                    }
+                    style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
+                    <MaterialIcons name="remove" size={20} color={theme.text.primary} />
+                  </Pressable>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={[styles.counterValue, { color: theme.text.primary }]}>
+                      {draft.rewatchCount ?? 0}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => update('rewatchCount', (draft.rewatchCount ?? 0) + 1)}
+                    style={[styles.counterButton, { borderColor: theme.glassBorder }]}>
+                    <MaterialIcons name="add" size={20} color={theme.text.primary} />
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
+
+            {draft.status !== 'planning' ? (
+              <>
+                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                  {t('commonUi.score')}
+                </Text>
+                <View style={styles.scoreRow}>
+                  <Text style={[styles.scoreValue, { color: theme.accent }]}>
+                    {draft.score.toFixed(1)}
                   </Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleSave}
-                  style={({ pressed }) => [
-                    styles.footerButton,
-                    { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-                  ]}>
-                  <Text style={styles.confirmLabel}>{t('collectionUi.saveProgress')}</Text>
-                </Pressable>
-              </View>
-            </SafeAreaView>
-          </Animated.View>
-        </Animated.View>
+                  <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
+                </View>
+                <RatingSlider
+                  value={draft.score}
+                  onChange={(v) => update('score', v)}
+                  width={300}
+                  step={0.5}
+                />
+              </>
+            ) : null}
+
+            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              {t('collectionUi.notes')}
+            </Text>
+            <TextInput
+              value={draft.notes}
+              onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}
+              placeholder={t('collectionUi.personalNotes')}
+              placeholderTextColor={theme.text.tertiary}
+              multiline
+              style={[
+                styles.notesInput,
+                {
+                  backgroundColor: theme.background.tertiary,
+                  borderColor: theme.glassBorder,
+                  color: theme.text.primary,
+                },
+              ]}
+            />
+          </KeyboardAwareScrollView>
+
+          <View style={styles.footerRow}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.footerButton,
+                styles.cancelButton,
+                { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
+              ]}>
+              <Text style={[styles.cancelLabel, { color: theme.text.secondary }]}>
+                {t('common.cancel')}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleSave}
+              style={({ pressed }) => [
+                styles.footerButton,
+                { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+              ]}>
+              <Text style={[styles.confirmLabel, { color: activeFg }]}>
+                {t('collectionUi.saveProgress')}
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
-    </Modal>
+    </ThemedBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: 8,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginBottom: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -390,11 +352,11 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   scoreValue: {
-    fontSize: 38,
+    ...Typography.headlineLarge,
     fontWeight: '800',
   },
   scoreMax: {
-    fontSize: 18,
+    ...Typography.bodyLarge,
     fontWeight: '600',
   },
   notesInput: {
@@ -425,7 +387,6 @@ const styles = StyleSheet.create({
   },
   confirmLabel: {
     ...Typography.titleMedium,
-    color: '#0E0A06',
     fontWeight: '700',
   },
 });

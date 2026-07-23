@@ -4,6 +4,14 @@
 // scans over memoized per-kind partitions.
 
 import { hasSufficientRuntimeCoverage } from '../anitabi-runtime-coverage';
+import { localityRepository } from '../locality/locality-repository';
+import type {
+  LocalityDataEnvelope,
+  Place,
+  PlaceId,
+  PlaceRole,
+  StampStopRole,
+} from '../locality/types';
 import { haversineKm } from '../spot-index';
 import { resolveEventDateState, type EventDateState } from './event-schedule';
 import { resolveOffsetMinutes } from './timezone';
@@ -23,16 +31,21 @@ interface IntelState {
   hints: LocalIntelViewingHint[];
 }
 
-let STATE: IntelState | null = null;
+let overrideState: IntelState | null = null;
+let canonicalCache: { snapshot: LocalityDataEnvelope; state: IntelState } | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
 
+localityRepository.subscribe(() => {
+  if (overrideState) return;
+  canonicalCache = null;
+  version += 1;
+  for (const listener of listeners) listener();
+});
+
 function isFiniteGeo(geo: unknown): geo is [number, number] {
   return (
-    Array.isArray(geo) &&
-    geo.length === 2 &&
-    Number.isFinite(geo[0]) &&
-    Number.isFinite(geo[1])
+    Array.isArray(geo) && geo.length === 2 && Number.isFinite(geo[0]) && Number.isFinite(geo[1])
   );
 }
 
@@ -63,11 +76,12 @@ function normalize(file: LocalIntelFile): IntelState {
 }
 
 function ensureBuilt(): IntelState {
-  if (STATE) return STATE;
-  // require (sync) keeps queries sync on first call; bun:test may wrap in { default }.
-  const mod = require('./local-intel.data.json');
-  STATE = normalize((mod?.default ?? mod) as LocalIntelFile);
-  return STATE;
+  if (overrideState) return overrideState;
+  const snapshot = localityRepository.getSnapshot();
+  if (canonicalCache?.snapshot === snapshot) return canonicalCache.state;
+  const state = projectCanonicalLocalIntel(snapshot);
+  canonicalCache = { snapshot, state };
+  return state;
 }
 
 /**
@@ -79,7 +93,7 @@ export function hydrateLocalIntelFromRuntime(file: LocalIntelFile): void {
   const current = ensureBuilt();
   const candidate = normalize(file);
   if (!hasSufficientRuntimeCoverage(current.entries.length, candidate.entries.length)) return;
-  STATE = candidate;
+  overrideState = candidate;
   version += 1;
   for (const listener of listeners) listener();
 }
@@ -95,7 +109,8 @@ export function getLocalIntelVersion(): number {
 
 /** Test-only: reset module state, optionally installing a fixture directly. */
 export function resetLocalIntelForTests(file?: LocalIntelFile): void {
-  STATE = file ? normalize(file) : null;
+  overrideState = file ? normalize(file) : null;
+  canonicalCache = null;
   version = 0;
   listeners.clear();
 }
@@ -189,7 +204,7 @@ export function getHubRailEvents(now: Date, horizonDays = 90): readonly HubRailE
     .filter(
       (r) =>
         r.state.state === 'unannounced' &&
-        monthWithinHorizon(r.state.typicalMonth, now, horizonDays, eventTz(r)),
+        monthWithinHorizon(r.state.typicalMonth, now, horizonDays, eventTz(r))
     )
     .sort((a, b) => tbaMonthDays(a, now) - tbaMonthDays(b, now));
 
@@ -217,10 +232,10 @@ function tbaMonthDays(row: HubRailEvent, now: Date): number {
 
 export function getViewingHintForSpot(
   bangumiId: number,
-  pointId: string,
+  pointId: string
 ): LocalIntelViewingHint | null {
   const match = ensureBuilt().hints.find((h) =>
-    h.spotRefs?.some((ref) => ref.bangumiId === bangumiId && ref.pointId === pointId),
+    h.spotRefs?.some((ref) => ref.bangumiId === bangumiId && ref.pointId === pointId)
   );
   return match ?? null;
 }
@@ -236,4 +251,126 @@ export function getViewingHintNear(geo: [number, number]): LocalIntelViewingHint
     }
   }
   return best?.hint ?? null;
+}
+
+function projectCanonicalLocalIntel(snapshot: LocalityDataEnvelope): IntelState {
+  const { entities } = snapshot;
+  const entries: LocalIntelEntry[] = [];
+
+  for (const guide of Object.values(entities.placeGuides)) {
+    const place = entities.places[guide.placeId];
+    if (!place) continue;
+    const provenance = legacyProvenance(guide.provenance[0]);
+    entries.push({
+      kind: 'viewing_hint',
+      id: guide.id,
+      bangumiIds: [...guide.animeIds],
+      name: guide.name,
+      description: guide.description,
+      geo: legacyGeo(place),
+      timezone: place.timezone,
+      hint: guide.guidanceKind,
+      note: guide.note,
+      ...(guide.bestMonths ? { bestMonths: [...guide.bestMonths] } : {}),
+      ...(guide.appliesWithinMeters !== undefined ? { radiusM: guide.appliesWithinMeters } : {}),
+      ...provenance,
+    });
+  }
+
+  for (const role of Object.values(entities.roles)) {
+    if (role.kind !== 'shop') continue;
+    const place = entities.places[role.placeId];
+    if (!place) continue;
+    const provenance = legacyProvenance(role.provenance[0]);
+    entries.push({
+      kind: 'shop',
+      id: place.id,
+      bangumiIds: [...role.animeIds],
+      name: place.name,
+      description: role.description ?? place.name,
+      geo: legacyGeo(place),
+      timezone: place.timezone,
+      category: role.shopCategory,
+      animeConnection: role.animeConnection,
+      ...(place.hours?.ja ? { hours: place.hours.ja } : {}),
+      ...provenance,
+    });
+  }
+
+  const roles = Object.values(entities.roles);
+  for (const event of Object.values(entities.events)) {
+    const stopRoles = roles.filter(
+      (role): role is StampStopRole => role.kind === 'stamp_stop' && role.campaignId === event.id
+    );
+    const venue =
+      event.category === 'stamp_rally'
+        ? null
+        : firstEventVenue(event.placeRefs, roles, entities.places);
+    const provenance = legacyProvenance(event.provenance[0]);
+    entries.push({
+      kind: 'event',
+      id: event.id,
+      bangumiIds: [...event.animeIds],
+      name: event.name,
+      description: event.description,
+      geo: venue ? legacyGeo(venue) : null,
+      timezone: event.timezone,
+      category: event.category,
+      schedule: event.schedule,
+      ...(venue ? { venue: venue.name } : {}),
+      ...(stopRoles.length > 0
+        ? {
+            stampSpots: stopRoles.flatMap((role) => {
+              const place = entities.places[role.placeId];
+              if (!place) return [];
+              return [
+                {
+                  name: role.sourceLabel,
+                  ...(role.sourceAddress?.ja ? { address: role.sourceAddress.ja } : {}),
+                  geo: legacyGeo(place),
+                  sourceUrl: role.provenance[0].sourceUrl,
+                },
+              ];
+            }),
+          }
+        : {}),
+      ...provenance,
+    });
+  }
+
+  return {
+    entries,
+    shops: entries.filter((entry): entry is LocalIntelShop => entry.kind === 'shop'),
+    events: entries.filter((entry): entry is LocalIntelEvent => entry.kind === 'event'),
+    hints: entries.filter((entry): entry is LocalIntelViewingHint => entry.kind === 'viewing_hint'),
+  };
+}
+
+function firstEventVenue(
+  placeIds: readonly PlaceId[],
+  roles: readonly PlaceRole[],
+  places: Readonly<Record<PlaceId, Place>>
+): Place | null {
+  for (const placeId of placeIds) {
+    if (!roles.some((role) => role.placeId === placeId && role.kind === 'festival_venue')) continue;
+    const place = places[placeId];
+    if (place) return place;
+  }
+  return null;
+}
+
+function legacyGeo(place: Place): [number, number] | null {
+  return place.geo ? [place.geo[0], place.geo[1]] : null;
+}
+
+function legacyProvenance(provenance: {
+  sourceUrl: string;
+  officialUrl?: string;
+  verifiedAt: string;
+}): Pick<LocalIntelEntry, 'sourceUrl' | 'officialUrl' | 'verifiedAt'> {
+  return {
+    sourceUrl: provenance.sourceUrl,
+    ...(provenance.officialUrl ? { officialUrl: provenance.officialUrl } : {}),
+    verifiedAt: provenance.verifiedAt,
+  };
 }

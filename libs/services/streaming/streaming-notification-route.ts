@@ -48,11 +48,9 @@ export function routeForNotificationResponse(
     }
     case 'pilgrimage_event': {
       const id = typeof data.animeId === 'string' ? data.animeId.trim() : '';
-      if (!id) return null;
       const eventId = typeof data.eventId === 'string' ? data.eventId.trim() : '';
-      return eventId
-        ? `/pilgrimage/${id}?intelEvent=${encodeURIComponent(eventId)}`
-        : `/pilgrimage/${id}`;
+      if (eventId) return `/pilgrimage/event/${encodeURIComponent(eventId)}`;
+      return id ? `/pilgrimage/${id}` : null;
     }
     default:
       return null;

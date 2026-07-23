@@ -36,6 +36,8 @@ export interface SpotMapViewHandle {
 
 export interface SpotMapViewProps {
   spots: readonly AnitabiPoint[];
+  /** Exact typed locality pins + honest area labels, additive to scene markers. */
+  localityMarkers?: readonly MapMarker[];
   visited: VisitedMap;
   ringColor: string;
   userLocation: LatLng | null;
@@ -57,6 +59,7 @@ export interface SpotMapViewProps {
   controlsBottomOffset?: number;
   onSpotPress: (spot: AnitabiPoint) => void;
   onClusterPick: (spots: readonly AnitabiPoint[]) => void;
+  onLocalityMarkerPress?: (marker: MapMarker) => void;
   /** Notified the moment the user drags the map (drops follow/compass). */
   onUserPan?: () => void;
   theme: ThemePalette;
@@ -66,6 +69,7 @@ export interface SpotMapViewProps {
 
 function SpotMapViewImpl({
   spots,
+  localityMarkers = [],
   visited,
   ringColor,
   userLocation,
@@ -77,6 +81,7 @@ function SpotMapViewImpl({
   controlsBottomOffset = 16,
   onSpotPress,
   onClusterPick,
+  onLocalityMarkerPress,
   onUserPan,
   theme,
   style,
@@ -89,17 +94,21 @@ function SpotMapViewImpl({
   const styleUrl = resolveMapStyleUrl(mapMode, loadMapStyleOverrideSync());
 
   const maplibreRef = useRef<MapSurfaceHandle>(null);
-  const spotsById = useRef(new Map<string, AnitabiPoint>());
   const styles = useMemo(() => makeMapStyles(theme), [theme]);
+  const spotsById = useMemo(() => {
+    const byId = new Map<string, AnitabiPoint>();
+    for (const spot of spots) {
+      if (hasValidGeo(spot.geo)) byId.set(spot.id, spot);
+    }
+    return byId;
+  }, [spots]);
 
-  // Engine-neutral scene markers. `spotsById` is (re)populated here so marker /
-  // cluster taps resolve back to the source AnitabiPoint.
+  // Engine-neutral scene markers. The memoized `spotsById` lookup resolves
+  // marker / cluster taps back to the source AnitabiPoint.
   const markers = useMemo<MapMarker[]>(() => {
     const out: MapMarker[] = [];
-    spotsById.current.clear();
     for (const spot of spots) {
       if (!hasValidGeo(spot.geo)) continue;
-      spotsById.current.set(spot.id, spot);
       out.push({
         id: spot.id,
         lat: spot.geo[0],
@@ -113,16 +122,17 @@ function SpotMapViewImpl({
         markerMode: markerMode === 'dot' ? 'dot' : 'bubble',
       });
     }
+    out.push(...localityMarkers);
     return out;
-  }, [spots, ringColor, markerMode, visited]);
+  }, [localityMarkers, spots, ringColor, markerMode, visited]);
 
   // Chip-strip selection pans to the focused spot (native flyTo, zoom 16).
   useEffect(() => {
     if (!focusSpotId) return;
-    const spot = spotsById.current.get(focusSpotId);
+    const spot = spotsById.get(focusSpotId);
     if (!spot || !hasValidGeo(spot.geo)) return;
     maplibreRef.current?.focus?.({ lat: spot.geo[0], lng: spot.geo[1], zoom: 16 });
-  }, [focusSpotId]);
+  }, [focusSpotId, spotsById]);
 
   // Imperative recenter / heading — driven by the locate-FAB hook so location +
   // 60 Hz magnetometer ticks bypass React state entirely (CLAUDE.md Rule 9).
@@ -138,7 +148,11 @@ function SpotMapViewImpl({
 
   const user = userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null;
   const center =
-    centerGeo && hasValidGeo(centerGeo) ? { lat: centerGeo[0], lng: centerGeo[1] } : undefined;
+    centerGeo && hasValidGeo(centerGeo)
+      ? { lat: centerGeo[0], lng: centerGeo[1] }
+      : localityMarkers[0]
+        ? { lat: localityMarkers[0].lat, lng: localityMarkers[0].lng }
+        : undefined;
 
   return (
     <View style={[styles.container, style]} testID="pilgrimage-spot-map">
@@ -154,16 +168,18 @@ function SpotMapViewImpl({
         offlineOnly={offlineOnly}
         controlsBottomOffset={controlsBottomOffset}
         onMarkerPress={(m) => {
-          const spot = spotsById.current.get(m.id);
+          const spot = spotsById.get(m.id);
           if (spot) onSpotPress(spot);
+          else onLocalityMarkerPress?.(m);
         }}
         onClusterPress={(picked) => {
           const spotsPicked: AnitabiPoint[] = [];
           for (const m of picked) {
-            const s = spotsById.current.get(m.id);
+            const s = spotsById.get(m.id);
             if (s) spotsPicked.push(s);
           }
           if (spotsPicked.length > 0) onClusterPick(spotsPicked);
+          else if (picked[0]) onLocalityMarkerPress?.(picked[0]);
         }}
         onPanned={onUserPan}
       />
@@ -174,6 +190,7 @@ function SpotMapViewImpl({
 function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
   return (
     prev.spots === next.spots &&
+    prev.localityMarkers === next.localityMarkers &&
     prev.visited === next.visited &&
     prev.ringColor === next.ringColor &&
     prev.userLocation === next.userLocation &&
@@ -185,6 +202,7 @@ function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
     prev.controlsBottomOffset === next.controlsBottomOffset &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onClusterPick === next.onClusterPick &&
+    prev.onLocalityMarkerPress === next.onLocalityMarkerPress &&
     prev.onUserPan === next.onUserPan &&
     prev.theme === next.theme &&
     prev.style === next.style

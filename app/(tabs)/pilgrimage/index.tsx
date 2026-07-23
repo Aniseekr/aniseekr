@@ -19,17 +19,18 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
+import { Typography } from '../../../constants/DesignSystem';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
 import { Skeleton, ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
-import { IntelEventsRail } from '../../../components/pilgrimage/IntelEventsRail';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
@@ -58,6 +59,7 @@ import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScree
 import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
 import { CacheService } from '../../../libs/services/cache-service';
 import { DETAIL_CACHE_KEY_PREFIX } from '../../../libs/services/pilgrimage/anitabi-service';
+import { listItemEnter, overlayEnter } from '../../../libs/animations/presets';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -273,6 +275,11 @@ export default function PilgrimageHubScreen() {
     router.push('/pilgrimage/identify');
   }, [router]);
 
+  const handleOpenNews = useCallback(() => {
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push('/pilgrimage/news');
+  }, [router]);
+
   const handleOpenCharacters = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     router.push('/companion/library');
@@ -471,27 +478,23 @@ export default function PilgrimageHubScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.popularRow}>
-                {sortedCollectionAnimes.map((anime) => (
-                  <PopularCard
+                {sortedCollectionAnimes.map((anime, index) => (
+                  <Animated.View
                     key={anime.id}
-                    anime={anime}
-                    visited={visited}
-                    theme={theme}
-                    fromCollection={false}
-                    distanceKm={collectionDistanceKm.get(anime.id)}
-                    onPress={() => handleAnimePress(anime)}
-                  />
+                    entering={index < 8 ? listItemEnter(index) : undefined}>
+                    <PopularCard
+                      anime={anime}
+                      visited={visited}
+                      theme={theme}
+                      fromCollection={false}
+                      distanceKm={collectionDistanceKm.get(anime.id)}
+                      onPress={() => handleAnimePress(anime)}
+                    />
+                  </Animated.View>
                 ))}
               </ScrollView>
             </View>
           ) : null}
-
-          {/*
-            近期活動 — curated collab events / festivals (spec §13). The rail
-            component owns its own sync data reads and hides itself when no
-            event is active, upcoming, or unannounced-in-horizon.
-          */}
-          <IntelEventsRail theme={theme} />
 
           {popularList.length > 0 ? (
             <View style={styles.section}>
@@ -505,16 +508,19 @@ export default function PilgrimageHubScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.popularRow}>
-                {popularList.map((card) => (
-                  <PopularCard
+                {popularList.map((card, index) => (
+                  <Animated.View
                     key={card.anime.id}
-                    anime={card.anime}
-                    visited={visited}
-                    theme={theme}
-                    fromCollection={card.fromCollection}
-                    distanceKm={card.distanceKm}
-                    onPress={() => handleAnimePress(card.anime)}
-                  />
+                    entering={index < 8 ? listItemEnter(index) : undefined}>
+                    <PopularCard
+                      anime={card.anime}
+                      visited={visited}
+                      theme={theme}
+                      fromCollection={card.fromCollection}
+                      distanceKm={card.distanceKm}
+                      onPress={() => handleAnimePress(card.anime)}
+                    />
+                  </Animated.View>
                 ))}
               </ScrollView>
             </View>
@@ -543,6 +549,17 @@ export default function PilgrimageHubScreen() {
               fullWidth
             />
 
+            <ThemedButton
+              label={t('news.hubEntry')}
+              accessibilityLabel={t('news.hubEntryA11y')}
+              onPress={handleOpenNews}
+              icon={
+                <Ionicons name="newspaper-outline" size={18} color={readableTextOn(theme.accent)} />
+              }
+              shape="rounded"
+              fullWidth
+            />
+
             {tourism88Entries.length > 0 ? (
               <Tourism88Rail
                 entries={tourism88Entries}
@@ -561,16 +578,19 @@ export default function PilgrimageHubScreen() {
                   theme={theme}
                 />
                 <View style={styles.spotList}>
-                  {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }) => (
-                    <FeaturedSpotRow
+                  {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }, index) => (
+                    <Animated.View
                       key={`${anime.id}:${spot.id}`}
-                      spot={spot}
-                      anime={anime}
-                      distanceKm={distanceKm}
-                      fromCollection={fromCollection}
-                      theme={theme}
-                      onPress={() => handleAnimePress(anime)}
-                    />
+                      entering={index < 8 ? listItemEnter(index) : undefined}>
+                      <FeaturedSpotRow
+                        spot={spot}
+                        anime={anime}
+                        distanceKm={distanceKm}
+                        fromCollection={fromCollection}
+                        theme={theme}
+                        onPress={() => handleAnimePress(anime)}
+                      />
+                    </Animated.View>
                   ))}
                 </View>
               </View>
@@ -685,7 +705,7 @@ function SectionHeader({
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
-    <View style={styles.sectionHeader}>
+    <Animated.View entering={overlayEnter()} style={styles.sectionHeader}>
       <View style={styles.sectionHeaderLeft}>
         <ThemedText variant="titleMedium" weight="700">
           {title}
@@ -710,7 +730,7 @@ function SectionHeader({
           </Pressable>
         ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -738,10 +758,10 @@ function PopularCard({
   const accent = anime.color || theme.accent;
   const accentFg = readableTextOn(accent);
   // Honest progress (Rule 8): visitedCount ∩ points, with the denominator
-  // only when we hold this anime's full per-anime points list — populated
-  // by opening the detail screen, and boot-seeded for the top-100 by
-  // hydratePointsTop. getSync is a cheap in-memory-mirror read (Rule 10),
-  // safe to call per card on a bounded rail. Absent → "✓{count}" alone.
+  // only when we hold this anime's full per-anime points list — populated by
+  // opening the detail screen. The retired points-top release no longer seeds
+  // this cache; getSync remains a cheap frame-1 read (Rule 10). Absent →
+  // "✓{count}" alone.
   const fullPoints = CacheService.getSync<AnitabiPoint[]>(DETAIL_CACHE_KEY_PREFIX + anime.id);
   const progress = resolveHubAnimeProgress(anime, visited, fullPoints);
   const titles = getPilgrimageAnimeTitles(anime);
@@ -755,7 +775,7 @@ function PopularCard({
       <View style={styles.popularPosterWrap}>
         <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
         <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
-          <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg, fontSize: 10 }}>
+          <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
             {t('pilgrimageUi.spotsCount', { count: total })}
           </ThemedText>
         </View>
@@ -767,10 +787,7 @@ function PopularCard({
         {progress.visitedCount > 0 ? (
           <View style={styles.popularVisited}>
             <Ionicons name="checkmark" size={10} color={theme.status.success} />
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: theme.status.success, fontSize: 9 }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: theme.status.success }}>
               {progress.total != null
                 ? t('pilgrimageUi.progressFraction', {
                     visited: progress.visitedCount,
@@ -782,7 +799,7 @@ function PopularCard({
         ) : null}
       </View>
       <View style={styles.popularMeta}>
-        <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
+        <ThemedText variant="captionSmall" weight="700" numberOfLines={1}>
           {titles.primary}
         </ThemedText>
         {subtitle ? (
@@ -790,7 +807,7 @@ function PopularCard({
             variant="captionSmall"
             tone="secondary"
             numberOfLines={1}
-            style={{ fontSize: 10 }}>
+            style={styles.compactCaption}>
             {subtitle}
           </ThemedText>
         ) : null}
@@ -798,7 +815,7 @@ function PopularCard({
           variant="captionSmall"
           tone="tertiary"
           numberOfLines={1}
-          style={{ fontSize: 10 }}>
+          style={styles.compactCaption}>
           {distanceKm !== undefined
             ? `${formatKm(distanceKm)} · ${anime.city || '—'}`
             : anime.city || '—'}
@@ -889,7 +906,7 @@ function makeStyles(theme: ThemePalette) {
     },
     // flexShrink + single line so the 4-button header cluster can't push the
     // title into unclipped overflow on narrow screens (album.tsx precedent).
-    headerTitle: { fontSize: 22, flexShrink: 1 },
+    headerTitle: { ...Typography.headlineMedium, flexShrink: 1 },
     headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     iconBtn: {
       width: 40,
@@ -903,7 +920,8 @@ function makeStyles(theme: ThemePalette) {
     },
     scrollContent: { paddingHorizontal: 20, paddingTop: 20, gap: 22 },
     intro: { gap: 4 },
-    introCaps: { letterSpacing: 1.2, fontSize: 12 },
+    introCaps: { ...Typography.captionSmall, letterSpacing: 1.2 },
+    compactCaption: Typography.captionSmall,
     introBody: { lineHeight: 18 },
     heroCard: {
       height: 170,

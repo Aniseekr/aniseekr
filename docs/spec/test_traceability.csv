@@ -190,10 +190,29 @@ PILG-044,__tests__/unit/pilgrimage/local-intel-repository.test.ts,viewing hint s
 PILG-045,__tests__/unit/pilgrimage/local-intel-repository.test.ts,shop queries filter by anime and sort by distance,covered
 PILG-046,__tests__/unit/pilgrimage/local-intel-event-reminders.test.ts,computes day-before trigger with fallback and rejects started events,covered
 PILG-047,__tests__/unit/pilgrimage/local-intel-event-reminders.test.ts,preference validation gates reminder scheduling,covered
-PILG-048,__tests__/unit/streaming-notification-route.test.ts,routes pilgrimage_event taps to pilgrimage detail,covered
+PILG-048,__tests__/unit/streaming-notification-route.test.ts,routes pilgrimage_event taps to first-class event detail with anime fallback,covered
 PILG-049,__tests__/unit/pilgrimage/local-intel-repository.test.ts,runtime hydration swaps notifies and rejects low coverage,covered
 PILG-050,__tests__/unit/pilgrimage/local-intel-localization.test.ts,resolves localized text by priority with conversion and source tag,covered
 PILG-051,__tests__/unit/pilgrimage/local-intel-repository.test.ts,hub rail ordering and dedupe,covered
+PILG-052,__tests__/unit/pilgrimage/event-date-block.test.ts,derives date block per state and language,covered
+PILG-053,__tests__/unit/pilgrimage/locality-migration.test.ts,conserves bundled canonical locality records and memberships,covered
+PILG-054,__tests__/unit/pilgrimage/locality-migration.test.ts,dedupes Gamers and rejects invalid snapshots or refreshes,covered
+PILG-055,__tests__/unit/pilgrimage/locality-scene-projector.test.ts,projects scenes through the existing Anitabi pipeline,covered
+PILG-056,__tests__/unit/pilgrimage/locality-event-detail.test.ts,joins event stops places map targets and provenance,covered
+PILG-056,__tests__/unit/pilgrimage/pilgrimage-navigation.test.ts,routes event rows to first-class detail with chrome seed,covered
+PILG-057,__tests__/unit/pilgrimage/visited-prefs.test.ts,namespaces and persists canonical stamp-stop role progress,covered
+PILG-058,__tests__/unit/pilgrimage/locality-map-markers.test.ts,projects exact typed role pins and honest Anime88 areas,covered
+PILG-058,__tests__/unit/pilgrimage/native-map-markers.test.tsx,renders distinct native shapes icons and area labels,covered
+PILG-059,__tests__/unit/pilgrimage/locality-event-calendar.test.ts,expands only real active or upcoming occurrences into clipped month day keys,covered
+NEWS-001,__tests__/unit/news/feed-parser.test.ts,parses rss2 items with cdata and entities,covered
+NEWS-002,__tests__/unit/news/feed-parser.test.ts,parses atom entries with alternate link,covered
+NEWS-003,__tests__/unit/news/feed-parser.test.ts,parses rdf items with dc date,covered
+NEWS-004,__tests__/unit/news/feed-parser.test.ts,tolerates malformed xml and missing fields,covered
+NEWS-005,__tests__/unit/news/news-sources.test.ts,loads dataset drops invalid dedupes and exposes recommended,covered
+NEWS-006,__tests__/unit/news/news-follows.test.ts,resolves recommended default and reduces follow set,covered
+NEWS-007,__tests__/unit/news/news-stream.test.ts,merges sorts dedupes and isolates source failures,covered
+NEWS-008,__tests__/unit/news/news-stream.test.ts,serves fresh and stale caches with independent ttls,covered
+NEWS-009,__tests__/unit/news/rss-client.test.ts,normalizes http errors to data source error,covered
 SYNC-001,__tests__/unit/multi-platform-sync-service.test.ts,initial state idle,pending
 SYNC-002,__tests__/unit/multi-platform-sync-service.test.ts,sync progress starts zero,pending
 SYNC-003,__tests__/unit/multi-platform-sync-service.test.ts,one failure does not stop others,pending

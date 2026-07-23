@@ -1,11 +1,13 @@
 import { memo } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { ThemedText, ON_DARK } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { listItemEnter } from '../../libs/animations/presets';
 
 export interface CollectionAnimeCardItem {
   id: string;
@@ -40,15 +42,29 @@ function CollectionAnimeGridComponent({
     <View style={styles.container}>
       {rows.map((row, rowIndex) => (
         <View key={`row-${rowIndex}`} style={styles.row}>
-          {row.map((item) => (
-            <AnimeGridCard
-              key={item.id}
-              item={item}
-              theme={theme}
-              onPressItem={onPressItem}
-              onLongPressItem={onLongPressItem}
-            />
-          ))}
+          {row.map((item, colIndex) => {
+            const entryIndex = rowIndex * 2 + colIndex;
+            const card = (
+              <AnimeGridCard
+                item={item}
+                theme={theme}
+                onPressItem={onPressItem}
+                onLongPressItem={onLongPressItem}
+              />
+            );
+            return entryIndex < 8 ? (
+              <Animated.View
+                key={item.id}
+                entering={listItemEnter(entryIndex)}
+                style={styles.cardSlot}>
+                {card}
+              </Animated.View>
+            ) : (
+              <View key={item.id} style={styles.cardSlot}>
+                {card}
+              </View>
+            );
+          })}
           {row.length === 1 ? <View style={styles.cardSpacer} /> : null}
         </View>
       ))}
@@ -91,11 +107,7 @@ function AnimeGridCard({
         },
       ]}>
       {item.imageUrl ? (
-        <Image
-          source={{ uri: item.imageUrl }}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: item.imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : null}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -130,6 +142,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: Spacing.md,
     justifyContent: 'flex-end',
+  },
+  cardSlot: {
+    flex: 1,
   },
   cardSpacer: {
     flex: 1,

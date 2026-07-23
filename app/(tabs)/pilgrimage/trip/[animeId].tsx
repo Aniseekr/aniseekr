@@ -9,6 +9,7 @@ import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
@@ -126,7 +127,10 @@ export default function PilgrimageTripScreen() {
   }, [ordered, animeId, accent]);
 
   // Next stop = first unvisited in walk order.
-  const nextStop = useMemo(() => ordered.find((s) => visited[s.id] !== true) ?? null, [ordered, visited]);
+  const nextStop = useMemo(
+    () => ordered.find((s) => visited[s.id] !== true) ?? null,
+    [ordered, visited]
+  );
   const nextStopDistanceKm =
     nextStop && userLocation
       ? haversineKm([userLocation.latitude, userLocation.longitude], nextStop.geo)
@@ -217,8 +221,11 @@ export default function PilgrimageTripScreen() {
       ) : null}
 
       {/* Next-stop card */}
-      <View style={[styles.bottomCard, { paddingBottom: insets.bottom + 12 }]} pointerEvents="box-none">
-        <View
+      <View
+        style={[styles.bottomCard, { paddingBottom: insets.bottom + 12 }]}
+        pointerEvents="box-none">
+        <Animated.View
+          entering={FadeIn}
           style={[
             styles.card,
             { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
@@ -256,7 +263,7 @@ export default function PilgrimageTripScreen() {
               fullWidth
             />
           ) : null}
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -291,7 +298,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 14,
   },
-  bottomCard: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: Spacing.screenPadding },
+  bottomCard: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: Spacing.screenPadding,
+  },
   card: { borderRadius: Radius.lg, borderWidth: 1, padding: Spacing.md, gap: Spacing.sm },
   nextRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   nextThumb: { width: 56, height: 42, borderRadius: 8 },

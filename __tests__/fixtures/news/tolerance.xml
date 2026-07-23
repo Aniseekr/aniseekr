@@ -1,0 +1,14 @@
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Link addressable</title>
+      <link>https://example.com/no-guid</link>
+      <pubDate>not a date</pubDate>
+      <description>This item has no guid.</description>
+    </item>
+    <item>
+      <title>Unaddressable</title>
+      <description>Dropped because it has neither guid nor link.</description>
+    </item>
+  </channel>
+</rss>

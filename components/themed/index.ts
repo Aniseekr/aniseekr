@@ -23,3 +23,4 @@ export { TranslatedText, type TranslatedTextProps } from './TranslatedText';
 export { ThemedSurface, type ThemedSurfaceProps, type SurfaceVariant } from './ThemedSurface';
 export { readableTextOn, contrastRatio, relativeLuminance, ON_DARK, ON_LIGHT } from './contrast';
 export { Skeleton } from './Skeleton';
+export { SheetBackdrop, SheetHandle, ThemedBottomSheet, useSheetDrag } from './sheet';

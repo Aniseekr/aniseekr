@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Fixture RSS</title>
+    <item>
+      <guid>rss-guid-1</guid>
+      <title><![CDATA[Anime &amp; Event <b>News</b>]]></title>
+      <link>https://example.com/rss/1</link>
+      <pubDate>Wed, 15 Jul 2026 10:30:00 GMT</pubDate>
+      <description><![CDATA[<p>First &amp; strongest item with an <img src="https://example.com/thumb.jpg" /> image.</p>]]></description>
+      <media:thumbnail url="https://example.com/media-thumb.jpg" />
+    </item>
+  </channel>
+</rss>

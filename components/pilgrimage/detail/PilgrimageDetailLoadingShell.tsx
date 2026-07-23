@@ -9,7 +9,7 @@
 // When the seed is missing the slots fall back to a shimmer block.
 
 import React, { memo, useMemo } from 'react';
-import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,12 +45,6 @@ function PilgrimageDetailLoadingShellImpl({
 }: PilgrimageDetailLoadingShellProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme, topInset), [theme, topInset]);
-  // 58% mid-snap is where the sheet lands in list mode; the shell uses the
-  // 16% peek so it matches map-mode entry (the user most often sees this).
-  const peekTop = useMemo(() => {
-    const screenH = Dimensions.get('window').height;
-    return Math.round(screenH * (1 - 0.46));
-  }, []);
 
   // Gradient that tones the seed themeColor down into the background so the
   // hue reads as "this anime's accent" without overpowering the chrome.
@@ -100,20 +94,8 @@ function PilgrimageDetailLoadingShellImpl({
         </Pressable>
       </View>
 
-      {/* Bottom sheet stub. Mid-height so the user reads the title without
-          dragging — the live sheet snaps to this height on first paint when
-          viewMode is `list`. */}
-      <View
-        style={[
-          styles.sheet,
-          {
-            top: peekTop,
-            backgroundColor: theme.background.primary,
-            borderColor: theme.glassBorder,
-          },
-        ]}>
-        <View style={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]} />
-
+      <View style={styles.loadingContent}>
+        <Skeleton.Block width="100%" height={240} borderRadius={Radius.xl} intensity="low" />
         <View style={styles.titleRow}>
           <View
             style={[
@@ -178,49 +160,7 @@ function PilgrimageDetailLoadingShellImpl({
           </View>
         </View>
 
-        {/* Stats strip stub. */}
-        <View
-          style={[
-            styles.statsRow,
-            {
-              borderColor: theme.glassBorder,
-              backgroundColor: theme.background.secondary,
-            },
-          ]}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <React.Fragment key={i}>
-              <View style={styles.statCell}>
-                <Skeleton.Block width={28} height={20} />
-                <Skeleton.Block width={36} height={10} style={{ marginTop: 4 }} />
-              </View>
-              {i < 3 ? (
-                <View style={[styles.statDivider, { backgroundColor: theme.glassBorder }]} />
-              ) : null}
-            </React.Fragment>
-          ))}
-        </View>
-
-        {/* Scene-spots header + grid stub. */}
-        <View style={styles.sectionTitleRow}>
-          <Skeleton.Block width={120} height={16} />
-          <Skeleton.Block width={68} height={12} />
-        </View>
-        <View style={styles.gridRow}>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton.Block key={i} width="48%" height={158} borderRadius={16} intensity="low" />
-          ))}
-        </View>
-        <View style={[styles.gridRow, { marginTop: Spacing.sm }]}>
-          {Array.from({ length: 2 }).map((_, i) => (
-            <Skeleton.Block
-              key={i + 'b'}
-              width="48%"
-              height={158}
-              borderRadius={16}
-              intensity="low"
-            />
-          ))}
-        </View>
+        <Skeleton.MapList mapHeight={0} listCount={4} style={styles.mapListSkeleton} />
       </View>
     </View>
   );
@@ -293,24 +233,14 @@ function makeStyles(theme: ThemePalette, topInset: number) {
     searchPlaceholder: {
       ...Typography.bodyMedium,
     },
-    sheet: {
+    loadingContent: {
       position: 'absolute',
       left: 0,
       right: 0,
       bottom: 0,
       paddingHorizontal: Spacing.screenPadding,
-      paddingTop: 14,
-      borderTopLeftRadius: Radius.xl,
-      borderTopRightRadius: Radius.xl,
-      borderTopWidth: StyleSheet.hairlineWidth,
+      paddingBottom: Spacing.xl,
       gap: Spacing.md,
-    },
-    sheetHandle: {
-      alignSelf: 'center',
-      width: 44,
-      height: 4,
-      borderRadius: 2,
-      marginBottom: Spacing.sm,
     },
     titleRow: {
       flexDirection: 'row',
@@ -351,30 +281,8 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       borderWidth: 1,
       marginTop: 8,
     },
-    statsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: 4,
-      borderRadius: Radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-    },
-    statCell: {
-      flex: 1,
-      alignItems: 'center',
-    },
-    statDivider: {
-      width: StyleSheet.hairlineWidth,
-      height: 28,
-    },
-    sectionTitleRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-    },
-    gridRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    mapListSkeleton: {
+      padding: 0,
     },
   });
 }

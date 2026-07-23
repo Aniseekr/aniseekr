@@ -7,25 +7,21 @@
 // pilgrimageRepository) or `null` / an empty array. We render a clear
 // "Loading…" or "Unavailable" state instead of fake data.
 
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Typography } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../themed';
+import { ON_DARK, ThemedBottomSheet, ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { anitabiImageSource, toFullResImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
+import {
+  anitabiImageSource,
+  toFullResImageUrl,
+} from '../../../libs/services/pilgrimage/anitabi-image';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
 import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
 
@@ -56,11 +52,10 @@ export default function SceneSwitcherSheet({
   const t = useT();
   const [query, setQuery] = useState('');
 
-  // Reset the search each time the sheet opens so a stale filter from a prior
-  // visit doesn't hide everything.
-  useEffect(() => {
-    if (!visible) setQuery('');
-  }, [visible]);
+  const handleClose = () => {
+    setQuery('');
+    onClose();
+  };
 
   // Surface the currently-selected spot first so the user can find their
   // place in long lists, then everything else in source order.
@@ -89,7 +84,7 @@ export default function SceneSwitcherSheet({
       // Tapping the active scene just closes the sheet — no point reloading
       // the same camera screen.
       hapticsBridge.tap();
-      onClose();
+      handleClose();
       return;
     }
     hapticsBridge.success();
@@ -97,120 +92,100 @@ export default function SceneSwitcherSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent>
-      <Pressable onPress={onClose} style={styles.backdrop}>
-        {/* Inner Pressable swallows taps so they don't bubble up to the
-            backdrop dismissal handler. */}
-        <Pressable
-          onPress={() => undefined}
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
-            },
-          ]}>
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.header}>
-              <View style={styles.handle} />
-              <View style={styles.headerRow}>
-                <View style={{ flex: 1 }}>
-                  <ThemedText variant="titleSmall" weight="700">
-                    {t('pilgrimageUi.switchScene')}
-                  </ThemedText>
-                  <ThemedText variant="captionSmall" tone="secondary">
-                    {orderedSpots == null
-                      ? 'Loading scenes…'
-                      : `${orderedSpots.length} scene${orderedSpots.length === 1 ? '' : 's'} in this anime`}
-                  </ThemedText>
-                </View>
+    <ThemedBottomSheet visible={visible} onClose={handleClose}>
+      <SafeAreaView edges={['bottom']}>
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="titleSmall" weight="700">
+                {t('pilgrimageUi.switchScene')}
+              </ThemedText>
+              <ThemedText variant="captionSmall" tone="secondary">
+                {orderedSpots == null
+                  ? 'Loading scenes…'
+                  : `${orderedSpots.length} scene${orderedSpots.length === 1 ? '' : 's'} in this anime`}
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                handleClose();
+              }}
+              hitSlop={14}
+              accessibilityRole="button"
+              accessibilityLabel={t('pilgrimageUi.closeSceneSwitcher')}
+              style={({ pressed }) => [
+                styles.closeBtn,
+                {
+                  backgroundColor: theme.background.tertiary,
+                  borderColor: theme.glassBorder,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}>
+              <Ionicons name="close" size={18} color={theme.text.primary} />
+            </Pressable>
+          </View>
+          {orderedSpots && orderedSpots.length > 4 ? (
+            <View
+              style={[
+                styles.searchRow,
+                { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
+              ]}>
+              <Ionicons name="search" size={15} color={theme.text.tertiary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder={t('pilgrimage.sceneSwitcher.searchPlaceholder')}
+                placeholderTextColor={theme.text.tertiary}
+                returnKeyType="search"
+                autoCorrect={false}
+                style={[styles.searchInput, { color: theme.text.primary }]}
+              />
+              {query.length > 0 ? (
                 <Pressable
-                  onPress={() => {
-                    hapticsBridge.tap();
-                    onClose();
-                  }}
-                  hitSlop={14}
+                  onPress={() => setQuery('')}
+                  hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel={t('pilgrimageUi.closeSceneSwitcher')}
-                  style={({ pressed }) => [
-                    styles.closeBtn,
-                    {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <Ionicons name="close" size={18} color={theme.text.primary} />
+                  accessibilityLabel={t('pilgrimage.sceneSwitcher.clearSearchA11y')}>
+                  <Ionicons name="close-circle" size={16} color={theme.text.tertiary} />
                 </Pressable>
-              </View>
-              {orderedSpots && orderedSpots.length > 4 ? (
-                <View
-                  style={[
-                    styles.searchRow,
-                    { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
-                  ]}>
-                  <Ionicons name="search" size={15} color={theme.text.tertiary} />
-                  <TextInput
-                    value={query}
-                    onChangeText={setQuery}
-                    placeholder={t('pilgrimage.sceneSwitcher.searchPlaceholder')}
-                    placeholderTextColor={theme.text.tertiary}
-                    returnKeyType="search"
-                    autoCorrect={false}
-                    style={[styles.searchInput, { color: theme.text.primary }]}
-                  />
-                  {query.length > 0 ? (
-                    <Pressable
-                      onPress={() => setQuery('')}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('pilgrimage.sceneSwitcher.clearSearchA11y')}>
-                      <Ionicons name="close-circle" size={16} color={theme.text.tertiary} />
-                    </Pressable>
-                  ) : null}
-                </View>
               ) : null}
             </View>
+          ) : null}
+        </View>
 
-            {loading || filteredSpots == null ? (
-              <View style={styles.loadingWrap}>
-                <ActivityIndicator color={themeColor} />
-              </View>
-            ) : filteredSpots.length === 0 ? (
-              <View style={styles.loadingWrap}>
-                <ThemedText variant="bodySmall" tone="secondary" align="center">
-                  {query.trim().length > 0
-                    ? t('pilgrimage.sceneSwitcher.noMatch')
-                    : 'No other scenes available for this anime.'}
-                </ThemedText>
-              </View>
-            ) : (
-              <FlatList
-                horizontal
-                data={filteredSpots}
-                keyExtractor={(s) => s.id}
-                keyboardShouldPersistTaps="handled"
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-                renderItem={({ item }) => (
-                  <SceneTile
-                    spot={item}
-                    isActive={item.id === currentSpotId}
-                    themeColor={themeColor}
-                    onPress={() => handlePick(item)}
-                  />
-                )}
+        {loading || filteredSpots == null ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={themeColor} />
+          </View>
+        ) : filteredSpots.length === 0 ? (
+          <View style={styles.loadingWrap}>
+            <ThemedText variant="bodySmall" tone="secondary" align="center">
+              {query.trim().length > 0
+                ? t('pilgrimage.sceneSwitcher.noMatch')
+                : 'No other scenes available for this anime.'}
+            </ThemedText>
+          </View>
+        ) : (
+          <FlatList
+            horizontal
+            data={filteredSpots}
+            keyExtractor={(s) => s.id}
+            keyboardShouldPersistTaps="handled"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+              <SceneTile
+                spot={item}
+                isActive={item.id === currentSpotId}
+                themeColor={themeColor}
+                onPress={() => handlePick(item)}
               />
             )}
-          </SafeAreaView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+          />
+        )}
+      </SafeAreaView>
+    </ThemedBottomSheet>
   );
 }
 
@@ -262,7 +237,7 @@ function SceneTile({ spot, isActive, themeColor, onPress }: SceneTileProps) {
           variant="captionSmall"
           weight="700"
           numberOfLines={1}
-          style={{ color: '#fff' }}>
+          style={{ color: ON_DARK }}>
           {titles.primary}
         </ThemedText>
         <ThemedText
@@ -275,7 +250,7 @@ function SceneTile({ spot, isActive, themeColor, onPress }: SceneTileProps) {
           source={spot}
           variant="inline"
           textVariant="captionSmall"
-          color="rgba(255,255,255,0.7)"
+          color={ON_DARK}
         />
       </View>
     </Pressable>
@@ -283,20 +258,6 @@ function SceneTile({ spot, isActive, themeColor, onPress }: SceneTileProps) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 14,
-    paddingTop: 8,
-  },
   header: {
     paddingBottom: 10,
   },
@@ -312,16 +273,8 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    ...Typography.bodyMedium,
     padding: 0,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    marginBottom: 10,
   },
   headerRow: {
     flexDirection: 'row',

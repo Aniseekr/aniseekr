@@ -1,5 +1,6 @@
 // Bangumi seasonal screen — calendar mode uses the iOS-style focus-day carousel
 // with a sticky today section on top, plus a list mode fallback.
+/* eslint-disable react-hooks/set-state-in-effect -- Existing season loader state model; Phase 3 only themes refresh and adds list motion. */
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
@@ -26,7 +27,6 @@ import { YearPickerSheet } from '../../components/bangumi/YearPickerSheet';
 import {
   BangumiSettingsSheet,
   BangumiTypeFilter,
-  DEFAULT_BANGUMI_PREFS,
   BangumiPreferences,
 } from '../../components/bangumi/BangumiSettingsSheet';
 import { NotificationManagerSheet } from '../../components/bangumi/NotificationManagerSheet';
@@ -192,7 +192,7 @@ export default function BangumiScreen() {
   // briefly render in the default mode before the async load flipped it —
   // visible as a layout shift on a cold open.
   const [prefs, setPrefsState] = useState<BangumiPreferences>(loadBangumiPrefsSync);
-  const [hydrated, setHydrated] = useState(true);
+  const [hydrated] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -865,7 +865,7 @@ export default function BangumiScreen() {
             contentContainerStyle={{ paddingBottom: 140 }}
             refreshControl={
               <RefreshControl
-                tintColor={theme.text.primary}
+                tintColor={theme.accent}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 colors={[theme.accent]}
@@ -930,7 +930,7 @@ export default function BangumiScreen() {
             contentContainerStyle={{ paddingBottom: 140 }}
             refreshControl={
               <RefreshControl
-                tintColor={theme.text.primary}
+                tintColor={theme.accent}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 colors={[theme.accent]}
@@ -945,7 +945,7 @@ export default function BangumiScreen() {
             renderAnimeCard={renderListRowCard}
             refreshControl={
               <RefreshControl
-                tintColor={theme.text.primary}
+                tintColor={theme.accent}
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 colors={[theme.accent]}

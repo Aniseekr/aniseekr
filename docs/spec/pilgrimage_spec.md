@@ -27,29 +27,29 @@ cached URLs from that origin are rewritten to `img-tc.anitabi.cn`.
 ```ts
 // Single scene/location point
 export interface AnitabiPoint {
-  id: string;       // unique within an anime, e.g., "abc123"
-  cn?: string;      // Chinese name of the spot
-  name: string;     // Japanese name (canonical)
-  image: string;    // scene screenshot URL from the anime
-  ep: number;       // episode number where this scene appears
-  s: number;        // second/scene marker within the episode
+  id: string; // unique within an anime, e.g., "abc123"
+  cn?: string; // Chinese name of the spot
+  name: string; // Japanese name (canonical)
+  image: string; // scene screenshot URL from the anime
+  ep: number; // episode number where this scene appears
+  s: number; // second/scene marker within the episode
   geo: [number, number]; // [latitude, longitude]
 }
 
 // Anime entry from Anitabi (the "container")
 export interface AnitabiBangumi {
-  id: number;             // Bangumi subject ID (THE link key)
-  cn: string;             // Chinese title
-  title: string;          // Japanese title (original)
-  city: string;           // primary city/prefecture (e.g., "東京都")
-  cover: string;          // cover image URL
-  color: string;          // dominant theme color hex (e.g., "#8DC5D8")
-  geo: [number, number];  // center coordinates [lat, lng]
-  zoom: number;           // recommended map zoom level (8–14)
-  modified: number;       // last-modified epoch
+  id: number; // Bangumi subject ID (THE link key)
+  cn: string; // Chinese title
+  title: string; // Japanese title (original)
+  city: string; // primary city/prefecture (e.g., "東京都")
+  cover: string; // cover image URL
+  color: string; // dominant theme color hex (e.g., "#8DC5D8")
+  geo: [number, number]; // center coordinates [lat, lng]
+  zoom: number; // recommended map zoom level (8–14)
+  modified: number; // last-modified epoch
   litePoints: AnitabiPoint[]; // sample points (for cards)
-  pointsLength: number;   // total spot count
-  imagesLength: number;   // total scene image count
+  pointsLength: number; // total spot count
+  imagesLength: number; // total scene image count
 }
 
 // Full point with extended fields (from /points/detail)
@@ -80,21 +80,25 @@ class AnitabiService {
 ```
 
 Caching:
+
 - In-memory: session lifetime, 100-entry LRU per method
 - SQLite: table `pilgrimage_spots` keyed by `bangumi_id`, TTL 7 days
 
 ## 5. Linking Anime ↔ Pilgrimage Spots
 
 ### Primary lookup
+
 ```
 unifiedAnimeItem.platformData.bangumi?.id  →  AnitabiService.getAnimePilgrimage(bangumiId)
 ```
 
 ### Fallback when anime lacks Bangumi ID
+
 1. Try `idMappingService.translate(unifiedItem.id, from: source, to: 'bangumi')`
 2. If still no Bangumi ID, return `null` (anime has no pilgrimage)
 
 ### Bulk enrichment
+
 For lists (e.g., seasonal anime grid), the repository should NOT eager-fetch pilgrimage
 data for every item. Instead, expose a hook `usePilgrimageBadge(bangumiId)` that fetches
 on-demand when an item enters the viewport.
@@ -126,13 +130,16 @@ CREATE INDEX IF NOT EXISTS idx_pilg_expires ON pilgrimage_spots(expires_at);
 ## 7. UI Components
 
 ### AnimePilgrimageCard
+
 Ported verbatim from japanwalker. Self-contained; only depends on:
+
 - `expo-image` for cover
 - `expo-haptics` for touch feedback
 - `Ionicons` from `@expo/vector-icons`
 - `expo-linear-gradient`
 
 Props:
+
 ```ts
 interface AnimePilgrimageCardProps {
   anime: AnitabiBangumi;
@@ -142,6 +149,7 @@ interface AnimePilgrimageCardProps {
 ```
 
 Renders:
+
 - Cover image with bottom gradient
 - Top-right badge: `{pointsLength} spots`
 - Top-left distance badge if provided
@@ -151,15 +159,18 @@ Renders:
 - Theme color from `anime.color`
 
 Behavior:
+
 - `onPress(anime)` → navigation to `/pilgrimage/{anime.id}`
 - Haptic feedback on press
 - Scale animation 1.0 → 0.98 on press
 
 ### NearbyPilgrimageBadge
+
 Inline badge shown on `UnifiedAnimeItem` cards (search/seasonal/detail) when the
 anime has pilgrimage data. Loads lazily.
 
 Props:
+
 ```ts
 interface NearbyPilgrimageBadgeProps {
   bangumiId: number;
@@ -171,6 +182,7 @@ Renders nothing until data loaded; then shows pin icon (icon variant) or
 `📍 {city}` pill.
 
 ### PilgrimageSpotList
+
 Used on `/pilgrimage/[animeId]` route. Grid of all spots with scene image, Japanese
 name, episode number, and "Open in Maps" action.
 
@@ -183,12 +195,14 @@ app/
 ```
 
 `/pilgrimage/{bangumiId}` screen flow:
+
 1. Hydrate `AnitabiBangumi` from cache or fetch
 2. Show header (cover, title, city, points count)
 3. Show "View on Map" button (deep link to native Maps with first point)
 4. Render `PilgrimageSpotList`
 
 For MVP, **no embedded map view**. Map links open native Maps app via:
+
 ```
 https://maps.apple.com/?q={lat},{lng}
 https://www.google.com/maps/search/?api=1&query={lat},{lng}
@@ -348,6 +362,49 @@ Dataset and loading:
   payload cannot replace the bundled seed. Hydration bumps a version counter
   and notifies subscribers.
 
+Canonical locality migration (schema v1):
+
+- Bundled local-intel, Anime Tourism 88 area rows, and curated news-source
+  definitions migrate into one normalized `Place` / `PlaceRole` / `Event` /
+  `AreaDestination` envelope. Every entity has display-ready provenance and
+  every foreign key is validated before a snapshot can become readable.
+- The bundled conservation baseline is 11 pre-rally local-intel records, 7
+  stamp-rally campaigns with 201 campaign-specific stop roles, 124 Anime
+  Tourism 88 administrative destinations, and 17 news sources. Deduplication
+  may reduce physical Places but never stop memberships.
+- `gamers-numazu` is one Place at the address-backed coordinate
+  `[35.101505, 138.856827]`, carrying one shop role plus three campaign stop
+  roles and every distinct source credit used by the merge.
+- Anime Tourism 88 city rows are coordinate-free area destinations. City
+  centroids may frame a viewport but cannot become `Place.geo` or visitable
+  map markers.
+- Scene Places are an async overlay projected by `AnitabiSceneProjector` from
+  the existing detailed-points fetch/cache and `groupPointsIntoSpots` path.
+  The locality bundle never copies or forks Anitabi point data.
+- Existing local-intel, Anime Tourism 88, and news reader APIs are compatibility
+  projections over the canonical repository. Replacing the bundled loader
+  with a validated remote loader therefore requires no reader change.
+
+P2 event and map surfaces:
+
+- `/pilgrimage/event/[eventId]` is the first-class destination for an event or
+  campaign. It joins the canonical event to its `stamp_stop` and
+  `festival_venue` roles, renders every stop with its sourced name/address,
+  Google Maps search target, map pin, and visible provenance, and stores stamp
+  progress by canonical role id rather than by place or display label.
+- The 聖地資訊 Activities tab is the event home: a vertical canonical list with
+  localized date/state, venue/area, anime cover/title, category, stop count,
+  status, and attribution. The former horizontal hub rail is retired; every
+  event row and reminder entry opens the first-class event destination.
+- Hub and anime-detail maps keep one additive marker layer. Scene markers remain
+  unchanged while canonical `stamp_stop`, `shop`, and `festival_venue` roles
+  use distinct pin shapes/icons and a visible legend. Anime Tourism 88 city-only
+  rows use labelled `precision: area` markers; they never expose navigation or
+  visit state and never acquire a `Place.geo`.
+- Canonical provenance is visible UI, not hidden metadata: each credit renders
+  localized `sourceName`, an official/source link, `verifiedAt`, and any
+  license/copyright notice beside the relevant event, stop, shop, or guide.
+
 Event scheduling is a pure date-state machine over `now`:
 
 - `fixed` schedules compare `now` against `[startsAt 00:00, endsAt 23:59:59]`
@@ -361,9 +418,16 @@ Event scheduling is a pure date-state machine over `now`:
 - `ongoing` schedules model permanent programs with no end date; they are
   always `active` and are never reminder-schedulable (there is no start to
   remind about).
-- Hub-rail ordering: `active` events first, then dated `upcoming` by start
-  date, then `unannounced` annuals whose `typicalMonth` falls within the
-  horizon (default 90 days), deduplicated by event id.
+- Integrated-list ordering: `active` events first (ongoing programs use the
+  localized Permanent/常設 label), then dated `upcoming` by start date, then
+  honestly `unannounced` annuals by typical month, and visibly `ended` history
+  last. Keeping ended campaigns reachable is what makes all 201 preserved
+  stamp-stop memberships inspectable. The legacy reader retains its horizon
+  projection for compatibility only.
+- Calendar projection groups those canonical rows into a requested civil month
+  using only real `active` or `upcoming` occurrence windows. Fixed and confirmed
+  annual windows are clipped to the month; ongoing, unannounced, and ended
+  records contribute no day key, so the calendar can never synthesize a date.
 
 Solar timing (`solar.ts`) implements the NOAA sunrise/sunset algorithm as
 pure functions with no dependencies: sunrise, sunset, solar noon, and the
@@ -444,15 +508,23 @@ machine translation as native text.
 - PILG-045: shop queries filter by bangumiId and sort geo results by distance within radius
 - PILG-046: event reminder triggers fire day-before 09:00 local with past-slot fallback and reject started events
 - PILG-047: pilgrimageEventReminders preference validates and gates scheduling
-- PILG-048: pilgrimage_event notification taps route to the pilgrimage detail with the event parameter
+- PILG-048: pilgrimage_event notification taps route to first-class event detail when eventId exists and falls back to anime detail only when it does not
 - PILG-049: runtime hydration swaps data, bumps version, notifies subscribers, and rejects low-coverage payloads
 - PILG-050: localized intel text resolves by language priority with zh-Hans→zh-Hant conversion and source tagging
 - PILG-051: hub rail orders active, dated upcoming, then unannounced-in-horizon events deduplicated by id
+- PILG-052: event date blocks localize active, upcoming, ongoing, and unannounced states without embedded UI copy
+- PILG-053: canonical bundled migration conserves every legacy record and membership while emitting coordinate-free Anime Tourism 88 destinations
+- PILG-054: Gamers Numazu resolves to one reviewed Place with four roles and merged provenance; invalid role anime links and failed refreshes retain the last-known-good snapshot
+- PILG-055: scene projection delegates to the existing Anitabi detailed-point source and grouping pipeline and remains outside the bundled snapshot
+- PILG-056: canonical event detail joins every campaign stop or festival venue to its Place, map target, provenance, and first-class route
+- PILG-057: stamp progress persists by namespaced canonical stamp-stop role id without colliding with scene visit state
+- PILG-058: canonical stamp, shop, and festival roles project as distinct exact pins while all 124 Anime Tourism 88 rows remain labelled non-visitable areas
+- PILG-059: canonical calendar mapping expands only real active/upcoming occurrence windows into requested-month day keys and clips cross-month ranges
 
 ## 15. Future Extensions (out of MVP scope)
 
 - Embedded `react-native-maps` view
 - "Nearby" mode using `expo-location` to compute distances
-- User check-ins to spots (gamification)
+- Proximity-verified or shared campaign stamp progress
 - Photo capture at location with EXIF geo verification
 - Itinerary builder spanning multiple anime/spots

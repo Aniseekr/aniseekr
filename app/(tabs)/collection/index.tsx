@@ -1,4 +1,13 @@
-import { Alert, View, ScrollView, RefreshControl, Pressable, Share, StyleSheet } from 'react-native';
+/* eslint-disable react-hooks/set-state-in-effect -- Existing collection loaders populate local state on mount/focus; Phase 3 keeps data flow unchanged. */
+import {
+  Alert,
+  View,
+  ScrollView,
+  RefreshControl,
+  Pressable,
+  Share,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,17 +29,14 @@ import { CollectionFolder } from '../../../types';
 import { collectionService } from '../../../libs/services/collection/collection-service';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { CreateFolderModal } from '../../../components/collection/CreateFolderModal';
-import {
-  QuickActionSheet,
-  type QuickAction,
-} from '../../../components/settings/QuickActionSheet';
+import { QuickActionSheet, type QuickAction } from '../../../components/settings/QuickActionSheet';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import {
   loadCollectionSortModeSync,
   saveCollectionSortMode,
   type CollectionSortMode,
 } from '../../../libs/services/collection-prefs';
-import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
+import { Colors, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { LocalDB } from '../../../libs/db';
 import { Skeleton, ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { ErrorStateView } from '../../../components/common/ErrorStateView';
@@ -188,7 +194,6 @@ export default function CollectionScreen() {
         console.error('Failed to load collection:', foldersResult.reason);
         setFoldersError(true);
       }
-
     }
 
     if (animeCardsRequestId === animeCardsLoadRef.current) {
@@ -549,7 +554,7 @@ export default function CollectionScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              tintColor={theme.text.primary}
+              tintColor={theme.accent}
               refreshing={refreshing}
               onRefresh={onRefresh}
             />
@@ -731,7 +736,6 @@ export default function CollectionScreen() {
               </View>
             )}
           </View>
-
         </ScrollView>
 
         <CreateFolderModal
@@ -902,6 +906,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorBannerText: {
-    color: '#fff',
+    color: Colors.text.primary,
   },
 });

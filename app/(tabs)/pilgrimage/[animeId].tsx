@@ -17,7 +17,14 @@
 // `components/pilgrimage/detail/`. We do not add new top-level `useState`s
 // here without first asking whether the value belongs in a hook or a child.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   Dimensions,
   InteractionManager,
@@ -45,6 +52,7 @@ import {
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import {
+  buildPilgrimageEventDetailRoute,
   buildPilgrimageSceneIdRoute,
   getPilgrimageDetailBackRoute,
   getPilgrimageDetailChromeSeed,
@@ -65,6 +73,13 @@ import type { SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
+import {
+  bannerEnter,
+  bannerExit,
+  fabEnter,
+  fabExit,
+  overlayEnter,
+} from '../../../libs/animations/presets';
 import {
   LOCATE_FAB_COMPASS_ZOOM,
   LOCATE_FAB_ZOOM,
@@ -96,7 +111,16 @@ import {
   type FilterCyclePillState,
   type SpotMapViewHandle,
 } from '../../../components/pilgrimage/detail';
-import { useT } from '../../../libs/i18n';
+import { useI18n, useT } from '../../../libs/i18n';
+import { LocalityMapLegend } from '../../../components/pilgrimage/map/LocalityMapLegend';
+import { localityMarkerPalette } from '../../../components/pilgrimage/common/LocalityAesthetic';
+import type { MapMarker } from '../../../components/pilgrimage/map';
+import { get88EntriesWithCoords } from '../../../libs/services/pilgrimage/anime88-repository';
+import {
+  buildAnime88AreaMarkers,
+  buildCanonicalLocalityMarkers,
+} from '../../../libs/services/pilgrimage/locality/map-markers';
+import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
 
 // Sheet snap heights as fractions of the screen — kept in lockstep with the
 // snap-points array in PilgrimageDetailSheet. We use them to position the
@@ -125,6 +149,16 @@ function firstNonEmptyTitle(...values: (string | null | undefined)[]): string {
   return '';
 }
 
+const ANIME_88_AREA_ENTRIES = get88EntriesWithCoords();
+
+function subscribeLocality(listener: () => void): () => void {
+  return localityRepository.subscribe(listener);
+}
+
+function getLocalitySnapshot() {
+  return localityRepository.getSnapshot();
+}
+
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
   const bangumiId = getNumberParam(params, 'animeId');
@@ -132,6 +166,12 @@ export default function PilgrimageDetailScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const t = useT();
+  const { language } = useI18n();
+  const localitySnapshot = useSyncExternalStore(
+    subscribeLocality,
+    getLocalitySnapshot,
+    getLocalitySnapshot
+  );
   // Frame-1 chrome seed (title / poster / themeColor) carried in by the
   // lister so we can paint hero + accent before any I/O resolves
   // (CLAUDE.md Rule 10). When the real data arrives it replaces the seed.
@@ -179,6 +219,21 @@ export default function PilgrimageDetailScreen() {
   const styles = useMemo(() => makePilgrimageDetailStyles(theme, insets.top), [theme, insets.top]);
   const animeTitles = useMemo(() => (anime ? getPilgrimageAnimeTitles(anime) : null), [anime]);
   const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
+  const localityAnimeId = anime?.id ?? bangumiId;
+  const localityMarkers = useMemo<MapMarker[]>(() => {
+    void localitySnapshot;
+    if (localityAnimeId === null) return [];
+    const roleMarkers = buildCanonicalLocalityMarkers(
+      localityRepository,
+      localityMarkerPalette(theme),
+      { animeId: localityAnimeId, language }
+    );
+    const areaMarkers = buildAnime88AreaMarkers(
+      ANIME_88_AREA_ENTRIES.filter((entry) => entry.externalIds.bangumi === localityAnimeId),
+      theme.status.info
+    );
+    return [...roleMarkers, ...areaMarkers];
+  }, [language, localityAnimeId, localitySnapshot, theme]);
 
   // Tracking hook drives the locate FAB + the map's user dot + cone. The ref
   // points at SpotMapView so location ticks and heading deltas push straight to
@@ -256,26 +311,22 @@ export default function PilgrimageDetailScreen() {
       setProximityTarget({ spot: near.spot, distanceMeters: near.distanceMeters });
     }
   }, [userLocation, points, visited]);
-  // The banner targets a specific spot snapshot; if that spot gets checked in
-  // some other way while the banner is still up (e.g. the SpotSheet's own
-  // 打卡 button), the banner is stale — clear it instead of leaving it to
-  // offer a now-wrong action.
-  useEffect(() => {
-    if (proximityTarget && visited[proximityTarget.spot.id]) {
-      setProximityTarget(null);
-    }
-  }, [proximityTarget, visited]);
+  // The banner targets a specific spot snapshot. If that spot gets checked in
+  // some other way while the banner is still up, derive it away instead of
+  // synchronously clearing state from an effect.
+  const visibleProximityTarget =
+    proximityTarget && !visited[proximityTarget.spot.id] ? proximityTarget : null;
   const handleProximityCheckIn = useCallback(() => {
     // Guard against a stale banner: `toggleVisitedPoint` is bidirectional, so
     // if the spot was already checked in elsewhere while the banner sat open,
     // tapping it must not reverse (check OUT) a real visit.
-    if (!proximityTarget || visited[proximityTarget.spot.id]) {
+    if (!visibleProximityTarget) {
       setProximityTarget(null);
       return;
     }
-    toggleVisitedPoint(proximityTarget.spot);
+    toggleVisitedPoint(visibleProximityTarget.spot);
     setProximityTarget(null);
-  }, [proximityTarget, visited, toggleVisitedPoint]);
+  }, [visibleProximityTarget, toggleVisitedPoint]);
   const handleProximityDismiss = useCallback(() => setProximityTarget(null), []);
 
   const sheet = usePilgrimageSpotSheet({
@@ -328,13 +379,6 @@ export default function PilgrimageDetailScreen() {
   // controls itself; we only react to its onChange to fade the chrome.
   const [sheetIndex, setSheetIndex] = useState<number>(viewMode === 'map' ? 0 : 1);
 
-  useEffect(() => {
-    // Keep the floating chrome's "ghost" snap in sync when the user flips
-    // the view mode toggle (the sheet itself also snaps via an effect inside
-    // PilgrimageDetailSheet).
-    setSheetIndex(viewMode === 'map' ? 0 : 1);
-  }, [viewMode]);
-
   // Keep the map's chip-strip selection in sync with the current filtered
   // pointset. If the previous pick was filtered out, fall back to the first
   // valid scene so the strip never lands on a blank chip.
@@ -375,6 +419,19 @@ export default function PilgrimageDetailScreen() {
     Haptics.selectionAsync().catch(() => undefined);
     Linking.openURL(buildMapsURL(spot.geo[0], spot.geo[1], spot.name)).catch(() => undefined);
   }, []);
+
+  const handleLocalityMarkerPress = useCallback(
+    (marker: MapMarker) => {
+      if (marker.eventId) {
+        router.push(buildPilgrimageEventDetailRoute(marker.eventId));
+        return;
+      }
+      if (marker.precision === 'exact') {
+        Linking.openURL(buildMapsURL(marker.lat, marker.lng, marker.title)).catch(() => undefined);
+      }
+    },
+    [router]
+  );
 
   const handleToggleSaved = useCallback(
     (spot: AnitabiPoint) =>
@@ -682,8 +739,10 @@ export default function PilgrimageDetailScreen() {
     };
   });
 
-  const isEmpty = !loading && !error && (!anime || points.length === 0);
-  const hasMap = !!anime && hasValidGeo(anime.geo) && points.length > 0;
+  const isEmpty =
+    !loading && !error && (!anime || (points.length === 0 && localityMarkers.length === 0));
+  const hasMap =
+    localityMarkers.length > 0 || (!!anime && hasValidGeo(anime.geo) && points.length > 0);
 
   return (
     <>
@@ -726,6 +785,7 @@ export default function PilgrimageDetailScreen() {
                 <SpotMapView
                   ref={spotMapRef}
                   spots={filteredPoints}
+                  localityMarkers={localityMarkers}
                   visited={visited}
                   ringColor={themeColor}
                   userLocation={userLocation}
@@ -738,6 +798,7 @@ export default function PilgrimageDetailScreen() {
                   theme={theme}
                   onSpotPress={openSpot}
                   onClusterPick={openCluster}
+                  onLocalityMarkerPress={handleLocalityMarkerPress}
                   onUserPan={tracking.onUserPan}
                   style={styles.mapBackgroundInner}
                 />
@@ -745,12 +806,20 @@ export default function PilgrimageDetailScreen() {
                 <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
               )}
               <View style={styles.mapScrim} pointerEvents="none" />
+              {localityMarkers.length > 0 ? (
+                <LocalityMapLegend
+                  style={[styles.localityLegend, { bottom: sheetPeekOffset + 108 }]}
+                />
+              ) : null}
             </View>
 
             {/* Layer 2 — top-floating chrome (header / search). Series picker
                 lives inline next to the back button now (compact dropdown
                 pill instead of a horizontal scroll row). */}
-            <View style={styles.topOverlay} pointerEvents="box-none">
+            <Animated.View
+              entering={overlayEnter()}
+              style={styles.topOverlay}
+              pointerEvents="box-none">
               <View style={styles.headerActions}>
                 <View style={styles.headerLeftGroup}>
                   <RoundHeaderButton
@@ -841,17 +910,19 @@ export default function PilgrimageDetailScreen() {
                 </View>
               ) : null}
 
-              {proximityTarget ? (
-                <ProximityCheckInBanner
-                  spotName={getPilgrimageSpotTitles(proximityTarget.spot).primary}
-                  distanceMeters={proximityTarget.distanceMeters}
-                  theme={theme}
-                  t={t}
-                  onCheckIn={handleProximityCheckIn}
-                  onDismiss={handleProximityDismiss}
-                />
+              {visibleProximityTarget ? (
+                <Animated.View entering={bannerEnter()} exiting={bannerExit()}>
+                  <ProximityCheckInBanner
+                    spotName={getPilgrimageSpotTitles(visibleProximityTarget.spot).primary}
+                    distanceMeters={visibleProximityTarget.distanceMeters}
+                    theme={theme}
+                    t={t}
+                    onCheckIn={handleProximityCheckIn}
+                    onDismiss={handleProximityDismiss}
+                  />
+                </Animated.View>
               ) : null}
-            </View>
+            </Animated.View>
 
             {/* Layer 3 — map-side dock for marker / offline toggles. Only in
                 map view, and only when we have a real map underneath. Also
@@ -859,7 +930,7 @@ export default function PilgrimageDetailScreen() {
                 the top overlay column enough to overlap the dock's pinned
                 position, so the dock hides while the banner is up and
                 returns once it's dismissed or checked in. */}
-            {hasMap && viewMode === 'map' && sheetIndex <= 1 && proximityTarget == null ? (
+            {hasMap && viewMode === 'map' && sheetIndex <= 1 && visibleProximityTarget == null ? (
               <View
                 style={[styles.mapOptionsDock, { top: insets.top + 132 }]}
                 pointerEvents="box-none">
@@ -894,6 +965,7 @@ export default function PilgrimageDetailScreen() {
                 at full snap so it doesn't float over the scene grid. */}
             {anime ? (
               <Animated.View
+                entering={overlayEnter()}
                 style={[styles.bottomChromeWrap, chromeAnimatedStyle]}
                 pointerEvents="box-none">
                 <View style={styles.filterCycleRow}>
@@ -988,15 +1060,17 @@ export default function PilgrimageDetailScreen() {
                 behind the drag handle, and fades itself out at the full snap
                 when the sheet covers the visible map. */}
             {hasMap ? (
-              <LocateFab
-                state={tracking.state}
-                onPress={tracking.cycleState}
-                sheetAnimatedPosition={sheetPosition}
-                screenHeight={screenHeight}
-                bottomInset={sheetPeekOffset}
-                edgeGap={LOCATE_FAB_EDGE_GAP}
-                loading={tracking.isRequestingPermission}
-              />
+              <Animated.View entering={fabEnter()} exiting={fabExit()} pointerEvents="box-none">
+                <LocateFab
+                  state={tracking.state}
+                  onPress={tracking.cycleState}
+                  sheetAnimatedPosition={sheetPosition}
+                  screenHeight={screenHeight}
+                  bottomInset={sheetPeekOffset}
+                  edgeGap={LOCATE_FAB_EDGE_GAP}
+                  loading={tracking.isRequestingPermission}
+                />
+              </Animated.View>
             ) : null}
           </>
         )}

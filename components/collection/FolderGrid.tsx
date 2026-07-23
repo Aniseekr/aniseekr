@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
@@ -10,6 +11,7 @@ import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedIconButton, ThemedText, readableTextOn } from '../themed';
 import type { CollectionFolder } from '../../types';
+import { listItemEnter } from '../../libs/animations/presets';
 
 interface FolderGridProps {
   folders: CollectionFolder[];
@@ -67,11 +69,7 @@ function FolderCard({ folder, cover, onPress, onLongPress, onManage }: FolderCar
             style={styles.coverGradient}
             pointerEvents="none"
           />
-          <View
-            style={[
-              styles.iconChip,
-              { backgroundColor: `${theme.background.primary}CC` },
-            ]}>
+          <View style={[styles.iconChip, { backgroundColor: `${theme.background.primary}CC` }]}>
             <Ionicons
               name={(folder.icon || 'folder') as keyof typeof Ionicons.glyphMap}
               size={14}
@@ -136,23 +134,34 @@ function FolderGridComponent({
     <View style={styles.grid}>
       {rows.map((row, idx) => (
         <View key={idx} style={styles.row}>
-          {row.map((folder) => (
-            <View key={folder.id} style={styles.cell}>
+          {row.map((folder, colIdx) => {
+            const entryIndex = idx * 2 + colIdx;
+            const card = (
               <FolderCard
                 folder={folder}
                 cover={covers?.[folder.id]}
                 onPress={() => onPressFolder?.(folder)}
-                onLongPress={
-                  onLongPressFolder ? () => onLongPressFolder(folder) : undefined
-                }
+                onLongPress={onLongPressFolder ? () => onLongPressFolder(folder) : undefined}
                 onManage={
                   !folder.isSystemFolder && onManageFolder
                     ? () => onManageFolder(folder)
                     : undefined
                 }
               />
-            </View>
-          ))}
+            );
+            return entryIndex < 8 ? (
+              <Animated.View
+                key={folder.id}
+                entering={listItemEnter(entryIndex)}
+                style={styles.cell}>
+                {card}
+              </Animated.View>
+            ) : (
+              <View key={folder.id} style={styles.cell}>
+                {card}
+              </View>
+            );
+          })}
           {row.length === 1 ? <View style={styles.cell} /> : null}
         </View>
       ))}

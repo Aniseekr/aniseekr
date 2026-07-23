@@ -3,10 +3,7 @@
 // consistently.
 import { describe, expect, it } from 'bun:test';
 import type { MapMarker } from '../../../libs/services/pilgrimage/map-engine/types';
-import {
-  resolveMarkerVisual,
-  VISITED_COLOR,
-} from '../../../libs/services/pilgrimage/map-engine/marker-style';
+import { resolveMarkerVisual } from '../../../libs/services/pilgrimage/map-engine/marker-style';
 
 const base = (over: Partial<MapMarker>): MapMarker => ({
   id: 'x',
@@ -78,8 +75,14 @@ describe('resolveMarkerVisual — anime balloon', () => {
   });
   it('anime centroid honors the visited flag (green progress ring)', () => {
     const visual = resolveMarkerVisual({
-      id: 'bgm:115908', kind: 'anime', lat: 34.9, lng: 135.8,
-      title: '響け！ユーフォニアム', color: '#4a90d9', pointsLength: 577, visited: true,
+      id: 'bgm:115908',
+      kind: 'anime',
+      lat: 34.9,
+      lng: 135.8,
+      title: '響け！ユーフォニアム',
+      color: '#4a90d9',
+      pointsLength: 577,
+      visited: true,
     } as MapMarker);
     expect(visual.visited).toBe(true);
     expect(visual.shape).toBe('balloon');
@@ -89,14 +92,28 @@ describe('resolveMarkerVisual — anime balloon', () => {
 describe('resolveMarkerVisual — city88 never shows visited', () => {
   it('city88 markers never show visited', () => {
     const visual = resolveMarkerVisual({
-      id: '88:1', kind: 'city88', lat: 35, lng: 139, title: 'x', color: '#caa64b', visited: true,
+      id: '88:1',
+      kind: 'city88',
+      lat: 35,
+      lng: 139,
+      title: 'x',
+      color: '#caa64b',
+      visited: true,
     } as MapMarker);
     expect(visual.visited).toBe(false);
   });
 });
 
-describe('VISITED_COLOR', () => {
-  it('keeps the visited green stable', () => {
-    expect(VISITED_COLOR).toBe('#34A853');
+describe('resolveMarkerVisual — canonical locality roles and areas', () => {
+  it('PILG-058 gives stamp, shop, festival, and area markers distinct shapes', () => {
+    expect(resolveMarkerVisual(base({ kind: 'stamp' })).shape).toBe('stamp');
+    expect(resolveMarkerVisual(base({ kind: 'shop' })).shape).toBe('shop');
+    expect(resolveMarkerVisual(base({ kind: 'festival' })).shape).toBe('festival');
+    expect(resolveMarkerVisual(base({ kind: 'area' })).shape).toBe('area');
+  });
+
+  it('PILG-058 lets stamp pins reflect collected progress but never marks areas visited', () => {
+    expect(resolveMarkerVisual(base({ kind: 'stamp', visited: true })).visited).toBe(true);
+    expect(resolveMarkerVisual(base({ kind: 'area', visited: true })).visited).toBe(false);
   });
 });

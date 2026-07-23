@@ -8,11 +8,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { readableTextOn, ThemedText } from '../../themed';
+import { ON_DARK, readableTextOn, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import type { CaptureMode } from '../../../hooks/useCameraSettings';
 import { captureModeToastCopy } from '../../../libs/services/pilgrimage/capture-mode-copy';
 import { CameraChrome } from './cameraChrome';
+import { toastEnter, toastExit } from '../../../libs/animations/presets';
 
 // Frame counts are the real values the capture hooks use. Burst still picks
 // the best alignment score, not sharpness. HDR copy is resolved at render time:
@@ -72,7 +73,11 @@ export default function CaptureModeToast({
   const copy = captureModeToastCopy(toast.mode, nativeHdrActive);
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.toast, animatedStyle]}>
+    <Animated.View
+      entering={toastEnter()}
+      exiting={toastExit()}
+      pointerEvents="none"
+      style={[styles.toast, animatedStyle]}>
       <View style={[styles.iconBadge, { backgroundColor: themeColor }]}>
         <Ionicons
           name={copy.icon as keyof typeof Ionicons.glyphMap}
@@ -119,5 +124,5 @@ const styles = StyleSheet.create({
   },
   text: { flexShrink: 1, gap: 1 },
   label: { letterSpacing: 1 },
-  hint: { color: '#fff' },
+  hint: { color: ON_DARK },
 });

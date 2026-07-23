@@ -10,6 +10,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
@@ -32,6 +33,7 @@ import {
 } from '../../../libs/services/pilgrimage/visited-prefs';
 import { getIndexedById } from '../../../libs/services/pilgrimage/anitabi-index';
 import { useT } from '../../../libs/i18n';
+import { listItemEnter } from '../../../libs/animations/presets';
 
 export default function PilgrimagePlanScreen() {
   const insets = useSafeAreaInsets();
@@ -111,7 +113,7 @@ export default function PilgrimagePlanScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 140 }]}
         showsVerticalScrollIndicator={false}>
         {isEmpty ? (
-          <View style={styles.emptyCard}>
+          <Animated.View entering={FadeIn} style={styles.emptyCard}>
             <MaterialIcons name="flag" size={40} color={theme.text.tertiary} />
             <ThemedText variant="titleMedium" weight="800" align="center" style={{ marginTop: 8 }}>
               {t('pilgrimage.plan.emptyTitle')}
@@ -131,7 +133,7 @@ export default function PilgrimagePlanScreen() {
               }}
               size="lg"
             />
-          </View>
+          </Animated.View>
         ) : (
           <>
             {groups.length > 0 ? (
@@ -143,25 +145,28 @@ export default function PilgrimagePlanScreen() {
                 {t('pilgrimage.plan.plannedHeader')}
               </ThemedText>
             ) : null}
-            {groups.map((group) => (
-              <PlannedGroupCard
+            {groups.map((group, index) => (
+              <Animated.View
                 key={`trip-${group.animeId}`}
-                group={group}
-                visited={visited}
-                theme={theme}
-                onStart={() => handleStart(group)}
-              />
+                entering={index < 8 ? listItemEnter(index) : undefined}>
+                <PlannedGroupCard
+                  group={group}
+                  visited={visited}
+                  theme={theme}
+                  onStart={() => handleStart(group)}
+                />
+              </Animated.View>
             ))}
 
             {uncategorized.length > 0 ? (
-              <View style={styles.uncategorizedCard}>
+              <Animated.View entering={FadeIn} style={styles.uncategorizedCard}>
                 <ThemedText variant="bodyMedium" weight="700">
                   {t('pilgrimage.plan.uncategorizedTitle')}
                 </ThemedText>
                 <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
                   {t('pilgrimage.plan.uncategorizedBody', { count: uncategorized.length })}
                 </ThemedText>
-              </View>
+              </Animated.View>
             ) : null}
           </>
         )}

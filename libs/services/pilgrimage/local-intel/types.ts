@@ -36,6 +36,15 @@ export interface SpotRef {
   pointId: string;
 }
 
+export interface StampSpot {
+  name: LocalizedText;
+  /** Official street address when the source lists one. Omitted for spots
+   *  sourced from an official Google My Maps (coords only, no address). */
+  address?: string;
+  geo: [number, number] | null;
+  sourceUrl: string;
+}
+
 interface LocalIntelEntryBase extends IntelProvenance {
   /** Stable slug, e.g. 'yasudaya-ryokan'. Survives server-sync migration. */
   id: string;
@@ -92,10 +101,17 @@ export interface LocalIntelEvent extends LocalIntelEntryBase {
   kind: 'event';
   category: EventCategory;
   schedule: EventSchedule;
+  stampSpots?: StampSpot[];
   venue?: LocalizedText;
 }
 
-export type ViewingHintKind = 'sunset' | 'sunrise' | 'golden_hour' | 'blue_hour' | 'night' | 'seasonal';
+export type ViewingHintKind =
+  | 'sunset'
+  | 'sunrise'
+  | 'golden_hour'
+  | 'blue_hour'
+  | 'night'
+  | 'seasonal';
 
 export interface LocalIntelViewingHint extends LocalIntelEntryBase {
   kind: 'viewing_hint';
