@@ -76,21 +76,13 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
               cachePolicy="memory-disk"
             />
             <LinearGradient
-              colors={[
-                'rgba(10,10,10,0.92)',
-                'rgba(10,10,10,0.2)',
-                'rgba(0,0,0,0)',
-              ]}
+              colors={['rgba(10,10,10,0.92)', 'rgba(10,10,10,0.2)', 'rgba(0,0,0,0)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.bannerContent}>
-              <View
-                style={[
-                  styles.bannerPill,
-                  { backgroundColor: `${theme.accent}33` },
-                ]}>
+              <View style={[styles.bannerPill, { backgroundColor: `${theme.accent}33` }]}>
                 <ThemedText
                   variant="captionSmall"
                   weight="700"
@@ -102,10 +94,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
                 The season&rsquo;s biggest premieres
               </ThemedText>
               <View style={styles.bannerCta}>
-                <ThemedText
-                  variant="captionSmall"
-                  weight="700"
-                  style={{ color: theme.accent }}>
+                <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
                   {t('rate.viewCalendar')}
                 </ThemedText>
                 <Ionicons name="arrow-forward" size={12} color={theme.accent} />
@@ -193,11 +182,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
                 borderColor: theme.glassBorder,
               },
             ]}>
-            <View
-              style={[
-                styles.forYouIcon,
-                { backgroundColor: `${theme.accent}26` },
-              ]}>
+            <View style={[styles.forYouIcon, { backgroundColor: `${theme.accent}26` }]}>
               <Ionicons name="sparkles" size={20} color={theme.accent} />
             </View>
             <View style={styles.forYouText}>
@@ -208,11 +193,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
                 {data.length} picks based on your watch history
               </ThemedText>
             </View>
-            <View
-              style={[
-                styles.forYouArrow,
-                { backgroundColor: theme.background.tertiary },
-              ]}>
+            <View style={[styles.forYouArrow, { backgroundColor: theme.background.tertiary }]}>
               <Ionicons name="arrow-forward" size={16} color={theme.text.primary} />
             </View>
           </View>
@@ -252,10 +233,7 @@ const ShowcasePoster = memo(function ShowcasePoster({
       accessibilityRole="button"
       accessibilityLabel={anime.title}>
       <View
-        style={[
-          styles.posterCard,
-          { borderColor, backgroundColor: theme.background.tertiary },
-        ]}>
+        style={[styles.posterCard, { borderColor, backgroundColor: theme.background.tertiary }]}>
         <Image
           source={{ uri: anime.image }}
           style={StyleSheet.absoluteFill}
@@ -264,11 +242,7 @@ const ShowcasePoster = memo(function ShowcasePoster({
           cachePolicy="memory-disk"
         />
         {score ? (
-          <View
-            style={[
-              styles.scorePill,
-              { backgroundColor: 'rgba(10,10,10,0.62)' },
-            ]}>
+          <View style={[styles.scorePill, { backgroundColor: 'rgba(10,10,10,0.62)' }]}>
             <Ionicons name="star" size={10} color={accent} />
             <ThemedText variant="captionSmall" weight="700">
               {score}

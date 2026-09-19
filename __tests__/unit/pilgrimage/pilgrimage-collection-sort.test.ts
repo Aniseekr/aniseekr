@@ -99,11 +99,9 @@ describe('sortPilgrimageAnimes', () => {
   });
 
   it('ignores non-finite distances and treats them as unknown', () => {
-    const sorted = sortPilgrimageAnimes(
-      [anime(1, 5, 'A'), anime(2, 9, 'B')],
-      'distance',
-      { distanceKmOf: (a) => (a.id === 1 ? NaN : 4) }
-    );
+    const sorted = sortPilgrimageAnimes([anime(1, 5, 'A'), anime(2, 9, 'B')], 'distance', {
+      distanceKmOf: (a) => (a.id === 1 ? NaN : 4),
+    });
     expect(sorted.map((a) => a.id)).toEqual([2, 1]);
   });
 

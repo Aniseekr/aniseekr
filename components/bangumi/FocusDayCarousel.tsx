@@ -264,7 +264,11 @@ const FocusDayItem = memo(function FocusDayItem({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.dayTitle}>{dayFullName(day) === UNKNOWN_AIR_KEY ? t('bangumiTab.unknownAirDate') : dayFullName(day)}</Text>
+            <Text style={styles.dayTitle}>
+              {dayFullName(day) === UNKNOWN_AIR_KEY
+                ? t('bangumiTab.unknownAirDate')
+                : dayFullName(day)}
+            </Text>
             {isToday ? <View style={styles.todayDot} /> : null}
           </View>
           <View style={styles.countBadge}>
@@ -385,11 +389,7 @@ const FocusDayRow = memo(function FocusDayRow({
             <Text style={styles.metaText}>{anime.format ?? anime.type}</Text>
           ) : null}
           {sourcePlatform ? (
-            <NearbyPilgrimageBadge
-              sourcePlatform={sourcePlatform}
-              id={anime.id}
-              variant="icon"
-            />
+            <NearbyPilgrimageBadge sourcePlatform={sourcePlatform} id={anime.id} variant="icon" />
           ) : null}
         </View>
       </View>

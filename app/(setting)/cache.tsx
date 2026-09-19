@@ -45,7 +45,10 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(precision)} ${units[unit]}`;
 }
 
-function formatStats(stats: BucketStats, t: (k: string, v?: Record<string, string | number>) => string): string {
+function formatStats(
+  stats: BucketStats,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   const parts: string[] = [];
   if (stats.bytes > 0) parts.push(formatBytes(stats.bytes));
   if (stats.entries > 0) {
@@ -158,7 +161,10 @@ export default function CacheSettingsScreen() {
     withBusy(async () => {
       const result = await manager.pruneAll();
       if (result.totalRemoved === 0) {
-        Alert.alert(t('settingsUi.noExpiredEntriesAllTtlTitle'), t('settingsUi.noExpiredEntriesAllTtlMessage'));
+        Alert.alert(
+          t('settingsUi.noExpiredEntriesAllTtlTitle'),
+          t('settingsUi.noExpiredEntriesAllTtlMessage')
+        );
       }
     });
 
@@ -247,7 +253,11 @@ export default function CacheSettingsScreen() {
       </SettingsSection>
 
       <SettingsSection title={t('settings.cacheScreen.section.actions')}>
-        <SettingsRow icon="refresh" label={t('settings.cacheScreen.recalculate')} onPress={() => void refresh()} />
+        <SettingsRow
+          icon="refresh"
+          label={t('settings.cacheScreen.recalculate')}
+          onPress={() => void refresh()}
+        />
         <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
         <SettingsRow
           icon="cleaning-services"
@@ -378,7 +388,9 @@ function SubBucketRow({ child, onClear }: SubBucketRowProps) {
             opacity: pressed ? 0.7 : 1,
           },
         ]}>
-        <Text style={[styles.subActionLabel, { color: theme.text.secondary }]}>{t('settings.cacheScreen.clear')}</Text>
+        <Text style={[styles.subActionLabel, { color: theme.text.secondary }]}>
+          {t('settings.cacheScreen.clear')}
+        </Text>
       </Pressable>
     </View>
   );

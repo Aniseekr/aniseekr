@@ -19,9 +19,9 @@ interface ShimmerEffectProps {
 }
 
 const INTENSITY: Record<'low' | 'medium' | 'high', { base: number; peak: number }> = {
-  low: { base: 0.04, peak: 0.10 },
+  low: { base: 0.04, peak: 0.1 },
   medium: { base: 0.06, peak: 0.18 },
-  high: { base: 0.10, peak: 0.28 },
+  high: { base: 0.1, peak: 0.28 },
 };
 
 // One shared driver for every ShimmerEffect mounted anywhere in the app.
@@ -36,7 +36,7 @@ const shimmerProgress = makeMutable(0);
 shimmerProgress.value = withRepeat(
   withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
   -1,
-  true,
+  true
 );
 
 function ShimmerEffectComponent({

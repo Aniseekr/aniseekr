@@ -18,39 +18,46 @@ export function parseFeed(xml: string, sourceId: string): NewsArticle[] {
 }
 
 function parseRss(xml: string, sourceId: string): NewsArticle[] {
-  return blocks(xml, 'item').flatMap((item) => toArticle({
-    sourceId,
-    id: text(item, 'guid') ?? text(item, 'id'),
-    title: text(item, 'title'),
-    link: text(item, 'link'),
-    date: text(item, 'pubDate'),
-    body: text(item, 'description'),
-    thumbnailUrl: mediaUrl(item) ?? enclosureImage(item) ?? imgFromHtml(text(item, 'description') ?? ''),
-  }));
+  return blocks(xml, 'item').flatMap((item) =>
+    toArticle({
+      sourceId,
+      id: text(item, 'guid') ?? text(item, 'id'),
+      title: text(item, 'title'),
+      link: text(item, 'link'),
+      date: text(item, 'pubDate'),
+      body: text(item, 'description'),
+      thumbnailUrl:
+        mediaUrl(item) ?? enclosureImage(item) ?? imgFromHtml(text(item, 'description') ?? ''),
+    })
+  );
 }
 
 function parseAtom(xml: string, sourceId: string): NewsArticle[] {
-  return blocks(xml, 'entry').flatMap((entry) => toArticle({
-    sourceId,
-    id: text(entry, 'id'),
-    title: text(entry, 'title'),
-    link: atomLink(entry),
-    date: text(entry, 'updated') ?? text(entry, 'published'),
-    body: text(entry, 'summary') ?? text(entry, 'content'),
-    thumbnailUrl: mediaUrl(entry) ?? enclosureImage(entry),
-  }));
+  return blocks(xml, 'entry').flatMap((entry) =>
+    toArticle({
+      sourceId,
+      id: text(entry, 'id'),
+      title: text(entry, 'title'),
+      link: atomLink(entry),
+      date: text(entry, 'updated') ?? text(entry, 'published'),
+      body: text(entry, 'summary') ?? text(entry, 'content'),
+      thumbnailUrl: mediaUrl(entry) ?? enclosureImage(entry),
+    })
+  );
 }
 
 function parseRdf(xml: string, sourceId: string): NewsArticle[] {
-  return blocks(xml, 'item').flatMap((item) => toArticle({
-    sourceId,
-    id: attrFromOpenTag(item, 'rdf:about') ?? attrFromOpenTag(item, 'about'),
-    title: text(item, 'title'),
-    link: text(item, 'link'),
-    date: text(item, 'dc:date'),
-    body: text(item, 'description'),
-    thumbnailUrl: mediaUrl(item) ?? imgFromHtml(text(item, 'description') ?? ''),
-  }));
+  return blocks(xml, 'item').flatMap((item) =>
+    toArticle({
+      sourceId,
+      id: attrFromOpenTag(item, 'rdf:about') ?? attrFromOpenTag(item, 'about'),
+      title: text(item, 'title'),
+      link: text(item, 'link'),
+      date: text(item, 'dc:date'),
+      body: text(item, 'description'),
+      thumbnailUrl: mediaUrl(item) ?? imgFromHtml(text(item, 'description') ?? ''),
+    })
+  );
 }
 
 function toArticle(input: {

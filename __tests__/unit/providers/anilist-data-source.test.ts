@@ -133,9 +133,7 @@ describe('AniListDataSource', () => {
   });
 
   it('ANIL-011 search query sorts by SEARCH_MATCH so exact matches rank first', async () => {
-    const { ds, calls } = buildSubject(() =>
-      fakeJson({ data: { Page: { media: [] } } })
-    );
+    const { ds, calls } = buildSubject(() => fakeJson({ data: { Page: { media: [] } } }));
 
     await ds.searchAnime('mono', 1);
 

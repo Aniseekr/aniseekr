@@ -1,6 +1,6 @@
 // Horizontal rail for the Japanese Anime Tourism 88 selection on the
 // pilgrimage hub. Sorted by AniList popularity descending; multi-city anime
-// collapse to one card with a "+N cities" tag.
+// collapse to one card with compact region and city-count metadata.
 
 import React, { useMemo, useState } from 'react';
 import {
@@ -14,9 +14,9 @@ import {
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Spacing, Radius, Shadow, Typography } from '../../constants/DesignSystem';
+import { Spacing, Radius, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
-import { ThemedText, readableTextOn } from '../themed';
+import { ThemedText } from '../themed';
 import { useT, type TranslationKey } from '../../libs/i18n';
 import { bangumiSubjectImageUrl } from '../../libs/clients/bangumi-client';
 import type {
@@ -58,14 +58,15 @@ export function Tourism88Rail({
     <View style={[styles.section, style]}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <ThemedText variant="titleMedium" weight="700">
+            {t('pilgrimageUi.animeTourism88')}
+          </ThemedText>
           <View style={styles.officialBadge}>
+            <Ionicons name="checkmark-circle-outline" size={11} color={theme.status.warning} />
             <ThemedText variant="captionSmall" weight="800" style={styles.officialBadgeLabel}>
               {t('pilgrimage.tourism88.official')}
             </ThemedText>
           </View>
-          <ThemedText variant="titleMedium" weight="700">
-            {t('pilgrimageUi.animeTourism88')}
-          </ThemedText>
         </View>
         {onSeeAll ? (
           <Pressable
@@ -134,35 +135,26 @@ function Tourism88RailCard({ entry, inCollection, onPress, theme }: Tourism88Rai
             onError={() => setPosterFailed(true)}
           />
         )}
-        <View style={styles.idChip}>
-          <ThemedText variant="captionSmall" weight="800" style={styles.idChipLabel}>
-            ★ #{primaryEntry.id}
-          </ThemedText>
-        </View>
-        {inCollection ? (
-          <View style={styles.collectedBadge}>
-            <Ionicons name="checkmark" size={11} color={readableTextOn(theme.status.success)} />
-          </View>
-        ) : null}
-        {cityCount > 1 ? (
-          <View style={styles.cityCount}>
-            <ThemedText variant="captionSmall" weight="700" style={styles.cityCountLabel}>
-              {t('pilgrimage.tourism88.moreCities', { count: cityCount })}
-            </ThemedText>
-          </View>
-        ) : null}
       </View>
       <View style={styles.meta}>
         <ThemedText variant="captionSmall" weight="700" numberOfLines={2} style={styles.title}>
           {title}
         </ThemedText>
-        <ThemedText
-          variant="captionSmall"
-          tone="tertiary"
-          numberOfLines={1}
-          style={styles.subtitle}>
-          {regionLabel}
-        </ThemedText>
+        <View style={styles.metaLine}>
+          {inCollection ? (
+            <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
+          ) : null}
+          <ThemedText
+            variant="captionSmall"
+            tone="tertiary"
+            numberOfLines={1}
+            style={styles.subtitle}>
+            #{primaryEntry.id} · {regionLabel}
+            {cityCount > 1
+              ? ` · ${t('pilgrimage.tourism88.moreCities', { count: cityCount })}`
+              : ''}
+          </ThemedText>
+        </View>
       </View>
     </Pressable>
   );
@@ -170,17 +162,13 @@ function Tourism88RailCard({ entry, inCollection, onPress, theme }: Tourism88Rai
 
 function makeStyles(theme: ThemePalette) {
   const officialAccent = theme.status.warning;
-  const officialAccentFg = readableTextOn(officialAccent);
 
   return StyleSheet.create({
-    section: {
-      marginTop: Spacing.lg,
-    },
+    section: {},
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: Spacing.screenPadding,
       marginBottom: Spacing.sm,
     },
     headerLeft: {
@@ -189,14 +177,19 @@ function makeStyles(theme: ThemePalette) {
       gap: 8,
     },
     officialBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 8,
-      backgroundColor: officialAccent,
+      backgroundColor: `${officialAccent}12`,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: `${officialAccent}55`,
     },
     officialBadgeLabel: {
       ...Typography.captionSmall,
-      color: officialAccentFg,
+      color: officialAccent,
       letterSpacing: 0.3,
     },
     seeAll: {
@@ -205,7 +198,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 2,
     },
     rail: {
-      paddingHorizontal: Spacing.screenPadding,
+      paddingRight: Spacing.xs,
       gap: 12,
     },
     card: {
@@ -216,10 +209,9 @@ function makeStyles(theme: ThemePalette) {
       height: 152,
       borderRadius: Radius.md,
       overflow: 'hidden',
-      borderWidth: 2,
-      borderColor: officialAccent,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.glassBorder,
       backgroundColor: theme.background.secondary,
-      ...Shadow.subtle,
     },
     poster: {
       width: '100%',
@@ -232,46 +224,6 @@ function makeStyles(theme: ThemePalette) {
       justifyContent: 'center',
       backgroundColor: theme.background.tertiary,
     },
-    idChip: {
-      position: 'absolute',
-      top: 6,
-      left: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      backgroundColor: officialAccent,
-    },
-    idChipLabel: {
-      ...Typography.captionSmall,
-      color: officialAccentFg,
-      letterSpacing: 0.2,
-    },
-    collectedBadge: {
-      position: 'absolute',
-      top: 6,
-      right: 6,
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      backgroundColor: theme.status.success,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: theme.background.primary,
-    },
-    cityCount: {
-      position: 'absolute',
-      bottom: 6,
-      right: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      backgroundColor: theme.background.secondary,
-    },
-    cityCountLabel: {
-      ...Typography.captionSmall,
-      color: theme.text.primary,
-    },
     meta: {
       marginTop: 6,
     },
@@ -281,6 +233,13 @@ function makeStyles(theme: ThemePalette) {
     },
     subtitle: {
       ...Typography.captionSmall,
+      flexShrink: 1,
+    },
+    metaLine: {
+      minHeight: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
       marginTop: 2,
     },
   });

@@ -25,17 +25,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraDevices, type CameraDevice } from 'react-native-vision-camera';
 import { Radius, Size, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import {
-  ThemedSurface,
-  ThemedText,
-  readableTextOn,
-} from '../../components/themed';
+import { ThemedSurface, ThemedText, readableTextOn } from '../../components/themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
-import {
-  classifyCohort,
-  type DeviceCohort,
-} from '../../libs/services/pilgrimage/device-cohort';
+import { classifyCohort, type DeviceCohort } from '../../libs/services/pilgrimage/device-cohort';
 
 interface CameraDump {
   id: string;
@@ -105,10 +98,8 @@ function platformIdentity(): DiagnosticsPayload['identity'] {
   return {
     osPlatform: Platform.OS,
     osVersion: String(Platform.Version),
-    manufacturer:
-      Platform.OS === 'android' ? constants.Manufacturer ?? 'unknown' : 'apple',
-    model:
-      Platform.OS === 'android' ? constants.Model ?? 'unknown' : 'ios',
+    manufacturer: Platform.OS === 'android' ? (constants.Manufacturer ?? 'unknown') : 'apple',
+    model: Platform.OS === 'android' ? (constants.Model ?? 'unknown') : 'ios',
     appBuildNumber: Application.nativeBuildVersion ?? 'unknown',
     appVersion: Application.nativeApplicationVersion ?? 'unknown',
   };
@@ -211,24 +202,39 @@ export default function CameraDiagnosticsScreen() {
           ]}
           showsVerticalScrollIndicator={false}>
           <Section title={t('settingsUi.identity')}>
-            <Row label={t('settingsUi.manufacturerModel')} value={`${payload.identity.manufacturer} / ${payload.identity.model}`} />
-            <Row label="OS" value={`${payload.identity.osPlatform} ${payload.identity.osVersion}`} />
-            <Row label={t('settingsUi.appVersion')} value={`${payload.identity.appVersion} (${payload.identity.appBuildNumber})`} />
+            <Row
+              label={t('settingsUi.manufacturerModel')}
+              value={`${payload.identity.manufacturer} / ${payload.identity.model}`}
+            />
+            <Row
+              label="OS"
+              value={`${payload.identity.osPlatform} ${payload.identity.osVersion}`}
+            />
+            <Row
+              label={t('settingsUi.appVersion')}
+              value={`${payload.identity.appVersion} (${payload.identity.appBuildNumber})`}
+            />
             <Row label={t('settingsUi.snapshotTaken')} value={payload.generatedAt} />
           </Section>
 
           <Section title={t('settingsUi.cohortClassification')}>
-            <Row label={t('settingsUi.strategy')} value={payload.cohort.strategy ?? '(null — no back devices)'} />
+            <Row
+              label={t('settingsUi.strategy')}
+              value={payload.cohort.strategy ?? '(null — no back devices)'}
+            />
             <Row label={t('settingsUi.primary')} value={payload.cohort.primaryId ?? '(none)'} />
-            <Row label={t('settingsUi.ultraWide')} value={payload.cohort.ultraWideId ?? '(none — no 0.5× swap target)'} />
+            <Row
+              label={t('settingsUi.ultraWide')}
+              value={payload.cohort.ultraWideId ?? '(none — no 0.5× swap target)'}
+            />
             <Row label={t('settingsUi.telephoto')} value={payload.cohort.telephotoId ?? '(none)'} />
           </Section>
 
           <Section title={`Cameras (${payload.totalDeviceCount})`}>
             {payload.devices.length === 0 ? (
               <ThemedText variant="bodySmall" tone="secondary" style={styles.empty}>
-                No camera devices reported. Permission may still be pending — back
-                out and re-open this screen.
+                No camera devices reported. Permission may still be pending — back out and re-open
+                this screen.
               </ThemedText>
             ) : (
               payload.devices.map((device, index) => (
@@ -248,11 +254,7 @@ export default function CameraDiagnosticsScreen() {
                 opacity: pressed ? 0.85 : 1,
               },
             ]}>
-            <Ionicons
-              name="share-outline"
-              size={18}
-              color={readableTextOn(theme.accent)}
-            />
+            <Ionicons name="share-outline" size={18} color={readableTextOn(theme.accent)} />
             <ThemedText
               variant="titleMedium"
               weight="700"
@@ -261,12 +263,9 @@ export default function CameraDiagnosticsScreen() {
             </ThemedText>
           </Pressable>
 
-          <ThemedText
-            variant="captionSmall"
-            tone="secondary"
-            style={styles.footnote}>
-            Paste the shared JSON into a bug report. The dump contains no
-            personal data — only hardware capabilities reported by your OS.
+          <ThemedText variant="captionSmall" tone="secondary" style={styles.footnote}>
+            Paste the shared JSON into a bug report. The dump contains no personal data — only
+            hardware capabilities reported by your OS.
           </ThemedText>
         </ScrollView>
       </SafeAreaView>
@@ -278,11 +277,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   const { theme } = useTheme();
   return (
     <View style={styles.section}>
-      <ThemedText
-        variant="captionSmall"
-        tone="secondary"
-        weight="600"
-        style={styles.sectionTitle}>
+      <ThemedText variant="captionSmall" tone="secondary" weight="600" style={styles.sectionTitle}>
         {title.toUpperCase()}
       </ThemedText>
       <ThemedSurface variant="card" padded={false} style={styles.sectionCard}>
@@ -336,7 +331,9 @@ function DeviceCard({ device }: { device: CameraDump }) {
       />
       <Row
         label="zoomLensSwitchFactors"
-        value={device.zoomLensSwitchFactors.length > 0 ? device.zoomLensSwitchFactors.join(', ') : '[]'}
+        value={
+          device.zoomLensSwitchFactors.length > 0 ? device.zoomLensSwitchFactors.join(', ') : '[]'
+        }
       />
       <Row
         label="physicalDevices"

@@ -128,7 +128,8 @@ const platforms: StreamingPlatformSpec[] = [
     icon: 'logo-amazon',
     domains: ['primevideo.com', 'amazon.com', 'amazon.co.jp'],
     aliases: ['amazon prime video', 'prime video', 'amazon', 'primevideo'],
-    buildSearch: (q) => `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(q)}`,
+    buildSearch: (q) =>
+      `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(q)}`,
     regions: ['Global'],
     monogram: 'PV',
   },
@@ -170,8 +171,7 @@ const platforms: StreamingPlatformSpec[] = [
       'gamer',
       'animad',
     ],
-    buildSearch: (q) =>
-      `https://ani.gamer.com.tw/search.php?keyword=${encodeURIComponent(q)}`,
+    buildSearch: (q) => `https://ani.gamer.com.tw/search.php?keyword=${encodeURIComponent(q)}`,
     regions: ['TW'],
     description: '巴哈姆特動漫瘋 (Animation Crazy) — 台灣最大授權動畫平台。',
     // Play Store app icon, pinned because clearbit doesn't index gamer.com.tw
@@ -278,7 +278,8 @@ const platforms: StreamingPlatformSpec[] = [
     icon: 'play-circle-outline',
     domains: ['viu.com'],
     aliases: ['viu'],
-    buildSearch: (q) => `https://www.viu.com/ott/sg/en-us/search/?keywords=${encodeURIComponent(q)}`,
+    buildSearch: (q) =>
+      `https://www.viu.com/ott/sg/en-us/search/?keywords=${encodeURIComponent(q)}`,
     regions: ['SEA'],
     monogram: 'V',
   },
@@ -315,9 +316,7 @@ domainIndex.sort((a, b) => b.domain.length - a.domain.length);
 export const STREAMING_PLATFORMS: Record<StreamingPlatformId, StreamingPlatformSpec> =
   byId as Record<StreamingPlatformId, StreamingPlatformSpec>;
 
-export const STREAMING_PLATFORM_IDS: readonly StreamingPlatformId[] = platforms.map(
-  (p) => p.id
-);
+export const STREAMING_PLATFORM_IDS: readonly StreamingPlatformId[] = platforms.map((p) => p.id);
 
 export function listStreamingPlatforms(): StreamingPlatformSpec[] {
   return platforms.slice();
@@ -329,7 +328,9 @@ export function getStreamingPlatform(
   return byId[id] ?? null;
 }
 
-export function matchStreamingPlatformByUrl(url: string | null | undefined): StreamingPlatformSpec | null {
+export function matchStreamingPlatformByUrl(
+  url: string | null | undefined
+): StreamingPlatformSpec | null {
   if (!url || typeof url !== 'string') return null;
   const trimmed = url.trim();
   if (!trimmed) return null;
@@ -357,7 +358,9 @@ export function matchStreamingPlatformByUrl(url: string | null | undefined): Str
   return null;
 }
 
-export function matchStreamingPlatformBySite(site: string | null | undefined): StreamingPlatformSpec | null {
+export function matchStreamingPlatformBySite(
+  site: string | null | undefined
+): StreamingPlatformSpec | null {
   if (!site || typeof site !== 'string') return null;
   const key = site.trim().toLowerCase();
   if (!key) return null;
@@ -390,10 +393,7 @@ export function resolveLogoDomain(spec: StreamingPlatformSpec): string | null {
   return null;
 }
 
-export function buildDeepLink(
-  id: StreamingPlatformId | string,
-  webUrl: string
-): string | null {
+export function buildDeepLink(id: StreamingPlatformId | string, webUrl: string): string | null {
   const spec = byId[id as string];
   if (!spec || !spec.deepLinkScheme) return null;
   // The scheme alone is enough for `Linking.canOpenURL` to probe whether the

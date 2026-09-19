@@ -73,9 +73,7 @@ function CollectionHeaderComponent({
               variant="glass"
               size={36}
               onPress={onPressShare}
-              icon={() => (
-                <MaterialIcons name="cloud-upload" size={18} color={theme.accent} />
-              )}
+              icon={() => <MaterialIcons name="cloud-upload" size={18} color={theme.accent} />}
             />
           ) : null}
           {onAddFolder ? (

@@ -109,9 +109,7 @@ describe('PilgrimageHubSheet — nearby spots strip wiring', () => {
 
   it('declares nearbySpots/onPickNearbySpot as optional props (undefined ⇒ no strip)', () => {
     expect(HUB_SHEET_SOURCE).toMatch(/nearbySpots\?: readonly NearbySpot\[\];/);
-    expect(HUB_SHEET_SOURCE).toMatch(
-      /onPickNearbySpot\?: \(spot: NearbySpot\) => void;/
-    );
+    expect(HUB_SHEET_SOURCE).toMatch(/onPickNearbySpot\?: \(spot: NearbySpot\) => void;/);
   });
 });
 

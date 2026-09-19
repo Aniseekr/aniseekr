@@ -36,7 +36,10 @@ function unsupportedMessage(
   }
 }
 
-const FEATURES: { icon: 'block' | 'palette' | 'cloud-sync' | 'auto-awesome'; labelKey: TranslationKey }[] = [
+const FEATURES: {
+  icon: 'block' | 'palette' | 'cloud-sync' | 'auto-awesome';
+  labelKey: TranslationKey;
+}[] = [
   { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
   { icon: 'cloud-sync', labelKey: 'subscription.unlimitedSyncPlatforms' },

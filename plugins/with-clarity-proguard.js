@@ -29,9 +29,7 @@ const withClarityProguard = (config) => {
         return modConfig;
       }
 
-      const next = current.endsWith('\n')
-        ? `${current}\n${RULES}`
-        : `${current}\n\n${RULES}`;
+      const next = current.endsWith('\n') ? `${current}\n${RULES}` : `${current}\n\n${RULES}`;
       fs.writeFileSync(proguardPath, next);
       return modConfig;
     },

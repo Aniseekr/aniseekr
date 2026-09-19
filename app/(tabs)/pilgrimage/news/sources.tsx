@@ -42,7 +42,9 @@ export default function NewsSourcesScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.background.primary }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: theme.background.primary }]}
+      edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <ThemedIconButton

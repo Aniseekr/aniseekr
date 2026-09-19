@@ -41,8 +41,13 @@ export default function TopPicksExhibit() {
         ? async () => {
             const lines = picks
               .slice(0, 10)
-              .map((p, i) => `${i + 1}. ${p.title ?? t('collectionStats.topPicks.untitled')}${p.score ? ` — ${p.score}` : ''}`);
-            await Share.share({ message: `${t('collectionStats.topPicks.shareHeading')}\n${lines.join('\n')}` });
+              .map(
+                (p, i) =>
+                  `${i + 1}. ${p.title ?? t('collectionStats.topPicks.untitled')}${p.score ? ` — ${p.score}` : ''}`
+              );
+            await Share.share({
+              message: `${t('collectionStats.topPicks.shareHeading')}\n${lines.join('\n')}`,
+            });
           }
         : undefined,
     [picks]
@@ -74,7 +79,8 @@ export default function TopPicksExhibit() {
         {t('collectionStats.topPicks.subtitle')}
       </ThemedText>
       <ThemedText variant="captionSmall" tone="tertiary" weight="700" style={{ letterSpacing: 2 }}>
-        {t('collectionStats.topPicks.updatedPrefix')} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+        {t('collectionStats.topPicks.updatedPrefix')} ·{' '}
+        {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
       </ThemedText>
       {picks.map((p, i) => (
         <View
@@ -90,14 +96,9 @@ export default function TopPicksExhibit() {
                   backgroundColor: theme.background.secondary,
                   borderColor: theme.glassBorder,
                 },
-          ]}
-        >
+          ]}>
           <ThemedText
-            style={[
-              styles.rank,
-              { color: i === 0 ? theme.accent : theme.text.tertiary },
-            ]}
-          >
+            style={[styles.rank, { color: i === 0 ? theme.accent : theme.text.tertiary }]}>
             {String(i + 1).padStart(2, '0')}
           </ThemedText>
           {p.image_url ? (

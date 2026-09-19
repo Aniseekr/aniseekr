@@ -1,6 +1,6 @@
 // PilgrimageDetailLoadingShell — first-paint loading skeleton for the
 // /pilgrimage/[animeId] route. Mirrors the loaded layout (themed gradient
-// background, top chrome, search pill, and a peek-height bottom sheet) so
+// background, navigation chrome and content sheet) so
 // the swap from loading → loaded has no layout shift.
 //
 // Caller passes the chrome seed (title / titleSecondary / poster) that was
@@ -9,12 +9,12 @@
 // When the seed is missing the slots fall back to a shimmer block.
 
 import React, { memo, useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
-import { ON_DARK, Skeleton, ThemedText } from '../../themed';
+import { Radius, Spacing } from '../../../constants/DesignSystem';
+import { Skeleton, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import { RoundHeaderButton } from './RoundHeaderButton';
@@ -79,23 +79,21 @@ function PilgrimageDetailLoadingShellImpl({
             <View style={[styles.headerButtonStub, { borderColor: theme.glassBorder }]} />
           </View>
         </View>
-
-        {/* Inert search pill — same shape as the live one so there is no
-            layout shift when the data lands. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: true }}
-          disabled
-          style={styles.searchPill}>
-          <Ionicons name="search" size={16} color={theme.text.tertiary} />
-          <ThemedText variant="bodyMedium" tone="tertiary" style={styles.searchPlaceholder}>
-            Loading scenes…
-          </ThemedText>
-        </Pressable>
       </View>
 
       <View style={styles.loadingContent}>
-        <Skeleton.Block width="100%" height={240} borderRadius={Radius.xl} intensity="low" />
+        <View style={styles.controlsStub}>
+          <View style={styles.searchStub}>
+            <Ionicons name="search" size={17} color={theme.text.tertiary} />
+            <ThemedText variant="bodyMedium" tone="tertiary">
+              {t('pilgrimageUi.loading')}
+            </ThemedText>
+          </View>
+          <View style={styles.controlRowStub}>
+            <Skeleton.Block width={104} height={44} borderRadius={Radius.lg} intensity="low" />
+            <Skeleton.Block width={168} height={48} borderRadius={Radius.lg} intensity="low" />
+          </View>
+        </View>
         <View style={styles.titleRow}>
           <View
             style={[
@@ -114,15 +112,6 @@ function PilgrimageDetailLoadingShellImpl({
             ) : (
               <Skeleton.Block width="100%" height="100%" borderRadius={Radius.lg} />
             )}
-            <View style={styles.posterBadge} pointerEvents="none">
-              <ThemedText
-                variant="captionSmall"
-                weight="800"
-                numberOfLines={1}
-                style={{ color: ON_DARK }}>
-                {t('pilgrimageUi.loading')}
-              </ThemedText>
-            </View>
           </View>
 
           <View style={styles.titleColumn}>
@@ -218,29 +207,39 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       borderWidth: StyleSheet.hairlineWidth,
       backgroundColor: `${theme.background.secondary}99`,
     },
-    searchPill: {
-      minHeight: 44,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      borderRadius: Radius.full,
-      backgroundColor: `${theme.background.secondary}E6`,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.glassBorder,
-      opacity: 0.85,
-    },
-    searchPlaceholder: {
-      ...Typography.bodyMedium,
-    },
     loadingContent: {
       position: 'absolute',
       left: 0,
       right: 0,
       bottom: 0,
+      minHeight: '58%',
+      paddingTop: Spacing.xl,
       paddingHorizontal: Spacing.screenPadding,
       paddingBottom: Spacing.xl,
       gap: Spacing.md,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
+      backgroundColor: theme.background.primary,
+    },
+    controlsStub: {
+      gap: Spacing.xs,
+    },
+    searchStub: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+    },
+    controlRowStub: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
     titleRow: {
       flexDirection: 'row',
@@ -253,17 +252,6 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       borderRadius: Radius.lg,
       borderWidth: 1,
       overflow: 'hidden',
-    },
-    posterBadge: {
-      position: 'absolute',
-      left: 6,
-      right: 6,
-      bottom: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: Radius.sm,
-      backgroundColor: 'rgba(0,0,0,0.62)',
-      alignItems: 'center',
     },
     titleColumn: {
       flex: 1,

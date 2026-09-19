@@ -3,12 +3,7 @@
 // a "Top of the Season" mini-rail of small poster tiles below.
 
 import { memo, useCallback, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -116,10 +111,7 @@ function SpotlightLayoutComponent({ data, onSelect }: SpotlightLayoutProps) {
             </ThemedText>
           </View>
           <View style={styles.seeAll}>
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: theme.accent }}>
+            <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
               {t('commonUi.seeAll')}
             </ThemedText>
             <Ionicons name="chevron-forward" size={11} color={theme.accent} />
@@ -164,25 +156,11 @@ const SpotlightCard = memo(function SpotlightCard({
   onPress,
 }: SpotlightCardProps) {
   const t = useT();
-  const inputRange = [
-    (index - 1) * ITEM_FULL,
-    index * ITEM_FULL,
-    (index + 1) * ITEM_FULL,
-  ];
+  const inputRange = [(index - 1) * ITEM_FULL, index * ITEM_FULL, (index + 1) * ITEM_FULL];
 
   const animatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.84, 1, 0.84],
-      Extrapolation.CLAMP,
-    );
-    const opacity = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.5, 1, 0.5],
-      Extrapolation.CLAMP,
-    );
+    const scale = interpolate(scrollX.value, inputRange, [0.84, 1, 0.84], Extrapolation.CLAMP);
+    const opacity = interpolate(scrollX.value, inputRange, [0.5, 1, 0.5], Extrapolation.CLAMP);
     return { transform: [{ scale }], opacity };
   });
 
@@ -213,8 +191,7 @@ const SpotlightCard = memo(function SpotlightCard({
 
         <View style={styles.cardTop}>
           {season ? (
-            <View
-              style={[styles.seasonPill, { backgroundColor: `${accent}33` }]}>
+            <View style={[styles.seasonPill, { backgroundColor: `${accent}33` }]}>
               <ThemedText
                 variant="captionSmall"
                 weight="700"
@@ -230,10 +207,7 @@ const SpotlightCard = memo(function SpotlightCard({
             {score ? (
               <View style={styles.metaPart}>
                 <Ionicons name="star" size={11} color={accent} />
-                <ThemedText
-                  variant="captionSmall"
-                  weight="700"
-                  style={{ color: accent }}>
+                <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
                   {score}
                 </ThemedText>
               </View>
@@ -264,10 +238,7 @@ const SpotlightCard = memo(function SpotlightCard({
                       borderColor: `${accent}55`,
                     },
                   ]}>
-                  <ThemedText
-                    variant="captionSmall"
-                    weight="600"
-                    style={{ color: accent }}>
+                  <ThemedText variant="captionSmall" weight="600" style={{ color: accent }}>
                     {g}
                   </ThemedText>
                 </View>
@@ -276,10 +247,7 @@ const SpotlightCard = memo(function SpotlightCard({
           ) : null}
           <View style={[styles.cta, { backgroundColor: accent }]}>
             <Ionicons name="play" size={14} color={accentFg} />
-            <ThemedText
-              variant="bodySmall"
-              weight="700"
-              style={{ color: accentFg }}>
+            <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
               {t('commonUi.watchNow')}
             </ThemedText>
           </View>
@@ -340,11 +308,7 @@ const MiniPoster = memo(function MiniPoster({
       style={({ pressed }) => [styles.miniCell, pressed && { opacity: 0.85 }]}
       accessibilityRole="button"
       accessibilityLabel={anime.title}>
-      <View
-        style={[
-          styles.miniImage,
-          { borderColor, backgroundColor: theme.background.tertiary },
-        ]}>
+      <View style={[styles.miniImage, { borderColor, backgroundColor: theme.background.tertiary }]}>
         <Image
           source={{ uri: anime.image }}
           style={StyleSheet.absoluteFill}
@@ -358,11 +322,7 @@ const MiniPoster = memo(function MiniPoster({
           style={StyleSheet.absoluteFill}
         />
         {score ? (
-          <View
-            style={[
-              styles.miniScore,
-              { backgroundColor: 'rgba(10,10,10,0.7)' },
-            ]}>
+          <View style={[styles.miniScore, { backgroundColor: 'rgba(10,10,10,0.7)' }]}>
             <Ionicons name="star" size={9} color={accent} />
             <ThemedText variant="captionSmall" weight="700">
               {score}

@@ -67,7 +67,9 @@ export default function SyncHubScreen() {
   };
 
   return (
-    <SettingsScreenLayout title={t('settings.syncHub')} subtitle={t('settings.syncHubScreen.subtitle')}>
+    <SettingsScreenLayout
+      title={t('settings.syncHub')}
+      subtitle={t('settings.syncHubScreen.subtitle')}>
       <View
         style={[
           styles.statusCard,
@@ -80,7 +82,9 @@ export default function SyncHubScreen() {
         <View style={{ flex: 1 }}>
           <View style={styles.statusTitleRow}>
             <Text style={[styles.statusTitle, { color: theme.text.primary }]}>
-              {lastSync ? t('settings.syncHubScreen.lastSync', { when: formatRelative(lastSync, t) }) : t('settings.syncHubScreen.noSync')}
+              {lastSync
+                ? t('settings.syncHubScreen.lastSync', { when: formatRelative(lastSync, t) })
+                : t('settings.syncHubScreen.noSync')}
             </Text>
             <View style={[styles.betaPill, { backgroundColor: theme.accent }]}>
               <ThemedText
@@ -103,7 +107,9 @@ export default function SyncHubScreen() {
             styles.syncButton,
             { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
           ]}>
-          <Text style={[styles.syncLabel, { color: readableTextOn(theme.accent) }]}>{t('settings.syncHubScreen.syncNow')}</Text>
+          <Text style={[styles.syncLabel, { color: readableTextOn(theme.accent) }]}>
+            {t('settings.syncHubScreen.syncNow')}
+          </Text>
         </Pressable>
       </View>
 
@@ -128,9 +134,21 @@ export default function SyncHubScreen() {
       <SettingsSection title={t('settings.syncHubScreen.section.conflict')}>
         {(
           [
-            ['newest', t('settings.syncHubScreen.conflict.newest.label'), t('settings.syncHubScreen.conflict.newest.desc')],
-            ['local', t('settings.syncHubScreen.conflict.local.label'), t('settings.syncHubScreen.conflict.local.desc')],
-            ['remote', t('settings.syncHubScreen.conflict.remote.label'), t('settings.syncHubScreen.conflict.remote.desc')],
+            [
+              'newest',
+              t('settings.syncHubScreen.conflict.newest.label'),
+              t('settings.syncHubScreen.conflict.newest.desc'),
+            ],
+            [
+              'local',
+              t('settings.syncHubScreen.conflict.local.label'),
+              t('settings.syncHubScreen.conflict.local.desc'),
+            ],
+            [
+              'remote',
+              t('settings.syncHubScreen.conflict.remote.label'),
+              t('settings.syncHubScreen.conflict.remote.desc'),
+            ],
           ] as const
         ).map(([key, label, desc], idx, arr) => {
           const active = prefs.conflictStrategy === key;
@@ -237,7 +255,10 @@ function ToggleRow({
   );
 }
 
-function formatRelative(date: Date, t: (k: string, v?: Record<string, string | number>) => string): string {
+function formatRelative(
+  date: Date,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   const seconds = Math.max(1, Math.floor((Date.now() - date.getTime()) / 1000));
   if (seconds < 60) return t('settings.syncHubScreen.relative.justNow');
   const minutes = Math.floor(seconds / 60);

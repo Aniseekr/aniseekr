@@ -108,11 +108,11 @@ function makeFakeCache() {
     set: async (key: string, value: unknown, ttlMs: number) => {
       store.set(key, { value, ts: 0, ttl: ttlMs });
     },
-    getSyncWithMeta: <T,>(key: string, _grace: number) => {
+    getSyncWithMeta: <T>(key: string, _grace: number) => {
       const hit = store.get(key);
       return hit ? { value: hit.value as T, age: 0, isStale: false } : null;
     },
-    getWithMeta: async <T,>(key: string, _grace: number) => {
+    getWithMeta: async <T>(key: string, _grace: number) => {
       const hit = store.get(key);
       return hit ? { value: hit.value as T, age: 0, isStale: false } : null;
     },

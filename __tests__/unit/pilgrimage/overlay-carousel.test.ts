@@ -11,7 +11,13 @@ import {
 
 describe('overlay carousel model', () => {
   it('orders the five items Off · Anime · Edge · Sketch · Subject', () => {
-    expect(OVERLAY_CAROUSEL_ITEMS.map((i) => i.id)).toEqual(['off', 'anime', 'edge', 'sketch', 'subject']);
+    expect(OVERLAY_CAROUSEL_ITEMS.map((i) => i.id)).toEqual([
+      'off',
+      'anime',
+      'edge',
+      'sketch',
+      'subject',
+    ]);
   });
 
   it('carries an icon and an i18n label key for every item', () => {

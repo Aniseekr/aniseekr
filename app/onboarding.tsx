@@ -255,7 +255,12 @@ function BrowseSourceStep({
           );
         })}
       </View>
-      <ThemedButton label={t('onboarding.browseSource.cta')} onPress={onContinue} size="lg" fullWidth />
+      <ThemedButton
+        label={t('onboarding.browseSource.cta')}
+        onPress={onContinue}
+        size="lg"
+        fullWidth
+      />
     </View>
   );
 }
@@ -297,7 +302,9 @@ function NotificationsStep({
         </View>
         <View style={styles.buttonRowItem}>
           <ThemedButton
-            label={busy ? t('onboarding.notifications.asking') : t('onboarding.notifications.allow')}
+            label={
+              busy ? t('onboarding.notifications.asking') : t('onboarding.notifications.allow')
+            }
             onPress={onAllow}
             loading={busy}
             size="lg"

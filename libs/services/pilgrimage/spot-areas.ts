@@ -23,8 +23,7 @@ export interface SpotArea {
 /** Detail list row: an area section header (1-indexed, precomputed so the
  * renderer never rescans prior rows) or a spot. */
 export type SpotAreaRow =
-  | { kind: 'header'; area: SpotArea; areaNumber: number }
-  | { kind: 'spot'; spot: AnitabiSpot };
+  { kind: 'header'; area: SpotArea; areaNumber: number } | { kind: 'spot'; spot: AnitabiSpot };
 
 const KM_PER_DEG_LAT = 111;
 

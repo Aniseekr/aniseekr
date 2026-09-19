@@ -27,13 +27,8 @@ const withStorekitConfig = (config) => {
         return modConfig;
       }
 
-      const projectName = IOSConfig.XcodeUtils.getProjectName(
-        modConfig.modRequest.projectRoot
-      );
-      const destDir = path.join(
-        modConfig.modRequest.platformProjectRoot,
-        projectName
-      );
+      const projectName = IOSConfig.XcodeUtils.getProjectName(modConfig.modRequest.projectRoot);
+      const destDir = path.join(modConfig.modRequest.platformProjectRoot, projectName);
 
       if (!fs.existsSync(destDir)) {
         fs.mkdirSync(destDir, { recursive: true });

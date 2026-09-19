@@ -15,9 +15,8 @@ const tEn = (key: string): string =>
 mock.module('../../../libs/i18n', () => ({ useT: () => tEn }));
 mock.module('../../../components/themed', () => ({ readableTextOn: () => '#000' }));
 
-const { default: GalleryThumb, resolveGalleryThumb } = await import(
-  '../../../components/pilgrimage/camera/GalleryThumb'
-);
+const { default: GalleryThumb, resolveGalleryThumb } =
+  await import('../../../components/pilgrimage/camera/GalleryThumb');
 
 type Props = React.ComponentProps<typeof GalleryThumb>;
 const noop = () => undefined;
@@ -27,7 +26,11 @@ describe('gallery thumb model', () => {
     expect(resolveGalleryThumb([])).toEqual({ thumbUri: null, count: 0, isEmpty: true });
   });
   it('uses the newest uri and the count when captures exist', () => {
-    expect(resolveGalleryThumb(['a', 'b', 'c'])).toEqual({ thumbUri: 'a', count: 3, isEmpty: false });
+    expect(resolveGalleryThumb(['a', 'b', 'c'])).toEqual({
+      thumbUri: 'a',
+      count: 3,
+      isEmpty: false,
+    });
   });
 });
 
@@ -43,7 +46,10 @@ describe('gallery thumb component', () => {
       onExpand: noop,
     };
     const tree = render(GalleryThumb, props);
-    const btn = findAll(tree, (n) => typeof (n.props as { onPress?: unknown }).onPress === 'function')[0];
+    const btn = findAll(
+      tree,
+      (n) => typeof (n.props as { onPress?: unknown }).onPress === 'function'
+    )[0];
     expect(btn).toBeTruthy();
     (btn.props as { onPress: () => void }).onPress();
     expect(imported).toBe(1);
@@ -60,7 +66,10 @@ describe('gallery thumb component', () => {
       },
     };
     const tree = render(GalleryThumb, props);
-    const btn = findAll(tree, (n) => typeof (n.props as { onPress?: unknown }).onPress === 'function')[0];
+    const btn = findAll(
+      tree,
+      (n) => typeof (n.props as { onPress?: unknown }).onPress === 'function'
+    )[0];
     expect(btn).toBeTruthy();
     (btn.props as { onPress: () => void }).onPress();
     expect(expanded).toBe(1);

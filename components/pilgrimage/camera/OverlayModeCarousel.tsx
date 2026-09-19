@@ -41,7 +41,15 @@ interface CarouselItemProps {
  * the mount/unmount choreography stays off the render path (Rule 9) and the slot
  * remains renderable by the synthetic unit-test renderer.
  */
-function CarouselItem({ item, itemIndex, active, themeColor, rotate, onPress, label }: CarouselItemProps) {
+function CarouselItem({
+  item,
+  itemIndex,
+  active,
+  themeColor,
+  rotate,
+  onPress,
+  label,
+}: CarouselItemProps) {
   const selected = itemIndex === active;
   const fg = selected ? readableTextOn(themeColor) : CameraChrome.fg;
 

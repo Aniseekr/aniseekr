@@ -138,13 +138,15 @@ export async function hydratePilgrimageHubSnapshotFromCache(): Promise<Pilgrimag
 // Persisted JSON has no methods and may be from an older shape — pass it
 // through cloneSnapshot so only known slices survive and updatedAt is sane.
 function normalizePersisted(raw: PilgrimageHubSnapshot): PilgrimageHubSnapshot {
-  return cloneSnapshot({ ...raw, updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : now() });
+  return cloneSnapshot({
+    ...raw,
+    updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : now(),
+  });
 }
 
 export function __resetPilgrimageHubCacheForTests(
-  arg:
-    | (() => number)
-    | { now?: () => number; cache?: HubCacheAdapter; debounceMs?: number } = () => Date.now()
+  arg: (() => number) | { now?: () => number; cache?: HubCacheAdapter; debounceMs?: number } = () =>
+    Date.now()
 ): void {
   snapshot = null;
   if (persistTimer !== null) {

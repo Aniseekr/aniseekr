@@ -153,16 +153,16 @@ function isLegacyRatingMigrationData(v: unknown): v is LegacyRatingMigrationData
   if (!v || typeof v !== 'object') return false;
   const o = v as Record<string, unknown>;
   return (
-    typeof o.animeId === 'number' &&
-    typeof o.title === 'string' &&
-    typeof o.ratingType === 'string'
+    typeof o.animeId === 'number' && typeof o.title === 'string' && typeof o.ratingType === 'string'
   );
 }
 
 export function importLegacyAniseekerExport(
   input: LegacyAniseekerExport | LegacyRatingMigrationData[] | unknown
 ): BackupEnvelopeV1 {
-  const exp: LegacyAniseekerExport = Array.isArray(input) ? { ratings: input } : (input as LegacyAniseekerExport);
+  const exp: LegacyAniseekerExport = Array.isArray(input)
+    ? { ratings: input }
+    : (input as LegacyAniseekerExport);
 
   const userAnimeById = new Map<string, BackupUserAnimeRow>();
   const favorites: BackupFavoriteRow[] = [];
@@ -237,7 +237,12 @@ export function importLegacyAniseekerExport(
       updated_at: createdAtMs,
     });
     if (u.ratingType === 'liked') {
-      favorites.push({ id: animeId, title: u.title, image: u.imageUrl ?? null, addedAt: createdAtMs });
+      favorites.push({
+        id: animeId,
+        title: u.title,
+        image: u.imageUrl ?? null,
+        addedAt: createdAtMs,
+      });
       ratings.push({ id: animeId, rating: 'like', timestamp: createdAtMs });
     } else if (u.ratingType === 'dislike') {
       ratings.push({ id: animeId, rating: 'pass', timestamp: createdAtMs });
@@ -364,10 +369,7 @@ function scoreFromRatingType(rt: LegacyRatingType): number | null {
   return null;
 }
 
-function mergeUserAnime(
-  by: Map<string, BackupUserAnimeRow>,
-  row: BackupUserAnimeRow
-): void {
+function mergeUserAnime(by: Map<string, BackupUserAnimeRow>, row: BackupUserAnimeRow): void {
   // If a richer record already exists for this animeId, keep the one that's
   // furthest along (completed > watching > planned). This lets a "tracking"
   // entry win over a stale "planned" wishlist entry without us having to

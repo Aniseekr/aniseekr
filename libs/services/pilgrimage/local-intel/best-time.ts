@@ -47,7 +47,7 @@ export function computeBestTimeForSpot(
   geo: [number, number],
   now: Date,
   hint: LocalIntelViewingHint | null,
-  tz: string = DEFAULT_SPOT_TIMEZONE,
+  tz: string = DEFAULT_SPOT_TIMEZONE
 ): ComputedBestTime | null {
   const kind = hint?.hint ?? 'golden_hour';
   if (kind === 'night' || kind === 'seasonal') return null;

@@ -19,7 +19,9 @@ export default function TermsScreen() {
   const t = useT();
 
   return (
-    <SettingsScreenLayout title={t('settings.termsLong')} subtitle={t('settings.termsScreen.subtitle')}>
+    <SettingsScreenLayout
+      title={t('settings.termsLong')}
+      subtitle={t('settings.termsScreen.subtitle')}>
       <Text style={[styles.lead, { color: theme.text.primary }]}>
         {t('settings.termsScreen.lead')}
       </Text>
@@ -33,8 +35,12 @@ export default function TermsScreen() {
               borderColor: theme.glassBorder,
             },
           ]}>
-          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>{t(`settings.termsScreen.section.${key}.title`)}</Text>
-          <Text style={[styles.body, { color: theme.text.secondary }]}>{t(`settings.termsScreen.section.${key}.body`)}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+            {t(`settings.termsScreen.section.${key}.title`)}
+          </Text>
+          <Text style={[styles.body, { color: theme.text.secondary }]}>
+            {t(`settings.termsScreen.section.${key}.body`)}
+          </Text>
         </View>
       ))}
       <Text style={[styles.updated, { color: theme.text.tertiary }]}>

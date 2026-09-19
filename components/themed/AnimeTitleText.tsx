@@ -6,10 +6,7 @@
 
 import { Text, type TextProps } from 'react-native';
 import type { PlatformType } from '../../libs/services/auth/types';
-import {
-  useAnimeDisplayTitle,
-  type DisplayTitleSource,
-} from '../../libs/i18n/use-display-title';
+import { useAnimeDisplayTitle, type DisplayTitleSource } from '../../libs/i18n/use-display-title';
 
 export interface AnimeTitleTextProps extends Omit<TextProps, 'children'> {
   anime: DisplayTitleSource;

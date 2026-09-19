@@ -128,8 +128,7 @@ export default function AccentColorScreen() {
                     styles.recentDot,
                     {
                       backgroundColor: hex,
-                      borderColor:
-                        pending === hex ? theme.text.primary : theme.glassBorder,
+                      borderColor: pending === hex ? theme.text.primary : theme.glassBorder,
                       borderWidth: pending === hex ? 2 : 1,
                     },
                     pressed && { opacity: 0.7 },
@@ -266,7 +265,10 @@ function GradientCard({
         end={{ x: 1, y: 0.5 }}
         style={styles.gradientFill}>
         <View style={styles.gradientText}>
-          <ThemedText variant="titleMedium" weight="700" style={{ color: readableTextOn(gradient.colors[0]) }}>
+          <ThemedText
+            variant="titleMedium"
+            weight="700"
+            style={{ color: readableTextOn(gradient.colors[0]) }}>
             {gradient.name}
           </ThemedText>
           <ThemedText

@@ -151,10 +151,7 @@ export function AchievementsGallery({ achievements }: AchievementsGalleryProps) 
 
       <View style={styles.grid}>
         {filtered.map((item, index) => (
-          <Animated.View
-            key={item.id}
-            entering={listItemEnter(index, 30)}
-            style={styles.gridItem}>
+          <Animated.View key={item.id} entering={listItemEnter(index, 30)} style={styles.gridItem}>
             <BadgeTile item={item} onPress={() => handleOpen(item)} />
           </Animated.View>
         ))}

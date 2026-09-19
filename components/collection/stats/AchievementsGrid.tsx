@@ -14,12 +14,7 @@ interface Props {
   onPressViewAll?: () => void;
 }
 
-export function AchievementsGrid({
-  achievements,
-  title,
-  maxItems = 6,
-  onPressViewAll,
-}: Props) {
+export function AchievementsGrid({ achievements, title, maxItems = 6, onPressViewAll }: Props) {
   const { theme } = useTheme();
   const t = useT();
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
@@ -38,8 +33,7 @@ export function AchievementsGrid({
               onPressViewAll();
             }
           }}
-          hitSlop={8}
-        >
+          hitSlop={8}>
           <ThemedText variant="captionSmall" tone="secondary" weight="600">
             {unlockedCount} / {achievements.length}
           </ThemedText>
@@ -60,9 +54,7 @@ export function AchievementsGrid({
               style={[
                 styles.iconWrap,
                 {
-                  backgroundColor: a.unlocked
-                    ? `${theme.accent}26`
-                    : `${theme.text.tertiary}1A`,
+                  backgroundColor: a.unlocked ? `${theme.accent}26` : `${theme.text.tertiary}1A`,
                 },
               ]}>
               <MaterialIcons
@@ -76,8 +68,7 @@ export function AchievementsGrid({
               weight="700"
               tone={a.unlocked ? 'primary' : 'tertiary'}
               align="center"
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               {a.title}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="tertiary" align="center" numberOfLines={1}>

@@ -31,11 +31,7 @@ export async function embedCaptureMetadata(
 ): Promise<void> {
   if (!uri) return;
   if (!exif || typeof exif !== 'object') return;
-  const absoluteUri = uri.startsWith('file://')
-    ? uri
-    : uri.startsWith('/')
-      ? `file://${uri}`
-      : uri;
+  const absoluteUri = uri.startsWith('file://') ? uri : uri.startsWith('/') ? `file://${uri}` : uri;
   try {
     await embedExifIntoJpegFile(absoluteUri, exif);
   } catch (error) {

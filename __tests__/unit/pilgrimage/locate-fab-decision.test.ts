@@ -112,11 +112,7 @@ describe('resolveLocateFabDecision', () => {
   });
 
   it('non-granted permissions never produce a cycle decision', () => {
-    const nonGranted: readonly LocatePermissionState[] = [
-      'undetermined',
-      'denied',
-      'blocked',
-    ];
+    const nonGranted: readonly LocatePermissionState[] = ['undetermined', 'denied', 'blocked'];
     const states: readonly LocateFollowState[] = ['idle', 'following', 'compass'];
     for (const permission of nonGranted) {
       for (const current of states) {
@@ -139,7 +135,9 @@ describe('shouldAutoEngageFollow', () => {
     expect(shouldAutoEngageFollow({ permission: 'granted', alreadyEngaged: true })).toBe(false);
   });
   test('never engages without permission', () => {
-    expect(shouldAutoEngageFollow({ permission: 'undetermined', alreadyEngaged: false })).toBe(false);
+    expect(shouldAutoEngageFollow({ permission: 'undetermined', alreadyEngaged: false })).toBe(
+      false
+    );
     expect(shouldAutoEngageFollow({ permission: 'denied', alreadyEngaged: false })).toBe(false);
     expect(shouldAutoEngageFollow({ permission: 'blocked', alreadyEngaged: false })).toBe(false);
   });

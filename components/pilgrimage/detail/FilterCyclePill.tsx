@@ -1,13 +1,15 @@
 // FilterCyclePill — single pill that cycles through the available filter
 // states on tap. Replaces the horizontal strip of FilterPill chips when we
-// want a more compact filter affordance. Shows the current label + badge and
-// a small cycle hint glyph so the tap-to-rotate gesture is discoverable.
+// want a more compact filter affordance. Shows the current label + count and
+// one repeat glyph so the tap-to-rotate gesture is discoverable without a
+// decorative train of state dots.
 
 import React, { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { PilgrimageSpotFilter } from '../../../libs/services/pilgrimage/pilgrimage-detail-filter';
 
@@ -35,6 +37,7 @@ function FilterCyclePillImpl({
   theme,
   onCycle,
 }: FilterCyclePillProps) {
+  const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const currentIndex = Math.max(
@@ -42,7 +45,8 @@ function FilterCyclePillImpl({
     states.findIndex((s) => s.filter === current)
   );
   const active = states[currentIndex] ?? states[0];
-  const fg = themeColorFg;
+  const hasAppliedFilter = current !== 'all';
+  const fg = hasAppliedFilter ? themeColor : theme.text.primary;
 
   const handlePress = () => {
     if (states.length <= 1) return;
@@ -57,33 +61,26 @@ function FilterCyclePillImpl({
       onPress={handlePress}
       accessibilityRole="button"
       accessibilityState={{ selected: true }}
-      accessibilityLabel={`Filter: ${active.label}. Tap to cycle.`}
+      accessibilityLabel={t('pilgrimage.detail.filterCycleA11y', { label: active.label })}
       style={({ pressed }) => [
         styles.pill,
-        { backgroundColor: themeColor, borderColor: themeColor },
+        {
+          backgroundColor: theme.background.secondary,
+          borderColor: hasAppliedFilter ? `${themeColor}77` : theme.glassBorder,
+        },
         pressed && { opacity: 0.86 },
       ]}>
-      {active.icon ? <Ionicons name={active.icon} size={13} color={fg} /> : null}
+      <Ionicons name={active.icon ?? 'funnel-outline'} size={14} color={fg} />
       <ThemedText variant="bodySmall" weight="700" style={{ color: fg }}>
         {active.label}
       </ThemedText>
-      <View style={[styles.badge, { backgroundColor: `${fg}22` }]}>
+      <View style={[styles.badge, { backgroundColor: theme.background.tertiary }]}>
         <ThemedText variant="captionSmall" weight="700" style={{ color: fg }}>
           {active.badge}
         </ThemedText>
       </View>
       {states.length > 1 ? (
-        <View style={styles.dots}>
-          {states.map((s, i) => (
-            <View
-              key={s.filter}
-              style={[
-                styles.dot,
-                { backgroundColor: i === currentIndex ? fg : `${fg}55` },
-              ]}
-            />
-          ))}
-        </View>
+        <Ionicons name="repeat-outline" size={13} color={theme.text.tertiary} />
       ) : null}
     </Pressable>
   );
@@ -105,13 +102,14 @@ export const FilterCyclePill = memo(FilterCyclePillImpl, areEqual);
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
     pill: {
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: Radius.full,
-      borderWidth: 1,
+      paddingVertical: 6,
+      borderRadius: Radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
     },
     badge: {
       minWidth: 22,
@@ -120,17 +118,6 @@ function makeStyles(theme: ThemePalette) {
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    dots: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      marginLeft: 2,
-    },
-    dot: {
-      width: 4,
-      height: 4,
-      borderRadius: 2,
     },
   });
 }

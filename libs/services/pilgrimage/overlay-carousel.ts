@@ -39,7 +39,10 @@ export function clampOverlayIndex(index: number): number {
 }
 
 /** HUD state → carousel slot index. A hidden overlay always resolves to the Off slot (0). */
-export function overlayCarouselIndex({ overlayVisible, overlayMode }: OverlayCarouselState): number {
+export function overlayCarouselIndex({
+  overlayVisible,
+  overlayMode,
+}: OverlayCarouselState): number {
   if (!overlayVisible) return 0;
   const idx = OVERLAY_CAROUSEL_ITEMS.findIndex((item) => item.id === overlayMode);
   return idx <= 0 ? 1 : idx; // a visible overlay never resolves to the Off slot

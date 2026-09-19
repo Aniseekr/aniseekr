@@ -71,15 +71,12 @@ export function useDeviceCohortCache(args: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identityKey]);
 
-  const save = useCallback(
-    (next: CohortSnapshot) => {
-      if (lastSavedKey.current === serializeSnapshot(next)) return;
-      lastSavedKey.current = serializeSnapshot(next);
-      void writeCohortSnapshot(next);
-      setSnapshot(next);
-    },
-    []
-  );
+  const save = useCallback((next: CohortSnapshot) => {
+    if (lastSavedKey.current === serializeSnapshot(next)) return;
+    lastSavedKey.current = serializeSnapshot(next);
+    void writeCohortSnapshot(next);
+    setSnapshot(next);
+  }, []);
 
   return { snapshot, hydrating, save };
 }

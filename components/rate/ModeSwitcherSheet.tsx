@@ -35,7 +35,8 @@ export function ModeSwitcherSheet({ visible, value, options, onSelect, onClose }
   const { theme, effectiveMode } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const blurTint = effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
+  const blurTint =
+    effectiveMode === 'light' ? 'systemThickMaterialLight' : 'systemThickMaterialDark';
 
   const activeOption = options.find((o) => o.value === value) ?? options[0];
 
@@ -46,7 +47,10 @@ export function ModeSwitcherSheet({ visible, value, options, onSelect, onClose }
       animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('commonUi.dismiss')}>
+      <Pressable
+        style={styles.backdrop}
+        onPress={onClose}
+        accessibilityLabel={t('commonUi.dismiss')}>
         <Pressable
           style={styles.sheetWrapper}
           onPress={(e) => e.stopPropagation()}
@@ -75,10 +79,7 @@ export function ModeSwitcherSheet({ visible, value, options, onSelect, onClose }
                         onSelect(option.value);
                         onClose();
                       }}
-                      style={[
-                        styles.segment,
-                        isActive && { backgroundColor: activeBg },
-                      ]}
+                      style={[styles.segment, isActive && { backgroundColor: activeBg }]}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isActive }}
                       accessibilityLabel={`${option.label} mode`}>

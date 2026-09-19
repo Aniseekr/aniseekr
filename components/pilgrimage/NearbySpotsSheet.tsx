@@ -36,7 +36,12 @@ export function NearbySpotRow({ spot, theme, onPress }: NearbySpotRowProps) {
       accessibilityRole="button"
       accessibilityLabel={spot.name}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.8 }]}>
-      <SpotImage uri={spot.image} style={styles.thumb} contentFit="cover" recyclingKey={spot.markerId} />
+      <SpotImage
+        uri={spot.image}
+        style={styles.thumb}
+        contentFit="cover"
+        recyclingKey={spot.markerId}
+      />
       <View style={styles.body}>
         <ThemedText variant="bodySmall" weight="700" numberOfLines={1}>
           {spot.name}

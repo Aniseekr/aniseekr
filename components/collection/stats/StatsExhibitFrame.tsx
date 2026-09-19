@@ -82,11 +82,7 @@ export function StatsExhibitFrame({
           )}
         </View>
 
-        {scrollable ? (
-          <ScrollView showsVerticalScrollIndicator={false}>{body}</ScrollView>
-        ) : (
-          body
-        )}
+        {scrollable ? <ScrollView showsVerticalScrollIndicator={false}>{body}</ScrollView> : body}
       </SafeAreaView>
     </View>
   );

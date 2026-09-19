@@ -2,9 +2,10 @@ import { describe, it, expect } from 'bun:test';
 import { openWatchOption, type WatchLinker } from '../../libs/services/streaming/streaming-linker';
 import type { WatchOption } from '../../libs/services/streaming/streaming-resolver';
 
-function makeFakeLinking(opts: {
-  canOpen: Record<string, boolean>;
-}): { linker: WatchLinker; opened: string[] } {
+function makeFakeLinking(opts: { canOpen: Record<string, boolean> }): {
+  linker: WatchLinker;
+  opened: string[];
+} {
   const opened: string[] = [];
   const linker: WatchLinker = {
     async canOpenURL(url: string) {

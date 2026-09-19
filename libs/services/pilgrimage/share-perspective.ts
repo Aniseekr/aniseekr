@@ -188,10 +188,7 @@ export type TiltSensorReading = {
 };
 
 export type RNPerspectiveTransform = (
-  | { perspective: number }
-  | { rotateX: string }
-  | { rotateY: string }
-  | { matrix: number[] }
+  { perspective: number } | { rotateX: string } | { rotateY: string } | { matrix: number[] }
 )[];
 
 const MAX_TILT_CORRECTION_DEG = 15;

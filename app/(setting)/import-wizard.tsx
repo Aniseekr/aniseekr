@@ -88,7 +88,9 @@ export default function ImportWizardScreen() {
   };
 
   return (
-    <SettingsScreenLayout title={t('settings.importWizard.title')} subtitle={t('settings.importWizard.subtitle')}>
+    <SettingsScreenLayout
+      title={t('settings.importWizard.title')}
+      subtitle={t('settings.importWizard.subtitle')}>
       <View style={styles.stepIndicator}>
         {(['source', 'mode', 'confirm'] as Step[]).map((s, idx) => {
           const active = step === s;
@@ -111,9 +113,7 @@ export default function ImportWizardScreen() {
                     style={[
                       styles.stepNumber,
                       {
-                        color: active
-                          ? readableTextOn(theme.accent)
-                          : theme.text.secondary,
+                        color: active ? readableTextOn(theme.accent) : theme.text.secondary,
                       },
                     ]}>
                     {idx + 1}
@@ -125,7 +125,11 @@ export default function ImportWizardScreen() {
                   styles.stepLabel,
                   { color: active ? theme.text.primary : theme.text.tertiary },
                 ]}>
-                {s === 'source' ? t('settings.importWizard.step.source') : s === 'mode' ? t('settings.importWizard.step.mode') : t('settings.importWizard.step.confirm')}
+                {s === 'source'
+                  ? t('settings.importWizard.step.source')
+                  : s === 'mode'
+                    ? t('settings.importWizard.step.mode')
+                    : t('settings.importWizard.step.confirm')}
               </Text>
               {idx < 2 ? (
                 <View
@@ -165,7 +169,9 @@ export default function ImportWizardScreen() {
                   <MaterialIcons name={s.icon} size={22} color={s.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sourceName, { color: theme.text.primary }]}>{t(s.nameKey)}</Text>
+                  <Text style={[styles.sourceName, { color: theme.text.primary }]}>
+                    {t(s.nameKey)}
+                  </Text>
                   <Text style={[styles.sourceDesc, { color: theme.text.secondary }]}>
                     {t(s.descKey)}
                   </Text>
@@ -215,7 +221,9 @@ export default function ImportWizardScreen() {
                   ) : null}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.modeLabel, { color: theme.text.primary }]}>{t(m.labelKey)}</Text>
+                  <Text style={[styles.modeLabel, { color: theme.text.primary }]}>
+                    {t(m.labelKey)}
+                  </Text>
                   <Text style={[styles.modeDesc, { color: theme.text.secondary }]}>
                     {t(m.descKey)}
                   </Text>
@@ -233,7 +241,11 @@ export default function ImportWizardScreen() {
               />
             </View>
             <View style={styles.rowItem}>
-              <ThemedButton label={t('common.continue')} onPress={() => next('confirm')} fullWidth />
+              <ThemedButton
+                label={t('common.continue')}
+                onPress={() => next('confirm')}
+                fullWidth
+              />
             </View>
           </View>
         </Animated.View>
@@ -249,10 +261,13 @@ export default function ImportWizardScreen() {
                 borderColor: theme.glassBorder,
               },
             ]}>
-            <SummaryRow label={t('settings.importWizard.summary.source')} value={(() => {
-              const s = SOURCES.find((x) => x.id === source);
-              return s ? t(s.nameKey) : '—';
-            })()} />
+            <SummaryRow
+              label={t('settings.importWizard.summary.source')}
+              value={(() => {
+                const s = SOURCES.find((x) => x.id === source);
+                return s ? t(s.nameKey) : '—';
+              })()}
+            />
             <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
             <SummaryRow
               label={t('settings.importWizard.summary.mode')}
@@ -262,7 +277,10 @@ export default function ImportWizardScreen() {
               })()}
             />
             <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
-            <SummaryRow label={t('settings.importWizard.summary.backup')} value={t('common.enabled')} />
+            <SummaryRow
+              label={t('settings.importWizard.summary.backup')}
+              value={t('common.enabled')}
+            />
           </View>
 
           <Text style={[styles.note, { color: theme.text.tertiary }]}>
@@ -279,7 +297,12 @@ export default function ImportWizardScreen() {
               />
             </View>
             <View style={styles.rowItem}>
-              <ThemedButton label={t('settings.importWizard.startCta')} onPress={finish} fullWidth haptic="success" />
+              <ThemedButton
+                label={t('settings.importWizard.startCta')}
+                onPress={finish}
+                fullWidth
+                haptic="success"
+              />
             </View>
           </View>
         </Animated.View>

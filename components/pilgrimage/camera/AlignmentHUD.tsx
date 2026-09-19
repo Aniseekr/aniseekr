@@ -56,9 +56,7 @@ function FadeInView({ top, children }: { top: number; children: React.ReactNode 
     }).start();
   }, [opacity]);
   return (
-    <RNAnimated.View
-      style={[styles.repositionRow, { top, opacity }]}
-      pointerEvents="box-none">
+    <RNAnimated.View style={[styles.repositionRow, { top, opacity }]} pointerEvents="box-none">
       {children}
     </RNAnimated.View>
   );

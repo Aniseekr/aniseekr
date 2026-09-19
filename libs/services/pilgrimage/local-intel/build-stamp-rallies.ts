@@ -32,12 +32,7 @@ interface GeocodeAudit {
   geo: Geo | null;
   provider: 'gsi' | 'nominatim' | null;
   status:
-    | 'ok'
-    | 'blocked_network'
-    | 'no_result'
-    | 'prefecture_mismatch'
-    | 'outside_japan'
-    | 'ambiguous';
+    'ok' | 'blocked_network' | 'no_result' | 'prefecture_mismatch' | 'outside_japan' | 'ambiguous';
   matchedTitle?: string;
   error?: string;
 }

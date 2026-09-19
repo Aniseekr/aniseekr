@@ -21,7 +21,11 @@ import {
   type PilgrimageCapture,
 } from '../../../libs/services/pilgrimage/captures';
 
-function capture(spotId: string, uri = `file:///${spotId}.jpg`, capturedAt = 1_700_000_000_000): PilgrimageCapture {
+function capture(
+  spotId: string,
+  uri = `file:///${spotId}.jpg`,
+  capturedAt = 1_700_000_000_000
+): PilgrimageCapture {
   return { spotId, uri, capturedAt };
 }
 
@@ -84,22 +88,34 @@ describe('pilgrimage captures v2', () => {
     appStorage.set(CAPTURES_STORAGE_KEY, JSON.stringify(v1));
     __resetCapturesCacheForTests();
     const v2 = loadCapturesV2Sync();
-    expect(v2).toEqual({ spots: { shrine: [capture('shrine', 'file:///legacy.jpg', 42)] }, free: [] });
+    expect(v2).toEqual({
+      spots: { shrine: [capture('shrine', 'file:///legacy.jpg', 42)] },
+      free: [],
+    });
     expect((await getCapture('shrine'))?.uri).toBe('file:///legacy.jpg');
     // First write persists v2 and does not lose the migrated capture.
     await recordCapture(capture('shrine', 'file:///new.jpg', 43));
-    expect(loadCapturesV2Sync().spots.shrine.map((c) => c.uri)).toEqual(['file:///new.jpg', 'file:///legacy.jpg']);
+    expect(loadCapturesV2Sync().spots.shrine.map((c) => c.uri)).toEqual([
+      'file:///new.jpg',
+      'file:///legacy.jpg',
+    ]);
   });
 
   it('migrates pre-existing v1 data on write, then prefers v2 over a stale v1 blob', async () => {
-    appStorage.set(CAPTURES_STORAGE_KEY, JSON.stringify({ spots: { shrine: capture('shrine', 'file:///v1.jpg', 1) } }));
+    appStorage.set(
+      CAPTURES_STORAGE_KEY,
+      JSON.stringify({ spots: { shrine: capture('shrine', 'file:///v1.jpg', 1) } })
+    );
     // recordCapture lazily migrates the v1 blob before appending — the pre-existing
     // 'shrine' capture must not be silently dropped (that's the bug this task fixes).
     await recordCapture(capture('tower', 'file:///v2.jpg', 2));
     __resetCapturesCacheForTests();
     expect(Object.keys(loadCapturesV2Sync().spots).sort()).toEqual(['shrine', 'tower']);
     // Once v2 has been persisted, later reads ignore the v1 blob even if it changes underneath.
-    appStorage.set(CAPTURES_STORAGE_KEY, JSON.stringify({ spots: { other: capture('other', 'file:///other.jpg', 9) } }));
+    appStorage.set(
+      CAPTURES_STORAGE_KEY,
+      JSON.stringify({ spots: { other: capture('other', 'file:///other.jpg', 9) } })
+    );
     __resetCapturesCacheForTests();
     expect(Object.keys(loadCapturesV2Sync().spots).sort()).toEqual(['shrine', 'tower']);
   });

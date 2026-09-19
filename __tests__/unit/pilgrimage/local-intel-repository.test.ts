@@ -132,7 +132,11 @@ describe('local-intel repository', () => {
     const otherAnime = shop('other', { bangumiIds: [200], geo: [35.002, 139] }); // ~222m
     resetLocalIntelForTests(file([far, near, otherAnime]));
 
-    expect(getShopsForAnime(100).map((s) => s.id).sort()).toEqual(['far', 'near']);
+    expect(
+      getShopsForAnime(100)
+        .map((s) => s.id)
+        .sort()
+    ).toEqual(['far', 'near']);
     expect(getShopsForAnime(999)).toEqual([]);
 
     const nearby = getShopsNear([35, 139], 0.3);
@@ -147,9 +151,7 @@ describe('local-intel repository', () => {
       notified += 1;
     });
 
-    hydrateLocalIntelFromRuntime(
-      file([shop('a'), shop('b'), shop('c'), shop('d'), shop('f')]),
-    );
+    hydrateLocalIntelFromRuntime(file([shop('a'), shop('b'), shop('c'), shop('d'), shop('f')]));
     expect(getLocalIntelVersion()).toBe(versionBefore + 1);
     expect(notified).toBe(1);
     expect(getAllLocalIntelEntries().some((e) => e.id === 'f')).toBe(true);
@@ -187,7 +189,7 @@ describe('local-intel repository', () => {
       schedule: { kind: 'fixed', startsAt: '2026-01-01', endsAt: '2026-01-02' },
     });
     resetLocalIntelForTests(
-      file([ended, unannouncedOutside, later, unannouncedInHorizon, soon, ongoing, active]),
+      file([ended, unannouncedOutside, later, unannouncedInHorizon, soon, ongoing, active])
     );
 
     const rail = getHubRailEvents(NOW, 90);

@@ -135,8 +135,7 @@ export function cameraHudInitialState(seed: CameraHudSeed): CameraHudState {
  * never read a stale render-closure value).
  */
 export type CameraHudPatch =
-  | Partial<CameraHudState>
-  | ((state: CameraHudState) => Partial<CameraHudState>);
+  Partial<CameraHudState> | ((state: CameraHudState) => Partial<CameraHudState>);
 
 export function cameraHudReducer(state: CameraHudState, patch: CameraHudPatch): CameraHudState {
   const next = typeof patch === 'function' ? patch(state) : patch;

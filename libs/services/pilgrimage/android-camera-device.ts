@@ -103,9 +103,7 @@ function buildCandidate(device: CameraDevice): PickerCandidate {
  * single-lens device into "looking like" an ultra-wide device.
  */
 export function selectAndroidBackDevice(devices: readonly CameraDevice[]): CameraDevice | null {
-  const candidates = devices
-    .filter((d) => d.position === 'back')
-    .map(buildCandidate);
+  const candidates = devices.filter((d) => d.position === 'back').map(buildCandidate);
 
   if (candidates.length === 0) return null;
 

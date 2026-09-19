@@ -10,7 +10,6 @@ import type {
   ShareTemplateBuild,
 } from '../../libs/services/collection/share-templates';
 
-
 // Posters are snapshotted to PNG the moment they mount — a hook-driven title
 // that re-renders after enrichment lands would miss the capture. Resolve
 // synchronously from the warm cache instead; cold misses fall back to the

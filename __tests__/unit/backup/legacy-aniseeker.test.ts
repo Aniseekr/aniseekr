@@ -189,8 +189,7 @@ describe('backup/legacy-aniseeker', () => {
 
     const env = importLegacyAniseekerExport(legacy);
 
-    const statusFor = (id: string) =>
-      env.db.userAnime.find((r) => r.anime_id === id)?.status;
+    const statusFor = (id: string) => env.db.userAnime.find((r) => r.anime_id === id)?.status;
     expect(statusFor('300')).toBe('completed'); // myScore present + later seen via watchedItems? No — score-only mapped as planned but rating wins
     expect(statusFor('301')).toBe('watching');
     expect(statusFor('302')).toBe('completed');

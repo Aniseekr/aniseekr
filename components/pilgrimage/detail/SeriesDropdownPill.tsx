@@ -8,14 +8,7 @@
 // it in the header).
 
 import React, { memo, useMemo, useRef, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-  type View as RNView,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View, type View as RNView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
@@ -61,7 +54,8 @@ function SeriesDropdownPillImpl({
   const canSelectAll = availableCount > 1;
 
   const currentLabel = useMemo(() => {
-    if (selection === 'all') return canSelectAll ? t('commonUi.all') : entries[0]?.subject.label ?? '—';
+    if (selection === 'all')
+      return canSelectAll ? t('commonUi.all') : (entries[0]?.subject.label ?? '—');
     const match = entries.find((e) => e.subject.id === selection);
     return match?.subject.label ?? t('commonUi.all');
   }, [selection, entries, canSelectAll, t]);
@@ -223,10 +217,7 @@ function SeriesDropdownItem({
         <ThemedText variant="bodyMedium" weight="700" numberOfLines={1} style={{ color: fg }}>
           {label}
         </ThemedText>
-        <ThemedText
-          variant="captionSmall"
-          numberOfLines={1}
-          style={{ color: subFg, marginTop: 1 }}>
+        <ThemedText variant="captionSmall" numberOfLines={1} style={{ color: subFg, marginTop: 1 }}>
           {sublabel}
         </ThemedText>
       </View>

@@ -34,8 +34,7 @@ export function ExhibitCard({
         hapticsBridge.tap();
         onPress();
       }}
-      style={({ pressed }) => [styles.wrap, { opacity: pressed ? 0.85 : 1 }]}
-    >
+      style={({ pressed }) => [styles.wrap, { opacity: pressed ? 0.85 : 1 }]}>
       <LinearGradient
         colors={[gradientFrom, gradientTo]}
         start={{ x: 0, y: 0 }}
@@ -44,8 +43,7 @@ export function ExhibitCard({
           styles.card,
           featured ? styles.featured : null,
           { borderColor: theme.glassBorder },
-        ]}
-      >
+        ]}>
         <View style={[styles.iconWrap, { backgroundColor: `${onAccent}26` }]}>
           <MaterialIcons name={icon} size={featured ? 26 : 22} color={onAccent} />
         </View>
@@ -53,15 +51,10 @@ export function ExhibitCard({
           <ThemedText
             variant={featured ? 'titleLarge' : 'titleMedium'}
             weight="700"
-            style={{ color: onAccent }}
-          >
+            style={{ color: onAccent }}>
             {title}
           </ThemedText>
-          <ThemedText
-            variant="bodySmall"
-            style={{ color: `${onAccent}CC` }}
-            numberOfLines={2}
-          >
+          <ThemedText variant="bodySmall" style={{ color: `${onAccent}CC` }} numberOfLines={2}>
             {subtitle}
           </ThemedText>
         </View>

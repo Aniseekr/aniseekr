@@ -39,7 +39,15 @@ describe('backup/backup-service · dryRunRestore', () => {
           },
         ],
         collectionFolders: [
-          { id: 'f1', name: 'A', icon: null, type: 'custom', is_shared: 0, is_r18: 0, created_at: 1 },
+          {
+            id: 'f1',
+            name: 'A',
+            icon: null,
+            type: 'custom',
+            is_shared: 0,
+            is_r18: 0,
+            created_at: 1,
+          },
         ],
         collectionFolderItems: [{ folder_id: 'f1', anime_id: '1', added_at: 1 }],
       },

@@ -23,7 +23,9 @@ export default function PrivacyScreen() {
   const t = useT();
 
   return (
-    <SettingsScreenLayout title={t('settings.privacyLong')} subtitle={t('settings.privacyScreen.subtitle')}>
+    <SettingsScreenLayout
+      title={t('settings.privacyLong')}
+      subtitle={t('settings.privacyScreen.subtitle')}>
       <Text style={[styles.lead, { color: theme.text.primary }]}>
         {t('settings.privacyScreen.lead')}
       </Text>
@@ -37,8 +39,12 @@ export default function PrivacyScreen() {
               borderColor: theme.glassBorder,
             },
           ]}>
-          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>{t(`settings.privacyScreen.section.${key}.title`)}</Text>
-          <Text style={[styles.body, { color: theme.text.secondary }]}>{t(`settings.privacyScreen.section.${key}.body`)}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+            {t(`settings.privacyScreen.section.${key}.title`)}
+          </Text>
+          <Text style={[styles.body, { color: theme.text.secondary }]}>
+            {t(`settings.privacyScreen.section.${key}.body`)}
+          </Text>
         </View>
       ))}
       <Text style={[styles.updated, { color: theme.text.tertiary }]}>

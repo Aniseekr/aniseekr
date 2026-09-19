@@ -54,7 +54,11 @@ export function AnitabiAttributionFooter({
     return (
       <View style={[styles.footerRow, { borderTopColor: theme.glassBorder }]}>
         <Ionicons name="map-outline" size={13} color={theme.text.tertiary} />
-        <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1} style={styles.footerLabel}>
+        <ThemedText
+          variant="captionSmall"
+          tone="tertiary"
+          numberOfLines={1}
+          style={styles.footerLabel}>
           {'Pilgrimage data by Anitabi'}
         </ThemedText>
         <ThemedText

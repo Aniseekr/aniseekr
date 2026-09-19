@@ -3,7 +3,9 @@ import { MultiPlatformSyncService } from '../../libs/services/sync/multi-platfor
 import { normalizeTitle, similarTitles } from '../../libs/services/sync/title-normalize';
 import type { UniversalAnimeItem, PlatformType } from '../../libs/services/auth/types';
 
-function makeItem(overrides: Partial<UniversalAnimeItem> & { source: PlatformType }): UniversalAnimeItem {
+function makeItem(
+  overrides: Partial<UniversalAnimeItem> & { source: PlatformType }
+): UniversalAnimeItem {
   return {
     id: `${overrides.source}:${overrides.platformIds?.[overrides.source] ?? '0'}`,
     title: overrides.title ?? '',
@@ -22,7 +24,7 @@ describe('areSameAnime — title fallback', () => {
   it('1. positive fallback: matching native title, disjoint IDs → method=title', () => {
     const a = makeItem({
       source: 'anilist',
-      title: 'Frieren: Beyond Journey\'s End',
+      title: "Frieren: Beyond Journey's End",
       titleJapanese: '葬送のフリーレン',
       platformIds: { anilist: '154587' },
     });
@@ -157,7 +159,7 @@ describe('mergeItems — smoke test (title fallback path)', () => {
     const items: UniversalAnimeItem[] = [
       makeItem({
         source: 'anilist',
-        title: 'Frieren: Beyond Journey\'s End',
+        title: "Frieren: Beyond Journey's End",
         titleJapanese: '葬送のフリーレン',
         platformIds: { anilist: '154587' },
       }),

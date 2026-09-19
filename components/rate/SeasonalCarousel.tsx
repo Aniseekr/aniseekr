@@ -4,13 +4,7 @@
 // flanked by dimmed neighbouring cards, with a pill-style page indicator.
 
 import { memo, useCallback, useMemo, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -25,13 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Anime } from './types';
-import {
-  FontFamily,
-  Radius,
-  Shadow,
-  Spacing,
-  Typography,
-} from '../../constants/DesignSystem';
+import { FontFamily, Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
 import { readableTextOn } from '../themed/contrast';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -184,11 +172,7 @@ const SeasonalCardItem = memo(function SeasonalCardItem({
   const { theme } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const inputRange = [
-    (index - 1) * ITEM_FULL,
-    index * ITEM_FULL,
-    (index + 1) * ITEM_FULL,
-  ];
+  const inputRange = [(index - 1) * ITEM_FULL, index * ITEM_FULL, (index + 1) * ITEM_FULL];
 
   const animatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(scrollX.value, inputRange, [0.78, 1, 0.78], Extrapolation.CLAMP);
@@ -268,11 +252,7 @@ const Dots = memo(function Dots({ length, activeIndex, accent }: DotsProps) {
         return (
           <View
             key={i}
-            style={
-              active
-                ? [styles.dotActive, { backgroundColor: accent }]
-                : styles.dot
-            }
+            style={active ? [styles.dotActive, { backgroundColor: accent }] : styles.dot}
           />
         );
       })}

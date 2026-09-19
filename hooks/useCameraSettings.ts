@@ -27,8 +27,7 @@ export type {
 } from '../libs/services/pilgrimage/camera-settings';
 
 export type CameraSettingsPatch =
-  | Partial<CameraSettings>
-  | ((prev: CameraSettings) => Partial<CameraSettings>);
+  Partial<CameraSettings> | ((prev: CameraSettings) => Partial<CameraSettings>);
 
 export interface UseCameraSettingsResult {
   settings: CameraSettings;

@@ -87,9 +87,7 @@ function applyEffects(
   }
 }
 
-export function useStrategicCameraDevice(
-  cohort: DeviceCohort | null
-): StrategicCameraDeviceResult {
+export function useStrategicCameraDevice(cohort: DeviceCohort | null): StrategicCameraDeviceResult {
   // The FSM starts on 'wide' because that's the default session every
   // shipped phone opens to. If the cohort later turns out to be wide-only
   // or logical, the FSM never transitions out of STABLE/wide and the
@@ -148,8 +146,7 @@ export function useStrategicCameraDevice(
         ? state.activeLens
         : 'wide';
 
-  const targetLens: ActiveLens =
-    state.phase === 'SWITCHING' ? state.targetLens : activeLens;
+  const targetLens: ActiveLens = state.phase === 'SWITCHING' ? state.targetLens : activeLens;
 
   const activeDevice = useMemo<CameraDevice | undefined>(() => {
     if (!cohort) return undefined;

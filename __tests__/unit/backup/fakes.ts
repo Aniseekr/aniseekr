@@ -87,11 +87,7 @@ function selectAll(tables: FakeDb['tables'], sql: string): Row[] {
   return [];
 }
 
-function run(
-  tables: FakeDb['tables'],
-  sql: string,
-  params: unknown[]
-): { changes: number } {
+function run(tables: FakeDb['tables'], sql: string, params: unknown[]): { changes: number } {
   const upper = sql.trim().toUpperCase();
 
   if (upper.startsWith('INSERT OR REPLACE INTO FAVORITES')) {

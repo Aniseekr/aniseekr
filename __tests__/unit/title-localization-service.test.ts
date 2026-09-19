@@ -5,8 +5,8 @@ function makeFakeCache() {
   const store = new Map<string, unknown>();
   return {
     store,
-    getSync: <T,>(key: string): T | null => (store.has(key) ? (store.get(key) as T) : null),
-    get: async <T,>(key: string): Promise<T | null> =>
+    getSync: <T>(key: string): T | null => (store.has(key) ? (store.get(key) as T) : null),
+    get: async <T>(key: string): Promise<T | null> =>
       store.has(key) ? (store.get(key) as T) : null,
     set: async (key: string, value: unknown, _ttlMs?: number) => {
       store.set(key, value);

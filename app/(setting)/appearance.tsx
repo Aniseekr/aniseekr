@@ -24,11 +24,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import { useT } from '../../libs/i18n';
-import {
-  loadUserPrefsSync,
-  patchUserPrefs,
-  type UserPrefs,
-} from '../../libs/services/user-prefs';
+import { loadUserPrefsSync, patchUserPrefs, type UserPrefs } from '../../libs/services/user-prefs';
 import { useMapThemePref } from '../../hooks/useMapThemePref';
 import type { MapThemePref } from '../../libs/services/pilgrimage/map-theme-prefs';
 
@@ -52,7 +48,10 @@ export default function AppearanceScreen() {
   const subscription = useSubscription();
   const t = useT();
   const MODES = MODE_DEFS.map((m) => ({ ...m, label: t(`settings.appearance.mode.${m.id}`) }));
-  const MAP_MODES = MAP_MODE_DEFS.map((m) => ({ ...m, label: t(`settings.appearance.mode.${m.id}`) }));
+  const MAP_MODES = MAP_MODE_DEFS.map((m) => ({
+    ...m,
+    label: t(`settings.appearance.mode.${m.id}`),
+  }));
   const {
     theme,
     themeId,
@@ -176,10 +175,7 @@ export default function AppearanceScreen() {
           </View>
 
           <SectionHeader>{t('settings.appearance.section.map')}</SectionHeader>
-          <ThemedText
-            variant="captionSmall"
-            tone="tertiary"
-            style={{ marginTop: -8 }}>
+          <ThemedText variant="captionSmall" tone="tertiary" style={{ marginTop: -8 }}>
             {t('settings.appearance.mapHint')}
           </ThemedText>
           <View style={styles.modeRow}>
@@ -250,9 +246,7 @@ export default function AppearanceScreen() {
             <ThemedButton
               variant="secondary"
               label={t('settings.appearance.customHex')}
-              icon={
-                <Ionicons name="color-wand-outline" size={16} color={theme.text.primary} />
-              }
+              icon={<Ionicons name="color-wand-outline" size={16} color={theme.text.primary} />}
               onPress={() => router.push('/(setting)/custom-color')}
               fullWidth
             />
@@ -260,9 +254,7 @@ export default function AppearanceScreen() {
               <ThemedButton
                 variant="ghost"
                 label={t('settings.appearance.resetToDefault')}
-                icon={
-                  <Ionicons name="refresh-outline" size={16} color={theme.text.secondary} />
-                }
+                icon={<Ionicons name="refresh-outline" size={16} color={theme.text.secondary} />}
                 onPress={handleResetAccent}
                 fullWidth
               />
@@ -390,11 +382,7 @@ export default function AppearanceScreen() {
 
 function SectionHeader({ children }: { children: string }) {
   return (
-    <ThemedText
-      variant="captionSmall"
-      tone="tertiary"
-      weight="600"
-      style={styles.sectionHeader}>
+    <ThemedText variant="captionSmall" tone="tertiary" weight="600" style={styles.sectionHeader}>
       {children}
     </ThemedText>
   );
@@ -477,27 +465,17 @@ function ThemeCard({
         </View>
         <View style={{ flex: 1 }} />
         <View style={styles.themeFooter}>
-          <ThemedText
-            variant="titleSmall"
-            weight="700"
-            style={{ color: palette.text.primary }}>
+          <ThemedText variant="titleSmall" weight="700" style={{ color: palette.text.primary }}>
             {palette.name}
           </ThemedText>
           {FeatureFlags.PREMIUM_ENABLED && palette.isPremium ? (
-            <View
-              style={[
-                styles.premiumPill,
-                { backgroundColor: palette.accent + '40' },
-              ]}>
+            <View style={[styles.premiumPill, { backgroundColor: palette.accent + '40' }]}>
               <Ionicons
                 name={isLocked ? 'lock-closed' : 'sparkles'}
                 size={9}
                 color={palette.accent}
               />
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                style={{ color: palette.accent }}>
+              <ThemedText variant="captionSmall" weight="700" style={{ color: palette.accent }}>
                 {t('settings.appearance.premium')}
               </ThemedText>
             </View>
@@ -536,11 +514,7 @@ function ModeChip({
           opacity: pressed ? 0.85 : 1,
         },
       ]}>
-      <Ionicons
-        name={mode.icon}
-        size={18}
-        color={selected ? accent : theme.text.secondary}
-      />
+      <Ionicons name={mode.icon} size={18} color={selected ? accent : theme.text.secondary} />
       <ThemedText
         variant="bodySmall"
         weight={selected ? '700' : '500'}
@@ -567,10 +541,7 @@ function AccentSwatch({
       accessibilityRole="button"
       accessibilityLabel={`Select ${preset.name}`}
       accessibilityState={{ selected }}
-      style={({ pressed }) => [
-        styles.accentSwatchWrap,
-        pressed && { opacity: 0.85 },
-      ]}>
+      style={({ pressed }) => [styles.accentSwatchWrap, pressed && { opacity: 0.85 }]}>
       <View
         style={[
           styles.accentCircle,
@@ -645,18 +616,17 @@ function GradientCard({
           </ThemedText>
         </View>
         {selected ? (
-          <Ionicons
-            name="checkmark-circle"
-            size={20}
-            color={readableTextOn(gradient.colors[1])}
-          />
+          <Ionicons name="checkmark-circle" size={20} color={readableTextOn(gradient.colors[1])} />
         ) : null}
       </LinearGradient>
     </Pressable>
   );
 }
 
-function tintSubtitle(value: TintIntensity, t: (key: string, values?: Record<string, string | number>) => string) {
+function tintSubtitle(
+  value: TintIntensity,
+  t: (key: string, values?: Record<string, string | number>) => string
+) {
   switch (value) {
     case 'subtle':
       return t('settings.appearance.tintSubtitle.subtle');

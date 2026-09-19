@@ -50,12 +50,20 @@ describe('bangumi card deck window', () => {
 
   it('expires outgoing cards after their animation lifetime', () => {
     const outgoing: BangumiOutgoingCard<Item>[] = [
-      { item: item('a'), key: bangumiDeckEntryKey(item('a'), 0), direction: 'right', committedAt: 1000 },
-      { item: item('b'), key: bangumiDeckEntryKey(item('b'), 1), direction: 'left', committedAt: 1300 },
+      {
+        item: item('a'),
+        key: bangumiDeckEntryKey(item('a'), 0),
+        direction: 'right',
+        committedAt: 1000,
+      },
+      {
+        item: item('b'),
+        key: bangumiDeckEntryKey(item('b'), 1),
+        direction: 'left',
+        committedAt: 1300,
+      },
     ];
 
-    expect(expireBangumiOutgoing({ outgoing, now: 1450, lifetimeMs: 400 })).toEqual([
-      outgoing[1],
-    ]);
+    expect(expireBangumiOutgoing({ outgoing, now: 1450, lifetimeMs: 400 })).toEqual([outgoing[1]]);
   });
 });

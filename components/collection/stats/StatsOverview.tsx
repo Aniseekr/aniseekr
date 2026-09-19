@@ -66,7 +66,8 @@ export function StatsOverview({
         setMonthly(monthlyHours(rows));
         setAchievements(ach);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : t('collectionUi.failedToLoadStats'));
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : t('collectionUi.failedToLoadStats'));
       } finally {
         if (!cancelled) setLoading(false);
       }

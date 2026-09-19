@@ -1,5 +1,5 @@
 // Pilgrimage hub. Matches japanwalker.pen Screen 1 (q3N3pG):
-// Header (聖地巡禮 + album + search) → Plan your day intro →
+// Header (聖地巡禮 + tools) → search → collection-aware intro →
 // hero (nearest spot) → 我的巡禮 (the user's collection) → 附近 (nearby/
 // popular rail) → 探索 (Tourism 88 + cross-anime Featured Spots list).
 //
@@ -19,19 +19,18 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { Typography } from '../../../constants/DesignSystem';
+import { Radius, Size, Spacing, Typography } from '../../../constants/DesignSystem';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
-import { Skeleton, ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
+import { Skeleton, ThemedText } from '../../../components/themed';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
+import { PilgrimageToolsMenu } from '../../../components/pilgrimage/PilgrimageToolsMenu';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
 import { bangumiSubjectImageUrl } from '../../../libs/clients/bangumi-client';
@@ -59,7 +58,6 @@ import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScree
 import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
 import { CacheService } from '../../../libs/services/cache-service';
 import { DETAIL_CACHE_KEY_PREFIX } from '../../../libs/services/pilgrimage/anitabi-service';
-import { listItemEnter, overlayEnter } from '../../../libs/animations/presets';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -121,6 +119,7 @@ export default function PilgrimageHubScreen() {
     nearestSpot,
   } = usePilgrimageHubScreenData();
   const [sortKey, setSortKey] = useState<PilgrimageSortKey>(DEFAULT_PILGRIMAGE_SORT_KEY);
+  const [toolsMenuVisible, setToolsMenuVisible] = useState(false);
 
   // Merge: collection first, then backfill from featured (deduped by id).
   const animeCards = useMemo<AnimeCard[]>(() => {
@@ -262,12 +261,10 @@ export default function PilgrimageHubScreen() {
   }, [router]);
 
   const handleOpenAlbum = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
     router.push('/pilgrimage/album');
   }, [router]);
 
   const handleOpenCamera = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
     router.push('/pilgrimage/capture');
   }, [router]);
 
@@ -276,12 +273,10 @@ export default function PilgrimageHubScreen() {
   }, [router]);
 
   const handleOpenNews = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
     router.push('/pilgrimage/news');
   }, [router]);
 
   const handleOpenCharacters = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
     router.push('/companion/library');
   }, [router]);
 
@@ -363,59 +358,35 @@ export default function PilgrimageHubScreen() {
             style={styles.headerTitle}>
             {t('tabs.pilgrimageScreen.title')}
           </ThemedText>
-          <View style={styles.headerRight}>
-            <Pressable
-              onPress={handleOpenCharacters}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('tabs.pilgrimageScreen.charactersA11y')}
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-              <Ionicons name="people-outline" size={18} color={theme.text.primary} />
-            </Pressable>
-            <Pressable
-              onPress={handleOpenAlbum}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('tabs.pilgrimageScreen.myAlbumA11y')}
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-              <Ionicons name="albums-outline" size={18} color={theme.text.primary} />
-            </Pressable>
-            <Pressable
-              onPress={handleOpenCamera}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('pilgrimage.capture.entryA11y')}
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-              <Ionicons name="camera-outline" size={18} color={theme.text.primary} />
-            </Pressable>
-            <Pressable
-              onPress={handleSearch}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('tabs.pilgrimageScreen.searchA11y')}
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-              <Ionicons name="search" size={18} color={theme.text.primary} />
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={() => setToolsMenuVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('tabs.pilgrimageScreen.moreActions')}
+            style={({ pressed }) => [styles.toolsButton, pressed && styles.toolsButtonPressed]}>
+            <Ionicons name="compass-outline" size={22} color={theme.accent} />
+          </Pressable>
         </View>
 
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}>
-          <View style={styles.intro}>
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={[styles.introCaps, { color: theme.accent }]}>
-              {t('tabs.pilgrimageScreen.intro.caps')}
+          <Pressable
+            onPress={handleSearch}
+            accessibilityRole="button"
+            accessibilityLabel={t('tabs.pilgrimageScreen.searchA11y')}
+            style={({ pressed }) => [styles.searchBar, pressed && styles.searchBarPressed]}>
+            <Ionicons name="search" size={20} color={theme.text.secondary} />
+            <ThemedText variant="bodySmall" tone="secondary">
+              {t('common.search')}
             </ThemedText>
-            <ThemedText variant="bodySmall" style={styles.introBody}>
-              {collectionAnimes.length > 0
-                ? t('tabs.pilgrimageScreen.intro.body.withCollection')
-                : t('tabs.pilgrimageScreen.intro.body.empty')}
-            </ThemedText>
-          </View>
+          </Pressable>
+
+          <ThemedText variant="bodySmall" tone="secondary" style={styles.introBody}>
+            {collectionAnimes.length > 0
+              ? t('tabs.pilgrimageScreen.intro.body.withCollection')
+              : t('tabs.pilgrimageScreen.intro.body.empty')}
+          </ThemedText>
 
           <NearbyHero
             theme={theme}
@@ -424,8 +395,6 @@ export default function PilgrimageHubScreen() {
               nearestSpotAnime ? nearestSpotAnime.cn || nearestSpotAnime.title : null
             }
             nearestAnime={nearestAnime}
-            nearbyCount={nearbyAnime.length}
-            tierLabel={nearby.tierLabel}
             hasLocation={!!userLocation}
             onPress={handleHeroPress}
           />
@@ -454,8 +423,8 @@ export default function PilgrimageHubScreen() {
             "我的巡禮" — the user's own collection, promoted to the second
             slot (right after the nearest-spot hero) so their own progress
             anchors the hub instead of being buried under discovery rails.
-            Each card's checkmark badge and accent now come from
-            resolveHubAnimeProgress / anime.color inside PopularCard.
+            Each card's compact progress indicator comes from
+            resolveHubAnimeProgress inside PopularCard.
           */}
           {sortedCollectionAnimes.length > 0 ? (
             <View style={styles.section}>
@@ -478,19 +447,15 @@ export default function PilgrimageHubScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.popularRow}>
-                {sortedCollectionAnimes.map((anime, index) => (
-                  <Animated.View
+                {sortedCollectionAnimes.map((anime) => (
+                  <PopularCard
                     key={anime.id}
-                    entering={index < 8 ? listItemEnter(index) : undefined}>
-                    <PopularCard
-                      anime={anime}
-                      visited={visited}
-                      theme={theme}
-                      fromCollection={false}
-                      distanceKm={collectionDistanceKm.get(anime.id)}
-                      onPress={() => handleAnimePress(anime)}
-                    />
-                  </Animated.View>
+                    anime={anime}
+                    visited={visited}
+                    theme={theme}
+                    distanceKm={collectionDistanceKm.get(anime.id)}
+                    onPress={() => handleAnimePress(anime)}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -508,19 +473,15 @@ export default function PilgrimageHubScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.popularRow}>
-                {popularList.map((card, index) => (
-                  <Animated.View
+                {popularList.map((card) => (
+                  <PopularCard
                     key={card.anime.id}
-                    entering={index < 8 ? listItemEnter(index) : undefined}>
-                    <PopularCard
-                      anime={card.anime}
-                      visited={visited}
-                      theme={theme}
-                      fromCollection={card.fromCollection}
-                      distanceKm={card.distanceKm}
-                      onPress={() => handleAnimePress(card.anime)}
-                    />
-                  </Animated.View>
+                    anime={card.anime}
+                    visited={visited}
+                    theme={theme}
+                    distanceKm={card.distanceKm}
+                    onPress={() => handleAnimePress(card.anime)}
+                  />
                 ))}
               </ScrollView>
             </View>
@@ -539,26 +500,6 @@ export default function PilgrimageHubScreen() {
               style={[styles.introCaps, { color: theme.accent }]}>
               {t('tabs.pilgrimageScreen.section.explore')}
             </ThemedText>
-
-            <ThemedButton
-              label={t('pilgrimage.identify.entry')}
-              accessibilityLabel={t('pilgrimage.identify.entryA11y')}
-              onPress={handleIdentifyScene}
-              icon={<Ionicons name="scan-outline" size={18} color={readableTextOn(theme.accent)} />}
-              shape="rounded"
-              fullWidth
-            />
-
-            <ThemedButton
-              label={t('news.hubEntry')}
-              accessibilityLabel={t('news.hubEntryA11y')}
-              onPress={handleOpenNews}
-              icon={
-                <Ionicons name="newspaper-outline" size={18} color={readableTextOn(theme.accent)} />
-              }
-              shape="rounded"
-              fullWidth
-            />
 
             {tourism88Entries.length > 0 ? (
               <Tourism88Rail
@@ -579,18 +520,16 @@ export default function PilgrimageHubScreen() {
                 />
                 <View style={styles.spotList}>
                   {featuredSpots.map(({ spot, anime, distanceKm, fromCollection }, index) => (
-                    <Animated.View
+                    <FeaturedSpotRow
                       key={`${anime.id}:${spot.id}`}
-                      entering={index < 8 ? listItemEnter(index) : undefined}>
-                      <FeaturedSpotRow
-                        spot={spot}
-                        anime={anime}
-                        distanceKm={distanceKm}
-                        fromCollection={fromCollection}
-                        theme={theme}
-                        onPress={() => handleAnimePress(anime)}
-                      />
-                    </Animated.View>
+                      spot={spot}
+                      anime={anime}
+                      distanceKm={distanceKm}
+                      fromCollection={fromCollection}
+                      theme={theme}
+                      showDivider={index < featuredSpots.length - 1}
+                      onPress={() => handleAnimePress(anime)}
+                    />
                   ))}
                 </View>
               </View>
@@ -600,6 +539,15 @@ export default function PilgrimageHubScreen() {
           <AnitabiAttributionFooter bangumiId={null} variant="footer" />
         </ScrollView>
       </SafeAreaView>
+      <PilgrimageToolsMenu
+        visible={toolsMenuVisible}
+        onClose={() => setToolsMenuVisible(false)}
+        onOpenCharacters={handleOpenCharacters}
+        onOpenAlbum={handleOpenAlbum}
+        onOpenCamera={handleOpenCamera}
+        onIdentifyScene={handleIdentifyScene}
+        onOpenNews={handleOpenNews}
+      />
     </View>
   );
 }
@@ -609,8 +557,6 @@ function NearbyHero({
   nearestSpot,
   nearestSpotAnimeName,
   nearestAnime,
-  nearbyCount,
-  tierLabel,
   hasLocation,
   onPress,
 }: {
@@ -618,8 +564,6 @@ function NearbyHero({
   nearestSpot: NearbySpotHit | null;
   nearestSpotAnimeName: string | null;
   nearestAnime: AnimeCard | null;
-  nearbyCount: number;
-  tierLabel: string | null;
   hasLocation: boolean;
   onPress: () => void;
 }) {
@@ -643,26 +587,20 @@ function NearbyHero({
       accessibilityLabel={t('tabs.pilgrimageScreen.hero.labelAccessibility')}
       style={({ pressed }) => [styles.heroCard, pressed && { opacity: 0.92 }]}>
       {spotImageUri ? (
-        <SpotImage uri={spotImageUri} style={styles.heroCoverArt} contentFit="cover" />
+        <SpotImage uri={spotImageUri} style={styles.heroThumb} contentFit="cover" />
       ) : (
-        <View style={[styles.heroCoverArt, { backgroundColor: theme.background.tertiary }]} />
+        <View style={styles.heroPlaceholder}>
+          <Ionicons name="map-outline" size={24} color={theme.text.tertiary} />
+        </View>
       )}
-
-      <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.92)']}
-        style={styles.heroOverlay}
-        pointerEvents="none"
-      />
       <View style={styles.heroBody}>
         <View style={styles.heroLabelRow}>
-          <View style={[styles.heroPinBadge, { backgroundColor: theme.background.tertiary }]}>
-            <Ionicons name="location" size={11} color={theme.text.primary} />
-          </View>
-          <ThemedText variant="bodySmall" weight="700">
+          <Ionicons name="location" size={13} color={theme.accent} />
+          <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
             {t('tabs.pilgrimageScreen.hero.nearestSpotCaps')}
           </ThemedText>
         </View>
-        <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 4 }}>
+        <ThemedText variant="bodySmall" weight="700" numberOfLines={2}>
           {hasLocation
             ? nearestSpot
               ? t('tabs.pilgrimageScreen.hero.closestWithDistance', {
@@ -684,6 +622,7 @@ function NearbyHero({
           </ThemedText>
         ) : null}
       </View>
+      <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
     </Pressable>
   );
 }
@@ -705,7 +644,7 @@ function SectionHeader({
 }) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
-    <Animated.View entering={overlayEnter()} style={styles.sectionHeader}>
+    <View style={styles.sectionHeader}>
       <View style={styles.sectionHeaderLeft}>
         <ThemedText variant="titleMedium" weight="700">
           {title}
@@ -730,7 +669,7 @@ function SectionHeader({
           </Pressable>
         ) : null}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -738,25 +677,18 @@ function PopularCard({
   anime,
   visited,
   theme,
-  fromCollection,
   distanceKm,
   onPress,
 }: {
   anime: AnitabiBangumi;
   visited: VisitedMap;
   theme: ThemePalette;
-  fromCollection: boolean;
   distanceKm?: number;
   onPress: () => void;
 }) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const total = anime.pointsLength ?? 0;
-  // Per-anime accent (map.tsx:491 precedent): `color` can be an empty string
-  // from Anitabi, so `||` falls back to the theme accent honestly instead of
-  // rendering a blank/transparent badge.
-  const accent = anime.color || theme.accent;
-  const accentFg = readableTextOn(accent);
   // Honest progress (Rule 8): visitedCount ∩ points, with the denominator
   // only when we hold this anime's full per-anime points list — populated by
   // opening the detail screen. The retired points-top release no longer seeds
@@ -774,16 +706,6 @@ function PopularCard({
       style={({ pressed }) => [styles.popularCard, pressed && { opacity: 0.9 }]}>
       <View style={styles.popularPosterWrap}>
         <SpotImage uri={anime.cover} style={styles.popularPoster} contentFit="cover" />
-        <View style={[styles.popularBadge, { backgroundColor: `${accent}E6` }]}>
-          <ThemedText variant="captionSmall" weight="700" style={{ color: accentFg }}>
-            {t('pilgrimageUi.spotsCount', { count: total })}
-          </ThemedText>
-        </View>
-        {fromCollection ? (
-          <View style={[styles.collectionBadge, { backgroundColor: `${theme.status.info}D9` }]}>
-            <Ionicons name="bookmark" size={9} color={readableTextOn(theme.status.info)} />
-          </View>
-        ) : null}
         {progress.visitedCount > 0 ? (
           <View style={styles.popularVisited}>
             <Ionicons name="checkmark" size={10} color={theme.status.success} />
@@ -815,7 +737,9 @@ function PopularCard({
           variant="captionSmall"
           tone="tertiary"
           numberOfLines={1}
-          style={styles.compactCaption}>
+          style={styles.popularDetails}>
+          {t('pilgrimageUi.spotsCount', { count: total })}
+          {' · '}
           {distanceKm !== undefined
             ? `${formatKm(distanceKm)} · ${anime.city || '—'}`
             : anime.city || '—'}
@@ -831,6 +755,7 @@ function FeaturedSpotRow({
   distanceKm,
   fromCollection,
   theme,
+  showDivider,
   onPress,
 }: {
   spot: AnitabiPoint;
@@ -838,6 +763,7 @@ function FeaturedSpotRow({
   distanceKm?: number;
   fromCollection: boolean;
   theme: ThemePalette;
+  showDivider: boolean;
   onPress: () => void;
 }) {
   const t = useT();
@@ -852,25 +778,18 @@ function FeaturedSpotRow({
         spot: spotTitles.primary,
         anime: animeTitles.primary,
       })}
-      style={({ pressed }) => [styles.spotRow, pressed && { opacity: 0.92 }]}>
+      style={({ pressed }) => [
+        styles.spotRow,
+        showDivider && styles.spotRowDivider,
+        pressed && styles.spotRowPressed,
+      ]}>
       <SpotImage uri={spot.image} style={styles.spotThumb} contentFit="cover" />
       <View style={styles.spotBody}>
         <View style={styles.spotTitleRow}>
           <ThemedText variant="bodySmall" weight="700" numberOfLines={1} style={{ flex: 1 }}>
             {spotTitles.primary}
           </ThemedText>
-          {fromCollection ? (
-            <View
-              style={[
-                styles.collectionPill,
-                {
-                  backgroundColor: `${theme.status.info}1A`,
-                  borderColor: `${theme.status.info}66`,
-                },
-              ]}>
-              <Ionicons name="bookmark" size={9} color={theme.status.info} />
-            </View>
-          ) : null}
+          {fromCollection ? <Ionicons name="bookmark" size={16} color={theme.status.info} /> : null}
         </View>
         <View style={styles.spotMetaRow}>
           <Ionicons name="film-outline" size={10} color={theme.text.tertiary} />
@@ -904,52 +823,67 @@ function makeStyles(theme: ThemePalette) {
       paddingBottom: 4,
       gap: 12,
     },
-    // flexShrink + single line so the 4-button header cluster can't push the
-    // title into unclipped overflow on narrow screens (album.tsx precedent).
     headerTitle: { ...Typography.headlineMedium, flexShrink: 1 },
-    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    iconBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+    toolsButton: {
+      width: Size.minTouchTarget,
+      height: Size.minTouchTarget,
       alignItems: 'center',
       justifyContent: 'center',
+      borderRadius: Radius.lg,
+      backgroundColor: `${theme.accent}14`,
+      borderWidth: 1,
+      borderColor: `${theme.accent}33`,
+    },
+    toolsButtonPressed: {
+      opacity: 0.68,
+    },
+    searchBar: {
+      minHeight: Size.recommendedTouchTarget,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
-    scrollContent: { paddingHorizontal: 20, paddingTop: 20, gap: 22 },
-    intro: { gap: 4 },
+    searchBarPressed: { opacity: 0.78 },
+    scrollContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.sm,
+      gap: Spacing.lg,
+    },
     introCaps: { ...Typography.captionSmall, letterSpacing: 1.2 },
     compactCaption: Typography.captionSmall,
-    introBody: { lineHeight: 18 },
+    introBody: { lineHeight: 18, paddingHorizontal: Spacing.xxs },
     heroCard: {
-      height: 170,
-      borderRadius: 16,
-      overflow: 'hidden',
+      minHeight: 112,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      padding: 10,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.secondary,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.glassBorder,
     },
-    heroCoverArt: {
-      ...StyleSheet.absoluteFill,
+    heroThumb: {
+      width: 92,
+      height: 92,
+      borderRadius: 10,
+      backgroundColor: theme.background.tertiary,
     },
-    heroOverlay: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: 78,
-    },
-    heroBody: { position: 'absolute', left: 16, right: 16, bottom: 14 },
-    heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    heroPinBadge: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
+    heroPlaceholder: {
+      width: 92,
+      height: 92,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: theme.background.tertiary,
     },
+    heroBody: { flex: 1, gap: 4 },
+    heroLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     errorBox: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -973,36 +907,17 @@ function makeStyles(theme: ThemePalette) {
     popularRow: { gap: 12, paddingRight: 4 },
     popularCard: {
       width: 128,
-      borderRadius: 16,
-      overflow: 'hidden',
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
     },
     popularPosterWrap: {
       height: 148,
       width: '100%',
+      overflow: 'hidden',
+      borderRadius: Radius.lg,
       backgroundColor: theme.background.tertiary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.glassBorder,
     },
     popularPoster: { width: '100%', height: '100%' },
-    popularBadge: {
-      position: 'absolute',
-      top: 8,
-      left: 8,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: 6,
-    },
-    collectionBadge: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     popularVisited: {
       position: 'absolute',
       bottom: 8,
@@ -1014,24 +929,30 @@ function makeStyles(theme: ThemePalette) {
       paddingVertical: 3,
       borderRadius: 6,
       backgroundColor: 'rgba(0,0,0,0.55)',
-      borderWidth: 1,
-      borderColor: `${theme.status.success}66`,
     },
-    popularMeta: { padding: 8, paddingHorizontal: 10, gap: 2 },
-    spotList: { gap: 10 },
+    popularMeta: { paddingTop: 8, paddingHorizontal: 2, gap: 2 },
+    popularDetails: { ...Typography.captionSmall, fontVariant: ['tabular-nums'] },
+    spotList: {
+      overflow: 'hidden',
+      borderRadius: Radius.card,
+      backgroundColor: theme.background.secondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.glassBorder,
+    },
     spotRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      padding: 10,
-      borderRadius: 14,
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
+      padding: 12,
+    },
+    spotRowDivider: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderColor: theme.glassBorder,
     },
+    spotRowPressed: { backgroundColor: theme.background.tertiary },
     spotThumb: {
-      width: 72,
-      height: 72,
+      width: 64,
+      height: 64,
       borderRadius: 10,
       backgroundColor: theme.background.tertiary,
     },
@@ -1040,14 +961,6 @@ function makeStyles(theme: ThemePalette) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-    },
-    collectionPill: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      borderWidth: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     spotMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     spotDistRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },

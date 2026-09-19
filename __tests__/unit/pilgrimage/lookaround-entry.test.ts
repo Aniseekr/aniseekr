@@ -5,7 +5,8 @@ mock.module('expo-modules-core', () => ({
   requireOptionalNativeModule: () => null,
 }));
 
-const { hasScene, lookAroundProvider, present } = await import('../../../modules/lookaround/src/index');
+const { hasScene, lookAroundProvider, present } =
+  await import('../../../modules/lookaround/src/index');
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 

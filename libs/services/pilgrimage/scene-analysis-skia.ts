@@ -2,11 +2,7 @@
 // pure inference functions (and their unit tests) don't transitively import
 // react-native through @shopify/react-native-skia.
 
-import {
-  AlphaType,
-  ColorType,
-  Skia,
-} from '@shopify/react-native-skia';
+import { AlphaType, ColorType, Skia } from '@shopify/react-native-skia';
 import { reducePixels, type SceneAnalysis } from './scene-analysis';
 
 const SAMPLE_W = 64;

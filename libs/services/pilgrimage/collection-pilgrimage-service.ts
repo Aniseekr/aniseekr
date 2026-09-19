@@ -282,9 +282,8 @@ export class CollectionPilgrimageService {
 
     // Search seeds: the native title is the most likely to hit Bangumi's
     // index, so it goes first when we have it.
-    const seeds = nativeTitle && nativeTitle !== storedTitle
-      ? [nativeTitle, storedTitle]
-      : [storedTitle];
+    const seeds =
+      nativeTitle && nativeTitle !== storedTitle ? [nativeTitle, storedTitle] : [storedTitle];
 
     for (const seed of seeds) {
       let response: BangumiV0SearchResponse;

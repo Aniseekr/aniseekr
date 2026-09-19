@@ -8,9 +8,7 @@ import { disposeSceneImageFiles, getSceneImageResize } from './scene-image-polic
 import type { TraceMoeSearchInput } from './trace-moe-client';
 
 export type PickSceneImageResult =
-  | { status: 'cancelled' }
-  | { status: 'denied' }
-  | { status: 'ok'; uri: string };
+  { status: 'cancelled' } | { status: 'denied' } | { status: 'ok'; uri: string };
 
 export interface PreparedSceneImage {
   searchInput: TraceMoeSearchInput;

@@ -1,11 +1,12 @@
-import { StatsSummary, UserAnimeRow, ratioOfNightUpdates, longestStreakDays } from './stats-service';
+import {
+  StatsSummary,
+  UserAnimeRow,
+  ratioOfNightUpdates,
+  longestStreakDays,
+} from './stats-service';
 
 export type PersonaDimensionKey =
-  | 'sentimental'
-  | 'adventurous'
-  | 'romantic'
-  | 'analytical'
-  | 'devoted';
+  'sentimental' | 'adventurous' | 'romantic' | 'analytical' | 'devoted';
 
 export interface PersonaDimension {
   key: PersonaDimensionKey;
@@ -97,13 +98,12 @@ const ARCHETYPES: Omit<PersonaArchetype, 'index' | 'total'>[] = [
       'You binge in long arcs, finishing seasons before sunrise. Tempo over tasting notes.',
     rarity: 9.1,
     tags: ['Devoted', 'Adventurous', 'Endurance'],
-    imageBg: { from: '#FF4E50', to: '#F9D423'},
+    imageBg: { from: '#FF4E50', to: '#F9D423' },
   },
   {
     id: 'quiet-collector',
     title: 'The Quiet Collector',
-    description:
-      'A small but luminous library. You wait, you choose, you keep.',
+    description: 'A small but luminous library. You wait, you choose, you keep.',
     rarity: 10.5,
     tags: ['Curated', 'Patient', 'Selective'],
     imageBg: { from: '#0F2027', to: '#2C5364' },
@@ -149,7 +149,9 @@ export function computePersona(rows: UserAnimeRow[], summary: StatsSummary): Per
   const bingeNorm = clamp01(binge / 7);
 
   const sentimental = clamp01(avgScoreNorm * 0.6 + completionRatio * 0.4);
-  const adventurous = clamp01(0.4 * (1 - completionRatio) + 0.3 * watchingRatio + 0.3 * (summary.total / 100));
+  const adventurous = clamp01(
+    0.4 * (1 - completionRatio) + 0.3 * watchingRatio + 0.3 * (summary.total / 100)
+  );
   const romantic = clamp01(avgScoreNorm * 0.5 + nightRatio * 0.3 + (1 - dropRatio) * 0.2);
   const analytical = clamp01(scoreVarNorm * 0.7 + ratedRatio * 0.3);
   const devoted = clamp01(completionRatio * 0.6 + bingeNorm * 0.2 + (1 - dropRatio) * 0.2);
@@ -160,13 +162,15 @@ export function computePersona(rows: UserAnimeRow[], summary: StatsSummary): Per
     key,
     label: DIMENSION_LABEL[key],
     color: DIMENSION_COLOR[key],
-    value: pct({
-      sentimental,
-      adventurous,
-      romantic,
-      analytical,
-      devoted,
-    }[key]),
+    value: pct(
+      {
+        sentimental,
+        adventurous,
+        romantic,
+        analytical,
+        devoted,
+      }[key]
+    ),
   }));
 
   const sorted = [...dims].sort((a, b) => b.value - a.value);
@@ -184,15 +188,18 @@ export function computePersona(rows: UserAnimeRow[], summary: StatsSummary): Per
   else if (second === 'sentimental') pick = ARCHETYPES[2];
 
   const matchSpread = sorted[0].value - sorted[1].value;
-  const match = Math.min(99, Math.max(60, 70 + Math.round(matchSpread * 0.5) + Math.round(sorted[0].value * 0.2)));
+  const match = Math.min(
+    99,
+    Math.max(60, 70 + Math.round(matchSpread * 0.5) + Math.round(sorted[0].value * 0.2))
+  );
 
   const index = ARCHETYPES.findIndex((a) => a.id === pick.id) + 1;
 
   const sinceTs = summary.startedDates.length
     ? Math.min(...summary.startedDates)
     : summary.updatedDates.length
-    ? Math.min(...summary.updatedDates)
-    : null;
+      ? Math.min(...summary.updatedDates)
+      : null;
   const sinceLabel = sinceTs
     ? new Date(sinceTs).toLocaleString('en-US', { month: 'short', year: 'numeric' })
     : null;

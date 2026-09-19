@@ -104,12 +104,14 @@ export default function TopFavoritesExhibit() {
         colors={[HERO_FROM, HERO_TO]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.featuredHero, { borderColor: theme.glassBorder }]}
-      >
+        style={[styles.featuredHero, { borderColor: theme.glassBorder }]}>
         <View style={styles.featuredTopRow}>
           <View style={[styles.badge, { backgroundColor: `${onHero}26` }]}>
             <MaterialIcons name="star" size={12} color={onHero} />
-            <ThemedText variant="captionSmall" weight="700" style={{ color: onHero, letterSpacing: 1 }}>
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: onHero, letterSpacing: 1 }}>
               {t('collectionStats.topFavorites.allTimeBadge')}
             </ThemedText>
           </View>
@@ -133,7 +135,9 @@ export default function TopFavoritesExhibit() {
           <View style={styles.metricRow}>
             <Metric
               label={t('collectionStats.topFavorites.metric.remembered')}
-              value={t('collectionStats.topFavorites.metric.episodes', { count: topMeta.remembered })}
+              value={t('collectionStats.topFavorites.metric.episodes', {
+                count: topMeta.remembered,
+              })}
               color={onHero}
             />
             {topMeta.rating ? (
@@ -170,7 +174,9 @@ export default function TopFavoritesExhibit() {
                 {row.image_url ? (
                   <Image source={{ uri: row.image_url }} style={styles.restCover} />
                 ) : (
-                  <View style={[styles.restCover, { backgroundColor: theme.background.tertiary }]} />
+                  <View
+                    style={[styles.restCover, { backgroundColor: theme.background.tertiary }]}
+                  />
                 )}
                 <View style={{ flex: 1, gap: 4 }}>
                   <ThemedText variant="titleSmall" weight="700" numberOfLines={2}>

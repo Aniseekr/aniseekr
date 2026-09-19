@@ -49,9 +49,7 @@ const theme = { __sentinel: 'theme' } as unknown as ThemePalette;
 // passed from the parent via useCallback are similarly stable in real usage.
 const noop = () => undefined;
 
-function sceneTileProps(
-  overrides: Partial<SceneTileEqualityProps> = {}
-): SceneTileEqualityProps {
+function sceneTileProps(overrides: Partial<SceneTileEqualityProps> = {}): SceneTileEqualityProps {
   return {
     spot: sampleSpot,
     sceneCount: 1,
@@ -171,9 +169,9 @@ describe('sceneTilePropsEqual', () => {
 
   it('returns false when handlers change identity', () => {
     const otherNoop = () => undefined;
-    expect(
-      sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ onPress: otherNoop }))
-    ).toBe(false);
+    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ onPress: otherNoop }))).toBe(
+      false
+    );
   });
 
   it('returns false when the underlying spot image changes', () => {
@@ -199,9 +197,9 @@ describe('spotRowPropsEqual', () => {
   });
 
   it('returns false when sceneCount changes', () => {
-    expect(spotRowPropsEqual(spotRowProps({ sceneCount: 1 }), spotRowProps({ sceneCount: 3 }))).toBe(
-      false
-    );
+    expect(
+      spotRowPropsEqual(spotRowProps({ sceneCount: 1 }), spotRowProps({ sceneCount: 3 }))
+    ).toBe(false);
   });
 
   it('returns false when the underlying spot name changes', () => {
@@ -212,9 +210,9 @@ describe('spotRowPropsEqual', () => {
   it('returns false when captureUri changes', () => {
     // captureUri toggles the rows' single-image / REAL+ANIME split layout, so
     // the memo must invalidate when it flips between null and a real uri.
-    expect(
-      spotRowPropsEqual(spotRowProps(), spotRowProps({ captureUri: 'file://x.jpg' }))
-    ).toBe(false);
+    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ captureUri: 'file://x.jpg' }))).toBe(
+      false
+    );
   });
 });
 

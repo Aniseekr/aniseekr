@@ -56,8 +56,7 @@ export function MonthlyHoursBar({ data, title, year }: Props) {
               <ThemedText
                 variant="captionSmall"
                 tone={isPeak ? 'primary' : 'tertiary'}
-                style={styles.barLabel}
-              >
+                style={styles.barLabel}>
                 {bucket.label}
               </ThemedText>
             </View>

@@ -239,9 +239,7 @@ export async function patchSwipePrefs(patch: Partial<SwipePrefs>): Promise<Swipe
   return nextSwipe;
 }
 
-export async function patchStreamingPrefs(
-  patch: Partial<StreamingPrefs>
-): Promise<StreamingPrefs> {
+export async function patchStreamingPrefs(patch: Partial<StreamingPrefs>): Promise<StreamingPrefs> {
   const current = await loadUserPrefs();
   const nextStreaming = normalizeStreamingPrefs({
     ...current.streamingPlatforms,

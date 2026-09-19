@@ -69,9 +69,7 @@ describe('analyzeLumaHistogram', () => {
 
   it('recommends HDR on a real high-DR scene: deep shadow + clipped highlight', () => {
     // 12% shadow, 8% highlight, rest midtones — both exceed thresholds.
-    const result = analyzeLumaHistogram(
-      mixedLuma({ shadow: 120, highlight: 80, mid: 800 })
-    );
+    const result = analyzeLumaHistogram(mixedLuma({ shadow: 120, highlight: 80, mid: 800 }));
     expect(result.shadowClip).toBeGreaterThan(0.08);
     expect(result.highlightClip).toBeGreaterThan(0.05);
     expect(result.needsHdr).toBe(true);
@@ -79,23 +77,16 @@ describe('analyzeLumaHistogram', () => {
 
   it('does NOT recommend HDR when only one tail clips', () => {
     // 12% shadow, 1% highlight — fails the highlight test.
-    const shadowOnly = analyzeLumaHistogram(
-      mixedLuma({ shadow: 120, highlight: 10, mid: 870 })
-    );
+    const shadowOnly = analyzeLumaHistogram(mixedLuma({ shadow: 120, highlight: 10, mid: 870 }));
     expect(shadowOnly.needsHdr).toBe(false);
     // 1% shadow, 8% highlight — fails the shadow test.
-    const highlightOnly = analyzeLumaHistogram(
-      mixedLuma({ shadow: 10, highlight: 80, mid: 910 })
-    );
+    const highlightOnly = analyzeLumaHistogram(mixedLuma({ shadow: 10, highlight: 80, mid: 910 }));
     expect(highlightOnly.needsHdr).toBe(false);
   });
 
   it('treats pixels EXACTLY at the threshold as not-clipped (strict inequality)', () => {
     // luma === SCENE_SHADOW_CLIP_THRESHOLD is NOT a shadow clip (< check).
-    const exactly = new Uint8Array([
-      SCENE_SHADOW_CLIP_THRESHOLD,
-      SCENE_HIGHLIGHT_CLIP_THRESHOLD,
-    ]);
+    const exactly = new Uint8Array([SCENE_SHADOW_CLIP_THRESHOLD, SCENE_HIGHLIGHT_CLIP_THRESHOLD]);
     const result = analyzeLumaHistogram(exactly);
     expect(result.shadowClip).toBe(0);
     expect(result.highlightClip).toBe(0);

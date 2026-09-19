@@ -20,7 +20,7 @@ const FALLBACK_DELAY_MS = 5 * 60 * 1000;
 export function computeEventReminderTrigger(
   occurrence: EventOccurrence,
   now: Date,
-  tz: string = DEFAULT_SPOT_TIMEZONE,
+  tz: string = DEFAULT_SPOT_TIMEZONE
 ): Date | null {
   const start = wallDateToInstant(occurrence.startsAt, tz, false);
   if (!start || start.getTime() <= now.getTime()) return null;
@@ -32,7 +32,7 @@ export function computeEventReminderTrigger(
 /** Only `upcoming` occurrences are schedulable, and only when the pref is on. */
 export function canScheduleEventReminder(
   prefs: Pick<NotificationPreferences, 'pilgrimageEventReminders'>,
-  state: EventDateState,
+  state: EventDateState
 ): boolean {
   return prefs.pilgrimageEventReminders && state.state === 'upcoming';
 }

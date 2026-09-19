@@ -149,7 +149,12 @@ export default function RatingScreen() {
   const t = useT();
   const MODE_OPTIONS: readonly ModeOption[] = useMemo(
     () => [
-      { value: 'plan', label: t('tabs.ratingScreen.mode.plan'), icon: 'bookmark', color: PLAN_COLOR },
+      {
+        value: 'plan',
+        label: t('tabs.ratingScreen.mode.plan'),
+        icon: 'bookmark',
+        color: PLAN_COLOR,
+      },
       { value: 'like', label: t('tabs.ratingScreen.mode.like'), icon: 'heart', color: LIKE_COLOR },
     ],
     [t]
@@ -611,7 +616,10 @@ export default function RatingScreen() {
       <View style={[styles.headerContainer, { paddingTop: top + 10 }]}>
         <View style={styles.topBar}>
           <View style={styles.headerLeftCluster}>
-            <Pressable onPress={handleClose} style={styles.closeButton} accessibilityLabel={t('tabs.ratingScreen.closeA11y')}>
+            <Pressable
+              onPress={handleClose}
+              style={styles.closeButton}
+              accessibilityLabel={t('tabs.ratingScreen.closeA11y')}>
               <Ionicons name="close" size={20} color="#fff" />
             </Pressable>
             <ModePill

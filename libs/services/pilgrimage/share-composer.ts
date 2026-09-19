@@ -53,9 +53,7 @@ export type ImagePairSlot = 'anime' | 'real';
 export type ImagePairOrder = { first: ImagePairSlot; second: ImagePairSlot };
 
 export function resolveImagePairOrder(swapOrder: boolean): ImagePairOrder {
-  return swapOrder
-    ? { first: 'real', second: 'anime' }
-    : { first: 'anime', second: 'real' };
+  return swapOrder ? { first: 'real', second: 'anime' } : { first: 'anime', second: 'real' };
 }
 
 // ----- watermark text -----
@@ -201,7 +199,11 @@ function autoContrastInk(canvasBg: string): string {
   const m = canvasBg.trim().match(/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
   if (!m) return ON_DARK_INK;
   let hex = m[1];
-  if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+  if (hex.length === 3)
+    hex = hex
+      .split('')
+      .map((c) => c + c)
+      .join('');
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);

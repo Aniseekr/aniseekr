@@ -11,10 +11,7 @@
 // lists on the first frame instead of popping them in after an async resolve.
 
 import { kvGet, kvSet } from '../storage/app-storage';
-import {
-  SPOT_INTENTS_STORAGE_KEY,
-  SPOT_INTENTS_STORAGE_KEY_V2,
-} from '../storage/keys';
+import { SPOT_INTENTS_STORAGE_KEY, SPOT_INTENTS_STORAGE_KEY_V2 } from '../storage/keys';
 import { Logger } from '../../utils/logger';
 import type { AnitabiPoint } from './types';
 import type { PilgrimageSeriesPoint } from './pilgrimage-series';

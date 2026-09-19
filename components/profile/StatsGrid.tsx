@@ -58,9 +58,24 @@ export function StatsGrid({ stats }: StatsGridProps) {
   return (
     <View style={styles.container}>
       <StatCard label={t('profile.total')} value={stats.total} icon="bookmark" color="#3b82f6" />
-      <StatCard label={t('commonUi.watching')} value={stats.watching} icon="play-circle" color="#10b981" />
-      <StatCard label={t('commonUi.completed')} value={stats.completed} icon="checkmark-circle" color="#22c55e" />
-      <StatCard label={t('commonUi.dropped')} value={stats.dropped} icon="x-circle" color="#ef4444" />
+      <StatCard
+        label={t('commonUi.watching')}
+        value={stats.watching}
+        icon="play-circle"
+        color="#10b981"
+      />
+      <StatCard
+        label={t('commonUi.completed')}
+        value={stats.completed}
+        icon="checkmark-circle"
+        color="#22c55e"
+      />
+      <StatCard
+        label={t('commonUi.dropped')}
+        value={stats.dropped}
+        icon="x-circle"
+        color="#ef4444"
+      />
     </View>
   );
 }

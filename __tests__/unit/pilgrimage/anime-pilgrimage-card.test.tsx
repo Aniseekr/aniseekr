@@ -66,13 +66,18 @@ mock.module('../../../context/ThemeContext', () => ({
 // real logic, not a hand-copied duplicate.
 mock.module('../../../components/pilgrimage/SpotImage', () => ({
   sanitizeImageUri,
-  SpotImage: ({ uri, style, contentFit }: { uri?: string | null; style?: unknown; contentFit?: unknown }) =>
-    React.createElement('Image', { source: { uri }, style, contentFit }),
+  SpotImage: ({
+    uri,
+    style,
+    contentFit,
+  }: {
+    uri?: string | null;
+    style?: unknown;
+    contentFit?: unknown;
+  }) => React.createElement('Image', { source: { uri }, style, contentFit }),
 }));
 
-const { AnimePilgrimageCard } = await import(
-  '../../../components/pilgrimage/AnimePilgrimageCard'
-);
+const { AnimePilgrimageCard } = await import('../../../components/pilgrimage/AnimePilgrimageCard');
 
 const sampleAnime: AnitabiBangumi = {
   id: 7157,

@@ -34,20 +34,12 @@ describe('DEFAULT_EV_STOPS', () => {
 
 describe('buildMertensUniforms', () => {
   it('flattens three (dx, dy) offsets in declared order', () => {
-    const out = buildMertensUniforms(
-      { dx: 1, dy: 2 },
-      { dx: 3, dy: 4 },
-      { dx: 5, dy: 6 }
-    );
+    const out = buildMertensUniforms({ dx: 1, dy: 2 }, { dx: 3, dy: 4 }, { dx: 5, dy: 6 });
     expect(out).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it('handles negative and zero offsets', () => {
-    const out = buildMertensUniforms(
-      { dx: -8, dy: 0 },
-      { dx: 0, dy: 0 },
-      { dx: 0, dy: -3 }
-    );
+    const out = buildMertensUniforms({ dx: -8, dy: 0 }, { dx: 0, dy: 0 }, { dx: 0, dy: -3 });
     expect(out).toEqual([-8, 0, 0, 0, 0, -3]);
   });
 });

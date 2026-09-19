@@ -22,7 +22,10 @@ function memTouch(key: string, entry: MemEntry) {
   }
 }
 
-function memReadFresh(key: string, graceMs = 0): { entry: MemEntry; age: number; isStale: boolean } | null {
+function memReadFresh(
+  key: string,
+  graceMs = 0
+): { entry: MemEntry; age: number; isStale: boolean } | null {
   const entry = mem.get(key);
   if (!entry) return null;
   const age = Date.now() - entry.timestamp;
@@ -247,9 +250,7 @@ export class CacheService {
       if (!rows || rows.length === 0) return empty;
 
       // Sort descending by length so the longest matching prefix wins.
-      const sortedPrefixes = prefixes
-        ? [...prefixes].sort((a, b) => b.length - a.length)
-        : null;
+      const sortedPrefixes = prefixes ? [...prefixes].sort((a, b) => b.length - a.length) : null;
 
       const byPrefix = new Map<string, CacheGroupStats>();
       const now = Date.now();
@@ -372,10 +373,7 @@ export class CacheService {
     for (const [k, e] of mem) if (e.timestamp + e.ttl < now) mem.delete(k);
     try {
       const db = await openDb();
-      const result = await db.runAsync(
-        'DELETE FROM cache WHERE timestamp + ttl < ?',
-        Date.now()
-      );
+      const result = await db.runAsync('DELETE FROM cache WHERE timestamp + ttl < ?', Date.now());
       return result?.changes ?? 0;
     } catch (error) {
       console.warn('CacheService.prune error:', error);

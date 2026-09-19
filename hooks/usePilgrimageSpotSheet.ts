@@ -98,8 +98,7 @@ export function usePilgrimageSpotSheet({
     [activeSpot, activeSpotScenes]
   );
   const activeSpotVisited = useMemo(
-    () =>
-      activeSpotVisitedTarget ? visited[activeSpotVisitedTarget.id] === true : false,
+    () => (activeSpotVisitedTarget ? visited[activeSpotVisitedTarget.id] === true : false),
     [activeSpotVisitedTarget, visited]
   );
   const activeSpotSaved = useMemo<boolean>(() => {

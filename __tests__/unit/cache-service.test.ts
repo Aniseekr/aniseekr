@@ -102,8 +102,8 @@ describe('CacheService', () => {
   });
 
   it('CACHE-012 stats() flags expired entries', async () => {
-    await CacheService.set('seasonal_a', { v: 1 }, 60_000);  // fresh
-    await CacheService.set('seasonal_b', { v: 2 }, -1);      // expired
+    await CacheService.set('seasonal_a', { v: 1 }, 60_000); // fresh
+    await CacheService.set('seasonal_b', { v: 2 }, -1); // expired
 
     const stats = await CacheService.stats(['seasonal_']);
     expect(stats.totalEntries).toBe(2);

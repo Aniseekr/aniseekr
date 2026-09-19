@@ -22,11 +22,7 @@ export interface PlatformAnimeData {
 
 /** Sync status carried alongside `platformData` for UI badges. */
 export type PlatformSyncStatus =
-  | 'notConnected'
-  | 'connected'
-  | 'syncing'
-  | 'synced'
-  | { kind: 'error'; message: string };
+  'notConnected' | 'connected' | 'syncing' | 'synced' | { kind: 'error'; message: string };
 
 export type ImageType = 'large' | 'extraLarge' | 'banner';
 

@@ -103,9 +103,7 @@ export default function DataSourceScreen() {
         </View>
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.description}>
-            {t('settings.dataSourceScreen.description')}
-          </Text>
+          <Text style={styles.description}>{t('settings.dataSourceScreen.description')}</Text>
 
           {initLoading ? (
             <View style={styles.loadingRow}>
@@ -135,7 +133,9 @@ export default function DataSourceScreen() {
                         <View>
                           <Text style={styles.rowLabel}>{platform.displayName}</Text>
                           <Text style={styles.rowSubLabel}>
-                            {isSelected ? t('settings.dataSourceScreen.active') : t('settings.dataSourceScreen.tapToUse')}
+                            {isSelected
+                              ? t('settings.dataSourceScreen.active')
+                              : t('settings.dataSourceScreen.tapToUse')}
                           </Text>
                         </View>
                       </View>
@@ -161,7 +161,11 @@ export default function DataSourceScreen() {
           )}
 
           {switchingState.kind === 'failed' ? (
-            <Text style={styles.errorText}>{t('settings.dataSourceScreen.switchFailed', { message: switchingState.error.message })}</Text>
+            <Text style={styles.errorText}>
+              {t('settings.dataSourceScreen.switchFailed', {
+                message: switchingState.error.message,
+              })}
+            </Text>
           ) : null}
         </ScrollView>
       </SafeAreaView>

@@ -31,7 +31,10 @@ import {
   type Pt,
   type RNPerspectiveTransform,
 } from '../../libs/services/pilgrimage/share-perspective';
-import { shotContentFitForCell, shotOrientation } from '../../libs/services/pilgrimage/share-aspect';
+import {
+  shotContentFitForCell,
+  shotOrientation,
+} from '../../libs/services/pilgrimage/share-aspect';
 
 export type ShareTemplate = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
 export type ShareRatio = '1:1' | '9:16' | '16:9';
@@ -139,15 +142,40 @@ export function ShareCard(props: ShareCardProps) {
   return (
     <View ref={props.ref} collapsable={false} style={{ width, height, overflow: 'hidden' }}>
       {template === 'polaroid' ? (
-        <PolaroidTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
+        <PolaroidTemplate
+          {...props}
+          height={height}
+          canvasBg={canvasBg}
+          shotContentFit={shotContentFit}
+        />
       ) : template === 'classic' ? (
-        <ClassicTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
+        <ClassicTemplate
+          {...props}
+          height={height}
+          canvasBg={canvasBg}
+          shotContentFit={shotContentFit}
+        />
       ) : template === 'minimal' ? (
-        <MinimalTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
+        <MinimalTemplate
+          {...props}
+          height={height}
+          canvasBg={canvasBg}
+          shotContentFit={shotContentFit}
+        />
       ) : template === 'comic' ? (
-        <ComicTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
+        <ComicTemplate
+          {...props}
+          height={height}
+          canvasBg={canvasBg}
+          shotContentFit={shotContentFit}
+        />
       ) : (
-        <MangaTemplate {...props} height={height} canvasBg={canvasBg} shotContentFit={shotContentFit} />
+        <MangaTemplate
+          {...props}
+          height={height}
+          canvasBg={canvasBg}
+          shotContentFit={shotContentFit}
+        />
       )}
       {watermarkText ? (
         <WatermarkOverlay

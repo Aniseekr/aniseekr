@@ -49,7 +49,12 @@ const TOKENS: Token[] = [
   // Brand
   { name: 'Solidarity Purple', variable: 'solidarity-purple', hex: '#5B2D8E', category: 'brand' },
   { name: 'Solidarity Pink', variable: 'solidarity-pink', hex: '#E8A0BF', category: 'brand' },
-  { name: 'Solidarity Lavender', variable: 'solidarity-lavender', hex: '#F5EDF8', category: 'brand' },
+  {
+    name: 'Solidarity Lavender',
+    variable: 'solidarity-lavender',
+    hex: '#F5EDF8',
+    category: 'brand',
+  },
 ];
 
 const CATEGORIES: { id: Category; labelKey: TranslationKey }[] = [
@@ -164,7 +169,11 @@ export default function DesignTokensScreen() {
           showsVerticalScrollIndicator={false}>
           {groups.map((g) => (
             <View key={g.category} style={{ gap: 10 }}>
-              <ThemedText variant="captionSmall" tone="secondary" weight="600" style={styles.groupHeader}>
+              <ThemedText
+                variant="captionSmall"
+                tone="secondary"
+                weight="600"
+                style={styles.groupHeader}>
                 {g.category.toUpperCase()}
               </ThemedText>
               <View style={styles.tokenList}>
@@ -189,7 +198,10 @@ export default function DesignTokensScreen() {
                         <ThemedText variant="bodySmall" weight="600">
                           {t.name}
                         </ThemedText>
-                        <ThemedText variant="captionSmall" tone="secondary" style={{ marginTop: 2 }}>
+                        <ThemedText
+                          variant="captionSmall"
+                          tone="secondary"
+                          style={{ marginTop: 2 }}>
                           ${t.variable}
                         </ThemedText>
                       </View>
@@ -199,9 +211,7 @@ export default function DesignTokensScreen() {
                       <Ionicons name="copy-outline" size={14} color={theme.text.tertiary} />
                     </Pressable>
                     {idx < g.tokens.length - 1 ? (
-                      <View
-                        style={[styles.separator, { backgroundColor: theme.glassBorder }]}
-                      />
+                      <View style={[styles.separator, { backgroundColor: theme.glassBorder }]} />
                     ) : null}
                   </View>
                 ))}

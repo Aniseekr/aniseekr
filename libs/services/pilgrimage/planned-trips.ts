@@ -38,7 +38,12 @@ export function groupPlannedIntents(map: SpotIntentMap): PlannedTrips {
     }
     let group = byAnime.get(meta.animeId);
     if (!group) {
-      group = { animeId: meta.animeId, name: meta.name, ...(meta.cn ? { cn: meta.cn } : {}), spots: [] };
+      group = {
+        animeId: meta.animeId,
+        name: meta.name,
+        ...(meta.cn ? { cn: meta.cn } : {}),
+        spots: [],
+      };
       byAnime.set(meta.animeId, group);
     }
     group.spots.push({ id, geo: meta.geo, image: meta.image });

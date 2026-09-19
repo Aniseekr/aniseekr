@@ -10,12 +10,9 @@ const rows: SpotIndexRow[] = [
 ];
 
 test('getSpotsNear prefilters via queryBox then ranks by haversine', async () => {
-  const out = await getSpotsNear(
-    { latitude: 35, longitude: 139 },
-    30,
-    10,
-    { queryBox: async () => rows }
-  );
+  const out = await getSpotsNear({ latitude: 35, longitude: 139 }, 30, 10, {
+    queryBox: async () => rows,
+  });
   expect(out.map((s) => s.pointId)).toEqual(['near']); // 'far' ~111km dropped
   expect(out[0].distanceKm).toBeGreaterThan(0);
 });
@@ -41,9 +38,33 @@ describe('LocalDB.queryAnitabiSpotsByBox (integration against FakeDatabase)', ()
   });
 
   const seedRows: SpotIndexRow[] = [
-    { pointId: 'inside', bangumiId: 1, lat: 35.01, lng: 139.01, name: 'Inside', cn: '', image: '/a.jpg' },
-    { pointId: 'outside-lat', bangumiId: 2, lat: 40, lng: 139.01, name: 'OutsideLat', cn: '', image: '' },
-    { pointId: 'outside-lng', bangumiId: 3, lat: 35.01, lng: 150, name: 'OutsideLng', cn: '', image: '' },
+    {
+      pointId: 'inside',
+      bangumiId: 1,
+      lat: 35.01,
+      lng: 139.01,
+      name: 'Inside',
+      cn: '',
+      image: '/a.jpg',
+    },
+    {
+      pointId: 'outside-lat',
+      bangumiId: 2,
+      lat: 40,
+      lng: 139.01,
+      name: 'OutsideLat',
+      cn: '',
+      image: '',
+    },
+    {
+      pointId: 'outside-lng',
+      bangumiId: 3,
+      lat: 35.01,
+      lng: 150,
+      name: 'OutsideLng',
+      cn: '',
+      image: '',
+    },
   ];
 
   test('hydrates then filters strictly by the lat/lng BETWEEN box, mapping snake_case columns back to SpotIndexRow', async () => {

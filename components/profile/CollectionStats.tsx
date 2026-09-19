@@ -12,8 +12,20 @@ import type {
 
 type AccountStatCardProps =
   | { iconSet: 'Ionicons'; icon: IoniconsName; title: string; value: string; color: string }
-  | { iconSet: 'MaterialIcons'; icon: MaterialIconsName; title: string; value: string; color: string }
-  | { iconSet: 'FontAwesome5'; icon: FontAwesome5Name; title: string; value: string; color: string };
+  | {
+      iconSet: 'MaterialIcons';
+      icon: MaterialIconsName;
+      title: string;
+      value: string;
+      color: string;
+    }
+  | {
+      iconSet: 'FontAwesome5';
+      icon: FontAwesome5Name;
+      title: string;
+      value: string;
+      color: string;
+    };
 
 function AccountStatCard(props: AccountStatCardProps) {
   const { title, value, color } = props;

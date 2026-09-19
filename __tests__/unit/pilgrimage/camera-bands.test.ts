@@ -32,17 +32,26 @@ describe('camera band layout', () => {
     const hidden = resolveCameraBandLayout({ bottomInset: 0, showZoomBand: false });
     expect(hidden.totalBottomChromeHeight).toBeLessThan(shown.totalBottomChromeHeight);
     expect(shown.totalBottomChromeHeight).toBe(
-      CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT,
+      CAMERA_BOTTOM_ROW_HEIGHT +
+        CAMERA_BAND_GAP +
+        CAMERA_CAROUSEL_BAND_HEIGHT +
+        CAMERA_BAND_GAP +
+        CAMERA_ZOOM_BAND_HEIGHT
     );
     expect(hidden.totalBottomChromeHeight).toBe(
-      CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT,
+      CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT
     );
   });
 });
 
 describe('camera chrome visibility (immersive by subtraction)', () => {
   it('shows everything relevant in portrait', () => {
-    const v = resolveCameraChromeVisibility({ isLandscape: false, immersive: true, afLocked: true, overlayActive: true });
+    const v = resolveCameraChromeVisibility({
+      isLandscape: false,
+      immersive: true,
+      afLocked: true,
+      overlayActive: true,
+    });
     expect(v.showZoomBand).toBe(true);
     expect(v.showOpacityPill).toBe(true);
     expect(v.showTopContextIcons).toBe(true);
@@ -51,7 +60,12 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
   });
 
   it('subtracts secondary controls only in landscape immersive, keeping shutter+carousel+alignment', () => {
-    const v = resolveCameraChromeVisibility({ isLandscape: true, immersive: true, afLocked: false, overlayActive: true });
+    const v = resolveCameraChromeVisibility({
+      isLandscape: true,
+      immersive: true,
+      afLocked: false,
+      overlayActive: true,
+    });
     expect(v.showZoomBand).toBe(false);
     expect(v.showOpacityPill).toBe(false);
     expect(v.showTopContextIcons).toBe(false);
@@ -60,20 +74,44 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
   });
 
   it('reveals everything again in landscape when not immersive', () => {
-    const v = resolveCameraChromeVisibility({ isLandscape: true, immersive: false, afLocked: false, overlayActive: true });
+    const v = resolveCameraChromeVisibility({
+      isLandscape: true,
+      immersive: false,
+      afLocked: false,
+      overlayActive: true,
+    });
     expect(v.showZoomBand).toBe(true);
     expect(v.showTopContextIcons).toBe(true);
   });
 
   it('gates the opacity pill and quick-controls on an active overlay', () => {
-    const off = resolveCameraChromeVisibility({ isLandscape: false, immersive: false, afLocked: false, overlayActive: false });
+    const off = resolveCameraChromeVisibility({
+      isLandscape: false,
+      immersive: false,
+      afLocked: false,
+      overlayActive: false,
+    });
     expect(off.showOpacityPill).toBe(false);
     expect(off.showOverlayQuickControls).toBe(false);
   });
 
   it('shows the transient focus/EV bar only while AF is locked', () => {
-    expect(resolveCameraChromeVisibility({ isLandscape: false, immersive: false, afLocked: true, overlayActive: false }).showFocusExposureBar).toBe(true);
-    expect(resolveCameraChromeVisibility({ isLandscape: false, immersive: false, afLocked: false, overlayActive: false }).showFocusExposureBar).toBe(false);
+    expect(
+      resolveCameraChromeVisibility({
+        isLandscape: false,
+        immersive: false,
+        afLocked: true,
+        overlayActive: false,
+      }).showFocusExposureBar
+    ).toBe(true);
+    expect(
+      resolveCameraChromeVisibility({
+        isLandscape: false,
+        immersive: false,
+        afLocked: false,
+        overlayActive: false,
+      }).showFocusExposureBar
+    ).toBe(false);
   });
 });
 

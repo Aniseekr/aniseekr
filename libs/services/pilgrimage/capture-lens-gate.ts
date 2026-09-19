@@ -21,7 +21,10 @@
 // before. Only Android captures explicitly stamped with a non-wide lens
 // trip the gate. This keeps the existing flow working unchanged.
 
-import type { EnginePhoto, EnginePhysicalLensType } from '../../../components/pilgrimage/camera/camera-engine';
+import type {
+  EnginePhoto,
+  EnginePhysicalLensType,
+} from '../../../components/pilgrimage/camera/camera-engine';
 
 interface LensRecord {
   lensType?: EnginePhysicalLensType;

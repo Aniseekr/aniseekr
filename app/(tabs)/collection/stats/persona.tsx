@@ -7,10 +7,7 @@ import { ThemedText, readableTextOn, Skeleton } from '../../../../components/the
 import { EmptyStateView } from '../../../../components/common/EmptyStateView';
 import { StatsExhibitFrame } from '../../../../components/collection/stats/StatsExhibitFrame';
 import { useT } from '../../../../libs/i18n';
-import {
-  loadUserAnimeRows,
-  summarize,
-} from '../../../../libs/services/collection/stats-service';
+import { loadUserAnimeRows, summarize } from '../../../../libs/services/collection/stats-service';
 import { computePersona, PersonaResult } from '../../../../libs/services/collection/persona';
 
 export default function PersonaExhibit() {
@@ -86,11 +83,13 @@ export default function PersonaExhibit() {
         colors={[archetype.imageBg.from, archetype.imageBg.to]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.heroCard, { borderColor: theme.glassBorder }]}
-      >
+        style={[styles.heroCard, { borderColor: theme.glassBorder }]}>
         <View style={styles.heroRow}>
           <View style={[styles.chip, { backgroundColor: `${onArt}26` }]}>
-            <ThemedText variant="captionSmall" weight="700" style={{ color: onArt, letterSpacing: 1 }}>
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: onArt, letterSpacing: 1 }}>
               {t('collectionStats.persona.typeLabel', {
                 index: String(archetype.index).padStart(2, '0'),
                 total: archetype.total,
@@ -104,13 +103,8 @@ export default function PersonaExhibit() {
           </View>
         </View>
         <View style={styles.heroBody}>
-          <ThemedText style={[styles.heroTitle, { color: onArt }]}>
-            {archetype.title}
-          </ThemedText>
-          <ThemedText
-            variant="bodyMedium"
-            style={{ color: `${onArt}E0`, marginTop: 6 }}
-          >
+          <ThemedText style={[styles.heroTitle, { color: onArt }]}>{archetype.title}</ThemedText>
+          <ThemedText variant="bodyMedium" style={{ color: `${onArt}E0`, marginTop: 6 }}>
             {archetype.description}
           </ThemedText>
         </View>
@@ -119,9 +113,7 @@ export default function PersonaExhibit() {
             <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
               {t('collectionStats.persona.statMatch')}
             </ThemedText>
-            <ThemedText style={[styles.heroStatValue, { color: onArt }]}>
-              {match}%
-            </ThemedText>
+            <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{match}%</ThemedText>
           </View>
           {watchHours > 0 ? (
             <View style={styles.heroStat}>
@@ -138,9 +130,7 @@ export default function PersonaExhibit() {
               <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
                 {t('collectionStats.persona.statSince')}
               </ThemedText>
-              <ThemedText style={[styles.heroStatValue, { color: onArt }]}>
-                {sinceLabel}
-              </ThemedText>
+              <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{sinceLabel}</ThemedText>
             </View>
           ) : null}
         </View>
@@ -148,8 +138,7 @@ export default function PersonaExhibit() {
           {archetype.tags.map((tag) => (
             <View
               key={tag}
-              style={[styles.tag, { backgroundColor: `${onArt}1A`, borderColor: `${onArt}40` }]}
-            >
+              style={[styles.tag, { backgroundColor: `${onArt}1A`, borderColor: `${onArt}40` }]}>
               <ThemedText variant="captionSmall" weight="600" style={{ color: onArt }}>
                 {tag}
               </ThemedText>
@@ -186,12 +175,7 @@ export default function PersonaExhibit() {
                 </ThemedText>
               </View>
               <View style={[styles.track, { backgroundColor: theme.background.tertiary }]}>
-                <View
-                  style={[
-                    styles.fill,
-                    { width: `${d.value}%`, backgroundColor: d.color },
-                  ]}
-                />
+                <View style={[styles.fill, { width: `${d.value}%`, backgroundColor: d.color }]} />
               </View>
             </View>
           ))}

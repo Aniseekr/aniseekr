@@ -104,8 +104,7 @@ describe('backup/encryption · BackupEncryption round-trip', () => {
     const cipher = enc.encrypt(env, key);
     const parsed = JSON.parse(cipher) as { ciphertext: string };
     // Flip the first character of the base64 payload.
-    parsed.ciphertext =
-      (parsed.ciphertext[0] === 'A' ? 'B' : 'A') + parsed.ciphertext.slice(1);
+    parsed.ciphertext = (parsed.ciphertext[0] === 'A' ? 'B' : 'A') + parsed.ciphertext.slice(1);
     const tampered = JSON.stringify(parsed);
     expect(() => enc.decrypt(tampered, key)).toThrow();
   });

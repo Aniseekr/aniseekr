@@ -19,9 +19,8 @@ mock.module('../../../components/themed', () => ({
     React.createElement('Text', props, props.children),
 }));
 
-const { default: OverlayQuickControls } = await import(
-  '../../../components/pilgrimage/camera/OverlayQuickControls'
-);
+const { default: OverlayQuickControls } =
+  await import('../../../components/pilgrimage/camera/OverlayQuickControls');
 
 type Props = React.ComponentProps<typeof OverlayQuickControls>;
 const noop = () => undefined;
@@ -46,7 +45,10 @@ const base: Props = {
 describe('overlay quick controls', () => {
   it('surfaces the character picker in subject mode (preserves the old OverlayControlsBar behavior)', () => {
     let opened = 0;
-    const tree = render(OverlayQuickControls, { ...base, onOpenCharacterPicker: () => (opened += 1) });
+    const tree = render(OverlayQuickControls, {
+      ...base,
+      onOpenCharacterPicker: () => (opened += 1),
+    });
     const pick = findAll(
       tree,
       (n) => (n.props as { accessibilityLabel?: unknown }).accessibilityLabel === 'Pick character'
@@ -69,7 +71,9 @@ describe('overlay quick controls', () => {
     const tree = render(OverlayQuickControls, base);
     const flip = findAll(
       tree,
-      (n) => (n.props as { accessibilityLabel?: unknown }).accessibilityLabel === 'Flip overlay horizontally'
+      (n) =>
+        (n.props as { accessibilityLabel?: unknown }).accessibilityLabel ===
+        'Flip overlay horizontally'
     );
     expect(flip.length).toBeGreaterThan(0);
   });

@@ -84,9 +84,7 @@ export function SettingsSection({
   const { theme } = useTheme();
   const items = Children.toArray(children).filter(
     (child) =>
-      isValidElement(child) &&
-      child.props &&
-      (child.props as { hidden?: boolean }).hidden !== true
+      isValidElement(child) && child.props && (child.props as { hidden?: boolean }).hidden !== true
   );
   return (
     <View style={style}>
@@ -174,9 +172,7 @@ export function SettingsRow({
   hidden?: boolean;
 }) {
   const { theme } = useTheme();
-  const iconTint = destructive
-    ? DESTRUCTIVE
-    : iconColor ?? theme.text.primary;
+  const iconTint = destructive ? DESTRUCTIVE : (iconColor ?? theme.text.primary);
   const labelColor = destructive ? DESTRUCTIVE : theme.text.primary;
   const showChevron = (trailing ?? (onPress ? 'chevron' : 'none')) === 'chevron';
   const valueColor = valueAccent ? theme.accent : theme.text.secondary;

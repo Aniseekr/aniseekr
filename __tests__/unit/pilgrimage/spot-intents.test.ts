@@ -85,13 +85,19 @@ describe('spot intents v2 meta snapshot', () => {
 
   it('sanitizes malformed meta away but keeps the flags', async () => {
     await saveSpotIntents({
-      pt1: { planned: true, meta: { animeId: 'x', name: 5, geo: [1], image: '' } as unknown as SpotIntentMeta },
+      pt1: {
+        planned: true,
+        meta: { animeId: 'x', name: 5, geo: [1], image: '' } as unknown as SpotIntentMeta,
+      },
     });
     expect(loadSpotIntentsSync()).toEqual({ pt1: { planned: true } });
   });
 
   it('migrates a v1 payload (flags preserved, meta undefined) when v2 is absent', () => {
-    appStorage.set(SPOT_INTENTS_STORAGE_KEY, JSON.stringify({ old1: { saved: true, planned: true } }));
+    appStorage.set(
+      SPOT_INTENTS_STORAGE_KEY,
+      JSON.stringify({ old1: { saved: true, planned: true } })
+    );
     expect(loadSpotIntentsSync()).toEqual({ old1: { saved: true, planned: true } });
   });
 

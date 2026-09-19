@@ -110,13 +110,11 @@ export default function YearInReviewExhibit() {
         colors={[HERO_FROM, HERO_TO]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.hero, { borderColor: theme.glassBorder }]}
-      >
+        style={[styles.hero, { borderColor: theme.glassBorder }]}>
         <ThemedText
           variant="captionSmall"
           weight="700"
-          style={{ color: `${onHero}CC`, letterSpacing: 2 }}
-        >
+          style={{ color: `${onHero}CC`, letterSpacing: 2 }}>
           {t('collectionStats.yearInReview.eyebrow')}
         </ThemedText>
         <ThemedText style={[styles.heroTitle, { color: onHero }]}>
@@ -126,9 +124,17 @@ export default function YearInReviewExhibit() {
           {t('collectionStats.yearInReview.heroSubtitle')}
         </ThemedText>
         <View style={styles.heroStats}>
-          <Stat label={t('collectionStats.yearInReview.statShows')} value={String(data.yearRowsCount)} color={onHero} />
+          <Stat
+            label={t('collectionStats.yearInReview.statShows')}
+            value={String(data.yearRowsCount)}
+            color={onHero}
+          />
           {data.hours > 0 ? (
-            <Stat label={t('collectionStats.yearInReview.statHours')} value={String(data.hours)} color={onHero} />
+            <Stat
+              label={t('collectionStats.yearInReview.statHours')}
+              value={String(data.hours)}
+              color={onHero}
+            />
           ) : null}
           {data.longestStreak > 1 ? (
             <Stat
@@ -148,9 +154,12 @@ export default function YearInReviewExhibit() {
               backgroundColor: theme.background.secondary,
               borderColor: theme.glassBorder,
             },
-          ]}
-        >
-          <ThemedText variant="captionSmall" tone="secondary" weight="700" style={{ letterSpacing: 2 }}>
+          ]}>
+          <ThemedText
+            variant="captionSmall"
+            tone="secondary"
+            weight="700"
+            style={{ letterSpacing: 2 }}>
             {t('collectionStats.yearInReview.topAnimeBadge')}
           </ThemedText>
           <ThemedText variant="titleLarge" weight="800" style={{ marginTop: 6 }}>
@@ -172,7 +181,11 @@ export default function YearInReviewExhibit() {
       ) : null}
 
       {data.monthly.some((b) => b.hours > 0) ? (
-        <MonthlyHoursBar data={data.monthly} year={year} title={t('collectionStats.yearInReview.monthlyTitle')} />
+        <MonthlyHoursBar
+          data={data.monthly}
+          year={year}
+          title={t('collectionStats.yearInReview.monthlyTitle')}
+        />
       ) : null}
     </StatsExhibitFrame>
   );

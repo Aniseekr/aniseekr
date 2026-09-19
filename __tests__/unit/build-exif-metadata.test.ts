@@ -118,9 +118,7 @@ describe('buildAdditionalExif — GPS reference flipping', () => {
   });
 
   it('omits GPSAltitude when altitude is undefined', () => {
-    const exif = buildAdditionalExif(
-      baseInput({ userLocation: { latitude: 1, longitude: 1 } })
-    );
+    const exif = buildAdditionalExif(baseInput({ userLocation: { latitude: 1, longitude: 1 } }));
     expect('GPSAltitude' in exif).toBe(false);
   });
 
@@ -166,9 +164,7 @@ describe('buildAdditionalExif — ImageDescription composition', () => {
   });
 
   it('appends anime title with em-dash separator', () => {
-    const exif = buildAdditionalExif(
-      baseInput({ spotName: '修学院駅', animeTitle: 'K-On!' })
-    );
+    const exif = buildAdditionalExif(baseInput({ spotName: '修学院駅', animeTitle: 'K-On!' }));
     expect(exif.ImageDescription).toBe('修学院駅 — K-On!');
   });
 

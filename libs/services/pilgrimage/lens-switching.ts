@@ -156,10 +156,7 @@ function dedupeSorted(stops: FocalStop[]): FocalStop[] {
  *      Android phone with a logical back-camera multi-cam — no need to
  *      reconstruct focal lengths through Camera2 interop.
  */
-function inferStopsFromFallbackSignals(
-  info: CameraDeviceInfo,
-  telephotoStop: 2 | 3
-): FocalStop[] {
+function inferStopsFromFallbackSignals(info: CameraDeviceInfo, telephotoStop: 2 | 3): FocalStop[] {
   const stops: FocalStop[] = [];
   const hasUltraWide = info.minZoom > 0 && info.minZoom < ULTRA_WIDE_MIN_ZOOM_EXCLUSIVE;
   if (hasUltraWide) stops.push(0.5);
@@ -251,9 +248,7 @@ export function availableStopsFromDeviceInfo(
   if (
     info.physicalLensTypes.length === 0 &&
     info.zoomLensSwitchFactors.length === 0 &&
-    (info.minZoom < 1 ||
-      info.physicalFocalLengths.length >= 2 ||
-      info.physicalDeviceCount >= 2)
+    (info.minZoom < 1 || info.physicalFocalLengths.length >= 2 || info.physicalDeviceCount >= 2)
   ) {
     for (const inferred of inferStopsFromFallbackSignals(info, telephotoStop)) {
       stops.push(inferred);

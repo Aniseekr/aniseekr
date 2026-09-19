@@ -2,7 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { groupPlannedIntents } from '../../../libs/services/pilgrimage/planned-trips';
 import type { SpotIntentMap } from '../../../libs/services/pilgrimage/spot-intents';
 
-const meta = (animeId: number, name: string, geo: [number, number], image: string, cn?: string) => ({
+const meta = (
+  animeId: number,
+  name: string,
+  geo: [number, number],
+  image: string,
+  cn?: string
+) => ({
   animeId,
   name,
   geo,

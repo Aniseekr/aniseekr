@@ -85,7 +85,10 @@ export default function AccountScreen() {
       hapticsBridge.success();
     } catch (e) {
       if (isAuthRequiresFormError(e)) {
-        console.log(`${tag} auth requires form`, { kind: e.kind, requiresServerUrl: e.requiresServerUrl });
+        console.log(`${tag} auth requires form`, {
+          kind: e.kind,
+          requiresServerUrl: e.requiresServerUrl,
+        });
         setSheet({
           visible: true,
           platform,
@@ -211,7 +214,9 @@ export default function AccountScreen() {
                       styles.platformStatus,
                       { color: connected ? Colors.success : theme.text.tertiary },
                     ]}>
-                    {connected ? t('settings.accountScreen.connected') : t('settings.accountScreen.notConnected')}
+                    {connected
+                      ? t('settings.accountScreen.connected')
+                      : t('settings.accountScreen.notConnected')}
                   </Text>
                 </View>
                 {connected ? (
@@ -227,7 +232,9 @@ export default function AccountScreen() {
                         opacity: pressed ? 0.7 : 1,
                       },
                     ]}>
-                    <Text style={[styles.actionLabel, { color: Colors.error }]}>{t('settings.accountScreen.disconnect')}</Text>
+                    <Text style={[styles.actionLabel, { color: Colors.error }]}>
+                      {t('settings.accountScreen.disconnect')}
+                    </Text>
                   </Pressable>
                 ) : (
                   <Pressable
@@ -243,8 +250,7 @@ export default function AccountScreen() {
                         opacity: pressed || loading ? 0.7 : 1,
                       },
                     ]}>
-                    <Text
-                      style={[styles.actionLabel, { color: readableTextOn(theme.accent) }]}>
+                    <Text style={[styles.actionLabel, { color: readableTextOn(theme.accent) }]}>
                       {t('settings.accountScreen.connect')}
                     </Text>
                   </Pressable>

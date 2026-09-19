@@ -55,11 +55,7 @@ const withCloudKitBridge = (config, options = {}) => {
     'ios',
     (cfg) => {
       const projectName = cfg.modRequest.projectName || 'AniSeekr';
-      const targetDir = path.join(
-        cfg.modRequest.platformProjectRoot,
-        projectName,
-        SUBDIR
-      );
+      const targetDir = path.join(cfg.modRequest.platformProjectRoot, projectName, SUBDIR);
       fs.mkdirSync(targetDir, { recursive: true });
 
       const swiftContent = loadTemplate(SWIFT_NAME, { ICLOUD_CONTAINER: containerId });

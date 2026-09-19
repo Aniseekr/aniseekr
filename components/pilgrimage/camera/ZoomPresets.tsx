@@ -1,7 +1,10 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { formatFocalStopLabel, isFocalStopActive } from '../../../libs/services/pilgrimage/zoom-presets';
+import {
+  formatFocalStopLabel,
+  isFocalStopActive,
+} from '../../../libs/services/pilgrimage/zoom-presets';
 import { readableTextOn } from '../../themed';
 import { CameraChrome } from './cameraChrome';
 import type { FocalStop } from './types';
@@ -26,7 +29,14 @@ interface ZoomPresetsProps {
  * Samsung-style zoom preset pills. Replaces the continuous ZoomDial; pinch-to-zoom and
  * pinch-driven lens swaps stay in useCameraZoom.pinchGesture (unchanged, on CameraStage).
  */
-function ZoomPresetsComponent({ stops, activeStop, themeColor, onPick, onPickUltraWide, rotateLabels }: ZoomPresetsProps) {
+function ZoomPresetsComponent({
+  stops,
+  activeStop,
+  themeColor,
+  onPick,
+  onPickUltraWide,
+  rotateLabels,
+}: ZoomPresetsProps) {
   if (!stops.length) return null;
   const rotate = rotateLabels ? '90deg' : '0deg';
   return (
@@ -45,9 +55,14 @@ function ZoomPresetsComponent({ stops, activeStop, themeColor, onPick, onPickUlt
               if (stop === 0.5 && onPickUltraWide) onPickUltraWide();
               onPick(stop);
             }}
-            style={({ pressed }) => [styles.pill, active && { backgroundColor: themeColor }, pressed && { transform: [{ scale: 0.96 }] }]}
-          >
-            <Text style={[styles.label, { color: fg, transform: [{ rotate }] }]}>{formatFocalStopLabel(stop)}</Text>
+            style={({ pressed }) => [
+              styles.pill,
+              active && { backgroundColor: themeColor },
+              pressed && { transform: [{ scale: 0.96 }] },
+            ]}>
+            <Text style={[styles.label, { color: fg, transform: [{ rotate }] }]}>
+              {formatFocalStopLabel(stop)}
+            </Text>
           </Pressable>
         );
       })}

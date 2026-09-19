@@ -105,10 +105,7 @@ function HeroRailLayoutComponent({ data, onSelect }: HeroRailLayoutProps) {
             <View style={styles.heroActions}>
               <View style={[styles.heroCta, { backgroundColor: theme.accent }]}>
                 <Ionicons name="play" size={14} color={accentFg} />
-                <ThemedText
-                  variant="bodySmall"
-                  weight="700"
-                  style={{ color: accentFg }}>
+                <ThemedText variant="bodySmall" weight="700" style={{ color: accentFg }}>
                   {t('commonUi.watchNow')}
                 </ThemedText>
               </View>
@@ -172,8 +169,7 @@ function HeroRailLayoutComponent({ data, onSelect }: HeroRailLayoutProps) {
                 opacity: pressed ? 0.88 : 1,
               },
             ]}>
-            <View
-              style={[styles.continueThumb, { borderColor: theme.glassBorder }]}>
+            <View style={[styles.continueThumb, { borderColor: theme.glassBorder }]}>
               <Image
                 source={{ uri: continueAnime.image }}
                 style={StyleSheet.absoluteFill}
@@ -182,27 +178,17 @@ function HeroRailLayoutComponent({ data, onSelect }: HeroRailLayoutProps) {
               />
             </View>
             <View style={styles.continueText}>
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                style={{ color: theme.accent }}>
+              <ThemedText variant="captionSmall" weight="700" style={{ color: theme.accent }}>
                 {episodeBadge(continueAnime) ?? 'Latest episode'} · pick up where you left off
               </ThemedText>
               <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
                 {continueAnime.title}
               </ThemedText>
-              <View
-                style={[styles.progressTrack, { backgroundColor: theme.glassBorder }]}>
-                <View
-                  style={[styles.progressFill, { backgroundColor: theme.accent }]}
-                />
+              <View style={[styles.progressTrack, { backgroundColor: theme.glassBorder }]}>
+                <View style={[styles.progressFill, { backgroundColor: theme.accent }]} />
               </View>
             </View>
-            <View
-              style={[
-                styles.continuePlay,
-                { backgroundColor: theme.accent },
-              ]}>
+            <View style={[styles.continuePlay, { backgroundColor: theme.accent }]}>
               <Ionicons name="play" size={14} color={accentFg} />
             </View>
           </Pressable>
@@ -238,10 +224,7 @@ const RailPoster = memo(function RailPoster({
       accessibilityRole="button"
       accessibilityLabel={anime.title}>
       <View
-        style={[
-          styles.posterImage,
-          { borderColor, backgroundColor: theme.background.tertiary },
-        ]}>
+        style={[styles.posterImage, { borderColor, backgroundColor: theme.background.tertiary }]}>
         <Image
           source={{ uri: anime.image }}
           style={StyleSheet.absoluteFill}

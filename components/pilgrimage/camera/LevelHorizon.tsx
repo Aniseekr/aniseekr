@@ -38,11 +38,7 @@ export function LevelHorizon({
       [1, 1, 0.25],
       Extrapolation.CLAMP
     );
-    const backgroundColor = interpolateColor(
-      abs,
-      [0, levelTolerance],
-      [successColor, color]
-    );
+    const backgroundColor = interpolateColor(abs, [0, levelTolerance], [successColor, color]);
     return {
       opacity,
       backgroundColor,

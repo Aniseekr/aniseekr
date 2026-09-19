@@ -4,14 +4,7 @@
  */
 
 export type PlatformType =
-  | 'anilist'
-  | 'myanimelist'
-  | 'bangumi'
-  | 'kitsu'
-  | 'shikimori'
-  | 'simkl'
-  | 'annict'
-  | 'kavita';
+  'anilist' | 'myanimelist' | 'bangumi' | 'kitsu' | 'shikimori' | 'simkl' | 'annict' | 'kavita';
 
 export interface OAuthConfig {
   clientId: string;

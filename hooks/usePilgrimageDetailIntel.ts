@@ -17,9 +17,7 @@ import {
   subscribeLocalIntel,
   type HubRailEvent,
 } from '../libs/services/pilgrimage/local-intel/local-intel-repository';
-import type {
-  LocalIntelViewingHint,
-} from '../libs/services/pilgrimage/local-intel/types';
+import type { LocalIntelViewingHint } from '../libs/services/pilgrimage/local-intel/types';
 import { haversineKm } from '../libs/services/pilgrimage/spot-index';
 import type { AnitabiPoint } from '../libs/services/pilgrimage/types';
 import type { NearbyShopRow } from '../components/pilgrimage/detail/IntelShopsSection';
@@ -49,12 +47,12 @@ function hasGeo(spot: AnitabiPoint | null): spot is AnitabiPoint {
 
 export function usePilgrimageDetailIntel(
   bangumiId: number | null,
-  spot: AnitabiPoint | null,
+  spot: AnitabiPoint | null
 ): SpotSheetIntel {
   const version = useSyncExternalStore(
     subscribeLocalIntel,
     getLocalIntelVersion,
-    getLocalIntelVersion,
+    getLocalIntelVersion
   );
 
   const spotId = spot?.id ?? null;

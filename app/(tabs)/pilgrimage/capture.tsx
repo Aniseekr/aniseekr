@@ -19,7 +19,10 @@ import { ThemedText, ThemedButton, ThemedSurface } from '../../../components/the
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { CameraStage } from '../../../components/pilgrimage/camera/CameraStage';
-import type { CameraDeviceInfo, CameraEngineHandle } from '../../../components/pilgrimage/camera/camera-engine';
+import type {
+  CameraDeviceInfo,
+  CameraEngineHandle,
+} from '../../../components/pilgrimage/camera/camera-engine';
 import ShutterRow from '../../../components/pilgrimage/camera/ShutterRow';
 import ZoomPresets from '../../../components/pilgrimage/camera/ZoomPresets';
 import CameraScrim from '../../../components/pilgrimage/camera/CameraScrim';
@@ -27,7 +30,9 @@ import CameraTopBar from '../../../components/pilgrimage/camera/CameraTopBar';
 import { LevelHorizon } from '../../../components/pilgrimage/camera/LevelHorizon';
 import { FocusReticle } from '../../../components/pilgrimage/camera/FocusReticle';
 import GalleryThumb from '../../../components/pilgrimage/camera/GalleryThumb';
-import CamSwitchToast, { type CamSwitchToastValue } from '../../../components/pilgrimage/camera/CamSwitchToast';
+import CamSwitchToast, {
+  type CamSwitchToastValue,
+} from '../../../components/pilgrimage/camera/CamSwitchToast';
 import type { CameraFacing, FocalStop } from '../../../components/pilgrimage/camera/types';
 import { useCameraLifecycle } from '../../../hooks/useCameraLifecycle';
 import { useCameraZoom } from '../../../hooks/useCameraZoom';
@@ -35,8 +40,15 @@ import { useTapToFocus } from '../../../hooks/useTapToFocus';
 import { useAlignmentSensors } from '../../../hooks/useAlignmentSensors';
 import { availableStopsFromDeviceInfo } from '../../../libs/services/pilgrimage/lens-switching';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
-import { recordFreeCapture, recordCapture, clearFreeCapture } from '../../../libs/services/pilgrimage/captures';
-import { findNearestCachedSpot, type NearestSpotSuggestion } from '../../../libs/services/pilgrimage/nearest-cached-spot';
+import {
+  recordFreeCapture,
+  recordCapture,
+  clearFreeCapture,
+} from '../../../libs/services/pilgrimage/captures';
+import {
+  findNearestCachedSpot,
+  type NearestSpotSuggestion,
+} from '../../../libs/services/pilgrimage/nearest-cached-spot';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 
 export default function StandaloneCaptureScreen() {
@@ -77,7 +89,11 @@ export default function StandaloneCaptureScreen() {
   // background and re-arms it after a native onError instead of leaving a
   // dead preview with no recovery. This screen has no settings sheet, so
   // `settingsOpen` is always false — the hook still owns AppState + re-arm.
-  const { active: cameraActive, onCameraReady, onMountError } = useCameraLifecycle({
+  const {
+    active: cameraActive,
+    onCameraReady,
+    onMountError,
+  } = useCameraLifecycle({
     settingsOpen: false,
     initialActive: true,
   });
@@ -218,7 +234,11 @@ export default function StandaloneCaptureScreen() {
         <View style={styles.levelHorizonWrap}>
           <LevelHorizon tiltShared={sensors.tiltShared} color={theme.accent} />
         </View>
-        <FocusReticle focusPoint={focus.focusPoint} accent={theme.accent} afLocked={focus.afLocked} />
+        <FocusReticle
+          focusPoint={focus.focusPoint}
+          accent={theme.accent}
+          afLocked={focus.afLocked}
+        />
       </View>
       <CameraTopBar
         placeName={t('pilgrimage.capture.title')}
@@ -237,7 +257,12 @@ export default function StandaloneCaptureScreen() {
             <CamSwitchToast toast={savedToast} themeColor={theme.accent} />
           </View>
           <View style={styles.zoomWrap}>
-            <ZoomPresets stops={stops} activeStop={zoom.activeStop} themeColor={theme.accent} onPick={zoom.setStop} />
+            <ZoomPresets
+              stops={stops}
+              activeStop={zoom.activeStop}
+              themeColor={theme.accent}
+              onPick={zoom.setStop}
+            />
           </View>
           <View style={styles.shutterWrap}>
             <ShutterRow

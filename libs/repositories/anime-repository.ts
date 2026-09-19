@@ -166,8 +166,8 @@ function bestImageForLegacy(item: UnifiedAnimeItem, type: ImageType): string | n
   }
 
   const platformImages =
-    (item as { platformImages?: Partial<Record<PlatformType, PlatformImageData>> }).platformImages ??
-    {};
+    (item as { platformImages?: Partial<Record<PlatformType, PlatformImageData>> })
+      .platformImages ?? {};
   for (const platform of IMAGE_PRIORITY) {
     const candidate = platformImages[platform]?.[type];
     if (candidate) return candidate;
@@ -462,10 +462,7 @@ export class AnimeRepository {
     while (collected.length < maxItems) {
       // Detect mid-flight source change between pages (no `preferredSource`
       // means the caller is following the global browseSource).
-      if (
-        options.preferredSource === undefined &&
-        this.config.browseSource !== requestPlatform
-      ) {
+      if (options.preferredSource === undefined && this.config.browseSource !== requestPlatform) {
         throw new CancellationError(
           `Browse source changed mid-flight: ${requestPlatform} → ${this.config.browseSource}`
         );
@@ -1409,7 +1406,9 @@ function filterGenreCards(genres: Genre[]): Genre[] {
 
 function applyGenreCoverOverrides(genres: Genre[], overrides: Record<string, string>): Genre[] {
   if (Object.keys(overrides).length === 0) return genres;
-  return genres.map((g) => (g.image === '' && overrides[g.id] ? { ...g, image: overrides[g.id] } : g));
+  return genres.map((g) =>
+    g.image === '' && overrides[g.id] ? { ...g, image: overrides[g.id] } : g
+  );
 }
 
 function isAniListAnimeSFW(item: AniListAnime): boolean {

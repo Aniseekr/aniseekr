@@ -1,31 +1,25 @@
-// SceneTile — grid tile for one pilgrimage spot. Memo'd with a custom
-// equality fn so flipping visited / saved / planned on one tile does not
-// re-render the entire grid (50–200 tiles).
-//
-// Extracted from `app/(tabs)/pilgrimage/[animeId].tsx` as part of the
-// pilgrimage detail perf refactor (Phase 1B).
+// SceneTile — a clean scene thumbnail with its metadata below the image.
+// Memo'd so one visited / saved / planned update does not re-render the grid.
 
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { ON_DARK, ThemedText, readableTextOn } from '../../themed';
+
+import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import type { ThemePalette } from '../../../context/ThemeContext';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
-import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { useT } from '../../../libs/i18n';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
+import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import { ON_DARK, ThemedText } from '../../themed';
+import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
 import { formatDistanceKm, getPointSourceLabel } from './_helpers';
 import { sceneTilePropsEqual } from './_equality';
-import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
-import { listItemEnter } from '../../../libs/animations/presets';
 
 export interface SceneTileProps {
-  /** Representative scene of the location (its first cut). */
   spot: AnitabiPoint;
-  /** Number of scene-cuts filmed at this location (>= 1). */
   sceneCount: number;
   themeColor: string;
   themeColorFg: string;
@@ -35,7 +29,6 @@ export interface SceneTileProps {
   planned: boolean;
   hasCapture: boolean;
   captureUri: string | null;
-  entryIndex?: number;
   theme: ThemePalette;
   onPress: (spot: AnitabiPoint) => void;
   onToggleVisited: (spot: AnitabiPoint) => void;
@@ -53,27 +46,32 @@ function SceneTileImpl({
   planned,
   hasCapture,
   captureUri,
-  entryIndex,
   theme,
   onPress,
   onToggleVisited,
   onTakeComparison,
 }: SceneTileProps) {
+  const t = useT();
   const styles = useMemo(() => makeTileStyles(theme), [theme]);
   const titles = getPilgrimageSpotTitles(spot);
   const sourceLabel = getPointSourceLabel(spot);
   const primaryMeta =
-    sceneCount > 1 ? `${sceneCount} scenes` : spot.ep > 0 ? `EP ${spot.ep}` : 'Scene';
+    sceneCount > 1
+      ? t('pilgrimageUi.scenesCount', { count: sceneCount })
+      : spot.ep > 0
+        ? t('pilgrimage.detail.episodeShort', { episode: spot.ep })
+        : t('pilgrimage.detail.scene');
   const labelledMeta = sourceLabel ? `${sourceLabel} · ${primaryMeta}` : primaryMeta;
   const metaLine =
     distanceKm != null ? `${labelledMeta} · ${formatDistanceKm(distanceKm)}` : labelledMeta;
   const [showCapture, setShowCapture] = useState(false);
   const flipped = showCapture && !!captureUri;
   const displayedUri = flipped ? captureUri! : spot.image;
+
   const handleFlip = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
     if (captureUri) {
-      setShowCapture((s) => !s);
+      setShowCapture((current) => !current);
     } else {
       onTakeComparison(spot);
     }
@@ -83,185 +81,141 @@ function SceneTileImpl({
     Haptics.selectionAsync().catch(() => undefined);
     onToggleVisited(spot);
   }, [onToggleVisited, spot]);
-  const tile = (
+
+  return (
     <Pressable
       onPress={handlePress}
       onLongPress={handleLongPress}
       delayLongPress={280}
-      style={({ pressed }) => [
-        styles.tile,
-        visited && { borderColor: `${theme.status.success}80` },
-        pressed && { opacity: 0.92 },
-      ]}
+      style={({ pressed }) => [styles.tile, pressed && { opacity: 0.86 }]}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${titles.primary}`}
-      accessibilityHint="Long press to toggle visited">
-      <Image
-        source={anitabiImageSource(displayedUri)}
-        style={styles.image}
-        contentFit="cover"
-        transition={160}
-      />
-      <View style={styles.baseMask} pointerEvents="none" />
-      <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.62)']}
-        locations={[0, 1]}
-        style={styles.captionGradient}
-        pointerEvents="none"
-      />
-      {hasCapture ? (
-        <View
-          style={[styles.cornerBadge, styles.cornerLeft, { backgroundColor: `${themeColor}E6` }]}>
-          <Ionicons name="camera" size={10} color={themeColorFg} />
-        </View>
-      ) : null}
-      {visited ? (
-        <View
-          style={[
-            styles.cornerBadge,
-            styles.cornerRight,
-            { backgroundColor: theme.status.success },
-          ]}>
-          <Ionicons name="checkmark" size={11} color={readableTextOn(theme.status.success)} />
-        </View>
-      ) : null}
-      {planned || saved ? (
-        <View style={[styles.intentBadge, { backgroundColor: theme.background.secondary }]}>
+      accessibilityLabel={t('pilgrimage.detail.openSpotA11y', { title: titles.primary })}
+      accessibilityHint={t('pilgrimage.detail.toggleVisitedHint')}>
+      <View
+        style={[
+          styles.imageWrap,
+          { borderColor: visited ? `${theme.status.success}88` : theme.glassBorder },
+        ]}>
+        <Image
+          source={anitabiImageSource(displayedUri)}
+          style={styles.image}
+          contentFit="cover"
+          transition={160}
+        />
+        <Pressable
+          onPress={handleFlip}
+          hitSlop={4}
+          style={({ pressed }) => [
+            styles.flipButton,
+            { backgroundColor: flipped ? `${themeColor}F2` : 'rgba(0,0,0,0.62)' },
+            pressed && { opacity: 0.74 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={
+            captureUri
+              ? t(
+                  flipped
+                    ? 'pilgrimage.detail.showSceneImageA11y'
+                    : 'pilgrimage.detail.showYourPhotoA11y'
+                )
+              : t('pilgrimageUi.takeComparisonPhoto')
+          }>
           <Ionicons
-            name={planned ? 'flag' : 'bookmark'}
-            size={11}
-            color={planned ? theme.status.warning : theme.status.info}
+            name={captureUri ? 'swap-horizontal' : 'camera-outline'}
+            size={17}
+            color={flipped ? themeColorFg : ON_DARK}
           />
-        </View>
-      ) : null}
-      <View style={styles.captionWrap} pointerEvents="box-none">
-        <ThemedText variant="bodySmall" weight="700" numberOfLines={1} style={styles.captionTitle}>
+        </Pressable>
+      </View>
+
+      <View style={styles.tileBody}>
+        <ThemedText variant="bodySmall" weight="700" numberOfLines={1}>
           {titles.primary}
         </ThemedText>
-        <ThemedText
-          variant="captionSmall"
-          weight="600"
-          numberOfLines={1}
-          style={styles.captionMeta}>
+        <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
           {metaLine}
         </ThemedText>
-        {flipped ? null : (
-          <AnitabiOriginCredit
-            source={spot}
-            variant="inline"
-            textVariant="captionSmall"
-            color="rgba(255,255,255,0.78)"
-            style={styles.originCredit}
-          />
-        )}
+        <View style={styles.footerRow}>
+          {flipped ? (
+            <View style={styles.creditSpacer} />
+          ) : (
+            <AnitabiOriginCredit
+              source={spot}
+              variant="inline"
+              textVariant="captionSmall"
+              color={theme.text.tertiary}
+              style={styles.originCredit}
+            />
+          )}
+          <View style={styles.statusRow}>
+            {hasCapture ? <Ionicons name="camera" size={13} color={themeColor} /> : null}
+            {planned ? <Ionicons name="flag" size={13} color={theme.status.warning} /> : null}
+            {saved ? <Ionicons name="bookmark" size={13} color={theme.status.info} /> : null}
+            {visited ? (
+              <Ionicons name="checkmark-circle" size={14} color={theme.status.success} />
+            ) : null}
+          </View>
+        </View>
       </View>
-      <Pressable
-        onPress={handleFlip}
-        hitSlop={6}
-        style={({ pressed }) => [
-          styles.flipBtn,
-          flipped && { backgroundColor: `${themeColor}E6` },
-          pressed && { opacity: 0.75 },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={
-          captureUri ? (flipped ? 'Show scene image' : 'Show your photo') : 'Take comparison photo'
-        }>
-        <Ionicons
-          name={captureUri ? 'swap-horizontal' : 'camera-outline'}
-          size={14}
-          color={flipped ? themeColorFg : ON_DARK}
-        />
-      </Pressable>
     </Pressable>
   );
-
-  if (entryIndex === undefined || entryIndex >= 8) return tile;
-  return <Animated.View entering={listItemEnter(entryIndex)}>{tile}</Animated.View>;
 }
 
-// Tiles are pure renders of `spot.id + display flags + handlers`. The equality
-// fn lives in ./_equality so unit tests can pin it without dragging RN in.
 export const SceneTile = memo(SceneTileImpl, sceneTilePropsEqual);
 
 function makeTileStyles(theme: ThemePalette) {
   return StyleSheet.create({
     tile: {
-      aspectRatio: 1,
-      borderRadius: 16,
-      overflow: 'hidden',
-      backgroundColor: theme.background.tertiary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
+      gap: Spacing.xs,
+      paddingBottom: Spacing.xs,
+    },
+    imageWrap: {
+      width: '100%',
+      aspectRatio: 4 / 3,
       position: 'relative',
+      overflow: 'hidden',
+      borderRadius: Radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
+      backgroundColor: theme.background.tertiary,
     },
     image: {
-      ...StyleSheet.absoluteFill,
+      width: '100%',
+      height: '100%',
     },
-    baseMask: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(0,0,0,0.12)',
-    },
-    captionGradient: {
+    flipButton: {
       position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: '55%',
-    },
-    cornerBadge: {
-      position: 'absolute',
-      top: 8,
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cornerLeft: { left: 8 },
-    cornerRight: { right: 8 },
-    intentBadge: {
-      position: 'absolute',
-      top: 36,
       right: 8,
-      width: 22,
-      height: 22,
-      borderRadius: 11,
+      bottom: 8,
+      width: Size.minTouchTarget,
+      height: Size.minTouchTarget,
+      borderRadius: Radius.md,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
     },
-    captionWrap: {
-      position: 'absolute',
-      left: 10,
-      right: 10,
-      bottom: 9,
-      gap: 1,
+    tileBody: {
+      minWidth: 0,
+      paddingHorizontal: 2,
+      gap: 2,
     },
-    captionTitle: {
-      color: ON_DARK,
-      textShadowColor: 'rgba(0,0,0,0.55)',
-      textShadowRadius: 4,
+    footerRow: {
+      minHeight: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: Spacing.xxs,
     },
-    captionMeta: {
-      color: 'rgba(255,255,255,0.85)',
-      textShadowColor: 'rgba(0,0,0,0.45)',
-      textShadowRadius: 3,
+    creditSpacer: {
+      flex: 1,
     },
     originCredit: {
-      marginTop: 1,
+      flex: 1,
+      minWidth: 0,
     },
-    flipBtn: {
-      position: 'absolute',
-      bottom: 8,
-      right: 8,
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+    statusRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'flex-end',
+      gap: 5,
     },
   });
 }

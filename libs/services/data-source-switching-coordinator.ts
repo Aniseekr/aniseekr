@@ -3,11 +3,7 @@ import { QueryClient } from './query-client';
 import { Logger } from '../utils/logger';
 
 export type SwitchErrorCode =
-  | 'NETWORK_ERROR'
-  | 'AUTHENTICATION_REQUIRED'
-  | 'PLATFORM_UNAVAILABLE'
-  | 'CANCELLED'
-  | 'UNKNOWN';
+  'NETWORK_ERROR' | 'AUTHENTICATION_REQUIRED' | 'PLATFORM_UNAVAILABLE' | 'CANCELLED' | 'UNKNOWN';
 
 export interface SwitchError {
   code: SwitchErrorCode;

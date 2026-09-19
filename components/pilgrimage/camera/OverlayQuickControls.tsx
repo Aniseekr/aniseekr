@@ -241,7 +241,13 @@ function IconBtn({
 
 const styles = StyleSheet.create({
   root: { gap: 8, alignItems: 'center' },
-  subRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  subRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   subSegment: {
     flexDirection: 'row',
     alignItems: 'center',

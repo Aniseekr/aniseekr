@@ -114,10 +114,7 @@ describe('device-cohort-cache', () => {
     // re-enumeration on every launch.
     const storage = makeMemoryStorage();
     const now = () => 1_700_000_000_000;
-    await writeCohortSnapshot(
-      { ...SNAPSHOT_BASE, manufacturer: 'samsung' },
-      { storage, now }
-    );
+    await writeCohortSnapshot({ ...SNAPSHOT_BASE, manufacturer: 'samsung' }, { storage, now });
     const read = await readCohortSnapshot(
       { manufacturer: 'Samsung', modelID: 'SM-G780G', facing: 'back' },
       { storage, now, buildNumber: '1.0.0+42' }
@@ -127,10 +124,7 @@ describe('device-cohort-cache', () => {
 
   it('corrupt JSON in storage returns null without throwing', async () => {
     const storage = makeMemoryStorage();
-    await storage.setItem(
-      'aniseekr.pilgrimage.cohort.v1:samsung:SM-G780G:back',
-      '{not valid json'
-    );
+    await storage.setItem('aniseekr.pilgrimage.cohort.v1:samsung:SM-G780G:back', '{not valid json');
     const read = await readCohortSnapshot(
       { manufacturer: 'samsung', modelID: 'SM-G780G', facing: 'back' },
       { storage, now: () => 1_700_000_000_000, buildNumber: '1.0.0+42' }

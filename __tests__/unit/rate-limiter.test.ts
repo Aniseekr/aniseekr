@@ -120,7 +120,7 @@ describe('RateLimiter', () => {
           // a separate closure trips TS's narrow-to-never on the outer `let`.
           const slot: PendingSlot = { until: now + ms, resolve };
           pending = slot;
-        }),
+        })
     );
 
     // Fire 4 concurrent callers — like a small slice of the 20-genre burst.

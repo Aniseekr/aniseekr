@@ -40,7 +40,7 @@ export const LOW_DETAIL_EDGE_FLOOR = 0.03;
 export const LOW_CONTRAST_FLOOR = 0.05;
 
 /** Sub-score weights for the total. */
-export const FRAME_MATCH_WEIGHTS = { histogram: 0.55, edge: 0.30, lighting: 0.15 };
+export const FRAME_MATCH_WEIGHTS = { histogram: 0.55, edge: 0.3, lighting: 0.15 };
 
 /** Cap applied to `total` when the validity gate trips. */
 export const INVALID_MAX_TOTAL = 0.1;

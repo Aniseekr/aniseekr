@@ -110,10 +110,6 @@ export interface ExpireOutgoingArgs {
  * driver in SwipeDeck can call this in a single `setOutgoing` update without
  * forking the expiry logic.
  */
-export function expireOutgoing({
-  outgoing,
-  now,
-  lifetimeMs,
-}: ExpireOutgoingArgs): OutgoingCard[] {
+export function expireOutgoing({ outgoing, now, lifetimeMs }: ExpireOutgoingArgs): OutgoingCard[] {
   return outgoing.filter((card) => now - card.committedAt < lifetimeMs);
 }

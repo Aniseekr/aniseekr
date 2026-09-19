@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { bearingDegrees, cardinalFromBearing } from '../../../components/pilgrimage/detail/_helpers';
+import {
+  bearingDegrees,
+  cardinalFromBearing,
+} from '../../../components/pilgrimage/detail/_helpers';
 
 describe('bearingDegrees', () => {
   test('due north is 0', () => {

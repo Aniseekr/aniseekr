@@ -1,11 +1,7 @@
 import { memo } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -143,9 +139,7 @@ function MoodCard({
   }));
 
   return (
-    <Animated.View
-      entering={listItemEnter(index)}
-      style={[{ width: CARD_WIDTH }, animatedStyle]}>
+    <Animated.View entering={listItemEnter(index)} style={[{ width: CARD_WIDTH }, animatedStyle]}>
       <Pressable
         onPressIn={() => {
           scale.value = withSpring(0.95, { damping: 12, stiffness: 300 });

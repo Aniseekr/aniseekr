@@ -378,12 +378,10 @@ describe('AnimeRepository', () => {
   // -------- Genres fallback (REPO-020) --------
 
   it('REPO-020 genres fetch falls back to AniList when primary source throws', async () => {
-    const anilistGenres = mock(
-      async (): Promise<AnimeGenre[]> => [
-        { id: 1, name: 'Action' },
-        { id: 2, name: 'Comedy' },
-      ]
-    );
+    const anilistGenres = mock(async (): Promise<AnimeGenre[]> => [
+      { id: 1, name: 'Action' },
+      { id: 2, name: 'Comedy' },
+    ]);
     const anilist = buildMockSource({
       type: 'anilist',
       fetchGenres: anilistGenres,
@@ -416,11 +414,9 @@ describe('AnimeRepository', () => {
       fetchAnimeStaff: bangumiStaff,
     });
 
-    const jikanStaff = mock(
-      async (id: string): Promise<AnimeStaff[]> => [
-        { id: `${id}-staff`, name: 'Director Test', role: 'Director' },
-      ]
-    );
+    const jikanStaff = mock(async (id: string): Promise<AnimeStaff[]> => [
+      { id: `${id}-staff`, name: 'Director Test', role: 'Director' },
+    ]);
     const jikan = buildMockSource({
       type: 'myanimelist',
       fetchAnimeStaff: jikanStaff,
@@ -450,11 +446,9 @@ describe('AnimeRepository', () => {
       type: 'bangumi',
       fetchAnimeStaff: mock(async () => []),
     });
-    const jikanStaff = mock(
-      async (id: string): Promise<AnimeStaff[]> => [
-        { id: 'mal-staff', name: 'MAL Director', role: 'Director' },
-      ]
-    );
+    const jikanStaff = mock(async (id: string): Promise<AnimeStaff[]> => [
+      { id: 'mal-staff', name: 'MAL Director', role: 'Director' },
+    ]);
     const jikan = buildMockSource({
       type: 'myanimelist',
       fetchAnimeStaff: jikanStaff,
@@ -751,7 +745,10 @@ describe('AnimeRepository', () => {
         data: {
           Page: {
             media: [
-              makeAniListAnime({ id: 1, title: { romaji: 'Popular', english: null, native: null } }),
+              makeAniListAnime({
+                id: 1,
+                title: { romaji: 'Popular', english: null, native: null },
+              }),
             ],
           },
         },

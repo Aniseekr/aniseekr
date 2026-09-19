@@ -15,9 +15,7 @@ const DEFAULT_BANGUMI_PREFS: BangumiPreferences = {
   notificationsEnabled: true,
 };
 
-function normalizeLoadedPrefs(
-  rest: Partial<BangumiPreferences>
-): BangumiPreferences {
+function normalizeLoadedPrefs(rest: Partial<BangumiPreferences>): BangumiPreferences {
   const merged = { ...DEFAULT_BANGUMI_PREFS, ...rest };
   // Migration: old blobs may not have `baseViewMode`. Seed it from the
   // current viewMode if it's a base view; otherwise keep the default.

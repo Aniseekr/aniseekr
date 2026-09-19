@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import {
-  summarizeColdStart,
-  type StartupMark,
-} from '../../../libs/services/perf/startup-spans';
+import { summarizeColdStart, type StartupMark } from '../../../libs/services/perf/startup-spans';
 
 function marks(entries: Record<string, number>): StartupMark[] {
   return Object.entries(entries).map(([name, startTime]) => ({ name, startTime }));

@@ -25,14 +25,13 @@ export function SwipeHintChip({ onDismiss }: SwipeHintChipProps) {
     <Animated.View
       entering={FadeIn.duration(220)}
       exiting={FadeOut.duration(160)}
-      style={styles.wrapper}
-    >
+      style={styles.wrapper}>
       <View style={styles.iconBubble}>
         <MaterialIcons name="swap-horiz" size={14} color={theme.accent} />
       </View>
       <Text style={styles.label} numberOfLines={1}>
         <Text style={styles.labelEmphasis}>{`← ${t('bangumiTab.notInterested')}`}</Text>
-        <Text style={styles.labelDivider}>  ·  </Text>
+        <Text style={styles.labelDivider}> · </Text>
         <Text style={styles.labelEmphasis}>{`${t('bangumiTab.wantToWatch')} →`}</Text>
       </Text>
       <Pressable
@@ -40,8 +39,7 @@ export function SwipeHintChip({ onDismiss }: SwipeHintChipProps) {
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel={t('bangumiTab.dismissSwipeHint')}
-        style={({ pressed }) => [styles.dismissBtn, pressed && { opacity: 0.6 }]}
-      >
+        style={({ pressed }) => [styles.dismissBtn, pressed && { opacity: 0.6 }]}>
         <MaterialIcons name="close" size={14} color={theme.text.tertiary} />
       </Pressable>
     </Animated.View>

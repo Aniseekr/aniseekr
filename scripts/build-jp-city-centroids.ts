@@ -19,14 +19,8 @@ import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 const ROOT = resolve(import.meta.dir, '..');
-const DATASET_PATH = resolve(
-  ROOT,
-  'libs/services/pilgrimage/anime-tourism-88.data.json'
-);
-const OUTPUT_PATH = resolve(
-  ROOT,
-  'libs/services/pilgrimage/jp-city-centroids.data.json'
-);
+const DATASET_PATH = resolve(ROOT, 'libs/services/pilgrimage/anime-tourism-88.data.json');
+const OUTPUT_PATH = resolve(ROOT, 'libs/services/pilgrimage/jp-city-centroids.data.json');
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const USER_AGENT =
@@ -149,9 +143,7 @@ async function main(): Promise<void> {
   };
   writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2) + '\n', 'utf8');
 
-  console.log(
-    `\n[city-centroids] wrote ${out.length}/${list.length} centroids to ${OUTPUT_PATH}`
-  );
+  console.log(`\n[city-centroids] wrote ${out.length}/${list.length} centroids to ${OUTPUT_PATH}`);
   if (failures.length) {
     console.log(`  failures (${failures.length}):`);
     for (const f of failures) console.log(`    ${f.prefecture} ${f.city}`);

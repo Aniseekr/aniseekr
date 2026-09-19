@@ -22,7 +22,8 @@ import {
 import { resolveLocalIntelText } from '../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import type { LocalIntelEvent } from '../../libs/services/pilgrimage/local-intel/types';
 
-export type ToggleEventReminderResult = 'scheduled' | 'cancelled' | 'permission-denied' | 'unavailable';
+export type ToggleEventReminderResult =
+  'scheduled' | 'cancelled' | 'permission-denied' | 'unavailable';
 
 class PilgrimageEventNotificationService {
   private static instance: PilgrimageEventNotificationService;
@@ -98,7 +99,7 @@ class PilgrimageEventNotificationService {
   async toggleEventReminder(
     event: LocalIntelEvent,
     state: EventDateState,
-    opts?: { body?: string },
+    opts?: { body?: string }
   ): Promise<ToggleEventReminderResult> {
     await this.init();
 
@@ -109,7 +110,10 @@ class PilgrimageEventNotificationService {
       return 'cancelled';
     }
 
-    if (!canScheduleEventReminder(getCachedNotificationPrefs(), state) || state.state !== 'upcoming') {
+    if (
+      !canScheduleEventReminder(getCachedNotificationPrefs(), state) ||
+      state.state !== 'upcoming'
+    ) {
       return 'unavailable';
     }
     const fireAt = computeEventReminderTrigger(state.occurrence, new Date(), event.timezone);
@@ -125,7 +129,7 @@ class PilgrimageEventNotificationService {
       name,
       // Callers pass localized copy (Rule 11); the bare date is the neutral default.
       opts?.body ?? state.occurrence.startsAt,
-      fireAt,
+      fireAt
     );
     if (!id) return 'unavailable';
     this.notifications.set(event.id, id);
@@ -148,6 +152,6 @@ export function useIsEventReminderScheduled(eventId: string | undefined | null):
   return useSyncExternalStore(
     (listener) => pilgrimageEventNotificationService.subscribe(listener),
     () => (eventId ? pilgrimageEventNotificationService.isEventReminderScheduled(eventId) : false),
-    () => false,
+    () => false
   );
 }

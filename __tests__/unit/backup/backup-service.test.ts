@@ -168,7 +168,11 @@ describe('backup/backup-service', () => {
     const summary = await svc.restoreSnapshot(env);
 
     expect(summary.prefsRestored.sort()).toEqual(
-      ['aniseekr.bangumi.prefs.v1', 'aniseekr.collection.sortMode.v1', 'aniseekr.user.prefs.v1'].sort()
+      [
+        'aniseekr.bangumi.prefs.v1',
+        'aniseekr.collection.sortMode.v1',
+        'aniseekr.user.prefs.v1',
+      ].sort()
     );
     expect(await storage.handle.getItem('aniseekr.user.prefs.v1')).toBe('{"cardHeightPercent":75}');
     expect(await storage.handle.getItem('aniseekr.collection.sortMode.v1')).toBe('oldest');

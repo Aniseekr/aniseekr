@@ -11,8 +11,6 @@ export function isExhaustedSwipeDeck(snapshot: {
   hasMore: boolean;
 }): boolean {
   return (
-    snapshot.deckLength > 0 &&
-    snapshot.currentIndex >= snapshot.deckLength &&
-    !snapshot.hasMore
+    snapshot.deckLength > 0 && snapshot.currentIndex >= snapshot.deckLength && !snapshot.hasMore
   );
 }

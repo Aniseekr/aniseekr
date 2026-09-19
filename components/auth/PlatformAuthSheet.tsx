@@ -148,13 +148,13 @@ export function PlatformAuthSheet({
 
             {kind === 'password' ? (
               <>
-                <FieldLabel label={platform === 'kitsu' ? t('commonUi.email') : t('commonUi.username')} />
+                <FieldLabel
+                  label={platform === 'kitsu' ? t('commonUi.email') : t('commonUi.username')}
+                />
                 <Input
                   value={username}
                   onChangeText={setUsername}
-                  placeholder={
-                    platform === 'kitsu' ? 'you@example.com' : 'username or email'
-                  }
+                  placeholder={platform === 'kitsu' ? 'you@example.com' : 'username or email'}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType={platform === 'kitsu' ? 'email-address' : 'default'}

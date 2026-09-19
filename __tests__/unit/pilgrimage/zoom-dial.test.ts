@@ -148,10 +148,7 @@ describe('zoomForPosition / positionForZoom clamping', () => {
 
   it('clamps out-of-range zoom values to the strip span', () => {
     expect(positionForZoom(-5, detents, SEGMENT_PX, MAX_ZOOM)).toBe(0);
-    expect(positionForZoom(500, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(
-      dialSpanPx(detents),
-      6
-    );
+    expect(positionForZoom(500, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(dialSpanPx(detents), 6);
   });
 
   it('returns 0 for an empty detent list', () => {
@@ -165,10 +162,7 @@ describe('zoomForPosition with a 0.5x ultrawide detent', () => {
 
   it('interpolates in real factor space across the 0.5x->1x segment', () => {
     expect(zoomForPosition(0, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(0.5, 10);
-    expect(zoomForPosition(SEGMENT_PX / 2, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(
-      0.75,
-      10
-    );
+    expect(zoomForPosition(SEGMENT_PX / 2, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(0.75, 10);
     expect(zoomForPosition(SEGMENT_PX, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(1, 10);
   });
 
@@ -266,10 +260,7 @@ describe('single-detent dial (front-facing camera)', () => {
 
   it('interpolates the tail from the detent zoom up to real max zoom', () => {
     expect(zoomForPosition(0, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(1, 10);
-    expect(zoomForPosition(SEGMENT_PX, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(
-      MAX_ZOOM,
-      10
-    );
+    expect(zoomForPosition(SEGMENT_PX, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(MAX_ZOOM, 10);
     expect(zoomForPosition(SEGMENT_PX / 2, detents, SEGMENT_PX, MAX_ZOOM)).toBeCloseTo(8, 10);
   });
 

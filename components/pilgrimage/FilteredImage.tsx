@@ -51,11 +51,7 @@ export function FilteredImage({ uri, matrix, contentFit = 'cover' }: FilteredIma
   if (skip || !image || !size) {
     return (
       <View onLayout={onLayout} style={StyleSheet.absoluteFill}>
-        <ExpoImage
-          source={{ uri }}
-          style={StyleSheet.absoluteFill}
-          contentFit={contentFit}
-        />
+        <ExpoImage source={{ uri }} style={StyleSheet.absoluteFill} contentFit={contentFit} />
       </View>
     );
   }
@@ -63,13 +59,7 @@ export function FilteredImage({ uri, matrix, contentFit = 'cover' }: FilteredIma
   return (
     <View onLayout={onLayout} style={StyleSheet.absoluteFill}>
       <Canvas style={{ width: size.w, height: size.h }}>
-        <SkiaImage
-          image={image}
-          x={0}
-          y={0}
-          width={size.w}
-          height={size.h}
-          fit={contentFit}>
+        <SkiaImage image={image} x={0} y={0} width={size.w} height={size.h} fit={contentFit}>
           <ColorMatrix matrix={matrix as number[]} />
         </SkiaImage>
       </Canvas>

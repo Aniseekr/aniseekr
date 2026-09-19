@@ -14,10 +14,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText } from '../../themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useT, type TranslationKey } from '../../../libs/i18n';
-import {
-  SEASONAL_LAYOUTS,
-  type SeasonalLayout,
-} from '../../../libs/services/user-prefs';
+import { SEASONAL_LAYOUTS, type SeasonalLayout } from '../../../libs/services/user-prefs';
 import type { Anime } from '../types';
 
 interface SeasonalViewProps {
@@ -48,12 +45,7 @@ function nextLayout(current: SeasonalLayout): SeasonalLayout {
   return SEASONAL_LAYOUTS[(i + 1) % SEASONAL_LAYOUTS.length];
 }
 
-function SeasonalViewComponent({
-  data,
-  layout,
-  onSelect,
-  onLayoutChange,
-}: SeasonalViewProps) {
+function SeasonalViewComponent({ data, layout, onSelect, onLayoutChange }: SeasonalViewProps) {
   const { theme } = useTheme();
   const t = useT();
   const meta = LAYOUT_META[layout];

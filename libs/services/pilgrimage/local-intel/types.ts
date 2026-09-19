@@ -106,12 +106,7 @@ export interface LocalIntelEvent extends LocalIntelEntryBase {
 }
 
 export type ViewingHintKind =
-  | 'sunset'
-  | 'sunrise'
-  | 'golden_hour'
-  | 'blue_hour'
-  | 'night'
-  | 'seasonal';
+  'sunset' | 'sunrise' | 'golden_hour' | 'blue_hour' | 'night' | 'seasonal';
 
 export interface LocalIntelViewingHint extends LocalIntelEntryBase {
   kind: 'viewing_hint';

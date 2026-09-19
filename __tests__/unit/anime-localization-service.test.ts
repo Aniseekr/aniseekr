@@ -102,7 +102,9 @@ describe('resolveTitleByOrder', () => {
 
   it('LOC-012 skips missing languages and falls back to canonical title', () => {
     const sparse = { title: 'Canonical', titleJapanese: 'ニッポン' };
-    expect(resolveTitleByOrder(sparse, ['chinese', 'russian', 'japanese'], 'hant')).toBe('ニッポン');
+    expect(resolveTitleByOrder(sparse, ['chinese', 'russian', 'japanese'], 'hant')).toBe(
+      'ニッポン'
+    );
     expect(resolveTitleByOrder(sparse, ['chinese', 'russian'], 'hant')).toBe('Canonical');
     expect(resolveTitleByOrder(sparse, [], 'hant')).toBe('Canonical');
   });

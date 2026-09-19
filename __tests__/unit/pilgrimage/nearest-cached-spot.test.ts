@@ -27,7 +27,10 @@ describe('pickNearestWithin', () => {
     const near = pt('near', 35.0005, 139.0);
     const nearer = pt('nearer', 35.0002, 139.0);
     const res = pickNearestWithin(
-      [{ animeId: 7, spot: near }, { animeId: 9, spot: nearer }],
+      [
+        { animeId: 7, spot: near },
+        { animeId: 9, spot: nearer },
+      ],
       user,
       150
     );
@@ -39,7 +42,9 @@ describe('pickNearestWithin', () => {
   });
 
   it('skips points with invalid geo', () => {
-    const bad = [{ animeId: 1, spot: { ...pt('b', 0, 0), geo: [Number.NaN, 139.0] as [number, number] } }];
+    const bad = [
+      { animeId: 1, spot: { ...pt('b', 0, 0), geo: [Number.NaN, 139.0] as [number, number] } },
+    ];
     expect(pickNearestWithin(bad, user, 150)).toBeNull();
   });
 

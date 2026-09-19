@@ -20,8 +20,7 @@ export function readSystemLanguage(): LanguageId {
   if (Platform.OS === 'ios') {
     const settings =
       (NativeModules?.SettingsManager?.settings as
-        | { AppleLocale?: string; AppleLanguages?: string[] }
-        | undefined) ?? undefined;
+        { AppleLocale?: string; AppleLanguages?: string[] } | undefined) ?? undefined;
     const tag = settings?.AppleLocale ?? settings?.AppleLanguages?.[0];
     return resolveSystemLanguage(tag);
   }

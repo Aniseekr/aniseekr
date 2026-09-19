@@ -156,7 +156,10 @@ export function usePilgrimageDetailData(
         const detailedByEntry = await Promise.all(
           series.availableEntries.map(async (entry) => {
             if (!entry.anime)
-              return { subjectId: entry.subject.id, points: null as readonly PilgrimageSeriesPoint[] | null };
+              return {
+                subjectId: entry.subject.id,
+                points: null as readonly PilgrimageSeriesPoint[] | null,
+              };
             try {
               const detailed = await pilgrimageRepository.getDetailedPointsByBangumiId(
                 entry.subject.id

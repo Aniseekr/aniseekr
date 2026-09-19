@@ -174,13 +174,7 @@ const BANGUMI_OVERRIDES: Record<
 };
 
 type AnimeTourism88Region =
-  | 'hokkaido_tohoku'
-  | 'kanto'
-  | 'tokyo'
-  | 'chubu'
-  | 'kinki'
-  | 'chugoku_shikoku'
-  | 'kyushu_okinawa';
+  'hokkaido_tohoku' | 'kanto' | 'tokyo' | 'chubu' | 'kinki' | 'chugoku_shikoku' | 'kyushu_okinawa';
 
 interface Entry {
   id: number;

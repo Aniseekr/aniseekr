@@ -78,8 +78,7 @@ export const jsSubjectLifter: SubjectLifter = {
 function tryLoadNative(): SubjectLifter | null {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return null;
   const native = (NativeModules as Record<string, unknown>).AniseekrSubjectLifter as
-    | NativeSubjectLifterModule
-    | undefined;
+    NativeSubjectLifterModule | undefined;
   // Module missing (no native binding in this build / Expo Go), or the device
   // reports it can't segment.
   if (!native || native.isSupported !== true || typeof native.lift !== 'function') {

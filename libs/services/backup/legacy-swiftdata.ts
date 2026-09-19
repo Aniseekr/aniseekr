@@ -61,9 +61,7 @@ export interface LegacySwiftDataCounts {
   total: number;
 }
 
-export function countLegacySwiftDataSnapshot(
-  snap: LegacySwiftDataSnapshot
-): LegacySwiftDataCounts {
+export function countLegacySwiftDataSnapshot(snap: LegacySwiftDataSnapshot): LegacySwiftDataCounts {
   const ratingMigrationItems = snap.ratings?.length ?? 0;
   const userRatings = snap.userRatings?.length ?? 0;
   const trackingItems = snap.trackingItems?.length ?? 0;
@@ -92,9 +90,7 @@ export function hasLegacyContent(snap: LegacySwiftDataSnapshot | null | undefine
 // merge/dedupe code path covers both the JSON-paste import flow and the native
 // UserDefaults read flow, so they're guaranteed to produce the same envelope
 // for the same migration data.
-export function swiftDataSnapshotToEnvelope(
-  snap: LegacySwiftDataSnapshot
-): BackupEnvelopeV1 {
+export function swiftDataSnapshotToEnvelope(snap: LegacySwiftDataSnapshot): BackupEnvelopeV1 {
   const exp: LegacyAniseekerExport = {
     version: 'swift-v1-v2-migration-data',
     ratings: snap.ratings ?? [],

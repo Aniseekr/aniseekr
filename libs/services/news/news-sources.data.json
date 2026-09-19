@@ -17,7 +17,11 @@
     },
     {
       "id": "donanetwork-tourist",
-      "name": { "ja": "ドーナネットワーク 観光情報", "en": "Dona Network — Tourism", "zhHant": "Dona Network 觀光情報" },
+      "name": {
+        "ja": "ドーナネットワーク 観光情報",
+        "en": "Dona Network — Tourism",
+        "zhHant": "Dona Network 觀光情報"
+      },
       "feedUrl": "https://donanetwork.jp/category/tourist-information/feed",
       "homepageUrl": "https://donanetwork.jp/category/tourist-information/",
       "category": "event",
@@ -54,7 +58,11 @@
     },
     {
       "id": "otakuma",
-      "name": { "ja": "おたくま経済新聞", "en": "Otakuma Keizai Shimbun", "zhHant": "御宅族經濟新聞" },
+      "name": {
+        "ja": "おたくま経済新聞",
+        "en": "Otakuma Keizai Shimbun",
+        "zhHant": "御宅族經濟新聞"
+      },
       "feedUrl": "https://otakuma.net/feed",
       "homepageUrl": "https://otakuma.net/",
       "category": "news",
@@ -139,7 +147,11 @@
     },
     {
       "id": "mynavi-anime",
-      "name": { "ja": "マイナビニュース アニメ", "en": "Mynavi News — Anime", "zhHant": "Mynavi News 動畫" },
+      "name": {
+        "ja": "マイナビニュース アニメ",
+        "en": "Mynavi News — Anime",
+        "zhHant": "Mynavi News 動畫"
+      },
       "feedUrl": "https://news.mynavi.jp/rss/entertainment/hobby/animation",
       "homepageUrl": "https://news.mynavi.jp/top/entertainment/hobby/animation/",
       "category": "news",
@@ -151,7 +163,11 @@
     },
     {
       "id": "realsound-movie",
-      "name": { "ja": "リアルサウンド映画部", "en": "Real Sound — Film", "zhHant": "Real Sound 電影部" },
+      "name": {
+        "ja": "リアルサウンド映画部",
+        "en": "Real Sound — Film",
+        "zhHant": "Real Sound 電影部"
+      },
       "feedUrl": "https://realsound.jp/movie/feed",
       "homepageUrl": "https://realsound.jp/movie",
       "category": "news",

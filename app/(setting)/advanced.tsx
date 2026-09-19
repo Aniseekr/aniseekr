@@ -5,11 +5,7 @@ import { Stack, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Size, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import {
-  ThemedSurface,
-  ThemedText,
-  readableTextOn,
-} from '../../components/themed';
+import { ThemedSurface, ThemedText, readableTextOn } from '../../components/themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 
@@ -125,11 +121,7 @@ export default function AdvancedScreen() {
 function Section({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <View style={styles.section}>
-      <ThemedText
-        variant="captionSmall"
-        tone="secondary"
-        weight="600"
-        style={styles.sectionTitle}>
+      <ThemedText variant="captionSmall" tone="secondary" weight="600" style={styles.sectionTitle}>
         {title.toUpperCase()}
       </ThemedText>
       <ThemedSurface variant="card" padded={false} style={styles.sectionCard}>
@@ -172,9 +164,7 @@ function AdvancedRow({ row, divider }: { row: Row; divider: boolean }) {
         {row.beta ? <BetaPill /> : null}
         <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />
       </Pressable>
-      {divider ? (
-        <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
-      ) : null}
+      {divider ? <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} /> : null}
     </View>
   );
 }
@@ -185,10 +175,7 @@ function BetaPill() {
   const fg = readableTextOn(theme.accent);
   return (
     <View style={[styles.betaPill, { backgroundColor: theme.accent }]}>
-      <ThemedText
-        variant="captionSmall"
-        weight="800"
-        style={[styles.betaPillText, { color: fg }]}>
+      <ThemedText variant="captionSmall" weight="800" style={[styles.betaPillText, { color: fg }]}>
         {t('settings.advanced.beta')}
       </ThemedText>
     </View>

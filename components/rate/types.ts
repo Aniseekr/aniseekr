@@ -66,12 +66,7 @@ export type DeckItem = { kind: 'photo'; photo: Photo } | { kind: 'ad'; id: strin
  * simply produced no overlap (which is a retryable transient, not onboarding).
  */
 export type PersonalizedPickStatus =
-  | 'idle'
-  | 'loading'
-  | 'ready'
-  | 'cold-start'
-  | 'no-match'
-  | 'error';
+  'idle' | 'loading' | 'ready' | 'cold-start' | 'no-match' | 'error';
 
 export type PersonalizedPickState = {
   status: PersonalizedPickStatus;

@@ -23,9 +23,8 @@ mock.module('react-native-gesture-handler', () => ({
   Gesture: { Pan: () => gestureChain },
 }));
 
-const { default: OverlayModeCarousel } = await import(
-  '../../../components/pilgrimage/camera/OverlayModeCarousel'
-);
+const { default: OverlayModeCarousel } =
+  await import('../../../components/pilgrimage/camera/OverlayModeCarousel');
 
 type Props = React.ComponentProps<typeof OverlayModeCarousel>;
 const noop = () => undefined;
@@ -42,7 +41,9 @@ describe('overlay mode carousel', () => {
     const tree = render(OverlayModeCarousel, props);
     const selected = findAll(
       tree,
-      (n) => (n.props as { accessibilityState?: { selected?: boolean } }).accessibilityState?.selected === true
+      (n) =>
+        (n.props as { accessibilityState?: { selected?: boolean } }).accessibilityState
+          ?.selected === true
     );
     expect(selected.length).toBe(1);
   });

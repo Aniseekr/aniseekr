@@ -117,7 +117,7 @@ public final class AniseekrLookAroundModule: Module {
   }
 }
 
-private func makeCoordinate(latitude: Double, longitude: Double) -> CLLocationCoordinate2D? {
+func makeCoordinate(latitude: Double, longitude: Double) -> CLLocationCoordinate2D? {
   guard latitude.isFinite,
     longitude.isFinite,
     latitude >= -90,

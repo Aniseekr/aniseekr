@@ -69,9 +69,7 @@ function isPositiveFinite(value: number | null | undefined): value is number {
  */
 function reachesUltraWide(device: CameraDevice): boolean {
   if (device.type === 'ultra-wide-angle') return true;
-  return (
-    isPositiveFinite(device.minZoom) && device.minZoom < ULTRA_WIDE_MIN_ZOOM_EXCLUSIVE
-  );
+  return isPositiveFinite(device.minZoom) && device.minZoom < ULTRA_WIDE_MIN_ZOOM_EXCLUSIVE;
 }
 
 /**

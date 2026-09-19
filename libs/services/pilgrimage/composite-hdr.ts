@@ -131,11 +131,7 @@ function getFusionEffect(): SkRuntimeEffect | null {
  * luma channel. Returns null if any step in the chain fails — callers must
  * fall back to a zero-offset alignment in that case.
  */
-function extractLumaGrid(
-  image: SkImage,
-  gridWidth: number,
-  gridHeight: number
-): Uint8Array | null {
+function extractLumaGrid(image: SkImage, gridWidth: number, gridHeight: number): Uint8Array | null {
   let smallSurface: SkSurface | null = null;
   let snapshot: SkImage | null = null;
   let paint: SkPaint | null = null;
@@ -419,7 +415,14 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
     let fusionPath: 'gpu' | 'cpu' = 'cpu';
     const effect = getFusionEffect();
     if (effect) {
-      const drawn = drawShaderFusion(effect, surface, width, height, [underImg, midImg, overImg], alignment);
+      const drawn = drawShaderFusion(
+        effect,
+        surface,
+        width,
+        height,
+        [underImg, midImg, overImg],
+        alignment
+      );
       if (drawn) {
         fusedPaint = drawn.paint;
         fusedShaders = drawn.shaders;

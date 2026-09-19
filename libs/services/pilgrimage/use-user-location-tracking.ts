@@ -217,7 +217,12 @@ export function useUserLocationTracking(
   const autoEngagedRef = useRef(false);
   useEffect(() => {
     if (!autoEngage) return;
-    if (!shouldAutoEngageFollow({ permission: internal.permission, alreadyEngaged: autoEngagedRef.current })) {
+    if (
+      !shouldAutoEngageFollow({
+        permission: internal.permission,
+        alreadyEngaged: autoEngagedRef.current,
+      })
+    ) {
       return;
     }
     autoEngagedRef.current = true;

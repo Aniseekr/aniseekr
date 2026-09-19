@@ -155,7 +155,11 @@ type OverlayModeToastSeed = Omit<CamSwitchToastValue, 'label'> & { labelKey: Tra
 const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', OverlayModeToastSeed> = {
   off: { icon: 'eye-off-outline', labelKey: 'pilgrimageUi.overlayOff' },
   anime: { icon: 'image-outline', labelKey: 'commonUi.anime', hint: 'Original scene overlay' },
-  edge: { icon: 'analytics-outline', labelKey: 'pilgrimageUi.edge', hint: 'Edge detection overlay' },
+  edge: {
+    icon: 'analytics-outline',
+    labelKey: 'pilgrimageUi.edge',
+    hint: 'Edge detection overlay',
+  },
   sketch: { icon: 'pencil-outline', labelKey: 'pilgrimageUi.sketch', hint: 'Sketch style overlay' },
   subject: {
     icon: 'person-outline',
@@ -294,12 +298,7 @@ export default function CompareCaptureScreen() {
     [setHud, setSettings]
   );
   const lifecycle = useCameraLifecycle({ settingsOpen, initialActive: true });
-  const {
-    active: cameraActive,
-    isReady: cameraIsReady,
-    onCameraReady,
-    onMountError,
-  } = lifecycle;
+  const { active: cameraActive, isReady: cameraIsReady, onCameraReady, onMountError } = lifecycle;
   // AUTO is device-mode by design: the capture follows the physical phone
   // while the HUD stays portrait. The hook also owns the ScreenOrientation
   // lock lifecycle (apply lock-intent on chip change; restore PORTRAIT_UP on

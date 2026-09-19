@@ -35,9 +35,7 @@ export interface PersonalizedPickPayload {
  *   nothing safely recommendable → "try again" state, NOT cold start
  */
 export type PersonalizedPickOutcome =
-  | { kind: 'ok'; payload: PersonalizedPickPayload }
-  | { kind: 'cold-start' }
-  | { kind: 'no-match' };
+  { kind: 'ok'; payload: PersonalizedPickPayload } | { kind: 'cold-start' } | { kind: 'no-match' };
 
 interface RatingRow {
   id: string;

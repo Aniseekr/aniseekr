@@ -72,7 +72,12 @@ export default function LanguageScreen() {
   const [autotranslate, setAutotranslateState] = useState<boolean>(getAutotranslateSync);
   const [showOriginal, setShowOriginalState] = useState<boolean>(getShowOriginalSync);
 
-  const appOptions: { id: AppLanguagePreference; label: string; subtitle?: string; flag: string }[] = [
+  const appOptions: {
+    id: AppLanguagePreference;
+    label: string;
+    subtitle?: string;
+    flag: string;
+  }[] = [
     { id: 'auto', label: t('language.systemDefault'), flag: '🌐' },
     ...LANGUAGE_IDS.map<{
       id: AppLanguagePreference;
@@ -127,9 +132,7 @@ export default function LanguageScreen() {
   };
 
   return (
-    <SettingsScreenLayout
-      title={t('language.screenTitle')}
-      subtitle={t('language.screenSubtitle')}>
+    <SettingsScreenLayout title={t('language.screenTitle')} subtitle={t('language.screenSubtitle')}>
       {/* SECTION 1 — App language */}
       <SectionHeader label={t('language.section.app')} color={theme.text.tertiary} />
       <Card theme={theme}>
@@ -226,15 +229,8 @@ export default function LanguageScreen() {
                   onPress={() => moveTitle(idx, 1)}
                   disabled={idx === titleOrder.length - 1}
                   hitSlop={8}
-                  style={[
-                    styles.arrowButton,
-                    idx === titleOrder.length - 1 && { opacity: 0.3 },
-                  ]}>
-                  <MaterialIcons
-                    name="keyboard-arrow-down"
-                    size={22}
-                    color={theme.text.primary}
-                  />
+                  style={[styles.arrowButton, idx === titleOrder.length - 1 && { opacity: 0.3 }]}>
+                  <MaterialIcons name="keyboard-arrow-down" size={22} color={theme.text.primary} />
                 </Pressable>
               </View>
             </View>
@@ -250,14 +246,16 @@ export default function LanguageScreen() {
         style={{ marginTop: Spacing.lg }}
       />
       <Card theme={theme}>
-        {([
-          { id: 'auto', label: t('language.vocabAuto'), flag: '🌐' },
-          ...LANGUAGE_IDS.map((id) => ({
-            id: id as AppLanguagePreference,
-            label: languages[id].nativeName,
-            flag: languages[id].flag,
-          })),
-        ] as { id: AppLanguagePreference; label: string; flag: string }[]).map((option, idx, arr) => {
+        {(
+          [
+            { id: 'auto', label: t('language.vocabAuto'), flag: '🌐' },
+            ...LANGUAGE_IDS.map((id) => ({
+              id: id as AppLanguagePreference,
+              label: languages[id].nativeName,
+              flag: languages[id].flag,
+            })),
+          ] as { id: AppLanguagePreference; label: string; flag: string }[]
+        ).map((option, idx, arr) => {
           const selected = option.id === vocabLang;
           const last = idx === arr.length - 1;
           return (
@@ -310,10 +308,7 @@ export default function LanguageScreen() {
 
       <View style={styles.helpBlock}>
         <Text
-          style={[
-            Typography.titleSmall,
-            { color: theme.text.primary, marginBottom: Spacing.xs },
-          ]}>
+          style={[Typography.titleSmall, { color: theme.text.primary, marginBottom: Spacing.xs }]}>
           {t('language.helpTranslateTitle')}
         </Text>
         <Text style={[Typography.caption, { color: theme.text.secondary }]}>
@@ -326,15 +321,7 @@ export default function LanguageScreen() {
 
 // --- small layout helpers (kept local — too thin to deserve their own file) ---
 
-function SectionHeader({
-  label,
-  color,
-  style,
-}: {
-  label: string;
-  color: string;
-  style?: object;
-}) {
+function SectionHeader({ label, color, style }: { label: string; color: string; style?: object }) {
   return (
     <Text
       style={[
@@ -428,11 +415,7 @@ function ToggleRow({
   disabled?: boolean;
 }) {
   return (
-    <View
-      style={[
-        styles.row,
-        { opacity: disabled ? 0.55 : 1 },
-      ]}>
+    <View style={[styles.row, { opacity: disabled ? 0.55 : 1 }]}>
       <View style={{ flex: 1 }}>
         <Text style={[Typography.bodyMedium, { color: theme.text.primary }]}>{title}</Text>
         {subtitle ? (

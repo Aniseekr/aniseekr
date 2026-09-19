@@ -155,7 +155,8 @@ describe('IDMappingService', () => {
     const runSpy = spyOn(db, 'runAsync');
     await svc.bulkInsert([{ mal_id: 1, bangumi_id: 2, name_cn: '葬送的芙莉蓮' }]);
     const insert = runSpy.mock.calls.find(
-      (c) => typeof c[0] === 'string' && (c[0] as string).startsWith('INSERT INTO id_mappings_staging')
+      (c) =>
+        typeof c[0] === 'string' && (c[0] as string).startsWith('INSERT INTO id_mappings_staging')
     );
     expect(insert?.[0]).toContain('name_cn');
     expect(insert?.slice(1)).toContain('葬送的芙莉蓮');
@@ -186,10 +187,7 @@ describe('IDMappingService', () => {
       await fn(db as never);
       order.push('swap-end');
     }) as never);
-    await Promise.all([
-      svc.bulkInsert([{ mal_id: 1 }]),
-      svc.bulkInsert([{ mal_id: 2 }]),
-    ]);
+    await Promise.all([svc.bulkInsert([{ mal_id: 1 }]), svc.bulkInsert([{ mal_id: 2 }])]);
     expect(order).toEqual(['swap-start', 'swap-end', 'swap-start', 'swap-end']);
     spy.mockRestore();
   });
@@ -215,7 +213,8 @@ describe('IDMappingService', () => {
 
     // 120 rows at 50 rows/statement → 3 INSERTs, all against the staging table.
     const inserts = runSpy.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && (c[0] as string).startsWith('INSERT INTO id_mappings_staging')
+      (c) =>
+        typeof c[0] === 'string' && (c[0] as string).startsWith('INSERT INTO id_mappings_staging')
     );
     expect(inserts.length).toBe(3);
     const firstSql = inserts[0]?.[0] as string;

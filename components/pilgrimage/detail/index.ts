@@ -29,13 +29,11 @@ export { SpotSheet } from './SpotSheet';
 export type { SpotSheetProps } from './SpotSheet';
 export { PilgrimageDetailSheet } from './PilgrimageDetailSheet';
 export type { PilgrimageDetailSheetProps } from './PilgrimageDetailSheet';
+export { PilgrimageDetailToolsMenu } from './PilgrimageDetailToolsMenu';
+export { PilgrimageDetailControls } from './PilgrimageDetailControls';
 export { PilgrimageDetailLoadingShell } from './PilgrimageDetailLoadingShell';
 export type { PilgrimageDetailLoadingShellProps } from './PilgrimageDetailLoadingShell';
 export { ProximityCheckInBanner } from './ProximityCheckInBanner';
 export type { ProximityCheckInBannerProps } from './ProximityCheckInBanner';
-export {
-  VIEW_MODE_TOGGLE_HEIGHT,
-  makePilgrimageDetailStyles,
-  type PilgrimageDetailStyles,
-} from './routeStyles';
+export { makePilgrimageDetailStyles, type PilgrimageDetailStyles } from './routeStyles';
 export * from './_helpers';

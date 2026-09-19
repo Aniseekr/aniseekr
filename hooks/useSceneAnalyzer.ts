@@ -29,11 +29,7 @@ import {
   type CameraFrameOutput,
   type Frame,
 } from 'react-native-vision-camera';
-import {
-  isResizerAvailable,
-  useResizer,
-  type GPUFrame,
-} from 'react-native-vision-camera-resizer';
+import { isResizerAvailable, useResizer, type GPUFrame } from 'react-native-vision-camera-resizer';
 import {
   advanceHysteresis,
   analyzeLumaHistogram,
@@ -135,15 +131,10 @@ export function useSceneAnalyzer({ enabled }: UseSceneAnalyzerInput): UseSceneAn
               const base = i * 3;
               // BT.601 RGB→luma; output stays on the 8-bit 0..255 scale the
               // histogram thresholds in scene-analyzer.ts are tuned for.
-              luma.push(
-                0.299 * rgb[base] + 0.587 * rgb[base + 1] + 0.114 * rgb[base + 2]
-              );
+              luma.push(0.299 * rgb[base] + 0.587 * rgb[base + 1] + 0.114 * rgb[base + 2]);
             }
             const { needsHdr } = analyzeLumaHistogram(luma);
-            const { flipped, current } = advanceHysteresis(
-              hysteresisShared.value,
-              needsHdr
-            );
+            const { flipped, current } = advanceHysteresis(hysteresisShared.value, needsHdr);
             if (flipped) {
               runOnJS(flipRecommendation)(current);
             }
@@ -180,10 +171,7 @@ export function useSceneAnalyzer({ enabled }: UseSceneAnalyzerInput): UseSceneAn
           }
 
           const { needsHdr } = analyzeLumaHistogram(samples);
-          const { flipped, current } = advanceHysteresis(
-            hysteresisShared.value,
-            needsHdr
-          );
+          const { flipped, current } = advanceHysteresis(hysteresisShared.value, needsHdr);
           if (flipped) {
             runOnJS(flipRecommendation)(current);
           }

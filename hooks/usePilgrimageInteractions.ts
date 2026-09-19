@@ -10,10 +10,7 @@
 import { useCallback, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
-import {
-  loadCapturesSync,
-  type PilgrimageCapture,
-} from '../libs/services/pilgrimage/captures';
+import { loadCapturesSync, type PilgrimageCapture } from '../libs/services/pilgrimage/captures';
 import {
   applySpotIntentAtomic,
   buildSpotIntentMeta,
@@ -65,8 +62,7 @@ export function usePilgrimageInteractions(): UsePilgrimageInteractionsResult {
   // correct on the first frame instead of popping in after an async resolve.
   const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
   const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
-  const [captures, setCaptures] =
-    useState<Record<string, PilgrimageCapture>>(loadCapturesSync);
+  const [captures, setCaptures] = useState<Record<string, PilgrimageCapture>>(loadCapturesSync);
 
   // The three pieces of state are seeded synchronously from MMKV above.
   // `refreshCaptures` is exposed so callers can re-pull after they record a

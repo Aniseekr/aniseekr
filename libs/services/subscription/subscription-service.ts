@@ -32,11 +32,7 @@ export interface SubscriptionOffering {
 }
 
 export type UnsupportedReason =
-  | 'no-module'
-  | 'no-key'
-  | 'billing-unavailable'
-  | 'network'
-  | 'unknown';
+  'no-module' | 'no-key' | 'billing-unavailable' | 'network' | 'unknown';
 
 export interface SubscriptionState {
   isPro: boolean;

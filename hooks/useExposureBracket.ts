@@ -19,10 +19,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 import type { CameraEngineRef } from '../components/pilgrimage/camera/camera-engine';
-import {
-  BRACKET_EV_STOPS,
-  clampBracketEvStops,
-} from '../libs/services/pilgrimage/camera-settings';
+import { BRACKET_EV_STOPS, clampBracketEvStops } from '../libs/services/pilgrimage/camera-settings';
 import { compositeHdr } from '../libs/services/pilgrimage/composite-hdr';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 
@@ -195,11 +192,7 @@ export function useExposureBracket(input: UseExposureBracketInput): UseExposureB
       // and a retry ever fills it back in, this is what keeps `compositeHdr`
       // honest about which frame is which exposure.
       const sorted = [...frames].sort((a, b) => a.ev - b.ev);
-      const frameUris: [string, string, string] = [
-        sorted[0].uri,
-        sorted[1].uri,
-        sorted[2].uri,
-      ];
+      const frameUris: [string, string, string] = [sorted[0].uri, sorted[1].uri, sorted[2].uri];
       const evTuple: [number, number, number] = [sorted[0].ev, sorted[1].ev, sorted[2].ev];
 
       const composite = await compositeHdr({

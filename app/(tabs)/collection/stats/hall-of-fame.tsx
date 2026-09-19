@@ -97,7 +97,10 @@ export default function HallOfFameExhibit() {
           style={[styles.featured, { borderColor: theme.glassBorder }]}>
           <View style={[styles.featuredIcon, { backgroundColor: `${onTrophy}22` }]}>
             <MaterialIcons
-              name={(featured.icon as React.ComponentProps<typeof MaterialIcons>['name']) || 'emoji-events'}
+              name={
+                (featured.icon as React.ComponentProps<typeof MaterialIcons>['name']) ||
+                'emoji-events'
+              }
               size={48}
               color={onTrophy}
             />
@@ -128,7 +131,11 @@ export default function HallOfFameExhibit() {
       ) : null}
 
       <View style={styles.sectionHeader}>
-        <ThemedText variant="captionSmall" tone="secondary" weight="700" style={{ letterSpacing: 2 }}>
+        <ThemedText
+          variant="captionSmall"
+          tone="secondary"
+          weight="700"
+          style={{ letterSpacing: 2 }}>
           {t('collectionStats.hallOfFame.rareMedallions')}
         </ThemedText>
         <ThemedText variant="captionSmall" tone="tertiary">
@@ -155,8 +162,7 @@ export default function HallOfFameExhibit() {
                   backgroundColor: theme.background.secondary,
                   borderColor: `${theme.accent}55`,
                 },
-              ]}
-            >
+              ]}>
               <View style={[styles.medallionIcon, { backgroundColor: `${theme.accent}22` }]}>
                 <MaterialIcons
                   name={(a.icon as React.ComponentProps<typeof MaterialIcons>['name']) || 'star'}
@@ -169,7 +175,10 @@ export default function HallOfFameExhibit() {
               </ThemedText>
               <ThemedText variant="captionSmall" tone="tertiary" align="center" numberOfLines={1}>
                 {a.unlockedAt
-                  ? new Date(a.unlockedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  ? new Date(a.unlockedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
                   : '—'}
               </ThemedText>
             </View>
@@ -180,7 +189,11 @@ export default function HallOfFameExhibit() {
       {locked.length > 0 ? (
         <>
           <View style={[styles.sectionHeader, { marginTop: Spacing.md }]}>
-            <ThemedText variant="captionSmall" tone="secondary" weight="700" style={{ letterSpacing: 2 }}>
+            <ThemedText
+              variant="captionSmall"
+              tone="secondary"
+              weight="700"
+              style={{ letterSpacing: 2 }}>
               {t('collectionStats.hallOfFame.inProgress')}
             </ThemedText>
           </View>
@@ -196,11 +209,13 @@ export default function HallOfFameExhibit() {
                       backgroundColor: theme.background.secondary,
                       borderColor: theme.glassBorder,
                     },
-                  ]}
-                >
-                  <View style={[styles.lockedIcon, { backgroundColor: `${theme.text.tertiary}1A` }]}>
+                  ]}>
+                  <View
+                    style={[styles.lockedIcon, { backgroundColor: `${theme.text.tertiary}1A` }]}>
                     <MaterialIcons
-                      name={(a.icon as React.ComponentProps<typeof MaterialIcons>['name']) || 'lock'}
+                      name={
+                        (a.icon as React.ComponentProps<typeof MaterialIcons>['name']) || 'lock'
+                      }
                       size={18}
                       color={theme.text.tertiary}
                     />

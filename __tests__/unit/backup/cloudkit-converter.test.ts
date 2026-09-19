@@ -252,8 +252,7 @@ describe('backup/cloudkit-converter · export (envelope → CloudKit)', () => {
     const animeIds = reimported.db.userAnime.map((r) => r.anime_id).sort();
     expect(animeIds).toEqual(['1', '2', '3']);
 
-    const statusOf = (id: string) =>
-      reimported.db.userAnime.find((r) => r.anime_id === id)?.status;
+    const statusOf = (id: string) => reimported.db.userAnime.find((r) => r.anime_id === id)?.status;
     expect(statusOf('1')).toBe('completed');
     expect(statusOf('2')).toBe('watching');
     expect(statusOf('3')).toBe('planned');
@@ -262,9 +261,7 @@ describe('backup/cloudkit-converter · export (envelope → CloudKit)', () => {
   it('CK-102 export records carry folderRecordName pointing back at the folder', () => {
     const records = envelopeToCloudKitRecords(makeEnv());
     // The watched record for anime_id=1 should reference folder F1.
-    const watched = records.find(
-      (r) => r.recordType === 'WatchedAnime' && r.fields.animeId === 1
-    );
+    const watched = records.find((r) => r.recordType === 'WatchedAnime' && r.fields.animeId === 1);
     expect(watched?.fields.folderRecordName).toBe('F1');
   });
 

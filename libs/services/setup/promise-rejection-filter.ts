@@ -48,7 +48,7 @@ function isBenignRejection(error: unknown): boolean {
 function defaultUnhandledHandler(id: number, error: unknown): void {
   console.warn(
     `Possible Unhandled Promise Rejection (id: ${id}):`,
-    error instanceof Error ? error.stack ?? error.message : String(error)
+    error instanceof Error ? (error.stack ?? error.message) : String(error)
   );
 }
 

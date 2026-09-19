@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 
-import {
-  CloudBackup,
-  type CloudStorageLike,
-} from '../../../libs/services/backup/cloud-backup';
+import { CloudBackup, type CloudStorageLike } from '../../../libs/services/backup/cloud-backup';
 import { createEmptyBackup } from '../../../libs/services/backup/schema';
 
 interface FakeCloud extends CloudStorageLike {
@@ -96,9 +93,8 @@ describe('backup/cloud-backup', () => {
   });
 
   it('CLOUD-006 encrypts uploads when a key is set, and auto-decrypts downloads', async () => {
-    const { generateBackupKey, isEncryptedPayload } = await import(
-      '../../../libs/services/backup/encryption'
-    );
+    const { generateBackupKey, isEncryptedPayload } =
+      await import('../../../libs/services/backup/encryption');
     const key = generateBackupKey();
     const cipherCloud = makeFakeCloud();
     const cipherSvc = new CloudBackup({ storage: cipherCloud, encryptionKey: key });

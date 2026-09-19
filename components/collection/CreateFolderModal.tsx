@@ -127,7 +127,9 @@ export function CreateFolderModal({
         <View style={styles.overlay}>
           <View style={styles.modalContainer}>
             <View style={styles.header}>
-              <Text style={styles.title}>{isEditMode ? t('collectionUi.editFolder') : t('collectionUi.createFolder')}</Text>
+              <Text style={styles.title}>
+                {isEditMode ? t('collectionUi.editFolder') : t('collectionUi.createFolder')}
+              </Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={24} color={theme.text.primary} />
               </TouchableOpacity>

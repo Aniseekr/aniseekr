@@ -145,11 +145,7 @@ async function runBracket(opts: {
     }
 
     const sorted = [...frames].sort((a, b) => a.ev - b.ev);
-    const frameUris: [string, string, string] = [
-      sorted[0].uri,
-      sorted[1].uri,
-      sorted[2].uri,
-    ];
+    const frameUris: [string, string, string] = [sorted[0].uri, sorted[1].uri, sorted[2].uri];
     const evTuple: [number, number, number] = [sorted[0].ev, sorted[1].ev, sorted[2].ev];
     const composite = await compositeHdr({
       frameUris,

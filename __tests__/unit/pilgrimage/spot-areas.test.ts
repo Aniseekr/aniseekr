@@ -9,7 +9,7 @@ function spot(id: string, lat: number, lng: number): AnitabiSpot {
 describe('groupSpotsIntoAreas', () => {
   test('collapses spots within one cell into a single area', () => {
     // ~200m apart at lat 35 — well inside a 2km cell
-    const areas = groupSpotsIntoAreas([spot('a', 35.0000, 139.0000), spot('b', 35.0018, 139.0018)]);
+    const areas = groupSpotsIntoAreas([spot('a', 35.0, 139.0), spot('b', 35.0018, 139.0018)]);
     expect(areas).toHaveLength(1);
     expect(areas[0].spots.map((s) => s.id)).toEqual(['a', 'b']);
   });
@@ -42,7 +42,9 @@ describe('groupSpotsIntoAreas', () => {
 
   test('cellKm widens buckets (two 3km-apart spots merge at cellKm=5)', () => {
     const a = groupSpotsIntoAreas([spot('a', 35.0, 139.0), spot('b', 35.027, 139.0)]);
-    const b = groupSpotsIntoAreas([spot('a', 35.0, 139.0), spot('b', 35.027, 139.0)], { cellKm: 5 });
+    const b = groupSpotsIntoAreas([spot('a', 35.0, 139.0), spot('b', 35.027, 139.0)], {
+      cellKm: 5,
+    });
     expect(a.length).toBe(2);
     expect(b.length).toBe(1);
   });
@@ -62,11 +64,7 @@ describe('composeAreaRows', () => {
     expect(rows.filter((r) => r.kind === 'header')).toHaveLength(0);
     const spotRows = rows.filter((r) => r.kind === 'spot');
     expect(spotRows).toHaveLength(spots.length);
-    expect(spotRows.map((r) => (r as { spot: AnitabiSpot }).spot.id)).toEqual([
-      'a',
-      'b',
-      'nogeo',
-    ]);
+    expect(spotRows.map((r) => (r as { spot: AnitabiSpot }).spot.id)).toEqual(['a', 'b', 'nogeo']);
   });
 
   test('>=2 areas: geo-less spots are appended as trailing rows after every section, none dropped', () => {
@@ -88,10 +86,7 @@ describe('composeAreaRows', () => {
     );
 
     // Geo-less spots land after the last header (trailing, unsectioned).
-    const lastHeaderIndex = rows.reduce(
-      (acc, r, i) => (r.kind === 'header' ? i : acc),
-      -1
-    );
+    const lastHeaderIndex = rows.reduce((acc, r, i) => (r.kind === 'header' ? i : acc), -1);
     const nogeoIndices = rows
       .map((r, i) => ({ r, i }))
       .filter(({ r }) => r.kind === 'spot' && (r.spot.id === 'nogeo1' || r.spot.id === 'nogeo2'))

@@ -10,6 +10,13 @@ module.exports = defineConfig([
   {
     rules: {
       'react/display-name': 'off',
+      // These React Compiler diagnostics were enabled by the SDK 57 lint
+      // upgrade. Migrate the existing codebase deliberately before enforcing
+      // them; keep the established Hooks correctness rules active meanwhile.
+      'react-hooks/immutability': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off',
     },
   },
   {
@@ -26,8 +33,9 @@ module.exports = defineConfig([
       'no-restricted-syntax': [
         'warn',
         {
-          selector: "Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]",
-          message: 'Raw hex color — use useTheme() palette or DesignSystem tokens (CLAUDE.md rule 4).',
+          selector: 'Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]',
+          message:
+            'Raw hex color — use useTheme() palette or DesignSystem tokens (CLAUDE.md rule 4).',
         },
         {
           selector: "Property[key.name='fontSize'] > Literal.value",

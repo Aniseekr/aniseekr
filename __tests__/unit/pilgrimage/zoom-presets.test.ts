@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { formatFocalStopLabel, isFocalStopActive } from '../../../libs/services/pilgrimage/zoom-presets';
+import {
+  formatFocalStopLabel,
+  isFocalStopActive,
+} from '../../../libs/services/pilgrimage/zoom-presets';
 
 describe('zoom presets', () => {
   it('formats focal stops with the multiplication sign', () => {

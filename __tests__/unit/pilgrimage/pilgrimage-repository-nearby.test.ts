@@ -23,12 +23,14 @@ interface FakeLocationModule {
 
 const buildFakeLocationModule = (): FakeLocationModule => ({
   Accuracy: { Balanced: 3 },
-  requestForegroundPermissionsAsync: mock(
-    async (): Promise<FakePermission> => ({ status: 'granted', canAskAgain: true })
-  ),
-  getForegroundPermissionsAsync: mock(
-    async (): Promise<FakePermission> => ({ status: 'granted', canAskAgain: true })
-  ),
+  requestForegroundPermissionsAsync: mock(async (): Promise<FakePermission> => ({
+    status: 'granted',
+    canAskAgain: true,
+  })),
+  getForegroundPermissionsAsync: mock(async (): Promise<FakePermission> => ({
+    status: 'granted',
+    canAskAgain: true,
+  })),
   getCurrentPositionAsync: mock(async (_opts: unknown) => ({
     coords: { latitude: 35.6895, longitude: 139.6917 },
   })),

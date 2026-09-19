@@ -1,11 +1,4 @@
-import {
-  Alert,
-  View,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Linking,
-} from 'react-native';
+import { Alert, View, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,10 +20,7 @@ import {
   SettingsRow,
   SettingsSwitchRow,
 } from '../../components/settings/SettingsList';
-import {
-  QuickActionSheet,
-  type QuickAction,
-} from '../../components/settings/QuickActionSheet';
+import { QuickActionSheet, type QuickAction } from '../../components/settings/QuickActionSheet';
 import { ThemedText, readableTextOn } from '../../components/themed';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -58,19 +48,11 @@ async function openManageSubscription(): Promise<void> {
   } catch {
     // fall through to URL fallback
   }
-  await Linking.openURL('https://apps.apple.com/account/subscriptions').catch(
-    () => undefined,
-  );
+  await Linking.openURL('https://apps.apple.com/account/subscriptions').catch(() => undefined);
 }
 
 type QuickSheetKind =
-  | 'appearance'
-  | 'theme'
-  | 'themeMode'
-  | 'accent'
-  | 'platforms'
-  | 'premium'
-  | null;
+  'appearance' | 'theme' | 'themeMode' | 'accent' | 'platforms' | 'premium' | null;
 
 const THEME_MODE_LABEL_KEY = {
   light: 'settingsUi.light',
@@ -144,12 +126,12 @@ export default function SettingsScreen() {
       return () => {
         cancelled = true;
       };
-    }, []),
+    }, [])
   );
 
   const updatePref = async <K extends keyof UserPrefs>(
     key: K,
-    value: UserPrefs[K],
+    value: UserPrefs[K]
   ): Promise<void> => {
     const next = await patchUserPrefs({ [key]: value } as Partial<UserPrefs>);
     setPrefs(next);
@@ -182,7 +164,7 @@ export default function SettingsScreen() {
             void updatePref('allowAdultContent', true);
           },
         },
-      ],
+      ]
     );
   };
 
@@ -213,7 +195,7 @@ export default function SettingsScreen() {
           void setTheme(t.id as ThemeId);
         },
       })),
-    [themes, themeId, isPro, setTheme],
+    [themes, themeId, isPro, setTheme]
   );
 
   const themeModeActions: QuickAction[] = useMemo(
@@ -241,7 +223,7 @@ export default function SettingsScreen() {
         onPress: () => void setThemeMode('auto'),
       },
     ],
-    [themeMode, setThemeMode, t],
+    [themeMode, setThemeMode, t]
   );
 
   const accentActions: QuickAction[] = useMemo(() => {
@@ -296,20 +278,34 @@ export default function SettingsScreen() {
         onPress: () => router.push('/(setting)/import-wizard'),
       },
     ],
-    [t],
+    [t]
   );
 
   const appearanceActions: QuickAction[] = useMemo(() => {
-    const modeRows: QuickAction[] = (
-      [
-        { key: 'light', label: t('settingsUi.light'), icon: 'sunny-outline' as const, mode: 'light' as ThemeMode },
-        { key: 'dark', label: t('settingsUi.dark'), icon: 'moon-outline' as const, mode: 'dark' as ThemeMode },
-        { key: 'auto', label: t('commonUi.auto'), icon: 'contrast-outline' as const, mode: 'auto' as ThemeMode },
-      ]
-    ).map((m) => ({
+    const modeRows: QuickAction[] = [
+      {
+        key: 'light',
+        label: t('settingsUi.light'),
+        icon: 'sunny-outline' as const,
+        mode: 'light' as ThemeMode,
+      },
+      {
+        key: 'dark',
+        label: t('settingsUi.dark'),
+        icon: 'moon-outline' as const,
+        mode: 'dark' as ThemeMode,
+      },
+      {
+        key: 'auto',
+        label: t('commonUi.auto'),
+        icon: 'contrast-outline' as const,
+        mode: 'auto' as ThemeMode,
+      },
+    ].map((m) => ({
       key: `mode-${m.key}`,
       label: m.label,
-      description: m.key === 'auto' ? t('settingsUi.followSystemAppearance') : t('settingsUi.themeMode'),
+      description:
+        m.key === 'auto' ? t('settingsUi.followSystemAppearance') : t('settingsUi.themeMode'),
       icon: m.icon,
       selected: themeMode === m.mode,
       onPress: () => void setThemeMode(m.mode),
@@ -341,14 +337,7 @@ export default function SettingsScreen() {
         onPress: () => router.push('/(setting)/appearance'),
       },
     ];
-  }, [
-    themeMode,
-    setThemeMode,
-    activeAccentHex,
-    setCustomAccent,
-    activeThemeName,
-    t,
-  ]);
+  }, [themeMode, setThemeMode, activeAccentHex, setCustomAccent, activeThemeName, t]);
 
   const premiumActions: QuickAction[] = useMemo(() => {
     if (isPro) {
@@ -415,9 +404,7 @@ export default function SettingsScreen() {
       case 'premium':
         return {
           title: isPro ? 'Premium' : 'Aniseekr Premium',
-          subtitle: isPro
-            ? 'Manage your subscription'
-            : 'Unlock all themes, sync, no ads',
+          subtitle: isPro ? 'Manage your subscription' : 'Unlock all themes, sync, no ads',
           actions: premiumActions,
         };
       default:
@@ -493,10 +480,7 @@ export default function SettingsScreen() {
                 {avatarUri ? (
                   <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                 ) : (
-                  <ThemedText
-                    variant="titleMedium"
-                    weight="800"
-                    style={{ color: ctaFg }}>
+                  <ThemedText variant="titleMedium" weight="800" style={{ color: ctaFg }}>
                     {initials || 'A'}
                   </ThemedText>
                 )}
@@ -555,23 +539,17 @@ export default function SettingsScreen() {
                 <View style={styles.premiumHeroLeft}>
                   <Ionicons name="sparkles" size={22} color={ctaFg} />
                   <View style={styles.premiumTextWrap}>
-                    <ThemedText
-                      variant="titleMedium"
-                      weight="700"
-                      style={{ color: ctaFg }}>
+                    <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
                       {isPro ? 'Premium active' : 'Unlock Premium'}
                     </ThemedText>
-                    <ThemedText
-                      variant="bodySmall"
-                      style={{ color: ctaFg, opacity: 0.85 }}>
+                    <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
                       {isPro
                         ? 'Manage your subscription and benefits'
                         : 'No ads, all themes, unlimited sync'}
                     </ThemedText>
                   </View>
                 </View>
-                <View
-                  style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
+                <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
                   <ThemedText variant="titleSmall" weight="700">
                     {isPro ? 'Manage' : 'Upgrade'}
                   </ThemedText>
@@ -715,10 +693,7 @@ export default function SettingsScreen() {
             style={styles.versionRow}
             accessibilityRole="button"
             accessibilityLabel={t('settingsUi.appVersionTapToOpen')}>
-            <ThemedText
-              variant="caption"
-              tone="tertiary"
-              align="center">
+            <ThemedText variant="caption" tone="tertiary" align="center">
               Aniseekr v{appVersion} (Expo)
             </ThemedText>
           </Pressable>

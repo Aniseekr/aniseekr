@@ -109,8 +109,7 @@ interface BuildDialLayoutArgs {
  */
 export function buildDialLayout(args: BuildDialLayoutArgs): DialLayout {
   const segPx = args.segPx ?? SEGMENT_PX;
-  const hasIsland =
-    args.strategy === 'standalone-switch' && args.hasStandaloneUltraWide === true;
+  const hasIsland = args.strategy === 'standalone-switch' && args.hasStandaloneUltraWide === true;
   const continuousStartPx = hasIsland ? ISLAND_CHIP_PX + ISLAND_GAP_PX : 0;
 
   const baseDetents = buildDetents(args.continuousStops, args.stopZoom, segPx);

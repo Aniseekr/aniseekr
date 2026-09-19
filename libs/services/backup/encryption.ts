@@ -19,11 +19,7 @@
 import { gcm } from '@noble/ciphers/aes.js';
 import { randomBytes } from '@noble/ciphers/utils.js';
 
-import {
-  parseBackupEnvelope,
-  serializeBackupEnvelope,
-  type BackupEnvelopeV1,
-} from './schema';
+import { parseBackupEnvelope, serializeBackupEnvelope, type BackupEnvelopeV1 } from './schema';
 
 export const ENCRYPTED_ENVELOPE_VERSION = 1 as const;
 const KEY_LENGTH_BYTES = 32; // AES-256
@@ -76,9 +72,7 @@ export function isEncryptedPayload(input: string): boolean {
     if (!parsed || typeof parsed !== 'object') return false;
     const obj = parsed as Record<string, unknown>;
     return (
-      obj.encrypted === true &&
-      typeof obj.iv === 'string' &&
-      typeof obj.ciphertext === 'string'
+      obj.encrypted === true && typeof obj.iv === 'string' && typeof obj.ciphertext === 'string'
     );
   } catch {
     return false;

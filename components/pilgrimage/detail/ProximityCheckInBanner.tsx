@@ -6,11 +6,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Shadow, Spacing } from '../../../constants/DesignSystem';
 import { ThemedButton, ThemedSurface, ThemedText } from '../../themed';
@@ -48,14 +44,15 @@ export function ProximityCheckInBanner({
     transform: [{ translateY: (1 - progress.value) * -12 }],
   }));
 
-  const distanceLabel = useMemo(
-    () => formatDistanceKm(distanceMeters / 1000),
-    [distanceMeters]
-  );
+  const distanceLabel = useMemo(() => formatDistanceKm(distanceMeters / 1000), [distanceMeters]);
 
   return (
     <Animated.View style={[styles.wrap, animatedStyle]} pointerEvents="box-none">
-      <ThemedSurface variant="elevated" radius={Radius.lg} padded style={[styles.surface, Shadow.medium]}>
+      <ThemedSurface
+        variant="elevated"
+        radius={Radius.lg}
+        padded
+        style={[styles.surface, Shadow.medium]}>
         <View style={[styles.iconBadge, { backgroundColor: `${theme.accent}22` }]}>
           <Ionicons name="location" size={18} color={theme.accent} />
         </View>

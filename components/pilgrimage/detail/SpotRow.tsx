@@ -1,18 +1,20 @@
-// SpotRow — row-layout card for one pilgrimage spot. Memo'd so a single
-// visited toggle does not re-render every row in the list.
-//
-// Extracted from `app/(tabs)/pilgrimage/[animeId].tsx` (Phase 1B).
+// SpotRow — compact list presentation for one pilgrimage spot. The row keeps
+// capture/reference comparison, visit state, intents and directions without
+// wrapping each location in another oversized card.
 
 import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ON_DARK, ThemedText } from '../../themed';
+
+import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import type { ThemePalette } from '../../../context/ThemeContext';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
-import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import { useT } from '../../../libs/i18n';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
+import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
+import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import { ON_DARK, ThemedText } from '../../themed';
 import { formatDistanceKm, getPointSourceLabel, hasValidGeo } from './_helpers';
 import { spotRowPropsEqual } from './_equality';
 
@@ -49,166 +51,129 @@ function SpotRowImpl({
   onToggleVisited,
   onOpenMaps,
 }: SpotRowProps) {
+  const t = useT();
   const styles = useMemo(() => makeRowStyles(theme), [theme]);
   const hasGeo = hasValidGeo(spot.geo);
   const titles = getPilgrimageSpotTitles(spot);
   const sourceLabel = getPointSourceLabel(spot);
   const sceneMeta =
-    sceneCount > 1 ? `${sceneCount} scenes` : spot.ep > 0 ? `EP ${spot.ep}` : 'Scene';
+    sceneCount > 1
+      ? t('pilgrimageUi.scenesCount', { count: sceneCount })
+      : spot.ep > 0
+        ? t('pilgrimage.detail.episodeShort', { episode: spot.ep })
+        : t('pilgrimage.detail.scene');
   const metaLabel = sourceLabel ? `${sourceLabel} · ${sceneMeta}` : sceneMeta;
   const handlePress = useCallback(() => onPress(spot), [onPress, spot]);
   const handleToggleVisited = useCallback(() => onToggleVisited(spot), [onToggleVisited, spot]);
   const handleOpenMaps = useCallback(() => onOpenMaps(spot), [onOpenMaps, spot]);
-  // Only show the REAL/ANIME split when the user actually has a capture — the
-  // prior implementation always rendered two <Image> with the same anime URI,
-  // which both lied (claiming the left tile was a real photo) and forced
-  // expo-image to decode the same bitmap twice per row.
   const showSplit = !!captureUri;
+
   return (
     <Pressable
       onPress={handlePress}
-      style={({ pressed }) => [
-        styles.card,
-        visited && {
-          borderColor: `${theme.status.success}66`,
-          backgroundColor: `${theme.status.success}0D`,
-        },
-        pressed && { opacity: 0.94 },
-      ]}
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.84 }]}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${titles.primary}`}>
-      <View style={styles.imageRow}>
+      accessibilityLabel={t('pilgrimage.detail.openSpotA11y', { title: titles.primary })}>
+      <View
+        style={[
+          styles.thumbnail,
+          { borderColor: visited ? `${theme.status.success}88` : theme.glassBorder },
+        ]}>
         {showSplit ? (
           <>
             <View style={styles.imageHalf}>
               <Image
                 source={{ uri: captureUri }}
-                style={styles.imgFull}
+                style={styles.image}
                 contentFit="cover"
                 transition={150}
               />
-              <View style={styles.labelChip}>
-                <ThemedText variant="captionSmall" weight="800" style={styles.labelText}>
-                  REAL
-                </ThemedText>
-              </View>
+              <ThemedText variant="captionSmall" weight="800" style={styles.realLabel}>
+                {t('pilgrimageUi.real')}
+              </ThemedText>
             </View>
+            <View style={styles.splitDivider} />
             <View style={styles.imageHalf}>
               <Image
                 source={anitabiImageSource(spot.image)}
-                style={styles.imgFull}
+                style={styles.image}
                 contentFit="cover"
                 transition={150}
               />
-              <View style={[styles.labelChip, { backgroundColor: `${themeColor}E6` }]}>
-                <ThemedText
-                  variant="captionSmall"
-                  weight="800"
-                  style={[styles.labelText, { color: themeColorFg }]}>
-                  ANIME
-                </ThemedText>
-              </View>
-            </View>
-          </>
-        ) : (
-          <View style={styles.imageFull}>
-            <Image
-              source={anitabiImageSource(spot.image)}
-              style={styles.imgFull}
-              contentFit="cover"
-              transition={150}
-            />
-            <View style={[styles.labelChip, { backgroundColor: `${themeColor}E6` }]}>
               <ThemedText
                 variant="captionSmall"
                 weight="800"
-                style={[styles.labelText, { color: themeColorFg }]}>
-                ANIME
+                style={[
+                  styles.animeLabel,
+                  { backgroundColor: `${themeColor}E6`, color: themeColorFg },
+                ]}>
+                {t('pilgrimageUi.anime')}
               </ThemedText>
             </View>
-            {hasCapture ? (
-              <View style={[styles.captureDot, { borderColor: theme.background.primary }]}>
-                <Ionicons name="camera" size={9} color="#000" />
-              </View>
-            ) : null}
-          </View>
+          </>
+        ) : (
+          <Image
+            source={anitabiImageSource(spot.image)}
+            style={styles.image}
+            contentFit="cover"
+            transition={150}
+          />
         )}
       </View>
-      <View style={styles.infoRow}>
-        <View style={styles.infoCol}>
-          <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
-            {titles.primary}
-          </ThemedText>
-          <View style={styles.epRow}>
-            <Ionicons
-              name={sceneCount > 1 ? 'images-outline' : 'film-outline'}
-              size={11}
-              color={theme.text.tertiary}
-            />
-            <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-              {metaLabel}
-              {titles.secondary ? ` · ${titles.secondary}` : ''}
+
+      <View style={styles.infoColumn}>
+        <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
+          {titles.primary}
+        </ThemedText>
+        <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={2}>
+          {metaLabel}
+          {titles.secondary ? ` · ${titles.secondary}` : ''}
+        </ThemedText>
+        <View style={styles.metaFooter}>
+          {distanceKm != null ? (
+            <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
+              {formatDistanceKm(distanceKm)}
             </ThemedText>
-            {distanceKm != null ? (
-              <>
-                <View style={[styles.dot, { backgroundColor: theme.text.tertiary }]} />
-                <ThemedText variant="captionSmall" weight="600" style={{ color: themeColor }}>
-                  {formatDistanceKm(distanceKm)}
-                </ThemedText>
-              </>
-            ) : null}
+          ) : null}
+          <View style={styles.intentRow}>
+            {hasCapture ? <Ionicons name="camera" size={13} color={themeColor} /> : null}
+            {planned ? <Ionicons name="flag" size={13} color={theme.status.warning} /> : null}
+            {saved ? <Ionicons name="bookmark" size={13} color={theme.status.info} /> : null}
           </View>
         </View>
-        <View style={styles.actionsCol}>
-          <Pressable
-            onPress={handleToggleVisited}
-            style={({ pressed }) => [
-              styles.visitPill,
-              {
-                backgroundColor: visited ? theme.background.tertiary : theme.background.secondary,
-                borderColor: visited ? `${theme.status.success}66` : theme.glassBorder,
-              },
-              pressed && { opacity: 0.75 },
-            ]}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: visited }}
-            accessibilityLabel={visited ? 'Mark as not visited' : 'Mark as visited'}
-            hitSlop={4}>
-            <Ionicons
-              name={visited ? 'checkmark' : 'ellipse-outline'}
-              size={12}
-              color={visited ? theme.status.success : theme.text.secondary}
-            />
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{
-                color: visited ? theme.status.success : theme.text.secondary,
-              }}>
-              {visited ? 'Visited' : 'Visit'}
-            </ThemedText>
-          </Pressable>
-          {planned ? <Ionicons name="flag" size={15} color={theme.status.warning} /> : null}
-          {saved ? <Ionicons name="bookmark" size={14} color={theme.status.info} /> : null}
-          <Pressable
-            onPress={handleOpenMaps}
-            disabled={!hasGeo}
-            style={({ pressed }) => [
-              styles.iconPill,
-              { backgroundColor: theme.background.tertiary },
-              !hasGeo && { opacity: 0.4 },
-              pressed && hasGeo && { opacity: 0.75 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Directions to ${titles.primary}`}
-            hitSlop={4}>
-            <MaterialIcons
-              name="directions"
-              size={16}
-              color={hasGeo ? theme.status.info : theme.text.tertiary}
-            />
-          </Pressable>
-        </View>
+      </View>
+
+      <View style={styles.actionsColumn}>
+        <Pressable
+          onPress={handleToggleVisited}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: visited }}
+          accessibilityLabel={t(
+            visited ? 'pilgrimage.detail.markNotVisitedA11y' : 'pilgrimage.detail.markVisitedA11y'
+          )}
+          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.65 }]}>
+          <Ionicons
+            name={visited ? 'checkmark-circle' : 'ellipse-outline'}
+            size={21}
+            color={visited ? theme.status.success : theme.text.tertiary}
+          />
+        </Pressable>
+        <Pressable
+          onPress={handleOpenMaps}
+          disabled={!hasGeo}
+          accessibilityRole="button"
+          accessibilityLabel={t('pilgrimage.detail.directionsA11y', { title: titles.primary })}
+          style={({ pressed }) => [
+            styles.iconButton,
+            !hasGeo && { opacity: 0.35 },
+            pressed && hasGeo && { opacity: 0.65 },
+          ]}>
+          <MaterialIcons
+            name="directions"
+            size={20}
+            color={hasGeo ? theme.status.info : theme.text.tertiary}
+          />
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -218,103 +183,79 @@ export const SpotRow = memo(SpotRowImpl, spotRowPropsEqual);
 
 function makeRowStyles(theme: ThemePalette) {
   return StyleSheet.create({
-    card: {
-      backgroundColor: theme.background.secondary,
-      borderColor: theme.glassBorder,
-      borderWidth: 1,
-      borderRadius: 16,
-      padding: 12,
-      gap: 10,
-    },
-    imageRow: {
+    row: {
+      minHeight: 104,
       flexDirection: 'row',
-      gap: 6,
-      height: 120,
+      alignItems: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.glassBorder,
+    },
+    thumbnail: {
+      width: 112,
+      height: 80,
+      flexDirection: 'row',
+      overflow: 'hidden',
+      borderRadius: Radius.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      backgroundColor: theme.background.tertiary,
     },
     imageHalf: {
       flex: 1,
-      borderRadius: 10,
-      overflow: 'hidden',
-      backgroundColor: theme.background.tertiary,
       position: 'relative',
     },
-    imageFull: {
-      flex: 1,
-      borderRadius: 10,
-      overflow: 'hidden',
-      backgroundColor: theme.background.tertiary,
-      position: 'relative',
+    splitDivider: {
+      width: StyleSheet.hairlineWidth,
+      backgroundColor: ON_DARK,
+      opacity: 0.7,
     },
-    imgFull: {
+    image: {
       width: '100%',
       height: '100%',
     },
-    labelChip: {
+    realLabel: {
       position: 'absolute',
-      top: 6,
-      left: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      backgroundColor: 'rgba(10,10,10,0.7)',
-    },
-    labelText: {
+      left: 4,
+      bottom: 4,
       color: ON_DARK,
-      fontSize: 9,
-      letterSpacing: 0.5,
+      backgroundColor: 'rgba(0,0,0,0.68)',
+      paddingHorizontal: 4,
+      borderRadius: 4,
+      textTransform: 'uppercase',
     },
-    captureDot: {
+    animeLabel: {
       position: 'absolute',
-      bottom: 6,
-      right: 6,
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.accent,
-      borderWidth: 2,
-      alignItems: 'center',
-      justifyContent: 'center',
+      left: 4,
+      bottom: 4,
+      paddingHorizontal: 4,
+      borderRadius: 4,
+      textTransform: 'uppercase',
     },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    infoCol: {
+    infoColumn: {
       flex: 1,
-      gap: 3,
       minWidth: 0,
+      gap: 3,
     },
-    epRow: {
+    metaFooter: {
+      minHeight: 16,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      gap: Spacing.xs,
     },
-    dot: {
-      width: 3,
-      height: 3,
-      borderRadius: 1.5,
-      opacity: 0.6,
-    },
-    actionsCol: {
+    intentRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 5,
     },
-    visitPill: {
-      flexDirection: 'row',
+    actionsColumn: {
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 14,
-      borderWidth: 1,
     },
-    iconPill: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+    iconButton: {
+      width: Size.minTouchTarget,
+      height: Size.minTouchTarget,
+      borderRadius: Radius.md,
       alignItems: 'center',
       justifyContent: 'center',
     },

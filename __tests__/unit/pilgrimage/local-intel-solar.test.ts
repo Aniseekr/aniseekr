@@ -92,7 +92,7 @@ describe('local-intel solar', () => {
     const lateNight = computeBestTimeForSpot(
       [TOKYO_LAT, TOKYO_LNG],
       new Date(Date.UTC(2024, 5, 21, 14, 0)), // 23:00 JST
-      null,
+      null
     );
     expect(lateNight?.dayOffset).toBe(1);
 

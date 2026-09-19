@@ -3,13 +3,10 @@
 //
 // Spec: spec/pilgrimage_spec.md §8 (Routes).
 //
-// Visual language: map-first. The native map fills the screen as the primary
-// surface; back/album/share buttons, the search field, the series switcher and
-// the filter chips float on top of the map. A persistent
-// pull-up `BottomSheet` hosts the anime info card, stats and scene grid.
-// Dragging it up focuses on scenes; dragging it down (or tapping Map)
-// focuses on the map. The view-mode toggle (Grid / Rows / Map) controls
-// both the sheet content layout and its default snap point.
+// Visual language: map-first. The native map fills the screen; only
+// navigation and one layers/tools affordance float above it. Search, filter,
+// Grid / Rows / Map and anime context live together in the persistent content
+// sheet. Dragging it up focuses on scenes; Map peeks it back down.
 //
 // CLAUDE.md Rule 9: this file is the route shell. State + side effects live
 // in feature hooks (usePilgrimageDetailData / Interactions / DerivedSpots /
@@ -32,10 +29,9 @@ import {
   Pressable,
   Share,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -73,13 +69,7 @@ import type { SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
-import {
-  bannerEnter,
-  bannerExit,
-  fabEnter,
-  fabExit,
-  overlayEnter,
-} from '../../../libs/animations/presets';
+import { bannerEnter, bannerExit } from '../../../libs/animations/presets';
 import {
   LOCATE_FAB_COMPASS_ZOOM,
   LOCATE_FAB_ZOOM,
@@ -92,8 +82,7 @@ import { usePilgrimageDerivedSpots } from '../../../hooks/usePilgrimageDerivedSp
 import { usePilgrimageDetailIntel } from '../../../hooks/usePilgrimageDetailIntel';
 import { usePilgrimageSpotSheet } from '../../../hooks/usePilgrimageSpotSheet';
 import {
-  FilterCyclePill,
-  LayoutModeButton,
+  PilgrimageDetailToolsMenu,
   PilgrimageDetailLoadingShell,
   PilgrimageDetailSheet,
   ProximityCheckInBanner,
@@ -102,7 +91,6 @@ import {
   SpotClusterPicker,
   SpotMapView,
   SpotSheet,
-  VIEW_MODE_TOGGLE_HEIGHT,
   buildBrowseUrl,
   buildMapsURL,
   getPointSourceBangumiId,
@@ -122,16 +110,12 @@ import {
 } from '../../../libs/services/pilgrimage/locality/map-markers';
 import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
 
-// Sheet snap heights as fractions of the screen — kept in lockstep with the
-// snap-points array in PilgrimageDetailSheet. We use them to position the
-// floating filter strip and view-mode toggle just above the sheet's peek.
+// Sheet snap height as a fraction of the screen — kept in lockstep with the
+// first snap point in PilgrimageDetailSheet. Map controls use it as a safe
+// bottom inset so they never disappear behind the persistent sheet.
 const SHEET_PEEK_FRACTION = 0.16;
 
-// The locate FAB shares the sheet's top edge with the floating chrome
-// (filter pill ≈36 + gap 8 + view-mode toggle + its 6px edge offset), so it
-// needs a gap tall enough to stack ABOVE that block — the wide 3-segment
-// toggle reaches the FAB's right-edge column on phone widths.
-const LOCATE_FAB_EDGE_GAP = VIEW_MODE_TOGGLE_HEIGHT + 36 + 8 + 6 + 10;
+const LOCATE_FAB_EDGE_GAP = 10;
 
 // Foreground proximity check-in radius (spec 3.5) — distinct from the 150m
 // standalone-capture mount radius in nearest-cached-spot.ts (spec 3.2).
@@ -373,11 +357,6 @@ export default function PilgrimageDetailScreen() {
     consumedSpotFocusRef.current = resolved.consumedKey;
     if (resolved.spotId && focusedSpot) openSpot(focusedSpot);
   }, [bangumiId, focusSpotId, groupedSpotByPointId, openSpot]);
-
-  // Track the bottom sheet's current snap index so the floating filter strip
-  // and view-mode toggle can hide as the sheet covers them. The sheet
-  // controls itself; we only react to its onChange to fade the chrome.
-  const [sheetIndex, setSheetIndex] = useState<number>(viewMode === 'map' ? 0 : 1);
 
   // Keep the map's chip-strip selection in sync with the current filtered
   // pointset. If the previous pick was filtered out, fall back to the first
@@ -704,40 +683,16 @@ export default function PilgrimageDetailScreen() {
     t,
   ]);
 
-  // The bottom sheet writes its top-edge Y (from the top of the screen) into
-  // this shared value every frame. The floating filter strip + view-mode
-  // toggle anchor to it via `useAnimatedStyle` so they hug the sheet's edge
-  // instead of sitting at a fixed point that disappears behind the sheet at
-  // mid snap. Starts at the screen height = sheet closed; gorhom overwrites
-  // it on first layout.
+  // The bottom sheet writes its top-edge Y into this shared value. Native map
+  // controls use it directly, avoiding JS state on every drag frame.
   const screenHeight = Dimensions.get('window').height;
   const sheetPosition = useSharedValue(screenHeight);
 
-  // Fallback static offset (used as bottom inset for the chrome when the
-  // sheet hasn't laid out yet, or when reduced-motion is on). Keeps the
-  // chrome visible above the sheet's peek edge on first paint.
+  // Static fallback used by map-native controls before the sheet reports its
+  // animated top edge on first layout.
   const sheetPeekOffset = useMemo(() => {
-    return Math.max(
-      VIEW_MODE_TOGGLE_HEIGHT + insets.bottom + 12,
-      Math.round(SHEET_PEEK_FRACTION * screenHeight) + 12
-    );
+    return Math.max(insets.bottom + 64, Math.round(SHEET_PEEK_FRACTION * screenHeight) + 12);
   }, [insets.bottom, screenHeight]);
-
-  const handleSheetIndexChange = useCallback((idx: number) => {
-    setSheetIndex(idx);
-  }, []);
-
-  // Anchor the chrome to the sheet's top edge with a 10px gap. Hide it once
-  // the sheet covers the top half of the screen (full snap) so it doesn't
-  // float over the scene grid.
-  const chromeAnimatedStyle = useAnimatedStyle(() => {
-    const bottom = Math.max(screenHeight - sheetPosition.value + 6, sheetPeekOffset);
-    const hidden = sheetPosition.value < screenHeight * 0.18;
-    return {
-      bottom,
-      opacity: hidden ? 0 : 1,
-    };
-  });
 
   const isEmpty =
     !loading && !error && (!anime || (points.length === 0 && localityMarkers.length === 0));
@@ -813,13 +768,10 @@ export default function PilgrimageDetailScreen() {
               ) : null}
             </View>
 
-            {/* Layer 2 — top-floating chrome (header / search). Series picker
-                lives inline next to the back button now (compact dropdown
-                pill instead of a horizontal scroll row). */}
-            <Animated.View
-              entering={overlayEnter()}
-              style={styles.topOverlay}
-              pointerEvents="box-none">
+            {/* Layer 2 — navigation-only chrome. Browsing controls live in
+                the content sheet; secondary map actions live behind one
+                anchored layers menu. */}
+            <View style={styles.topOverlay} pointerEvents="box-none">
               <View style={styles.headerActions}>
                 <View style={styles.headerLeftGroup}>
                   <RoundHeaderButton
@@ -871,44 +823,17 @@ export default function PilgrimageDetailScreen() {
                     tint={themeColor}
                     theme={theme}
                   />
-                  <RoundHeaderButton
-                    icon="share-outline"
-                    onPress={handleShare}
-                    accessibilityLabel={t('pilgrimage.detail.shareA11y')}
-                    tint={theme.text.primary}
-                    theme={theme}
+                  <PilgrimageDetailToolsMenu
+                    hasMap={hasMap}
+                    mapMarkerMode={mapMarkerMode}
+                    mapOfflineOnly={mapOfflineOnly}
+                    themeColor={themeColor}
+                    onShare={handleShare}
+                    onToggleMarkerMode={handleMarkerModeToggle}
+                    onToggleOfflineOnly={handleOfflineToggle}
                   />
                 </View>
               </View>
-
-              {anime ? (
-                <View style={styles.searchPill}>
-                  <Ionicons name="search" size={16} color={theme.text.tertiary} />
-                  <TextInput
-                    value={spotSearchQuery}
-                    onChangeText={handleSearchChange}
-                    placeholder={t('pilgrimage.detail.searchPlaceholder')}
-                    placeholderTextColor={theme.text.tertiary}
-                    returnKeyType="search"
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                    selectionColor={themeColor}
-                    clearButtonMode="never"
-                    accessibilityLabel={t('pilgrimage.detail.searchA11y')}
-                    style={[styles.searchInput, { color: theme.text.primary }]}
-                  />
-                  {normalizedSpotSearchQuery ? (
-                    <Pressable
-                      onPress={handleSearchClear}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('pilgrimage.detail.clearSearchA11y')}
-                      style={({ pressed }) => [styles.searchClearBtn, pressed && { opacity: 0.7 }]}>
-                      <Ionicons name="close-circle" size={18} color={theme.text.tertiary} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              ) : null}
 
               {visibleProximityTarget ? (
                 <Animated.View entering={bannerEnter()} exiting={bannerExit()}>
@@ -922,103 +847,10 @@ export default function PilgrimageDetailScreen() {
                   />
                 </Animated.View>
               ) : null}
-            </Animated.View>
+            </View>
 
-            {/* Layer 3 — map-side dock for marker / offline toggles. Only in
-                map view, and only when we have a real map underneath. Also
-                yields to the proximity check-in banner — the banner grows
-                the top overlay column enough to overlap the dock's pinned
-                position, so the dock hides while the banner is up and
-                returns once it's dismissed or checked in. */}
-            {hasMap && viewMode === 'map' && sheetIndex <= 1 && visibleProximityTarget == null ? (
-              <View
-                style={[styles.mapOptionsDock, { top: insets.top + 132 }]}
-                pointerEvents="box-none">
-                <LayoutModeButton
-                  icon={mapMarkerMode === 'photo' ? 'image-outline' : 'ellipse'}
-                  active={mapMarkerMode === 'dot'}
-                  themeColor={themeColor}
-                  themeColorFg={themeColorFg}
-                  theme={theme}
-                  accessibilityLabel={
-                    mapMarkerMode === 'photo'
-                      ? t('pilgrimage.detail.useDotMarkersA11y')
-                      : t('pilgrimage.detail.usePhotoMarkersA11y')
-                  }
-                  onPress={handleMarkerModeToggle}
-                />
-                <LayoutModeButton
-                  icon="cloud-offline-outline"
-                  active={mapOfflineOnly}
-                  themeColor={themeColor}
-                  themeColorFg={themeColorFg}
-                  theme={theme}
-                  accessibilityLabel={t('pilgrimage.detail.useCachedTilesA11y')}
-                  onPress={handleOfflineToggle}
-                />
-              </View>
-            ) : null}
-
-            {/* Layer 4+5 — floating chrome (filter cycle pill + view-mode
-                toggle), anchored to the bottom sheet's top edge so it slides
-                with the sheet rather than getting buried at mid snap. Hidden
-                at full snap so it doesn't float over the scene grid. */}
-            {anime ? (
-              <Animated.View
-                entering={overlayEnter()}
-                style={[styles.bottomChromeWrap, chromeAnimatedStyle]}
-                pointerEvents="box-none">
-                <View style={styles.filterCycleRow}>
-                  <FilterCyclePill
-                    states={filterCycleStates}
-                    current={spotFilter}
-                    themeColor={themeColor}
-                    themeColorFg={themeColorFg}
-                    theme={theme}
-                    onCycle={handleSpotFilterChange}
-                  />
-                </View>
-                <View style={styles.viewModeWrapInner}>
-                  <View style={styles.viewModeBar}>
-                    <ViewModeSegment
-                      icon="apps"
-                      label={t('pilgrimage.detail.viewMode.grid')}
-                      count={filteredGroupedSpots.length}
-                      active={activeViewPreset === 'grid'}
-                      themeColor={themeColor}
-                      themeColorFg={themeColorFg}
-                      theme={theme}
-                      styles={styles}
-                      onPress={() => handleViewPresetChange('grid')}
-                    />
-                    <ViewModeSegment
-                      icon="reorder-three"
-                      label={t('pilgrimage.detail.viewMode.rows')}
-                      count={filteredGroupedSpots.length}
-                      active={activeViewPreset === 'rows'}
-                      themeColor={themeColor}
-                      themeColorFg={themeColorFg}
-                      theme={theme}
-                      styles={styles}
-                      onPress={() => handleViewPresetChange('rows')}
-                    />
-                    <ViewModeSegment
-                      icon="map"
-                      label={t('pilgrimage.detail.viewMode.map')}
-                      count={filteredMappablePointCount}
-                      active={activeViewPreset === 'map'}
-                      themeColor={themeColor}
-                      themeColorFg={themeColorFg}
-                      theme={theme}
-                      styles={styles}
-                      onPress={() => handleViewPresetChange('map')}
-                    />
-                  </View>
-                </View>
-              </Animated.View>
-            ) : null}
-
-            {/* Layer 6 — persistent pull-up bottom sheet with anime info
+            {/* Layer 3 — persistent pull-up bottom sheet with browse controls,
+                anime info,
                 + scene grid. Snaps follow viewMode (peek for map, mid for
                 grid/rows). */}
             <PilgrimageDetailSheet
@@ -1039,10 +871,18 @@ export default function PilgrimageDetailScreen() {
               visited={visited}
               captures={captures}
               spotIntents={spotIntents}
+              spotSearchQuery={spotSearchQuery}
+              filterCycleStates={filterCycleStates}
+              spotFilter={spotFilter}
+              activeViewPreset={activeViewPreset}
+              filteredMappablePointCount={filteredMappablePointCount}
               emptyMessage={isEmpty ? t('pilgrimage.detail.emptyNoData') : emptyMessage}
               animatedPosition={sheetPosition}
-              onSheetIndexChange={handleSheetIndexChange}
               onOpenBrowse={handleOpenBrowse}
+              onSearchChange={handleSearchChange}
+              onSearchClear={handleSearchClear}
+              onSpotFilterChange={handleSpotFilterChange}
+              onViewPresetChange={handleViewPresetChange}
               onSpotPress={openGroup}
               onToggleVisited={toggleGroupedVisited}
               onAreaPress={handleAreaPress}
@@ -1060,7 +900,7 @@ export default function PilgrimageDetailScreen() {
                 behind the drag handle, and fades itself out at the full snap
                 when the sheet covers the visible map. */}
             {hasMap ? (
-              <Animated.View entering={fabEnter()} exiting={fabExit()} pointerEvents="box-none">
+              <View pointerEvents="box-none">
                 <LocateFab
                   state={tracking.state}
                   onPress={tracking.cycleState}
@@ -1070,7 +910,7 @@ export default function PilgrimageDetailScreen() {
                   edgeGap={LOCATE_FAB_EDGE_GAP}
                   loading={tracking.isRequestingPermission}
                 />
-              </Animated.View>
+              </View>
             ) : null}
           </>
         )}
@@ -1122,61 +962,5 @@ export default function PilgrimageDetailScreen() {
         />
       </View>
     </>
-  );
-}
-
-// Segmented view-mode tab. Inlined here because it's a tiny presentational
-// helper specific to this route's floating toggle — a separate file would
-// add more import noise than the local component is worth.
-interface ViewModeSegmentProps {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  count: number;
-  active: boolean;
-  themeColor: string;
-  themeColorFg: string;
-  theme: ReturnType<typeof useTheme>['theme'];
-  styles: ReturnType<typeof makePilgrimageDetailStyles>;
-  onPress: () => void;
-}
-
-function ViewModeSegment({
-  icon,
-  label,
-  count,
-  active,
-  themeColor,
-  themeColorFg,
-  theme,
-  styles,
-  onPress,
-}: ViewModeSegmentProps) {
-  const fg = active ? themeColorFg : theme.text.primary;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      style={({ pressed }) => [
-        styles.viewModeSegment,
-        active ? { backgroundColor: themeColor } : { backgroundColor: 'transparent' },
-        pressed && { opacity: 0.86 },
-      ]}>
-      <Ionicons name={icon} size={14} color={fg} />
-      <ThemedText variant="bodySmall" weight="700" style={{ color: fg }}>
-        {label}
-      </ThemedText>
-      <View
-        style={[
-          styles.viewModeSegmentBadge,
-          active
-            ? { backgroundColor: `${themeColorFg}22` }
-            : { backgroundColor: theme.background.tertiary },
-        ]}>
-        <ThemedText variant="captionSmall" weight="700" style={{ color: fg }}>
-          {count}
-        </ThemedText>
-      </View>
-    </Pressable>
   );
 }

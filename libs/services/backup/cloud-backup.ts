@@ -62,10 +62,7 @@ export interface CloudStorageLike {
   readFile(path: string, scope?: CloudScope): Promise<string>;
   writeFile(path: string, data: string, scope?: CloudScope): Promise<void>;
   unlink(path: string, scope?: CloudScope): Promise<void>;
-  stat(
-    path: string,
-    scope?: CloudScope
-  ): Promise<{ size: number; mtimeMs: number; mtime: Date }>;
+  stat(path: string, scope?: CloudScope): Promise<{ size: number; mtimeMs: number; mtime: Date }>;
   getProvider(): CloudProviderId | string;
   setProviderOptions(options: Record<string, unknown>): void;
   /** Switch the active provider. Optional — not every backend supports it. */

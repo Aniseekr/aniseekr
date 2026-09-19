@@ -40,7 +40,9 @@ function GalleryThumbComponent({ uris, themeColor, onPickLibrary, onExpand }: Ga
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={isEmpty ? t('pilgrimageUi.pickPhotoFromLibrary') : t('pilgrimageUi.openRecentCapture')}
+      accessibilityLabel={
+        isEmpty ? t('pilgrimageUi.pickPhotoFromLibrary') : t('pilgrimageUi.openRecentCapture')
+      }
       onPress={() => {
         hapticsBridge.tap();
         if (isEmpty) onPickLibrary();

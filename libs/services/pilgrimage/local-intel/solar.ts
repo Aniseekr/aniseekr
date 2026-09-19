@@ -53,8 +53,7 @@ function solarBasis(julianCentury: number): SolarBasis {
   const trueLong = meanLong + eqOfCtr;
   const omega = 125.04 - 1934.136 * jc;
   const appLong = trueLong - 0.00569 - 0.00478 * Math.sin(omega * DEG);
-  const meanObliq =
-    23 + (26 + (21.448 - jc * (46.815 + jc * (0.00059 - jc * 0.001813))) / 60) / 60;
+  const meanObliq = 23 + (26 + (21.448 - jc * (46.815 + jc * (0.00059 - jc * 0.001813))) / 60) / 60;
   const obliqCorr = meanObliq + 0.00256 * Math.cos(omega * DEG);
   const declinationRad = Math.asin(Math.sin(obliqCorr * DEG) * Math.sin(appLong * DEG));
   const varY = Math.tan((obliqCorr / 2) * DEG) ** 2;
@@ -117,8 +116,10 @@ export function getSunTimes(lat: number, lng: number, civilDate: CivilDate): Sun
   const sunset = toDate(solarNoonMin + 4 * haOfficial);
 
   const haGolden = hourAngleDeg(lat, declinationRad, ZENITH_GOLDEN);
-  const goldenHourAm = haGolden === null ? null : { start: sunrise, end: toDate(solarNoonMin - 4 * haGolden) };
-  const goldenHourPm = haGolden === null ? null : { start: toDate(solarNoonMin + 4 * haGolden), end: sunset };
+  const goldenHourAm =
+    haGolden === null ? null : { start: sunrise, end: toDate(solarNoonMin - 4 * haGolden) };
+  const goldenHourPm =
+    haGolden === null ? null : { start: toDate(solarNoonMin + 4 * haGolden), end: sunset };
 
   const haCivil = hourAngleDeg(lat, declinationRad, ZENITH_CIVIL);
   const civilDusk = haCivil === null ? null : toDate(solarNoonMin + 4 * haCivil);

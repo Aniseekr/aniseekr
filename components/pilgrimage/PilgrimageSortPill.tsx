@@ -47,7 +47,12 @@ interface Anchor {
   h: number;
 }
 
-function PilgrimageSortPillImpl({ sortKey, availableKeys, theme, onSelect }: PilgrimageSortPillProps) {
+function PilgrimageSortPillImpl({
+  sortKey,
+  availableKeys,
+  theme,
+  onSelect,
+}: PilgrimageSortPillProps) {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const t = useT();
   const pillRef = useRef<RNView>(null);
@@ -72,7 +77,9 @@ function PilgrimageSortPillImpl({ sortKey, availableKeys, theme, onSelect }: Pil
 
   const menuTop = anchor ? anchor.y + anchor.h + 6 : 0;
   // Right-align the menu to the pill's right edge so it doesn't run off-screen.
-  const menuRight = anchor ? Math.max(Spacing.sm, Dimensions.get('window').width - (anchor.x + anchor.w)) : Spacing.sm;
+  const menuRight = anchor
+    ? Math.max(Spacing.sm, Dimensions.get('window').width - (anchor.x + anchor.w))
+    : Spacing.sm;
 
   return (
     <>

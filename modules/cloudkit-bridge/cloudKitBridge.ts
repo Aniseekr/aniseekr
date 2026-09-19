@@ -26,8 +26,7 @@ interface NativeCloudKitBridge {
 }
 
 const Native = (NativeModules as Record<string, unknown>).AniseekrCloudKitBridge as
-  | NativeCloudKitBridge
-  | undefined;
+  NativeCloudKitBridge | undefined;
 
 export type CloudKitAvailability = 'unavailable' | 'no-account' | 'ready';
 

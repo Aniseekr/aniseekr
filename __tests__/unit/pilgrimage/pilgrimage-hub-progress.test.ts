@@ -4,10 +4,25 @@ import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 
 function anime(litePointIds: string[]): AnitabiBangumi {
   return {
-    id: 1, title: 'X', cn: '', city: '', cover: '', color: '#8DC5D8',
-    geo: [35, 139], zoom: 12, modified: 0, pointsLength: 500,
+    id: 1,
+    title: 'X',
+    cn: '',
+    city: '',
+    cover: '',
+    color: '#8DC5D8',
+    geo: [35, 139],
+    zoom: 12,
+    modified: 0,
+    pointsLength: 500,
     imagesLength: 0,
-    litePoints: litePointIds.map((id) => ({ id, name: id, image: 'https://x/a.jpg', ep: 0, s: 0, geo: [35, 139] as [number, number] })),
+    litePoints: litePointIds.map((id) => ({
+      id,
+      name: id,
+      image: 'https://x/a.jpg',
+      ep: 0,
+      s: 0,
+      geo: [35, 139] as [number, number],
+    })),
   };
 }
 

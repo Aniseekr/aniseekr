@@ -97,7 +97,16 @@ describe('character library · serialization', () => {
 
   it('parseLibraryFromJson drops entries missing required fields', () => {
     const partial = JSON.stringify([
-      { id: 'ok', displayName: 'OK', sourceUri: 's', cutoutUri: 'c', thumbUri: 't', intrinsicW: 1, intrinsicH: 1, createdAt: 1 },
+      {
+        id: 'ok',
+        displayName: 'OK',
+        sourceUri: 's',
+        cutoutUri: 'c',
+        thumbUri: 't',
+        intrinsicW: 1,
+        intrinsicH: 1,
+        createdAt: 1,
+      },
       { id: 'bad' }, // missing fields
     ]);
     const back = parseLibraryFromJson(partial);

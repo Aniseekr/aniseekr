@@ -28,9 +28,7 @@ import { useT } from '../../libs/i18n';
 export default function WatchPlatformsScreen() {
   const { theme } = useTheme();
   const t = useT();
-  const [prefs, setPrefs] = useState<StreamingPrefs>(
-    () => loadUserPrefsSync().streamingPlatforms,
-  );
+  const [prefs, setPrefs] = useState<StreamingPrefs>(() => loadUserPrefsSync().streamingPlatforms);
 
   useEffect(() => {
     let mounted = true;
@@ -61,7 +59,7 @@ export default function WatchPlatformsScreen() {
     const enabled = isOn ? current.enabled.filter((x) => x !== id) : [...current.enabled, id];
     const primary = enabled.includes(current.primary ?? ('' as StreamingPlatformId))
       ? current.primary
-      : enabled[0] ?? null;
+      : (enabled[0] ?? null);
     hapticsBridge.selection();
     setPrefs(await patchStreamingPrefs({ enabled, primary }));
   }, []);
@@ -83,13 +81,16 @@ export default function WatchPlatformsScreen() {
   const platforms = useMemo(() => listStreamingPlatforms(), []);
   const enabledSet = useMemo(() => new Set(prefs.enabled), [prefs.enabled]);
   const primaryName = prefs.primary
-    ? platformById(platforms, prefs.primary)?.displayName ?? prefs.primary
+    ? (platformById(platforms, prefs.primary)?.displayName ?? prefs.primary)
     : null;
   const subtitle =
     prefs.enabled.length === 0
       ? t('settings.watchPlatformsScreen.subtitle.none')
       : primaryName
-        ? t('settings.watchPlatformsScreen.subtitle.withPrimary', { count: prefs.enabled.length, primary: primaryName })
+        ? t('settings.watchPlatformsScreen.subtitle.withPrimary', {
+            count: prefs.enabled.length,
+            primary: primaryName,
+          })
         : t('settings.watchPlatformsScreen.subtitle.count', { count: prefs.enabled.length });
 
   return (
@@ -192,10 +193,7 @@ function PlatformRow({
       onPress={onToggle}
       accessibilityRole="button"
       accessibilityLabel={`${enabled ? 'Disable' : 'Enable'} ${spec.displayName}`}
-      style={({ pressed }) => [
-        styles.platformRow,
-        pressed && { opacity: 0.7 },
-      ]}>
+      style={({ pressed }) => [styles.platformRow, pressed && { opacity: 0.7 }]}>
       <PlatformLogo
         size={32}
         logoDomain={resolveLogoDomain(spec)}
@@ -207,9 +205,7 @@ function PlatformRow({
         <Text style={[styles.platformName, { color: theme.text.primary }]} numberOfLines={1}>
           {spec.displayName}
         </Text>
-        <Text
-          style={[styles.platformMeta, { color: theme.text.tertiary }]}
-          numberOfLines={1}>
+        <Text style={[styles.platformMeta, { color: theme.text.tertiary }]} numberOfLines={1}>
           {spec.regions?.join(' · ') ?? t('settings.watchPlatformsScreen.streamingService')}
         </Text>
       </View>

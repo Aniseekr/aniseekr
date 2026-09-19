@@ -112,7 +112,9 @@ export default function BackupScreen() {
   const { theme } = useTheme();
   const t = useT();
   const [available, setAvailable] = useState<boolean | null>(null);
-  const [provider, setProvider] = useState<string>(Platform.OS === 'ios' ? 'icloud' : 'googledrive');
+  const [provider, setProvider] = useState<string>(
+    Platform.OS === 'ios' ? 'icloud' : 'googledrive'
+  );
   const [scope, setScope] = useState<CloudScope | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   // Seed sync from MMKV so the "Last backup …" line renders on frame 1
@@ -227,7 +229,9 @@ export default function BackupScreen() {
         Logger.warn('[Backup] setProvider failed', err);
         Alert.alert(
           t('settingsUi.unavailableProviderlabelNextIsNotTitle'),
-          t('settingsUi.unavailableProviderlabelNextIsNotMessage', { provider: providerLabel(next) })
+          t('settingsUi.unavailableProviderlabelNextIsNotMessage', {
+            provider: providerLabel(next),
+          })
         );
         return;
       }
@@ -301,7 +305,10 @@ export default function BackupScreen() {
       setPhase('downloading');
       const env = await cloud.download();
       if (!env) {
-        Alert.alert(t('settingsUi.noCloudBackupFoundTapTitle'), t('settingsUi.noCloudBackupFoundTapMessage'));
+        Alert.alert(
+          t('settingsUi.noCloudBackupFoundTapTitle'),
+          t('settingsUi.noCloudBackupFoundTapMessage')
+        );
         return;
       }
       setPhase('restoring');
@@ -438,7 +445,10 @@ export default function BackupScreen() {
       hapticsBridge.success();
       Alert.alert(
         t('settingsUi.pushedToCloudkitWroteResTitle'),
-        t('settingsUi.pushedToCloudkitWroteResMessage', { written: res.written, failed: res.failed })
+        t('settingsUi.pushedToCloudkitWroteResMessage', {
+          written: res.written,
+          failed: res.failed,
+        })
       );
     } catch (err) {
       Logger.error('[Backup] CloudKit push failed', err);
@@ -544,7 +554,9 @@ export default function BackupScreen() {
   // ---------- Render ----------
 
   return (
-    <SettingsScreenLayout title={t('settings.backup')} subtitle={t('settings.backupScreen.subtitle')}>
+    <SettingsScreenLayout
+      title={t('settings.backup')}
+      subtitle={t('settings.backupScreen.subtitle')}>
       <View
         style={[
           styles.statusCard,
@@ -560,7 +572,9 @@ export default function BackupScreen() {
               ? t('settings.backupScreen.status.checking')
               : available
                 ? lastBackupAt
-                  ? t('settings.backupScreen.status.lastBackup', { when: formatRelative(lastBackupAt, t) })
+                  ? t('settings.backupScreen.status.lastBackup', {
+                      when: formatRelative(lastBackupAt, t),
+                    })
                   : t('settings.backupScreen.status.noBackup')
                 : provider === 'googledrive'
                   ? t('settings.backupScreen.status.googleSignInPrompt')
@@ -578,14 +592,19 @@ export default function BackupScreen() {
         <SettingsSection title={t('settings.backupScreen.legacy.title')}>
           <View style={{ padding: Spacing.sm + 2, gap: Spacing.sm }}>
             <ThemedText variant="bodySmall" tone="secondary">
-              {t('settings.backupScreen.legacy.detected', { total: legacyPending.total })}{'\n'}
+              {t('settings.backupScreen.legacy.detected', { total: legacyPending.total })}
+              {'\n'}
               {describeLegacyCounts(legacyPending)}
             </ThemedText>
             <ThemedText variant="caption" tone="tertiary">
               {t('settings.backupScreen.legacy.explainer')}
             </ThemedText>
             <ThemedButton
-              label={phase === 'downloading' || phase === 'restoring' ? t('settings.backupScreen.legacy.processing') : t('settings.backupScreen.legacy.importCta')}
+              label={
+                phase === 'downloading' || phase === 'restoring'
+                  ? t('settings.backupScreen.legacy.processing')
+                  : t('settings.backupScreen.legacy.importCta')
+              }
               onPress={onMigrateLegacy}
               size="lg"
               fullWidth
@@ -627,7 +646,11 @@ export default function BackupScreen() {
       <SettingsSection title={t('settings.backupScreen.section.backup')}>
         <View style={{ padding: Spacing.sm + 2, gap: Spacing.sm }}>
           <ThemedButton
-            label={phase === 'uploading' ? t('settings.backupScreen.uploading') : t('settings.backupScreen.backupNow')}
+            label={
+              phase === 'uploading'
+                ? t('settings.backupScreen.uploading')
+                : t('settings.backupScreen.backupNow')
+            }
             onPress={onBackupNow}
             size="lg"
             fullWidth
@@ -693,7 +716,11 @@ export default function BackupScreen() {
               spellCheck={false}
             />
             <ThemedButton
-              label={phase === 'restoring' ? t('settings.backupScreen.restoring') : t('settings.backupScreen.restoreLegacyCta')}
+              label={
+                phase === 'restoring'
+                  ? t('settings.backupScreen.restoring')
+                  : t('settings.backupScreen.restoreLegacyCta')
+              }
               onPress={onRestoreLegacy}
               size="md"
               fullWidth
@@ -852,7 +879,11 @@ function GoogleDriveAuth({
         />
       ) : (
         <ThemedButton
-          label={working ? t('settings.backupScreen.google.signingIn') : t('settings.backupScreen.google.signIn')}
+          label={
+            working
+              ? t('settings.backupScreen.google.signingIn')
+              : t('settings.backupScreen.google.signIn')
+          }
           onPress={signIn}
           size="md"
           fullWidth
@@ -923,7 +954,11 @@ function providerLabel(provider: string): string {
   return provider;
 }
 
-function scopeHint(provider: string, scope: CloudScope | null, t: (k: string, v?: Record<string, string | number>) => string): string {
+function scopeHint(
+  provider: string,
+  scope: CloudScope | null,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   if (!scope) return '';
   if (provider === 'icloud') {
     return scope === 'documents'
@@ -1000,7 +1035,10 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-function formatRelative(date: Date, t: (k: string, v?: Record<string, string | number>) => string): string {
+function formatRelative(
+  date: Date,
+  t: (k: string, v?: Record<string, string | number>) => string
+): string {
   const seconds = Math.max(1, Math.floor((Date.now() - date.getTime()) / 1000));
   if (seconds < 60) return t('settings.backupScreen.relative.justNow');
   const minutes = Math.floor(seconds / 60);

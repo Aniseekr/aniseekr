@@ -4,13 +4,7 @@ import { Typography } from '../../constants/DesignSystem';
 import { useT, type TranslationKey } from '../../libs/i18n';
 
 export type AnimeStatus =
-  | 'watching'
-  | 'completed'
-  | 'on_hold'
-  | 'dropped'
-  | 'planning'
-  | 'rewatching'
-  | 'unknown';
+  'watching' | 'completed' | 'on_hold' | 'dropped' | 'planning' | 'rewatching' | 'unknown';
 
 interface AnimeStatusBadgeProps {
   status: AnimeStatus | string;

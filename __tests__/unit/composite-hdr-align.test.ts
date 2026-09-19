@@ -197,7 +197,9 @@ describe('alignTranslation', () => {
 describe('rgbaToLuma', () => {
   it('extracts luma using Rec. 601 weights for pure colors', () => {
     // 1×1 pure red, pure green, pure blue, pure white.
-    const rgba = new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]);
+    const rgba = new Uint8Array([
+      255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255,
+    ]);
     const luma = rgbaToLuma(rgba, 4, 1);
     expect(luma.length).toBe(4);
     // 0.299*255 ≈ 76.245 → integer-scaled becomes 76 (255*77 >> 8 = 76).

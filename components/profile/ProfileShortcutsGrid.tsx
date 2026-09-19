@@ -29,10 +29,8 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
 
   const slots = useMemo<(ShortcutSpec | null)[]>(
     () =>
-      Array.from({ length: PROFILE_SHORTCUT_COUNT }, (_, i) =>
-        getShortcutSpec(shortcuts[i] ?? ''),
-      ),
-    [shortcuts],
+      Array.from({ length: PROFILE_SHORTCUT_COUNT }, (_, i) => getShortcutSpec(shortcuts[i] ?? '')),
+    [shortcuts]
   );
 
   const handleTilePress = (slot: number, spec: ShortcutSpec | null) => {
@@ -184,18 +182,10 @@ function ShortcutTile({
             : `${spec.label}. Long-press to replace.`
           : 'Empty shortcut slot'
       }>
-      <View
-        style={[
-          styles.iconWrap,
-          { backgroundColor: tintWithAlpha(tint, 0.14) },
-        ]}>
+      <View style={[styles.iconWrap, { backgroundColor: tintWithAlpha(tint, 0.14) }]}>
         <Ionicons name={spec?.icon ?? 'add'} size={20} color={tint} />
       </View>
-      <ThemedText
-        variant="captionSmall"
-        weight="500"
-        numberOfLines={1}
-        style={styles.tileLabel}>
+      <ThemedText variant="captionSmall" weight="500" numberOfLines={1} style={styles.tileLabel}>
         {spec?.label ?? 'Empty'}
       </ThemedText>
     </Pressable>

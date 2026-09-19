@@ -17,9 +17,7 @@ export type EventDateState =
 const DAY_MS = 86400000;
 
 type OccurrenceState =
-  | { state: 'upcoming'; startsInDays: number }
-  | { state: 'active' }
-  | { state: 'ended' };
+  { state: 'upcoming'; startsInDays: number } | { state: 'active' } | { state: 'ended' };
 
 /**
  * Where `now` falls relative to one occurrence's [start-of-startsAt,

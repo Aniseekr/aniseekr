@@ -196,10 +196,7 @@ function folderFromRecord(rec: CloudKitRecord): BackupCollectionFolderRow | null
   };
 }
 
-function mergeUserAnime(
-  by: Map<string, BackupUserAnimeRow>,
-  row: BackupUserAnimeRow
-): void {
+function mergeUserAnime(by: Map<string, BackupUserAnimeRow>, row: BackupUserAnimeRow): void {
   const prev = by.get(row.anime_id);
   if (!prev) {
     by.set(row.anime_id, row);

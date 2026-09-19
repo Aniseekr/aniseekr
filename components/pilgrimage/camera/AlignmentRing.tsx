@@ -34,7 +34,14 @@ function AlignmentRingImpl({ progress, theme, trackColor }: AlignmentRingProps) 
   return (
     <View style={{ width: SIZE, height: SIZE }}>
       <Svg width={SIZE} height={SIZE}>
-        <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke={trackColor} strokeWidth={STROKE} fill="none" />
+        <Circle
+          cx={SIZE / 2}
+          cy={SIZE / 2}
+          r={R}
+          stroke={trackColor}
+          strokeWidth={STROKE}
+          fill="none"
+        />
         <Circle
           cx={SIZE / 2}
           cy={SIZE / 2}

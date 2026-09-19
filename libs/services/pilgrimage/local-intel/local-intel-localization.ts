@@ -16,7 +16,7 @@ function nonEmpty(value: string | undefined): string | null {
 
 export function resolveLocalIntelText(
   text: LocalizedText,
-  appLanguage: string = getAppLanguageSync(),
+  appLanguage: string = getAppLanguageSync()
 ): TranslatedValue {
   const lang = (appLanguage || '').toLowerCase();
   const ja = nonEmpty(text.ja);

@@ -83,7 +83,7 @@ export default function Index() {
             useNativeDriver: true,
           }),
         ]),
-      ]),
+      ])
     ).start();
 
     // Halo pulse: the cyan eye underlay throbs subtly to imitate the SwiftUI blur glow.
@@ -101,7 +101,7 @@ export default function Index() {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ]),
+      ])
     ).start();
 
     // Scanner ring — expands then fades, on loop.
@@ -133,7 +133,7 @@ export default function Index() {
             useNativeDriver: true,
           }),
         ]),
-      ]),
+      ])
     ).start();
 
     // Blink loop — starts after the spring entry settles, then repeats with a
@@ -154,7 +154,7 @@ export default function Index() {
           useNativeDriver: true,
         }),
         Animated.delay(1600),
-      ]),
+      ])
     ).start();
 
     const timer = setTimeout(() => {
@@ -162,17 +162,7 @@ export default function Index() {
     }, 2600);
 
     return () => clearTimeout(timer);
-  }, [
-    eyeScale,
-    eyeOpacity,
-    bgScale,
-    bgOpacity,
-    haloPulse,
-    ringScale,
-    ringOpacity,
-    blink,
-    router,
-  ]);
+  }, [eyeScale, eyeOpacity, bgScale, bgOpacity, haloPulse, ringScale, ringOpacity, blink, router]);
 
   const haloScale = Animated.multiply(eyeScale, haloPulse);
   const haloOuterScale = Animated.multiply(eyeScale, Animated.add(haloPulse, 0.1));

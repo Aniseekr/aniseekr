@@ -201,7 +201,11 @@ export function resolveCameraBandLayout(input: CameraBandLayoutInput): CameraBan
   const carouselBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP;
   const zoomBandBottom = carouselBottom + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP;
   const totalBottomChromeHeight = input.showZoomBand
-    ? CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT
+    ? CAMERA_BOTTOM_ROW_HEIGHT +
+      CAMERA_BAND_GAP +
+      CAMERA_CAROUSEL_BAND_HEIGHT +
+      CAMERA_BAND_GAP +
+      CAMERA_ZOOM_BAND_HEIGHT
     : CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT;
   return {
     shutterRowBottom,
@@ -241,7 +245,7 @@ export interface CameraChromeVisibility {
  * `resolveTransientCameraHudVisibility`.
  */
 export function resolveCameraChromeVisibility(
-  input: CameraChromeVisibilityInput,
+  input: CameraChromeVisibilityInput
 ): CameraChromeVisibility {
   const secondaryHidden = input.isLandscape && input.immersive;
   return {

@@ -42,7 +42,7 @@ function offsetViaIntl(tz: string, instant: Date): number | null {
       read('day'),
       read('hour'),
       read('minute'),
-      read('second'),
+      read('second')
     );
     if (!Number.isFinite(wallMs)) return null;
     return Math.round((wallMs - instant.getTime()) / 60000);

@@ -57,9 +57,7 @@ describe('inferBestTime', () => {
     expect(inferBestTime(baseAnalysis({ brightness: 0.1 })).en).toBe('Night');
   });
   it('returns 黃昏 when warm and dim', () => {
-    expect(
-      inferBestTime(baseAnalysis({ warmth: 0.25, brightness: 0.45 })).en
-    ).toBe('Golden Hour');
+    expect(inferBestTime(baseAnalysis({ warmth: 0.25, brightness: 0.45 })).en).toBe('Golden Hour');
   });
   it('returns 正午 when very bright', () => {
     expect(inferBestTime(baseAnalysis({ brightness: 0.8 })).en).toBe('Midday');
@@ -68,11 +66,9 @@ describe('inferBestTime', () => {
 
 describe('inferWeather', () => {
   it('detects 陰天 when sky channels are nearly equal', () => {
-    expect(
-      inferWeather(
-        baseAnalysis({ topSkyR: 170, topSkyG: 175, topSkyB: 175 })
-      ).en
-    ).toBe('Overcast');
+    expect(inferWeather(baseAnalysis({ topSkyR: 170, topSkyG: 175, topSkyB: 175 })).en).toBe(
+      'Overcast'
+    );
   });
   it('detects 晴朗 when blue dominates with saturation', () => {
     expect(
@@ -100,24 +96,22 @@ describe('inferCameraAngle', () => {
     expect(a.jp).toBe('仰角');
   });
   it('returns Eye-level when horizon is in the middle band', () => {
-    expect(inferCameraAngle(baseAnalysis({ horizonY: 0.5 })).en).toBe(
-      'Eye-level'
-    );
+    expect(inferCameraAngle(baseAnalysis({ horizonY: 0.5 })).en).toBe('Eye-level');
   });
   it('flags left-side light when left half is noticeably brighter', () => {
-    expect(
-      inferCameraAngle(baseAnalysis({ leftLum: 0.7, rightLum: 0.4 })).light
-    ).toBe('Light from left');
+    expect(inferCameraAngle(baseAnalysis({ leftLum: 0.7, rightLum: 0.4 })).light).toBe(
+      'Light from left'
+    );
   });
   it('flags right-side light when right is brighter', () => {
-    expect(
-      inferCameraAngle(baseAnalysis({ leftLum: 0.4, rightLum: 0.7 })).light
-    ).toBe('Light from right');
+    expect(inferCameraAngle(baseAnalysis({ leftLum: 0.4, rightLum: 0.7 })).light).toBe(
+      'Light from right'
+    );
   });
   it('flags even lighting when L/R differ by < 0.04', () => {
-    expect(
-      inferCameraAngle(baseAnalysis({ leftLum: 0.5, rightLum: 0.52 })).light
-    ).toBe('Even lighting');
+    expect(inferCameraAngle(baseAnalysis({ leftLum: 0.5, rightLum: 0.52 })).light).toBe(
+      'Even lighting'
+    );
   });
 });
 
@@ -184,63 +178,45 @@ describe('inferContrast', () => {
 
 describe('inferSceneComplexity', () => {
   it('flags busy scenes when edge magnitude is high', () => {
-    expect(inferSceneComplexity(baseAnalysis({ edgeMagnitude: 0.7 })).en).toBe(
-      'Detailed scene'
-    );
+    expect(inferSceneComplexity(baseAnalysis({ edgeMagnitude: 0.7 })).en).toBe('Detailed scene');
   });
   it('flags minimal scenes when edges are sparse', () => {
-    expect(
-      inferSceneComplexity(baseAnalysis({ edgeMagnitude: 0.1 })).en
-    ).toBe('Minimal / clean');
+    expect(inferSceneComplexity(baseAnalysis({ edgeMagnitude: 0.1 })).en).toBe('Minimal / clean');
   });
 });
 
 describe('inferAspectRatio', () => {
   it('recommends 4:5 when vertical edges dominate', () => {
-    expect(
-      inferAspectRatio(baseAnalysis({ verticalEdgeRatio: 0.7 })).ratio
-    ).toBe('4:5');
+    expect(inferAspectRatio(baseAnalysis({ verticalEdgeRatio: 0.7 })).ratio).toBe('4:5');
   });
   it('recommends 16:9 when horizontal edges dominate', () => {
-    expect(
-      inferAspectRatio(baseAnalysis({ verticalEdgeRatio: 0.3 })).ratio
-    ).toBe('16:9');
+    expect(inferAspectRatio(baseAnalysis({ verticalEdgeRatio: 0.3 })).ratio).toBe('16:9');
   });
   it('recommends 1:1 when balanced', () => {
-    expect(
-      inferAspectRatio(baseAnalysis({ verticalEdgeRatio: 0.5 })).ratio
-    ).toBe('1:1');
+    expect(inferAspectRatio(baseAnalysis({ verticalEdgeRatio: 0.5 })).ratio).toBe('1:1');
   });
 });
 
 describe('inferColorVariety', () => {
   it('flags monochrome when variance is low', () => {
-    expect(
-      inferColorVariety(baseAnalysis({ colorVariance: 0.1 })).en
-    ).toBe('Monochrome leaning');
+    expect(inferColorVariety(baseAnalysis({ colorVariance: 0.1 })).en).toBe('Monochrome leaning');
   });
   it('flags rich palette when variance is high', () => {
-    expect(
-      inferColorVariety(baseAnalysis({ colorVariance: 0.7 })).en
-    ).toBe('Rich palette');
+    expect(inferColorVariety(baseAnalysis({ colorVariance: 0.7 })).en).toBe('Rich palette');
   });
 });
 
 describe('inferMood', () => {
   it('returns warm cinematic for warm, saturated scenes', () => {
-    expect(
-      inferMood(baseAnalysis({ warmth: 0.25, saturation: 0.4 })).en
-    ).toBe('Warm cinematic');
+    expect(inferMood(baseAnalysis({ warmth: 0.25, saturation: 0.4 })).en).toBe('Warm cinematic');
   });
   it('returns moody noir for dark, low-variance scenes', () => {
-    expect(
-      inferMood(baseAnalysis({ brightness: 0.18, colorVariance: 0.2 })).en
-    ).toBe('Moody / noir');
+    expect(inferMood(baseAnalysis({ brightness: 0.18, colorVariance: 0.2 })).en).toBe(
+      'Moody / noir'
+    );
   });
   it('returns cool & crisp for cool, bright scenes', () => {
-    expect(
-      inferMood(baseAnalysis({ warmth: -0.15, brightness: 0.6 })).en
-    ).toBe('Cool & crisp');
+    expect(inferMood(baseAnalysis({ warmth: -0.15, brightness: 0.6 })).en).toBe('Cool & crisp');
   });
 });
 
@@ -250,33 +226,26 @@ describe('inferExposureCompensation', () => {
     return Array.from({ length: 16 }, (_, i) => (i === centerBin ? 1 : 0));
   }
   it('suggests +0.7 EV for very underexposed images', () => {
-    expect(
-      inferExposureCompensation(baseAnalysis({ luminanceHistogram: histAt(2) })).ev
-    ).toBe('+0.7');
+    expect(inferExposureCompensation(baseAnalysis({ luminanceHistogram: histAt(2) })).ev).toBe(
+      '+0.7'
+    );
   });
   it('suggests -0.7 EV for very overexposed images', () => {
-    expect(
-      inferExposureCompensation(baseAnalysis({ luminanceHistogram: histAt(14) }))
-        .ev
-    ).toBe('-0.7');
+    expect(inferExposureCompensation(baseAnalysis({ luminanceHistogram: histAt(14) })).ev).toBe(
+      '-0.7'
+    );
   });
   it('suggests 0 EV when histogram is balanced', () => {
-    expect(
-      inferExposureCompensation(baseAnalysis({ luminanceHistogram: histAt(7) })).ev
-    ).toBe('0');
+    expect(inferExposureCompensation(baseAnalysis({ luminanceHistogram: histAt(7) })).ev).toBe('0');
   });
 });
 
 describe('inferCameraSettings', () => {
   it('returns low ISO + narrow aperture for bright scenes', () => {
-    expect(
-      inferCameraSettings(baseAnalysis({ brightness: 0.8 })).iso
-    ).toBe('ISO 100');
+    expect(inferCameraSettings(baseAnalysis({ brightness: 0.8 })).iso).toBe('ISO 100');
   });
   it('returns high ISO + wide aperture for night scenes', () => {
-    expect(
-      inferCameraSettings(baseAnalysis({ brightness: 0.15 })).iso
-    ).toBe('ISO 1600');
+    expect(inferCameraSettings(baseAnalysis({ brightness: 0.15 })).iso).toBe('ISO 1600');
   });
 });
 

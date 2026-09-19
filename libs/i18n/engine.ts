@@ -23,12 +23,7 @@ import ja from './locales/ja.json';
 import ko from './locales/ko.json';
 import zhHans from './locales/zh-Hans.json';
 import zhHant from './locales/zh-Hant.json';
-import type {
-  LanguageId,
-  LanguageMeta,
-  TranslationKey,
-  TranslationValues,
-} from './types';
+import type { LanguageId, LanguageMeta, TranslationKey, TranslationValues } from './types';
 
 export const LANGUAGES: Record<LanguageId, LanguageMeta> = {
   en: { id: 'en', nativeName: 'English', englishName: 'English', flag: '🇬🇧' },

@@ -12,7 +12,7 @@ import {
 } from '../../libs/services/pilgrimage/alignment-scoring';
 
 // One degree of latitude is ~111,194.93 m (R = 6371 km × π / 180).
-const METERS_PER_DEG_LAT = (6371 * Math.PI) / 180 * 1000;
+const METERS_PER_DEG_LAT = ((6371 * Math.PI) / 180) * 1000;
 
 function locOffsetMeters(meters: number) {
   return {
@@ -127,9 +127,7 @@ describe('computeAlignmentScore', () => {
   });
 
   it('handles compass wrap so heading 350 / target 10 gives delta ≈ 20', () => {
-    const r = computeAlignmentScore(
-      baseSensors({ heading: 350, targetBearing: 10 })
-    );
+    const r = computeAlignmentScore(baseSensors({ heading: 350, targetBearing: 10 }));
     expect(r.headingDeltaDeg).toBeCloseTo(20, 5);
     expect(r.heading).toBeCloseTo(
       expectedFalloff(20, HEADING_PERFECT_DEG, HEADING_FULL_RANGE_DEG),
@@ -150,9 +148,10 @@ describe('computeAlignmentScore', () => {
   });
 
   it('clamps tilt score at 0 for tilts at or beyond the full angle', () => {
-    expect(
-      computeAlignmentScore(baseSensors({ tilt: TILT_FULL_ANGLE_DEG })).tilt
-    ).toBeCloseTo(0, 5);
+    expect(computeAlignmentScore(baseSensors({ tilt: TILT_FULL_ANGLE_DEG })).tilt).toBeCloseTo(
+      0,
+      5
+    );
     expect(computeAlignmentScore(baseSensors({ tilt: 90 })).tilt).toBe(0);
     expect(computeAlignmentScore(baseSensors({ tilt: -90 })).tilt).toBe(0);
   });
@@ -164,9 +163,7 @@ describe('computeAlignmentScore', () => {
   });
 
   it('keeps total null and ready false when only one sensor is available', () => {
-    const r = computeAlignmentScore(
-      baseSensors({ heading: 12, targetBearing: 18 })
-    );
+    const r = computeAlignmentScore(baseSensors({ heading: 12, targetBearing: 18 }));
     expect(r.heading).not.toBeNull();
     expect(r.position).toBeNull();
     expect(r.tilt).toBeNull();
@@ -186,8 +183,7 @@ describe('computeAlignmentScore', () => {
     });
     const pos = expectedFalloff(midDist, POSITION_PERFECT_M, POSITION_FULL_RADIUS_M);
     const head = expectedFalloff(20, HEADING_PERFECT_DEG, HEADING_FULL_RANGE_DEG);
-    const expected =
-      pos * WEIGHTS.position + head * WEIGHTS.heading + 1 * WEIGHTS.tilt;
+    const expected = pos * WEIGHTS.position + head * WEIGHTS.heading + 1 * WEIGHTS.tilt;
     expect(r.total).toBeCloseTo(expected, 5);
   });
 

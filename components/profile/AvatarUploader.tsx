@@ -51,7 +51,7 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: 'Open settings', onPress: () => Linking.openSettings() },
-      ],
+      ]
     );
     return false;
   }, [t]);
@@ -76,7 +76,7 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
       if (!dir) {
         Alert.alert(
           t('profile.storageUnavailableCouldNotAccessTitle'),
-          t('profile.storageUnavailableCouldNotAccessMessage'),
+          t('profile.storageUnavailableCouldNotAccessMessage')
         );
         return;
       }
@@ -98,7 +98,7 @@ export function AvatarUploader({ currentAvatarUrl, onChange }: AvatarUploaderPro
       hapticsBridge.error();
       Alert.alert(
         t('profile.couldNotUpdateAvatarPleaseTitle'),
-        t('profile.couldNotUpdateAvatarPleaseMessage'),
+        t('profile.couldNotUpdateAvatarPleaseMessage')
       );
     } finally {
       setBusy(false);

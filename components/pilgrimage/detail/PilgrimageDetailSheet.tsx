@@ -25,7 +25,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ON_DARK, ThemedText } from '../../themed';
+import { ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import type { ThemePalette } from '../../../context/ThemeContext';
@@ -38,6 +38,8 @@ import type { PilgrimageDisplayTitles } from '../../../libs/services/pilgrimage/
 import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import type { SpotIntentKind, SpotIntentMap } from '../../../libs/services/pilgrimage/spot-intents';
+import type { PilgrimageSpotFilter } from '../../../libs/services/pilgrimage/pilgrimage-detail-filter';
+import type { PilgrimageDetailViewPreset } from '../../../libs/services/pilgrimage/pilgrimage-detail-flow';
 import {
   composeAreaRows,
   groupSpotsIntoAreas,
@@ -45,9 +47,10 @@ import {
   type SpotAreaRow,
 } from '../../../libs/services/pilgrimage/spot-areas';
 import { IntelEventsList } from './IntelEventsList';
+import { PilgrimageDetailControls } from './PilgrimageDetailControls';
+import type { FilterCyclePillState } from './FilterCyclePill';
 import { SceneTile } from './SceneTile';
 import { SpotRow } from './SpotRow';
-import { StatCell } from './StatCell';
 import { formatDistanceKm } from './_helpers';
 import { AnitabiAttributionFooter } from '../common/AnitabiAttributionFooter';
 
@@ -69,14 +72,21 @@ export interface PilgrimageDetailSheetProps {
   visited: VisitedMap;
   captures: Record<string, PilgrimageCapture>;
   spotIntents: SpotIntentMap;
+  spotSearchQuery: string;
+  filterCycleStates: readonly FilterCyclePillState[];
+  spotFilter: PilgrimageSpotFilter;
+  activeViewPreset: PilgrimageDetailViewPreset;
+  filteredMappablePointCount: number;
   emptyMessage: string;
-  /** Optional shared value that the sheet writes its top-edge Y to, so the
-   * parent's floating chrome (filter chips + view mode toggle) can anchor to
-   * the sheet edge with a single Animated.View rather than a JS-thread tick. */
+  /** Optional shared value that exposes the sheet's top-edge Y to native map
+   * controls such as the locate button. */
   animatedPosition?: SharedValue<number>;
-  onSheetIndexChange?: (index: number) => void;
   onOpenBrowse: () => void;
   onOpenAnimePoster?: () => void;
+  onSearchChange: (text: string) => void;
+  onSearchClear: () => void;
+  onSpotFilterChange: (filter: PilgrimageSpotFilter) => void;
+  onViewPresetChange: (preset: PilgrimageDetailViewPreset) => void;
   onSpotPress: (group: AnitabiSpot) => void;
   onToggleVisited: (group: AnitabiSpot) => void;
   /** rows-mode area section header tap — jumps the map to that area's bounds. */
@@ -112,11 +122,19 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     theme,
     visited,
     captures,
+    spotSearchQuery,
+    filterCycleStates,
+    spotFilter,
+    activeViewPreset,
+    filteredMappablePointCount,
     emptyMessage,
     animatedPosition,
-    onSheetIndexChange,
     onOpenBrowse,
     onOpenAnimePoster,
+    onSearchChange,
+    onSearchClear,
+    onSpotFilterChange,
+    onViewPresetChange,
     onSpotPress,
     onToggleVisited,
     onAreaPress,
@@ -157,7 +175,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
   );
 
   const renderTile = useCallback(
-    ({ item: gs, index }: { item: AnitabiSpot; index: number }) => {
+    ({ item: gs }: { item: AnitabiSpot }) => {
       const rep = representativeForGroup(gs);
       const captured = gs.scenes.find((p) => captures[p.id]);
       return (
@@ -173,7 +191,6 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
             planned={hasIntentForGroup(gs, 'planned')}
             hasCapture={!!captured}
             captureUri={captured ? (captures[captured.id]?.uri ?? null) : null}
-            entryIndex={index}
             theme={theme}
             onPress={handleTilePress}
             onToggleVisited={handleTileToggleVisited}
@@ -276,23 +293,30 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
     [onAreaPress, renderRow, styles.areaHeader, t, theme.text.tertiary]
   );
 
-  const handleIndexChange = useCallback(
-    (index: number) => {
-      onSheetIndexChange?.(index);
-    },
-    [onSheetIndexChange]
-  );
-
   const listKey = listLayout;
   const numColumns = listLayout === 'grid' ? 2 : 1;
 
   const subtitleLine = animeSubtitle ?? anime?.city ?? '';
 
-  const visitedLabel = userStats.visitedCount === 1 ? 'Visited' : 'Visited';
-  const photosLabel = userStats.capturedCount === 1 ? 'Photo' : 'Photos';
+  const radiusValue = spotStats.radiusKm > 0 ? `~${formatDistanceKm(spotStats.radiusKm)}` : '—';
 
   const headerNode = (
     <View style={styles.headerWrap}>
+      <PilgrimageDetailControls
+        spotSearchQuery={spotSearchQuery}
+        filterCycleStates={filterCycleStates}
+        spotFilter={spotFilter}
+        activeViewPreset={activeViewPreset}
+        filteredMappablePointCount={filteredMappablePointCount}
+        themeColor={themeColor}
+        themeColorFg={themeColorFg}
+        theme={theme}
+        onSearchChange={onSearchChange}
+        onSearchClear={onSearchClear}
+        onSpotFilterChange={onSpotFilterChange}
+        onViewPresetChange={onViewPresetChange}
+      />
+
       <View style={styles.titleRow}>
         <Pressable
           onPress={onOpenAnimePoster}
@@ -309,15 +333,6 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
               contentFit="cover"
             />
           ) : null}
-          <View style={styles.posterBadge} pointerEvents="none">
-            <ThemedText
-              variant="captionSmall"
-              weight="800"
-              numberOfLines={1}
-              style={{ color: ON_DARK }}>
-              {spotStats.spotCount} scenes
-            </ThemedText>
-          </View>
         </Pressable>
         <View style={styles.titleColumn}>
           <ThemedText variant="headlineMedium" weight="800" numberOfLines={2}>
@@ -354,38 +369,39 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       </View>
 
       {anime ? (
-        <View style={styles.statsRow}>
-          <StatCell
-            icon="place"
-            value={String(spotStats.spotCount)}
-            label={spotStats.spotCount === 1 ? 'scene' : 'scenes'}
-            color={themeColor}
-            theme={theme}
-          />
-          <View style={styles.statDivider} />
-          <StatCell
-            icon="explore"
-            value={spotStats.radiusKm > 0 ? `~${formatDistanceKm(spotStats.radiusKm)}` : '—'}
-            label="radius"
-            color={themeColor}
-            theme={theme}
-          />
-          <View style={styles.statDivider} />
-          <StatCell
-            icon="check-circle-outline"
-            value={`${userStats.visitedCount}`}
-            label={visitedLabel}
-            color={userStats.visitedCount > 0 ? theme.status.success : themeColor}
-            theme={theme}
-          />
-          <View style={styles.statDivider} />
-          <StatCell
-            icon="photo"
-            value={`${userStats.capturedCount}`}
-            label={photosLabel}
-            color={userStats.capturedCount > 0 ? themeColor : theme.text.tertiary}
-            theme={theme}
-          />
+        <View style={styles.statsSummary}>
+          <View style={styles.statItem}>
+            <Ionicons name="location-outline" size={14} color={themeColor} />
+            <ThemedText variant="captionSmall" weight="600" tone="secondary">
+              {t('pilgrimage.detail.stats.scenes', { count: spotStats.spotCount })}
+            </ThemedText>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons name="scan-outline" size={14} color={theme.text.tertiary} />
+            <ThemedText variant="captionSmall" weight="600" tone="secondary">
+              {t('pilgrimage.detail.stats.radius', { distance: radiusValue })}
+            </ThemedText>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={14}
+              color={userStats.visitedCount > 0 ? theme.status.success : theme.text.tertiary}
+            />
+            <ThemedText variant="captionSmall" weight="600" tone="secondary">
+              {t('pilgrimage.detail.stats.visited', { count: userStats.visitedCount })}
+            </ThemedText>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons
+              name="camera-outline"
+              size={14}
+              color={userStats.capturedCount > 0 ? themeColor : theme.text.tertiary}
+            />
+            <ThemedText variant="captionSmall" weight="600" tone="secondary">
+              {t('pilgrimage.detail.stats.photos', { count: userStats.capturedCount })}
+            </ThemedText>
+          </View>
         </View>
       ) : null}
 
@@ -437,8 +453,7 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
       enableContentPanningGesture
       animatedPosition={animatedPosition}
       backgroundStyle={[styles.sheetBg, { backgroundColor: theme.background.primary }]}
-      handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]}
-      onChange={handleIndexChange}>
+      handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]}>
       <BottomSheetFlatList
         key={listKey}
         data={
@@ -485,11 +500,19 @@ function areEqual(prev: PilgrimageDetailSheetProps, next: PilgrimageDetailSheetP
     prev.visited === next.visited &&
     prev.captures === next.captures &&
     prev.spotIntents === next.spotIntents &&
+    prev.spotSearchQuery === next.spotSearchQuery &&
+    prev.filterCycleStates === next.filterCycleStates &&
+    prev.spotFilter === next.spotFilter &&
+    prev.activeViewPreset === next.activeViewPreset &&
+    prev.filteredMappablePointCount === next.filteredMappablePointCount &&
     prev.emptyMessage === next.emptyMessage &&
     prev.animatedPosition === next.animatedPosition &&
-    prev.onSheetIndexChange === next.onSheetIndexChange &&
     prev.onOpenBrowse === next.onOpenBrowse &&
     prev.onOpenAnimePoster === next.onOpenAnimePoster &&
+    prev.onSearchChange === next.onSearchChange &&
+    prev.onSearchClear === next.onSearchClear &&
+    prev.onSpotFilterChange === next.onSpotFilterChange &&
+    prev.onViewPresetChange === next.onViewPresetChange &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onToggleVisited === next.onToggleVisited &&
     prev.onAreaPress === next.onAreaPress &&
@@ -538,17 +561,6 @@ function makeStyles(theme: ThemePalette) {
       width: '100%',
       height: '100%',
     },
-    posterBadge: {
-      position: 'absolute',
-      left: 6,
-      right: 6,
-      bottom: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: Radius.sm,
-      backgroundColor: 'rgba(0,0,0,0.62)',
-      alignItems: 'center',
-    },
     titleColumn: {
       flex: 1,
       gap: 4,
@@ -565,20 +577,17 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       marginTop: 6,
     },
-    statsRow: {
+    statsSummary: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: 4,
-      borderRadius: Radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.glassBorder,
-      backgroundColor: theme.background.secondary,
+      flexWrap: 'wrap',
+      columnGap: Spacing.md,
+      rowGap: Spacing.xs,
     },
-    statDivider: {
-      width: StyleSheet.hairlineWidth,
-      height: 28,
-      backgroundColor: theme.glassBorder,
+    statItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
     },
     sectionTitleRow: {
       flexDirection: 'row',

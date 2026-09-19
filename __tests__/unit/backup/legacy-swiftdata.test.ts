@@ -117,9 +117,7 @@ describe('backup/legacy-swiftdata', () => {
   it('LEGACY-SD-001 hasLegacyContent / counts treat hasStore=false as empty', () => {
     expect(hasLegacyContent(null)).toBe(false);
     expect(hasLegacyContent({ hasStore: false, alreadyImported: false })).toBe(false);
-    expect(
-      countLegacySwiftDataSnapshot({ hasStore: false, alreadyImported: false }).total
-    ).toBe(0);
+    expect(countLegacySwiftDataSnapshot({ hasStore: false, alreadyImported: false }).total).toBe(0);
   });
 
   it('LEGACY-SD-002 hasLegacyContent counts the old migration_v1_v2_data ratings blob', () => {
@@ -209,10 +207,7 @@ describe('backup/legacy-swiftdata', () => {
       },
     ]);
     expect(env.db.collectionFolderItems).toHaveLength(2);
-    expect(env.db.collectionFolderItems.map((r) => r.anime_id).sort()).toEqual([
-      '100',
-      '21',
-    ]);
+    expect(env.db.collectionFolderItems.map((r) => r.anime_id).sort()).toEqual(['100', '21']);
     for (const item of env.db.collectionFolderItems) {
       expect(item.folder_id).toBe(FOLDER_UUID);
     }

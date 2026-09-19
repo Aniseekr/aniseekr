@@ -48,10 +48,7 @@ function useGenreCarouselMetrics() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const cardWidth = Math.min(screenWidth * CARD_RATIO, 340);
-  const maxByViewport = Math.max(
-    340,
-    screenHeight - insets.top - insets.bottom - VERTICAL_RESERVE,
-  );
+  const maxByViewport = Math.max(340, screenHeight - insets.top - insets.bottom - VERTICAL_RESERVE);
   const cardHeight = Math.min(cardWidth * CARD_ASPECT, maxByViewport);
   return {
     cardWidth,
@@ -151,13 +148,13 @@ const GenreCarouselItem = memo(function GenreCarouselItem({
       scrollX.value,
       inputRange,
       [NEIGHBOUR_SCALE, 1, NEIGHBOUR_SCALE],
-      Extrapolation.CLAMP,
+      Extrapolation.CLAMP
     );
     const opacity = interpolate(
       scrollX.value,
       inputRange,
       [NEIGHBOUR_OPACITY, 1, NEIGHBOUR_OPACITY],
-      Extrapolation.CLAMP,
+      Extrapolation.CLAMP
     );
     return { transform: [{ scale }], opacity };
   });

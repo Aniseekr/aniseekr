@@ -15,9 +15,7 @@ function distanceKm(userLocation: LatLng, geo: readonly [number, number]): numbe
   const dLng = toRad(geo[1] - userLocation.longitude);
   const lat1 = toRad(userLocation.latitude);
   const lat2 = toRad(geo[0]);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 

@@ -12,7 +12,14 @@
 // uses the `translation.machineBadge` catalog string so it localizes too.
 
 import { memo, useState } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -68,8 +75,7 @@ function TranslatedTextImpl({
   const [transientOverride, setTransientOverride] = useState<boolean | null>(null);
 
   const sameAsOriginal = translated === original;
-  const showOriginal =
-    !sameAsOriginal && (transientOverride ?? storedShowOriginal);
+  const showOriginal = !sameAsOriginal && (transientOverride ?? storedShowOriginal);
 
   const onLongPress = () => {
     if (disableLongPress || sameAsOriginal) return;

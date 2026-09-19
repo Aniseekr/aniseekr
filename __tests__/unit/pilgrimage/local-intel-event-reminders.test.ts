@@ -34,9 +34,7 @@ describe('local-intel event reminders', () => {
 
   it('PILG-046 returns null once the event has started or passed', () => {
     expect(computeEventReminderTrigger(OCCURRENCE, new Date(START_INSTANT))).toBeNull();
-    expect(
-      computeEventReminderTrigger(OCCURRENCE, new Date(Date.UTC(2026, 10, 1))),
-    ).toBeNull();
+    expect(computeEventReminderTrigger(OCCURRENCE, new Date(Date.UTC(2026, 10, 1)))).toBeNull();
   });
 
   it('PILG-047 pilgrimageEventReminders validates through preference merging', async () => {
@@ -44,7 +42,7 @@ describe('local-intel event reminders', () => {
 
     kvSet(
       NOTIFICATION_PREFS_KEY,
-      JSON.stringify({ pilgrimageEventReminders: false, episodeReminders: true }),
+      JSON.stringify({ pilgrimageEventReminders: false, episodeReminders: true })
     );
     const prefs = await refreshNotificationPrefs();
     expect(prefs.pilgrimageEventReminders).toBe(false);

@@ -8,10 +8,7 @@ import {
   normalizeStreamingPrefs,
 } from '../../libs/services/user-prefs';
 
-import {
-  appStorage,
-  __resetAppStorageForTests,
-} from '../../libs/services/storage/app-storage';
+import { appStorage, __resetAppStorageForTests } from '../../libs/services/storage/app-storage';
 
 describe('UserPrefs: streaming platform preferences', () => {
   beforeEach(() => {
@@ -65,7 +62,11 @@ describe('UserPrefs: streaming platform preferences', () => {
   });
 
   it('SP-PREFS-005 normalize keeps primary null when enabled is empty', () => {
-    const got = normalizeStreamingPrefs({ enabled: [], primary: 'netflix', preferAppDeepLink: true });
+    const got = normalizeStreamingPrefs({
+      enabled: [],
+      primary: 'netflix',
+      preferAppDeepLink: true,
+    });
     expect(got.enabled).toEqual([]);
     expect(got.primary).toBeNull();
   });

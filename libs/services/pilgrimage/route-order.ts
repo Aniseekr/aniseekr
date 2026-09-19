@@ -12,10 +12,7 @@ const EARTH_RADIUS_KM = 6371;
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
 
 /** Great-circle distance in km between two [lat, lng] pairs. */
-export function haversineKm(
-  a: readonly [number, number],
-  b: readonly [number, number]
-): number {
+export function haversineKm(a: readonly [number, number], b: readonly [number, number]): number {
   const dLat = toRad(b[0] - a[0]);
   const dLng = toRad(b[1] - a[1]);
   const h =

@@ -31,7 +31,10 @@ export default function AchievementsScreen() {
   };
 
   return (
-    <SettingsScreenLayout title={t('settings.achievements')} refreshing={refreshing} onRefresh={onRefresh}>
+    <SettingsScreenLayout
+      title={t('settings.achievements')}
+      refreshing={refreshing}
+      onRefresh={onRefresh}>
       <View style={{ paddingBottom: Spacing.xxl }}>
         <AchievementsGallery achievements={items} />
       </View>

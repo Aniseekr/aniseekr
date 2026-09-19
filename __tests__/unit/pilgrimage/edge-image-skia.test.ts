@@ -36,9 +36,8 @@ mock.module('expo-file-system/legacy', () => ({
   downloadAsync: async () => ({ uri: downloadedUri }),
 }));
 
-const { loadOverlaySourceImage } = await import(
-  '../../../libs/services/pilgrimage/edge-image-skia'
-);
+const { loadOverlaySourceImage } =
+  await import('../../../libs/services/pilgrimage/edge-image-skia');
 
 describe('loadOverlaySourceImage', () => {
   it('falls back to a direct download when the expo-image cache path cannot be decoded', async () => {

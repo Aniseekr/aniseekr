@@ -49,10 +49,7 @@ function enrichmentId(anime: DisplayTitleSource): string | null {
 const ENRICHABLE: ReadonlySet<TitleLanguageId> = new Set<TitleLanguageId>(['chinese', 'russian']);
 
 /** Overlay enrichment-cache titles onto the item's own bundle. */
-function withEnrichment(
-  anime: DisplayTitleSource,
-  platform: PlatformType
-): AnimeTitleBundle {
+function withEnrichment(anime: DisplayTitleSource, platform: PlatformType): AnimeTitleBundle {
   const id = enrichmentId(anime);
   if (!id) return anime;
   let out: AnimeTitleBundle = anime;

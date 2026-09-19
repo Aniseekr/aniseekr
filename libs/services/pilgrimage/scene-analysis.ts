@@ -601,14 +601,7 @@ export function inferFocalCell(a: SceneAnalysis): FocalCellInference {
 }
 
 export type WarningIcon =
-  | 'sunny'
-  | 'moon'
-  | 'eye-off'
-  | 'flash-off'
-  | 'walk'
-  | 'people'
-  | 'alert-circle'
-  | 'contrast';
+  'sunny' | 'moon' | 'eye-off' | 'flash-off' | 'walk' | 'people' | 'alert-circle' | 'contrast';
 
 export interface WarningItem {
   icon: WarningIcon;

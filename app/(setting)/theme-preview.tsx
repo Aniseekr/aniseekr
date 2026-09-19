@@ -109,7 +109,11 @@ export default function ThemePreviewScreen() {
                 <View
                   style={[
                     styles.progressArc,
-                    { borderColor: 'transparent', borderTopColor: accent, borderRightColor: accent },
+                    {
+                      borderColor: 'transparent',
+                      borderTopColor: accent,
+                      borderRightColor: accent,
+                    },
                   ]}
                 />
                 <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
@@ -132,7 +136,12 @@ export default function ThemePreviewScreen() {
 
           {/* Button row — actual ThemedButton variants */}
           <View style={styles.buttonRow}>
-            <ThemedButton label={t('settingsUi.primary')} onPress={() => hapticsBridge.tap()} size="sm" shape="rounded" />
+            <ThemedButton
+              label={t('settingsUi.primary')}
+              onPress={() => hapticsBridge.tap()}
+              size="sm"
+              shape="rounded"
+            />
             <ThemedButton
               variant="outline"
               label={t('settingsUi.outline')}
@@ -156,7 +165,11 @@ export default function ThemePreviewScreen() {
                 NEW
               </ThemedText>
             </View>
-            <View style={[styles.badge, { backgroundColor: accent + '14', borderColor: accent + '55' }]}>
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: accent + '14', borderColor: accent + '55' },
+              ]}>
               <Ionicons name="trending-up" size={11} color={accent} />
               <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
                 {t('settingsUi.trending')}

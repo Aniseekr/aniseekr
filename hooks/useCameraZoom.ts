@@ -232,11 +232,7 @@ export function useCameraZoom(input?: UseCameraZoomInput): UseCameraZoomOutput {
           // require a clear "past the wall" gesture, not just brushing the
           // floor with a small numeric overshoot from gesture noise. Each
           // callback latches per-gesture so we don't re-fire on every frame.
-          if (
-            onPinchBelowMin !== undefined &&
-            !belowMinTriggered.value &&
-            next < minZoom * 0.85
-          ) {
+          if (onPinchBelowMin !== undefined && !belowMinTriggered.value && next < minZoom * 0.85) {
             belowMinTriggered.value = true;
             runOnJS(onPinchBelowMin)();
           }

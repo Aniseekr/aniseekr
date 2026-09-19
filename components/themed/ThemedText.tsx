@@ -20,14 +20,7 @@ export type ThemedTextVariant =
   | 'monospace';
 
 export type ThemedTextTone =
-  | 'primary'
-  | 'secondary'
-  | 'tertiary'
-  | 'accent'
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'inverse';
+  'primary' | 'secondary' | 'tertiary' | 'accent' | 'success' | 'warning' | 'error' | 'inverse';
 
 export interface ThemedTextProps extends Omit<TextProps, 'style'> {
   variant?: ThemedTextVariant;

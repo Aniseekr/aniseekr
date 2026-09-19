@@ -45,9 +45,7 @@ import { subjectLifter } from './subject-lifter';
 export type EditorPhase = 'analyzing' | 'ready' | 'manual' | 'failed';
 
 export type SaveResult =
-  | { status: 'saved'; entry: CharacterEntry }
-  | { status: 'full' }
-  | { status: 'error' };
+  { status: 'saved'; entry: CharacterEntry } | { status: 'full' } | { status: 'error' };
 
 export interface EditorImages {
   /** Editing-resolution original for display. */

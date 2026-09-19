@@ -30,13 +30,22 @@ const THEME_ACCENTS = [
   '#F9A8D4', // candy accentLight
 ];
 const ACCENT_PRESET_HEXES = [
-  '#FF9900', '#FF3B30', '#FFD700', '#32D74B',
-  '#00BCD4', '#007AFF', '#AF52DE', '#E8A0BF',
+  '#FF9900',
+  '#FF3B30',
+  '#FFD700',
+  '#32D74B',
+  '#00BCD4',
+  '#007AFF',
+  '#AF52DE',
+  '#E8A0BF',
 ];
 const ACCENT_GRADIENT_STOPS = [
-  '#FF9900', '#FF3B30', // sunset
-  '#00BCD4', '#007AFF', // ocean
-  '#AF52DE', '#E8A0BF', // bloom
+  '#FF9900',
+  '#FF3B30', // sunset
+  '#00BCD4',
+  '#007AFF', // ocean
+  '#AF52DE',
+  '#E8A0BF', // bloom
 ];
 const COLORS_GRADIENT_SEEDS = [
   '#BF5AF2', // Colors.gradients.aurora[0]
