@@ -23,11 +23,7 @@
 // pillar.
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
-import {
-  getCameraDevice,
-  useCameraDevices,
-  type CameraDevice,
-} from 'react-native-vision-camera';
+import { useCameraDevice, useCameraDevices, type CameraDevice } from 'react-native-vision-camera';
 import { selectAndroidBackDevice } from '../libs/services/pilgrimage/android-camera-device';
 import {
   preferredPhysicalDevicesForFacing,
@@ -36,13 +32,14 @@ import {
 
 export function useResolvedCameraDevice(facing: CameraEngineFacing): CameraDevice | undefined {
   const devices = useCameraDevices();
+  const fallbackDevice = useCameraDevice(facing, {
+    physicalDevices: [...preferredPhysicalDevicesForFacing(facing)],
+  });
   return useMemo(() => {
     if (Platform.OS === 'android' && facing === 'back') {
       const picked = selectAndroidBackDevice(devices);
       if (picked) return picked;
     }
-    return getCameraDevice(devices, facing, {
-      physicalDevices: [...preferredPhysicalDevicesForFacing(facing)],
-    });
-  }, [devices, facing]);
+    return fallbackDevice;
+  }, [devices, facing, fallbackDevice]);
 }
