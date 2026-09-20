@@ -12,6 +12,16 @@ export type ExperienceTabId =
   | 'profile';
 
 export type SeekerTabId = Exclude<ExperienceTabId, 'profile'>;
+export type ExperienceTabRouteName =
+  | '(rate)'
+  | 'bangumi'
+  | 'collection'
+  | 'pilgrimage'
+  | 'explorer-camera'
+  | 'explorer-search'
+  | 'explorer-map'
+  | 'explorer-journal'
+  | 'profile';
 export type ExperienceTabHref =
   | '/(rate)'
   | '/bangumi'
@@ -58,6 +68,18 @@ export const EXPERIENCE_TAB_HREFS: Record<ExperienceTabId, ExperienceTabHref> = 
   profile: '/profile',
 };
 
+export const EXPERIENCE_TAB_ROUTE_NAMES: Record<ExperienceTabId, ExperienceTabRouteName> = {
+  discover: '(rate)',
+  bangumi: 'bangumi',
+  collection: 'collection',
+  pilgrimage: 'pilgrimage',
+  explorerCamera: 'explorer-camera',
+  explorerSearch: 'explorer-search',
+  explorerMap: 'explorer-map',
+  explorerJournal: 'explorer-journal',
+  profile: 'profile',
+};
+
 const FIXED_TABS: Record<Exclude<ExperienceMode, 'seeker'>, readonly ExperienceTabId[]> = {
   explorer: ['explorerCamera', 'explorerSearch', 'explorerMap', 'explorerJournal', 'profile'],
   collector: ['discover', 'bangumi', 'collection', 'profile'],
@@ -95,6 +117,10 @@ export function normalizeExperiencePrefs(input: unknown): ExperiencePrefs {
 export function resolveExperienceTabs(prefs: ExperiencePrefs): ExperienceTabId[] {
   if (prefs.mode !== 'seeker') return [...FIXED_TABS[prefs.mode]];
   return [...prefs.seekerTabs, 'profile'];
+}
+
+export function resolveExperienceRouteNames(prefs: ExperiencePrefs): ExperienceTabRouteName[] {
+  return resolveExperienceTabs(prefs).map((tab) => EXPERIENCE_TAB_ROUTE_NAMES[tab]);
 }
 
 export function resolveExperienceLandingHref(prefs: ExperiencePrefs): ExperienceTabHref {

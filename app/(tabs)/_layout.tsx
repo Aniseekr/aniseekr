@@ -1,20 +1,29 @@
 import { Tabs } from 'expo-router';
+import { useMemo } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FloatingTabBar from '../../components/FloatingTabBar';
 import { EXPERIENCE_TAB_META } from '../../components/navigation/experience-tab-meta';
 import { useT } from '../../libs/i18n';
 import { useExperienceMode } from '../../hooks/useExperienceMode';
-import { EXPERIENCE_TAB_HREFS, type ExperienceTabId } from '../../libs/navigation/experience-tabs';
+import {
+  EXPERIENCE_TAB_HREFS,
+  resolveExperienceRouteNames,
+  type ExperienceTabId,
+} from '../../libs/navigation/experience-tabs';
 
 export default function TabsLayout() {
   const t = useT();
-  const { mode, visibleTabs } = useExperienceMode();
+  const { experience, mode, visibleTabs } = useExperienceMode();
   const visible = new Set<ExperienceTabId>(visibleTabs);
+  const visibleRouteNames = useMemo(
+    () => new Set<string>(resolveExperienceRouteNames(experience)),
+    [experience]
+  );
   const href = (tab: ExperienceTabId) => (visible.has(tab) ? EXPERIENCE_TAB_HREFS[tab] : null);
 
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <FloatingTabBar {...props} visibleRouteNames={visibleRouteNames} />}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#fff',

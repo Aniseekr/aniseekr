@@ -5,6 +5,9 @@ import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+type FloatingTabBarProps = BottomTabBarProps & {
+  visibleRouteNames?: ReadonlySet<string>;
+};
 import Animated, {
   Easing,
   interpolateColor,
@@ -52,7 +55,12 @@ const isPermanentlyHidden = (options: any) =>
 const isTransientlyHidden = (options: any) =>
   (options?.tabBarStyle as any)?.display === 'none' || options?.tabBarVisible === false;
 
-export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export default function FloatingTabBar({
+  state,
+  descriptors,
+  navigation,
+  visibleRouteNames,
+}: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   const { theme, effectiveMode } = useTheme();
   const externallyHidden = useSyncExternalStore(
@@ -70,6 +78,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   });
 
   const visibleRoutes = state.routes.filter((route) => {
+    if (visibleRouteNames && !visibleRouteNames.has(route.name)) return false;
     const { options } = descriptors[route.key];
     return !isPermanentlyHidden(options);
   });

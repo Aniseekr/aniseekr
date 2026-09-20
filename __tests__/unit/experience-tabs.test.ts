@@ -3,6 +3,7 @@ import {
   DEFAULT_EXPERIENCE_PREFS,
   normalizeExperiencePrefs,
   resolveExperienceLandingHref,
+  resolveExperienceRouteNames,
   resolveExperienceTabTarget,
   resolveExperienceTabs,
   toggleSeekerTab,
@@ -147,5 +148,27 @@ describe('Experience tabs', () => {
         '/pilgrimage/album'
       )
     ).toEqual({ href: '/explorer-journal', isVisibleTab: true });
+  });
+
+  it('EXP-TABS-013 exposes only the registered routes for the active mode with Profile fixed', () => {
+    expect(resolveExperienceRouteNames({ mode: 'explorer', seekerTabs: [] })).toEqual([
+      'explorer-camera',
+      'explorer-search',
+      'explorer-map',
+      'explorer-journal',
+      'profile',
+    ]);
+    expect(resolveExperienceRouteNames({ mode: 'collector', seekerTabs: [] })).toEqual([
+      '(rate)',
+      'bangumi',
+      'collection',
+      'profile',
+    ]);
+    expect(
+      resolveExperienceRouteNames({
+        mode: 'seeker',
+        seekerTabs: ['explorerCamera', 'collection'],
+      })
+    ).toEqual(['explorer-camera', 'collection', 'profile']);
   });
 });
