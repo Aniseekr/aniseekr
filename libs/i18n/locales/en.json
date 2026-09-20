@@ -808,6 +808,19 @@
     },
     "profileScreen": {
       "anonName": "Anime fan",
+      "experienceMode": {
+        "choose": "Choose your AniSeekr mode",
+        "collector": "Collector",
+        "collectorDescription": "Discover anime, share thoughts, and grow your collection.",
+        "explorer": "Explorer",
+        "explorerDescription": "Find real-world anime locations and plan pilgrimages.",
+        "menuA11y": "Switch AniSeekr mode",
+        "profileFixed": "Profile always stays available",
+        "seeker": "Seeker",
+        "seekerDescription": "Build your own mix of Explorer and Collector tabs.",
+        "tabsSubtitle": "Choose the pages shown in your bottom navigation.",
+        "tabsTitle": "Seeker tabs"
+      },
       "settings": "Settings",
       "settingsSubtitle": "Preferences, account, more",
       "statLabel": {

@@ -10,6 +10,11 @@ import {
   getStreamingPlatform,
   type StreamingPlatformId,
 } from './streaming/streaming-platforms';
+import {
+  DEFAULT_EXPERIENCE_PREFS,
+  normalizeExperiencePrefs,
+  type ExperiencePrefs,
+} from '../navigation/experience-tabs';
 
 import { kvGet, kvSet } from './storage/app-storage';
 import { USER_PREFS_STORAGE_KEY } from './storage/keys';
@@ -84,6 +89,7 @@ export interface UserPrefs {
   swipe: SwipePrefs;
   seasonalLayout: SeasonalLayout;
   streamingPlatforms: StreamingPrefs;
+  experience: ExperiencePrefs;
 }
 
 export const DEFAULT_USER_PREFS: UserPrefs = {
@@ -97,6 +103,10 @@ export const DEFAULT_USER_PREFS: UserPrefs = {
   swipe: { ...DEFAULT_SWIPE_PREFS },
   seasonalLayout: 'carousel',
   streamingPlatforms: { ...DEFAULT_STREAMING_PREFS },
+  experience: {
+    ...DEFAULT_EXPERIENCE_PREFS,
+    seekerTabs: [...DEFAULT_EXPERIENCE_PREFS.seekerTabs],
+  },
 };
 
 export function normalizeStreamingPrefs(input: unknown): StreamingPrefs {
@@ -157,6 +167,7 @@ export function loadUserPrefsSync(): UserPrefs {
         ? (parsed.seasonalLayout as SeasonalLayout)
         : DEFAULT_USER_PREFS.seasonalLayout,
       streamingPlatforms: normalizeStreamingPrefs(parsed.streamingPlatforms),
+      experience: normalizeExperiencePrefs(parsed.experience),
     };
     return result;
   } catch (err) {
@@ -249,7 +260,28 @@ export async function patchStreamingPrefs(patch: Partial<StreamingPrefs>): Promi
   return nextStreaming;
 }
 
+export async function patchExperiencePrefs(
+  patch: Partial<ExperiencePrefs>
+): Promise<ExperiencePrefs> {
+  const current = loadUserPrefsSync();
+  const nextExperience = normalizeExperiencePrefs({
+    ...current.experience,
+    ...patch,
+  });
+  const nextPrefs = { ...current, experience: nextExperience };
+  try {
+    kvSet(USER_PREFS_STORAGE_KEY, JSON.stringify(nextPrefs));
+  } catch (err) {
+    Logger.warn('[UserPrefs] experience save failed', err);
+  }
+  // Experience changes do not affect the adult-content data source, so they
+  // can notify mounted navigators immediately without waiting on that sync.
+  notifyPrefsChanged(nextPrefs);
+  return nextExperience;
+}
+
 // Re-exported for consumers that want to enumerate the catalog without
 // importing both modules; keeps the public surface of user-prefs cohesive.
 export { STREAMING_PLATFORM_IDS };
 export type { StreamingPlatformId };
+export type { ExperiencePrefs };

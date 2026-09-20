@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { AniseekrEye } from '../components/common/AniseekrEye';
 import { isOnboardingCompleteSync } from '../libs/services/onboarding-service';
+import { loadUserPrefsSync } from '../libs/services/user-prefs';
+import { resolveExperienceLandingHref } from '../libs/navigation/experience-tabs';
 
 // Mirrors aniseeker/AniseekrSplashScreen.swift:
 // - pulsating cyan glow ball behind the eye (.repeatForever, autoreverses)
@@ -158,7 +160,11 @@ export default function Index() {
     ).start();
 
     const timer = setTimeout(() => {
-      router.replace(isOnboardingCompleteSync() ? '/(rate)' : '/onboarding');
+      router.replace(
+        isOnboardingCompleteSync()
+          ? resolveExperienceLandingHref(loadUserPrefsSync().experience)
+          : '/onboarding'
+      );
     }, 2600);
 
     return () => clearTimeout(timer);

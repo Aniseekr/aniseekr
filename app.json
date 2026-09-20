@@ -2,7 +2,7 @@
   "expo": {
     "name": "AniSeekr",
     "slug": "aniseekr",
-    "version": "1.1.9",
+    "version": "1.1.10",
     "scheme": "aniseeker",
     "web": {
       "favicon": "./assets/favicon.png"

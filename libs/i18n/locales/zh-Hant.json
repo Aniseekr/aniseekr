@@ -808,6 +808,19 @@
     },
     "profileScreen": {
       "anonName": "動畫迷",
+      "experienceMode": {
+        "choose": "選擇你的 AniSeekr 模式",
+        "collector": "Collector",
+        "collectorDescription": "探索動畫、分享心得，建立自己的收藏。",
+        "explorer": "Explorer",
+        "explorerDescription": "尋找動畫實景，規劃你的聖地巡禮。",
+        "menuA11y": "切換 AniSeekr 模式",
+        "profileFixed": "個人頁面會固定保留",
+        "seeker": "Seeker",
+        "seekerDescription": "自由組合 Explorer 與 Collector 的頁面。",
+        "tabsSubtitle": "選擇要顯示在下方導覽列的頁面。",
+        "tabsTitle": "Seeker 頁面"
+      },
       "settings": "設定",
       "settingsSubtitle": "偏好、帳號、其他",
       "statLabel": {

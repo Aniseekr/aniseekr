@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect -- Existing profile loaders populate local state on mount; Phase 3 only themes refresh and adds entry motion. */
 import { View, ScrollView, RefreshControl, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,8 +11,16 @@ import { router } from 'expo-router';
 import { PlatformSwitcher, PlatformInfo } from '../../components/profile/PlatformSwitcher';
 import { EditDisplayNameSheet } from '../../components/profile/EditDisplayNameSheet';
 import { ProfileShortcutsGrid } from '../../components/profile/ProfileShortcutsGrid';
+import { ExperienceModeSwitcher } from '../../components/profile/ExperienceModeSwitcher';
+import { SeekerTabEditor } from '../../components/profile/SeekerTabEditor';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
-import { ThemedText, ThemedSurface, readableTextOn, Skeleton } from '../../components/themed';
+import {
+  ThemedIconButton,
+  ThemedText,
+  ThemedSurface,
+  readableTextOn,
+  Skeleton,
+} from '../../components/themed';
 import { UserRepository, UserProfile } from '../../libs/repositories/user-repository';
 import { gachaService } from '../../libs/services/gacha-service';
 import { authService } from '../../libs/services/auth/auth-service';
@@ -27,6 +34,7 @@ import { FeatureFlags } from '../../constants/FeatureFlags';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import { listItemEnter } from '../../libs/animations/presets';
+import { useExperienceMode } from '../../hooks/useExperienceMode';
 
 const PLATFORM_INITIAL: Record<PlatformType, string> = {
   anilist: 'A',
@@ -51,6 +59,7 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const subscription = useSubscription();
   const t = useT();
+  const { mode, seekerTabs, setMode, toggleTab } = useExperienceMode();
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [cardsCount, setCardsCount] = useState(0);
@@ -186,7 +195,16 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.headerRow, { paddingTop: Math.max(top * 0.25, Spacing.xs) }]}>
-          <ThemedText variant="headlineLarge">{t('tabs.profileScreen.title')}</ThemedText>
+          <View style={styles.headerSide} />
+          <ExperienceModeSwitcher mode={mode} onChange={(next) => void setMode(next)} />
+          <View style={styles.headerSide}>
+            <ThemedIconButton
+              icon={(color) => <Ionicons name="settings-outline" size={21} color={color} />}
+              accessibilityLabel={t('tabs.profileScreen.settings')}
+              onPress={handleOpenSettings}
+              variant="ghost"
+            />
+          </View>
         </View>
 
         <ScrollView
@@ -401,13 +419,19 @@ export default function ProfileScreen() {
             </Animated.View>
           ) : null}
 
+          {mode === 'seeker' ? (
+            <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 4 : 3)}>
+              <SeekerTabEditor tabs={seekerTabs} onToggle={(tab) => void toggleTab(tab)} />
+            </Animated.View>
+          ) : null}
+
           {/* Quick Shortcuts */}
-          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 4 : 3)}>
+          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 5 : 4)}>
             <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
           </Animated.View>
 
           {/* Settings Row */}
-          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 5 : 4)}>
+          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}>
             <Pressable
               onPress={handleOpenSettings}
               style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
@@ -434,7 +458,7 @@ export default function ProfileScreen() {
 
           {connectedPlatforms.length > 0 ? (
             <Animated.View
-              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}
+              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 7 : 6)}
               style={styles.platformsSection}>
               <PlatformSwitcher
                 platforms={switcherPlatforms}
@@ -505,6 +529,14 @@ const styles = StyleSheet.create({
   headerRow: {
     paddingHorizontal: Spacing.screenPadding,
     paddingBottom: Spacing.sm,
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerSide: {
+    width: 44,
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,

@@ -26,9 +26,10 @@ import {
   dataSourceConfig,
 } from '../libs/services/data-source-config';
 import { PLATFORM_CONFIGS, type PlatformType } from '../libs/services/auth/types';
-import { patchUserPrefs } from '../libs/services/user-prefs';
+import { loadUserPrefsSync, patchUserPrefs } from '../libs/services/user-prefs';
 import { markOnboardingComplete } from '../libs/services/onboarding-service';
 import { useT } from '../libs/i18n';
+import { resolveExperienceLandingHref } from '../libs/navigation/experience-tabs';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -114,7 +115,7 @@ export default function OnboardingScreen() {
     } catch {
       // best-effort: never block the user from entering the app
     } finally {
-      router.replace('/(rate)');
+      router.replace(resolveExperienceLandingHref(loadUserPrefsSync().experience));
     }
   }, [allowAdult, browseSource, completing, router]);
 
