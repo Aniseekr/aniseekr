@@ -163,6 +163,10 @@
     "rate": "首页",
     "collection": "收藏",
     "pilgrimage": "圣地巡礼",
+    "explorerCamera": "相机",
+    "explorerSearch": "搜索",
+    "explorerMap": "地图",
+    "explorerJournal": "足迹",
     "bangumi": "Bangumi",
     "profile": "我的"
   }

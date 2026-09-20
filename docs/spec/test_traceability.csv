@@ -204,6 +204,7 @@ PILG-057,__tests__/unit/pilgrimage/visited-prefs.test.ts,namespaces and persists
 PILG-058,__tests__/unit/pilgrimage/locality-map-markers.test.ts,projects exact typed role pins and honest Anime88 areas,covered
 PILG-058,__tests__/unit/pilgrimage/native-map-markers.test.tsx,renders distinct native shapes icons and area labels,covered
 PILG-059,__tests__/unit/pilgrimage/locality-event-calendar.test.ts,expands only real active or upcoming occurrences into clipped month day keys,covered
+PILG-060,__tests__/unit/pilgrimage/pilgrimage-navigation.test.ts,returns Explorer detail flows to their first-class tabs,covered
 NEWS-001,__tests__/unit/news/feed-parser.test.ts,parses rss2 items with cdata and entities,covered
 NEWS-002,__tests__/unit/news/feed-parser.test.ts,parses atom entries with alternate link,covered
 NEWS-003,__tests__/unit/news/feed-parser.test.ts,parses rdf items with dc date,covered

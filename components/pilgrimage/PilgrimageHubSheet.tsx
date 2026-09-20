@@ -96,6 +96,8 @@ export interface PilgrimageHubSheetProps {
   nearbySpots?: readonly NearbySpot[];
   onPickNearbySpot?: (spot: NearbySpot) => void;
   headerControls?: ReactNode;
+  /** Extra clearance for a floating app tab bar rendered over this sheet. */
+  bottomContentInset?: number;
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
@@ -123,6 +125,7 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
     nearbySpots,
     onPickNearbySpot,
     headerControls,
+    bottomContentInset = 0,
   } = props;
 
   const t = useT();
@@ -329,7 +332,10 @@ function PilgrimageHubSheetImpl(props: PilgrimageHubSheetProps) {
         ListHeaderComponent={headerNode}
         ListEmptyComponent={emptyNode}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.sheetContent}
+        contentContainerStyle={[
+          styles.sheetContent,
+          { paddingBottom: Spacing.xxl + bottomContentInset },
+        ]}
         columnWrapperStyle={listLayout === 'grid' ? styles.gridRow : undefined}
       />
     </BottomSheet>
@@ -348,6 +354,7 @@ function areEqual(prev: PilgrimageHubSheetProps, next: PilgrimageHubSheetProps):
     prev.theme === next.theme &&
     prev.searchQuery === next.searchQuery &&
     prev.filterMode === next.filterMode &&
+    prev.bottomContentInset === next.bottomContentInset &&
     prev.onGoToCollection === next.onGoToCollection &&
     prev.onSearchAll === next.onSearchAll &&
     prev.initialIndex === next.initialIndex &&

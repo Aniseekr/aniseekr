@@ -3,6 +3,7 @@ import {
   DEFAULT_EXPERIENCE_PREFS,
   normalizeExperiencePrefs,
   resolveExperienceLandingHref,
+  resolveExperienceTabTarget,
   resolveExperienceTabs,
   toggleSeekerTab,
 } from '../../libs/navigation/experience-tabs';
@@ -49,7 +50,10 @@ describe('Experience tabs', () => {
 
   it('EXP-TABS-004 resolves the fixed Explorer and Collector presets', () => {
     expect(resolveExperienceTabs({ mode: 'explorer', seekerTabs: [] })).toEqual([
-      'pilgrimage',
+      'explorerCamera',
+      'explorerSearch',
+      'explorerMap',
+      'explorerJournal',
       'profile',
     ]);
     expect(resolveExperienceTabs({ mode: 'collector', seekerTabs: [] })).toEqual([
@@ -77,7 +81,9 @@ describe('Experience tabs', () => {
   });
 
   it('EXP-TABS-007 lands on the first visible tab for every mode', () => {
-    expect(resolveExperienceLandingHref({ mode: 'explorer', seekerTabs: [] })).toBe('/pilgrimage');
+    expect(resolveExperienceLandingHref({ mode: 'explorer', seekerTabs: [] })).toBe(
+      '/explorer-camera'
+    );
     expect(resolveExperienceLandingHref({ mode: 'collector', seekerTabs: [] })).toBe('/(rate)');
     expect(resolveExperienceLandingHref({ mode: 'seeker', seekerTabs: ['collection'] })).toBe(
       '/collection'
@@ -91,7 +97,29 @@ describe('Experience tabs', () => {
     expect(toggleSeekerTab(removed, 'pilgrimage')).toEqual(['discover', 'pilgrimage']);
   });
 
-  it('EXP-TABS-009 persists mode changes and notifies mounted navigation', async () => {
+  it('EXP-TABS-009 keeps Seeker within four optional tabs while still allowing removal', () => {
+    const full = ['discover', 'bangumi', 'collection', 'explorerMap'] as const;
+
+    expect(toggleSeekerTab(full, 'explorerCamera')).toEqual([...full]);
+    expect(toggleSeekerTab(full, 'collection')).toEqual(['discover', 'bangumi', 'explorerMap']);
+  });
+
+  it('EXP-TABS-010 clamps persisted Seeker tabs to the visible navigation capacity', () => {
+    expect(
+      normalizeExperiencePrefs({
+        mode: 'seeker',
+        seekerTabs: [
+          'explorerCamera',
+          'explorerSearch',
+          'explorerMap',
+          'explorerJournal',
+          'discover',
+        ],
+      }).seekerTabs
+    ).toEqual(['explorerCamera', 'explorerSearch', 'explorerMap', 'explorerJournal']);
+  });
+
+  it('EXP-TABS-011 persists mode changes and notifies mounted navigation', async () => {
     let observedMode: string | undefined;
     const unsubscribe = subscribeUserPrefs((prefs) => {
       observedMode = prefs.experience.mode;
@@ -102,5 +130,22 @@ describe('Experience tabs', () => {
 
     expect(loadUserPrefsSync().experience.mode).toBe('explorer');
     expect(observedMode).toBe('explorer');
+  });
+
+  it('EXP-TABS-012 falls back to a returnable legacy route when a Seeker tab is hidden', () => {
+    expect(
+      resolveExperienceTabTarget(
+        ['explorerCamera', 'profile'],
+        'explorerJournal',
+        '/pilgrimage/album'
+      )
+    ).toEqual({ href: '/pilgrimage/album', isVisibleTab: false });
+    expect(
+      resolveExperienceTabTarget(
+        ['explorerJournal', 'profile'],
+        'explorerJournal',
+        '/pilgrimage/album'
+      )
+    ).toEqual({ href: '/explorer-journal', isVisibleTab: true });
   });
 });

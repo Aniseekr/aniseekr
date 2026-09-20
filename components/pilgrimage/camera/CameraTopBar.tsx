@@ -23,7 +23,7 @@ interface CameraTopBarProps {
   topInset: number;
   leftInset?: number;
   rightInset?: number;
-  onClose: () => void;
+  onClose?: () => void;
   /** Up to 3 icon-button actions on the right side. */
   actions?: ReactNode;
   /** Second-row contextual controls (timer, aspect, orientation, guide). */
@@ -69,14 +69,18 @@ export default function CameraTopBar({
       />
 
       <View style={styles.row}>
-        <Pressable
-          onPress={onClose}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t('pilgrimageUi.closeCamera')}
-          style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}>
-          <Ionicons name="close" size={20} color="#fff" />
-        </Pressable>
+        {onClose ? (
+          <Pressable
+            onPress={onClose}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('pilgrimageUi.closeCamera')}
+            style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}>
+            <Ionicons name="close" size={20} color="#fff" />
+          </Pressable>
+        ) : (
+          <View style={styles.btnSpacer} />
+        )}
 
         <View style={styles.nameSlot} pointerEvents="none">
           <ThemedText variant="captionSmall" weight="600" numberOfLines={1} style={styles.nameText}>
@@ -186,6 +190,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CameraChrome.border,
     ...cameraControlShadow,
+  },
+  btnSpacer: {
+    width: 34,
+    height: 34,
   },
   nameSlot: {
     flex: 1,

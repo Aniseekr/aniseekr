@@ -49,6 +49,10 @@
     "rate": "홈",
     "collection": "컬렉션",
     "pilgrimage": "성지순례",
+    "explorerCamera": "카메라",
+    "explorerSearch": "검색",
+    "explorerMap": "지도",
+    "explorerJournal": "기록",
     "bangumi": "Bangumi",
     "profile": "프로필"
   }

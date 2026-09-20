@@ -679,6 +679,10 @@
     "rate": "首頁",
     "collection": "收藏",
     "pilgrimage": "聖地巡禮",
+    "explorerCamera": "相機",
+    "explorerSearch": "搜尋",
+    "explorerMap": "地圖",
+    "explorerJournal": "足跡",
     "bangumi": "Bangumi",
     "profile": "個人",
     "bangumiScreen": {
@@ -819,6 +823,7 @@
         "seeker": "Seeker",
         "seekerDescription": "自由組合 Explorer 與 Collector 的頁面。",
         "tabsSubtitle": "選擇要顯示在下方導覽列的頁面。",
+        "tabsLimit": "最多選擇四個頁面，個人頁面會固定保留。",
         "tabsTitle": "Seeker 頁面"
       },
       "settings": "設定",

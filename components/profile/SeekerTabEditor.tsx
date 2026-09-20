@@ -1,31 +1,26 @@
-import type { ComponentProps } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedSurface, ThemedText } from '../themed';
 import { useTheme } from '../../context/ThemeContext';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
-import { SEEKER_TAB_CATALOG, type SeekerTabId } from '../../libs/navigation/experience-tabs';
+import {
+  MAX_SEEKER_CONTENT_TABS,
+  SEEKER_TAB_CATALOG,
+  type SeekerTabId,
+} from '../../libs/navigation/experience-tabs';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { EXPERIENCE_TAB_META } from '../navigation/experience-tab-meta';
 
 interface SeekerTabEditorProps {
   tabs: readonly SeekerTabId[];
   onToggle: (tab: SeekerTabId) => void;
 }
 
-const TAB_META: Record<
-  SeekerTabId,
-  { labelKey: string; icon: ComponentProps<typeof MaterialIcons>['name'] }
-> = {
-  discover: { labelKey: 'tabs.rate', icon: 'home-filled' },
-  bangumi: { labelKey: 'tabs.bangumi', icon: 'date-range' },
-  collection: { labelKey: 'tabs.collection', icon: 'bookmark' },
-  pilgrimage: { labelKey: 'tabs.pilgrimage', icon: 'place' },
-};
-
 export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
   const { theme } = useTheme();
   const t = useT();
+  const atCapacity = tabs.length >= MAX_SEEKER_CONTENT_TABS;
 
   return (
     <ThemedSurface
@@ -37,14 +32,15 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
           {t('tabs.profileScreen.experienceMode.tabsTitle')}
         </ThemedText>
         <ThemedText variant="bodySmall" tone="secondary">
-          {t('tabs.profileScreen.experienceMode.tabsSubtitle')}
+          {t('tabs.profileScreen.experienceMode.tabsLimit')}
         </ThemedText>
       </View>
 
       <View style={styles.rows}>
         {SEEKER_TAB_CATALOG.map((tab, index) => {
-          const meta = TAB_META[tab];
+          const meta = EXPERIENCE_TAB_META[tab];
           const enabled = tabs.includes(tab);
+          const disabled = !enabled && atCapacity;
           return (
             <View
               key={tab}
@@ -54,6 +50,7 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
                   borderTopWidth: StyleSheet.hairlineWidth,
                   borderTopColor: theme.glassBorder,
                 },
+                disabled && styles.rowDisabled,
               ]}>
               <View style={[styles.icon, { backgroundColor: theme.background.tertiary }]}>
                 <MaterialIcons
@@ -68,6 +65,7 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
               <Switch
                 accessibilityLabel={t(meta.labelKey)}
                 value={enabled}
+                disabled={disabled}
                 onValueChange={() => {
                   hapticsBridge.selection();
                   onToggle(tab);
@@ -106,6 +104,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  rowDisabled: {
+    opacity: 0.45,
   },
   icon: {
     width: 36,

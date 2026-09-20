@@ -1,25 +1,49 @@
 export type ExperienceMode = 'explorer' | 'collector' | 'seeker';
 
-export type ExperienceTabId = 'discover' | 'bangumi' | 'collection' | 'pilgrimage' | 'profile';
+export type ExperienceTabId =
+  | 'discover'
+  | 'bangumi'
+  | 'collection'
+  | 'pilgrimage'
+  | 'explorerCamera'
+  | 'explorerSearch'
+  | 'explorerMap'
+  | 'explorerJournal'
+  | 'profile';
 
 export type SeekerTabId = Exclude<ExperienceTabId, 'profile'>;
-export type ExperienceTabHref = '/(rate)' | '/bangumi' | '/collection' | '/pilgrimage' | '/profile';
+export type ExperienceTabHref =
+  | '/(rate)'
+  | '/bangumi'
+  | '/collection'
+  | '/pilgrimage'
+  | '/explorer-camera'
+  | '/explorer-search'
+  | '/explorer-map'
+  | '/explorer-journal'
+  | '/profile';
 
 export interface ExperiencePrefs {
   mode: ExperienceMode;
   seekerTabs: SeekerTabId[];
 }
 
+export const MAX_SEEKER_CONTENT_TABS = 4;
+
 export const SEEKER_TAB_CATALOG: readonly SeekerTabId[] = [
   'discover',
   'bangumi',
   'collection',
   'pilgrimage',
+  'explorerCamera',
+  'explorerSearch',
+  'explorerMap',
+  'explorerJournal',
 ] as const;
 
 export const DEFAULT_EXPERIENCE_PREFS: ExperiencePrefs = {
   mode: 'seeker',
-  seekerTabs: [...SEEKER_TAB_CATALOG],
+  seekerTabs: ['discover', 'bangumi', 'collection', 'pilgrimage'],
 };
 
 export const EXPERIENCE_TAB_HREFS: Record<ExperienceTabId, ExperienceTabHref> = {
@@ -27,14 +51,15 @@ export const EXPERIENCE_TAB_HREFS: Record<ExperienceTabId, ExperienceTabHref> = 
   bangumi: '/bangumi',
   collection: '/collection',
   pilgrimage: '/pilgrimage',
+  explorerCamera: '/explorer-camera',
+  explorerSearch: '/explorer-search',
+  explorerMap: '/explorer-map',
+  explorerJournal: '/explorer-journal',
   profile: '/profile',
 };
 
 const FIXED_TABS: Record<Exclude<ExperienceMode, 'seeker'>, readonly ExperienceTabId[]> = {
-  // Phase 1 only exposes routes that already exist. Camera, Search, Map, and
-  // Journal become first-class Explorer tabs when their route shells land.
-  explorer: ['pilgrimage', 'profile'],
-  // Rating becomes a first-class Collector tab in the next page phase.
+  explorer: ['explorerCamera', 'explorerSearch', 'explorerMap', 'explorerJournal', 'profile'],
   collector: ['discover', 'bangumi', 'collection', 'profile'],
 };
 
@@ -59,6 +84,7 @@ export function normalizeExperiencePrefs(input: unknown): ExperiencePrefs {
       if (typeof id !== 'string' || !SEEKER_TAB_CATALOG.includes(id as SeekerTabId)) continue;
       const valid = id as SeekerTabId;
       if (!seekerTabs.includes(valid)) seekerTabs.push(valid);
+      if (seekerTabs.length === MAX_SEEKER_CONTENT_TABS) break;
     }
   } else {
     seekerTabs.push(...DEFAULT_EXPERIENCE_PREFS.seekerTabs);
@@ -76,7 +102,19 @@ export function resolveExperienceLandingHref(prefs: ExperiencePrefs): Experience
   return EXPERIENCE_TAB_HREFS[firstTab];
 }
 
+export function resolveExperienceTabTarget<TFallback extends string>(
+  visibleTabs: readonly ExperienceTabId[],
+  target: ExperienceTabId,
+  fallbackHref: TFallback
+): { href: ExperienceTabHref; isVisibleTab: true } | { href: TFallback; isVisibleTab: false } {
+  if (visibleTabs.includes(target)) {
+    return { href: EXPERIENCE_TAB_HREFS[target], isVisibleTab: true };
+  }
+  return { href: fallbackHref, isVisibleTab: false };
+}
+
 export function toggleSeekerTab(tabs: readonly SeekerTabId[], tab: SeekerTabId): SeekerTabId[] {
   if (tabs.includes(tab)) return tabs.filter((candidate) => candidate !== tab);
+  if (tabs.length >= MAX_SEEKER_CONTENT_TABS) return [...tabs];
   return [...tabs, tab];
 }

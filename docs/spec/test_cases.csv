@@ -202,6 +202,7 @@ PILG-056,Pilgrimage,deterministic,P0,Canonical event detail wiring,Event detail 
 PILG-057,Pilgrimage,deterministic,P0,Stamp-stop progress persistence,Stamp collection persists by namespaced canonical role id without colliding with scene point state,boundary,active
 PILG-058,Pilgrimage,deterministic,P0,Typed locality map markers,Stamp shop and festival roles render as distinct exact pins while Anime Tourism 88 rows remain labelled non-visitable areas,mapping,active
 PILG-059,Pilgrimage,deterministic,P0,Canonical event calendar mapping,Active and upcoming real occurrence windows expand to requested-month day keys while ongoing unannounced and ended events never receive a date,mapping,active
+PILG-060,Pilgrimage,deterministic,P0,Explorer tab return routing,Pilgrimage detail flows return to their first-class Explorer search map or journal tab without falling into the compact hub,navigation,active
 NEWS-001,News,deterministic,P0,RSS2 feed parse,RSS 2.0 items parse guid link title pubDate and description with CDATA and HTML entities decoded,mapping,active
 NEWS-002,News,deterministic,P0,Atom feed parse,Atom entries parse id title updated and the alternate link,mapping,active
 NEWS-003,News,deterministic,P0,RDF feed parse,RSS 1.0 RDF items parse title link description and dc date,mapping,active

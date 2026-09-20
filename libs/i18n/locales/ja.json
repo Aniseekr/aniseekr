@@ -49,6 +49,10 @@
     "rate": "ホーム",
     "collection": "コレクション",
     "pilgrimage": "聖地巡礼",
+    "explorerCamera": "カメラ",
+    "explorerSearch": "検索",
+    "explorerMap": "マップ",
+    "explorerJournal": "記録",
     "bangumi": "Bangumi",
     "profile": "プロフィール"
   }

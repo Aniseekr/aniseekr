@@ -41,7 +41,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { ThemedText, readableTextOn } from '../../../components/themed';
 import { PLATFORM_CONFIGS, type PlatformType } from '../../../libs/services/auth/types';
 import { isSupportedBrowseSource } from '../../../libs/services/data-source-config';
-import { getNumberParam } from '../../../libs/utils/route-params';
+import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
 import {
   formatPilgrimageSubtitle,
   getPilgrimageAnimeTitles,
@@ -109,6 +109,8 @@ import {
   buildCanonicalLocalityMarkers,
 } from '../../../libs/services/pilgrimage/locality/map-markers';
 import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
+import { useExperienceMode } from '../../../hooks/useExperienceMode';
+import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
 
 // Sheet snap height as a fraction of the screen — kept in lockstep with the
 // first snap point in PilgrimageDetailSheet. Map controls use it as a safe
@@ -146,9 +148,16 @@ function getLocalitySnapshot() {
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
   const bangumiId = getNumberParam(params, 'animeId');
+  const isExplorerFlow = getStringParam(params, 'returnTo')?.startsWith('explorer-') ?? false;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { visibleTabs } = useExperienceMode();
+  const journalTarget = resolveExperienceTabTarget(
+    isExplorerFlow ? visibleTabs : [],
+    'explorerJournal',
+    '/pilgrimage/album'
+  );
   const t = useT();
   const { language } = useI18n();
   const localitySnapshot = useSyncExternalStore(
@@ -485,8 +494,12 @@ export default function PilgrimageDetailScreen() {
   const handleOpenAlbum = useCallback(() => {
     if (bangumiId === null) return;
     Haptics.selectionAsync().catch(() => undefined);
-    router.push({ pathname: '/pilgrimage/album', params: { animeId: String(bangumiId) } });
-  }, [router, bangumiId]);
+    if (journalTarget.isVisibleTab) {
+      router.navigate(journalTarget.href);
+      return;
+    }
+    router.push({ pathname: journalTarget.href, params: { animeId: String(bangumiId) } });
+  }, [router, bangumiId, journalTarget.href, journalTarget.isVisibleTab]);
 
   const handleShare = useCallback(() => {
     if (!anime) return;

@@ -679,6 +679,10 @@
     "rate": "Home",
     "collection": "Collection",
     "pilgrimage": "Pilgrimage",
+    "explorerCamera": "Camera",
+    "explorerSearch": "Search",
+    "explorerMap": "Map",
+    "explorerJournal": "Journal",
     "bangumi": "Bangumi",
     "profile": "Profile",
     "bangumiScreen": {
@@ -819,6 +823,7 @@
         "seeker": "Seeker",
         "seekerDescription": "Build your own mix of Explorer and Collector tabs.",
         "tabsSubtitle": "Choose the pages shown in your bottom navigation.",
+        "tabsLimit": "Choose up to four pages. Profile always stays available.",
         "tabsTitle": "Seeker tabs"
       },
       "settings": "Settings",

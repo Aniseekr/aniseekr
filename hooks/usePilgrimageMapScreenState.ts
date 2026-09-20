@@ -1,5 +1,5 @@
 // usePilgrimageMapScreenState — parent-owned view controls for the hub map
-// screen (app/(tabs)/pilgrimage/map.tsx): search / filter / layout / region /
+// screen (components/pilgrimage/screens/PilgrimageMapScreen.tsx): search / filter / layout / region /
 // focused card / view-mode. Lifted out so the route file stays a view
 // orchestrator (CLAUDE.md Rule 9). Derived memos (hubEntries, filteredEntries,
 // markers, stats, focusedAnime) + the imperative camera effects stay in the
