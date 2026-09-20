@@ -88,7 +88,7 @@
     "react-native-css": "latest",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-gifted-charts": "^1.4.78",
-    "react-native-google-mobile-ads": "^16.5.0",
+    "react-native-google-mobile-ads": "16.0.0",
     "react-native-keyboard-controller": "1.21.9",
     "react-native-mmkv": "4.3.2",
     "react-native-nitro-image": "0.15.2",
