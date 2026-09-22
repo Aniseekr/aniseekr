@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { ON_DARK, ThemedText, readableTextOn } from '../../../components/themed';
+import { ON_DARK, ThemedIconButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { Shadow, Spacing } from '../../../constants/DesignSystem';
 import {
   clearCapture,
@@ -473,49 +473,44 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
           {tabRoot && !isDetail ? (
-            <View style={styles.iconBtnSpacer} />
+            <View style={styles.rootHeaderIdentity}>
+              <ThemedText variant="headlineMedium" weight="700" numberOfLines={1}>
+                {headerTitle}
+              </ThemedText>
+              <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>
+                {headerSubtitle}
+              </ThemedText>
+            </View>
           ) : (
-            <Pressable
-              onPress={handleBack}
-              hitSlop={14}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.back')}
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-              <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-            </Pressable>
+            <>
+              <ThemedIconButton
+                onPress={handleBack}
+                accessibilityLabel={t('common.back')}
+                haptic="none"
+                icon={(color) => <Ionicons name="chevron-back" size={22} color={color} />}
+              />
+              <View style={styles.headerCenter}>
+                <ThemedText variant="titleSmall" weight="700" numberOfLines={1}>
+                  {headerTitle}
+                </ThemedText>
+                <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
+                  {headerSubtitle}
+                </ThemedText>
+              </View>
+              <ThemedIconButton
+                onPress={handleAddNew}
+                accessibilityLabel={
+                  isDetail
+                    ? t('pilgrimage.album.addPhotoA11y')
+                    : t('pilgrimage.album.startPilgrimageA11y')
+                }
+                haptic="none"
+                icon={(color) => (
+                  <Ionicons name={isDetail ? 'images-outline' : 'add'} size={20} color={color} />
+                )}
+              />
+            </>
           )}
-          <View style={styles.headerCenter}>
-            <ThemedText
-              variant="titleSmall"
-              weight="700"
-              numberOfLines={1}
-              style={styles.headerTitle}>
-              {headerTitle}
-            </ThemedText>
-            <ThemedText
-              variant="captionSmall"
-              tone="secondary"
-              numberOfLines={1}
-              style={styles.headerSubtitle}>
-              {headerSubtitle}
-            </ThemedText>
-          </View>
-          <Pressable
-            onPress={handleAddNew}
-            hitSlop={14}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isDetail
-                ? t('pilgrimage.album.addPhotoA11y')
-                : t('pilgrimage.album.startPilgrimageA11y')
-            }
-            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons
-              name={isDetail ? 'images-outline' : 'add'}
-              size={20}
-              color={theme.text.primary}
-            />
-          </Pressable>
         </View>
 
         <ScrollView
@@ -1241,33 +1236,15 @@ function makeStyles(theme: ThemePalette) {
       paddingBottom: 12,
       gap: 12,
     },
-    iconBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
-    iconBtnSpacer: {
-      width: 40,
-      height: 40,
+    rootHeaderIdentity: {
+      flex: 1,
+      gap: Spacing.xxs,
+      paddingHorizontal: Spacing.xs,
     },
     headerCenter: {
       flex: 1,
       alignItems: 'center',
       gap: 2,
-    },
-    headerTitle: {
-      fontSize: 16,
-      textAlign: 'center',
-    },
-    headerSubtitle: {
-      letterSpacing: 0.5,
-      fontSize: 11,
-      textAlign: 'center',
     },
     scroll: {
       paddingHorizontal: 16,

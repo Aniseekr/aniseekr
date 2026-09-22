@@ -683,6 +683,8 @@
     "explorerSearch": "Search",
     "explorerMap": "Map",
     "explorerJournal": "Journal",
+    "explorerDiscover": "Discover",
+    "collectorSchedule": "Schedule",
     "bangumi": "Bangumi",
     "profile": "Profile",
     "bangumiScreen": {
@@ -769,6 +771,8 @@
       "untitled": "Untitled"
     },
     "pilgrimageScreen": {
+      "explorerSubtitle": "Find anime scenes and plan your next pilgrimage.",
+      "explorerTitle": "Discover",
       "errorLoadFailed": "Failed to load",
       "hero": {
         "closest": "Closest: {title}",
@@ -984,8 +988,13 @@
     "noMatchesDescription": "Nothing for \"{query}\" with the current filters. Try a different keyword or change the filter.",
     "noMatchesTitle": "No matches",
     "pilgrimage": {
+      "description": "Find an anime, then open its real-world locations.",
+      "emptyDescription": "Search by anime title or place to find mapped real-world scenes.",
+      "emptyTitle": "Find a pilgrimage",
       "noMapping": "No pilgrimage mapping for \"{title}\".",
-      "resolveFailed": "Could not resolve this title."
+      "noMatchesDescription": "No pilgrimage locations matched \"{query}\". Try another anime or place.",
+      "resolveFailed": "Could not resolve this title.",
+      "title": "Search pilgrimages"
     },
     "placeholder": {
       "default": "Search anime, characters, studios…",

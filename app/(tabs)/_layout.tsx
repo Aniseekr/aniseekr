@@ -15,10 +15,7 @@ export default function TabsLayout() {
   const t = useT();
   const { experience, mode, visibleTabs } = useExperienceMode();
   const visible = new Set<ExperienceTabId>(visibleTabs);
-  const visibleRouteNames = useMemo(
-    () => new Set<string>(resolveExperienceRouteNames(experience)),
-    [experience]
-  );
+  const visibleRouteNames = useMemo(() => resolveExperienceRouteNames(experience), [experience]);
   const href = (tab: ExperienceTabId) => (visible.has(tab) ? EXPERIENCE_TAB_HREFS[tab] : null);
 
   return (
@@ -49,7 +46,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="bangumi"
         options={{
-          title: t(EXPERIENCE_TAB_META.bangumi.labelKey),
+          title:
+            mode === 'collector'
+              ? t('tabs.collectorSchedule')
+              : t(EXPERIENCE_TAB_META.bangumi.labelKey),
           href: href('bangumi'),
           tabBarIcon: ({ color }) => (
             <MaterialIcons name={EXPERIENCE_TAB_META.bangumi.icon} size={24} color={color} />
@@ -69,10 +69,17 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="pilgrimage"
         options={{
-          title: t(EXPERIENCE_TAB_META.pilgrimage.labelKey),
+          title:
+            mode === 'explorer'
+              ? t('tabs.explorerDiscover')
+              : t(EXPERIENCE_TAB_META.pilgrimage.labelKey),
           href: href('pilgrimage'),
           tabBarIcon: ({ color }) => (
-            <MaterialIcons name={EXPERIENCE_TAB_META.pilgrimage.icon} size={24} color={color} />
+            <MaterialIcons
+              name={mode === 'explorer' ? 'explore' : EXPERIENCE_TAB_META.pilgrimage.icon}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />

@@ -17,8 +17,12 @@ describe('Pilgrimage hub simplification', () => {
       "router.push({ pathname: '/search', params: { context: 'pilgrimage' } })"
     );
     expect(HUB_SOURCE).toContain("router.push('/companion/library')");
-    expect(HUB_SOURCE).toContain("router.push('/pilgrimage/album')");
-    expect(HUB_SOURCE).toContain("router.push('/pilgrimage/capture')");
+    expect(HUB_SOURCE).toContain("'explorerJournal',\n    '/pilgrimage/album'");
+    expect(HUB_SOURCE).toContain('router.navigate(journalTarget.href)');
+    expect(HUB_SOURCE).toContain('router.push(journalTarget.href)');
+    expect(HUB_SOURCE).toContain("'explorerCamera',\n    '/pilgrimage/capture'");
+    expect(HUB_SOURCE).toContain('router.navigate(cameraTarget.href)');
+    expect(HUB_SOURCE).toContain('router.push(cameraTarget.href)');
     expect(HUB_SOURCE).toContain("router.push('/pilgrimage/identify')");
     expect(HUB_SOURCE).toContain("router.push('/pilgrimage/news')");
     expect(HUB_SOURCE).toContain("pathname: '/pilgrimage/map'");

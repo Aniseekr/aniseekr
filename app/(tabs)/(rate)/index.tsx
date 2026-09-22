@@ -11,7 +11,12 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Skeleton, readableTextOn } from '../../../components/themed';
+import {
+  Skeleton,
+  ThemedButton,
+  ThemedIconButton,
+  readableTextOn,
+} from '../../../components/themed';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { GenreCarousel, GenreCarouselSkeleton } from '../../../components/rate/GenreCarousel';
 import { SeasonalView } from '../../../components/rate/seasonal/SeasonalView';
@@ -36,6 +41,8 @@ import {
 } from '../../../libs/services/user-prefs';
 import { loadGenreSwipePage } from '../../../libs/services/rate/genre-deck-prefetch';
 import { useT } from '../../../libs/i18n';
+import { useExperienceMode } from '../../../hooks/useExperienceMode';
+import { trackingService } from '../../../libs/services/tracking/tracking-service';
 
 type TrendRange = 'week' | 'all';
 
@@ -47,6 +54,8 @@ export default function HomeRateScreen() {
   const { state, actions } = useRateData();
   const router = useRouter();
   const t = useT();
+  const { mode } = useExperienceMode();
+  const showPilgrimageTrend = mode !== 'collector';
   const MODE_OPTIONS: readonly { value: ViewMode; label: string }[] = useMemo(
     () => [
       { value: 'discovery', label: t('tabs.rateScreen.mode.discovery') },
@@ -93,6 +102,7 @@ export default function HomeRateScreen() {
   // Reuses the curated list from the pilgrimage hub, sorted by spot count so
   // the most-documented locations float to the top.
   useEffect(() => {
+    if (!showPilgrimageTrend) return;
     if (state.viewMode !== 'trend') return;
     if (trendPilgrimages.length > 0 || loadingTrendPilgrimages) return;
     let cancelled = false;
@@ -122,7 +132,7 @@ export default function HomeRateScreen() {
     return () => {
       cancelled = true;
     };
-  }, [state.viewMode, trendPilgrimages.length, loadingTrendPilgrimages]);
+  }, [state.viewMode, trendPilgrimages.length, loadingTrendPilgrimages, showPilgrimageTrend]);
 
   const warmGenreDeck = useCallback((genre: Genre) => {
     if (genreWarmupsRef.current.has(genre.id)) return;
@@ -282,6 +292,7 @@ export default function HomeRateScreen() {
             onRangeChange={handleTrendRangeChange}
             pilgrimages={trendPilgrimages}
             loadingPilgrimages={loadingTrendPilgrimages}
+            showPilgrimages={showPilgrimageTrend}
             headerBlock={headerBlock}
             onAnimePress={handleAnimeSelect}
             onPilgrimagePress={handlePilgrimageSelect}
@@ -344,6 +355,7 @@ interface TrendViewProps {
   onRangeChange: (next: TrendRange) => void;
   pilgrimages: AnitabiBangumi[];
   loadingPilgrimages: boolean;
+  showPilgrimages: boolean;
   headerBlock: React.ReactNode;
   onAnimePress: (anime: Anime) => void;
   onPilgrimagePress: (pilgrim: AnitabiBangumi) => void;
@@ -360,6 +372,7 @@ function TrendView({
   onRangeChange,
   pilgrimages,
   loadingPilgrimages,
+  showPilgrimages,
   headerBlock,
   onAnimePress,
   onPilgrimagePress,
@@ -414,15 +427,14 @@ function TrendView({
               <Text style={trendStyles.sectionTitle}>{sectionTitle}</Text>
               <Text style={trendStyles.sectionSubtitle}>{sectionSubtitle}</Text>
             </View>
-            <Pressable
+            <ThemedButton
               onPress={onSeeAllAnime}
-              hitSlop={12}
-              accessibilityRole="button"
+              label={t('tabs.rateScreen.trend.seeAll')}
               accessibilityLabel={t('tabs.rateScreen.trend.seeAllAnimeA11y')}
-              style={({ pressed }) => [trendStyles.seeAllBtn, pressed && { opacity: 0.6 }]}>
-              <Text style={trendStyles.sectionLink}>{t('tabs.rateScreen.trend.seeAll')}</Text>
-              <Ionicons name="chevron-forward" size={14} color={theme.accent} />
-            </Pressable>
+              variant="ghost"
+              haptic="none"
+              iconRight={<Ionicons name="chevron-forward" size={14} color={theme.accent} />}
+            />
           </View>
           <View style={trendStyles.rangePillRow}>
             <TrendRangePill options={rangeOptions} value={range} onChange={onRangeChange} />
@@ -440,58 +452,59 @@ function TrendView({
         </View>
       ) : null}
 
-      <View style={trendStyles.section}>
-        <View style={trendStyles.sectionHead}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={trendStyles.titleRow}>
-              <Text style={trendStyles.sectionTitle}>
-                {t('tabs.rateScreen.trend.pilgrimagesTitle')}
-              </Text>
-              <View style={trendStyles.trendBadge}>
-                <Ionicons name="trending-up" size={10} color={theme.accent} />
-                <Text style={trendStyles.trendBadgeText}>
-                  {t('tabs.rateScreen.trend.hotBadge')}
+      {showPilgrimages ? (
+        <View style={trendStyles.section}>
+          <View style={trendStyles.sectionHead}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={trendStyles.titleRow}>
+                <Text style={trendStyles.sectionTitle}>
+                  {t('tabs.rateScreen.trend.pilgrimagesTitle')}
                 </Text>
+                <View style={trendStyles.trendBadge}>
+                  <Ionicons name="trending-up" size={10} color={theme.accent} />
+                  <Text style={trendStyles.trendBadgeText}>
+                    {t('tabs.rateScreen.trend.hotBadge')}
+                  </Text>
+                </View>
               </View>
+              <Text style={trendStyles.sectionSubtitle}>
+                {t('tabs.rateScreen.trend.pilgrimagesSubtitle')}
+              </Text>
             </View>
-            <Text style={trendStyles.sectionSubtitle}>
-              {t('tabs.rateScreen.trend.pilgrimagesSubtitle')}
-            </Text>
+            <ThemedButton
+              onPress={onSeeAllPilgrimages}
+              label={t('tabs.rateScreen.trend.seeAll')}
+              accessibilityLabel={t('tabs.rateScreen.trend.pilgrimagesA11y')}
+              variant="ghost"
+              haptic="none"
+              iconRight={<Ionicons name="chevron-forward" size={14} color={theme.accent} />}
+            />
           </View>
-          <Pressable
-            onPress={onSeeAllPilgrimages}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('tabs.rateScreen.trend.pilgrimagesA11y')}
-            style={({ pressed }) => [trendStyles.seeAllBtn, pressed && { opacity: 0.6 }]}>
-            <Text style={trendStyles.sectionLink}>{t('tabs.rateScreen.trend.seeAll')}</Text>
-            <Ionicons name="chevron-forward" size={14} color={theme.accent} />
-          </Pressable>
+          {loadingPilgrimages && pilgrimages.length === 0 ? (
+            <Skeleton.AnimeCardList horizontal count={4} paddingHorizontal={16} />
+          ) : pilgrimages.length === 0 ? (
+            <View style={trendStyles.pilgrimageEmpty}>
+              <Text style={trendStyles.placeholderText}>
+                {t('tabs.rateScreen.trend.noPilgrimages')}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={trendStyles.pilgrimageList}>
+              {pilgrimages.map((p, idx) => (
+                <TrendingPilgrimageCard
+                  key={`pilg-${p.id}`}
+                  pilgrim={p}
+                  rank={idx + 1}
+                  onPress={() => onPilgrimagePress(p)}
+                />
+              ))}
+            </ScrollView>
+          )}
         </View>
-        {loadingPilgrimages && pilgrimages.length === 0 ? (
-          <Skeleton.AnimeCardList horizontal count={4} paddingHorizontal={16} />
-        ) : pilgrimages.length === 0 ? (
-          <View style={trendStyles.pilgrimageEmpty}>
-            <Text style={trendStyles.placeholderText}>
-              {t('tabs.rateScreen.trend.noPilgrimages')}
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={trendStyles.pilgrimageList}>
-            {pilgrimages.map((p, idx) => (
-              <TrendingPilgrimageCard
-                key={`pilg-${p.id}`}
-                pilgrim={p}
-                rank={idx + 1}
-                onPress={() => onPilgrimagePress(p)}
-              />
-            ))}
-          </ScrollView>
-        )}
-      </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -545,16 +558,56 @@ interface TrendingHeroCardProps {
 function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
   const { theme } = useTheme();
   const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
-  const accentFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
   const t = useT();
+  const [tracked, setTracked] = useState(false);
+  const [trackingPending, setTrackingPending] = useState(false);
   const score = anime.score != null ? formatScore(anime.score) : null;
   const description = anime.description?.replace(/<[^>]+>/g, '').trim();
+
+  useEffect(() => {
+    let cancelled = false;
+    void trackingService
+      .getTrackedIdSet()
+      .then((ids) => {
+        if (!cancelled) setTracked(ids.has(anime.id));
+      })
+      .catch(() => undefined);
+    const unsubscribe = trackingService.onTrackedIdsChange((ids) => {
+      setTracked(ids.has(anime.id));
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [anime.id]);
+
+  const handleTrackingToggle = useCallback(async () => {
+    if (trackingPending) return;
+    const wasTracked = tracked;
+    setTrackingPending(true);
+    setTracked(!wasTracked);
+    try {
+      if (wasTracked) {
+        await trackingService.removeTracking(anime.id);
+      } else {
+        await trackingService.updateStatus(anime.id, 'planned', {
+          id: anime.id,
+          title: anime.title,
+          imageUrl: anime.image,
+        });
+      }
+      hapticsBridge.success();
+    } catch (error) {
+      console.warn('[TrendingHeroCard] tracking toggle failed', error);
+      setTracked(wasTracked);
+      hapticsBridge.warning();
+    } finally {
+      setTrackingPending(false);
+    }
+  }, [anime, tracked, trackingPending]);
+
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [trendStyles.heroCard, pressed && { opacity: 0.92 }]}
-      accessibilityRole="button"
-      accessibilityLabel={anime.title}>
+    <View style={trendStyles.heroCard}>
       <Image
         source={{ uri: anime.bannerImage ?? anime.image }}
         style={StyleSheet.absoluteFill}
@@ -594,29 +647,28 @@ function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
           </Text>
         ) : null}
         <View style={trendStyles.heroActions}>
-          <Pressable
+          <ThemedButton
             onPress={onPress}
-            style={({ pressed }) => [trendStyles.heroPrimaryBtn, pressed && { opacity: 0.85 }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('tabs.rateScreen.trend.openA11y')}>
-            <Ionicons name="play" size={14} color={accentFg} />
-            <Text style={[trendStyles.heroPrimaryText, { color: accentFg }]}>
-              {t('tabs.rateScreen.trend.openLabel')}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation?.();
-              hapticsBridge.tap();
-            }}
-            style={({ pressed }) => [trendStyles.heroIconBtn, pressed && { opacity: 0.85 }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('tabs.rateScreen.trend.bookmarkA11y')}>
-            <Ionicons name="bookmark-outline" size={18} color={theme.text.primary} />
-          </Pressable>
+            label={t('tabs.rateScreen.trend.openLabel')}
+            accessibilityLabel={t('tabs.rateScreen.trend.openA11y')}
+            icon={<Ionicons name="play" size={14} color={readableTextOn(theme.accent)} />}
+          />
+          <ThemedIconButton
+            onPress={handleTrackingToggle}
+            disabled={trackingPending}
+            haptic="none"
+            accessibilityLabel={t(tracked ? 'search.bookmarkRemoveA11y' : 'search.bookmarkAddA11y')}
+            icon={() => (
+              <Ionicons
+                name={tracked ? 'bookmark' : 'bookmark-outline'}
+                size={18}
+                color={tracked ? theme.accent : theme.text.primary}
+              />
+            )}
+          />
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -878,29 +930,6 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 10,
       marginTop: 6,
     },
-    heroPrimaryBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: 22,
-      backgroundColor: theme.accent,
-    },
-    heroPrimaryText: {
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    heroIconBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.background.tertiary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
     section: {
       marginTop: Spacing.xs,
       marginBottom: Spacing.lg,
@@ -929,18 +958,6 @@ const makeTrendStyles = (theme: ThemePalette) =>
       color: theme.text.tertiary,
       fontSize: 12,
       marginTop: 2,
-    },
-    sectionLink: {
-      color: theme.accent,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    seeAllBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-      paddingVertical: 4,
-      paddingLeft: 8,
     },
     rangePillRow: {
       paddingHorizontal: Spacing.md,

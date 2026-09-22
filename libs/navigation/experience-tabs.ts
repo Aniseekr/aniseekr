@@ -81,7 +81,7 @@ export const EXPERIENCE_TAB_ROUTE_NAMES: Record<ExperienceTabId, ExperienceTabRo
 };
 
 const FIXED_TABS: Record<Exclude<ExperienceMode, 'seeker'>, readonly ExperienceTabId[]> = {
-  explorer: ['explorerCamera', 'explorerSearch', 'explorerMap', 'explorerJournal', 'profile'],
+  explorer: ['pilgrimage', 'explorerJournal', 'explorerCamera', 'explorerSearch', 'profile'],
   collector: ['discover', 'bangumi', 'collection', 'profile'],
 };
 

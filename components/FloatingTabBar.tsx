@@ -3,11 +3,6 @@ import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-
-type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
-type FloatingTabBarProps = BottomTabBarProps & {
-  visibleRouteNames?: ReadonlySet<string>;
-};
 import Animated, {
   Easing,
   interpolateColor,
@@ -28,6 +23,11 @@ import {
   FLOATING_TAB_BAR_SHOW_DURATION_MS,
 } from '../libs/navigation/floating-tab-bar-animation';
 import { Springs } from '../libs/animations/presets';
+
+type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+type FloatingTabBarProps = BottomTabBarProps & {
+  visibleRouteNames?: readonly string[];
+};
 
 const PILL_HORIZONTAL_MARGIN = 16;
 const PILL_INNER_PADDING = 8;
@@ -77,11 +77,23 @@ export default function FloatingTabBar({
     android: bottomPad(insets),
   });
 
-  const visibleRoutes = state.routes.filter((route) => {
-    if (visibleRouteNames && !visibleRouteNames.has(route.name)) return false;
-    const { options } = descriptors[route.key];
-    return !isPermanentlyHidden(options);
-  });
+  const visibleRouteOrder = useMemo(
+    () =>
+      visibleRouteNames
+        ? new Map(visibleRouteNames.map((routeName, index) => [routeName, index]))
+        : null,
+    [visibleRouteNames]
+  );
+  const visibleRoutes = state.routes
+    .filter((route) => {
+      if (visibleRouteOrder && !visibleRouteOrder.has(route.name)) return false;
+      const { options } = descriptors[route.key];
+      return !isPermanentlyHidden(options);
+    })
+    .sort((a, b) => {
+      if (!visibleRouteOrder) return 0;
+      return (visibleRouteOrder.get(a.name) ?? 0) - (visibleRouteOrder.get(b.name) ?? 0);
+    });
 
   const activeRouteKey = state.routes[state.index]?.key;
   const activeOptions = activeRouteKey ? descriptors[activeRouteKey]?.options : undefined;

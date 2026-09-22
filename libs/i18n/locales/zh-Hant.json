@@ -683,6 +683,8 @@
     "explorerSearch": "搜尋",
     "explorerMap": "地圖",
     "explorerJournal": "足跡",
+    "explorerDiscover": "探索",
+    "collectorSchedule": "追番",
     "bangumi": "Bangumi",
     "profile": "個人",
     "bangumiScreen": {
@@ -769,6 +771,8 @@
       "untitled": "未命名"
     },
     "pilgrimageScreen": {
+      "explorerSubtitle": "尋找動畫場景，規劃下一次聖地巡禮。",
+      "explorerTitle": "探索",
       "errorLoadFailed": "載入失敗",
       "hero": {
         "closest": "最近：{title}",
@@ -984,8 +988,13 @@
     "noMatchesDescription": "目前篩選下沒有「{query}」的結果,試試其他關鍵字或更換篩選。",
     "noMatchesTitle": "沒有結果",
     "pilgrimage": {
+      "description": "找到作品後，直接查看它的實景地點。",
+      "emptyDescription": "用動畫名稱或地名，尋找已有實景資料的場景。",
+      "emptyTitle": "尋找巡禮地點",
       "noMapping": "「{title}」沒有對應的巡禮資料。",
-      "resolveFailed": "無法解析這部作品。"
+      "noMatchesDescription": "找不到符合「{query}」的巡禮地點，試試其他動畫或地名。",
+      "resolveFailed": "無法解析這部作品。",
+      "title": "搜尋巡禮"
     },
     "placeholder": {
       "default": "搜尋動畫、角色、製作公司…",

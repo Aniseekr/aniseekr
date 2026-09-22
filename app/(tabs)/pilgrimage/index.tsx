@@ -28,7 +28,7 @@ import { Radius, Size, Spacing, Typography } from '../../../constants/DesignSyst
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
-import { Skeleton, ThemedText } from '../../../components/themed';
+import { Skeleton, ThemedIconButton, ThemedText } from '../../../components/themed';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
 import { PilgrimageToolsMenu } from '../../../components/pilgrimage/PilgrimageToolsMenu';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
@@ -58,6 +58,8 @@ import { usePilgrimageHubScreenData } from '../../../hooks/usePilgrimageHubScree
 import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
 import { CacheService } from '../../../libs/services/cache-service';
 import { DETAIL_CACHE_KEY_PREFIX } from '../../../libs/services/pilgrimage/anitabi-service';
+import { useExperienceMode } from '../../../hooks/useExperienceMode';
+import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
 
 interface FeaturedSpot {
   spot: AnitabiPoint;
@@ -108,6 +110,18 @@ export default function PilgrimageHubScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const t = useT();
+  const { mode, visibleTabs } = useExperienceMode();
+  const searchTarget = resolveExperienceTabTarget(visibleTabs, 'explorerSearch', '/search');
+  const journalTarget = resolveExperienceTabTarget(
+    visibleTabs,
+    'explorerJournal',
+    '/pilgrimage/album'
+  );
+  const cameraTarget = resolveExperienceTabTarget(
+    visibleTabs,
+    'explorerCamera',
+    '/pilgrimage/capture'
+  );
   const {
     collectionAnimes,
     featuredAnimes,
@@ -254,19 +268,31 @@ export default function PilgrimageHubScreen() {
 
   const handleSearch = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
+    if (searchTarget.isVisibleTab) {
+      router.navigate(searchTarget.href);
+      return;
+    }
     // context=pilgrimage tells /search to route picked results to
     // /pilgrimage/[bangumiId] instead of /anime/[id] so the user stays
     // inside the pilgrimage flow.
     router.push({ pathname: '/search', params: { context: 'pilgrimage' } });
-  }, [router]);
+  }, [router, searchTarget.href, searchTarget.isVisibleTab]);
 
   const handleOpenAlbum = useCallback(() => {
-    router.push('/pilgrimage/album');
-  }, [router]);
+    if (journalTarget.isVisibleTab) {
+      router.navigate(journalTarget.href);
+      return;
+    }
+    router.push(journalTarget.href);
+  }, [journalTarget.href, journalTarget.isVisibleTab, router]);
 
   const handleOpenCamera = useCallback(() => {
-    router.push('/pilgrimage/capture');
-  }, [router]);
+    if (cameraTarget.isVisibleTab) {
+      router.navigate(cameraTarget.href);
+      return;
+    }
+    router.push(cameraTarget.href);
+  }, [cameraTarget.href, cameraTarget.isVisibleTab, router]);
 
   const handleIdentifyScene = useCallback(() => {
     router.push('/pilgrimage/identify');
@@ -351,20 +377,28 @@ export default function PilgrimageHubScreen() {
     <View style={styles.root}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.headerBar}>
-          <ThemedText
-            variant="titleLarge"
-            weight="700"
-            numberOfLines={1}
-            style={styles.headerTitle}>
-            {t('tabs.pilgrimageScreen.title')}
-          </ThemedText>
-          <Pressable
+          <View style={styles.headerIdentity}>
+            <ThemedText
+              variant={mode === 'explorer' ? 'headlineMedium' : 'titleLarge'}
+              weight="700"
+              numberOfLines={1}
+              style={styles.headerTitle}>
+              {mode === 'explorer'
+                ? t('tabs.pilgrimageScreen.explorerTitle')
+                : t('tabs.pilgrimageScreen.title')}
+            </ThemedText>
+            {mode === 'explorer' ? (
+              <ThemedText variant="bodySmall" tone="secondary" numberOfLines={2}>
+                {t('tabs.pilgrimageScreen.explorerSubtitle')}
+              </ThemedText>
+            ) : null}
+          </View>
+          <ThemedIconButton
             onPress={() => setToolsMenuVisible(true)}
-            accessibilityRole="button"
             accessibilityLabel={t('tabs.pilgrimageScreen.moreActions')}
-            style={({ pressed }) => [styles.toolsButton, pressed && styles.toolsButtonPressed]}>
-            <Ionicons name="compass-outline" size={22} color={theme.accent} />
-          </Pressable>
+            variant="ghost"
+            icon={() => <Ionicons name="compass-outline" size={22} color={theme.accent} />}
+          />
         </View>
 
         <ScrollView
@@ -823,20 +857,8 @@ function makeStyles(theme: ThemePalette) {
       paddingBottom: 4,
       gap: 12,
     },
+    headerIdentity: { flex: 1, gap: Spacing.xxs },
     headerTitle: { ...Typography.headlineMedium, flexShrink: 1 },
-    toolsButton: {
-      width: Size.minTouchTarget,
-      height: Size.minTouchTarget,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: Radius.lg,
-      backgroundColor: `${theme.accent}14`,
-      borderWidth: 1,
-      borderColor: `${theme.accent}33`,
-    },
-    toolsButtonPressed: {
-      opacity: 0.68,
-    },
     searchBar: {
       minHeight: Size.recommendedTouchTarget,
       flexDirection: 'row',

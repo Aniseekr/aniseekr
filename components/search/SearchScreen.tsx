@@ -1,4 +1,3 @@
-/* eslint-disable no-restricted-syntax -- Existing screen styles predate token lint; Phase 3 only swaps loading motion and list entry animation. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
@@ -23,7 +22,8 @@ import { AnimeRepository } from '../../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { EmptyStateView } from '../common/EmptyStateView';
 import { ErrorStateView } from '../common/ErrorStateView';
-import { Colors, IconSize, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { IconSize, Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { isStringArray, safeJsonParse } from '../../libs/utils/safe-json';
@@ -43,7 +43,7 @@ import { sameArrayBy } from '../../libs/utils/state-array';
 
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
 import { SEARCH_RECENT_KEY } from '../../libs/services/storage/keys';
-import { Skeleton, readableTextOn } from '../themed';
+import { Skeleton, ThemedButton, ThemedIconButton, ThemedText } from '../themed';
 import { useT } from '../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { listItemEnter } from '../../libs/animations/presets';
@@ -120,6 +120,8 @@ interface SearchScreenProps {
 export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const t = useT();
   // `context=pilgrimage` is set by the pilgrimage hub so we route picks to
   // /pilgrimage/[bangumiId] instead of /anime/[id]. Any other value falls
@@ -421,6 +423,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
   // Apply client-side filter + sort to keep things responsive without adding
   // backend params. Filters narrow on type; sort reorders only.
   const filteredResults = useMemo(() => {
+    if (isPilgrimageMode) return results;
     let list = results;
     if (filter === 'tv') {
       list = list.filter((a) => (a.type ?? a.format ?? '').toUpperCase().includes('TV'));
@@ -436,132 +439,124 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
       list = [...list].sort((a, b) => (b.startDate?.year ?? 0) - (a.startDate?.year ?? 0));
     }
     return list;
-  }, [filter, results, sort]);
+  }, [filter, isPilgrimageMode, results, sort]);
 
   const sortLabel = t(SORT_KEYS.find((s) => s.key === sort)?.labelKey ?? 'search.sort.relevance');
 
   return (
     <View style={styles.root}>
       {tabRoot ? null : <Stack.Screen options={{ headerShown: false }} />}
-      <LinearGradient
-        colors={Colors.gradients.background as [string, string, ...string[]]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View
-          style={[styles.searchHeader, { paddingTop: insets.top > 0 ? Spacing.xs : Spacing.sm }]}>
+          style={[styles.headerShell, { paddingTop: insets.top > 0 ? Spacing.xs : Spacing.sm }]}>
           {tabRoot ? (
-            <View style={styles.backBtn} />
-          ) : (
-            <Pressable
-              onPress={handleClose}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.back')}
-              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.78 }]}>
-              <Ionicons name="chevron-back" size={20} color={Colors.text.primary} />
-            </Pressable>
-          )}
+            <View style={styles.tabTitleBlock}>
+              <ThemedText variant="headlineMedium" weight="700">
+                {t('search.pilgrimage.title')}
+              </ThemedText>
+              <ThemedText variant="bodySmall" tone="secondary">
+                {t('search.pilgrimage.description')}
+              </ThemedText>
+            </View>
+          ) : null}
 
-          <View style={styles.searchBar}>
-            <Ionicons
-              name={isPilgrimageMode ? 'location' : 'search'}
-              size={16}
-              color={isPilgrimageMode ? Colors.primary : Colors.text.secondary}
-            />
-            <TextInput
-              autoFocus={!tabRoot}
-              placeholder={
-                isPilgrimageMode
-                  ? t('search.placeholder.pilgrimage')
-                  : t('search.placeholder.default')
-              }
-              placeholderTextColor={Colors.text.tertiary}
-              value={query}
-              onChangeText={setQuery}
-              style={styles.input}
-              returnKeyType="search"
-              onSubmitEditing={handleSubmitSearch}
-              autoCorrect={false}
-              autoCapitalize="none"
-            />
-            {loading && results.length > 0 ? (
-              // Old results stay visible while a new query runs — without this
-              // spinner the screen reads as stale/stuck (the skeleton only
-              // covers the zero-results case).
-              <Skeleton.Block width={18} height={18} borderRadius={9} />
+          <View style={styles.searchHeader}>
+            {!tabRoot ? (
+              <ThemedIconButton
+                onPress={handleClose}
+                accessibilityLabel={t('common.back')}
+                haptic="none"
+                icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+              />
             ) : null}
-            {query.length > 0 ? (
-              <Pressable
-                onPress={() => setQuery('')}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={t('search.clearA11y')}>
-                <View style={styles.clearBtn}>
-                  <Ionicons name="close" size={12} color={Colors.text.primary} />
-                </View>
-              </Pressable>
-            ) : null}
+
+            <View style={styles.searchBar}>
+              <Ionicons
+                name={isPilgrimageMode ? 'location' : 'search'}
+                size={16}
+                color={isPilgrimageMode ? theme.accent : theme.text.secondary}
+              />
+              <TextInput
+                autoFocus={!tabRoot}
+                placeholder={
+                  isPilgrimageMode
+                    ? t('search.placeholder.pilgrimage')
+                    : t('search.placeholder.default')
+                }
+                placeholderTextColor={theme.text.tertiary}
+                value={query}
+                onChangeText={setQuery}
+                style={styles.input}
+                returnKeyType="search"
+                onSubmitEditing={handleSubmitSearch}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              {loading && results.length > 0 ? (
+                // Old results stay visible while a new query runs — without this
+                // spinner the screen reads as stale/stuck (the skeleton only
+                // covers the zero-results case).
+                <Skeleton.Block width={18} height={18} borderRadius={9} />
+              ) : null}
+              {query.length > 0 ? (
+                <ThemedIconButton
+                  onPress={() => setQuery('')}
+                  accessibilityLabel={t('search.clearA11y')}
+                  variant="ghost"
+                  icon={(color) => <Ionicons name="close-circle" size={18} color={color} />}
+                />
+              ) : null}
+            </View>
           </View>
         </View>
 
         {isPilgrimageMode && resolveError ? (
           <View style={styles.resolveBanner}>
-            <Ionicons name="information-circle" size={14} color={Colors.text.primary} />
+            <Ionicons name="information-circle" size={14} color={theme.text.primary} />
             <Text style={styles.resolveBannerText} numberOfLines={2}>
               {resolveError}
             </Text>
-            <Pressable
+            <ThemedIconButton
               onPress={() => setResolveError(null)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('search.dismissA11y')}>
-              <Ionicons name="close" size={14} color={Colors.text.secondary} />
-            </Pressable>
+              accessibilityLabel={t('search.dismissA11y')}
+              variant="ghost"
+              icon={(color) => <Ionicons name="close" size={18} color={color} />}
+            />
           </View>
         ) : null}
 
         {/* Fixed-height slot: the chip row fades in/out inside it so typing
             the first character doesn't shove the whole list down (and
             clearing doesn't shove it back up). */}
-        <View style={styles.filterChipsWrap}>
-          {query.length > 0 ? (
-            <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterChipsRow}>
-                {FILTER_KEYS.map((f) => {
-                  const active = filter === f.key;
-                  return (
-                    <Pressable
-                      key={f.key}
-                      onPress={() => handleFilterTap(f.key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      style={({ pressed }) => [
-                        styles.filterChip,
-                        active ? styles.filterChipActive : styles.filterChipInactive,
-                        pressed && { opacity: 0.85 },
-                      ]}>
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          {
-                            color: active
-                              ? readableTextOn(Colors.text.primary)
-                              : Colors.text.primary,
-                          },
-                        ]}>
-                        {t(f.labelKey)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </Animated.View>
-          ) : null}
-        </View>
+        {!isPilgrimageMode ? (
+          <View style={styles.filterChipsWrap}>
+            {query.length > 0 ? (
+              <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterChipsRow}>
+                  {FILTER_KEYS.map((f) => {
+                    const active = filter === f.key;
+                    return (
+                      <ThemedButton
+                        key={f.key}
+                        onPress={() => handleFilterTap(f.key)}
+                        label={t(f.labelKey)}
+                        accessibilityLabel={t(f.labelKey)}
+                        variant={active ? 'primary' : 'secondary'}
+                        size="md"
+                        haptic="none"
+                        textStyle={Typography.captionSmall}
+                      />
+                    );
+                  })}
+                </ScrollView>
+              </Animated.View>
+            ) : null}
+          </View>
+        ) : null}
 
         {error ? (
           <ErrorStateView
@@ -595,7 +590,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                       style={({ pressed }) => [styles.recentChip, pressed && { opacity: 0.8 }]}
                       accessibilityRole="button"
                       accessibilityLabel={t('search.recentTermA11y', { term })}>
-                      <MaterialIcons name="history" size={14} color={Colors.text.secondary} />
+                      <MaterialIcons name="history" size={14} color={theme.text.secondary} />
                       <Text style={styles.recentText} numberOfLines={1}>
                         {term}
                       </Text>
@@ -606,8 +601,14 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
             ) : (
               <EmptyStateView
                 icon="search"
-                title={t('search.discoverTitle')}
-                description={t('search.discoverDescription')}
+                title={
+                  isPilgrimageMode ? t('search.pilgrimage.emptyTitle') : t('search.discoverTitle')
+                }
+                description={
+                  isPilgrimageMode
+                    ? t('search.pilgrimage.emptyDescription')
+                    : t('search.discoverDescription')
+                }
               />
             )}
           </ScrollView>
@@ -625,7 +626,11 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
             <EmptyStateView
               icon="search-off"
               title={t('search.noMatchesTitle')}
-              description={t('search.noMatchesDescription', { query })}
+              description={
+                isPilgrimageMode
+                  ? t('search.pilgrimage.noMatchesDescription', { query })
+                  : t('search.noMatchesDescription', { query })
+              }
             />
           </View>
         ) : (
@@ -646,43 +651,46 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                     ? t('search.searching')
                     : t('search.resultCount', { count: filteredResults.length })}
                 </Text>
-                <Pressable
-                  onPress={handleSortTap}
-                  style={({ pressed }) => [styles.sortBtn, pressed && { opacity: 0.8 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('search.sortByA11y')}>
-                  <Ionicons name="swap-vertical" size={12} color={Colors.text.secondary} />
-                  <Text style={styles.sortBtnText}>{sortLabel}</Text>
-                  <Ionicons
-                    name={sortOpen ? 'chevron-up' : 'chevron-down'}
-                    size={12}
-                    color={Colors.text.secondary}
-                  />
-                </Pressable>
-                {sortOpen ? (
-                  <View style={styles.sortMenu}>
-                    {SORT_KEYS.map((s) => (
-                      <Pressable
-                        key={s.key}
-                        onPress={() => handleSortPick(s.key)}
-                        style={({ pressed }) => [
-                          styles.sortMenuItem,
-                          sort === s.key && styles.sortMenuItemActive,
-                          pressed && { opacity: 0.8 },
-                        ]}>
-                        <Text
-                          style={[
-                            styles.sortMenuItemText,
-                            sort === s.key && { color: Colors.primary },
-                          ]}>
-                          {t(s.labelKey)}
-                        </Text>
-                        {sort === s.key ? (
-                          <Ionicons name="checkmark" size={14} color={Colors.primary} />
-                        ) : null}
-                      </Pressable>
-                    ))}
-                  </View>
+                {!isPilgrimageMode ? (
+                  <>
+                    <ThemedButton
+                      onPress={handleSortTap}
+                      label={sortLabel}
+                      accessibilityLabel={t('search.sortByA11y')}
+                      variant="secondary"
+                      haptic="none"
+                      icon={
+                        <Ionicons name="swap-vertical" size={14} color={theme.text.secondary} />
+                      }
+                      iconRight={
+                        <Ionicons
+                          name={sortOpen ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color={theme.text.secondary}
+                        />
+                      }
+                    />
+                    {sortOpen ? (
+                      <View style={styles.sortMenu}>
+                        {SORT_KEYS.map((s) => (
+                          <ThemedButton
+                            key={s.key}
+                            onPress={() => handleSortPick(s.key)}
+                            label={t(s.labelKey)}
+                            variant="ghost"
+                            fullWidth
+                            haptic="none"
+                            textStyle={sort === s.key ? { color: theme.accent } : undefined}
+                            iconRight={
+                              sort === s.key ? (
+                                <Ionicons name="checkmark" size={14} color={theme.accent} />
+                              ) : null
+                            }
+                          />
+                        ))}
+                      </View>
+                    ) : null}
+                  </>
                 ) : null}
               </View>
             }
@@ -730,7 +738,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                     : insets.bottom + Spacing.lg,
             },
           ]}>
-          <Ionicons name="bookmark" size={16} color={Colors.primary} />
+          <Ionicons name="bookmark" size={16} color={theme.accent} />
           <Text style={styles.toastText} numberOfLines={2}>
             {bookmarkToast}
           </Text>
@@ -803,6 +811,8 @@ function ResultCard({
   onBookmarkPress,
 }: ResultCardProps) {
   const t = useT();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   // Pilgrimage rows carry a Bangumi id and a title already localized by
   // pilgrimage-localization — don't run them through the AniList-id pipeline.
   const isPilgrimageRow = anime.pilgrimageSource !== undefined;
@@ -838,7 +848,7 @@ function ResultCard({
             <Ionicons
               name="location-sharp"
               size={IconSize.sm}
-              color={Colors.primary}
+              color={theme.accent}
               style={styles.pilgrimagePin}
               accessibilityLabel={t('search.hasPilgrimageSpotsA11y')}
             />
@@ -861,7 +871,7 @@ function ResultCard({
           {anime.status ? <Text style={styles.resultMetaSubtle}>· {anime.status}</Text> : null}
           {score ? (
             <View style={styles.resultScore}>
-              <Ionicons name="star" size={11} color={Colors.primary} />
+              <Ionicons name="star" size={11} color={theme.accent} />
               <Text style={styles.resultScoreText}>{score}</Text>
             </View>
           ) : null}
@@ -893,7 +903,7 @@ function ResultCard({
         <Ionicons
           name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
           size={16}
-          color={isBookmarked ? Colors.primary : Colors.text.secondary}
+          color={isBookmarked ? theme.accent : theme.text.secondary}
         />
       </Pressable>
     </Pressable>
@@ -905,343 +915,190 @@ function formatScore(score: number): string {
   return score.toFixed(1);
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background.primary },
-  safe: { flex: 1 },
-  searchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
-    gap: 10,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(40, 40, 44, 0.78)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(20, 20, 22, 0.85)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  input: {
-    flex: 1,
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    paddingVertical: 0,
-  },
-  clearBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  resolveBanner: {
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,159,10,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,159,10,0.45)',
-  },
-  resolveBannerText: {
-    flex: 1,
-    color: Colors.text.primary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  filterChipsWrap: {
-    // Fixed height so mounting/unmounting the chips never reflows the list
-    // below (34px chip + 12px bottom padding).
-    height: 46,
-    paddingBottom: Spacing.sm,
-    justifyContent: 'center',
-  },
-  filterChipsRow: {
-    paddingHorizontal: Spacing.md,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 17,
-    borderWidth: 1,
-    minHeight: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterChipActive: {
-    backgroundColor: Colors.text.primary,
-    borderColor: Colors.text.primary,
-  },
-  filterChipInactive: {
-    backgroundColor: 'rgba(20, 20, 22, 0.78)',
-    borderColor: Colors.glass.border,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  sortRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    position: 'relative',
-  },
-  centerFill: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  centerGrow: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  resultCount: {
-    color: Colors.text.secondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sortBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: 'rgba(20,20,22,0.78)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  sortBtnText: {
-    color: Colors.text.primary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sortMenu: {
-    position: 'absolute',
-    top: 38,
-    right: 0,
-    minWidth: 140,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(20,20,22,0.96)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.32,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  sortMenuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  sortMenuItemActive: {
-    backgroundColor: 'rgba(255, 159, 10, 0.08)',
-  },
-  sortMenuItemText: {
-    color: Colors.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  recentSection: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  sectionTitle: {
-    color: Colors.text.primary,
-    ...Typography.titleLarge,
-  },
-  clearText: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  recentRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  recentChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 16,
-    backgroundColor: 'rgba(20, 20, 22, 0.78)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    maxWidth: 220,
-  },
-  recentText: {
-    color: Colors.text.primary,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  resultCard: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 10,
-    borderRadius: Radius.chipLg,
-    backgroundColor: 'rgba(20, 20, 22, 0.85)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    alignItems: 'center',
-  },
-  thumb: {
-    width: 64,
-    height: 88,
-    borderRadius: 10,
-    backgroundColor: Colors.background.tertiary,
-  },
-  resultBody: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  resultTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.xs,
-  },
-  resultTitle: {
-    flex: 1,
-    minWidth: 0,
-    color: Colors.text.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  resultSubtitle: {
-    color: Colors.text.tertiary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  pilgrimagePin: {
-    padding: Spacing.xs,
-    marginTop: -Spacing.xs,
-    marginRight: -Spacing.xs,
-  },
-  resultMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  typeChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: Colors.glass.medium,
-  },
-  typeChipText: {
-    color: Colors.text.secondary,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-  },
-  resultMeta: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  resultMetaSubtle: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  resultScore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginLeft: 'auto',
-  },
-  resultScoreText: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  resultTags: {
-    color: Colors.text.tertiary,
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  bookmarkBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  bookmarkBtnActive: {
-    backgroundColor: 'rgba(255,159,10,0.16)',
-    borderColor: 'rgba(255,159,10,0.55)',
-  },
-  toast: {
-    position: 'absolute',
-    left: Spacing.md,
-    right: Spacing.md,
-    bottom: Spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(20,20,22,0.96)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.32,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  toastText: {
-    flex: 1,
-    color: Colors.text.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  footerLoader: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-  },
-});
+function makeStyles(theme: ThemePalette) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background.primary },
+    safe: { flex: 1 },
+    headerShell: { gap: Spacing.xs, paddingBottom: Spacing.sm },
+    tabTitleBlock: {
+      gap: Spacing.xxs,
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.xs,
+    },
+    searchHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      gap: 10,
+    },
+    searchBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: Spacing.md,
+      minHeight: 48,
+      borderRadius: Radius.card,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    input: {
+      flex: 1,
+      color: theme.text.primary,
+      ...Typography.bodyMedium,
+      fontWeight: '600',
+      paddingVertical: 0,
+    },
+    resolveBanner: {
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      backgroundColor: `${theme.status.warning}1F`,
+      borderWidth: 1,
+      borderColor: `${theme.status.warning}73`,
+    },
+    resolveBannerText: {
+      flex: 1,
+      color: theme.text.primary,
+      ...Typography.bodySmall,
+      fontWeight: '600',
+    },
+    filterChipsWrap: {
+      height: 46,
+      paddingBottom: Spacing.sm,
+      justifyContent: 'center',
+    },
+    filterChipsRow: { paddingHorizontal: Spacing.md, gap: Spacing.xs },
+    sortRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+      position: 'relative',
+    },
+    centerFill: { flex: 1, justifyContent: 'center' },
+    centerGrow: { flexGrow: 1, justifyContent: 'center' },
+    resultCount: { color: theme.text.secondary, ...Typography.captionSmall, fontWeight: '600' },
+    sortMenu: {
+      position: 'absolute',
+      top: 42,
+      right: 0,
+      minWidth: 140,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.md,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      zIndex: 10,
+      ...Shadow.heavy,
+    },
+    recentSection: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
+    sectionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    sectionTitle: { color: theme.text.primary, ...Typography.titleLarge },
+    clearText: { color: theme.accent, ...Typography.bodySmall, fontWeight: '700' },
+    recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+    recentChip: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.full,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      maxWidth: 220,
+    },
+    recentText: { color: theme.text.primary, ...Typography.bodySmall, fontWeight: '500' },
+    resultCard: {
+      minHeight: 108,
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      padding: Spacing.sm,
+      borderRadius: Radius.card,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      alignItems: 'center',
+    },
+    thumb: {
+      width: 64,
+      height: 88,
+      borderRadius: Radius.md,
+      backgroundColor: theme.background.tertiary,
+    },
+    resultBody: { flex: 1, minWidth: 0, gap: Spacing.xxs },
+    resultTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.xs },
+    resultTitle: {
+      flex: 1,
+      minWidth: 0,
+      color: theme.text.primary,
+      ...Typography.bodyMedium,
+      fontWeight: '700',
+    },
+    resultSubtitle: { color: theme.text.tertiary, ...Typography.captionSmall, fontWeight: '600' },
+    pilgrimagePin: { padding: Spacing.xs, marginTop: -Spacing.xs, marginRight: -Spacing.xs },
+    resultMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    typeChip: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: Radius.sm,
+      backgroundColor: theme.background.tertiary,
+    },
+    typeChipText: { color: theme.text.secondary, ...Typography.captionSmall, fontWeight: '700' },
+    resultMeta: { color: theme.text.secondary, ...Typography.captionSmall, fontWeight: '600' },
+    resultMetaSubtle: { color: theme.text.tertiary, ...Typography.captionSmall },
+    resultScore: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 'auto' },
+    resultScoreText: { color: theme.accent, ...Typography.captionSmall, fontWeight: '700' },
+    resultTags: { color: theme.text.tertiary, ...Typography.captionSmall },
+    bookmarkBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.background.tertiary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+    },
+    bookmarkBtnActive: {
+      backgroundColor: `${theme.accent}29`,
+      borderColor: `${theme.accent}8C`,
+    },
+    toast: {
+      position: 'absolute',
+      left: Spacing.md,
+      right: Spacing.md,
+      bottom: Spacing.lg,
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.md,
+      backgroundColor: theme.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      ...Shadow.heavy,
+    },
+    toastText: { flex: 1, color: theme.text.primary, ...Typography.bodySmall, fontWeight: '600' },
+    footerLoader: { paddingVertical: Spacing.lg, alignItems: 'center' },
+  });
+}

@@ -51,10 +51,10 @@ describe('Experience tabs', () => {
 
   it('EXP-TABS-004 resolves the fixed Explorer and Collector presets', () => {
     expect(resolveExperienceTabs({ mode: 'explorer', seekerTabs: [] })).toEqual([
+      'pilgrimage',
+      'explorerJournal',
       'explorerCamera',
       'explorerSearch',
-      'explorerMap',
-      'explorerJournal',
       'profile',
     ]);
     expect(resolveExperienceTabs({ mode: 'collector', seekerTabs: [] })).toEqual([
@@ -82,9 +82,7 @@ describe('Experience tabs', () => {
   });
 
   it('EXP-TABS-007 lands on the first visible tab for every mode', () => {
-    expect(resolveExperienceLandingHref({ mode: 'explorer', seekerTabs: [] })).toBe(
-      '/explorer-camera'
-    );
+    expect(resolveExperienceLandingHref({ mode: 'explorer', seekerTabs: [] })).toBe('/pilgrimage');
     expect(resolveExperienceLandingHref({ mode: 'collector', seekerTabs: [] })).toBe('/(rate)');
     expect(resolveExperienceLandingHref({ mode: 'seeker', seekerTabs: ['collection'] })).toBe(
       '/collection'
@@ -152,10 +150,10 @@ describe('Experience tabs', () => {
 
   it('EXP-TABS-013 exposes only the registered routes for the active mode with Profile fixed', () => {
     expect(resolveExperienceRouteNames({ mode: 'explorer', seekerTabs: [] })).toEqual([
+      'pilgrimage',
+      'explorer-journal',
       'explorer-camera',
       'explorer-search',
-      'explorer-map',
-      'explorer-journal',
       'profile',
     ]);
     expect(resolveExperienceRouteNames({ mode: 'collector', seekerTabs: [] })).toEqual([
