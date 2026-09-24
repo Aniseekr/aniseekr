@@ -132,7 +132,7 @@ export default function AppearanceScreen() {
             </ThemedText>
           </Pressable>
           <ThemedText variant="titleLarge" weight="600">
-            {t('settings.appearance.title')}
+            {t('settings.appearanceTitle')}
           </ThemedText>
           <View style={{ width: 80 }} />
         </View>

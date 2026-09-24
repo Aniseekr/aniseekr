@@ -659,6 +659,20 @@
         "none": "No platforms picked yet",
         "withPrimary": "{count} enabled · Primary: {primary}"
       }
+    },
+    "appearanceTitle": "Appearance",
+    "watchPlatformsHint": "Pick where you watch (Netflix, Bahamut, Crunchyroll…)",
+    "watchPlatformsSummary": "{count} enabled · primary: {primary}",
+    "watchPlatformsNoPrimary": "none",
+    "backupHint": "iCloud · Google Drive · import old aniseeker data",
+    "connectedNone": "None",
+    "premium": {
+      "active": "Premium active",
+      "unlock": "Unlock Premium",
+      "activeDesc": "Manage your subscription and benefits",
+      "pitch": "No ads, all themes, unlimited sync",
+      "manage": "Manage",
+      "upgrade": "Upgrade"
     }
   },
   "titleLanguage": {
@@ -828,7 +842,8 @@
         "seekerDescription": "Build your own mix of Explorer and Collector tabs.",
         "tabsSubtitle": "Choose the pages shown in your bottom navigation.",
         "tabsLimit": "Choose up to four pages. Profile always stays available.",
-        "tabsTitle": "Seeker tabs"
+        "tabsTitle": "Seeker tabs",
+        "tabsSeparator": ", "
       },
       "settings": "Settings",
       "settingsSubtitle": "Preferences, account, more",
@@ -1110,7 +1125,38 @@
     "share": {
       "appMissingBody": "{app} isn't installed. Your photo is saved to Photos and the caption is copied.",
       "appMissingTitle": "{app} not installed",
-      "shareAnotherWay": "Share another way"
+      "shareAnotherWay": "Share another way",
+      "realFirst": "REAL first",
+      "animeFirst": "ANIME first",
+      "filter": "Filter",
+      "crop": "Crop",
+      "cropped": "Cropped",
+      "background": "Background",
+      "watermark": "Watermark",
+      "watermarkPlaceholder": "@your_handle, trip name, …",
+      "autoColorMatch": "Auto color match",
+      "autoColorMatchNeed": "Needs both photos loaded",
+      "analysing": "Analysing…",
+      "autoColorMatchDesc": "Match user shot to anime palette",
+      "autoPerspective": "Auto perspective",
+      "autoPerspectiveDesc": "Correct tilt from capture sensors",
+      "autoPerspectiveNoData": "No sensor data on this capture",
+      "manualWarp": "Manual warp",
+      "manualWarpApplied": "4-corner warp applied",
+      "manualWarpHint": "Drag corners to align",
+      "edit": "Edit",
+      "a11y": {
+        "swapOrder": "Swap image order",
+        "export": "Export {label} ({hint})",
+        "cropPhoto": "Crop user photo",
+        "filter": "Filter {label}",
+        "resetWarp": "Reset manual warp",
+        "openWarp": "Open manual warp editor",
+        "bgSwatch": "Background {label}",
+        "watermarkPosition": "Watermark position {label}",
+        "watermarkFont": "Watermark font {label}",
+        "watermarkColor": "Watermark color {label}"
+      }
     },
     "album": {
       "addPhotoA11y": "Add photo to this folder",

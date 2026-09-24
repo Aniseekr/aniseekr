@@ -8,7 +8,7 @@ import {
   Share,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -128,7 +128,6 @@ function sameAnimeCards(
 }
 
 export default function CollectionScreen() {
-  const { top } = useSafeAreaInsets();
   const { theme } = useTheme();
   const t = useT();
   const [refreshing, setRefreshing] = useState(false);
@@ -529,14 +528,11 @@ export default function CollectionScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.background.primary, paddingTop: top }]}>
+      style={[styles.safeArea, { backgroundColor: theme.background.primary }]}
+      edges={['top']}>
       <LinearGradient
         colors={[theme.background.primary, theme.background.secondary, theme.background.primary]}
         style={StyleSheet.absoluteFill}
-      />
-      <View
-        style={[styles.glowAccent, { backgroundColor: `${theme.accent}26` }]}
-        pointerEvents="none"
       />
       <View style={styles.container}>
         {screenMode === 'collect' ? (
@@ -816,15 +812,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  glowAccent: {
-    position: 'absolute',
-    top: -100,
-    right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    opacity: 0.5,
   },
   scrollContent: {
     paddingBottom: 140,

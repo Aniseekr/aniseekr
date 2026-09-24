@@ -127,7 +127,7 @@ export default function TrendingScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
+      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]} edges={['top']}>
         <View style={styles.headerRow}>
           <Pressable
             onPress={() => {

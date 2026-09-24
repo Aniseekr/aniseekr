@@ -1,6 +1,6 @@
 import { Alert, View, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Application from 'expo-application';
@@ -70,7 +70,6 @@ const PRESET_ACCENTS: { hex: string; name: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { top } = useSafeAreaInsets();
   const subscription = useSubscription();
   const t = useT();
   const {
@@ -443,7 +442,7 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <SettingsHeader
           title={t('settings.title')}
           subtitle={t('settings.longPressHint')}
@@ -540,18 +539,16 @@ export default function SettingsScreen() {
                   <Ionicons name="sparkles" size={22} color={ctaFg} />
                   <View style={styles.premiumTextWrap}>
                     <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
-                      {isPro ? 'Premium active' : 'Unlock Premium'}
+                      {isPro ? t('settings.premium.active') : t('settings.premium.unlock')}
                     </ThemedText>
                     <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
-                      {isPro
-                        ? 'Manage your subscription and benefits'
-                        : 'No ads, all themes, unlimited sync'}
+                      {isPro ? t('settings.premium.activeDesc') : t('settings.premium.pitch')}
                     </ThemedText>
                   </View>
                 </View>
                 <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
                   <ThemedText variant="titleSmall" weight="700">
-                    {isPro ? 'Manage' : 'Upgrade'}
+                    {isPro ? t('settings.premium.manage') : t('settings.premium.upgrade')}
                   </ThemedText>
                 </View>
               </LinearGradient>
@@ -562,7 +559,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="people-circle-outline"
               label={t('settings.connectedPlatforms')}
-              value={connectedCount > 0 ? `${connectedCount}` : t('common.no')}
+              value={connectedCount > 0 ? `${connectedCount}` : t('settings.connectedNone')}
               onPress={() => router.push('/(setting)/account')}
               onLongPress={() => setActiveSheet('platforms')}
             />
@@ -584,8 +581,12 @@ export default function SettingsScreen() {
               label={t('settings.watchPlatforms')}
               description={
                 prefs.streamingPlatforms.enabled.length > 0
-                  ? `${prefs.streamingPlatforms.enabled.length} enabled · primary: ${prefs.streamingPlatforms.primary ?? 'none'}`
-                  : 'Pick where you watch (Netflix, Bahamut, Crunchyroll…)'
+                  ? t('settings.watchPlatformsSummary', {
+                      count: prefs.streamingPlatforms.enabled.length,
+                      primary:
+                        prefs.streamingPlatforms.primary ?? t('settings.watchPlatformsNoPrimary'),
+                    })
+                  : t('settings.watchPlatformsHint')
               }
               onPress={() => router.push('/(setting)/watch-platforms')}
             />
@@ -597,7 +598,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="cloud-upload-outline"
               label={t('settings.backup')}
-              description="iCloud · Google Drive · import old aniseeker data"
+              description={t('settings.backupHint')}
               onPress={() => router.push('/(setting)/backup')}
             />
           </SettingsSection>
@@ -605,7 +606,7 @@ export default function SettingsScreen() {
           <SettingsSection title={t('settings.sections.appearance')}>
             <SettingsRow
               icon="color-palette-outline"
-              label={t('settings.appearance.title')}
+              label={t('settings.appearanceTitle')}
               description={`${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`}
               right={
                 <View

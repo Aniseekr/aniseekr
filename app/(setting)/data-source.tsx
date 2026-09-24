@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -22,7 +22,6 @@ import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSyste
 import { useT } from '../../libs/i18n';
 
 export default function DataSourceScreen() {
-  const { top } = useSafeAreaInsets();
   const t = useT();
   const [browseSource, setBrowseSourceState] = useState<PlatformType>(
     dataSourceConfig.browseSource
@@ -94,7 +93,7 @@ export default function DataSourceScreen() {
         colors={Colors.gradients.background as [string, string, ...string[]]}
         style={StyleSheet.absoluteFill}
       />
-      <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />

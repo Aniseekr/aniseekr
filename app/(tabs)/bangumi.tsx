@@ -769,7 +769,7 @@ export default function BangumiScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
+      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]} edges={['top']}>
         <View style={styles.headerWrap}>
           <SeasonHeader
             seasonDisplayName={seasonDisplayName}

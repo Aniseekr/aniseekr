@@ -267,7 +267,7 @@ export default function HomeRateScreen() {
     <View style={styles.root}>
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
 
-      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
+      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]} edges={['top']}>
         <ImageDisplaySettingsSheet
           visible={showDisplaySettings}
           preferences={swipePrefs}

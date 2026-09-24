@@ -193,7 +193,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={[styles.headerRow, { paddingTop: Math.max(top * 0.25, Spacing.xs) }]}>
           <View style={styles.headerSide} />
           <ExperienceModeSwitcher mode={mode} onChange={(next) => void setMode(next)} />
