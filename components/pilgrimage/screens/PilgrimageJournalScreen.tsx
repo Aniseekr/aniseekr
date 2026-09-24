@@ -52,6 +52,7 @@ import {
 } from '../../../libs/services/companion/character-library-store';
 import type { CharacterGroup } from '../../../libs/services/companion/character-library';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
+import { StampBookSection } from '../../../components/pilgrimage/journal/StampBookSection';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
 import { floatingTabBarOverlayBottom } from '../../../libs/navigation/floating-tab-bar-layout';
@@ -400,6 +401,11 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
     router.back();
   }, [router, selectedAnimeId]);
 
+  const handleBrowseRallies = useCallback(() => {
+    hapticsBridge.tap();
+    router.push('/pilgrimage/news');
+  }, [router]);
+
   const selectedFolder = useMemo(
     () => folders.find((f) => String(f.anime.id) === selectedAnimeId) ?? null,
     [folders, selectedAnimeId]
@@ -545,6 +551,9 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
               theme={theme}
             />
           </View>
+
+          {/* Renders nothing when there's no book and no rally to join. */}
+          {!isDetail ? <StampBookSection onBrowseRallies={handleBrowseRallies} /> : null}
 
           {!isDetail ? (
             <View style={styles.charSection}>

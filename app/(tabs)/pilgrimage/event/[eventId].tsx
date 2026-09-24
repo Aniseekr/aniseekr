@@ -75,9 +75,18 @@ import {
 import {
   checkInStampStop,
   checkOutStampStop,
-  loadVisitedStampStopsSync,
   type StampStopVisitedMap,
 } from '../../../../libs/services/pilgrimage/visited-prefs';
+import {
+  buildRallyRoute,
+  type RallyRouteStop,
+} from '../../../../libs/services/pilgrimage/locality/stamp-rally';
+import { RallyRouteStopRow } from '../../../../components/pilgrimage/rally/RallyRouteStopRow';
+import { RallyTicketStub } from '../../../../components/pilgrimage/rally/RallyTicketStub';
+import {
+  loadStampCollectedAtSync,
+  type StampCollectedAtMap,
+} from '../../../../components/pilgrimage/rally/rally-format';
 
 function subscribeLocality(listener: () => void): () => void {
   return localityRepository.subscribe(listener);
@@ -144,10 +153,17 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
   const { pref: mapThemePref } = useMapThemePref();
   const { language } = useI18n();
   const t = useT();
-  const [visitedStops, setVisitedStops] = useState<StampStopVisitedMap>(loadVisitedStampStopsSync);
+  // Stamped role id → stamp time; the boolean view below feeds counts and map markers.
+  const [collectedAt, setCollectedAt] = useState<StampCollectedAtMap>(loadStampCollectedAtSync);
+  const visitedStops = useMemo<StampStopVisitedMap>(
+    () => Object.fromEntries(Object.keys(collectedAt).map((roleId) => [roleId, true as const])),
+    [collectedAt]
+  );
   const mapRef = useRef<MapSurfaceHandle>(null);
 
   const { event, stops } = detail;
+  const isRally = event.category === 'stamp_rally';
+  const route = useMemo(() => (isRally ? buildRallyRoute(detail) : []), [detail, isRally]);
   const eventState = resolveEventDateState(event, new Date());
   const eventText = resolveLocalIntelText(event.name, language);
   const descriptionText = resolveLocalIntelText(event.description, language);
@@ -202,24 +218,43 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
   const toggleCollected = useCallback(
     async (stop: LocalityEventStop) => {
       if (stop.role.kind !== 'stamp_stop') return;
-      const wasCollected = visitedStops[stop.id] === true;
-      setVisitedStops((current) => {
+      const wasCollected = stop.id in collectedAt;
+      // One timestamp for the UI and storage, so the stamp date shown is the one saved.
+      const at = Date.now();
+      setCollectedAt((current) => {
         const next = { ...current };
         if (wasCollected) delete next[stop.id];
-        else next[stop.id] = true;
+        else next[stop.id] = at;
         return next;
       });
       if (wasCollected) await checkOutStampStop(stop.id as RoleId);
-      else await checkInStampStop(stop.id as RoleId);
+      else await checkInStampStop(stop.id as RoleId, at);
     },
-    [visitedStops]
+    [collectedAt]
+  );
+
+  const stopAddress = (stop: LocalityEventStop) =>
+    stop.address ? resolveLocalIntelText(stop.address, language).value : areaFallback;
+
+  const renderRouteStop = ({ item, index }: ListRenderItemInfo<RallyRouteStop>) => (
+    <RallyRouteStopRow
+      stop={item}
+      index={index}
+      isLast={index === route.length - 1}
+      collectedAt={item.id in collectedAt ? collectedAt[item.id] : undefined}
+      previousCollected={index > 0 && route[index - 1].id in collectedAt}
+      nextCollected={index < route.length - 1 && route[index + 1].id in collectedAt}
+      address={stopAddress(item)}
+      accent={accent}
+      showProvenance={!sameSources(item.provenance, event.provenance)}
+      onToggleCollected={toggleCollected}
+      onOpenMaps={openStopMaps}
+    />
   );
 
   const renderStop = ({ item, index }: ListRenderItemInfo<LocalityEventStop>) => {
     const collected = visitedStops[item.id] === true;
-    const address = item.address
-      ? resolveLocalIntelText(item.address, language).value
-      : areaFallback;
+    const address = stopAddress(item);
     return (
       <StopCard
         stop={item}
@@ -251,14 +286,19 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
         </ThemedText>
         <View style={styles.headerSpacer} />
       </View>
-      <FlatList
-        data={stops}
+      <FlatList<LocalityEventStop>
+        data={isRally ? route : stops}
         keyExtractor={(stop) => stop.id}
-        renderItem={renderStop}
+        renderItem={
+          isRally
+            ? // Rally rows are RallyRouteStop (a LocalityEventStop plus its leg).
+              (info) => renderRouteStop(info as ListRenderItemInfo<RallyRouteStop>)
+            : renderStop
+        }
         initialNumToRender={8}
         windowSize={7}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.xl }]}
-        ItemSeparatorComponent={StopSeparator}
+        ItemSeparatorComponent={isRally ? undefined : StopSeparator}
         ListHeaderComponent={
           <View style={styles.headerContent}>
             <Animated.View entering={listItemEnter(0, 40)} style={styles.heroWrap}>
@@ -346,32 +386,11 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
 
             {stampStops.length > 0 ? (
               <Animated.View entering={listItemEnter(1, 40)}>
-                <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.progressCard}>
-                  <View style={styles.sectionTitleRow}>
-                    <LocalityMiniStamp accent={accent} icon="ticket-outline" size="sm" />
-                    <ThemedText variant="titleMedium" weight="800" style={styles.sectionTitle}>
-                      {t('pilgrimageUi.eventDetail.progress')}
-                    </ThemedText>
-                    <ThemedText variant="bodySmall" weight="800" style={{ color: accent }}>
-                      {t('pilgrimageUi.eventDetail.progressValue', {
-                        collected: collectedCount,
-                        total: stampStops.length,
-                      })}
-                    </ThemedText>
-                  </View>
-                  <View
-                    style={[styles.progressTrack, { backgroundColor: theme.background.tertiary }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          backgroundColor: accent,
-                          width: `${Math.round((collectedCount / stampStops.length) * 100)}%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                </ThemedSurface>
+                <RallyTicketStub
+                  collected={collectedCount}
+                  total={stampStops.length}
+                  accent={accent}
+                />
               </Animated.View>
             ) : null}
 
@@ -563,6 +582,15 @@ function formatEventSchedule(
   return t('pilgrimageUi.eventDetail.dateTba');
 }
 
+/** Two credit lists cite the same pages (the rally hero already shows the event's credits). */
+function sameSources(
+  a: readonly { sourceUrl: string }[],
+  b: readonly { sourceUrl: string }[]
+): boolean {
+  const urls = new Set(b.map((credit) => credit.sourceUrl));
+  return a.length === b.length && a.every((credit) => urls.has(credit.sourceUrl));
+}
+
 function markerBounds(markers: readonly MapMarker[]): BBox | null {
   if (markers.length < 2) return null;
   let north = -90;
@@ -637,11 +665,6 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   animeCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
-  progressCard: { gap: Spacing.sm, ...Shadow.subtle },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  sectionTitle: { flex: 1 },
-  progressTrack: { height: Spacing.xs, borderRadius: Radius.full, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: Radius.full },
   mapCard: { gap: Spacing.sm, ...Shadow.subtle },
   mapHeading: {
     flexDirection: 'row',

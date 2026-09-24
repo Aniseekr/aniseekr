@@ -2210,5 +2210,29 @@
     "lifetime": "買斷",
     "weekly": "週繳",
     "loadingOfferings": "載入方案中…"
+  },
+  "explorer": {
+    "rally": {
+      "railTitle": "集章活動",
+      "railSubtitle": "進行中與即將開始",
+      "openA11y": "開啟集章活動 {name}",
+      "ticketCaption": "巡禮車票",
+      "progressBig": "{collected} / {total}",
+      "progressLabel": "已集章",
+      "legStraightLine": "直線 {distance}",
+      "collectedOn": "{date} 已蓋章",
+      "notCollected": "尚未蓋章",
+      "nodeCollectedA11y": "{stop}，{date} 已蓋章",
+      "nodeCollectedNoDateA11y": "{stop}，已蓋章",
+      "nodePendingA11y": "{stop}，尚未蓋章",
+      "route": "路線"
+    },
+    "stampBook": {
+      "title": "集章冊",
+      "complete": "已集滿",
+      "openA11y": "開啟 {name} 的集章冊",
+      "emptyJoinable": "還沒有集章紀錄・目前有 {count} 個集章活動進行中",
+      "browse": "看看集章活動"
+    }
   }
 }

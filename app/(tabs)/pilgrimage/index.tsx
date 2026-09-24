@@ -30,6 +30,7 @@ import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs
 import { rankFeaturedSpotsByPriority } from '../../../libs/services/pilgrimage/featured-spots';
 import { Skeleton, ThemedIconButton, ThemedText } from '../../../components/themed';
 import { Tourism88Rail } from '../../../components/pilgrimage/Tourism88Rail';
+import { StampRallyRail } from '../../../components/pilgrimage/StampRallyRail';
 import { PilgrimageToolsMenu } from '../../../components/pilgrimage/PilgrimageToolsMenu';
 import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { getUnique88AnimeByPopularity } from '../../../libs/services/pilgrimage/anime88-repository';
@@ -520,6 +521,9 @@ export default function PilgrimageHubScreen() {
               </ScrollView>
             </View>
           ) : null}
+
+          {/* 集章活動 — running or upcoming stamp rallies; renders nothing when none. */}
+          <StampRallyRail onSeeAll={handleOpenNews} />
 
           {/*
             探索 — everything that isn't the user's own collection or the
