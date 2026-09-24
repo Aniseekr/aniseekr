@@ -228,3 +228,9 @@ PILG-066,Pilgrimage,deterministic,P0,Imported reference free entry,A free captur
 PILG-067,Pilgrimage,deterministic,P0,Blank target coordinates,Empty or non-numeric spot latitude or longitude params resolve to an unknown target instead of the 0 0 null island,boundary,active
 PILG-068,Pilgrimage,deterministic,P0,Reference camera route params,Anime-scene and imported references build compare params from real spot fields only with no invented geo or scene names,mapping,active
 PILG-069,Pilgrimage,deterministic,P0,Preview modes without reference,A shot without a reference image offers only the single-photo preview mode,boundary,active
+PILG-070,Pilgrimage,deterministic,P0,Capture re-save merges,Re-recording a capture against the same reference keeps every field the writer did not supply and an empty note clears the stored note,boundary,active
+PILG-071,Pilgrimage,deterministic,P0,Capture re-pair carry-over,Filing a capture against another scene or imported reference keeps only the photo's own fields and drops distance heading offset frame match composite and old scene metadata,mapping,active
+PILG-072,Pilgrimage,deterministic,P1,Legacy duplicate captures,A stored index that repeats a uri within one list reads back as that uri's newest record only,boundary,active
+PILG-073,Pilgrimage,deterministic,P0,Camera preview params,The compare camera hands the preview the shot's own sensors and the session's referenceKind so imported-reference shots are filed in the free bucket,mapping,active
+PILG-074,Pilgrimage,deterministic,P0,Journal preview params,A Journal shot opens the preview with its stored sensors and source and a leftover camera session never replaces it,mapping,active
+PILG-075,Pilgrimage,deterministic,P0,Preview capture record,The preview files a shot under its scene or the free bucket with lens-gated analysis and no composite without a reference,mapping,active

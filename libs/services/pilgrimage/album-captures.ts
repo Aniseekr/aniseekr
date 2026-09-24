@@ -1,6 +1,14 @@
 import type { PilgrimageCapture } from './captures';
 import type { AnitabiBangumi, AnitabiPoint } from './types';
 
+/**
+ * Display-only title for a capture whose anime title was never stored. It is
+ * a label, not data — never persist it back into a record.
+ */
+export function albumFallbackAnimeTitle(animeId: number): string {
+  return `Bangumi #${animeId}`;
+}
+
 /** Reserved synthetic anime id for the "自由拍攝" (free capture) folder. */
 export const FREE_FOLDER_ANIME_ID = -1;
 
@@ -122,7 +130,7 @@ function buildEntryFromCaptureMetadata(capture: PilgrimageCapture): PilgrimageAl
   };
   const anime: AnitabiBangumi = {
     id: capture.animeId,
-    title: capture.animeTitle || `Bangumi #${capture.animeId}`,
+    title: capture.animeTitle || albumFallbackAnimeTitle(capture.animeId),
     cn: capture.animeTitleCn ?? '',
     city: capture.animeCity ?? '',
     cover: capture.animeCover ?? '',

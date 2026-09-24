@@ -2062,7 +2062,8 @@
       "focusedShotA11y": "目前檢視的照片",
       "focusShotA11y": "檢視這張照片",
       "selectShotA11y": "選取照片",
-      "deselectShotA11y": "取消選取照片"
+      "deselectShotA11y": "取消選取照片",
+      "positionLockPercent": "位置鎖定 {percent}%"
     },
     "referencePicker": {
       "title": "選擇參考圖",
@@ -2073,7 +2074,6 @@
       "allAnime": "所有作品",
       "noScenes": "這部作品還沒有場景。",
       "noAnimeMatch": "找不到符合的作品。",
-      "importDenied": "尚未開啟相片存取權限，請到設定開啟後再匯入。",
       "importFailed": "無法匯入這張圖片，請換一張試試。",
       "importedLabel": "匯入的參考圖",
       "open": "參考圖",

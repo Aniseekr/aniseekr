@@ -24,6 +24,7 @@ import {
   ThemedText,
 } from '../../components/themed';
 import {
+  findCaptureByUri,
   recordCapture,
   recordFreeCapture,
   type SensorSnapshot,
@@ -32,9 +33,16 @@ import {
   availablePreviewModes,
   buildImportedCompareParams,
   buildSceneCompareParams,
-  resolveCaptureBucket,
 } from '../../libs/services/pilgrimage/reference-route';
-import { resolveTargetLocation } from '../../libs/services/pilgrimage/target-location';
+import {
+  buildPreviewCaptureRecord,
+  isFiledUnder,
+  previewReferenceFromParams,
+  snapshotFromShot,
+  withoutTargetFields,
+  type PreviewCaptureRecord,
+} from '../../libs/services/pilgrimage/preview-capture';
+import { releaseImportedReference } from '../../libs/services/pilgrimage/reference-image';
 import {
   ReferencePickerSheet,
   type PickedReference,
@@ -48,14 +56,13 @@ import {
   buildCaptureSessionShotFromRoute,
   reconcileCapturePreviewSelection,
   resolveCapturePreviewFocus,
+  resolvePreviewShots,
   resolveRouteShotDimensions,
 } from '../../libs/services/pilgrimage/capture-preview-route';
 import { computeFrameMatch, type FrameMatch } from '../../libs/services/pilgrimage/frame-match';
 import { resolveFullModeStageHeight } from '../../libs/services/pilgrimage/compare-layout';
 import { useCaptureSession, type CaptureSessionShot } from '../../hooks/useCaptureSession';
-import { capturedOnWideAngle } from '../../libs/services/pilgrimage/capture-lens-gate';
-import { sanitizeCaptureNote } from '../../libs/services/pilgrimage/capture-session';
-import { getNumberParam, getStringParam } from '../../libs/utils/route-params';
+import { getStringParam } from '../../libs/utils/route-params';
 import { buildShareRouteParams } from '../../libs/services/pilgrimage/share-route-params';
 import { resolveCapturedPhotoDimensions } from '../../libs/services/pilgrimage/camera-engine-parity';
 import { AnitabiOriginCredit } from '../../components/pilgrimage/common/AnitabiOriginCredit';
@@ -91,12 +98,9 @@ function formatSignedDeg(value: number): string {
   return '0°';
 }
 
-/** Pull a shot's capture-time sensor snapshot, or null if it carries none. */
-function snapshotFromShot(shot: CaptureSessionShot | null): SensorSnapshot | null {
-  if (!shot) return null;
-  const { distanceMeters, headingDeltaDeg, tilt } = shot;
-  if (distanceMeters == null && headingDeltaDeg == null && tilt == null) return null;
-  return { distanceMeters, headingDeltaDeg, tilt };
+/** Write one preview record; the index merges it into the shot's existing record. */
+function fileCapture({ bucket, capture }: PreviewCaptureRecord): Promise<void> {
+  return bucket === 'free' ? recordFreeCapture(capture) : recordCapture(capture);
 }
 
 type Mode = 'stacked' | 'sideBySide' | 'overlay' | 'slider' | 'full';
@@ -118,16 +122,16 @@ export default function ComparePreviewScreen() {
   const imageUrl = toFullResImageUrl(getStringParam(params, 'imageUrl') ?? '');
   // Only a real scene name is ever persisted; the fallback is display-only.
   const sceneNameParam = getStringParam(params, 'name');
-  const sceneName = sceneNameParam ?? t('pilgrimageUi.preview.sceneFallback');
+  const sceneName =
+    sceneNameParam ??
+    (imageUrl ? t('pilgrimageUi.preview.sceneFallback') : t('pilgrimage.album.freeCapturesFolder'));
   const referenceKind = getStringParam(params, 'referenceKind');
   const ep = getStringParam(params, 'ep');
   const animeId = getStringParam(params, 'animeId');
-  const animeIdNumber = getNumberParam(params, 'animeId');
   const animeTitle = getStringParam(params, 'animeTitle');
   const themeColor = getStringParam(params, 'themeColor') || theme.accent;
   const spotLat = getStringParam(params, 'spotLat');
   const spotLng = getStringParam(params, 'spotLng');
-  const epNumber = getNumberParam(params, 'ep');
   const shotUriParam = getStringParam(params, 'shotUri');
   const shotWidthParam = getStringParam(params, 'shotWidth');
   const shotHeightParam = getStringParam(params, 'shotHeight');
@@ -141,6 +145,11 @@ export default function ComparePreviewScreen() {
   const userLatParam = getStringParam(params, 'userLat');
   const userLngParam = getStringParam(params, 'userLng');
   const noteParam = getStringParam(params, 'note');
+  // A Journal shot is already filed. Viewing it must not rewrite its record —
+  // only an edit (note, reference, save) does.
+  const origin = getStringParam(params, 'origin');
+  const openedFromJournal = origin === 'journal';
+  const userEditedRef = useRef(!openedFromJournal);
   // CC BY-NC-SA 4.0 attribution for the reference scene image — surfaced as
   // a small "via {origin}" credit below the comparison stage.
   const sceneOrigin = (getStringParam(params, 'sceneOrigin') ?? '').trim();
@@ -180,16 +189,52 @@ export default function ComparePreviewScreen() {
       noteParam,
     ]
   );
-  const shots = useMemo(
-    () => (sessionShots.length > 0 ? sessionShots : routeShot ? [routeShot] : []),
-    [sessionShots, routeShot]
+  const baseShots = useMemo(
+    () => resolvePreviewShots(sessionShots, routeShot, origin),
+    [sessionShots, routeShot, origin]
   );
-  const routeOnlyPreview = sessionShots.length === 0 && routeShot !== null;
-  const spotGeo = useMemo<[number, number] | undefined>(() => {
-    // '' (spot without geo) must not become the (0, 0) null island.
-    const target = resolveTargetLocation(spotLat, spotLng);
-    return target ? [target.latitude, target.longitude] : undefined;
-  }, [spotLat, spotLng]);
+  const routeOnlyPreview = routeShot !== null && baseShots[0] === routeShot;
+
+  // What the shots are filed against. Only a real scene name is persisted.
+  const reference = useMemo(
+    () =>
+      previewReferenceFromParams(
+        {
+          spotId,
+          imageUrl,
+          referenceKind: referenceKind ?? undefined,
+          name: sceneNameParam ?? undefined,
+          animeId: animeId ?? undefined,
+          animeTitle: animeTitle ?? undefined,
+          themeColor,
+          ep: ep ?? undefined,
+          spotLat: spotLat ?? undefined,
+          spotLng: spotLng ?? undefined,
+        },
+        { fallbackColor: theme.accent }
+      ),
+    [
+      spotId,
+      imageUrl,
+      referenceKind,
+      sceneNameParam,
+      animeId,
+      animeTitle,
+      themeColor,
+      ep,
+      spotLat,
+      spotLng,
+      theme.accent,
+    ]
+  );
+  // Distance / heading offset were measured against the reference the shots
+  // were opened with; once re-paired they'd describe the wrong place.
+  const referenceKey = `${spotId}|${imageUrl}`;
+  const [openedReferenceKey] = useState(referenceKey);
+  const shots = useMemo(
+    () => (referenceKey === openedReferenceKey ? baseShots : baseShots.map(withoutTargetFields)),
+    [baseShots, referenceKey, openedReferenceKey]
+  );
 
   // ── Album focus + selection ────────────────────────────────────────────
   // `focusedShotId` drives the comparison stage. `selectedIds` drives Save.
@@ -210,7 +255,17 @@ export default function ComparePreviewScreen() {
     () => shots.find((s) => s.id === focusedShotId) ?? shots[0] ?? null,
     [shots, focusedShotId]
   );
-  const [note, setNote] = useState(() => focusedShot?.note ?? routeShot?.note ?? '');
+  // Notes the user typed in this preview, by photo uri (stable across re-pairs).
+  // Only these are ever written; an untouched note is left as stored.
+  const [noteEdits, setNoteEdits] = useState<Record<string, string>>({});
+  const focusedUri = focusedShot?.uri ?? null;
+  const editedNote = focusedUri !== null ? noteEdits[focusedUri] : undefined;
+  // Session shots never learn about saved notes, so the record is the truth.
+  const storedNote = useMemo(
+    () => (focusedUri ? findCaptureByUri(focusedUri)?.note : undefined),
+    [focusedUri]
+  );
+  const note = editedNote ?? storedNote ?? focusedShot?.note ?? '';
   const shotUri = focusedShot?.uri ?? '';
   const selectedCount = useMemo(
     () => shots.reduce((n, s) => (selectedIds.has(s.id) ? n + 1 : n), 0),
@@ -223,28 +278,55 @@ export default function ComparePreviewScreen() {
   const mode: Mode = modes.includes(modeState) ? modeState : modes[0];
   const [referencePickerOpen, setReferencePickerOpen] = useState(false);
 
-  // Pair (or re-pair) this shot with a reference. The params swap in place;
-  // the persist effect below re-files the same shot (captures upsert by uri),
-  // so it moves to the new scene / imported reference instead of duplicating.
+  // Pair (or re-pair) the shots with a reference: re-file every shot on screen
+  // right away (captures upsert by uri, so each moves rather than duplicates),
+  // then swap the params so the stage shows the new pairing.
   const handlePickReference = useCallback(
-    (reference: PickedReference) => {
+    (picked: PickedReference) => {
       const next =
-        reference.kind === 'scene'
-          ? buildSceneCompareParams(reference.spot, {
-              animeId: reference.animeId,
-              animeTitle: reference.animeTitle,
+        picked.kind === 'scene'
+          ? buildSceneCompareParams(picked.spot, {
+              animeId: picked.animeId,
+              animeTitle: picked.animeTitle,
               themeColor,
             })
-          : buildImportedCompareParams(reference.uri, {
+          : buildImportedCompareParams(picked.uri, {
               label: t('pilgrimageUi.referencePicker.importedLabel'),
               themeColor,
               now: Date.now(),
               nonce: Math.round(Math.random() * 1e6),
             });
+      const nextReference = previewReferenceFromParams(next, {
+        fallbackColor: theme.accent,
+        resolveImageUrl: toFullResImageUrl,
+      });
+      const backToOpened =
+        `${nextReference.spotId}|${nextReference.imageUrl}` === openedReferenceKey;
+      userEditedRef.current = true;
+      // A pending write for the old pairing must not land after this one (the
+      // loop below writes every shot, typed notes included).
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+      persistTimerRef.current = null;
+      pendingWriteRef.current = null;
+      const previousImported = referenceKind === 'imported' ? imageUrl : null;
+      void (async () => {
+        for (const shot of baseShots) {
+          await fileCapture(
+            buildPreviewCaptureRecord({
+              shot: backToOpened ? shot : withoutTargetFields(shot),
+              reference: nextReference,
+              note: noteEdits[shot.uri],
+            })
+          );
+        }
+        // Drop the old imported file once nothing is filed against it — except
+        // the camera's own reference, which the compare screen underneath still
+        // shows (it releases that one when it closes).
+        const cameraStillShowsIt = !openedFromJournal && referenceKey === openedReferenceKey;
+        if (previousImported && !cameraStillShowsIt) releaseImportedReference(previousImported);
+      })().catch((err) => console.warn('[preview] re-pair failed', err));
       router.setParams({
         ...next,
-        // Keep the shot's own id; clear fields the new reference doesn't carry.
-        spotId: reference.kind === 'scene' ? next.spotId : spotId,
         spotLat: next.spotLat ?? '',
         spotLng: next.spotLng ?? '',
         sceneOrigin: next.sceneOrigin ?? '',
@@ -253,7 +335,19 @@ export default function ComparePreviewScreen() {
       });
       setMode(availablePreviewModes(true)[0]);
     },
-    [router, spotId, t, themeColor]
+    [
+      baseShots,
+      imageUrl,
+      noteEdits,
+      openedFromJournal,
+      openedReferenceKey,
+      referenceKey,
+      referenceKind,
+      router,
+      t,
+      theme.accent,
+      themeColor,
+    ]
   );
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [saving, setSaving] = useState(false);
@@ -297,12 +391,17 @@ export default function ComparePreviewScreen() {
   }, [shots]);
 
   useEffect(() => {
-    setNote(focusedShot?.note ?? '');
-  }, [focusedShot?.id, focusedShot?.note]);
-
-  useEffect(() => {
     setSaved(false);
   }, [note]);
+
+  const handleNoteChange = useCallback(
+    (text: string) => {
+      if (!focusedUri) return;
+      userEditedRef.current = true;
+      setNoteEdits((prev) => ({ ...prev, [focusedUri]: text }));
+    },
+    [focusedUri]
+  );
 
   // Alignment sensor snapshot — strictly real data, taken from the FOCUSED
   // shot's own capture-time fields. Each shot carries its own snapshot, so the
@@ -322,11 +421,14 @@ export default function ComparePreviewScreen() {
   // Frame match — does the focused photo actually look like the anime
   // reference? Recomputed whenever the focused shot changes.
   const [frameMatch, setFrameMatch] = useState<FrameMatch | null>(null);
-  const [frameLoading, setFrameLoading] = useState(true);
+  // Only a shot with a reference has anything to analyse — no skeleton otherwise.
+  const [frameLoading, setFrameLoading] = useState(() => Boolean(imageUrl && shotUri));
+  // Last frame match per (reference, shot), so saving several shots keeps each
+  // one's own analysis instead of blanking the non-focused ones.
+  const frameByPairRef = useRef<Record<string, FrameMatch>>({});
 
   useEffect(() => {
     let cancelled = false;
-    setFrameLoading(true);
     setFrameMatch(null);
     if (!imageUrl || !shotUri) {
       setFrameLoading(false);
@@ -334,8 +436,10 @@ export default function ComparePreviewScreen() {
         cancelled = true;
       };
     }
+    setFrameLoading(true);
     void computeFrameMatch(imageUrl, shotUri)
       .then((m) => {
+        frameByPairRef.current[`${imageUrl}|${shotUri}`] = m;
         if (cancelled) return;
         setFrameMatch(m);
       })
@@ -387,7 +491,22 @@ export default function ComparePreviewScreen() {
   }, [frameMatch, t]);
 
   const stageRef = useRef<View>(null);
-  const compositeByShotIdRef = useRef<Record<string, string>>({});
+  // Saved composites by `${reference}|${shot uri}` — a composite shows one
+  // pairing and must not follow the shot to another reference.
+  const compositeByPairRef = useRef<Record<string, string>>({});
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The write the debounce is holding, so leaving the screen (or moving to
+  // another shot) inside the 450ms window still saves what was typed.
+  const pendingWriteRef = useRef<{ uri: string; record: PreviewCaptureRecord } | null>(null);
+  const flushPendingWrite = useCallback(() => {
+    const pending = pendingWriteRef.current;
+    pendingWriteRef.current = null;
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current);
+      persistTimerRef.current = null;
+    }
+    if (pending) void fileCapture(pending.record);
+  }, []);
 
   // Slider drag position (0..1) for slider mode
   const sliderProgress = useSharedValue(0.5);
@@ -426,86 +545,6 @@ export default function ComparePreviewScreen() {
     [stageWidth]
   );
 
-  // Persist one session shot's capture record so the spot shows "captured".
-  //
-  // Rule 8 gate: when the capture wasn't taken on the wide-angle baseline
-  // (ultra-wide / telephoto), frame-match and HDR composite results are
-  // optical-mismatch artifacts — useful as a live reference for the user but
-  // not comparable apples-to-apples with wide-angle captures. We keep the
-  // live UI display (preview.tsx still shows the score) but write null
-  // through to `recordCapture` so the album-level average isn't polluted
-  // by lens-induced bias. See `capture-lens-gate.ts`.
-  const persistShot = useCallback(
-    async (
-      shot: CaptureSessionShot,
-      frame: FrameMatch | null,
-      compositeUri?: string,
-      noteText?: string
-    ) => {
-      const lensAllowsAnalysis = capturedOnWideAngle(shot);
-      const effectiveFrame = lensAllowsAnalysis ? frame : null;
-      const effectiveCompositeUri = lensAllowsAnalysis ? compositeUri : undefined;
-      const snap = snapshotFromShot(shot);
-      const cleanedNote = sanitizeCaptureNote(noteText ?? shot.note);
-      const enrichedSnapshot: SensorSnapshot | undefined = snap
-        ? {
-            ...snap,
-            frameMatch: effectiveFrame?.total ?? null,
-            frameValid: effectiveFrame ? effectiveFrame.valid : null,
-            frameReason: effectiveFrame?.reason ?? null,
-          }
-        : undefined;
-      const source =
-        shot.source === 'library' ? 'library' : shot.source === 'auto' ? 'auto' : 'camera';
-      if (resolveCaptureBucket({ referenceKind, imageUrl }) === 'free') {
-        // No known scene behind this shot: keep it in the free bucket (with the
-        // imported reference, if any) instead of an orphaned synthetic spot.
-        await recordFreeCapture({
-          spotId,
-          uri: shot.uri,
-          compositeUri: effectiveCompositeUri,
-          capturedAt: shot.createdAt,
-          heading: shot.heading ?? undefined,
-          sensorSnapshot: enrichedSnapshot,
-          userLocation: shot.userLocation ?? undefined,
-          note: cleanedNote,
-          source,
-          ...(referenceKind === 'imported' && imageUrl ? { referenceUri: imageUrl } : {}),
-        });
-        return;
-      }
-      await recordCapture({
-        spotId,
-        uri: shot.uri,
-        compositeUri: effectiveCompositeUri,
-        capturedAt: shot.createdAt,
-        heading: shot.heading ?? undefined,
-        sensorSnapshot: enrichedSnapshot,
-        userLocation: shot.userLocation ?? undefined,
-        note: cleanedNote,
-        source,
-        animeId: animeIdNumber ?? undefined,
-        animeTitle: animeTitle ?? undefined,
-        animeColor: themeColor,
-        spotName: sceneNameParam ?? undefined,
-        spotImage: imageUrl,
-        spotEp: epNumber ?? undefined,
-        spotGeo,
-      });
-    },
-    [
-      animeIdNumber,
-      animeTitle,
-      epNumber,
-      imageUrl,
-      referenceKind,
-      sceneNameParam,
-      spotGeo,
-      spotId,
-      themeColor,
-    ]
-  );
-
   const snapshotComposite = useCallback(async (): Promise<string | null> => {
     if (!stageRef.current) return null;
     try {
@@ -533,19 +572,55 @@ export default function ComparePreviewScreen() {
   // without re-persisting older ones.
   const persistedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
+    if (openedFromJournal) return; // already filed
     const newest = shots[0];
     if (!newest || persistedRef.current.has(newest.id)) return;
     persistedRef.current.add(newest.id);
-    void persistShot(newest, null, undefined, newest.note);
-  }, [shots, persistShot]);
+    // Only a shot with no record yet is new; an existing one may have been
+    // re-paired elsewhere and must not be pulled back.
+    if (findCaptureByUri(newest.uri)) return;
+    void fileCapture(buildPreviewCaptureRecord({ shot: newest, reference, note: newest.note }));
+  }, [openedFromJournal, shots, reference]);
 
+  // Keep the focused shot's record current as the user edits its note and as
+  // its frame score settles. A frame result is only written where the shot is
+  // already filed (or for a fresh camera shot) — looking at a shot never moves
+  // it, and a Journal shot is only touched once the user changed something.
+  // Frame match and composite are lens-gated (Rule 8, `capture-lens-gate.ts`).
   useEffect(() => {
     if (!focusedShot) return;
+    // Focus moved while a write for the previous shot was pending: send it now.
+    if (pendingWriteRef.current && pendingWriteRef.current.uri !== focusedShot.uri) {
+      flushPendingWrite();
+    }
+    const stored = findCaptureByUri(focusedShot.uri);
+    const mayWriteFrame =
+      (!openedFromJournal || userEditedRef.current) &&
+      (stored ? isFiledUnder(stored, reference) : !openedFromJournal);
+    const frame = mayWriteFrame ? frameMatch : null;
+    if (editedNote === undefined && !frame) return;
+    const record = buildPreviewCaptureRecord({
+      shot: focusedShot,
+      reference,
+      frame,
+      compositeUri: compositeByPairRef.current[`${reference.imageUrl}|${focusedShot.uri}`],
+      note: editedNote,
+    });
+    pendingWriteRef.current = { uri: focusedShot.uri, record };
     const timer = setTimeout(() => {
-      void persistShot(focusedShot, frameMatch, compositeByShotIdRef.current[focusedShot.id], note);
+      persistTimerRef.current = null;
+      if (pendingWriteRef.current?.record === record) pendingWriteRef.current = null;
+      void fileCapture(record);
     }, 450);
-    return () => clearTimeout(timer);
-  }, [focusedShot, frameMatch, note, persistShot]);
+    persistTimerRef.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (persistTimerRef.current === timer) persistTimerRef.current = null;
+    };
+  }, [focusedShot, frameMatch, editedNote, reference, openedFromJournal, flushPendingWrite]);
+
+  // Leaving within the debounce window still saves the last keystrokes.
+  useEffect(() => () => flushPendingWrite(), [flushPendingWrite]);
 
   const handleSave = useCallback(async () => {
     if (saving) return;
@@ -555,6 +630,7 @@ export default function ComparePreviewScreen() {
     const targets = toSave.length > 0 ? toSave : focusedShot ? [focusedShot] : [];
     if (targets.length === 0) return;
     setSaving(true);
+    userEditedRef.current = true;
     hapticsBridge.success();
     try {
       const ok = await ensureMediaPerm();
@@ -563,24 +639,33 @@ export default function ComparePreviewScreen() {
         return;
       }
       // The comparison composite is only meaningful for the focused shot's
-      // stage, so capture it once and save it alongside.
-      const composite = await snapshotComposite();
+      // stage, so capture it once and save it alongside. A lone shot has no
+      // comparison — the photo itself is already saved.
+      const composite = imageUrl ? await snapshotComposite() : null;
       for (const shot of targets) {
         await MediaLibrary.saveToLibraryAsync(shot.uri);
       }
       if (composite) {
         await MediaLibrary.saveToLibraryAsync(composite);
-        if (focusedShot) compositeByShotIdRef.current[focusedShot.id] = composite;
+        if (focusedShot) {
+          compositeByPairRef.current[`${reference.imageUrl}|${focusedShot.uri}`] = composite;
+        }
       }
       // Persist the focused shot's record with its frame-match analysis +
       // composite; other selected shots persist their raw record.
       for (const shot of targets) {
         const isFocused = shot.id === focusedShot?.id;
-        await persistShot(
-          shot,
-          isFocused ? frameMatch : null,
-          isFocused ? (composite ?? undefined) : undefined,
-          note
+        await fileCapture(
+          buildPreviewCaptureRecord({
+            shot,
+            reference,
+            frame: isFocused
+              ? frameMatch
+              : (frameByPairRef.current[`${imageUrl}|${shot.uri}`] ?? null),
+            compositeUri: isFocused ? (composite ?? undefined) : undefined,
+            // Only notes typed here are written; the rest stay as stored.
+            note: noteEdits[shot.uri],
+          })
         );
         persistedRef.current.add(shot.id);
       }
@@ -596,10 +681,11 @@ export default function ComparePreviewScreen() {
     selectedIds,
     focusedShot,
     ensureMediaPerm,
+    imageUrl,
     snapshotComposite,
-    persistShot,
+    reference,
     frameMatch,
-    note,
+    noteEdits,
   ]);
 
   const handleShare = useCallback(() => {
@@ -818,7 +904,9 @@ export default function ComparePreviewScreen() {
                 </ThemedText>
                 {positionScore?.total != null ? (
                   <ThemedText variant="captionSmall" tone="secondary">
-                    Position lock {Math.round(positionScore.total * 100)}%
+                    {t('pilgrimageUi.preview.positionLockPercent', {
+                      percent: Math.round(positionScore.total * 100),
+                    })}
                   </ThemedText>
                 ) : null}
                 {sensorSnapshot ? (
@@ -1211,7 +1299,7 @@ export default function ComparePreviewScreen() {
             </View>
             <TextInput
               value={note}
-              onChangeText={setNote}
+              onChangeText={handleNoteChange}
               placeholder={t('pilgrimageUi.addWhereWhyOrWhat')}
               placeholderTextColor={theme.text.tertiary}
               multiline
@@ -1302,7 +1390,9 @@ export default function ComparePreviewScreen() {
         visible={referencePickerOpen}
         onClose={() => setReferencePickerOpen(false)}
         onPick={handlePickReference}
-        initialAnimeId={animeIdNumber != null && animeIdNumber > 0 ? animeIdNumber : null}
+        initialAnimeId={
+          reference.animeId != null && reference.animeId > 0 ? reference.animeId : null
+        }
         currentSpotId={spotId}
       />
     </GestureHandlerRootView>

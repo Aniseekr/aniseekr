@@ -11,7 +11,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useSharedValue } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useCameraPermission } from 'react-native-vision-camera';
@@ -43,7 +43,11 @@ import { useTapToFocus } from '../../../hooks/useTapToFocus';
 import { useAlignmentSensors } from '../../../hooks/useAlignmentSensors';
 import { availableStopsFromDeviceInfo } from '../../../libs/services/pilgrimage/lens-switching';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
-import { recordFreeCapture, recordCapture } from '../../../libs/services/pilgrimage/captures';
+import {
+  findCaptureByUri,
+  recordFreeCapture,
+  recordCapture,
+} from '../../../libs/services/pilgrimage/captures';
 import {
   findNearestCachedSpot,
   type NearestSpotSuggestion,
@@ -99,6 +103,15 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   // Recent free shots this session, newest first — feeds the ShutterRow gallery
   // thumb (same bottom-row layout as compare/[spotId].tsx).
   const [shotUris, setShotUris] = useState<string[]>([]);
+  // Shots deleted in the Journal meanwhile (their files may be gone) drop out.
+  useFocusEffect(
+    useCallback(() => {
+      setShotUris((prev) => {
+        const kept = prev.filter((uri) => findCaptureByUri(uri) !== null);
+        return kept.length === prev.length ? prev : kept;
+      });
+    }, [])
+  );
   const lastFreeRef = useRef<{ uri: string; capturedAt: number } | null>(null);
 
   const exposureShared = useSharedValue(0);
@@ -230,10 +243,6 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   const importFromLibrary = useCallback(async () => {
     try {
       const result = await importLibraryPhoto();
-      if (result.status === 'denied') {
-        Alert.alert(t('pilgrimageUi.referencePicker.importDenied'));
-        return;
-      }
       if (result.status !== 'ok') return;
       const capturedAt = Date.now();
       await recordFreeCapture({

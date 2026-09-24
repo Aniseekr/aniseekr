@@ -94,10 +94,18 @@ let cache: { rawV2: string | null; rawV1: string | null; index: CapturesIndexV2 
 
 function sanitizeArray(value: unknown): PilgrimageCapture[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(
-    (c): c is PilgrimageCapture =>
-      Boolean(c) && typeof c === 'object' && typeof (c as PilgrimageCapture).uri === 'string'
-  );
+  // Lists are newest-first, so the first record of a uri is its latest save.
+  // Older builds prepended on every save; keep only that latest one.
+  const seen = new Set<string>();
+  return value.filter((c): c is PilgrimageCapture => {
+    if (!c || typeof c !== 'object' || typeof (c as PilgrimageCapture).uri !== 'string') {
+      return false;
+    }
+    const { uri } = c as PilgrimageCapture;
+    if (seen.has(uri)) return false;
+    seen.add(uri);
+    return true;
+  });
 }
 
 /** Parse a stored v2 blob. Returns null if the string isn't a v2 index. */
@@ -193,44 +201,103 @@ function withoutUri(idx: CapturesIndexV2, uri: string): CapturesIndexV2 {
   return { spots, free: idx.free.filter((c) => c.uri !== uri) };
 }
 
-/** Replace `capture` in place when its uri is already in `list`; null if absent. */
-function replaceInPlace(
-  list: readonly PilgrimageCapture[],
-  capture: PilgrimageCapture
-): PilgrimageCapture[] | null {
-  const at = list.findIndex((c) => c.uri === capture.uri);
-  if (at < 0) return null;
-  const next = [...list];
-  next[at] = capture;
-  return next;
+/** The stored record of a photo, wherever it is filed; null when it has none. */
+export function findCaptureByUri(uri: string): PilgrimageCapture | null {
+  return findByUri(loadV2(), uri);
 }
 
-/** Upsert by uri: same spot → update in place; elsewhere → move here (newest-first). */
+function findByUri(idx: CapturesIndexV2, uri: string): PilgrimageCapture | null {
+  for (const arr of Object.values(idx.spots)) {
+    const hit = arr.find((c) => c.uri === uri);
+    if (hit) return hit;
+  }
+  return idx.free.find((c) => c.uri === uri) ?? null;
+}
+
+/**
+ * The fields that describe the photo itself. They stay true when the photo is
+ * paired with another reference; everything else (distance and heading to the
+ * old target, frame match, composite, scene/anime metadata, imported
+ * reference) described the old pairing and is dropped.
+ */
+function photoFields(prev: PilgrimageCapture): Partial<PilgrimageCapture> {
+  const tilt = prev.sensorSnapshot?.tilt ?? null;
+  return {
+    capturedAt: prev.capturedAt,
+    ...(prev.heading !== undefined ? { heading: prev.heading } : {}),
+    ...(prev.userLocation ? { userLocation: prev.userLocation } : {}),
+    ...(prev.note ? { note: prev.note } : {}),
+    ...(prev.source ? { source: prev.source } : {}),
+    ...(tilt !== null
+      ? { sensorSnapshot: { distanceMeters: null, headingDeltaDeg: null, tilt } }
+      : {}),
+  };
+}
+
+/**
+ * Writers only send what they know (a preview opened from the Journal has the
+ * uri and note, not the shutter-time sensors), so a field left undefined keeps
+ * the stored value. An empty note is the one explicit clear.
+ */
+function withDefined<T extends object>(base: Partial<T> | undefined, next: T): T {
+  const merged: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(next)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged as T;
+}
+
+function mergeCapture(base: Partial<PilgrimageCapture>, capture: PilgrimageCapture) {
+  const merged = withDefined(base, capture);
+  // Field by field, so a save without a fresh frame result keeps the stored one.
+  if (capture.sensorSnapshot) {
+    merged.sensorSnapshot = withDefined(base.sensorSnapshot, capture.sensorSnapshot);
+  }
+  if (!merged.note) delete merged.note;
+  return merged;
+}
+
+/** Upsert by uri: same spot → merge in place; elsewhere → move here (newest-first). */
 export async function recordCapture(capture: PilgrimageCapture): Promise<void> {
   const idx = loadV2();
   const existing = idx.spots[capture.spotId] ?? [];
-  const updated = replaceInPlace(existing, capture);
-  if (updated) {
+  const at = existing.findIndex((c) => c.uri === capture.uri);
+  if (at >= 0) {
+    const updated = [...existing];
+    updated[at] = mergeCapture(existing[at], capture);
     persist({ spots: { ...idx.spots, [capture.spotId]: updated }, free: idx.free });
     return;
   }
+  const prev = findByUri(idx, capture.uri);
+  const moved = mergeCapture(prev ? photoFields(prev) : {}, capture);
   const rest = withoutUri(idx, capture.uri);
   persist({
-    spots: { ...rest.spots, [capture.spotId]: [capture, ...(rest.spots[capture.spotId] ?? [])] },
+    spots: { ...rest.spots, [capture.spotId]: [moved, ...(rest.spots[capture.spotId] ?? [])] },
     free: rest.free,
   });
 }
 
-/** Upsert by uri into the free bucket (e.g. attaching an imported reference). */
+/**
+ * Upsert by uri into the free bucket. Re-saving against the same imported
+ * reference (or without naming one) merges; a different reference is a new
+ * pairing and keeps only the photo's own fields.
+ */
 export async function recordFreeCapture(capture: PilgrimageCapture): Promise<void> {
   const idx = loadV2();
-  const updated = replaceInPlace(idx.free, capture);
-  if (updated) {
+  const at = idx.free.findIndex((c) => c.uri === capture.uri);
+  if (at >= 0) {
+    const current = idx.free[at];
+    const samePairing =
+      capture.referenceUri === undefined || capture.referenceUri === current.referenceUri;
+    const updated = [...idx.free];
+    updated[at] = mergeCapture(samePairing ? current : photoFields(current), capture);
     persist({ spots: idx.spots, free: updated });
     return;
   }
+  const prev = findByUri(idx, capture.uri);
+  const moved = mergeCapture(prev ? photoFields(prev) : {}, capture);
   const rest = withoutUri(idx, capture.uri);
-  persist({ spots: rest.spots, free: [capture, ...rest.free] });
+  persist({ spots: rest.spots, free: [moved, ...rest.free] });
 }
 
 export async function listCaptures(): Promise<Record<string, PilgrimageCapture>> {

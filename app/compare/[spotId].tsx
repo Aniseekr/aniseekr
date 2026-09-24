@@ -115,6 +115,8 @@ import {
   buildImportedCompareParams,
   buildSceneCompareParams,
 } from '../../libs/services/pilgrimage/reference-route';
+import { buildCameraPreviewParams } from '../../libs/services/pilgrimage/preview-capture';
+import { releaseImportedReference } from '../../libs/services/pilgrimage/reference-image';
 import CaptureModeToast from '../../components/pilgrimage/camera/CaptureModeToast';
 
 import AutoCaptureToast from '../../components/pilgrimage/camera/AutoCaptureToast';
@@ -233,6 +235,12 @@ export default function CompareCaptureScreen() {
   // Anitabi `?plan=h160` is a 284×160 thumb; upgrade to full 1920×1080 for the
   // overlay + Skia edge/sketch source.
   const hiResImageUrl = useMemo(() => toFullResImageUrl(imageUrl), [imageUrl]);
+  // An imported reference this camera was opened with is deleted when the
+  // camera closes, unless a shot was filed against it.
+  useEffect(() => {
+    if (!importedReference || !imageUrl) return;
+    return () => releaseImportedReference(imageUrl);
+  }, [importedReference, imageUrl]);
 
   const { width: winW, height: winH } = useWindowDimensions();
   const isLandscape = winW > winH;
@@ -639,56 +647,37 @@ export default function CompareCaptureScreen() {
     (shot: CaptureSessionShot) => {
       router.push({
         pathname: '/compare/preview',
-        params: {
+        params: buildCameraPreviewParams(shot, {
           spotId,
           imageUrl: hiResImageUrl,
-          shotUri: shot.uri,
-          shotWidth: String(shot.width),
-          shotHeight: String(shot.height),
-          capturedAt: String(shot.createdAt),
-          name,
+          // The real scene name or nothing — the preview persists it.
+          name: nameParam ?? '',
           ep: ep ?? '',
           animeId: animeId ?? '',
           animeTitle,
           themeColor,
-          heading: sensors.heading != null ? sensors.heading.toFixed(0) : '',
           spotLat: params.spotLat ?? '',
           spotLng: params.spotLng ?? '',
-          distanceMeters:
-            sensors.score.distanceMeters != null ? String(sensors.score.distanceMeters) : '',
-          headingDeltaDeg:
-            sensors.score.headingDeltaDeg != null ? String(sensors.score.headingDeltaDeg) : '',
-          tilt: sensors.tilt != null ? String(sensors.tilt) : '',
-          captureMode: shot.captureMode,
-          shotSource: shot.source,
-          userLat: shot.userLocation?.latitude != null ? String(shot.userLocation.latitude) : '',
-          userLng: shot.userLocation?.longitude != null ? String(shot.userLocation.longitude) : '',
-          note: shot.note ?? '',
-          burstTotal: shot.burstTotal != null ? String(shot.burstTotal) : '',
-          burstUris: shot.burstUris ? JSON.stringify(shot.burstUris) : '',
-          burstBestIndex: shot.burstBestIndex != null ? String(shot.burstBestIndex) : '',
           ...(sceneOrigin ? { sceneOrigin } : {}),
           ...(sceneOriginURL ? { sceneOriginURL } : {}),
-        },
+          ...(importedReference ? { referenceKind: 'imported' as const } : {}),
+        }),
       });
     },
     [
       router,
       spotId,
       hiResImageUrl,
-      name,
+      nameParam,
       ep,
       animeId,
       animeTitle,
       themeColor,
-      sensors.heading,
-      sensors.score.distanceMeters,
-      sensors.score.headingDeltaDeg,
-      sensors.tilt,
       params.spotLat,
       params.spotLng,
       sceneOrigin,
       sceneOriginURL,
+      importedReference,
     ]
   );
 

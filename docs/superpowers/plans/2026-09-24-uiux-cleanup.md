@@ -92,4 +92,18 @@ Screenshots live outside the repo (session scratchpad `baseline/`); findings bel
   ReferencePickerSheet; free-camera Reference pill + library import; single-shot preview;
   Journal free shots open the preview). Device check pending: library import + pairing
   (simulator has no camera; photo permission was not granted during testing).
+- [x] 3 review fixes (PILG-070..075). Camera→preview and Journal→preview go through tested
+  builders (`preview-capture.ts`; `referenceKind` forwarded). Captures merge on re-save and
+  carry only photo fields across a re-pair. The preview uses session shots only when the
+  opened uri is among them, and a Journal-opened preview writes only after an edit. Re-pair
+  persists every shot immediately, without distance/heading. The Journal reloads on focus.
+  Imports need no library permission. Imported copies are released on delete.
+  Simulator-verified: import → Journal → pair scene → note kept → one record → delete
+  removes the file. Device check still pending: picker keyboard (M5), camera-shot pairing.
+  Re-review (opus) found a BLOCKING: which shots the preview shows must be decided by where it
+  was opened, not by which uris are in the session. Also fixed: notes keyed by uri and seeded
+  from the record, written only when edited, and flushed on leave; frame results written only
+  where the shot is already filed; composites keyed by pairing; field-level `sensorSnapshot`
+  merge; imported references released when the camera closes. Final verdict: APPROVE.
+  Follow-up (out of scope): frame-match scores unrelated scenes ~90%.
 - [ ] 1b bundled display face (native rebuild, combined with Phase 3 device build)

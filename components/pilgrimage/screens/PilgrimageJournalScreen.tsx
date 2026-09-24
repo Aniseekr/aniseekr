@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
@@ -44,6 +44,11 @@ import {
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import { buildJournalPreviewParams } from '../../../libs/services/pilgrimage/preview-capture';
+import {
+  releaseImportedPhoto,
+  releaseImportedReference,
+} from '../../../libs/services/pilgrimage/reference-image';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { useT, type TranslationKey } from '../../../libs/i18n';
 import {
@@ -161,9 +166,14 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
 
   useEffect(() => subscribeCharacters(() => setCharacters(getCharacterGroups())), []);
 
-  // Captures are seeded synchronously above; no async reload needed because
-  // every writer (camera capture flow, clear actions) updates MMKV directly
-  // and the new mount will see the fresh value.
+  // Captures are seeded synchronously above. The preview can re-pair or edit a
+  // shot while this screen stays mounted underneath, so re-read on focus — a
+  // cheap memoised read that returns the same object when nothing changed.
+  useFocusEffect(
+    useCallback(() => {
+      setCapturesV2(loadCapturesV2Sync());
+    }, [])
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -242,7 +252,8 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
       const matches = folder.entries
         .map((entry) => entry.matchPercent)
         .filter((value): value is number => typeof value === 'number');
-      folder.visitedSpots = distinct.size;
+      // Free shots have no known place behind them, so they visit none (Rule 8).
+      folder.visitedSpots = folder.anime.id === FREE_FOLDER_ANIME_ID ? 0 : distinct.size;
       folder.avgMatch =
         matches.length > 0
           ? Math.round(matches.reduce((sum, value) => sum + value, 0) / matches.length)
@@ -292,74 +303,14 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
   const handleEntryPress = useCallback(
     (entry: AlbumEntry) => {
       hapticsBridge.selection();
-      if (entry.isFree) {
-        // A free shot opens as a single photo — or against the user's imported
-        // reference — and the preview offers "pair with a reference".
-        const referenceUri = entry.capture.referenceUri;
-        const params: Record<string, string> = {
-          spotId: entry.capture.spotId,
-          imageUrl: referenceUri ?? '',
-          referenceKind: referenceUri ? 'imported' : '',
-          name: referenceUri ? t('pilgrimageUi.referencePicker.importedLabel') : '',
-          shotUri: entry.capture.uri,
-          shotWidth: '0',
-          shotHeight: '0',
-          capturedAt: String(entry.capture.capturedAt),
-          themeColor: theme.accent,
-          shotSource: entry.capture.source === 'library' ? 'library' : 'manual',
-          note: entry.capture.note ?? '',
-        };
-        if (entry.capture.userLocation) {
-          params.userLat = String(entry.capture.userLocation.latitude);
-          params.userLng = String(entry.capture.userLocation.longitude);
-        }
-        router.push({ pathname: '/compare/preview', params });
-        return;
-      }
-      const animeTitles = getPilgrimageAnimeTitles(entry.anime);
-      const spotTitles = getPilgrimageSpotTitles(entry.spot);
-      const params: Record<string, string> = {
-        spotId: entry.spot.id,
-        imageUrl: entry.spot.image,
-        shotUri: entry.capture.uri,
-        shotWidth: '0',
-        shotHeight: '0',
-        capturedAt: String(entry.capture.capturedAt),
-        name: spotTitles.primary,
-        ep: String(entry.spot.ep),
-        animeId: String(entry.anime.id),
-        animeTitle: animeTitles.primary,
-        themeColor: entry.anime.color || theme.accent,
-        heading: entry.capture.heading != null ? String(entry.capture.heading) : '',
-        shotSource:
-          entry.capture.source === 'library'
-            ? 'library'
-            : entry.capture.source === 'auto'
-              ? 'auto'
-              : 'manual',
-        note: entry.capture.note ?? '',
-      };
-      if (entry.capture.userLocation) {
-        params.userLat = String(entry.capture.userLocation.latitude);
-        params.userLng = String(entry.capture.userLocation.longitude);
-      }
-      const [lat, lng] = entry.spot.geo;
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        params.spotLat = String(lat);
-        params.spotLng = String(lng);
-      }
-      const snapshot = entry.capture.sensorSnapshot;
-      if (snapshot?.distanceMeters != null) params.distanceMeters = String(snapshot.distanceMeters);
-      if (snapshot?.headingDeltaDeg != null) {
-        params.headingDeltaDeg = String(snapshot.headingDeltaDeg);
-      }
-      if (snapshot?.tilt != null) params.tilt = String(snapshot.tilt);
-      // CC BY-NC-SA 4.0 attribution for the saved reference scene.
-      if (entry.spot.origin) params.sceneOrigin = entry.spot.origin;
-      if (entry.spot.originURL) params.sceneOriginURL = entry.spot.originURL;
+      // A free shot opens as a single photo — or against the user's imported
+      // reference — and the preview offers "pair with a reference".
       router.push({
         pathname: '/compare/preview',
-        params,
+        params: buildJournalPreviewParams(entry, {
+          importedLabel: t('pilgrimageUi.referencePicker.importedLabel'),
+          fallbackColor: theme.accent,
+        }),
       });
     },
     [router, t, theme.accent]
@@ -395,7 +346,15 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
                 else delete spots[spotId];
                 return { spots, free: prev.free };
               });
-              const p = entry.isFree ? clearFreeCapture(uri) : clearCapture(spotId, uri);
+              const p = (entry.isFree ? clearFreeCapture(uri) : clearCapture(spotId, uri)).then(
+                () => {
+                  // The app's own copies go with the record (no-ops otherwise).
+                  releaseImportedPhoto(uri);
+                  if (entry.capture.referenceUri) {
+                    releaseImportedReference(entry.capture.referenceUri);
+                  }
+                }
+              );
               p.catch((err) => {
                 console.warn('[PilgrimageAlbum] delete failed:', err);
               });
@@ -432,6 +391,15 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
     () => folders.find((f) => String(f.anime.id) === selectedAnimeId) ?? null,
     [folders, selectedAnimeId]
   );
+
+  // A folder opened from the grid can empty out while the preview is on top
+  // (its last shot re-paired elsewhere or deleted): return to the grid rather
+  // than show an empty detail that claims to be loading.
+  useEffect(() => {
+    if (selectedAnimeId && !cameFromUrlRef.current && !selectedFolder) {
+      setSelectedAnimeId(null);
+    }
+  }, [selectedAnimeId, selectedFolder]);
 
   const handleAddNew = useCallback(() => {
     hapticsBridge.tap();
@@ -482,10 +450,12 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
   const isDetail = !!selectedAnimeId;
   const headerSubtitle = isDetail
     ? selectedFolder
-      ? t('pilgrimage.album.detailSubtitle', {
-          captures: selectedFolder.entries.length,
-          spots: selectedFolder.visitedSpots,
-        })
+      ? selectedFolder.anime.id === FREE_FOLDER_ANIME_ID
+        ? t('pilgrimage.album.folderPhotosCount', { count: selectedFolder.entries.length })
+        : t('pilgrimage.album.detailSubtitle', {
+            captures: selectedFolder.entries.length,
+            spots: selectedFolder.visitedSpots,
+          })
       : t('pilgrimage.album.loadingFolder')
     : t('pilgrimage.album.foldersByAnime');
 
@@ -1009,7 +979,8 @@ function FolderCard({
         })
       : t('pilgrimage.album.folderSpotsCount', { count: folder.visitedSpots });
   const photoPart = t('pilgrimage.album.folderPhotosCount', { count: folder.entries.length });
-  const subtitle = `${spotPart} · ${photoPart}`;
+  const subtitle =
+    folder.anime.id === FREE_FOLDER_ANIME_ID ? photoPart : `${spotPart} · ${photoPart}`;
   return (
     <Pressable
       onPress={onPress}

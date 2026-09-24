@@ -2062,7 +2062,8 @@
       "focusedShotA11y": "Focused shot",
       "focusShotA11y": "Focus this shot",
       "selectShotA11y": "Select shot",
-      "deselectShotA11y": "Deselect shot"
+      "deselectShotA11y": "Deselect shot",
+      "positionLockPercent": "Position lock {percent}%"
     },
     "referencePicker": {
       "title": "Choose a reference",
@@ -2073,7 +2074,6 @@
       "allAnime": "All anime",
       "noScenes": "No scenes for this anime yet.",
       "noAnimeMatch": "No anime matches that search.",
-      "importDenied": "Photo access is off. Allow it in Settings to import an image.",
       "importFailed": "Couldn't import that image. Try another one.",
       "importedLabel": "Imported reference",
       "open": "Reference",

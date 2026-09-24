@@ -70,10 +70,18 @@ export function ReferencePickerSheet({
   const [animeId, setAnimeId] = useState<number | null>(initialAnimeId);
   const [query, setQuery] = useState('');
   const [importing, setImporting] = useState(false);
+  // Each open starts from the anime the caller is on *now* — it may have been
+  // re-paired with another anime since the sheet was last shown.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setAnimeId(initialAnimeId);
+      setQuery('');
+    }
+  }
 
   const close = () => {
-    setQuery('');
-    setAnimeId(initialAnimeId);
     onClose();
   };
 
@@ -86,8 +94,6 @@ export function ReferencePickerSheet({
         hapticsBridge.success();
         onPick({ kind: 'imported', uri: result.uri });
         close();
-      } else if (result.status === 'denied') {
-        Alert.alert(t('pilgrimageUi.referencePicker.importDenied'));
       }
     } catch (error) {
       console.warn('[reference] import failed', error);

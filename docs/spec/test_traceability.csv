@@ -230,3 +230,9 @@ PILG-066,__tests__/unit/pilgrimage/album-captures.test.ts,imported reference fre
 PILG-067,__tests__/unit/pilgrimage/target-location.test.ts,blank and non-numeric target coordinates,covered
 PILG-068,__tests__/unit/pilgrimage/reference-route.test.ts,reference compare params and capture bucket,covered
 PILG-069,__tests__/unit/pilgrimage/reference-route.test.ts,preview modes without a reference,covered
+PILG-070,__tests__/unit/pilgrimage/captures.test.ts,capture re-save merges,covered
+PILG-071,__tests__/unit/pilgrimage/captures.test.ts,capture re-pair carry-over,covered
+PILG-072,__tests__/unit/pilgrimage/captures.test.ts,legacy duplicate captures,covered
+PILG-073,__tests__/unit/pilgrimage/preview-capture.test.ts,camera preview params,covered
+PILG-074,__tests__/unit/pilgrimage/preview-capture.test.ts,journal preview params and preview shots,covered
+PILG-075,__tests__/unit/pilgrimage/preview-capture.test.ts,preview capture record,covered
