@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,7 @@ import { useT } from '../../libs/i18n';
 import { loadUserPrefsSync, patchUserPrefs, type UserPrefs } from '../../libs/services/user-prefs';
 import { useMapThemePref } from '../../hooks/useMapThemePref';
 import type { MapThemePref } from '../../libs/services/pilgrimage/map-theme-prefs';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 const MODE_DEFS: { id: ThemeMode; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { id: 'light', icon: 'sunny-outline' },
@@ -350,14 +351,10 @@ export default function AppearanceScreen() {
                 {t('settings.appearance.increaseContrastDesc')}
               </ThemedText>
             </View>
-            <Switch
+            <ThemedSwitch
               value={increaseContrast}
-              onValueChange={(v) => {
-                hapticsBridge.selection();
-                void setIncreaseContrast(v);
-              }}
-              trackColor={{ false: theme.background.tertiary, true: accent }}
-              thumbColor={theme.text.primary}
+              onValueChange={(v) => void setIncreaseContrast(v)}
+              accent={accent}
             />
           </View>
 

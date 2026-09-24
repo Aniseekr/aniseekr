@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
@@ -8,13 +8,14 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
-import { ON_DARK, ThemedBottomSheet, readableTextOn } from '../themed';
+import { ThemedBottomSheet, readableTextOn } from '../themed';
 import type {
   SwipeContentMode,
   SwipePrefs,
   SwipeRatingButtons,
 } from '../../libs/services/user-prefs';
 import { CapsText } from '../themed/CapsText';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 // Re-export aliases for any legacy importers (kept stable across the swipe-prefs migration).
 export type ImageContentMode = SwipeContentMode;
@@ -251,15 +252,7 @@ function ToggleRow({
           {description}
         </Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? ON_DARK : theme.text.tertiary}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
@@ -8,8 +8,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
 import { useT } from '../../libs/i18n';
-import { ON_DARK, ThemedBottomSheet, readableTextOn } from '../themed';
+import { ThemedBottomSheet, readableTextOn } from '../themed';
 import { CapsText } from '../themed/CapsText';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 export type BangumiViewMode = 'calendar' | 'list' | 'cards';
 export type BangumiBaseViewMode = 'calendar' | 'list';
@@ -339,15 +340,7 @@ function ToggleRow({
           {description}
         </Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? ON_DARK : theme.text.tertiary}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }

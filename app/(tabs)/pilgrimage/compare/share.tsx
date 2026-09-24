@@ -5,15 +5,7 @@
 // platform-specific share intent (or the OS share sheet) delivers.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -76,6 +68,7 @@ import {
 } from '../../../../libs/services/pilgrimage/share-intents';
 import { useT } from '../../../../libs/i18n';
 import { listItemEnterDown, toastEnter, toastExit } from '../../../../libs/animations/presets';
+import { ThemedSwitch } from '../../../../components/themed/ThemedSwitch';
 
 export default function ShareComparisonScreen() {
   const router = useRouter();
@@ -695,15 +688,7 @@ function ToggleRow({
           {subtitle}
         </ThemedText>
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.tertiary, true: theme.accent }}
-        thumbColor={theme.text.primary}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }

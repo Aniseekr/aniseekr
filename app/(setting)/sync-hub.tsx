@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
@@ -15,6 +15,7 @@ import { useT } from '../../libs/i18n';
 
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
 import { SYNC_LAST_RUN_KEY, SYNC_PREFS_KEY } from '../../libs/services/storage/keys';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 interface SyncPrefs {
   wifiOnly: boolean;
@@ -242,15 +243,7 @@ function ToggleRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }

@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
   type NativeScrollEvent,
@@ -30,6 +29,7 @@ import { loadUserPrefsSync, patchUserPrefs } from '../libs/services/user-prefs';
 import { markOnboardingComplete } from '../libs/services/onboarding-service';
 import { useT } from '../libs/i18n';
 import { resolveExperienceLandingHref } from '../libs/navigation/experience-tabs';
+import { ThemedSwitch } from '../components/themed/ThemedSwitch';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -99,7 +99,6 @@ export default function OnboardingScreen() {
   }, [goToStep, stepIndex]);
 
   const handleToggleAdult = useCallback((value: boolean) => {
-    hapticsBridge.selection();
     setAllowAdult(value);
   }, []);
 
@@ -340,12 +339,7 @@ function AdultContentStep({
           <Text style={styles.toggleTitle}>{t('onboarding.adult.toggleTitle')}</Text>
           <Text style={styles.toggleSubtitle}>{t('onboarding.adult.toggleSubtitle')}</Text>
         </View>
-        <Switch
-          value={value}
-          onValueChange={onToggle}
-          trackColor={{ true: accent, false: 'rgba(255,255,255,0.2)' }}
-          thumbColor="#FFFFFF"
-        />
+        <ThemedSwitch value={value} onValueChange={onToggle} accent={accent} />
       </View>
       <ThemedButton label={t('onboarding.adult.cta')} onPress={onContinue} size="lg" fullWidth />
     </View>

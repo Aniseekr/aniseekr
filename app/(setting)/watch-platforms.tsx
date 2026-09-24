@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -24,6 +24,7 @@ import {
   type StreamingPlatformSpec,
 } from '../../libs/services/streaming/streaming-platforms';
 import { useT } from '../../libs/i18n';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 export default function WatchPlatformsScreen() {
   const { theme } = useTheme();
@@ -160,15 +161,7 @@ function ToggleRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }

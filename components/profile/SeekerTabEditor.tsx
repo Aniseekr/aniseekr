@@ -1,6 +1,6 @@
-import { StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ThemedSurface, ThemedText } from '../themed';
+import { ThemedSurface, ThemedSwitch, ThemedText } from '../themed';
 import { useTheme } from '../../context/ThemeContext';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
@@ -9,7 +9,6 @@ import {
   SEEKER_TAB_CATALOG,
   type SeekerTabId,
 } from '../../libs/navigation/experience-tabs';
-import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { EXPERIENCE_TAB_META } from '../navigation/experience-tab-meta';
 
 interface SeekerTabEditorProps {
@@ -50,28 +49,27 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
                   borderTopWidth: StyleSheet.hairlineWidth,
                   borderTopColor: theme.glassBorder,
                 },
-                disabled && styles.rowDisabled,
               ]}>
               <View style={[styles.icon, { backgroundColor: theme.background.tertiary }]}>
                 <MaterialIcons
                   name={meta.icon}
                   size={20}
-                  color={enabled ? theme.accent : theme.text.secondary}
+                  color={enabled ? theme.accent : theme.text.tertiary}
                 />
               </View>
-              <ThemedText variant="bodyLarge" weight="600" style={styles.label}>
+              <ThemedText
+                variant="bodyLarge"
+                weight="600"
+                tone={disabled ? 'tertiary' : 'primary'}
+                numberOfLines={1}
+                style={styles.label}>
                 {t(meta.labelKey)}
               </ThemedText>
-              <Switch
+              <ThemedSwitch
                 accessibilityLabel={t(meta.labelKey)}
                 value={enabled}
                 disabled={disabled}
-                onValueChange={() => {
-                  hapticsBridge.selection();
-                  onToggle(tab);
-                }}
-                trackColor={{ false: theme.background.tertiary, true: `${theme.accent}80` }}
-                thumbColor={enabled ? theme.accent : theme.text.secondary}
+                onValueChange={() => onToggle(tab)}
               />
             </View>
           );
@@ -104,9 +102,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-  },
-  rowDisabled: {
-    opacity: 0.45,
   },
   icon: {
     width: 36,

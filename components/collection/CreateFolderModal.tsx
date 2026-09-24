@@ -5,7 +5,6 @@ import {
   TextInput,
   Modal,
   StyleSheet,
-  Switch,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { readableTextOn } from '../themed';
 import type { IoniconsName } from '../../libs/utils/icon-types';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 export interface NewFolderData {
   name: string;
@@ -166,12 +166,7 @@ export function CreateFolderModal({
 
               <View style={styles.switchRow}>
                 <Text style={styles.label}>{t('collectionUi.containsR18Content')}</Text>
-                <Switch
-                  value={isR18}
-                  onValueChange={setIsR18}
-                  trackColor={{ false: theme.background.tertiary, true: theme.status.error }}
-                  thumbColor={theme.text.primary}
-                />
+                <ThemedSwitch value={isR18} onValueChange={setIsR18} accent={theme.status.error} />
               </View>
 
               <AnimatedPressable

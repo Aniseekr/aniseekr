@@ -6,7 +6,6 @@ import {
   type AppStateStatus,
   Platform,
   StyleSheet,
-  Switch,
   TextInput,
   View,
 } from 'react-native';
@@ -50,6 +49,7 @@ import {
   BACKUP_PROVIDER_KEY,
 } from '../../libs/services/storage/keys';
 import { useT } from '../../libs/i18n';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 let SecureStore: {
   getItemAsync(k: string): Promise<string | null>;
@@ -926,15 +926,7 @@ function ToggleRow({
           </ThemedText>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }
