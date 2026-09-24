@@ -11,59 +11,78 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { bottomPad, Size, Typography } from '../../../../constants/DesignSystem';
-import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
-import { useT } from '../../../../libs/i18n';
-import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
+import { bottomPad, Size, Typography } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { useT, type TranslationKey } from '../../libs/i18n';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
   ON_DARK,
   readableTextOn,
   Skeleton,
+  ThemedButton,
   ThemedSurface,
   ThemedText,
-} from '../../../../components/themed';
-import { recordCapture, type SensorSnapshot } from '../../../../libs/services/pilgrimage/captures';
+} from '../../components/themed';
+import {
+  recordCapture,
+  recordFreeCapture,
+  type SensorSnapshot,
+} from '../../libs/services/pilgrimage/captures';
+import {
+  availablePreviewModes,
+  buildImportedCompareParams,
+  buildSceneCompareParams,
+  resolveCaptureBucket,
+} from '../../libs/services/pilgrimage/reference-route';
+import { resolveTargetLocation } from '../../libs/services/pilgrimage/target-location';
+import {
+  ReferencePickerSheet,
+  type PickedReference,
+} from '../../components/pilgrimage/camera/ReferencePickerSheet';
 import {
   anitabiImageSource,
   toFullResImageUrl,
-} from '../../../../libs/services/pilgrimage/anitabi-image';
-import { scoreSnapshot } from '../../../../libs/services/pilgrimage/alignment-scoring';
+} from '../../libs/services/pilgrimage/anitabi-image';
+import { scoreSnapshot } from '../../libs/services/pilgrimage/alignment-scoring';
 import {
   buildCaptureSessionShotFromRoute,
   reconcileCapturePreviewSelection,
   resolveCapturePreviewFocus,
   resolveRouteShotDimensions,
-} from '../../../../libs/services/pilgrimage/capture-preview-route';
-import {
-  computeFrameMatch,
-  type FrameMatch,
-} from '../../../../libs/services/pilgrimage/frame-match';
-import { resolveFullModeStageHeight } from '../../../../libs/services/pilgrimage/compare-layout';
-import { useCaptureSession, type CaptureSessionShot } from '../../../../hooks/useCaptureSession';
-import { capturedOnWideAngle } from '../../../../libs/services/pilgrimage/capture-lens-gate';
-import { sanitizeCaptureNote } from '../../../../libs/services/pilgrimage/capture-session';
-import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
-import { buildShareRouteParams } from '../../../../libs/services/pilgrimage/share-route-params';
-import { resolveCapturedPhotoDimensions } from '../../../../libs/services/pilgrimage/camera-engine-parity';
-import { AnitabiOriginCredit } from '../../../../components/pilgrimage/common/AnitabiOriginCredit';
+} from '../../libs/services/pilgrimage/capture-preview-route';
+import { computeFrameMatch, type FrameMatch } from '../../libs/services/pilgrimage/frame-match';
+import { resolveFullModeStageHeight } from '../../libs/services/pilgrimage/compare-layout';
+import { useCaptureSession, type CaptureSessionShot } from '../../hooks/useCaptureSession';
+import { capturedOnWideAngle } from '../../libs/services/pilgrimage/capture-lens-gate';
+import { sanitizeCaptureNote } from '../../libs/services/pilgrimage/capture-session';
+import { getNumberParam, getStringParam } from '../../libs/utils/route-params';
+import { buildShareRouteParams } from '../../libs/services/pilgrimage/share-route-params';
+import { resolveCapturedPhotoDimensions } from '../../libs/services/pilgrimage/camera-engine-parity';
+import { AnitabiOriginCredit } from '../../components/pilgrimage/common/AnitabiOriginCredit';
 
-function getRetakeTip(s: SensorSnapshot | null): string | null {
+function getRetakeTip(s: SensorSnapshot | null): TranslationKey | null {
   if (!s) return null;
   if (s.headingDeltaDeg != null && Math.abs(s.headingDeltaDeg) > 15) {
     return s.headingDeltaDeg > 0
-      ? 'Turn a little more to the right next time to match the reference heading.'
-      : 'Turn a little more to the left next time to match the reference heading.';
+      ? 'pilgrimageUi.preview.retakeTurnRight'
+      : 'pilgrimageUi.preview.retakeTurnLeft';
   }
   if (s.distanceMeters != null && s.distanceMeters > 20) {
-    return 'Move closer next time; distance has a large effect on matching the frame.';
+    return 'pilgrimageUi.preview.retakeMoveCloser';
   }
   if (s.tilt != null && Math.abs(s.tilt) > 10) {
-    return s.tilt > 0
-      ? 'Level the phone a little more next time to avoid skewing the ground plane.'
-      : 'Tilt the phone slightly downward next time to reduce excess sky in the frame.';
+    return s.tilt > 0 ? 'pilgrimageUi.preview.retakeLevel' : 'pilgrimageUi.preview.retakeTiltDown';
   }
   return null;
 }
+
+const MODE_LABEL_KEY: Record<Mode, TranslationKey> = {
+  stacked: 'pilgrimageUi.preview.modeStacked',
+  sideBySide: 'pilgrimageUi.preview.modeSideBySide',
+  overlay: 'pilgrimageUi.preview.modeOverlay',
+  slider: 'pilgrimageUi.preview.modeSlider',
+  full: 'pilgrimageUi.preview.modeFull',
+};
 
 function formatSignedDeg(value: number): string {
   const rounded = Math.round(value);
@@ -97,7 +116,10 @@ export default function ComparePreviewScreen() {
   // / slider stage renders the original 1920×1080 frame instead of pixelating
   // the 284×160 thumb.
   const imageUrl = toFullResImageUrl(getStringParam(params, 'imageUrl') ?? '');
-  const sceneName = getStringParam(params, 'name') ?? 'Scene';
+  // Only a real scene name is ever persisted; the fallback is display-only.
+  const sceneNameParam = getStringParam(params, 'name');
+  const sceneName = sceneNameParam ?? t('pilgrimageUi.preview.sceneFallback');
+  const referenceKind = getStringParam(params, 'referenceKind');
   const ep = getStringParam(params, 'ep');
   const animeId = getStringParam(params, 'animeId');
   const animeIdNumber = getNumberParam(params, 'animeId');
@@ -164,9 +186,9 @@ export default function ComparePreviewScreen() {
   );
   const routeOnlyPreview = sessionShots.length === 0 && routeShot !== null;
   const spotGeo = useMemo<[number, number] | undefined>(() => {
-    const lat = spotLat != null ? Number(spotLat) : Number.NaN;
-    const lng = spotLng != null ? Number(spotLng) : Number.NaN;
-    return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : undefined;
+    // '' (spot without geo) must not become the (0, 0) null island.
+    const target = resolveTargetLocation(spotLat, spotLng);
+    return target ? [target.latitude, target.longitude] : undefined;
   }, [spotLat, spotLng]);
 
   // ── Album focus + selection ────────────────────────────────────────────
@@ -195,7 +217,44 @@ export default function ComparePreviewScreen() {
     [shots, selectedIds]
   );
 
-  const [mode, setMode] = useState<Mode>('stacked');
+  // A lone shot (no reference) has nothing to compare against: single view only.
+  const modes = useMemo(() => availablePreviewModes(imageUrl !== ''), [imageUrl]);
+  const [modeState, setMode] = useState<Mode>(() => modes[0]);
+  const mode: Mode = modes.includes(modeState) ? modeState : modes[0];
+  const [referencePickerOpen, setReferencePickerOpen] = useState(false);
+
+  // Pair (or re-pair) this shot with a reference. The params swap in place;
+  // the persist effect below re-files the same shot (captures upsert by uri),
+  // so it moves to the new scene / imported reference instead of duplicating.
+  const handlePickReference = useCallback(
+    (reference: PickedReference) => {
+      const next =
+        reference.kind === 'scene'
+          ? buildSceneCompareParams(reference.spot, {
+              animeId: reference.animeId,
+              animeTitle: reference.animeTitle,
+              themeColor,
+            })
+          : buildImportedCompareParams(reference.uri, {
+              label: t('pilgrimageUi.referencePicker.importedLabel'),
+              themeColor,
+              now: Date.now(),
+              nonce: Math.round(Math.random() * 1e6),
+            });
+      router.setParams({
+        ...next,
+        // Keep the shot's own id; clear fields the new reference doesn't carry.
+        spotId: reference.kind === 'scene' ? next.spotId : spotId,
+        spotLat: next.spotLat ?? '',
+        spotLng: next.spotLng ?? '',
+        sceneOrigin: next.sceneOrigin ?? '',
+        sceneOriginURL: next.sceneOriginURL ?? '',
+        referenceKind: next.referenceKind ?? '',
+      });
+      setMode(availablePreviewModes(true)[0]);
+    },
+    [router, spotId, t, themeColor]
+  );
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -300,7 +359,8 @@ export default function ComparePreviewScreen() {
     };
   }, [imageUrl, shotUri]);
 
-  const retakeTip = useMemo(() => getRetakeTip(sensorSnapshot), [sensorSnapshot]);
+  const retakeTipKey = useMemo(() => getRetakeTip(sensorSnapshot), [sensorSnapshot]);
+  const retakeTip = retakeTipKey ? t(retakeTipKey) : null;
 
   const frameTone = useMemo(() => {
     if (frameMatch?.total == null) return theme.accent;
@@ -314,17 +374,17 @@ export default function ComparePreviewScreen() {
     if (!frameMatch || frameMatch.valid) return null;
     switch (frameMatch.reason) {
       case 'dark':
-        return 'This photo looks completely dark — lens may be covered. Try again.';
+        return t('pilgrimageUi.preview.frameDark');
       case 'lowDetail':
-        return 'This photo has no detail — check focus and lens cover.';
+        return t('pilgrimageUi.preview.frameLowDetail');
       case 'lowContrast':
-        return 'This photo is very flat — check exposure or pick a more textured scene.';
+        return t('pilgrimageUi.preview.frameLowContrast');
       case 'analysisFailed':
-        return 'Could not analyze this photo. Frame match is unavailable.';
+        return t('pilgrimageUi.preview.frameAnalysisFailed');
       default:
         return null;
     }
-  }, [frameMatch]);
+  }, [frameMatch, t]);
 
   const stageRef = useRef<View>(null);
   const compositeByShotIdRef = useRef<Record<string, string>>({});
@@ -395,6 +455,25 @@ export default function ComparePreviewScreen() {
             frameReason: effectiveFrame?.reason ?? null,
           }
         : undefined;
+      const source =
+        shot.source === 'library' ? 'library' : shot.source === 'auto' ? 'auto' : 'camera';
+      if (resolveCaptureBucket({ referenceKind, imageUrl }) === 'free') {
+        // No known scene behind this shot: keep it in the free bucket (with the
+        // imported reference, if any) instead of an orphaned synthetic spot.
+        await recordFreeCapture({
+          spotId,
+          uri: shot.uri,
+          compositeUri: effectiveCompositeUri,
+          capturedAt: shot.createdAt,
+          heading: shot.heading ?? undefined,
+          sensorSnapshot: enrichedSnapshot,
+          userLocation: shot.userLocation ?? undefined,
+          note: cleanedNote,
+          source,
+          ...(referenceKind === 'imported' && imageUrl ? { referenceUri: imageUrl } : {}),
+        });
+        return;
+      }
       await recordCapture({
         spotId,
         uri: shot.uri,
@@ -404,17 +483,27 @@ export default function ComparePreviewScreen() {
         sensorSnapshot: enrichedSnapshot,
         userLocation: shot.userLocation ?? undefined,
         note: cleanedNote,
-        source: shot.source === 'library' ? 'library' : shot.source === 'auto' ? 'auto' : 'camera',
+        source,
         animeId: animeIdNumber ?? undefined,
         animeTitle: animeTitle ?? undefined,
         animeColor: themeColor,
-        spotName: sceneName,
+        spotName: sceneNameParam ?? undefined,
         spotImage: imageUrl,
         spotEp: epNumber ?? undefined,
         spotGeo,
       });
     },
-    [animeIdNumber, animeTitle, epNumber, imageUrl, sceneName, spotGeo, spotId, themeColor]
+    [
+      animeIdNumber,
+      animeTitle,
+      epNumber,
+      imageUrl,
+      referenceKind,
+      sceneNameParam,
+      spotGeo,
+      spotId,
+      themeColor,
+    ]
   );
 
   const snapshotComposite = useCallback(async (): Promise<string | null> => {
@@ -541,7 +630,7 @@ export default function ComparePreviewScreen() {
       positionScore: positionScore?.total != null ? Math.round(positionScore.total * 100) : null,
     });
     router.push({
-      pathname: '/pilgrimage/compare/share',
+      pathname: '/compare/share',
       params: shareParams,
     });
   }, [
@@ -660,9 +749,11 @@ export default function ComparePreviewScreen() {
               {t('pilgrimageUi.comparisonResult')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary" align="center" numberOfLines={1}>
-              {ep ? `EP ${ep} · ` : ''}
+              {ep ? `${t('pilgrimage.album.epLabel', { ep })} · ` : ''}
               {sceneName}
-              {shots.length > 1 ? ` · ${shots.length} shots` : ''}
+              {shots.length > 1
+                ? ` · ${t('pilgrimageUi.preview.shotsCount', { count: shots.length })}`
+                : ''}
             </ThemedText>
           </View>
           <Pressable
@@ -815,44 +906,50 @@ export default function ComparePreviewScreen() {
             </View>
           ) : null}
 
-          <View style={styles.modeRow}>
-            {(['stacked', 'sideBySide', 'overlay', 'slider', 'full'] as Mode[]).map((m) => {
-              const active = m === mode;
-              const label =
-                m === 'stacked'
-                  ? 'Stacked'
-                  : m === 'sideBySide'
-                    ? 'Side by side'
-                    : m === 'overlay'
-                      ? 'Overlay'
-                      : m === 'slider'
-                        ? 'Slider'
-                        : 'Full';
-              return (
-                <Pressable
-                  key={m}
-                  onPress={() => {
-                    hapticsBridge.selection();
-                    setMode(m);
-                  }}
-                  style={({ pressed }) => [
-                    styles.modeBtn,
-                    {
-                      backgroundColor: active ? themeColor : theme.background.secondary,
-                      borderColor: active ? themeColor : theme.glassBorder,
-                    },
-                    pressed && { opacity: 0.85 },
-                  ]}>
-                  <ThemedText
-                    variant="bodySmall"
-                    weight={active ? '700' : '500'}
-                    style={{ color: active ? readableTextOn(themeColor) : theme.text.primary }}>
-                    {label}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
+          <View style={styles.referenceRow}>
+            <ThemedButton
+              label={
+                imageUrl
+                  ? t('pilgrimageUi.referencePicker.change')
+                  : t('pilgrimageUi.referencePicker.pair')
+              }
+              variant={imageUrl ? 'ghost' : 'secondary'}
+              size="sm"
+              icon={<Ionicons name="images-outline" size={16} color={theme.text.primary} />}
+              onPress={() => setReferencePickerOpen(true)}
+            />
           </View>
+
+          {modes.length > 1 ? (
+            <View style={styles.modeRow}>
+              {modes.map((m) => {
+                const active = m === mode;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => {
+                      hapticsBridge.selection();
+                      setMode(m);
+                    }}
+                    style={({ pressed }) => [
+                      styles.modeBtn,
+                      {
+                        backgroundColor: active ? themeColor : theme.background.secondary,
+                        borderColor: active ? themeColor : theme.glassBorder,
+                      },
+                      pressed && { opacity: 0.85 },
+                    ]}>
+                    <ThemedText
+                      variant="bodySmall"
+                      weight={active ? '700' : '500'}
+                      style={{ color: active ? readableTextOn(themeColor) : theme.text.primary }}>
+                      {t(MODE_LABEL_KEY[m])}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
 
           <View style={styles.stageWrap}>
             <View
@@ -971,7 +1068,7 @@ export default function ComparePreviewScreen() {
                   <View style={[styles.fullModeBadge, { borderColor: themeColor }]}>
                     <View style={[styles.labelDot, { backgroundColor: themeColor }]} />
                     <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
-                      Your shot · Full
+                      {t('pilgrimageUi.preview.yourShotFull')}
                     </ThemedText>
                   </View>
                 </View>
@@ -1173,7 +1270,9 @@ export default function ComparePreviewScreen() {
             ]}
             accessibilityRole="button"
             accessibilityLabel={
-              selectedCount > 0 ? `Save ${selectedCount} shots to library` : 'Save to library'
+              selectedCount > 0
+                ? t('pilgrimageUi.preview.saveCountA11y', { count: selectedCount })
+                : t('pilgrimageUi.preview.saveA11y')
             }>
             {saving ? (
               <Animated.View entering={FadeIn}>
@@ -1190,11 +1289,22 @@ export default function ComparePreviewScreen() {
               variant="bodyMedium"
               weight="700"
               style={{ color: readableTextOn(themeColor) }}>
-              {saved ? 'Saved' : selectedCount > 1 ? `Save ${selectedCount}` : 'Save'}
+              {saved
+                ? t('pilgrimageUi.preview.saved')
+                : selectedCount > 1
+                  ? t('pilgrimageUi.preview.saveCount', { count: selectedCount })
+                  : t('pilgrimageUi.preview.save')}
             </ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
+      <ReferencePickerSheet
+        visible={referencePickerOpen}
+        onClose={() => setReferencePickerOpen(false)}
+        onPick={handlePickReference}
+        initialAnimeId={animeIdNumber != null && animeIdNumber > 0 ? animeIdNumber : null}
+        currentSpotId={spotId}
+      />
     </GestureHandlerRootView>
   );
 }
@@ -1231,11 +1341,11 @@ function Filmstrip({
         const selected = selectedIds.has(shot.id);
         const sourceBadge =
           shot.source === 'library'
-            ? 'LIBRARY'
+            ? t('pilgrimageUi.preview.badgeLibrary')
             : shot.captureMode === 'burst'
-              ? 'BURST'
+              ? t('pilgrimageUi.preview.badgeBurst')
               : shot.captureMode === 'hdr'
-                ? 'HDR'
+                ? t('pilgrimageUi.preview.badgeHdr')
                 : null;
         return (
           <View key={shot.id} style={styles.thumbWrap}>
@@ -1251,7 +1361,11 @@ function Filmstrip({
                 pressed && { opacity: 0.85 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={focused ? 'Focused shot' : 'Focus this shot'}>
+              accessibilityLabel={
+                focused
+                  ? t('pilgrimageUi.preview.focusedShotA11y')
+                  : t('pilgrimageUi.preview.focusShotA11y')
+              }>
               <Image source={{ uri: shot.uri }} style={styles.thumbImage} contentFit="cover" />
               {sourceBadge ? (
                 <View style={[styles.thumbModeBadge, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
@@ -1273,7 +1387,11 @@ function Filmstrip({
               ]}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
-              accessibilityLabel={selected ? 'Deselect shot' : 'Select shot'}>
+              accessibilityLabel={
+                selected
+                  ? t('pilgrimageUi.preview.deselectShotA11y')
+                  : t('pilgrimageUi.preview.selectShotA11y')
+              }>
               {selected ? (
                 <Ionicons name="checkmark" size={14} color={readableTextOn(accent)} />
               ) : null}
@@ -1716,6 +1834,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stackedFlow: { flex: 1, flexDirection: 'column' },
+  referenceRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
   sideFlow: { flex: 1, flexDirection: 'row' },
   sideHalf: { flex: 1 },
   overlayFlow: { flex: 1 },

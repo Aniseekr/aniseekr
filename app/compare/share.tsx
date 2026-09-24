@@ -13,18 +13,18 @@ import Animated from 'react-native-reanimated';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Radius, bottomPad } from '../../../../constants/DesignSystem';
-import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
-import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import { ON_DARK, ThemedText, readableTextOn } from '../../../../components/themed';
+import { Radius, bottomPad } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ON_DARK, ThemedText, readableTextOn } from '../../components/themed';
 import {
   formatShareLocation,
   getShareEpisode,
   getShareFrameValid,
   getShareMatchScore,
   getShareSceneName,
-} from '../../../../libs/services/pilgrimage/share-card';
-import { getNumberParam, getStringParam } from '../../../../libs/utils/route-params';
+} from '../../libs/services/pilgrimage/share-card';
+import { getNumberParam, getStringParam } from '../../libs/utils/route-params';
 import {
   ShareCard,
   SHARE_TEMPLATES,
@@ -32,29 +32,29 @@ import {
   ratioToAspect,
   type ShareRatio,
   type ShareTemplate,
-} from '../../../../components/pilgrimage/ShareCard';
-import { shareRatioForShot } from '../../../../libs/services/pilgrimage/share-aspect';
-import { ShareComposerControls } from '../../../../components/pilgrimage/ShareComposerControls';
-import { CropSheet } from '../../../../components/pilgrimage/CropSheet';
-import { CornerPinSheet } from '../../../../components/pilgrimage/CornerPinSheet';
+} from '../../components/pilgrimage/ShareCard';
+import { shareRatioForShot } from '../../libs/services/pilgrimage/share-aspect';
+import { ShareComposerControls } from '../../components/pilgrimage/ShareComposerControls';
+import { CropSheet } from '../../components/pilgrimage/CropSheet';
+import { CornerPinSheet } from '../../components/pilgrimage/CornerPinSheet';
 import {
   getExportDimensions,
   normalizeWatermarkText,
   type ExportResolution,
   type WatermarkFontId,
   type WatermarkPosition,
-} from '../../../../libs/services/pilgrimage/share-composer';
+} from '../../libs/services/pilgrimage/share-composer';
 import {
   getFilterMatrix,
   IDENTITY_COLOR_MATRIX,
   type FilterPresetId,
-} from '../../../../libs/services/pilgrimage/share-filters';
-import { loadAutoColorMatrix } from '../../../../libs/services/pilgrimage/share-auto-match';
+} from '../../libs/services/pilgrimage/share-filters';
+import { loadAutoColorMatrix } from '../../libs/services/pilgrimage/share-auto-match';
 import {
   tiltCorrectionTransform,
   type Pt,
   type RNPerspectiveTransform,
-} from '../../../../libs/services/pilgrimage/share-perspective';
+} from '../../libs/services/pilgrimage/share-perspective';
 import {
   buildShareCaption,
   saveShareImage,
@@ -65,10 +65,10 @@ import {
   shareToTwitter,
   type ShareIntentResult,
   type SharePlatform,
-} from '../../../../libs/services/pilgrimage/share-intents';
-import { useT } from '../../../../libs/i18n';
-import { listItemEnterDown, toastEnter, toastExit } from '../../../../libs/animations/presets';
-import { ThemedSwitch } from '../../../../components/themed/ThemedSwitch';
+} from '../../libs/services/pilgrimage/share-intents';
+import { useT } from '../../libs/i18n';
+import { listItemEnterDown, toastEnter, toastExit } from '../../libs/animations/presets';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 export default function ShareComparisonScreen() {
   const router = useRouter();

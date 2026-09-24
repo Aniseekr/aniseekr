@@ -207,6 +207,9 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: 6,
+    // Matches the close button / spacer on the left so the place name stays centred.
+    minWidth: 34,
   },
 });

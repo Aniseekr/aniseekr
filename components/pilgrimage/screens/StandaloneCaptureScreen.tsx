@@ -2,11 +2,14 @@
 // camera engine + chrome — deliberately NOT a fork of `compare/[spotId].tsx`.
 // Shutter → geotag (best-effort) → save to library + `recordFreeCapture` →
 // if a real cached spot is nearby, offer to attach the shot to that scene.
+// "Reference" opens the ReferencePickerSheet: an anime scene or an imported
+// image turns this into the full compare camera (`/compare/[spotId]`).
 // Rule 9: zoom/exposure stay in SharedValues, capture-in-flight lives in a
 // ref, the mount suggestion is the only piece of render state this screen
 // owns beyond facing/capturing/device caps.
 import { useCallback, useRef, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useSharedValue } from 'react-native-reanimated';
@@ -15,7 +18,7 @@ import { useCameraPermission } from 'react-native-vision-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
-import { ThemedText, ThemedButton, ThemedSurface } from '../../../components/themed';
+import { ON_DARK, ThemedText, ThemedButton, ThemedSurface } from '../../../components/themed';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { CameraStage } from '../../../components/pilgrimage/camera/CameraStage';
@@ -40,11 +43,7 @@ import { useTapToFocus } from '../../../hooks/useTapToFocus';
 import { useAlignmentSensors } from '../../../hooks/useAlignmentSensors';
 import { availableStopsFromDeviceInfo } from '../../../libs/services/pilgrimage/lens-switching';
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
-import {
-  recordFreeCapture,
-  recordCapture,
-  clearFreeCapture,
-} from '../../../libs/services/pilgrimage/captures';
+import { recordFreeCapture, recordCapture } from '../../../libs/services/pilgrimage/captures';
 import {
   findNearestCachedSpot,
   type NearestSpotSuggestion,
@@ -53,6 +52,19 @@ import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgr
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
 import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../../libs/navigation/floating-tab-bar-layout';
+import {
+  buildImportedCompareParams,
+  buildSceneCompareParams,
+} from '../../../libs/services/pilgrimage/reference-route';
+import { importLibraryPhoto } from '../../../libs/services/pilgrimage/reference-image';
+import {
+  ReferencePickerSheet,
+  type PickedReference,
+} from '../../../components/pilgrimage/camera/ReferencePickerSheet';
+import {
+  CameraChrome,
+  cameraControlShadow,
+} from '../../../components/pilgrimage/camera/cameraChrome';
 
 interface StandaloneCaptureScreenProps {
   tabRoot?: boolean;
@@ -83,6 +95,7 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   const [maxZoom, setMaxZoom] = useState(1);
   const [suggestion, setSuggestion] = useState<NearestSpotSuggestion | null>(null);
   const [savedToast, setSavedToast] = useState<CamSwitchToastValue | null>(null);
+  const [referencePickerOpen, setReferencePickerOpen] = useState(false);
   // Recent free shots this session, newest first — feeds the ShutterRow gallery
   // thumb (same bottom-row layout as compare/[spotId].tsx).
   const [shotUris, setShotUris] = useState<string[]>([]);
@@ -171,21 +184,73 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
     setSuggestion(null);
     if (!s || !last) return;
     hapticsBridge.selection();
-    // Move the free capture under the matched spot: record under the real
-    // spotId, then drop the free-bucket entry so it isn't duplicated.
-    await recordCapture({
-      spotId: s.spot.id,
-      uri: last.uri,
-      capturedAt: last.capturedAt,
-      source: 'camera',
-      animeId: s.animeId,
-      spotName: s.spot.name,
-      spotImage: s.spot.image,
-      spotEp: s.spot.ep,
-      spotGeo: s.spot.geo,
-    });
-    await clearFreeCapture(last.uri);
+    // Re-file the free capture under the matched spot. recordCapture upserts by
+    // uri, so the free-bucket copy is moved, not duplicated.
+    try {
+      await recordCapture({
+        spotId: s.spot.id,
+        uri: last.uri,
+        capturedAt: last.capturedAt,
+        source: 'camera',
+        animeId: s.animeId,
+        spotName: s.spot.name,
+        spotImage: s.spot.image,
+        spotEp: s.spot.ep,
+        spotGeo: s.spot.geo,
+      });
+    } catch (error) {
+      console.warn('[capture] mount to spot failed', error);
+      hapticsBridge.error();
+    }
   }, [suggestion]);
+
+  // A reference turns this free camera into the full compare camera (overlay,
+  // frame match, preview) — for a known anime scene or the user's own image.
+  const openWithReference = useCallback(
+    (reference: PickedReference) => {
+      const params =
+        reference.kind === 'scene'
+          ? buildSceneCompareParams(reference.spot, {
+              animeId: reference.animeId,
+              animeTitle: reference.animeTitle,
+              themeColor: theme.accent,
+            })
+          : buildImportedCompareParams(reference.uri, {
+              label: t('pilgrimageUi.referencePicker.importedLabel'),
+              themeColor: theme.accent,
+              now: Date.now(),
+              nonce: Math.round(Math.random() * 1e6),
+            });
+      router.push({ pathname: '/compare/[spotId]', params });
+    },
+    [router, t, theme.accent]
+  );
+
+  // The gallery button imports a photo from the library as a free capture.
+  const importFromLibrary = useCallback(async () => {
+    try {
+      const result = await importLibraryPhoto();
+      if (result.status === 'denied') {
+        Alert.alert(t('pilgrimageUi.referencePicker.importDenied'));
+        return;
+      }
+      if (result.status !== 'ok') return;
+      const capturedAt = Date.now();
+      await recordFreeCapture({
+        spotId: `free-${capturedAt}-${Math.round(Math.random() * 1e6)}`,
+        uri: result.uri,
+        capturedAt,
+        source: 'library',
+      });
+      setShotUris((prev) => [result.uri, ...prev].slice(0, 12));
+      hapticsBridge.success();
+      setSavedToast({ icon: 'checkmark-circle', label: t('pilgrimage.capture.savedToAlbum') });
+    } catch (error) {
+      console.warn('[capture] library import failed', error);
+      hapticsBridge.error();
+      Alert.alert(t('pilgrimageUi.referencePicker.importFailed'));
+    }
+  }, [t]);
 
   const dismissMount = useCallback(() => {
     hapticsBridge.tap();
@@ -277,6 +342,22 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
           <View style={styles.toastWrap}>
             <CamSwitchToast toast={savedToast} themeColor={theme.accent} />
           </View>
+          <View style={styles.referenceWrap}>
+            <Pressable
+              onPress={() => {
+                hapticsBridge.tap();
+                setReferencePickerOpen(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t('pilgrimageUi.referencePicker.openA11y')}
+              hitSlop={8}
+              style={({ pressed }) => [styles.referencePill, pressed && { opacity: 0.7 }]}>
+              <Ionicons name="images-outline" size={16} color={ON_DARK} />
+              <ThemedText variant="caption" weight="700" style={{ color: ON_DARK }}>
+                {t('pilgrimageUi.referencePicker.open')}
+              </ThemedText>
+            </Pressable>
+          </View>
           <View style={styles.zoomWrap}>
             <ZoomPresets
               stops={stops}
@@ -300,7 +381,7 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
                 <GalleryThumb
                   uris={shotUris}
                   themeColor={theme.accent}
-                  onPickLibrary={openAlbum}
+                  onPickLibrary={() => void importFromLibrary()}
                   onExpand={openAlbum}
                 />
               }
@@ -308,6 +389,11 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
           </View>
         </View>
       </SafeAreaView>
+      <ReferencePickerSheet
+        visible={referencePickerOpen}
+        onClose={() => setReferencePickerOpen(false)}
+        onPick={openWithReference}
+      />
       {suggestion ? (
         <MountSuggestion
           suggestion={suggestion}
@@ -389,6 +475,20 @@ const styles = StyleSheet.create({
   },
   bottom: { gap: Spacing.sm, paddingBottom: Spacing.xs },
   toastWrap: { alignItems: 'center' },
+  referenceWrap: { alignItems: 'center' },
+  // Floats over the live preview, so it uses the camera chrome, not theme surfaces.
+  referencePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xxs,
+    minHeight: 36,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.full,
+    backgroundColor: CameraChrome.controlFill,
+    borderWidth: 1,
+    borderColor: CameraChrome.border,
+    ...cameraControlShadow,
+  },
   zoomWrap: { alignItems: 'center' },
   shutterWrap: { paddingTop: Spacing.xs },
   mountRoot: {

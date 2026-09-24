@@ -16,110 +16,109 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { bottomPad } from '../../../../constants/DesignSystem';
-import { useTheme } from '../../../../context/ThemeContext';
-import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../../../components/themed';
-import { toFullResImageUrl } from '../../../../libs/services/pilgrimage/anitabi-image';
-import { compositeSubjectIntoPhoto } from '../../../../libs/services/pilgrimage/subject-composite';
-import { shouldCompositeSubjectOverlay } from '../../../../libs/services/pilgrimage/subject-composite-plan';
-import { buildAdditionalExif } from '../../../../libs/services/pilgrimage/build-exif-metadata';
-import { getPilgrimageSpotTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
-import type { AnitabiPoint } from '../../../../libs/services/pilgrimage/types';
+import { bottomPad } from '../../constants/DesignSystem';
+import { useTheme } from '../../context/ThemeContext';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ThemedText, readableTextOn } from '../../components/themed';
+import { toFullResImageUrl } from '../../libs/services/pilgrimage/anitabi-image';
+import { compositeSubjectIntoPhoto } from '../../libs/services/pilgrimage/subject-composite';
+import { shouldCompositeSubjectOverlay } from '../../libs/services/pilgrimage/subject-composite-plan';
+import { buildAdditionalExif } from '../../libs/services/pilgrimage/build-exif-metadata';
 import {
   CAMERA_BAND_GAP,
   resolveCameraBandLayout,
   resolveCameraBottomInset,
   resolveCameraChromeVisibility,
   resolveCameraTopChromeHeight,
-} from '../../../../libs/services/pilgrimage/camera-ui';
+} from '../../libs/services/pilgrimage/camera-ui';
 import {
   overlayCarouselIndex,
   overlaySelectionForIndex,
-} from '../../../../libs/services/pilgrimage/overlay-carousel';
-import { embedCaptureMetadata } from '../../../../libs/services/pilgrimage/embed-capture-metadata';
-import { availableStopsFromDeviceInfo } from '../../../../libs/services/pilgrimage/lens-switching';
-import { captureAnalysisGate } from '../../../../libs/services/pilgrimage/capture-lens-gate';
-import { useResolvedCameraDevices } from '../../../../hooks/useResolvedCameraDevices';
-import { useStrategicCameraDevice } from '../../../../hooks/useStrategicCameraDevice';
+} from '../../libs/services/pilgrimage/overlay-carousel';
+import { embedCaptureMetadata } from '../../libs/services/pilgrimage/embed-capture-metadata';
+import { availableStopsFromDeviceInfo } from '../../libs/services/pilgrimage/lens-switching';
+import { captureAnalysisGate } from '../../libs/services/pilgrimage/capture-lens-gate';
+import { useResolvedCameraDevices } from '../../hooks/useResolvedCameraDevices';
+import { useStrategicCameraDevice } from '../../hooks/useStrategicCameraDevice';
 import type {
   CameraDeviceInfo,
   CameraEngineHandle,
-} from '../../../../components/pilgrimage/camera/camera-engine';
-import CameraErrorBoundary from '../../../../components/pilgrimage/camera/CameraErrorBoundary';
-import { CameraStage } from '../../../../components/pilgrimage/camera/CameraStage';
-import { CompanionOverlay } from '../../../../components/companion/CompanionOverlay';
-import type { CharacterLayerHandle } from '../../../../components/companion/CharacterLayer';
-import type { CharacterEntry } from '../../../../libs/services/companion/character-library';
-import { compositeCharacterIntoPhoto } from '../../../../libs/services/companion/character-composite';
-import OverlayLayer from '../../../../components/pilgrimage/camera/OverlayLayer';
-import { FocusReticle } from '../../../../components/pilgrimage/camera/FocusReticle';
-import { LevelHorizon } from '../../../../components/pilgrimage/camera/LevelHorizon';
-import FocusExposureBar from '../../../../components/pilgrimage/camera/FocusExposureBar';
-import CameraTopBar, {
-  CameraHeaderButton,
-} from '../../../../components/pilgrimage/camera/CameraTopBar';
-import AlignmentHUD from '../../../../components/pilgrimage/camera/AlignmentHUD';
-import ShutterRow from '../../../../components/pilgrimage/camera/ShutterRow';
-import ReferenceThumbnail from '../../../../components/pilgrimage/camera/ReferenceThumbnail';
-import OverlayModeCarousel from '../../../../components/pilgrimage/camera/OverlayModeCarousel';
-import OverlayQuickControls from '../../../../components/pilgrimage/camera/OverlayQuickControls';
-import ZoomPresets from '../../../../components/pilgrimage/camera/ZoomPresets';
-import OverlayOpacityPill from '../../../../components/pilgrimage/camera/OverlayOpacityPill';
-import GalleryThumb from '../../../../components/pilgrimage/camera/GalleryThumb';
-import CameraScrim from '../../../../components/pilgrimage/camera/CameraScrim';
-import CameraChip from '../../../../components/pilgrimage/camera/chips/CameraChip';
-import AspectChip from '../../../../components/pilgrimage/camera/chips/AspectChip';
-import CountdownChip from '../../../../components/pilgrimage/camera/chips/CountdownChip';
-import OrientationChip from '../../../../components/pilgrimage/camera/chips/OrientationChip';
-import CameraSettingsSheet from '../../../../components/pilgrimage/camera/CameraSettingsSheet';
-import { CountdownOverlay } from '../../../../components/pilgrimage/camera/CountdownOverlay';
+} from '../../components/pilgrimage/camera/camera-engine';
+import CameraErrorBoundary from '../../components/pilgrimage/camera/CameraErrorBoundary';
+import { CameraStage } from '../../components/pilgrimage/camera/CameraStage';
+import { CompanionOverlay } from '../../components/companion/CompanionOverlay';
+import type { CharacterLayerHandle } from '../../components/companion/CharacterLayer';
+import type { CharacterEntry } from '../../libs/services/companion/character-library';
+import { compositeCharacterIntoPhoto } from '../../libs/services/companion/character-composite';
+import OverlayLayer from '../../components/pilgrimage/camera/OverlayLayer';
+import { FocusReticle } from '../../components/pilgrimage/camera/FocusReticle';
+import { LevelHorizon } from '../../components/pilgrimage/camera/LevelHorizon';
+import FocusExposureBar from '../../components/pilgrimage/camera/FocusExposureBar';
+import CameraTopBar, { CameraHeaderButton } from '../../components/pilgrimage/camera/CameraTopBar';
+import AlignmentHUD from '../../components/pilgrimage/camera/AlignmentHUD';
+import ShutterRow from '../../components/pilgrimage/camera/ShutterRow';
+import ReferenceThumbnail from '../../components/pilgrimage/camera/ReferenceThumbnail';
+import OverlayModeCarousel from '../../components/pilgrimage/camera/OverlayModeCarousel';
+import OverlayQuickControls from '../../components/pilgrimage/camera/OverlayQuickControls';
+import ZoomPresets from '../../components/pilgrimage/camera/ZoomPresets';
+import OverlayOpacityPill from '../../components/pilgrimage/camera/OverlayOpacityPill';
+import GalleryThumb from '../../components/pilgrimage/camera/GalleryThumb';
+import CameraScrim from '../../components/pilgrimage/camera/CameraScrim';
+import CameraChip from '../../components/pilgrimage/camera/chips/CameraChip';
+import AspectChip from '../../components/pilgrimage/camera/chips/AspectChip';
+import CountdownChip from '../../components/pilgrimage/camera/chips/CountdownChip';
+import OrientationChip from '../../components/pilgrimage/camera/chips/OrientationChip';
+import CameraSettingsSheet from '../../components/pilgrimage/camera/CameraSettingsSheet';
+import { CountdownOverlay } from '../../components/pilgrimage/camera/CountdownOverlay';
 import CamSwitchToast, {
   type CamSwitchToastValue,
-} from '../../../../components/pilgrimage/camera/CamSwitchToast';
-import type {
-  FlashMode,
-  FocalStop,
-  OverlayMode,
-} from '../../../../components/pilgrimage/camera/types';
-import { useCameraZoom } from '../../../../hooks/useCameraZoom';
-import { useTapToFocus } from '../../../../hooks/useTapToFocus';
-import { useOverlayTransform } from '../../../../hooks/useOverlayTransform';
-import { useAlignmentSensors } from '../../../../hooks/useAlignmentSensors';
-import { useEdgeOrSketch } from '../../../../hooks/useEdgeOrSketch';
+} from '../../components/pilgrimage/camera/CamSwitchToast';
+import type { FlashMode, FocalStop, OverlayMode } from '../../components/pilgrimage/camera/types';
+import { useCameraZoom } from '../../hooks/useCameraZoom';
+import { useTapToFocus } from '../../hooks/useTapToFocus';
+import { useOverlayTransform } from '../../hooks/useOverlayTransform';
+import { useAlignmentSensors } from '../../hooks/useAlignmentSensors';
+import { useEdgeOrSketch } from '../../hooks/useEdgeOrSketch';
 import {
   useCameraSettings,
   qualityToNumber,
   qualityToPrioritization,
   type CameraSettings,
   type CaptureMode,
-} from '../../../../hooks/useCameraSettings';
-import { useCameraHud } from '../../../../hooks/useCameraHud';
-import { useSceneSwitcherSpots } from '../../../../hooks/useSceneSwitcherSpots';
-import { useCameraLifecycle } from '../../../../hooks/useCameraLifecycle';
-import { useFreezeFrame } from '../../../../hooks/useFreezeFrame';
-import { useCameraOrientation } from '../../../../hooks/useCameraOrientation';
-import { useBurstCapture } from '../../../../hooks/useBurstCapture';
-import { useCaptureCountdown } from '../../../../hooks/useCaptureCountdown';
-import { useExposureBracket } from '../../../../hooks/useExposureBracket';
-import { useSceneAnalyzer } from '../../../../hooks/useSceneAnalyzer';
-import { probeHdrFusionSupport } from '../../../../libs/services/pilgrimage/composite-hdr';
-import { useT, type TranslationKey } from '../../../../libs/i18n';
-import { useAutoCapture } from '../../../../hooks/useAutoCapture';
-import { useCaptureSession } from '../../../../hooks/useCaptureSession';
+} from '../../hooks/useCameraSettings';
+import { useCameraHud } from '../../hooks/useCameraHud';
+import { useCameraLifecycle } from '../../hooks/useCameraLifecycle';
+import { useFreezeFrame } from '../../hooks/useFreezeFrame';
+import { useCameraOrientation } from '../../hooks/useCameraOrientation';
+import { useBurstCapture } from '../../hooks/useBurstCapture';
+import { useCaptureCountdown } from '../../hooks/useCaptureCountdown';
+import { useExposureBracket } from '../../hooks/useExposureBracket';
+import { useSceneAnalyzer } from '../../hooks/useSceneAnalyzer';
+import { probeHdrFusionSupport } from '../../libs/services/pilgrimage/composite-hdr';
+import { useT, type TranslationKey } from '../../libs/i18n';
+import { useAutoCapture } from '../../hooks/useAutoCapture';
+import { useCaptureSession } from '../../hooks/useCaptureSession';
 import {
   buildLibraryCaptureSessionShot,
   getShots as getCaptureSessionShots,
   type CaptureSessionShot,
-} from '../../../../libs/services/pilgrimage/capture-session';
-import { locationService } from '../../../../libs/services/pilgrimage/location-service';
-import AutoCaptureStatusBadge from '../../../../components/pilgrimage/camera/AutoCaptureBadge';
-import CaptureHistoryStrip from '../../../../components/pilgrimage/camera/CaptureHistoryStrip';
-import SceneSwitcherSheet from '../../../../components/pilgrimage/camera/SceneSwitcherSheet';
-import CaptureModeToast from '../../../../components/pilgrimage/camera/CaptureModeToast';
+} from '../../libs/services/pilgrimage/capture-session';
+import { locationService } from '../../libs/services/pilgrimage/location-service';
+import AutoCaptureStatusBadge from '../../components/pilgrimage/camera/AutoCaptureBadge';
+import CaptureHistoryStrip from '../../components/pilgrimage/camera/CaptureHistoryStrip';
+import { captureModeToastCopy } from '../../libs/services/pilgrimage/capture-mode-copy';
+import {
+  ReferencePickerSheet,
+  type PickedReference,
+} from '../../components/pilgrimage/camera/ReferencePickerSheet';
+import {
+  buildImportedCompareParams,
+  buildSceneCompareParams,
+} from '../../libs/services/pilgrimage/reference-route';
+import CaptureModeToast from '../../components/pilgrimage/camera/CaptureModeToast';
 
-import AutoCaptureToast from '../../../../components/pilgrimage/camera/AutoCaptureToast';
-import { AnitabiOriginCredit } from '../../../../components/pilgrimage/common/AnitabiOriginCredit';
+import AutoCaptureToast from '../../components/pilgrimage/camera/AutoCaptureToast';
+import { AnitabiOriginCredit } from '../../components/pilgrimage/common/AnitabiOriginCredit';
 
 type CameraRouteParams = {
   spotId: string;
@@ -135,6 +134,8 @@ type CameraRouteParams = {
   sceneOrigin?: string;
   /** Anitabi `originURL` link for the reference scene contributor. */
   sceneOriginURL?: string;
+  /** 'imported' when the reference is the user's own image (no spot/anime behind it). */
+  referenceKind?: string;
 };
 
 // Flash lives as a top-bar icon button. The icon mirrors the live mode; the
@@ -214,7 +215,18 @@ export default function CompareCaptureScreen() {
   const { theme } = useTheme();
   const t = useT();
   const params = useLocalSearchParams<CameraRouteParams>();
-  const { spotId = '', imageUrl = '', name = 'Scene', ep, animeId, animeTitle = '' } = params;
+  const {
+    spotId = '',
+    imageUrl = '',
+    name: nameParam,
+    ep,
+    animeId,
+    animeTitle = '',
+    referenceKind,
+  } = params;
+  // Display-only fallback; EXIF and records only ever get a real scene name.
+  const name = nameParam ?? t('pilgrimageUi.preview.sceneFallback');
+  const importedReference = referenceKind === 'imported';
   const themeColor = params.themeColor || theme.accent;
   const sceneOrigin = (params.sceneOrigin ?? '').trim();
   const sceneOriginURL = (params.sceneOriginURL ?? '').trim();
@@ -274,11 +286,6 @@ export default function CompareCaptureScreen() {
   // until the first device pick resolves; drives zoom range, HDR availability,
   // and the focal-stop pill set on the dial.
   const [deviceInfo, setDeviceInfo] = useState<CameraDeviceInfo | null>(null);
-  // Scene-switcher spot list — lazily fetched the first time the sheet opens.
-  const { spots: availableSpots, loading: spotsLoading } = useSceneSwitcherSpots(
-    animeId,
-    sceneSwitcherOpen
-  );
 
   // Overlay knobs (overlayMode / edgeIntensity / subjectFocus / subjectCombine)
   // are SEEDED into the HUD reducer's lazy initializer from `settings` above
@@ -601,33 +608,29 @@ export default function CompareCaptureScreen() {
     setHud((h) => ({ editMode: !h.editMode }));
   }, [setHud]);
 
-  const handlePickSpot = useCallback(
-    (spot: AnitabiPoint) => {
+  // Swap what this camera compares against — another scene (of this or any
+  // anime) or an imported image. Replaces the route so back still returns to
+  // wherever the camera was opened from.
+  const handlePickReference = useCallback(
+    (reference: PickedReference) => {
       setHud({ sceneSwitcherOpen: false });
-      if (spot.id === spotId) return;
-      const titles = getPilgrimageSpotTitles(spot);
-      const hasGeo =
-        Array.isArray(spot.geo) &&
-        spot.geo.length === 2 &&
-        (spot.geo[0] !== 0 || spot.geo[1] !== 0);
-      router.replace({
-        pathname: '/pilgrimage/compare/[spotId]',
-        params: {
-          spotId: spot.id,
-          imageUrl: spot.image,
-          name: titles.primary,
-          ep: String(spot.ep),
-          animeId: animeId ?? '',
-          animeTitle,
-          themeColor,
-          spotLat: hasGeo ? String(spot.geo[0]) : '',
-          spotLng: hasGeo ? String(spot.geo[1]) : '',
-          ...(spot.origin ? { sceneOrigin: spot.origin } : {}),
-          ...(spot.originURL ? { sceneOriginURL: spot.originURL } : {}),
-        },
-      });
+      if (reference.kind === 'scene' && reference.spot.id === spotId) return;
+      const next =
+        reference.kind === 'scene'
+          ? buildSceneCompareParams(reference.spot, {
+              animeId: reference.animeId,
+              animeTitle: reference.animeTitle,
+              themeColor,
+            })
+          : buildImportedCompareParams(reference.uri, {
+              label: t('pilgrimageUi.referencePicker.importedLabel'),
+              themeColor,
+              now: Date.now(),
+              nonce: Math.round(Math.random() * 1e6),
+            });
+      router.replace({ pathname: '/compare/[spotId]', params: next });
     },
-    [router, spotId, animeId, animeTitle, themeColor, setHud]
+    [router, spotId, themeColor, setHud, t]
   );
 
   // Centralised navigation: every capture mode lands on the same preview
@@ -635,7 +638,7 @@ export default function CompareCaptureScreen() {
   const navigateToPreview = useCallback(
     (shot: CaptureSessionShot) => {
       router.push({
-        pathname: '/pilgrimage/compare/preview',
+        pathname: '/compare/preview',
         params: {
           spotId,
           imageUrl: hiResImageUrl,
@@ -742,8 +745,9 @@ export default function CompareCaptureScreen() {
   // Centralised so single/burst/HDR all stamp the same set of tags.
   const buildExifNow = useCallback(() => {
     return buildAdditionalExif({
-      spotId,
-      spotName: name,
+      // An imported reference's id is synthetic — it names no real place.
+      spotId: importedReference ? '' : spotId,
+      spotName: importedReference ? '' : (nameParam ?? ''),
       animeId: animeId ?? undefined,
       animeTitle: animeTitle || undefined,
       episode: ep ?? undefined,
@@ -751,7 +755,17 @@ export default function CompareCaptureScreen() {
       heading: sensors.heading,
       tilt: sensors.tilt,
     });
-  }, [spotId, name, animeId, animeTitle, ep, sensors.userLocation, sensors.heading, sensors.tilt]);
+  }, [
+    importedReference,
+    spotId,
+    nameParam,
+    animeId,
+    animeTitle,
+    ep,
+    sensors.userLocation,
+    sensors.heading,
+    sensors.tilt,
+  ]);
 
   const maybeCompositeSubjectShot = useCallback(
     async (
@@ -1133,7 +1147,10 @@ export default function CompareCaptureScreen() {
       t('pilgrimageUi.photoAccessNeededAllowPhotoMessage'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
+        {
+          text: t('pilgrimageUi.camera.openSettings'),
+          onPress: () => Linking.openSettings().catch(() => undefined),
+        },
       ]
     );
     return false;
@@ -1238,7 +1255,9 @@ export default function CompareCaptureScreen() {
                 variant="titleSmall"
                 weight="700"
                 style={{ color: readableTextOn(themeColor) }}>
-                {canRequestPermission ? 'Grant access' : 'Open Settings'}
+                {canRequestPermission
+                  ? t('pilgrimageUi.camera.grantAccess')
+                  : t('pilgrimageUi.camera.openSettings')}
               </ThemedText>
             </Pressable>
             <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -1290,7 +1309,7 @@ export default function CompareCaptureScreen() {
   const rotateGlyphs = isLandscape && orientationMode === 'landscape';
   const handleOpenInfo = () => {
     hapticsBridge.tap();
-    router.push({ pathname: '/pilgrimage/compare/align', params: { ...params } });
+    router.push({ pathname: '/compare/align', params: { ...params } });
   };
   // Carousel index → HUD patch. Mirrors the old OverlayControlsBar onSelectOff/onSelectMode
   // (same per-mode switch toast + persisted overlayMode write-through), so behavior is preserved.
@@ -1397,14 +1416,18 @@ export default function CompareCaptureScreen() {
             <>
               <CameraHeaderButton
                 icon={FLASH_ICON[flashMode]}
-                accessibilityLabel={`Flash ${flashMode}`}
+                accessibilityLabel={t('pilgrimageUi.camera.flashA11y', {
+                  mode: t(`pilgrimageUi.camera.flashMode.${flashMode}`),
+                })}
                 themeColor={themeColor}
                 active={flashMode !== 'off'}
                 onPress={cycleFlash}
               />
               <CameraHeaderButton
                 icon={CAPTURE_MODE_ICON[settings.captureMode]}
-                accessibilityLabel={`Capture mode: ${settings.captureMode}`}
+                accessibilityLabel={t('pilgrimageUi.camera.captureModeA11y', {
+                  mode: t(captureModeToastCopy(settings.captureMode, false).label),
+                })}
                 themeColor={themeColor}
                 active={settings.captureMode !== 'single'}
                 onPress={cycleCaptureMode}
@@ -1705,14 +1728,12 @@ export default function CompareCaptureScreen() {
           onCaptureModeChange={(m) => setSettings({ captureMode: m })}
         />
 
-        <SceneSwitcherSheet
+        <ReferencePickerSheet
           visible={sceneSwitcherOpen}
           onClose={() => setHud({ sceneSwitcherOpen: false })}
-          spots={availableSpots}
+          onPick={handlePickReference}
+          initialAnimeId={Number(animeId) > 0 ? Number(animeId) : null}
           currentSpotId={spotId}
-          themeColor={themeColor}
-          onPickSpot={handlePickSpot}
-          loading={spotsLoading}
         />
       </View>
     </GestureHandlerRootView>

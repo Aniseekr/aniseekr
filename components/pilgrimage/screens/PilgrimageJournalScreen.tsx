@@ -291,9 +291,31 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
 
   const handleEntryPress = useCallback(
     (entry: AlbumEntry) => {
-      // Free captures have no reference scene to compare against.
-      if (entry.isFree) return;
       hapticsBridge.selection();
+      if (entry.isFree) {
+        // A free shot opens as a single photo — or against the user's imported
+        // reference — and the preview offers "pair with a reference".
+        const referenceUri = entry.capture.referenceUri;
+        const params: Record<string, string> = {
+          spotId: entry.capture.spotId,
+          imageUrl: referenceUri ?? '',
+          referenceKind: referenceUri ? 'imported' : '',
+          name: referenceUri ? t('pilgrimageUi.referencePicker.importedLabel') : '',
+          shotUri: entry.capture.uri,
+          shotWidth: '0',
+          shotHeight: '0',
+          capturedAt: String(entry.capture.capturedAt),
+          themeColor: theme.accent,
+          shotSource: entry.capture.source === 'library' ? 'library' : 'manual',
+          note: entry.capture.note ?? '',
+        };
+        if (entry.capture.userLocation) {
+          params.userLat = String(entry.capture.userLocation.latitude);
+          params.userLng = String(entry.capture.userLocation.longitude);
+        }
+        router.push({ pathname: '/compare/preview', params });
+        return;
+      }
       const animeTitles = getPilgrimageAnimeTitles(entry.anime);
       const spotTitles = getPilgrimageSpotTitles(entry.spot);
       const params: Record<string, string> = {
@@ -336,11 +358,11 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
       if (entry.spot.origin) params.sceneOrigin = entry.spot.origin;
       if (entry.spot.originURL) params.sceneOriginURL = entry.spot.originURL;
       router.push({
-        pathname: '/pilgrimage/compare/preview',
+        pathname: '/compare/preview',
         params,
       });
     },
-    [router, theme.accent]
+    [router, t, theme.accent]
   );
 
   const handleDeleteEntry = useCallback(
@@ -743,7 +765,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
                         entry={entry}
                         theme={theme}
                         heightVariant={i % 3}
-                        onPress={entry.isFree ? undefined : () => handleEntryPress(entry)}
+                        onPress={() => handleEntryPress(entry)}
                         onDelete={() => handleDeleteEntry(entry)}
                       />
                     ))}
@@ -755,7 +777,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
                         entry={entry}
                         theme={theme}
                         heightVariant={(i + 1) % 3}
-                        onPress={entry.isFree ? undefined : () => handleEntryPress(entry)}
+                        onPress={() => handleEntryPress(entry)}
                         onDelete={() => handleDeleteEntry(entry)}
                       />
                     ))}
@@ -1113,7 +1135,9 @@ function CompareCard({
               <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
               <View style={styles.cornerTag}>
                 <ThemedText variant="badge" style={{ color: ON_DARK }}>
-                  {t('pilgrimage.album.tagScene')}
+                  {entry.isFree
+                    ? t('pilgrimageUi.referencePicker.tagReference')
+                    : t('pilgrimage.album.tagScene')}
                 </ThemedText>
               </View>
             </View>

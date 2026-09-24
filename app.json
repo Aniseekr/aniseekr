@@ -47,7 +47,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "AniSeekr needs access to your photos so you can pick a profile picture.",
+          "photosPermission": "AniSeekr opens your photos so you can import a pilgrimage shot or a reference image to compare against, or pick a profile picture.",
           "microphonePermission": false
         }
       ],
@@ -177,7 +177,7 @@
       "infoPlist": {
         "LSApplicationQueriesSchemes": ["instagram", "instagram-stories", "line"],
         "NSLocationWhenInUseUsageDescription": "AniSeekr uses your location to surface nearby anime pilgrimage spots.",
-        "NSPhotoLibraryUsageDescription": "AniSeekr needs access to your photos so you can pick a profile picture.",
+        "NSPhotoLibraryUsageDescription": "AniSeekr opens your photos so you can import a pilgrimage shot or a reference image to compare against, or pick a profile picture.",
         "NSPhotoLibraryAddUsageDescription": "AniSeekr saves pilgrimage comparison photos to your library so you can share them later.",
         "NSCameraUsageDescription": "AniSeekr uses the camera so you can frame and capture a pilgrimage scene next to its anime reference.",
         "NSMotionUsageDescription": "AniSeekr uses the compass to help you match your shot to the original anime scene direction.",

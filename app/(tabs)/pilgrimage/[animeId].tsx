@@ -111,6 +111,7 @@ import {
 import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
+import { buildSceneCompareParams } from '../../../libs/services/pilgrimage/reference-route';
 
 // Sheet snap height as a fraction of the screen — kept in lockstep with the
 // first snap point in PilgrimageDetailSheet. Map controls use it as a safe
@@ -523,29 +524,12 @@ export default function PilgrimageDetailScreen() {
   }, [browseSource, t]);
 
   const buildCompareParams = useCallback(
-    (spot: AnitabiPoint) => {
-      const lat = hasValidGeo(spot.geo) ? String(spot.geo[0]) : undefined;
-      const lng = hasValidGeo(spot.geo) ? String(spot.geo[1]) : undefined;
-      const animeTitle = animeTitles?.primary ?? '';
-      const spotTitles = getPilgrimageSpotTitles(spot);
-      const sourceBangumiId = getPointSourceBangumiId(spot) ?? bangumiId;
-      return {
-        spotId: spot.id,
-        imageUrl: spot.image,
-        name: spotTitles.primary,
-        ep: String(spot.ep),
-        animeId: sourceBangumiId !== null ? String(sourceBangumiId) : '',
-        animeTitle,
+    (spot: AnitabiPoint) =>
+      buildSceneCompareParams(spot, {
+        animeId: bangumiId,
+        animeTitle: animeTitles?.primary ?? '',
         themeColor,
-        ...(lat ? { spotLat: lat } : {}),
-        ...(lng ? { spotLng: lng } : {}),
-        // CC BY-NC-SA 4.0 attribution for the reference screenshot. Both
-        // fields are optional; the compare screen reads them via
-        // useLocalSearchParams and only renders the credit when origin is set.
-        ...(spot.origin ? { sceneOrigin: spot.origin } : {}),
-        ...(spot.originURL ? { sceneOriginURL: spot.originURL } : {}),
-      };
-    },
+      }),
     [bangumiId, animeTitles?.primary, themeColor]
   );
 
@@ -558,7 +542,7 @@ export default function PilgrimageDetailScreen() {
       const params = buildCompareParams(spot);
       closeSheet();
       InteractionManager.runAfterInteractions(() => {
-        router.push({ pathname: '/pilgrimage/compare/tips', params });
+        router.push({ pathname: '/compare/tips', params });
       });
     },
     [buildCompareParams, closeSheet, router]
@@ -570,7 +554,7 @@ export default function PilgrimageDetailScreen() {
       const params = buildCompareParams(spot);
       closeSheet();
       InteractionManager.runAfterInteractions(() => {
-        router.push({ pathname: '/pilgrimage/compare/[spotId]', params });
+        router.push({ pathname: '/compare/[spotId]', params });
       });
     },
     [buildCompareParams, closeSheet, router]

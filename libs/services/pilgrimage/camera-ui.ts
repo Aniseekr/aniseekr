@@ -73,9 +73,10 @@ export function formatCameraHeader(input: CameraHeaderInput): CameraHeaderText {
 export function isCameraCapturePath(pathname: string | null | undefined): boolean {
   const clean = (pathname ?? '').split(/[?#]/)[0]?.replace(/\/+$/, '') ?? '';
   const parts = clean.split('/').filter(Boolean);
-  if (parts.length !== 3) return false;
-  if (parts[0] !== 'pilgrimage' || parts[1] !== 'compare') return false;
-  return !RESERVED_COMPARE_ROUTES.has(parts[2] ?? '');
+  // The compare flow is a root-level stack (`app/compare/*`) so it can be
+  // opened from any tab — the spot camera is `/compare/<spotId>`.
+  if (parts.length !== 2 || parts[0] !== 'compare') return false;
+  return !RESERVED_COMPARE_ROUTES.has(parts[1] ?? '');
 }
 
 export function cameraOrientationLockIntent(

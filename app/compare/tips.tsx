@@ -13,12 +13,12 @@ import { Image } from 'expo-image';
 import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraPermission } from 'react-native-vision-camera';
-import { bottomPad } from '../../../../constants/DesignSystem';
-import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
-import { useT, type TranslationKey } from '../../../../libs/i18n';
-import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../../../components/themed';
-import { useSceneAnalysis } from '../../../../components/pilgrimage/SceneAnalyzer';
+import { bottomPad } from '../../constants/DesignSystem';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
+import { useT, type TranslationKey } from '../../libs/i18n';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ThemedText, readableTextOn } from '../../components/themed';
+import { useSceneAnalysis } from '../../components/pilgrimage/SceneAnalyzer';
 import {
   inferAspectRatio,
   inferBestTime,
@@ -31,10 +31,10 @@ import {
   inferWarnings,
   inferWeather,
   type WarningItem,
-} from '../../../../libs/services/pilgrimage/scene-analysis';
-import { anitabiImageSource } from '../../../../libs/services/pilgrimage/anitabi-image';
-import { getStringParam } from '../../../../libs/utils/route-params';
-import { listItemEnter } from '../../../../libs/animations/presets';
+} from '../../libs/services/pilgrimage/scene-analysis';
+import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
+import { getStringParam } from '../../libs/utils/route-params';
+import { listItemEnter } from '../../libs/animations/presets';
 
 const WARN_ICONS: Record<WarningItem['icon'], React.ComponentProps<typeof Ionicons>['name']> = {
   sunny: 'sunny',
@@ -138,7 +138,7 @@ export default function PhotoTipsScreen() {
 
     hapticsBridge.success();
     router.replace({
-      pathname: '/pilgrimage/compare/[spotId]',
+      pathname: '/compare/[spotId]',
       params: { ...params },
     });
   }, [router, params, hasPermission, canRequestPermission, requestPermission, requesting, t]);
@@ -147,7 +147,7 @@ export default function PhotoTipsScreen() {
     hapticsBridge.tap();
     // Routes to GPS alignment helper from header — same pre-camera utility.
     router.push({
-      pathname: '/pilgrimage/compare/align',
+      pathname: '/compare/align',
       params: { ...params },
     });
   }, [router, params]);

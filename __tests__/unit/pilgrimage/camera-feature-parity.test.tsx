@@ -33,8 +33,8 @@ const noop = () => undefined;
 describe('camera feature parity', () => {
   it('uses the public VisionCamera entry with the worklets peer installed', async () => {
     const runtimeSourcePaths = [
-      'app/(tabs)/pilgrimage/compare/[spotId].tsx',
-      'app/(tabs)/pilgrimage/compare/tips.tsx',
+      'app/compare/[spotId].tsx',
+      'app/compare/tips.tsx',
       'components/pilgrimage/camera/CameraStage.tsx',
     ];
 
