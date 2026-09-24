@@ -354,7 +354,7 @@ export default function SettingsScreen() {
         key: 'upgrade',
         label: t('settingsUi.upgradeNow'),
         description: t('settingsUi.unlockThemesSyncNoAds'),
-        icon: 'sparkles-outline',
+        icon: 'ribbon-outline',
         onPress: () => setPaywallVisible(true),
       },
       {
@@ -536,7 +536,7 @@ export default function SettingsScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.premiumHero}>
                 <View style={styles.premiumHeroLeft}>
-                  <Ionicons name="sparkles" size={22} color={ctaFg} />
+                  <Ionicons name="ribbon" size={22} color={ctaFg} />
                   <View style={styles.premiumTextWrap}>
                     <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
                       {isPro ? t('settings.premium.active') : t('settings.premium.unlock')}

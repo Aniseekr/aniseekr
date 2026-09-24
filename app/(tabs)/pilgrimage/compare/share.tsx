@@ -468,7 +468,7 @@ export default function ShareComparisonScreen() {
                       variant="bodySmall"
                       weight="700"
                       style={{ color: active ? accentFg : theme.text.primary }}>
-                      {tpl.emoji} {tplLabel}
+                      {tplLabel}
                     </ThemedText>
                   </Pressable>
                 );

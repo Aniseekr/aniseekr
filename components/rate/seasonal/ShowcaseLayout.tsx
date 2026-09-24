@@ -183,7 +183,7 @@ function ShowcaseLayoutComponent({ data, onSelect }: ShowcaseLayoutProps) {
               },
             ]}>
             <View style={[styles.forYouIcon, { backgroundColor: `${theme.accent}26` }]}>
-              <Ionicons name="sparkles" size={20} color={theme.accent} />
+              <Ionicons name="heart-circle" size={20} color={theme.accent} />
             </View>
             <View style={styles.forYouText}>
               <ThemedText variant="bodySmall" weight="700">

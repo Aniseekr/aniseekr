@@ -102,7 +102,7 @@ function ModeIcon({ mode, color }: { mode: ExperienceMode; color: string }) {
   if (mode === 'explorer') return <MaterialIcons name="explore" size={22} color={color} />;
   if (mode === 'collector')
     return <MaterialIcons name="collections-bookmark" size={21} color={color} />;
-  return <Ionicons name="sparkles" size={20} color={color} />;
+  return <Ionicons name="apps" size={20} color={color} />;
 }
 
 const makeStyles = (safeTop: number) =>

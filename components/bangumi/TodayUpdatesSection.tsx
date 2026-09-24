@@ -56,7 +56,7 @@ function TodayUpdatesSectionComponent({
       <View pointerEvents="none" style={styles.surfaceBorder} />
 
       <Pressable onPress={() => setCollapsed((p) => !p)} style={styles.header}>
-        <Ionicons name="sparkles" size={16} color={theme.accent} />
+        <Ionicons name="today" size={16} color={theme.accent} />
         <Text style={styles.title}>{t('bangumiTab.today')}</Text>
         <Text style={styles.count}>({todayAnime.length})</Text>
         <View style={{ flex: 1 }} />

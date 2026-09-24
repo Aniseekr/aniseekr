@@ -177,7 +177,7 @@ const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', OverlayModeToastSeed> = {
 const CAPTURE_MODE_ICON: Record<CaptureMode, keyof typeof Ionicons.glyphMap> = {
   single: 'camera-outline',
   burst: 'albums-outline',
-  auto: 'sparkles-outline',
+  auto: 'aperture-outline',
 };
 const CAPTURE_MODE_CYCLE: CaptureMode[] = ['single', 'burst', 'auto'];
 

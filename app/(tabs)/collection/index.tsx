@@ -370,13 +370,13 @@ export default function CollectionScreen() {
         {
           url: uri,
           message: t('tabs.collectionScreen.share.myTemplateOnAniseekr', {
-            template: shareBuild.template.title,
+            template: t(shareBuild.template.titleKey),
           }),
-          title: `Aniseekr · ${shareBuild.template.title}`,
+          title: `Aniseekr · ${t(shareBuild.template.titleKey)}`,
         },
         {
           dialogTitle: t('tabs.collectionScreen.share.dialogTitle', {
-            template: shareBuild.template.title,
+            template: t(shareBuild.template.titleKey),
           }),
         }
       );

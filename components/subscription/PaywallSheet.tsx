@@ -37,13 +37,13 @@ function unsupportedMessage(
 }
 
 const FEATURES: {
-  icon: 'block' | 'palette' | 'cloud-sync' | 'auto-awesome';
+  icon: 'block' | 'palette' | 'cloud-sync' | 'offline-pin';
   labelKey: TranslationKey;
 }[] = [
   { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
   { icon: 'cloud-sync', labelKey: 'subscription.unlimitedSyncPlatforms' },
-  { icon: 'auto-awesome', labelKey: 'subscription.pilgrimageOfflineMaps' },
+  { icon: 'offline-pin', labelKey: 'subscription.pilgrimageOfflineMaps' },
 ];
 
 export interface PaywallSheetProps {

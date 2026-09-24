@@ -42,18 +42,28 @@ export function LocalityAttributionFooter({
         variant === 'footer' && [styles.footer, { borderTopColor: theme.glassBorder }],
         style,
       ]}>
-      {dedupeDisplayedCredits(provenance, language).map(({ credit, sourceName, copyright }) => (
-        <AttributionCredit
-          key={`${credit.sourceUrl}:${credit.verifiedAt}`}
-          credit={credit}
-          sourceName={sourceName}
-          copyright={copyright}
-          compact={variant === 'compact'}
-          openLabel={t('pilgrimageUi.attribution.openSourceA11y', { source: sourceName })}
-        />
-      ))}
+      {dedupeDisplayedCredits(provenance, language).map(
+        ({ key, credit, sourceName, copyright }) => (
+          <AttributionCredit
+            key={key}
+            credit={credit}
+            sourceName={sourceName}
+            copyright={copyright}
+            compact={variant === 'compact'}
+            openLabel={t('pilgrimageUi.attribution.openSourceA11y', { source: sourceName })}
+          />
+        )
+      )}
     </View>
   );
+}
+
+export interface DisplayedCredit {
+  /** Every displayed field joined — unique within one footer. */
+  key: string;
+  credit: IntelProvenance;
+  sourceName: string;
+  copyright: string | null;
 }
 
 /**
@@ -61,12 +71,12 @@ export function LocalityAttributionFooter({
  * — e.g. two pages of the same site) collapse into one line; the first URL is
  * kept as the link. A notice that only repeats the source name is dropped.
  */
-function dedupeDisplayedCredits(
+export function dedupeDisplayedCredits(
   provenance: readonly IntelProvenance[],
   language: LanguageId
-): { credit: IntelProvenance; sourceName: string; copyright: string | null }[] {
+): DisplayedCredit[] {
   const seen = new Set<string>();
-  const out: { credit: IntelProvenance; sourceName: string; copyright: string | null }[] = [];
+  const out: DisplayedCredit[] = [];
   for (const credit of provenance) {
     const sourceName = resolveLocalIntelText(credit.sourceName, language).value;
     const notice = credit.copyrightNotice
@@ -76,7 +86,7 @@ function dedupeDisplayedCredits(
     const key = [sourceName, credit.verifiedAt, credit.license ?? '', copyright ?? ''].join('|');
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ credit, sourceName, copyright });
+    out.push({ key, credit, sourceName, copyright });
   }
   return out;
 }
@@ -137,7 +147,7 @@ function AttributionCredit({
 }
 
 // Text links stay visually light; the slop lifts the tap area to 44pt.
-const LINK_HIT_SLOP = { top: 12, bottom: 12, left: 8, right: 8 };
+const LINK_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 };
 
 const styles = StyleSheet.create({
   container: {

@@ -67,7 +67,7 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
               styles.iconBubble,
               { backgroundColor: theme.accent + '22', borderColor: theme.accent + '55' },
             ]}>
-            <Ionicons name="sparkles" size={14} color={theme.accent} />
+            <Ionicons name="heart-circle" size={14} color={theme.accent} />
           </View>
           <View>
             <ThemedText variant="titleLarge" weight="700">
@@ -242,7 +242,7 @@ function LoadingState({ accent }: { accent: string }) {
           { borderColor: accent + '55', backgroundColor: accent + '11' },
           Shadow.glow(accent),
         ]}>
-        <Ionicons name="sparkles" size={28} color={accent} />
+        <Ionicons name="heart-circle" size={28} color={accent} />
       </View>
       <ThemedText variant="titleMedium" align="center">
         Finding your next favorite…

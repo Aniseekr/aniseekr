@@ -221,7 +221,7 @@ export default function PhotoTipsScreen() {
             </View>
             <View style={styles.heroCaption}>
               <View style={styles.captionRow}>
-                <Ionicons name="sparkles" size={14} color={accent} />
+                <Ionicons name="film" size={14} color={accent} />
                 <ThemedText variant="bodySmall" weight="600">
                   {epLabel ? `Anime scene · ${epLabel}` : 'Anime scene'}
                 </ThemedText>

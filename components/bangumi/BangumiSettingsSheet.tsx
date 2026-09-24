@@ -234,7 +234,10 @@ function BangumiSettingsSheetComponent({
           label={t('bangumiTab.showAdultContent')}
           description={t('bangumiTab.revealR18SeriesInSeasonal')}
           value={adultContent}
-          onChange={onAdultContentChange}
+          onChange={(v) => {
+            hapticsBridge.selection();
+            onAdultContentChange(v);
+          }}
         />
 
         <View style={styles.actionRow}>
@@ -340,7 +343,8 @@ function ToggleRow({
           {description}
         </Text>
       </View>
-      <ThemedSwitch value={value} onValueChange={onChange} />
+      {/* The row callers' update helper already fires the selection haptic. */}
+      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
     </View>
   );
 }

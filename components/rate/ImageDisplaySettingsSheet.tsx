@@ -141,7 +141,7 @@ function ImageDisplaySettingsSheetComponent({
         </View>
 
         <ToggleRow
-          icon="auto-awesome"
+          icon="lightbulb-outline"
           label={t('rate.aiInsights')}
           description={t('rate.showAiGeneratedRecommendationsOn')}
           value={preferences.showAIInsights}
@@ -252,7 +252,8 @@ function ToggleRow({
           {description}
         </Text>
       </View>
-      <ThemedSwitch value={value} onValueChange={onChange} />
+      {/* The row callers' update helper already fires the selection haptic. */}
+      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
     </View>
   );
 }

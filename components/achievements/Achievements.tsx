@@ -298,7 +298,7 @@ function EmptyHintCard() {
   return (
     <GlassCard variant="frosted" style={styles.emptyCard}>
       <View style={styles.emptyIconWrap}>
-        <MaterialIcons name="auto-awesome" size={20} color={Colors.primary} />
+        <MaterialIcons name="emoji-events" size={20} color={Colors.primary} />
       </View>
       <View style={styles.emptyTextWrap}>
         <Text style={styles.emptyTitle}>{t('achievementsUi.noBadgesYet')}</Text>

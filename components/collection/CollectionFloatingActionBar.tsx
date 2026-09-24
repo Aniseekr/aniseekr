@@ -79,9 +79,9 @@ function CollectionFloatingActionBarComponent({
           <View style={styles.row}>
             {unratedCount > 0 && onRateUnrated ? (
               <ActionButton
-                icon="auto-awesome"
-                label={`Rate ${Math.min(unratedCount, 3)}`}
-                hint={`${unratedCount} unrated`}
+                icon="star-rate"
+                label={t('collectionUi.rateCount', { count: Math.min(unratedCount, 3) })}
+                hint={t('collectionUi.unratedCount', { count: unratedCount })}
                 accent={theme.accent}
                 onPress={() => {
                   hapticsBridge.tap();

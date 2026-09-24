@@ -107,7 +107,7 @@ export function StatsOverview({
         id: 'persona',
         title: t('collectionUi.animePersona'),
         subtitle: t('collectionUi.discoverYourViewingArchetype'),
-        icon: 'auto-awesome' as const,
+        icon: 'psychology' as const,
         gradientFrom: '#7C5BFF',
         gradientTo: '#21D4FD',
         route: '/collection/stats/persona',

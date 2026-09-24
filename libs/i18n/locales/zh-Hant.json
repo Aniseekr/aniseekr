@@ -338,7 +338,7 @@
       "cloudkitUnavailable": "目前無法使用 — 請重新建置 dev client 並包含 bridge",
       "encrypt": "加密備份檔",
       "encryptDesc": "以裝置金鑰進行 AES-256-GCM 加密。需在同一台裝置才能還原。",
-      "encryptedTag": "🔒 已加密 (AES-256-GCM)",
+      "encryptedTag": "已加密 (AES-256-GCM)",
       "google": {
         "signIn": "以 Google 登入",
         "signInPrompt": "登入以啟用 Google Drive 備份。",
@@ -1337,7 +1337,7 @@
       "filter": {
         "all": "全部",
         "collection": "收藏中",
-        "official88": "★ 88"
+        "official88": "88 選"
       },
       "layout": {
         "grid": "格狀",
@@ -1439,7 +1439,7 @@
     "tourism88": {
       "entryA11y": "{title}，動畫聖地巡禮 88 選",
       "moreCities": "+{count} 個城市",
-      "official": "★ 官方"
+      "official": "官方"
     },
     "trip": {
       "nextStop": "下一站",
@@ -1690,7 +1690,20 @@
     "indexingYourCollection": "正在建立收藏索引…",
     "couldnTLoadStats": "無法載入統計",
     "yourRecentPicksWillAppear": "你最近挑選的作品會顯示在這裡。",
-    "noPicksYetTapAdd": "尚未挑選。點下方的「新增動畫」。"
+    "noPicksYetTapAdd": "尚未挑選。點下方的「新增動畫」。",
+    "rateCount": "評分 {count} 部",
+    "unratedCount": "{count} 部未評分",
+    "shareTemplate": {
+      "top10Title": "前 10 名",
+      "top10Desc": "你評分最高的動畫",
+      "yearlyBestTitle": "年度最佳",
+      "yearlyBestDesc": "近四年每年的前 3 名",
+      "starterPackTitle": "入坑包",
+      "starterPackDesc": "推薦給新手的六部動畫",
+      "masterpieceTitle": "代表作",
+      "masterpieceDesc": "一部值得做成海報的作品"
+    },
+    "sharePicks": "已選 {count}/{limit}"
   },
   "commonUi": {
     "achievements": "成就",
@@ -2049,7 +2062,31 @@
     "storedOnThisDeviceOnly": "只儲存在這台裝置上,不需帳號。",
     "sync": "同步",
     "tapAShortcutToPut": "點選捷徑放進這個欄位",
-    "total": "總計"
+    "total": "總計",
+    "shortcut": {
+      "notifications": "通知",
+      "appearance": "外觀",
+      "language": "語言",
+      "privacy": "隱私",
+      "cache": "快取",
+      "syncHub": "同步中心",
+      "sources": "資料來源",
+      "otakuDna": "宅力 DNA",
+      "accounts": "帳號",
+      "trophies": "成就",
+      "import": "匯入",
+      "credits": "致謝",
+      "terms": "條款",
+      "preview": "主題預覽",
+      "tokens": "設計參數",
+      "empty": "空位",
+      "swapHint": "與其他位置交換",
+      "a11yTapToReplace": "{label}。點一下以更換。",
+      "a11yLongPressToReplace": "{label}。長按以更換。",
+      "a11yEmptySlot": "空的捷徑位置",
+      "a11yEdit": "編輯捷徑",
+      "a11yFinishEdit": "完成編輯捷徑"
+    }
   },
   "rate": {
     "addAnimeToListsDirectly": "直接從滑卡將動畫加入清單",
@@ -2134,7 +2171,13 @@
     "viewCalendar": "查看番組表",
     "winter": "冬",
     "year": "年份",
-    "openDetail": "開啟詳情"
+    "openDetail": "開啟詳情",
+    "seasonRange": {
+      "winter": "1–3 月",
+      "spring": "4–6 月",
+      "summer": "7–9 月",
+      "fall": "10–12 月"
+    }
   },
   "settingsUi": {
     "accent": "強調色",

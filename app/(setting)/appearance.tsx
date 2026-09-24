@@ -404,7 +404,7 @@ function PreviewCard({
       end={{ x: 1, y: 1 }}
       style={styles.previewCard}>
       <View style={[styles.previewBubble, { backgroundColor: accent }]}>
-        <Ionicons name="sparkles" size={20} color={accentFg} />
+        <Ionicons name="color-palette" size={20} color={accentFg} />
       </View>
       <View style={{ flex: 1 }}>
         <ThemedText variant="titleMedium" weight="700" style={{ color: text.primary }}>
@@ -468,7 +468,7 @@ function ThemeCard({
           {FeatureFlags.PREMIUM_ENABLED && palette.isPremium ? (
             <View style={[styles.premiumPill, { backgroundColor: palette.accent + '40' }]}>
               <Ionicons
-                name={isLocked ? 'lock-closed' : 'sparkles'}
+                name={isLocked ? 'lock-closed' : 'ribbon'}
                 size={9}
                 color={palette.accent}
               />

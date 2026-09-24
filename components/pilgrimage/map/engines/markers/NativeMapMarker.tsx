@@ -94,9 +94,7 @@ function BalloonMarker({
             styles.photoFallback,
             { backgroundColor: visual.ringColor },
           ]}>
-          <Text style={[styles.photoFallbackPin, { color: readableTextOn(visual.ringColor) }]}>
-            📍
-          </Text>
+          <Ionicons name="location" size={20} color={readableTextOn(visual.ringColor)} />
         </View>
         {imageUri ? (
           <Image
@@ -130,7 +128,7 @@ function Gold88Marker({ visual, chrome }: { visual: MarkerVisual; chrome: Marker
             ...Shadow.glow(visual.ringColor),
           },
         ]}>
-        <Text style={[styles.star, { color: readableTextOn(visual.ringColor) }]}>★</Text>
+        <Ionicons name="star" size={18} color={readableTextOn(visual.ringColor)} />
       </View>
       <View style={[styles.tail, { borderTopColor: chrome.chrome }]} />
       <Badge visual={visual} chrome={chrome} />
@@ -152,7 +150,7 @@ function LocalityPinMarker({
       ? 'ticket-outline'
       : marker.kind === 'shop'
         ? 'storefront-outline'
-        : 'sparkles-outline';
+        : 'bonfire-outline';
   const border = visual.visited ? chrome.visited : chrome.chrome;
   const foreground = readableTextOn(visual.ringColor);
   const shapeStyle =
@@ -275,7 +273,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoFallbackPin: { ...Typography.titleLarge },
   tail: {
     width: 0,
     height: 0,
@@ -373,7 +370,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flexShrink: 1,
   },
-  star: { ...Typography.titleLarge },
   dotBox: { alignItems: 'center', justifyContent: 'center' },
   dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
   badge: {

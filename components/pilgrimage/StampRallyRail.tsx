@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   rail: { gap: Spacing.sm, paddingRight: Spacing.md },
   cardPress: { width: CARD_WIDTH },
-  card: { flexDirection: 'row', height: CARD_HEIGHT, overflow: 'hidden', ...Shadow.subtle },
-  poster: { width: POSTER_WIDTH, height: CARD_HEIGHT },
+  card: { flexDirection: 'row', minHeight: CARD_HEIGHT, overflow: 'hidden', ...Shadow.subtle },
+  poster: { width: POSTER_WIDTH, minHeight: CARD_HEIGHT, alignSelf: 'stretch' },
   cardBody: {
     flex: 1,
     minWidth: 0,

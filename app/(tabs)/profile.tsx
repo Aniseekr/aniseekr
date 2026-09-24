@@ -386,7 +386,7 @@ export default function ProfileScreen() {
                 <View style={styles.premiumCtaContent}>
                   <View style={styles.premiumCtaText}>
                     <View style={styles.premiumTitleRow}>
-                      <Ionicons name="sparkles" size={16} color={ctaFg} />
+                      <Ionicons name="ribbon" size={16} color={ctaFg} />
                       <ThemedText
                         variant="titleMedium"
                         weight="700"

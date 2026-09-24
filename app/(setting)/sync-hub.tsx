@@ -243,7 +243,8 @@ function ToggleRow({
           </Text>
         ) : null}
       </View>
-      <ThemedSwitch value={value} onValueChange={onChange} />
+      {/* The row callers' update helper already fires the selection haptic. */}
+      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
     </View>
   );
 }

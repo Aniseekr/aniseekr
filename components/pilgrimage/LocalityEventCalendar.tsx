@@ -104,9 +104,7 @@ function LocalityEventCalendarComponent({
 
         <View style={styles.legendRow}>
           <View style={styles.legendCopy}>
-            <View style={[styles.legendRing, { borderColor: theme.accent }]}>
-              <Ionicons name="sparkles" size={10} color={theme.accent} />
-            </View>
+            <View style={[styles.legendRing, { borderColor: theme.accent }]} />
             <ThemedText variant="captionSmall" tone="secondary" style={styles.legendText}>
               {t('news.calendar.markerLegend')}
             </ThemedText>

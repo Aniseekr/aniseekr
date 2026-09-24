@@ -25,6 +25,7 @@ import {
   LocalityEventCalendar,
   type LocalityCalendarEventRow,
 } from '../../../../components/pilgrimage/LocalityEventCalendar';
+import { dedupeDisplayedCredits } from '../../../../components/pilgrimage/common/LocalityAttributionFooter';
 import { EventStateChip } from '../../../../components/pilgrimage/detail/IntelEventBanner';
 import { formatEventSchedule } from '../../../../components/pilgrimage/event-date-block';
 import { RallyPoster } from '../../../../components/pilgrimage/rally/RallyPoster';
@@ -483,16 +484,12 @@ function EventRowCard({
   const facts = [t('news.events.stopCount', { count: row.stopCount }), location]
     .filter(Boolean)
     .join(' · ');
-  const [firstSource] = row.event.provenance;
-  const sourceName = firstSource
-    ? resolveLocalIntelText(firstSource.sourceName, language).value
-    : null;
+  // Same de-duplication as the detail page's footer, so "+N" never overstates.
+  const credits = dedupeDisplayedCredits(row.event.provenance, language);
+  const sourceName = credits[0]?.sourceName ?? null;
   const sourceLine = sourceName
-    ? row.event.provenance.length > 1
-      ? t('news.events.sourceLineMore', {
-          source: sourceName,
-          count: row.event.provenance.length - 1,
-        })
+    ? credits.length > 1
+      ? t('news.events.sourceLineMore', { source: sourceName, count: credits.length - 1 })
       : t('news.events.sourceLine', { source: sourceName })
     : null;
 
@@ -531,6 +528,8 @@ function EventRowCard({
             variant="bodyMedium"
             weight="700"
             numberOfLines={2}
+            // The card is a fixed-rhythm list row; the original title lives on the detail page.
+            alwaysShowOriginal={false}
             disableLongPress
           />
           {row.animeTitle ? (
@@ -653,11 +652,11 @@ function makeStyles() {
     eventList: { gap: Spacing.sm },
     eventCard: {
       flexDirection: 'row',
-      height: EVENT_CARD_HEIGHT,
+      minHeight: EVENT_CARD_HEIGHT,
       overflow: 'hidden',
       ...Shadow.subtle,
     },
-    eventPoster: { width: EVENT_POSTER_WIDTH, height: EVENT_CARD_HEIGHT },
+    eventPoster: { width: EVENT_POSTER_WIDTH, minHeight: EVENT_CARD_HEIGHT, alignSelf: 'stretch' },
     eventBody: { flex: 1, minWidth: 0, padding: Spacing.sm, gap: Spacing.xxs },
     eventMetaRow: {
       flexDirection: 'row',
@@ -666,6 +665,7 @@ function makeStyles() {
       overflow: 'hidden',
     },
     eventChip: {
+      flexShrink: 0,
       maxWidth: 104,
       borderRadius: Radius.full,
       paddingHorizontal: Spacing.sm,

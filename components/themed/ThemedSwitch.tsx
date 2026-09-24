@@ -1,6 +1,7 @@
 import { StyleSheet, Switch, View, type StyleProp, type ViewStyle } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { ON_DARK } from './contrast';
 
 export interface ThemedSwitchProps {
   value: boolean;
@@ -9,7 +10,21 @@ export interface ThemedSwitchProps {
   accessibilityLabel?: string;
   /** Overrides the "on" track colour (defaults to the resolved theme accent). */
   accent?: string;
+  /** Fire the selection haptic on toggle. Off when the handler already does. */
+  haptic?: boolean;
   style?: StyleProp<ViewStyle>;
+}
+
+/**
+ * Switch colours: accent "on" track, tertiary "off" track, and the native white
+ * thumb in every mode — a text-primary thumb would turn near-black in light mode.
+ */
+export function themedSwitchColors(theme: ThemePalette, accent?: string) {
+  return {
+    trackColor: { false: theme.background.tertiary, true: accent ?? theme.accent },
+    iosBackground: theme.background.tertiary,
+    thumbColor: ON_DARK,
+  };
 }
 
 // Native switch footprint. iOS 26 draws a wider/shorter glass switch than the
@@ -26,9 +41,11 @@ export function ThemedSwitch({
   disabled,
   accessibilityLabel,
   accent,
+  haptic = true,
   style,
 }: ThemedSwitchProps) {
   const { theme } = useTheme();
+  const colors = themedSwitchColors(theme, accent);
   return (
     <View style={[styles.box, style]}>
       <Switch
@@ -36,12 +53,12 @@ export function ThemedSwitch({
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
         onValueChange={(next) => {
-          hapticsBridge.selection();
+          if (haptic) hapticsBridge.selection();
           onValueChange(next);
         }}
-        trackColor={{ false: theme.background.tertiary, true: accent ?? theme.accent }}
-        ios_backgroundColor={theme.background.tertiary}
-        thumbColor={theme.text.primary}
+        trackColor={colors.trackColor}
+        ios_backgroundColor={colors.iosBackground}
+        thumbColor={colors.thumbColor}
       />
     </View>
   );

@@ -338,7 +338,7 @@
       "cloudkitUnavailable": "Not available — rebuild dev client with the bridge",
       "encrypt": "Encrypt backup file",
       "encryptDesc": "AES-256-GCM with a device key. Required to restore on the same device.",
-      "encryptedTag": "🔒 encrypted (AES-256-GCM)",
+      "encryptedTag": "encrypted (AES-256-GCM)",
       "google": {
         "signIn": "Sign in with Google",
         "signInPrompt": "Sign in to enable Google Drive backup.",
@@ -1337,7 +1337,7 @@
       "filter": {
         "all": "All",
         "collection": "In collection",
-        "official88": "★ 88"
+        "official88": "Tourism 88"
       },
       "layout": {
         "grid": "Grid",
@@ -1439,7 +1439,7 @@
     "tourism88": {
       "entryA11y": "{title}, Anime Tourism 88 entry",
       "moreCities": "+{count} cities",
-      "official": "★ Official"
+      "official": "Official"
     },
     "trip": {
       "nextStop": "Next stop",
@@ -1690,7 +1690,20 @@
     "indexingYourCollection": "Indexing your collection…",
     "couldnTLoadStats": "Couldn't load stats",
     "yourRecentPicksWillAppear": "Your recent picks will appear here.",
-    "noPicksYetTapAdd": "No picks yet. Tap “Add anime” below."
+    "noPicksYetTapAdd": "No picks yet. Tap “Add anime” below.",
+    "rateCount": "Rate {count}",
+    "unratedCount": "{count} unrated",
+    "shareTemplate": {
+      "top10Title": "Top 10",
+      "top10Desc": "Your highest-rated anime",
+      "yearlyBestTitle": "Yearly Best",
+      "yearlyBestDesc": "Top 3 from each of the last 4 years",
+      "starterPackTitle": "Starter Pack",
+      "starterPackDesc": "Six anime to recommend to a newcomer",
+      "masterpieceTitle": "Masterpiece",
+      "masterpieceDesc": "A single hero pick worth a poster"
+    },
+    "sharePicks": "{count}/{limit} picks"
   },
   "commonUi": {
     "achievements": "Achievements",
@@ -2049,7 +2062,31 @@
     "storedOnThisDeviceOnly": "Stored on this device only. No account needed.",
     "sync": "Sync",
     "tapAShortcutToPut": "Tap a shortcut to put it in this slot",
-    "total": "Total"
+    "total": "Total",
+    "shortcut": {
+      "notifications": "Notifications",
+      "appearance": "Appearance",
+      "language": "Language",
+      "privacy": "Privacy",
+      "cache": "Cache",
+      "syncHub": "Sync hub",
+      "sources": "Sources",
+      "otakuDna": "Otaku DNA",
+      "accounts": "Accounts",
+      "trophies": "Trophies",
+      "import": "Import",
+      "credits": "Credits",
+      "terms": "Terms",
+      "preview": "Preview",
+      "tokens": "Tokens",
+      "empty": "Empty",
+      "swapHint": "Swap with another slot",
+      "a11yTapToReplace": "{label}. Tap to replace.",
+      "a11yLongPressToReplace": "{label}. Long-press to replace.",
+      "a11yEmptySlot": "Empty shortcut slot",
+      "a11yEdit": "Edit shortcuts",
+      "a11yFinishEdit": "Finish editing shortcuts"
+    }
   },
   "rate": {
     "addAnimeToListsDirectly": "Add anime to lists directly from the swipe deck",
@@ -2134,7 +2171,13 @@
     "viewCalendar": "View calendar",
     "winter": "Winter",
     "year": "Year",
-    "openDetail": "Open detail"
+    "openDetail": "Open detail",
+    "seasonRange": {
+      "winter": "Jan – Mar",
+      "spring": "Apr – Jun",
+      "summer": "Jul – Sep",
+      "fall": "Oct – Dec"
+    }
   },
   "settingsUi": {
     "accent": "Accent",

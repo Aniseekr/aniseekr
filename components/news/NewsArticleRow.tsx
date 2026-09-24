@@ -8,6 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useI18n, useT } from '../../libs/i18n';
 import type { NewsArticle, NewsSource } from '../../libs/services/news/types';
 import { newsImageSource } from '../../libs/services/news/news-image';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { resolveLocalIntelText } from '../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import { LOCALITY_CARD_RADIUS } from '../pilgrimage/common/LocalityAesthetic';
 import { ThemedSurface, ThemedText } from '../themed';
@@ -36,9 +37,12 @@ export function NewsArticleRow({
 
   return (
     <Pressable
-      onPress={onOpen}
+      onPress={() => {
+        hapticsBridge.tap();
+        onOpen();
+      }}
       accessibilityRole="link"
-      accessibilityLabel={article.title}
+      accessibilityLabel={[article.title, sourceName, relativeTime].filter(Boolean).join(', ')}
       accessibilityHint={t('news.openArticle')}
       style={({ pressed }) => [pressed && styles.pressed]}>
       <ThemedSurface padded={Spacing.md} radius={LOCALITY_CARD_RADIUS} style={styles.row}>

@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
   },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   titleCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
-  flex: { flex: 1 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   leg: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs },
 });

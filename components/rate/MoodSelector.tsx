@@ -1,12 +1,14 @@
-import { memo } from 'react';
+import { memo, type ComponentProps } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { listItemEnter } from '../../libs/animations/presets';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { ON_DARK } from '../themed';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.md * 2 - Spacing.sm) / 2;
@@ -24,7 +26,7 @@ export type MoodKey =
 interface MoodOption {
   key: MoodKey;
   labelKey: TranslationKey;
-  emoji: string;
+  icon: ComponentProps<typeof Ionicons>['name'];
   descriptionKey: TranslationKey;
   gradient: [string, string];
 }
@@ -33,56 +35,56 @@ export const MOOD_OPTIONS: MoodOption[] = [
   {
     key: 'cozy',
     labelKey: 'rate.cozy',
-    emoji: '🍵',
+    icon: 'cafe',
     descriptionKey: 'rate.sliceOfLife',
     gradient: ['#F59E0B', '#D97706'],
   },
   {
     key: 'thrilling',
     labelKey: 'rate.thrilling',
-    emoji: '⚡',
+    icon: 'flash',
     descriptionKey: 'rate.onTheEdge',
     gradient: ['#EF4444', '#B91C1C'],
   },
   {
     key: 'romantic',
     labelKey: 'rate.romantic',
-    emoji: '💕',
+    icon: 'heart',
     descriptionKey: 'rate.heartFluttering',
     gradient: ['#EC4899', '#BE185D'],
   },
   {
     key: 'epic',
     labelKey: 'rate.epic',
-    emoji: '🐉',
+    icon: 'flame',
     descriptionKey: 'rate.grandAdventure',
     gradient: ['#8B5CF6', '#6D28D9'],
   },
   {
     key: 'comedic',
     labelKey: 'rate.comedic',
-    emoji: '😂',
+    icon: 'happy',
     descriptionKey: 'rate.laughOutLoud',
     gradient: ['#FBBF24', '#D97706'],
   },
   {
     key: 'mysterious',
     labelKey: 'rate.mysterious',
-    emoji: '🔮',
+    icon: 'eye',
     descriptionKey: 'rate.twistsTurns',
     gradient: ['#6366F1', '#3730A3'],
   },
   {
     key: 'melancholic',
     labelKey: 'rate.melancholic',
-    emoji: '🌧️',
+    icon: 'rainy',
     descriptionKey: 'rate.quietlyMoving',
     gradient: ['#0EA5E9', '#0369A1'],
   },
   {
     key: 'inspiring',
     labelKey: 'rate.inspiring',
-    emoji: '🌅',
+    icon: 'partly-sunny',
     descriptionKey: 'rate.upliftingStories',
     gradient: ['#10B981', '#047857'],
   },
@@ -154,7 +156,7 @@ function MoodCard({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.card}>
-          <Text style={styles.emoji}>{mood.emoji}</Text>
+          <Ionicons name={mood.icon} size={28} color={ON_DARK} style={styles.icon} />
           <Text style={styles.label}>{t(mood.labelKey)}</Text>
           <Text style={styles.description}>{t(mood.descriptionKey)}</Text>
         </LinearGradient>
@@ -185,8 +187,8 @@ const styles = StyleSheet.create({
     padding: Spacing.sm + 2,
     justifyContent: 'space-between',
   },
-  emoji: {
-    fontSize: 30,
+  icon: {
+    marginBottom: Spacing.xxs,
   },
   label: {
     ...Typography.titleMedium,

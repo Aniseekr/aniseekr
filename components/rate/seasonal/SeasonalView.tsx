@@ -36,7 +36,7 @@ const LAYOUT_META: Record<
   carousel: { labelKey: 'rate.carousel', label: 'Carousel', icon: 'albums-outline' },
   'hero-rail': { label: 'Hero + Rails', icon: 'reorder-three-outline' },
   showcase: { labelKey: 'rate.showcase', label: 'Showcase', icon: 'grid-outline' },
-  spotlight: { labelKey: 'rate.spotlight', label: 'Spotlight', icon: 'sparkles-outline' },
+  spotlight: { labelKey: 'rate.spotlight', label: 'Spotlight', icon: 'flashlight-outline' },
 };
 
 function nextLayout(current: SeasonalLayout): SeasonalLayout {

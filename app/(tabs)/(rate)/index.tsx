@@ -9,7 +9,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Skeleton,
@@ -238,7 +237,7 @@ export default function HomeRateScreen() {
             <Ionicons name="search" size={20} color={theme.text.secondary} />
           </Pressable>
           <Pressable onPress={handlePullAI} style={styles.iconButton} hitSlop={8}>
-            <MaterialIcons name="auto-awesome" size={22} color={theme.accent} />
+            <Ionicons name="heart-circle-outline" size={22} color={theme.accent} />
           </Pressable>
           <Pressable
             onPress={() => {

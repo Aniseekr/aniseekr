@@ -20,7 +20,7 @@ export function localityCategoryIcon(
   category: EventCategory
 ): ComponentProps<typeof Ionicons>['name'] {
   if (category === 'stamp_rally') return 'ticket-outline';
-  if (category === 'festival') return 'sparkles-outline';
+  if (category === 'festival') return 'bonfire-outline';
   if (category === 'collab_cafe') return 'cafe-outline';
   if (category === 'exhibition') return 'easel-outline';
   return 'calendar-outline';
@@ -29,7 +29,7 @@ export function localityCategoryIcon(
 export function LocalityMiniStamp({
   accent,
   imageUri,
-  icon = 'sparkles-outline',
+  icon = 'tv-outline',
   size = 'md',
   style,
 }: {
@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
   miniStamp: {
     borderRadius: Radius.full,
     borderWidth: 2,
-    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

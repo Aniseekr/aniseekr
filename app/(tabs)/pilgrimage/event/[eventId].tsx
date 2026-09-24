@@ -338,8 +338,9 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
                       variant="headlineSmall"
                       weight="800"
                     />
-                    {/* A bare "permanent" line would repeat the state chip. */}
-                    {event.schedule.kind === 'ongoing' && !event.schedule.since ? null : (
+                    {/* "Permanent" / "TBA" lines would only repeat the state chip. */}
+                    {(event.schedule.kind === 'ongoing' && !event.schedule.since) ||
+                    eventState.state === 'unannounced' ? null : (
                       <ThemedText variant="bodySmall" tone="secondary">
                         {scheduleLabel}
                       </ThemedText>

@@ -36,7 +36,7 @@ export function GachaHeader({
         <Pressable
           onPress={onShowReconstruction}
           style={[styles.actionButton, styles.reconstructionButton]}>
-          <MaterialIcons name="auto-awesome" size={24} color="#06b6d4" />
+          <MaterialIcons name="construction" size={24} color="#06b6d4" />
         </Pressable>
       </View>
     </View>

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT, type TranslationKey } from '../../libs/i18n';
@@ -88,7 +89,7 @@ export function CardDetailView({ visible, card, onClose, onShardExchange }: Card
           <TouchableOpacity
             style={[styles.closeButton, styles.closeButtonTop]}
             onPress={handleClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
           </TouchableOpacity>
 
           <ExpoImage
@@ -141,7 +142,7 @@ export function ShardCounter({ totalShards, shardsPerCard, exchangeRate }: Shard
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
       <View style={styles.iconContainer}>
-        <Text style={styles.shardIcon}>💎</Text>
+        <Ionicons name="diamond" size={20} color={Colors.primary} />
       </View>
 
       <View style={styles.counterContainer}>
@@ -171,7 +172,7 @@ export function SortSelector({ currentSort, onSortChange, visible, onClose }: So
       <Pressable style={styles.backdrop} onPress={onClose}>
         <View style={styles.content}>
           <TouchableOpacity style={[styles.closeButton, styles.closeButtonTop]} onPress={onClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Ionicons name="close" size={24} color={Colors.text.secondary} />
           </TouchableOpacity>
 
           <Text style={styles.title}>{t('gacha.sortCollection')}</Text>
@@ -189,7 +190,9 @@ export function SortSelector({ currentSort, onSortChange, visible, onClose }: So
                     style={[styles.sortOptionText, isSelected && styles.sortOptionTextSelected]}>
                     {option.labelKey ? t(option.labelKey) : 'ID'}
                   </Text>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={14} color={Colors.text.primary} />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -223,11 +226,6 @@ const styles = StyleSheet.create({
 
   closeButton: {
     padding: 8,
-  },
-
-  closeButtonText: {
-    fontSize: 24,
-    color: Colors.text.secondary,
   },
 
   closeButtonTop: {
@@ -344,11 +342,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  shardIcon: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
-
   counterContainer: {
     flex: 1,
     alignItems: 'center',
@@ -403,12 +396,5 @@ const styles = StyleSheet.create({
 
   sortOptionTextSelected: {
     color: '#000',
-  },
-
-  checkmark: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginLeft: 12,
   },
 });
