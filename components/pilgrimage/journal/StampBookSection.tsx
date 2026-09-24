@@ -25,6 +25,7 @@ import { buildPilgrimageEventDetailRoute } from '@/libs/services/pilgrimage/pilg
 import { localityEventAccent, LOCALITY_CARD_RADIUS } from '../common/LocalityAesthetic';
 import { EventStateChip } from '../detail/IntelEventBanner';
 import { formatStampDate } from '../rally/rally-format';
+import { StampMark } from '../rally/StampMark';
 import { useStampRallyRows } from '../rally/useStampRallyRows';
 
 const STAMP = 52;
@@ -162,26 +163,14 @@ function StampBookCard({
             const date = stamped && stamp.collectedAt ? formatStampDate(stamp.collectedAt) : null;
             return (
               <View key={stamp.roleId} style={styles.cell}>
-                <View
-                  style={[
-                    styles.stamp,
-                    stamped
-                      ? {
-                          backgroundColor: accent,
-                          borderColor: accent,
-                          // Deterministic tilt so the book looks hand-stamped but never reshuffles.
-                          transform: [{ rotate: `${((routeIndex % 3) - 1) * 6}deg` }],
-                        }
-                      : { borderColor: theme.glassBorder, borderStyle: 'dashed' },
-                  ]}>
-                  {stamped ? (
-                    <Ionicons name="checkmark" size={20} color={inkOn} />
-                  ) : (
-                    <ThemedText variant="captionSmall" weight="700" tone="tertiary">
-                      {routeIndex + 1}
-                    </ThemedText>
-                  )}
-                </View>
+                <StampMark
+                  number={routeIndex + 1}
+                  collected={stamped}
+                  accent={accent}
+                  size={STAMP}
+                  // Deterministic tilt so the book looks hand-stamped but never reshuffles.
+                  tilt={((routeIndex % 3) - 1) * 6}
+                />
                 <ThemedText
                   variant="captionSmall"
                   tone={stamped ? 'secondary' : 'tertiary'}

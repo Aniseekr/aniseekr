@@ -9,15 +9,12 @@ import {
 } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated from 'react-native-reanimated';
 
 import { LocalityAttributionFooter } from '../../../../components/pilgrimage/common/LocalityAttributionFooter';
 import {
   LOCALITY_CARD_RADIUS,
-  LocalityMiniStamp,
-  localityCategoryIcon,
   localityEventAccent,
   localityMarkerPalette,
 } from '../../../../components/pilgrimage/common/LocalityAesthetic';
@@ -37,18 +34,15 @@ import {
   ThemedText,
   TranslatedText,
 } from '../../../../components/themed';
-import { Radius, Shadow, Spacing } from '../../../../constants/DesignSystem';
+import { Radius, Shadow, Size, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { useMapThemePref } from '../../../../hooks/useMapThemePref';
 import { useI18n, useT, type TranslationKey } from '../../../../libs/i18n';
 import { getIndexedById } from '../../../../libs/services/pilgrimage/anitabi-index';
 import { bannerEnter, listItemEnter } from '../../../../libs/animations/presets';
 import { resolveLocalIntelText } from '../../../../libs/services/pilgrimage/local-intel/local-intel-localization';
-import {
-  resolveEventDateState,
-  type EventDateState,
-} from '../../../../libs/services/pilgrimage/local-intel/event-schedule';
-import { formatMonthLabel } from '../../../../components/pilgrimage/detail/intel-format';
+import { resolveEventDateState } from '../../../../libs/services/pilgrimage/local-intel/event-schedule';
+import { formatEventSchedule } from '../../../../components/pilgrimage/event-date-block';
 import {
   getLocalityEventDetail,
   type LocalityEventDetail,
@@ -60,7 +54,6 @@ import type {
   EventCategory,
   EventId,
   IntelProvenance,
-  LocalityEvent,
   RoleId,
 } from '../../../../libs/services/pilgrimage/locality/types';
 import { resolveMapModeWithClock } from '../../../../libs/services/pilgrimage/map-theme-clock';
@@ -83,7 +76,7 @@ import {
   type RallyRouteStop,
 } from '../../../../libs/services/pilgrimage/locality/stamp-rally';
 import { RallyRouteStopRow } from '../../../../components/pilgrimage/rally/RallyRouteStopRow';
-import { RallyTicketStub } from '../../../../components/pilgrimage/rally/RallyTicketStub';
+import { RallyPoster } from '../../../../components/pilgrimage/rally/RallyPoster';
 import {
   loadStampCollectedAtSync,
   sameCollectedAt,
@@ -97,6 +90,9 @@ function subscribeLocality(listener: () => void): () => void {
 function getLocalitySnapshot() {
   return localityRepository.getSnapshot();
 }
+
+const HERO_POSTER_WIDTH = 96;
+const HERO_POSTER_HEIGHT = 144;
 
 export default function LocalityEventDetailScreen() {
   const params = useLocalSearchParams();
@@ -311,34 +307,45 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
         ItemSeparatorComponent={isRally ? undefined : StopSeparator}
         ListHeaderComponent={
           <View style={styles.headerContent}>
-            <Animated.View entering={listItemEnter(0, 40)} style={styles.heroWrap}>
-              <LinearGradient
-                colors={theme.gradient}
-                style={[styles.hero, { borderColor: accent }]}>
-                <View style={styles.heroTopRow}>
-                  <View style={[styles.categoryStamp, { borderColor: accent }]}>
-                    <Ionicons
-                      name={localityCategoryIcon(event.category)}
-                      size={18}
-                      color={accent}
-                    />
-                    <ThemedText variant="captionSmall" weight="800" style={{ color: accent }}>
-                      {t(categoryKey(event.category))}
-                    </ThemedText>
-                  </View>
-                  <EventStateChip
-                    state={eventState}
-                    theme={theme}
-                    ongoing={event.schedule.kind === 'ongoing'}
+            <Animated.View entering={listItemEnter(0, 40)}>
+              <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.hero}>
+                <View style={styles.heroTop}>
+                  <RallyPoster
+                    bangumiId={primaryAnime?.id ?? event.animeIds[0]}
+                    style={styles.heroPoster}
                   />
+                  <View style={styles.heroTitleCol}>
+                    <View style={styles.heroChips}>
+                      <View style={[styles.categoryChip, { backgroundColor: `${accent}22` }]}>
+                        <ThemedText
+                          variant="captionSmall"
+                          weight="800"
+                          numberOfLines={1}
+                          style={{ color: accent }}>
+                          {t(categoryKey(event.category))}
+                        </ThemedText>
+                      </View>
+                      <EventStateChip
+                        state={eventState}
+                        theme={theme}
+                        ongoing={event.schedule.kind === 'ongoing'}
+                      />
+                    </View>
+                    <TranslatedText
+                      original={event.name.ja}
+                      translated={eventText.value}
+                      source={eventText.source}
+                      variant="headlineSmall"
+                      weight="800"
+                    />
+                    {/* A bare "permanent" line would repeat the state chip. */}
+                    {event.schedule.kind === 'ongoing' && !event.schedule.since ? null : (
+                      <ThemedText variant="bodySmall" tone="secondary">
+                        {scheduleLabel}
+                      </ThemedText>
+                    )}
+                  </View>
                 </View>
-                <TranslatedText
-                  original={event.name.ja}
-                  translated={eventText.value}
-                  source={eventText.source}
-                  variant="headlineMedium"
-                  weight="800"
-                />
                 <TranslatedText
                   original={event.description.ja}
                   translated={descriptionText.value}
@@ -346,17 +353,38 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
                   variant="bodyMedium"
                   tone="secondary"
                 />
-                <View style={styles.scheduleRow}>
-                  <Ionicons name="calendar-outline" size={16} color={accent} />
-                  <View style={styles.scheduleCopy}>
-                    <ThemedText variant="captionSmall" tone="tertiary">
-                      {t('pilgrimageUi.eventDetail.schedule')}
-                    </ThemedText>
-                    <ThemedText variant="bodySmall" weight="700">
-                      {scheduleLabel}
-                    </ThemedText>
+                {stampStops.length > 0 ? (
+                  <View
+                    style={styles.progress}
+                    accessible
+                    accessibilityLabel={t('pilgrimageUi.eventDetail.progressValue', {
+                      collected: collectedCount,
+                      total: stampStops.length,
+                    })}>
+                    <View style={styles.progressLabels}>
+                      <ThemedText variant="caption" tone="secondary">
+                        {t('explorer.rally.progressLabel')}
+                      </ThemedText>
+                      <ThemedText variant="titleMedium" weight="800" style={{ color: accent }}>
+                        {t('explorer.rally.progressBig', {
+                          collected: collectedCount,
+                          total: stampStops.length,
+                        })}
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.track, { backgroundColor: theme.background.tertiary }]}>
+                      <View
+                        style={[
+                          styles.fill,
+                          {
+                            backgroundColor: accent,
+                            width: `${Math.round((collectedCount / stampStops.length) * 100)}%`,
+                          },
+                        ]}
+                      />
+                    </View>
                   </View>
-                </View>
+                ) : null}
                 {primaryAnime && animeTitle ? (
                   <Pressable
                     accessibilityRole="button"
@@ -371,19 +399,14 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
                     }
                     style={({ pressed }) => [
                       styles.animeTie,
-                      { borderColor: theme.glassBorder },
+                      { borderTopColor: theme.glassBorder },
                       pressed && styles.pressed,
                     ]}>
-                    <LocalityMiniStamp
-                      accent={accent}
-                      imageUri={primaryAnime.cover}
-                      icon="sparkles-outline"
-                    />
                     <View style={styles.animeCopy}>
                       <ThemedText variant="captionSmall" tone="tertiary">
                         {t('pilgrimageUi.eventDetail.animeTie')}
                       </ThemedText>
-                      <ThemedText variant="bodySmall" weight="800" numberOfLines={2}>
+                      <ThemedText variant="bodySmall" weight="700" numberOfLines={1}>
                         {animeTitle}
                       </ThemedText>
                     </View>
@@ -391,18 +414,8 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
                   </Pressable>
                 ) : null}
                 <LocalityAttributionFooter provenance={event.provenance} />
-              </LinearGradient>
+              </ThemedSurface>
             </Animated.View>
-
-            {stampStops.length > 0 ? (
-              <Animated.View entering={listItemEnter(1, 40)}>
-                <RallyTicketStub
-                  collected={collectedCount}
-                  total={stampStops.length}
-                  accent={accent}
-                />
-              </Animated.View>
-            ) : null}
 
             {markers.length > 0 ? (
               <Animated.View entering={listItemEnter(2, 40)}>
@@ -561,37 +574,6 @@ function StopSeparator() {
   return <View style={styles.stopSeparator} />;
 }
 
-function formatEventSchedule(
-  event: LocalityEvent,
-  state: EventDateState,
-  language: string,
-  t: ReturnType<typeof useT>
-): string {
-  if (event.schedule.kind === 'ongoing') {
-    return event.schedule.since
-      ? t('pilgrimageUi.eventDetail.since', { date: event.schedule.since })
-      : t('pilgrimageUi.eventDetail.permanent');
-  }
-  const occurrence =
-    state.state === 'active' || state.state === 'upcoming' || state.state === 'ended'
-      ? state.occurrence
-      : null;
-  if (occurrence) {
-    return occurrence.startsAt === occurrence.endsAt
-      ? occurrence.startsAt
-      : t('pilgrimageUi.eventDetail.dateRange', {
-          start: occurrence.startsAt,
-          end: occurrence.endsAt,
-        });
-  }
-  if (state.state === 'unannounced') {
-    return t('pilgrimageUi.intel.tbaAnnual', {
-      month: formatMonthLabel(state.typicalMonth, language),
-    });
-  }
-  return t('pilgrimageUi.eventDetail.dateTba');
-}
-
 /**
  * Two credit lists would display identically (the rally hero already shows the
  * event's credits). Compares every displayed field, not just the URL, so a stop
@@ -649,40 +631,31 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 44 },
   content: { paddingHorizontal: Spacing.screenPadding },
   headerContent: { gap: Spacing.md, paddingBottom: Spacing.md },
-  heroWrap: { borderRadius: LOCALITY_CARD_RADIUS, ...Shadow.medium },
-  hero: {
-    borderWidth: 1,
-    borderRadius: LOCALITY_CARD_RADIUS,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    overflow: 'hidden',
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  categoryStamp: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderRadius: Radius.sm,
+  hero: { gap: Spacing.md, ...Shadow.subtle },
+  heroTop: { flexDirection: 'row', gap: Spacing.md },
+  heroPoster: { width: HERO_POSTER_WIDTH, height: HERO_POSTER_HEIGHT, borderRadius: Radius.md },
+  heroTitleCol: { flex: 1, minWidth: 0, gap: Spacing.xs },
+  heroChips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.xs },
+  categoryChip: {
+    borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    transform: [{ rotate: '-1deg' }],
+    paddingVertical: Spacing.xxs,
   },
-  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  scheduleCopy: { flex: 1, gap: Spacing.xxs },
+  progress: { gap: Spacing.xs },
+  progressLabels: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  track: { height: Spacing.xs, borderRadius: Radius.full, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: Radius.full },
   animeTie: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.sm,
+    minHeight: Size.minTouchTarget,
   },
   animeCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
   mapCard: { gap: Spacing.sm, ...Shadow.subtle },

@@ -78,7 +78,9 @@
       "emptyTitle": "No upcoming events",
       "emptyBody": "Verified pilgrimage events will appear here when they are active, permanent, or coming soon.",
       "stopCount": "{count} stops",
-      "locationMore": "{location} +{count} more"
+      "locationMore": "{location} +{count} more",
+      "sourceLine": "Source: {source}",
+      "sourceLineMore": "Source: {source} +{count}"
     },
     "tags": {
       "allWorks": "All works",
@@ -2269,7 +2271,9 @@
       "legStraightLine": "{distance} straight-line",
       "nodeCollectedA11y": "{stop}, stamped on {date}",
       "nodeCollectedNoDateA11y": "{stop}, stamped",
-      "nodePendingA11y": "{stop}, not stamped yet"
+      "nodePendingA11y": "{stop}, not stamped yet",
+      "stamped": "Stamped",
+      "stampedOn": "Stamped {date}"
     },
     "stampBook": {
       "more": "+{count}",

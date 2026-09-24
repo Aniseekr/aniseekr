@@ -23,10 +23,14 @@ import { ThemedSurface, ThemedText } from '../themed';
 import { localityEventAccent, LOCALITY_CARD_RADIUS } from './common/LocalityAesthetic';
 import { EventStateChip } from './detail/IntelEventBanner';
 import type { StampCollectedAtMap } from './rally/rally-format';
-import { PerforatedDivider } from './rally/PerforatedDivider';
+import { RallyPoster } from './rally/RallyPoster';
 import { useStampRallyRows } from './rally/useStampRallyRows';
 
-const CARD_WIDTH = 248;
+// Every card is the same size: a 2:3 poster on the left fixes the height, and
+// the name is capped at two lines.
+const CARD_WIDTH = 288;
+const CARD_HEIGHT = 132;
+const POSTER_WIDTH = (CARD_HEIGHT * 2) / 3;
 
 export function StampRallyRail({ onSeeAll }: { onSeeAll: () => void }) {
   const t = useT();
@@ -120,43 +124,40 @@ function RallyTicketCard({
       accessibilityLabel={a11yLabel}
       style={({ pressed }) => [styles.cardPress, pressed && styles.pressed]}>
       <ThemedSurface padded={0} radius={LOCALITY_CARD_RADIUS} style={styles.card}>
-        <View style={styles.cardTop}>
-          <View style={styles.cardTopRow}>
-            <Ionicons name="ticket-outline" size={16} color={accent} />
-            <EventStateChip
-              state={row.state}
-              theme={theme}
-              ongoing={row.event.schedule.kind === 'ongoing'}
-            />
-          </View>
-          <ThemedText variant="bodyMedium" weight="800" numberOfLines={2}>
+        <RallyPoster bangumiId={row.event.animeIds[0]} style={styles.poster} />
+        <View style={styles.cardBody}>
+          <EventStateChip
+            state={row.state}
+            theme={theme}
+            ongoing={row.event.schedule.kind === 'ongoing'}
+          />
+          <ThemedText variant="bodyMedium" weight="700" numberOfLines={2} style={styles.name}>
             {name}
           </ThemedText>
-        </View>
-        <PerforatedDivider notch={Spacing.sm} />
-        <View style={styles.cardBottom}>
-          <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-            {t('news.events.stopCount', { count: route.length })}
-            {area ? ` · ${area}` : ''}
-          </ThemedText>
-          {started ? (
-            <View style={styles.progressRow}>
-              <View style={[styles.track, { backgroundColor: theme.background.tertiary }]}>
-                <View
-                  style={[
-                    styles.fill,
-                    {
-                      backgroundColor: accent,
-                      width: `${Math.round((collected / Math.max(1, route.length)) * 100)}%`,
-                    },
-                  ]}
-                />
+          <View style={styles.cardFoot}>
+            {started ? (
+              <View style={styles.progressRow}>
+                <View style={[styles.track, { backgroundColor: theme.background.tertiary }]}>
+                  <View
+                    style={[
+                      styles.fill,
+                      {
+                        backgroundColor: accent,
+                        width: `${Math.round((collected / Math.max(1, route.length)) * 100)}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
+                  {t('explorer.rally.progressBig', { collected, total: route.length })}
+                </ThemedText>
               </View>
-              <ThemedText variant="captionSmall" weight="800" style={{ color: accent }}>
-                {t('explorer.rally.progressBig', { collected, total: route.length })}
-              </ThemedText>
-            </View>
-          ) : null}
+            ) : null}
+            <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
+              {t('news.events.stopCount', { count: route.length })}
+              {area ? ` · ${area}` : ''}
+            </ThemedText>
+          </View>
         </View>
       </ThemedSurface>
     </Pressable>
@@ -176,10 +177,17 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   rail: { gap: Spacing.sm, paddingRight: Spacing.md },
   cardPress: { width: CARD_WIDTH },
-  card: { overflow: 'hidden', ...Shadow.subtle },
-  cardTop: { padding: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.xs },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardBottom: { padding: Spacing.md, paddingTop: Spacing.sm, gap: Spacing.xs },
+  card: { flexDirection: 'row', height: CARD_HEIGHT, overflow: 'hidden', ...Shadow.subtle },
+  poster: { width: POSTER_WIDTH, height: CARD_HEIGHT },
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+    padding: Spacing.sm,
+    gap: Spacing.xs,
+    alignItems: 'flex-start',
+  },
+  name: { alignSelf: 'stretch' },
+  cardFoot: { marginTop: 'auto', alignSelf: 'stretch', gap: Spacing.xxs },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   track: { flex: 1, height: Spacing.xxs, borderRadius: Radius.full, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: Radius.full },

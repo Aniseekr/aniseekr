@@ -78,7 +78,9 @@
       "emptyTitle": "目前沒有即將到來的活動",
       "emptyBody": "已驗證的聖地巡禮活動正在進行、常設或即將開始時，會顯示在這裡。",
       "stopCount": "{count} 個停靠點",
-      "locationMore": "{location}，另有 {count} 處"
+      "locationMore": "{location}，另有 {count} 處",
+      "sourceLine": "來源：{source}",
+      "sourceLineMore": "來源：{source} 等 {count} 個"
     },
     "tags": {
       "allWorks": "全部作品",
@@ -2269,7 +2271,9 @@
       "legStraightLine": "直線 {distance}",
       "nodeCollectedA11y": "{stop}，{date} 已蓋章",
       "nodeCollectedNoDateA11y": "{stop}，已蓋章",
-      "nodePendingA11y": "{stop}，尚未蓋章"
+      "nodePendingA11y": "{stop}，尚未蓋章",
+      "stamped": "已蓋章",
+      "stampedOn": "{date} 已蓋章"
     },
     "stampBook": {
       "more": "+{count}",

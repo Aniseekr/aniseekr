@@ -2,14 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import {
-  readableTextOn,
-  ThemedButton,
-  ThemedIconButton,
-  ThemedText,
-  TranslatedText,
-} from '@/components/themed';
-import { Radius, Size, Spacing } from '@/constants/DesignSystem';
+import { ThemedButton, ThemedIconButton, ThemedText, TranslatedText } from '@/components/themed';
+import { Size, Spacing } from '@/constants/DesignSystem';
 import { useTheme } from '@/context/ThemeContext';
 import { listItemEnter } from '@/libs/animations/presets';
 import { useI18n, useT } from '@/libs/i18n';
@@ -17,10 +11,10 @@ import { resolveLocalIntelText } from '@/libs/services/pilgrimage/local-intel/lo
 import type { RallyRouteStop } from '@/libs/services/pilgrimage/locality/stamp-rally';
 
 import { LocalityAttributionFooter } from '../common/LocalityAttributionFooter';
-import { LocalityMiniStamp } from '../common/LocalityAesthetic';
 import { formatStampDate, formatStraightLineDistance } from './rally-format';
+import { StampMark } from './StampMark';
 
-const NODE = 28;
+const NODE = 32;
 const LINE = 2;
 
 /**
@@ -79,22 +73,14 @@ export function RallyRouteStopRow({
             { backgroundColor: index > 0 ? lineIn : 'transparent' },
           ]}
         />
-        <View
-          accessible
-          accessibilityLabel={nodeLabel}
-          style={[
-            styles.node,
-            collected
-              ? { backgroundColor: accent, borderColor: accent }
-              : { backgroundColor: theme.background.primary, borderColor: theme.glassBorder },
-          ]}>
-          {collected ? (
-            <Ionicons name="checkmark" size={16} color={readableTextOn(accent)} />
-          ) : (
-            <ThemedText variant="captionSmall" weight="800" tone="tertiary">
-              {index + 1}
-            </ThemedText>
-          )}
+        <View accessible accessibilityLabel={nodeLabel}>
+          <StampMark
+            number={index + 1}
+            collected={collected}
+            accent={accent}
+            size={NODE}
+            tilt={((index % 3) - 1) * 6}
+          />
         </View>
         <View
           style={[
@@ -115,46 +101,29 @@ export function RallyRouteStopRow({
               variant="bodyMedium"
               weight="800"
             />
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={14} color={theme.text.tertiary} />
-              <ThemedText variant="bodySmall" tone="secondary" style={styles.flex}>
-                {address}
+            <ThemedText variant="bodySmall" tone="secondary">
+              {address}
+            </ThemedText>
+            {collected ? (
+              <ThemedText variant="caption" weight="700" style={{ color: accent }}>
+                {date ? t('explorer.rally.stampedOn', { date }) : t('explorer.rally.stamped')}
               </ThemedText>
-            </View>
+            ) : null}
           </View>
-          {collected ? (
-            <View style={styles.stampMark}>
-              <LocalityMiniStamp accent={accent} icon="ticket-outline" size="sm" />
-              {date ? (
-                <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
-                  {date}
-                </ThemedText>
-              ) : null}
-            </View>
-          ) : null}
         </View>
 
         <View style={styles.actions}>
-          <View style={styles.flex}>
-            <ThemedButton
-              label={
-                collected
-                  ? t('pilgrimageUi.eventDetail.uncollect')
-                  : t('pilgrimageUi.eventDetail.collect')
-              }
-              variant={collected ? 'ghost' : 'primary'}
-              size="sm"
-              fullWidth
-              accent={accent}
-              icon={
-                collected ? undefined : (
-                  <Ionicons name="ticket-outline" size={16} color={readableTextOn(accent)} />
-                )
-              }
-              haptic={collected ? 'selection' : 'success'}
-              onPress={() => onToggleCollected(stop)}
-            />
-          </View>
+          <ThemedButton
+            label={
+              collected
+                ? t('pilgrimageUi.eventDetail.uncollect')
+                : t('pilgrimageUi.eventDetail.collect')
+            }
+            variant={collected ? 'ghost' : 'secondary'}
+            accent={accent}
+            haptic={collected ? 'selection' : 'success'}
+            onPress={() => onToggleCollected(stop)}
+          />
           <ThemedIconButton
             accessibilityLabel={t('pilgrimageUi.eventDetail.openGoogleMapsA11y', {
               stop: stopName.value,
@@ -172,7 +141,6 @@ export function RallyRouteStopRow({
 
         {stop.legToNext ? (
           <View style={styles.leg}>
-            <Ionicons name="swap-vertical-outline" size={12} color={theme.text.tertiary} />
             <ThemedText variant="captionSmall" tone="tertiary">
               {t('explorer.rally.legStraightLine', {
                 distance: formatStraightLineDistance(stop.legToNext.straightLineKm),
@@ -191,14 +159,6 @@ const styles = StyleSheet.create({
   line: { width: LINE },
   lineIn: { height: Spacing.md },
   lineOut: { flex: 1 },
-  node: {
-    width: NODE,
-    height: NODE,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   body: {
     flex: 1,
     minWidth: 0,
@@ -208,9 +168,7 @@ const styles = StyleSheet.create({
   },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   titleCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
-  locationRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.xxs },
   flex: { flex: 1 },
-  stampMark: { alignItems: 'center', gap: Spacing.xxs, transform: [{ rotate: '-6deg' }] },
   actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   leg: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs },
 });
