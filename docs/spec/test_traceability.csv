@@ -221,3 +221,7 @@ E2E-001,__tests__/integration/e2e-flow.test.ts,search to detail,covered
 E2E-002,__tests__/integration/e2e-flow.test.ts,browse switch invalidates cache,covered
 E2E-003,__tests__/integration/e2e-flow.test.ts,detail to pilgrimage,covered
 E2E-004,__tests__/integration/e2e-flow.test.ts,cross-platform id resolution,covered
+PILG-061,__tests__/unit/pilgrimage/stamp-rally.test.ts,published route and distances,covered
+PILG-062,__tests__/unit/pilgrimage/stamp-rally.test.ts,route progress,covered
+PILG-063,__tests__/unit/pilgrimage/stamp-rally.test.ts,discover selection and joinable count,covered
+PILG-064,__tests__/unit/pilgrimage/stamp-rally.test.ts,stamp book filtering and sorting,covered

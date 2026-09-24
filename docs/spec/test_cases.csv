@@ -219,3 +219,7 @@ E2E-001,EndToEnd,integration,P0,Search to detail,Search returns items detail fet
 E2E-002,EndToEnd,integration,P0,Browse switch invalidates cache,Switching browseSource invalidates seasonal cache,timing,active
 E2E-003,EndToEnd,integration,P0,Detail to pilgrimage,Anime detail with bangumi id navigates to pilgrimage list,mapping,active
 E2E-004,EndToEnd,integration,P0,Cross-platform ID resolution,Detail by Bangumi id resolves staff via Jikan fallback,fallback,active
+PILG-061,Pilgrimage,deterministic,P0,Rally route derivation,Published stamp order and honest straight-line legs with missing geo handling,mapping,active
+PILG-062,Pilgrimage,deterministic,P0,Rally progress,Counts only collected route stops and handles an empty route,mapping,active
+PILG-063,Pilgrimage,deterministic,P0,Discover rally selection,Only active or upcoming stamp rallies retain input order and obey cap,mapping,active
+PILG-064,Pilgrimage,deterministic,P0,Stamp book derivation,Collected rally books preserve labels timestamps and order by completion recency and ended state,mapping,active
