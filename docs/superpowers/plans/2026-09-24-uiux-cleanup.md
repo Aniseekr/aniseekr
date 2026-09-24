@@ -81,7 +81,12 @@ Screenshots live outside the repo (session scratchpad `baseline/`); findings bel
 
 ## Phase checklist
 - [x] 0 baseline + punch list (this file)
-- [ ] 1a typography JS fixes (G1, SF names, CJK tracking G3, token migration)
-- [ ] 2 de-AI visuals + detail alignment (G2, G4–G6, sections above)
+- [x] 1a typography JS fixes (G1, SF names, CJK tracking G3, token migration) — 69b1c86
+- [x] 2 de-AI visuals + detail alignment — 86e7d2e, 9ed25bd, 00529b5, 250b89f, 4b8dc73, 86fa63d
+  (ThemedSwitch; SafeArea edges; Seeker collapse; poster-led rally/event cards; StampMark;
+  plain credits; sparkles/emoji purge; i18n gaps + literal-key guard test; genre translator).
+  G5 was not a bug: the hub header sits above the ScrollView; the "peek" is normal edge clipping.
+  Open: Jujutsu Kaisen rally links Bangumi 238887, which resolves to the manga vol.1 cover
+  (data mapping review, Atlas side).
 - [ ] 3 camera (root compare route, reference picker, capture upsert, preview modes)
 - [ ] 1b bundled display face (native rebuild, combined with Phase 3 device build)
