@@ -223,3 +223,8 @@ PILG-061,Pilgrimage,deterministic,P0,Rally route derivation,Published stamp orde
 PILG-062,Pilgrimage,deterministic,P0,Rally progress,Counts only collected route stops and handles an empty route,mapping,active
 PILG-063,Pilgrimage,deterministic,P0,Discover rally selection,Only active or upcoming stamp rallies retain input order and obey cap,mapping,active
 PILG-064,Pilgrimage,deterministic,P0,Stamp book derivation,Collected rally books preserve labels timestamps and order by completion recency and ended state,mapping,active
+PILG-065,Pilgrimage,deterministic,P0,Capture upsert by uri,Recording a capture whose uri already exists updates it in place and moving it between a spot and the free bucket leaves exactly one record,boundary,active
+PILG-066,Pilgrimage,deterministic,P0,Imported reference free entry,A free capture paired with an imported reference image stays in the free bucket and the album renders it as a comparison without a synthetic spot or anime,mapping,active
+PILG-067,Pilgrimage,deterministic,P0,Blank target coordinates,Empty or non-numeric spot latitude or longitude params resolve to an unknown target instead of the 0 0 null island,boundary,active
+PILG-068,Pilgrimage,deterministic,P0,Reference camera route params,Anime-scene and imported references build compare params from real spot fields only with no invented geo or scene names,mapping,active
+PILG-069,Pilgrimage,deterministic,P0,Preview modes without reference,A shot without a reference image offers only the single-photo preview mode,boundary,active

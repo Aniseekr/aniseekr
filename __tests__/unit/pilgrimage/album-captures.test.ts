@@ -150,3 +150,27 @@ describe('free-bucket album entries', () => {
     expect(entries.find((e) => e.isFree)?.anime.id).toBe(FREE_FOLDER_ANIME_ID);
   });
 });
+
+describe('imported reference free entries', () => {
+  it('PILG-066 a free capture with an imported reference renders as a comparison in the free folder', () => {
+    const free: PilgrimageCapture = {
+      spotId: 'free-9',
+      uri: 'file:///mine.jpg',
+      capturedAt: 50,
+      referenceUri: 'file:///imported-ref.jpg',
+    };
+    const [entry] = buildPilgrimageAlbumEntries({ captures: [], free: [free], animes: [] });
+    expect(entry.isFree).toBe(true);
+    expect(entry.anime.id).toBe(FREE_FOLDER_ANIME_ID);
+    // The imported image is the comparison's reference half — no invented scene data.
+    expect(entry.spot.image).toBe('file:///imported-ref.jpg');
+    expect(entry.spot.name).toBe('');
+    expect(entry.matchPercent).toBeNull();
+  });
+
+  it('PILG-066 a free capture without a reference stays a single photo', () => {
+    const free: PilgrimageCapture = { spotId: 'free-1', uri: 'file:///solo.jpg', capturedAt: 1 };
+    const [entry] = buildPilgrimageAlbumEntries({ captures: [], free: [free], animes: [] });
+    expect(entry.spot.image).toBe('');
+  });
+});

@@ -9,7 +9,10 @@ export interface PilgrimageAlbumEntry {
   spot: AnitabiPoint;
   anime: AnitabiBangumi;
   matchPercent: number | null;
-  /** True for standalone free captures — the album renders a single photo (no comparison). */
+  /**
+   * True for standalone free captures. They render as a single photo, or as a
+   * comparison against the user's imported reference (`capture.referenceUri`).
+   */
   isFree?: boolean;
 }
 
@@ -62,7 +65,9 @@ function buildFreeEntry(capture: PilgrimageCapture): PilgrimageAlbumEntry {
   const spot: AnitabiPoint = {
     id: capture.spotId,
     name: '', // no reference scene name — folder label comes from i18n, not this
-    image: '', // empty -> album renders the single captured photo, no comparison
+    // An imported reference becomes the comparison's reference half; without
+    // one this stays empty and the album renders the single captured photo.
+    image: capture.referenceUri ?? '',
     ep: 0,
     s: 0,
     geo,

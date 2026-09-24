@@ -120,3 +120,41 @@ describe('pilgrimage captures v2', () => {
     expect(Object.keys(loadCapturesV2Sync().spots).sort()).toEqual(['shrine', 'tower']);
   });
 });
+
+describe('capture upsert by uri', () => {
+  it('PILG-065 re-recording the same uri updates the capture in place instead of duplicating it', async () => {
+    await recordCapture(capture('shrine', 'file:///a.jpg', 1));
+    await recordCapture(capture('shrine', 'file:///b.jpg', 2));
+    // Preview re-saves the same shot (frame score arrives later, note edited).
+    await recordCapture({ ...capture('shrine', 'file:///a.jpg', 1), note: 'sunset' });
+    const shots = loadCapturesV2Sync().spots.shrine;
+    expect(shots.map((c) => c.uri)).toEqual(['file:///b.jpg', 'file:///a.jpg']);
+    expect(shots[1].note).toBe('sunset');
+  });
+
+  it('PILG-065 moving a shot to another spot or out of the free bucket leaves exactly one record', async () => {
+    await recordFreeCapture(capture('free-1', 'file:///shot.jpg', 5));
+    await recordCapture(capture('shrine', 'file:///shot.jpg', 5));
+    let idx = loadCapturesV2Sync();
+    expect(idx.free).toEqual([]);
+    expect(idx.spots.shrine.map((c) => c.uri)).toEqual(['file:///shot.jpg']);
+
+    // Swapping the reference scene re-files the shot under the new spot.
+    await recordCapture(capture('tower', 'file:///shot.jpg', 5));
+    idx = loadCapturesV2Sync();
+    expect(idx.spots.shrine).toBeUndefined();
+    expect(idx.spots.tower.map((c) => c.uri)).toEqual(['file:///shot.jpg']);
+    expect(loadAllCapturesSync()).toHaveLength(1);
+  });
+
+  it('PILG-065 re-recording a free capture (e.g. attaching a reference) keeps one free record', async () => {
+    await recordFreeCapture(capture('free-1', 'file:///shot.jpg', 5));
+    await recordFreeCapture({
+      ...capture('free-1', 'file:///shot.jpg', 5),
+      referenceUri: 'file:///ref.jpg',
+    });
+    const { free } = loadCapturesV2Sync();
+    expect(free).toHaveLength(1);
+    expect(free[0].referenceUri).toBe('file:///ref.jpg');
+  });
+});

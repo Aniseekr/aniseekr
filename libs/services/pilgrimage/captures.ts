@@ -73,6 +73,12 @@ export interface PilgrimageCapture {
   spotEp?: number;
   spotSecond?: number;
   spotGeo?: [number, number];
+  /**
+   * Free captures only: local file of a reference image the user imported to
+   * compare against (not an anime scene we know of). The album shows it as the
+   * comparison's reference half; there is no spot or anime behind it.
+   */
+  referenceUri?: string;
 }
 
 export interface CapturesIndexV2 {
@@ -173,19 +179,58 @@ export function loadAllCapturesSync(): PilgrimageCapture[] {
   return all.sort((a, b) => b.capturedAt - a.capturedAt);
 }
 
+/**
+ * Drop every record of `uri` from the index. A photo is one record: re-saving
+ * it (the preview saves on mount and again as its frame score / note settle)
+ * or re-filing it under another spot must never leave a second copy behind.
+ */
+function withoutUri(idx: CapturesIndexV2, uri: string): CapturesIndexV2 {
+  const spots: Record<string, PilgrimageCapture[]> = {};
+  for (const [spotId, arr] of Object.entries(idx.spots)) {
+    const kept = arr.filter((c) => c.uri !== uri);
+    if (kept.length > 0) spots[spotId] = kept;
+  }
+  return { spots, free: idx.free.filter((c) => c.uri !== uri) };
+}
+
+/** Replace `capture` in place when its uri is already in `list`; null if absent. */
+function replaceInPlace(
+  list: readonly PilgrimageCapture[],
+  capture: PilgrimageCapture
+): PilgrimageCapture[] | null {
+  const at = list.findIndex((c) => c.uri === capture.uri);
+  if (at < 0) return null;
+  const next = [...list];
+  next[at] = capture;
+  return next;
+}
+
+/** Upsert by uri: same spot → update in place; elsewhere → move here (newest-first). */
 export async function recordCapture(capture: PilgrimageCapture): Promise<void> {
   const idx = loadV2();
   const existing = idx.spots[capture.spotId] ?? [];
-  const next: CapturesIndexV2 = {
-    spots: { ...idx.spots, [capture.spotId]: [capture, ...existing] },
-    free: idx.free,
-  };
-  persist(next);
+  const updated = replaceInPlace(existing, capture);
+  if (updated) {
+    persist({ spots: { ...idx.spots, [capture.spotId]: updated }, free: idx.free });
+    return;
+  }
+  const rest = withoutUri(idx, capture.uri);
+  persist({
+    spots: { ...rest.spots, [capture.spotId]: [capture, ...(rest.spots[capture.spotId] ?? [])] },
+    free: rest.free,
+  });
 }
 
+/** Upsert by uri into the free bucket (e.g. attaching an imported reference). */
 export async function recordFreeCapture(capture: PilgrimageCapture): Promise<void> {
   const idx = loadV2();
-  persist({ spots: idx.spots, free: [capture, ...idx.free] });
+  const updated = replaceInPlace(idx.free, capture);
+  if (updated) {
+    persist({ spots: idx.spots, free: updated });
+    return;
+  }
+  const rest = withoutUri(idx, capture.uri);
+  persist({ spots: rest.spots, free: [capture, ...rest.free] });
 }
 
 export async function listCaptures(): Promise<Record<string, PilgrimageCapture>> {

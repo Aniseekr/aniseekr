@@ -12,6 +12,7 @@ import {
 } from '../libs/services/pilgrimage/alignment-sensor-state';
 import type { AlignmentScoreView } from '../components/pilgrimage/camera/types';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
+import { resolveTargetLocation } from '../libs/services/pilgrimage/target-location';
 
 interface UseAlignmentSensorsInput {
   spotLat: string | undefined;
@@ -74,12 +75,10 @@ export function useAlignmentSensors({
   const headingSnapshotRef = useRef<SensorSnapshotRef>({ value: null, publishedAtMs: null });
   const tiltSnapshotRef = useRef<SensorSnapshotRef>({ value: null, publishedAtMs: null });
 
-  const targetLocation = useMemo<LatLng | null>(() => {
-    const lat = Number(spotLat);
-    const lng = Number(spotLng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    return { latitude: lat, longitude: lng };
-  }, [spotLat, spotLng]);
+  const targetLocation = useMemo<LatLng | null>(
+    () => resolveTargetLocation(spotLat, spotLng),
+    [spotLat, spotLng]
+  );
 
   useEffect(() => {
     let cancelled = false;

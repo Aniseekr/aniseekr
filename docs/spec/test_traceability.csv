@@ -225,3 +225,8 @@ PILG-061,__tests__/unit/pilgrimage/stamp-rally.test.ts,published route and dista
 PILG-062,__tests__/unit/pilgrimage/stamp-rally.test.ts,route progress,covered
 PILG-063,__tests__/unit/pilgrimage/stamp-rally.test.ts,discover selection and joinable count,covered
 PILG-064,__tests__/unit/pilgrimage/stamp-rally.test.ts,stamp book filtering and sorting,covered
+PILG-065,__tests__/unit/pilgrimage/captures.test.ts,capture upsert by uri,covered
+PILG-066,__tests__/unit/pilgrimage/album-captures.test.ts,imported reference free entries,covered
+PILG-067,__tests__/unit/pilgrimage/target-location.test.ts,blank and non-numeric target coordinates,covered
+PILG-068,__tests__/unit/pilgrimage/reference-route.test.ts,reference compare params and capture bucket,covered
+PILG-069,__tests__/unit/pilgrimage/reference-route.test.ts,preview modes without a reference,covered
