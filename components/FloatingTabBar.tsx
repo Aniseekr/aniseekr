@@ -44,8 +44,9 @@ const PILL_INNER_PADDING = 8;
 const COLLAPSED_WIDTH = 44;
 const TAB_HEIGHT = 44;
 const LABEL_TRAILING_PAD = 14;
-const ACTIVE_ICON_SIZE = 18;
-const INACTIVE_ICON_SIZE = 20;
+// One icon size for both states: focus reads through colour and the pill, not
+// a 2pt size jump.
+const ICON_SIZE = 22;
 
 const PRESS_OUT_SPRING = { damping: 12, stiffness: 280 } as const;
 // Slide far enough that the elevation shadow on Android also clears the screen.
@@ -274,14 +275,14 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
                 {renderIcon({
                   focused: false,
                   color: inactiveFg,
-                  size: INACTIVE_ICON_SIZE,
+                  size: ICON_SIZE,
                 })}
               </Animated.View>
               <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, activeIconStyle]}>
                 {renderIcon({
                   focused: true,
                   color: activeFg,
-                  size: ACTIVE_ICON_SIZE,
+                  size: ICON_SIZE,
                 })}
               </Animated.View>
             </>

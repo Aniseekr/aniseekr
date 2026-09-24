@@ -347,26 +347,28 @@ export default function ProfileScreen() {
                 hapticsBridge.tap();
                 router.push('/collection/stats');
               }}
-              style={({ pressed }) => [styles.statsHero, pressed && { opacity: 0.92 }]}>
-              <LinearGradient
-                colors={[theme.accent + 'CC', theme.accentDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
+              style={({ pressed }) => [
+                styles.statsHero,
+                {
+                  backgroundColor: theme.background.secondary,
+                  borderColor: theme.glassBorder,
+                },
+                pressed && { opacity: 0.92 },
+              ]}>
               <View style={styles.statsHeroContent}>
-                <View style={[styles.statsHeroIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-                  <MaterialIcons name="bar-chart" size={20} color={ctaFg} />
+                <View
+                  style={[styles.statsHeroIcon, { backgroundColor: theme.background.tertiary }]}>
+                  <MaterialIcons name="bar-chart" size={20} color={theme.accent} />
                 </View>
                 <View style={styles.statsHeroText}>
-                  <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
+                  <ThemedText variant="titleMedium" weight="700">
                     {t('tabs.profileScreen.statsHero.title')}
                   </ThemedText>
-                  <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
+                  <ThemedText variant="bodySmall" tone="secondary">
                     {t('tabs.profileScreen.statsHero.subtitle')}
                   </ThemedText>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={ctaFg} />
+                <Ionicons name="chevron-forward" size={20} color={theme.text.tertiary} />
               </View>
             </Pressable>
           </Animated.View>
@@ -628,6 +630,7 @@ const styles = StyleSheet.create({
   },
   statsHero: {
     borderRadius: Radius.card,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   statsHeroContent: {

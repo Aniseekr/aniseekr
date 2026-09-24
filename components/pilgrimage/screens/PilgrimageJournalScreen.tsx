@@ -19,7 +19,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { ON_DARK, ThemedIconButton, ThemedText, readableTextOn } from '../../../components/themed';
-import { Shadow, Spacing } from '../../../constants/DesignSystem';
+import { Radius, Shadow, Size, Spacing } from '../../../constants/DesignSystem';
 import {
   clearCapture,
   clearFreeCapture,
@@ -526,7 +526,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
           <View style={styles.statsRow}>
             <StatCard
               icon="location"
-              iconColor={theme.status.info}
+              iconColor={theme.text.tertiary}
               label={t('pilgrimage.album.statVisited')}
               value={String(stats.visited)}
               subtitle={t('pilgrimage.album.statSpots')}
@@ -534,7 +534,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
             />
             <StatCard
               icon="camera"
-              iconColor={theme.secondary}
+              iconColor={theme.text.tertiary}
               label={t('pilgrimage.album.statPhotos')}
               value={String(stats.photos)}
               subtitle={t('pilgrimage.album.statCaptures')}
@@ -542,7 +542,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
             />
             <StatCard
               icon="checkmark-circle"
-              iconColor={theme.status.success}
+              iconColor={theme.text.tertiary}
               label={t('pilgrimage.album.statAvgMatch')}
               value={stats.avgMatch !== null ? `${stats.avgMatch}` : '—'}
               valueSuffix={stats.avgMatch !== null ? '%' : undefined}
@@ -793,38 +793,31 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
           )}
         </ScrollView>
 
-        <View
-          style={[
-            styles.fabWrap,
-            {
-              bottom: tabRoot ? floatingTabBarOverlayBottom(insets.bottom) : insets.bottom + 18,
-            },
-          ]}>
-          <Pressable
-            onPress={handleAddNew}
-            accessibilityRole="button"
-            accessibilityLabel={t('pilgrimage.album.startPilgrimageA11y')}
-            style={({ pressed }) => [
-              styles.fabBtn,
+        {/* The capture shortcut only earns its place when Camera isn't already a tab. */}
+        {cameraTarget.isVisibleTab ? null : (
+          <View
+            style={[
+              styles.fabWrap,
               {
-                backgroundColor: theme.accent,
-                opacity: pressed ? 0.92 : 1,
+                bottom: tabRoot ? floatingTabBarOverlayBottom(insets.bottom) : insets.bottom + 18,
               },
-              Shadow.glow(theme.accent),
             ]}>
-            <View style={[styles.fabIconWrap, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
-              <Ionicons name="camera" size={14} color={accentFg} />
-            </View>
-            <View>
+            <Pressable
+              onPress={handleAddNew}
+              accessibilityRole="button"
+              accessibilityLabel={t('pilgrimage.album.startPilgrimageA11y')}
+              style={({ pressed }) => [
+                styles.fabBtn,
+                { backgroundColor: theme.accent, opacity: pressed ? 0.92 : 1 },
+                Shadow.medium,
+              ]}>
+              <Ionicons name="camera" size={16} color={accentFg} />
               <ThemedText variant="titleSmall" weight="700" style={{ color: accentFg }}>
                 {t('pilgrimage.album.addPilgrimage')}
               </ThemedText>
-              <ThemedText variant="captionSmall" weight="600" style={{ color: `${accentFg}CC` }}>
-                {t('pilgrimage.album.startCapture')}
-              </ThemedText>
-            </View>
-          </Pressable>
-        </View>
+            </Pressable>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -1516,17 +1509,10 @@ function makeStyles(theme: ThemePalette) {
     fabBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: 28,
-    },
-    fabIconWrap: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
+      gap: Spacing.xs,
+      minHeight: Size.minTouchTarget + Spacing.xxs,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.full,
     },
   });
 }
