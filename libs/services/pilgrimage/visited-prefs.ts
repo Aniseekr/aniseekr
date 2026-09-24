@@ -158,6 +158,22 @@ export function loadVisitedStampStopsSync(): StampStopVisitedMap {
   return out;
 }
 
+/**
+ * Every stamped role id → its stamp time, from ONE read of the visited blob.
+ * Surfaces that need many stamp times on first paint must use this rather than
+ * calling `stampStopVisitedAtSync` per stop (each call re-parses the blob).
+ */
+export function loadStampStopVisitedAtSync(): Record<string, number> {
+  const at = loadVisitedAtSync();
+  const out: Record<string, number> = {};
+  for (const key of Object.keys(at)) {
+    if (!key.startsWith(STAMP_STOP_VISITED_PREFIX)) continue;
+    const roleId = key.slice(STAMP_STOP_VISITED_PREFIX.length);
+    if (roleId) out[roleId] = at[key];
+  }
+  return out;
+}
+
 export function stampStopVisitedAtSync(roleId: RoleId): number | null {
   return visitedAtSync(stampStopStorageKey(roleId));
 }

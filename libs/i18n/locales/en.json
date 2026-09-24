@@ -2210,5 +2210,28 @@
     "lifetime": "Lifetime",
     "weekly": "Weekly",
     "loadingOfferings": "Loading offerings…"
+  },
+  "explorer": {
+    "rally": {
+      "openWithProgressA11y": "Open stamp rally {name}, {collected} of {total} stamped",
+      "railTitle": "Stamp rallies",
+      "railSubtitle": "Running now or starting soon",
+      "openA11y": "Open stamp rally {name}",
+      "ticketCaption": "Rally ticket",
+      "progressBig": "{collected} / {total}",
+      "progressLabel": "stamps collected",
+      "legStraightLine": "{distance} straight-line",
+      "nodeCollectedA11y": "{stop}, stamped on {date}",
+      "nodeCollectedNoDateA11y": "{stop}, stamped",
+      "nodePendingA11y": "{stop}, not stamped yet"
+    },
+    "stampBook": {
+      "more": "+{count}",
+      "title": "Stamp book",
+      "complete": "Complete",
+      "openA11y": "Open the stamp book for {name}, {progress}",
+      "emptyJoinable": "No stamps yet · Stamp rallies running or coming up: {count}",
+      "browse": "Browse rallies"
+    }
   }
 }

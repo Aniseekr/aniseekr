@@ -11,6 +11,7 @@ import {
   loadVisitedSpots,
   loadVisitedSpotsSync,
   loadVisitedStampStopsSync,
+  loadStampStopVisitedAtSync,
   saveVisitedSpots,
   loadVisitedAtSync,
   stampStopVisitedAtSync,
@@ -151,6 +152,17 @@ describe('stamp-stop collection persistence', () => {
     await checkOutStampStop(roleId);
     expect(loadVisitedStampStopsSync()).toEqual({});
     expect(stampStopVisitedAtSync(roleId)).toBeNull();
+  });
+
+  it('PILG-057 exposes every stamp-stop time in one read, without scene points', async () => {
+    const other = 'numazu-stop-2' as RoleId;
+    await checkInSpot(roleId, 100); // scene point sharing the raw id
+    await checkInStampStop(roleId, 200);
+    await checkInStampStop(other, 300);
+
+    expect(loadStampStopVisitedAtSync()).toEqual({ [roleId]: 200, [other]: 300 });
+    await checkOutStampStop(roleId);
+    expect(loadStampStopVisitedAtSync()).toEqual({ [other]: 300 });
   });
 
   it('PILG-057 namespaces a role collection from a scene point with the same raw id', async () => {
