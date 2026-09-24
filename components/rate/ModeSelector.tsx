@@ -181,11 +181,6 @@ function Segment({
     color: interpolateColor(progress.value, [0, 1], [inactiveColor, activeFg]),
   }));
 
-  const arrowStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateX: (progress.value - 1) * -6 }],
-  }));
-
   // Icon color is animated separately because Ionicons doesn't accept an
   // Animated value for `color`. We render two stacked icons and cross-fade.
   const inactiveIconWrap = useAnimatedStyle(() => ({
@@ -219,11 +214,6 @@ function Segment({
         allowFontScaling={false}>
         {option.label}
       </Animated.Text>
-      {!compact ? (
-        <Animated.View style={[styles.arrow, arrowStyle]} pointerEvents="none">
-          <Ionicons name="arrow-forward" size={13} color={activeFg} />
-        </Animated.View>
-      ) : null}
     </AnimatedPressable>
   );
 }
@@ -293,9 +283,6 @@ const makeStyles = (theme: ThemePalette) =>
       ...Typography.caption,
       fontWeight: '700',
       fontFamily: FontFamily.display,
-    },
-    arrow: {
-      marginLeft: 2,
     },
   });
 

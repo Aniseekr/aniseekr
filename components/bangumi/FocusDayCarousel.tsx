@@ -367,7 +367,6 @@ const FocusDayRow = memo(function FocusDayRow({
       }
       delayLongPress={280}
       style={styles.row}>
-      {isToday ? <View style={styles.trackedBar} /> : null}
       <Image
         source={{ uri: anime.image }}
         style={styles.poster}
@@ -442,18 +441,10 @@ const makeStyles = (theme: ThemePalette) =>
       borderColor: theme.glassBorder,
       backgroundColor: theme.background.secondary,
     },
+    // Today is marked by the dot beside its weekday; the card itself stays calm.
     cardToday: {
-      borderColor: theme.accent,
+      borderColor: theme.glassBorder,
       backgroundColor: theme.background.secondary,
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.accent,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.18,
-          shadowRadius: 18,
-        },
-        android: { elevation: 6 },
-      }),
     },
     header: {
       flexDirection: 'row',
@@ -516,12 +507,6 @@ const makeStyles = (theme: ThemePalette) =>
       paddingVertical: Spacing.xs,
       borderRadius: Radius.md,
       gap: Spacing.sm,
-    },
-    trackedBar: {
-      width: 3,
-      height: 56,
-      borderRadius: 2,
-      backgroundColor: theme.accent,
     },
     poster: {
       width: 52,

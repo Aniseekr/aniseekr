@@ -403,11 +403,6 @@ export default function CollectionScreen() {
 
   const totalCount = categoryCounts.All ?? 0;
 
-  const userFolderCount = useMemo(
-    () => collections.filter((f) => !f.isSystemFolder || f.folderType === 'favorites').length,
-    [collections]
-  );
-
   const handleEditFolder = useCallback((folder: CollectionFolder) => {
     setEditingFolder(folder);
     setCreateModalVisible(true);
@@ -538,7 +533,8 @@ export default function CollectionScreen() {
         {screenMode === 'collect' ? (
           <CollectionHeader
             totalAnime={totalCount}
-            folderCount={userFolderCount}
+            // Same set the grid shows, so the header never contradicts the list below.
+            folderCount={visibleFolders.length}
             onAddFolder={() => setCreateModalVisible(true)}
             onPressShare={enterShareMode}
             onPressSearch={() => setSearchOpen(true)}

@@ -243,7 +243,7 @@ function Screen() {
 
 ```tsx
 import { TranslatedText } from '@/components/themed';
-import { useTranslatedGenre } from '@/libs/i18n/data-translator';
+import { useTranslatedGenre } from '@/libs/i18n/use-translated-genre';
 
 function GenreChip({ genre }: { genre: string }) {
   const { value, source } = useTranslatedGenre(genre);  // 'Action' → '動作'

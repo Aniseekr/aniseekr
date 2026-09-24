@@ -10,6 +10,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { FontFamily, Radius, Shadow } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
+import { useTranslatedGenre } from '../../libs/i18n/use-translated-genre';
 
 type Props = {
   title: string;
@@ -35,6 +36,8 @@ function GenreCardComponent({
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
+  // Genre names come from the API in English; show the curated translation.
+  const genreLabel = useTranslatedGenre(title);
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handlePress = () => {
@@ -81,7 +84,7 @@ function GenreCardComponent({
         {showButton ? (
           <View style={styles.content}>
             <Text style={styles.title} numberOfLines={2}>
-              {title.toUpperCase()}
+              {genreLabel.source === 'native' ? genreLabel.value.toUpperCase() : genreLabel.value}
             </Text>
             <Text style={styles.hint}>{t('rate.tapToExplore')}</Text>
           </View>
