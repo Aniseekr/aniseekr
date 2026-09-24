@@ -9,6 +9,7 @@ import type {
   IoniconsName,
   MaterialIconsName,
 } from '../../libs/utils/icon-types';
+import { CapsText } from '../themed/CapsText';
 
 type AccountStatCardProps =
   | { iconSet: 'Ionicons'; icon: IoniconsName; title: string; value: string; color: string }
@@ -41,7 +42,7 @@ function AccountStatCard(props: AccountStatCardProps) {
         )}
       </View>
       <Text style={styles.value}>{value}</Text>
-      <Text style={styles.title}>{title}</Text>
+      <CapsText style={styles.title}>{title}</CapsText>
     </View>
   );
 }
@@ -107,10 +108,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     paddingHorizontal: Spacing.screenPadding,
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   scrollContent: {
     paddingLeft: Spacing.screenPadding,
@@ -149,19 +146,11 @@ const styles = StyleSheet.create({
     ...Typography.headlineLarge,
     marginBottom: 4,
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   title: {
     color: Colors.text.placeholder,
     ...Typography.caption,
     textTransform: 'uppercase',
     letterSpacing: 2,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
 });

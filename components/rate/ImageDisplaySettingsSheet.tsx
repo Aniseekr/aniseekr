@@ -14,6 +14,7 @@ import type {
   SwipePrefs,
   SwipeRatingButtons,
 } from '../../libs/services/user-prefs';
+import { CapsText } from '../themed/CapsText';
 
 // Re-export aliases for any legacy importers (kept stable across the swipe-prefs migration).
 export type ImageContentMode = SwipeContentMode;
@@ -68,9 +69,9 @@ function ImageDisplaySettingsSheetComponent({
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('commonUi.dataSource')}
-        </Text>
+        </CapsText>
         <View style={styles.sourceRow}>
           <BrowseSourceChip
             onPress={() => {
@@ -81,9 +82,9 @@ function ImageDisplaySettingsSheetComponent({
           />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('rate.imageFit')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['fill', 'fit'] as SwipeContentMode[]).map((mode) => {
             const active = preferences.contentMode === mode;
@@ -112,9 +113,9 @@ function ImageDisplaySettingsSheetComponent({
           })}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('rate.ratingButtonsLikeMode')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['three', 'five'] as SwipeRatingButtons[]).map((mode) => {
             const active = preferences.ratingButtons === mode;
@@ -162,9 +163,9 @@ function ImageDisplaySettingsSheetComponent({
 
         {onRestartGenre ? (
           <>
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.deck')}
-            </Text>
+            </CapsText>
             <ActionRow
               icon="refresh"
               label={t('rate.restartThisGenre')}

@@ -9,6 +9,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
 import { useT } from '../../libs/i18n';
 import { ON_DARK, ThemedBottomSheet, readableTextOn } from '../themed';
+import { CapsText } from '../themed/CapsText';
 
 export type BangumiViewMode = 'calendar' | 'list' | 'cards';
 export type BangumiBaseViewMode = 'calendar' | 'list';
@@ -95,9 +96,9 @@ function BangumiSettingsSheetComponent({
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('commonUi.dataSource')}
-        </Text>
+        </CapsText>
         <View style={styles.sourceRow}>
           <BrowseSourceChip
             onPress={() => {
@@ -108,9 +109,9 @@ function BangumiSettingsSheetComponent({
           />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('bangumiTab.viewMode')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['calendar', 'list'] as BangumiBaseViewMode[]).map((mode) => {
             // Swipe-mode (cards) lives on the header toggle; settings only
@@ -141,9 +142,9 @@ function BangumiSettingsSheetComponent({
           })}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('bangumiTab.filter')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['tracking', 'all'] as BangumiFilterMode[]).map((mode) => {
             const active = preferences.filterMode === mode;
@@ -167,9 +168,9 @@ function BangumiSettingsSheetComponent({
           })}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('bangumiTab.type')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(
             [

@@ -13,6 +13,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 /**
  * Static layout values that don't depend on theme.
@@ -89,7 +90,7 @@ export function SettingsSection({
   return (
     <View style={style}>
       {title ? (
-        <Text style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</Text>
+        <CapsText style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</CapsText>
       ) : null}
       <View
         style={[

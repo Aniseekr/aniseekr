@@ -1,23 +1,11 @@
 import { memo, ReactNode } from 'react';
 import { Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
-import { Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { isCjkLabel } from '../../libs/i18n/script';
+import { useUiLanguage } from '../../libs/i18n/ui-language';
+import { resolveThemedTextStyles, type ThemedTextVariant } from './text-style';
 
-export type ThemedTextVariant =
-  | 'displayLarge'
-  | 'displayMedium'
-  | 'headlineLarge'
-  | 'headlineMedium'
-  | 'headlineSmall'
-  | 'titleLarge'
-  | 'titleMedium'
-  | 'titleSmall'
-  | 'bodyLarge'
-  | 'bodyMedium'
-  | 'bodySmall'
-  | 'caption'
-  | 'captionSmall'
-  | 'monospace';
+export type { ThemedTextVariant } from './text-style';
 
 export type ThemedTextTone =
   'primary' | 'secondary' | 'tertiary' | 'accent' | 'success' | 'warning' | 'error' | 'inverse';
@@ -41,6 +29,7 @@ function ThemedTextComponent({
   ...rest
 }: ThemedTextProps) {
   const { theme } = useTheme();
+  const cjk = isCjkLabel(children, useUiLanguage());
 
   let color: string;
   switch (tone) {
@@ -72,9 +61,7 @@ function ThemedTextComponent({
   }
 
   return (
-    <Text
-      {...rest}
-      style={[Typography[variant], { color, textAlign: align, fontWeight: weight }, style]}>
+    <Text {...rest} style={resolveThemedTextStyles({ variant, color, weight, align, cjk, style })}>
       {children}
     </Text>
   );

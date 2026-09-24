@@ -9,6 +9,7 @@ import type {
   IoniconsName,
   MaterialIconsName,
 } from '../../libs/utils/icon-types';
+import { CapsText } from '../themed/CapsText';
 
 type QuickActionButtonProps = (
   | { iconSet: 'Ionicons'; icon: IoniconsName }
@@ -29,7 +30,7 @@ function QuickActionButton(props: QuickActionButtonProps) {
           <FontAwesome5 name={props.icon} size={28} color={color} />
         )}
       </View>
-      <Text style={styles.actionLabel}>{title}</Text>
+      <CapsText style={styles.actionLabel}>{title}</CapsText>
     </Pressable>
   );
 }
@@ -105,10 +106,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     paddingHorizontal: Spacing.screenPadding,
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   card: {
     backgroundColor: Colors.glass.medium,
@@ -153,10 +150,6 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   spacer: {
     flex: 1,

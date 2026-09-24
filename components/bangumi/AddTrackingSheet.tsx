@@ -14,6 +14,7 @@ import { collectionService } from '../../libs/services/collection/collection-ser
 import type { AnimeStatus } from '../../libs/services/auth/types';
 import type { CollectionFolder } from '../../types';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 type UiStatus = 'watching' | 'wishlist' | 'completed' | 'paused' | 'dropped';
 
@@ -144,9 +145,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.status')}
-          </Text>
+          </CapsText>
           <View style={styles.statusRow}>
             {STATUS_OPTIONS.map((opt) => {
               const active = status === opt.key;
@@ -182,18 +183,18 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
             })}
           </View>
 
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.score')}
-          </Text>
+          </CapsText>
           <View style={styles.scoreRow}>
             <Text style={[styles.scoreValue, { color: theme.accent }]}>{score.toFixed(1)}</Text>
             <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
           </View>
           <RatingSlider value={score} onChange={setScore} width={320} step={0.5} />
 
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.episodes')}
-          </Text>
+          </CapsText>
           <View style={styles.stepperRow}>
             <Pressable
               onPress={decrementProgress}
@@ -234,9 +235,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
             </Pressable>
           </View>
 
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('bangumiTab.folder')}
-          </Text>
+          </CapsText>
           <View style={styles.folderRow}>
             <Pressable
               onPress={() => {

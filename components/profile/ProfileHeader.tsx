@@ -6,6 +6,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { CapsText } from '../themed/CapsText';
 
 interface ProfileHeaderProps {
   username: string;
@@ -56,7 +57,7 @@ export function ProfileHeader({
           {isPro && (
             <View style={styles.proBadge}>
               <FontAwesome5 name="crown" size={12} color="#000" />
-              <Text style={styles.proText}>PRO</Text>
+              <CapsText style={styles.proText}>PRO</CapsText>
             </View>
           )}
         </Pressable>
@@ -154,10 +155,6 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     ...Typography.headlineLarge,
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   proBadge: {
     flexDirection: 'row',
@@ -179,10 +176,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   currencyRow: {
     flexDirection: 'row',
@@ -203,10 +196,6 @@ const styles = StyleSheet.create({
   currencyText: {
     color: Colors.text.primary,
     ...Typography.titleMedium,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   currencyDivider: {
     width: 1,

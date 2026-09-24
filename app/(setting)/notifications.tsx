@@ -31,6 +31,7 @@ import {
   saveNotificationPrefs,
 } from '../../libs/services/notifications/notification-service';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../../components/themed/CapsText';
 
 // Storage now lives on MMKV via notification-service.saveNotificationPrefs.
 
@@ -383,9 +384,9 @@ export default function NotificationsScreen() {
           groupedPending.map((group, gIdx) => (
             <View key={group.key}>
               {group.label ? (
-                <Text style={[styles.groupHeader, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.groupHeader, { color: theme.text.secondary }]}>
                   {group.label}
-                </Text>
+                </CapsText>
               ) : null}
               {group.items.map((item, idx) => (
                 <View key={item.identifier}>

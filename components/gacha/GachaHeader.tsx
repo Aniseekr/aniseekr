@@ -2,6 +2,7 @@ import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { CapsText } from '../themed/CapsText';
 
 interface GachaHeaderProps {
   coinBalance: number;
@@ -24,7 +25,7 @@ export function GachaHeader({
           </View>
           <Text style={styles.coinBalance}>{coinBalance}</Text>
           <Pressable style={styles.addButton}>
-            <Text style={styles.addButtonText}>+ ADD</Text>
+            <CapsText style={styles.addButtonText}>+ ADD</CapsText>
           </Pressable>
         </View>
       </View>
@@ -60,10 +61,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3.2,
     marginBottom: 12,
     marginLeft: 8,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   coinCard: {
     flexDirection: 'row',
@@ -97,10 +94,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   addButton: {
     paddingHorizontal: 16,
@@ -119,10 +112,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   actionsRow: {
     flexDirection: 'row',

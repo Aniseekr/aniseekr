@@ -3,7 +3,7 @@
 
 import { Image } from 'expo-image';
 import { memo, useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -140,7 +140,7 @@ const makeStyles = (theme: ThemePalette) =>
       fontWeight: '800',
       letterSpacing: 1.5,
       textAlign: 'center',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       textShadowColor: 'rgba(0,0,0,0.6)',
       textShadowOffset: { width: 0, height: 2 },
       textShadowRadius: 8,
@@ -150,10 +150,6 @@ const makeStyles = (theme: ThemePalette) =>
       fontSize: 13,
       fontWeight: '500',
       marginTop: 10,
-      fontFamily: Platform.select({
-        ios: 'System',
-        android: 'Roboto',
-      }),
       letterSpacing: 0.4,
     },
   });

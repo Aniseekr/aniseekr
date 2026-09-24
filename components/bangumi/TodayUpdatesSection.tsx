@@ -140,7 +140,7 @@ const makeStyles = (theme: ThemePalette) =>
     title: {
       ...Typography.titleSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     count: {
       ...Typography.bodySmall,
@@ -182,7 +182,7 @@ const makeStyles = (theme: ThemePalette) =>
       fontSize: 10,
       fontWeight: '700',
       color: theme.accent,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     trackedBadge: {
       position: 'absolute',

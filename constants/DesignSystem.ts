@@ -130,115 +130,123 @@ export const TabBar = {
   itemGap: 4,
 } as const;
 
+// Font roles. `display` carries headlines and big numerals; `text` is every
+// other tier. Both resolve to the platform system face (SF / Roboto) until a
+// bundled display face lands — `undefined` means "system", which is the only
+// value iOS reliably resolves (literal names like 'SF Pro Rounded' silently
+// fall back and log "Unrecognized font family").
 export const FontFamily = {
-  rounded: Platform.select({
-    ios: 'SF Pro Rounded',
-    android: 'sans-serif-medium',
-    default: undefined,
-  }),
-  display: Platform.select({
-    ios: 'SF Pro Display',
-    android: 'sans-serif',
-    default: undefined,
-  }),
-  text: Platform.select({
-    ios: 'SF Pro Text',
-    android: 'sans-serif',
-    default: undefined,
-  }),
+  display: undefined as string | undefined,
+  text: undefined as string | undefined,
 } as const;
+
+/**
+ * Tracking for uppercase caption labels (section titles, eyebrows, tab label).
+ * Latin caps need air; CJK has no case and spaced-out ideographs read as
+ * "應 用 語 言", so callers resolve this through `useCapsTracking()` /
+ * `capsTracking()` instead of hardcoding it.
+ */
+export const CAPS_TRACKING = 1;
+
+// Spread into tokens only when a family is set: an explicit `fontFamily:
+// undefined` would clobber a caller's earlier fontFamily when style arrays
+// are flattened.
+const displayFace = FontFamily.display ? { fontFamily: FontFamily.display } : {};
+const textFace = FontFamily.text ? { fontFamily: FontFamily.text } : {};
 
 export const Typography = {
   displayLarge: {
     fontSize: 34,
     fontWeight: '800' as const,
     lineHeight: 41,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.37,
+    ...displayFace,
   },
   displayMedium: {
     fontSize: 30,
     fontWeight: '700' as const,
     lineHeight: 36,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.34,
+    ...displayFace,
   },
   headlineLarge: {
     fontSize: 28,
     fontWeight: '700' as const,
     lineHeight: 34,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.36,
+    ...displayFace,
   },
   headlineMedium: {
     fontSize: 22,
     fontWeight: '600' as const,
     lineHeight: 28,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.35,
+    ...displayFace,
   },
   headlineSmall: {
     fontSize: 20,
     fontWeight: '600' as const,
     lineHeight: 25,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.38,
+    ...displayFace,
   },
   titleLarge: {
     fontSize: 17,
     fontWeight: '600' as const,
     lineHeight: 22,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.43,
+    ...textFace,
   },
   titleMedium: {
     fontSize: 15,
     fontWeight: '600' as const,
     lineHeight: 20,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.24,
+    ...textFace,
   },
   titleSmall: {
     fontSize: 13,
     fontWeight: '600' as const,
     lineHeight: 18,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.08,
+    ...textFace,
   },
   bodyLarge: {
     fontSize: 17,
     fontWeight: '400' as const,
     lineHeight: 22,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.43,
+    ...textFace,
   },
   bodyMedium: {
     fontSize: 15,
     fontWeight: '400' as const,
     lineHeight: 20,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.24,
+    ...textFace,
   },
   bodySmall: {
     fontSize: 13,
     fontWeight: '400' as const,
     lineHeight: 18,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.08,
+    ...textFace,
   },
   caption: {
     fontSize: 12,
     fontWeight: '500' as const,
     lineHeight: 16,
-    fontFamily: FontFamily.text,
-    letterSpacing: 0,
+    ...textFace,
   },
   captionSmall: {
     fontSize: 11,
     fontWeight: '500' as const,
     lineHeight: 13,
-    fontFamily: FontFamily.text,
-    letterSpacing: 0.07,
+    ...textFace,
+  },
+  // Dense labels on pills laid over imagery (count / region / match tags).
+  badge: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    lineHeight: 12,
+    ...textFace,
+  },
+  overline: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    lineHeight: 14,
+    ...textFace,
+    letterSpacing: CAPS_TRACKING,
+    textTransform: 'uppercase' as const,
   },
   monospace: {
     fontSize: 14,

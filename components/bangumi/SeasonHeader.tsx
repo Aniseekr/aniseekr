@@ -153,7 +153,7 @@ const makeStyles = (theme: ThemePalette) =>
     title: {
       ...Typography.headlineLarge,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     subtitle: {
       ...Typography.caption,
@@ -187,7 +187,7 @@ const makeStyles = (theme: ThemePalette) =>
     seasonText: {
       ...Typography.caption,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     bottomRow: {
       flexDirection: 'row',
@@ -223,7 +223,7 @@ const makeStyles = (theme: ThemePalette) =>
     filterText: {
       ...Typography.titleSmall,
       color: theme.text.secondary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     viewModeButton: {
       width: 40,

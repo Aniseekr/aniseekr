@@ -107,10 +107,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: -0.5,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   subtitle: {
     color: 'rgba(255, 255, 255, 0.5)',
@@ -119,10 +115,6 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     textAlign: 'center',
     letterSpacing: 1,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   subtitleHighlight: {
     color: 'rgba(255, 255, 255, 0.87)',
@@ -156,10 +148,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 2,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   pullButtonDot: {
     width: 4,
@@ -171,9 +159,5 @@ const styles = StyleSheet.create({
     color: 'rgba(0, 0, 0, 0.6)',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
 });

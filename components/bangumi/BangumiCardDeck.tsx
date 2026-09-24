@@ -41,6 +41,7 @@ import {
   type BangumiDeckSlot,
   type BangumiOutgoingCard,
 } from '../../libs/services/bangumi/card-deck-window';
+import { CapsText } from '../themed/CapsText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - Spacing.lg * 2, 360);
@@ -416,9 +417,9 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
           <View style={[styles.indicatorBubble, { borderColor: theme.status.error }]}>
             <MaterialIcons name="close" size={28} color={theme.status.error} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.status.error }]}>
+          <CapsText style={[styles.indicatorLabel, { color: theme.status.error }]}>
             {t('bangumiTab.notInterested')}
-          </Text>
+          </CapsText>
         </Animated.View>
 
         <Animated.View
@@ -427,9 +428,9 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
           <View style={[styles.indicatorBubble, { borderColor: theme.accent }]}>
             <MaterialIcons name="bookmark-add" size={28} color={theme.accent} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>
+          <CapsText style={[styles.indicatorLabel, { color: theme.accent }]}>
             {t('bangumiTab.wantToWatch')}
-          </Text>
+          </CapsText>
         </Animated.View>
       </Animated.View>
     </GestureDetector>
@@ -486,7 +487,7 @@ const makeStyles = (theme: ThemePalette) =>
     counterText: {
       ...Typography.titleSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     counterTextMuted: {
       color: theme.text.tertiary,
@@ -541,7 +542,7 @@ const makeStyles = (theme: ThemePalette) =>
     cardTitle: {
       ...Typography.headlineSmall,
       color: '#FFFFFF',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     cardMetaRow: {
       flexDirection: 'row',
@@ -642,7 +643,7 @@ const makeStyles = (theme: ThemePalette) =>
     emptyTitle: {
       ...Typography.headlineSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     emptySubtitle: {
       ...Typography.bodySmall,

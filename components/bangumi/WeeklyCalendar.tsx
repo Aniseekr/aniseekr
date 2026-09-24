@@ -10,6 +10,7 @@ import { Anime } from '../rate/types';
 import { pushAnimeDetail, prefetchAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 interface WeeklyCalendarProps {
   weekDays: string[];
@@ -37,7 +38,7 @@ export function WeeklyCalendar({
           <Text style={[styles.dayTitle, isToday && styles.dayTitleToday]}>
             {dayShortName(day)}
           </Text>
-          <Text style={styles.dayCount}>{dayData.anime.length} shows</Text>
+          <CapsText style={styles.dayCount}>{dayData.anime.length} shows</CapsText>
         </View>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   },
   dayTitle: {
     ...Typography.titleLarge,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     color: Colors.text.primary,
   },
   dayTitleToday: {

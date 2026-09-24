@@ -1,7 +1,8 @@
-import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, Platform, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 interface GachaControlsProps {
   onShowHistory: () => void;
@@ -52,7 +53,7 @@ function ControlButton({
   return (
     <Pressable onPress={onPress} style={styles.button}>
       <View style={styles.iconContainer}>{icon}</View>
-      <Text style={styles.label}>{label}</Text>
+      <CapsText style={styles.label}>{label}</CapsText>
     </Pressable>
   );
 }
@@ -95,9 +96,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
 });

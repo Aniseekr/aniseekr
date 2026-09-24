@@ -471,7 +471,7 @@ const makeStyles = (theme: ThemePalette) =>
     dayTitle: {
       ...Typography.headlineLarge,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     todayDot: {
       width: 10,

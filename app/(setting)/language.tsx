@@ -12,6 +12,7 @@ import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
+import { CapsText } from '../../components/themed';
 import {
   LANGUAGE_IDS,
   useI18n,
@@ -323,7 +324,7 @@ export default function LanguageScreen() {
 
 function SectionHeader({ label, color, style }: { label: string; color: string; style?: object }) {
   return (
-    <Text
+    <CapsText
       style={[
         Typography.captionSmall,
         {
@@ -336,7 +337,7 @@ function SectionHeader({ label, color, style }: { label: string; color: string; 
         style,
       ]}>
       {label}
-    </Text>
+    </CapsText>
   );
 }
 

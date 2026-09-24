@@ -12,6 +12,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
 import { AnimeStatus, AnimeStatusBadge } from '../common/AnimeStatusBadge';
 import { ThemedBottomSheet, readableTextOn } from '../themed';
+import { CapsText } from '../themed/CapsText';
 
 export interface AnimeProgress {
   status: AnimeStatus;
@@ -107,9 +108,9 @@ function AnimeProgressViewComponent({
             showsVerticalScrollIndicator={false}
             bottomOffset={20}
             keyboardShouldPersistTaps="handled">
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('commonUi.status')}
-            </Text>
+            </CapsText>
             <View style={styles.statusGrid}>
               {STATUS_OPTIONS.map((opt) => {
                 const active = draft.status === opt.key;
@@ -144,9 +145,9 @@ function AnimeProgressViewComponent({
 
             {draft.status !== 'planning' ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                   {t('commonUi.episodes')}
-                </Text>
+                </CapsText>
                 <View
                   style={[
                     styles.counterRow,
@@ -182,9 +183,9 @@ function AnimeProgressViewComponent({
 
             {draft.status === 'rewatching' ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                   {t('collectionUi.rewatches')}
-                </Text>
+                </CapsText>
                 <View
                   style={[
                     styles.counterRow,
@@ -216,9 +217,9 @@ function AnimeProgressViewComponent({
 
             {draft.status !== 'planning' ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                   {t('commonUi.score')}
-                </Text>
+                </CapsText>
                 <View style={styles.scoreRow}>
                   <Text style={[styles.scoreValue, { color: theme.accent }]}>
                     {draft.score.toFixed(1)}
@@ -234,9 +235,9 @@ function AnimeProgressViewComponent({
               </>
             ) : null}
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('collectionUi.notes')}
-            </Text>
+            </CapsText>
             <TextInput
               value={draft.notes}
               onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}

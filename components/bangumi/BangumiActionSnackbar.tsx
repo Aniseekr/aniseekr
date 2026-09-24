@@ -11,6 +11,7 @@ import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { CapsText } from '../themed/CapsText';
 
 interface BangumiActionSnackbarProps {
   visible: boolean;
@@ -96,9 +97,9 @@ function BangumiActionSnackbarComponent({
                 opacity: pressed ? 0.85 : 1,
               },
             ]}>
-            <Text style={[styles.actionLabel, { color: readableTextOn(actionColor) }]}>
+            <CapsText style={[styles.actionLabel, { color: readableTextOn(actionColor) }]}>
               {actionLabel}
-            </Text>
+            </CapsText>
           </Pressable>
         ) : null}
       </View>

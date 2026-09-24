@@ -727,8 +727,9 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
                       ]}>
                       <Ionicons name="checkmark-circle" size={12} color={theme.status.success} />
                       <ThemedText
+                        variant="caption"
                         weight="700"
-                        style={{ color: theme.status.success, fontSize: 12 }}>
+                        style={{ color: theme.status.success }}>
                         {selectedFolder.avgMatch}%
                       </ThemedText>
                     </View>
@@ -815,20 +816,10 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
               <Ionicons name="camera" size={14} color={accentFg} />
             </View>
             <View>
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                style={{ color: accentFg, fontSize: 13 }}>
+              <ThemedText variant="titleSmall" weight="700" style={{ color: accentFg }}>
                 {t('pilgrimage.album.addPilgrimage')}
               </ThemedText>
-              <ThemedText
-                variant="captionSmall"
-                weight="600"
-                style={{
-                  color: `${accentFg}CC`,
-                  fontSize: 9,
-                  letterSpacing: 0.3,
-                }}>
+              <ThemedText variant="captionSmall" weight="600" style={{ color: `${accentFg}CC` }}>
                 {t('pilgrimage.album.startCapture')}
               </ThemedText>
             </View>
@@ -863,23 +854,21 @@ function StatCard({
     <View style={styles.statCard}>
       <View style={styles.statTop}>
         <Ionicons name={icon} size={12} color={iconColor} />
-        <ThemedText
-          variant="captionSmall"
-          weight="600"
-          tone="secondary"
-          style={{ letterSpacing: 0.4, fontSize: 10 }}>
+        <ThemedText variant="captionSmall" weight="600" tone="secondary">
           {label}
         </ThemedText>
       </View>
       <View style={styles.statValueRow}>
-        <ThemedText weight="700" style={{ fontSize: 22, color: valueColor ?? theme.text.primary }}>
+        <ThemedText
+          variant="headlineMedium"
+          weight="700"
+          style={{ color: valueColor ?? theme.text.primary }}>
           {value}
         </ThemedText>
         {valueSuffix ? (
           <ThemedText
-            weight="600"
+            variant="titleSmall"
             style={{
-              fontSize: 13,
               color: valueColor ?? theme.text.primary,
               marginBottom: 2,
             }}>
@@ -887,7 +876,9 @@ function StatCard({
           </ThemedText>
         ) : null}
       </View>
-      <ThemedText style={{ fontSize: 10, color: theme.text.tertiary }}>{subtitle}</ThemedText>
+      <ThemedText variant="captionSmall" tone="tertiary">
+        {subtitle}
+      </ThemedText>
     </View>
   );
 }
@@ -925,11 +916,9 @@ function Chip({
         },
       ]}>
       <ThemedText
+        variant="caption"
         weight={active ? '700' : '600'}
-        style={{
-          color: active ? accentFg : theme.text.primary,
-          fontSize: 12,
-        }}
+        style={{ color: active ? accentFg : theme.text.primary }}
         numberOfLines={1}>
         {label}
       </ThemedText>
@@ -941,12 +930,7 @@ function Chip({
               backgroundColor: active ? 'rgba(255,255,255,0.22)' : theme.background.tertiary,
             },
           ]}>
-          <ThemedText
-            weight="700"
-            style={{
-              color: active ? accentFg : theme.text.tertiary,
-              fontSize: 10,
-            }}>
+          <ThemedText variant="badge" style={{ color: active ? accentFg : theme.text.tertiary }}>
             {count}
           </ThemedText>
         </View>
@@ -1041,14 +1025,14 @@ function FolderCard({
         {regionLabel ? (
           <View style={styles.regionPill}>
             <Ionicons name="location-outline" size={10} color={ON_DARK} />
-            <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 10 }} numberOfLines={1}>
+            <ThemedText variant="badge" style={{ color: ON_DARK }} numberOfLines={1}>
               {regionLabel}
             </ThemedText>
           </View>
         ) : null}
         <View style={styles.countPill}>
           <Ionicons name="camera" size={10} color={ON_DARK} />
-          <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 10 }}>
+          <ThemedText variant="badge" style={{ color: ON_DARK }}>
             {folder.entries.length}
           </ThemedText>
         </View>
@@ -1060,8 +1044,9 @@ function FolderCard({
               color={readableTextOn(theme.status.success)}
             />
             <ThemedText
+              variant="captionSmall"
               weight="800"
-              style={{ color: readableTextOn(theme.status.success), fontSize: 11 }}>
+              style={{ color: readableTextOn(theme.status.success) }}>
               {folder.avgMatch}%
             </ThemedText>
           </View>
@@ -1072,16 +1057,12 @@ function FolderCard({
           {title}
         </ThemedText>
         <View style={styles.folderMetaRow}>
-          <ThemedText
-            variant="captionSmall"
-            tone="secondary"
-            numberOfLines={1}
-            style={{ flex: 1, fontSize: 11 }}>
+          <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1} style={{ flex: 1 }}>
             {subtitle}
           </ThemedText>
         </View>
         <View style={styles.folderFootRow}>
-          <ThemedText variant="captionSmall" tone="tertiary" style={{ fontSize: 10 }}>
+          <ThemedText variant="captionSmall" tone="tertiary">
             {formatRelative(folder.lastCapturedAt, now, t)}
           </ThemedText>
           <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
@@ -1138,7 +1119,7 @@ function CompareCard({
             <View style={[styles.compareHalf, { height: animeH }]}>
               <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
               <View style={styles.cornerTag}>
-                <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 9 }}>
+                <ThemedText variant="badge" style={{ color: ON_DARK }}>
                   {t('pilgrimage.album.tagScene')}
                 </ThemedText>
               </View>
@@ -1149,7 +1130,7 @@ function CompareCard({
         <View style={[styles.compareHalf, { height: realH }]}>
           <SpotImage uri={entry.capture.uri} style={styles.compareImgFill} contentFit="cover" />
           <View style={[styles.cornerTag, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-            <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 9 }}>
+            <ThemedText variant="badge" style={{ color: ON_DARK }}>
               {entry.capture.source === 'library'
                 ? t('pilgrimage.album.tagLibrary')
                 : t('pilgrimage.album.tagYours')}
@@ -1159,22 +1140,18 @@ function CompareCard({
         {entry.matchPercent !== null ? (
           <View style={styles.matchPill}>
             <Ionicons name="checkmark-circle" size={10} color={theme.status.success} />
-            <ThemedText weight="700" style={{ color: ON_DARK, fontSize: 10 }}>
+            <ThemedText variant="badge" style={{ color: ON_DARK }}>
               {entry.matchPercent}%
             </ThemedText>
           </View>
         ) : null}
       </View>
       <View style={styles.compareFoot}>
-        <ThemedText variant="captionSmall" weight="700" numberOfLines={1} style={{ fontSize: 12 }}>
+        <ThemedText variant="caption" weight="700" numberOfLines={1}>
           {cardTitle}
         </ThemedText>
         {entry.capture.note ? (
-          <ThemedText
-            variant="captionSmall"
-            tone="secondary"
-            numberOfLines={2}
-            style={{ fontSize: 10 }}>
+          <ThemedText variant="captionSmall" tone="secondary" numberOfLines={2}>
             {entry.capture.note}
           </ThemedText>
         ) : null}
@@ -1184,13 +1161,10 @@ function CompareCard({
               variant="captionSmall"
               tone="tertiary"
               numberOfLines={1}
-              style={{ fontSize: 9, flex: 1 }}>
+              style={{ flex: 1 }}>
               {animeTitles.primary}
             </ThemedText>
-            <ThemedText
-              variant="captionSmall"
-              weight="600"
-              style={{ color: theme.accent, fontSize: 9 }}>
+            <ThemedText variant="captionSmall" weight="600" style={{ color: theme.accent }}>
               {t('pilgrimage.album.epLabel', { ep: entry.spot.ep })}
             </ThemedText>
           </View>
@@ -1202,7 +1176,7 @@ function CompareCard({
               variant="captionSmall"
               tone="tertiary"
               numberOfLines={1}
-              style={{ flex: 1, fontSize: 9 }}>
+              style={{ flex: 1 }}>
               {entry.capture.userLocation.latitude.toFixed(4)},{' '}
               {entry.capture.userLocation.longitude.toFixed(4)}
             </ThemedText>

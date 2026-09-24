@@ -532,10 +532,7 @@ export default function PilgrimageHubScreen() {
             list (ranked by real distance, see rankFeaturedSpotsByPriority).
           */}
           <View style={styles.section}>
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={[styles.introCaps, { color: theme.accent }]}>
+            <ThemedText variant="overline" tone="accent">
               {t('tabs.pilgrimageScreen.section.explore')}
             </ThemedText>
 
@@ -880,7 +877,6 @@ function makeStyles(theme: ThemePalette) {
       paddingTop: Spacing.sm,
       gap: Spacing.lg,
     },
-    introCaps: { ...Typography.captionSmall, letterSpacing: 1.2 },
     compactCaption: Typography.captionSmall,
     introBody: { lineHeight: 18, paddingHorizontal: Spacing.xxs },
     heroCard: {

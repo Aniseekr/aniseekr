@@ -8,6 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { sheetEnter } from '../../libs/animations/presets';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 export type Season = 'winter' | 'spring' | 'summer' | 'fall';
 
@@ -93,9 +94,9 @@ function RatingSeasonPickerComponent({
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.season')}
-            </Text>
+            </CapsText>
             <View style={styles.seasonRow}>
               {SEASONS.map((s) => {
                 const active = s.key === selectedSeason;
@@ -132,9 +133,9 @@ function RatingSeasonPickerComponent({
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.year')}
-            </Text>
+            </CapsText>
             {view === 'grid' ? (
               <ScrollView style={{ maxHeight: 240 }}>
                 <View style={styles.yearGrid}>

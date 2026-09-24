@@ -32,6 +32,7 @@ import { NearbyPilgrimageBadge } from '../pilgrimage/NearbyPilgrimageBadge';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { CapsText } from '../themed/CapsText';
 
 interface AnimeListGroup {
   day: string;
@@ -253,7 +254,7 @@ function AnimeRowCardImpl({
               <View className="mt-2 mb-4 flex-row flex-wrap gap-2">
                 {anime.tags.slice(0, 3).map((tag, idx) => (
                   <View key={idx} style={styles.tagContainer}>
-                    <Text style={styles.tagText}>{tag}</Text>
+                    <CapsText style={styles.tagText}>{tag}</CapsText>
                   </View>
                 ))}
               </View>
@@ -274,10 +275,10 @@ function AnimeRowCardImpl({
                     color={isScheduled ? theme.accent : theme.text.primary}
                     style={{ marginRight: 6 }}
                   />
-                  <Text
+                  <CapsText
                     style={[styles.remindButtonText, isScheduled && styles.remindButtonTextActive]}>
                     {isScheduled ? 'Scheduled' : 'Remind Me'}
-                  </Text>
+                  </CapsText>
                 </Pressable>
               )}
               {onAddTracking && (
@@ -294,9 +295,9 @@ function AnimeRowCardImpl({
                     color={isTracked ? theme.accent : theme.text.primary}
                     style={{ marginRight: 4 }}
                   />
-                  <Text style={[styles.addButtonText, isTracked && styles.addButtonTextActive]}>
+                  <CapsText style={[styles.addButtonText, isTracked && styles.addButtonTextActive]}>
                     {isTracked ? 'Tracking' : 'Track'}
-                  </Text>
+                  </CapsText>
                 </Pressable>
               )}
             </View>
@@ -350,7 +351,7 @@ function SwipeActionPanel({ side, dragX, icon, label, tint }: SwipeActionPanelPr
       ]}>
       <Animated.View style={[styles.actionPanelInner, animatedStyle]}>
         <MaterialIcons name={icon} size={22} color={tint} />
-        <Text style={[styles.actionPanelLabel, { color: tint }]}>{label}</Text>
+        <CapsText style={[styles.actionPanelLabel, { color: tint }]}>{label}</CapsText>
       </Animated.View>
     </View>
   );
@@ -365,7 +366,7 @@ const makeStyles = (theme: ThemePalette) =>
     sectionTitle: {
       ...Typography.headlineSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       marginTop: Spacing.lg,
       marginBottom: Spacing.md,
       paddingLeft: Spacing.xs,
@@ -402,7 +403,7 @@ const makeStyles = (theme: ThemePalette) =>
     cardTitle: {
       ...Typography.headlineSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       marginBottom: Spacing.xs,
     },
     tagContainer: {

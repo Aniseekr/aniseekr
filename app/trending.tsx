@@ -326,7 +326,7 @@ const makeStyles = (theme: ThemePalette) =>
     },
     headerTitle: {
       ...Typography.titleLarge,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       color: theme.text.primary,
     },
     headerSubtitle: {
@@ -405,7 +405,7 @@ const makeStyles = (theme: ThemePalette) =>
       color: theme.text.tertiary,
       fontSize: 22,
       fontWeight: '800',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       minWidth: 32,
       textAlign: 'center',
     },

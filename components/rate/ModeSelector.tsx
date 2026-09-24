@@ -286,13 +286,13 @@ const makeStyles = (theme: ThemePalette) =>
     label: {
       ...Typography.titleSmall,
       fontWeight: '700',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       letterSpacing: 0.2,
     },
     compactLabel: {
       ...Typography.caption,
       fontWeight: '700',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     arrow: {
       marginLeft: 2,

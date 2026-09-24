@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: 96,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     letterSpacing: 0.6,
   },
   headerSubtitle: {
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 28,
     fontWeight: '600',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     letterSpacing: 0.5,
   },
   top10List: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     color: '#0E0A06',
     fontSize: 32,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   top10Cover: {
     width: 80,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 30,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   yearlyGrid: {
     flexDirection: 'row',
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: 56,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     marginBottom: 18,
   },
   yearlyCovers: {
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     color: '#FF453A',
     fontSize: 32,
     fontWeight: '900',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     textAlign: 'center',
     lineHeight: 36,
   },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 30,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   masterpieceSynopsis: {
     color: Colors.text.primary,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   masterpieceEmptyText: {
     color: Colors.text.secondary,
     fontSize: 36,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   coverFallback: {
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -530,6 +530,6 @@ const styles = StyleSheet.create({
   coverFallbackText: {
     color: Colors.text.tertiary,
     fontSize: 36,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
 });

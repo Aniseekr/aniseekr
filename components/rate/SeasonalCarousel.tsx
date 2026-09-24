@@ -306,7 +306,7 @@ const makeStyles = (theme: ThemePalette) =>
       fontSize: 26,
       fontWeight: '700',
       lineHeight: 30,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     cardMeta: {
       color: 'rgba(255,255,255,0.7)',

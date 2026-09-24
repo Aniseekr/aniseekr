@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentProps } from 'react';
-import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
+import { View, Platform, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
@@ -12,7 +12,15 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Radius, TabBar as TabBarTokens, bottomPad } from '../constants/DesignSystem';
+import {
+  CAPS_TRACKING,
+  Radius,
+  TabBar as TabBarTokens,
+  Typography,
+  bottomPad,
+} from '../constants/DesignSystem';
+import { isCjkLabel } from '../libs/i18n/script';
+import { useUiLanguage } from '../libs/i18n/ui-language';
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import {
   isFloatingTabBarHidden,
@@ -23,6 +31,7 @@ import {
   FLOATING_TAB_BAR_SHOW_DURATION_MS,
 } from '../libs/navigation/floating-tab-bar-animation';
 import { Springs } from '../libs/animations/presets';
+import { CapsText } from './themed/CapsText';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 type FloatingTabBarProps = BottomTabBarProps & {
@@ -210,6 +219,7 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   const focusProgress = useSharedValue(isFocused ? 1 : 0);
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const labelTracking = isCjkLabel(label, useUiLanguage()) ? 0 : CAPS_TRACKING;
   const activeFg = theme.accent;
   const inactiveFg = theme.text.tertiary;
   // Active pill fill = accent at ~18% alpha (0x2E), border = accent at ~45% (0x73).
@@ -278,13 +288,13 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
           ) : null}
         </View>
         <Animated.Text
-          style={[styles.label, { color: activeFg }, labelStyle]}
+          style={[styles.label, { color: activeFg, letterSpacing: labelTracking }, labelStyle]}
           numberOfLines={1}
           allowFontScaling={false}>
           {label}
         </Animated.Text>
       </Animated.View>
-      <Text
+      <CapsText
         style={styles.labelMeasure}
         numberOfLines={1}
         allowFontScaling={false}
@@ -293,7 +303,7 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
           if (w !== labelWidth) setLabelWidth(w);
         }}>
         {label}
-      </Text>
+      </CapsText>
     </Pressable>
   );
 }
@@ -359,18 +369,12 @@ const makeStyles = (theme: ThemePalette) =>
       justifyContent: 'center',
     },
     label: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 1,
-      textTransform: 'uppercase',
+      ...Typography.overline,
       marginRight: LABEL_TRAILING_PAD,
     },
     labelMeasure: {
+      ...Typography.overline,
       position: 'absolute',
       opacity: 0,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 1,
-      textTransform: 'uppercase',
     },
   });

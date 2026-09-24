@@ -17,6 +17,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import type { AuthFormKind } from '../../libs/services/auth/auth-errors';
 import type { PlatformType } from '../../libs/services/auth/types';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 export interface PlatformAuthSheetProps {
   visible: boolean;
@@ -237,7 +238,7 @@ export function PlatformAuthSheet({
 
 function FieldLabel({ label }: { label: string }) {
   const { theme } = useTheme();
-  return <Text style={[styles.fieldLabel, { color: theme.text.secondary }]}>{label}</Text>;
+  return <CapsText style={[styles.fieldLabel, { color: theme.text.secondary }]}>{label}</CapsText>;
 }
 
 function Input(props: React.ComponentProps<typeof TextInput>) {

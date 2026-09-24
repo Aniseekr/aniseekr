@@ -26,7 +26,7 @@ import { ImageDisplaySettingsSheet } from '../../../components/rate/ImageDisplay
 import { useRateData } from '../../../components/rate/useRateData';
 import { Anime, Genre, ViewMode } from '../../../components/rate/types';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { FontFamily, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import { clearAllDecks } from '../../../libs/services/rate/deck-cache';
@@ -807,7 +807,6 @@ const makeStyles = (theme: ThemePalette) =>
     },
     appTitle: {
       ...Typography.headlineLarge,
-      fontFamily: FontFamily.rounded,
       color: theme.text.primary,
     },
     appSubtitle: {
@@ -892,14 +891,12 @@ const makeTrendStyles = (theme: ThemePalette) =>
       borderColor: `${theme.accent}A6`,
     },
     trendBadgeText: {
+      ...Typography.badge,
       color: theme.accent,
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.6,
     },
     heroMeta: {
+      ...Typography.captionSmall,
       color: theme.text.secondary,
-      fontSize: 11,
       fontWeight: '600',
     },
     heroScore: {
@@ -908,21 +905,18 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 3,
     },
     heroScoreText: {
+      ...Typography.captionSmall,
       color: theme.accent,
-      fontSize: 11,
       fontWeight: '700',
     },
     heroTitle: {
+      ...Typography.headlineLarge,
       color: theme.text.primary,
-      fontSize: 28,
       fontWeight: '800',
-      lineHeight: 32,
-      letterSpacing: 0.2,
     },
     heroDescription: {
+      ...Typography.bodySmall,
       color: theme.text.secondary,
-      fontSize: 12,
-      lineHeight: 18,
     },
     heroActions: {
       flexDirection: 'row',
@@ -949,14 +943,13 @@ const makeTrendStyles = (theme: ThemePalette) =>
       flexWrap: 'wrap',
     },
     sectionTitle: {
+      ...Typography.titleLarge,
       color: theme.text.primary,
-      fontSize: 18,
       fontWeight: '700',
-      letterSpacing: 0.2,
     },
     sectionSubtitle: {
+      ...Typography.caption,
       color: theme.text.tertiary,
-      fontSize: 12,
       marginTop: 2,
     },
     rangePillRow: {
@@ -981,9 +974,8 @@ const makeTrendStyles = (theme: ThemePalette) =>
       justifyContent: 'center',
     },
     rangePillText: {
-      fontSize: 12,
+      ...Typography.caption,
       fontWeight: '600',
-      letterSpacing: 0.1,
     },
     list: {
       paddingHorizontal: Spacing.md,
@@ -1003,10 +995,10 @@ const makeTrendStyles = (theme: ThemePalette) =>
       borderColor: theme.glassBorder,
     },
     rankNumber: {
+      ...Typography.headlineMedium,
       color: theme.text.tertiary,
-      fontSize: 22,
       fontWeight: '800',
-      fontFamily: FontFamily.rounded,
+      fontVariant: ['tabular-nums'],
       minWidth: 28,
     },
     rankThumb: {
@@ -1021,10 +1013,9 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 4,
     },
     rankTitle: {
+      ...Typography.titleMedium,
       color: theme.text.primary,
-      fontSize: 14,
       fontWeight: '700',
-      lineHeight: 18,
     },
     rankMetaRow: {
       flexDirection: 'row',
@@ -1033,9 +1024,8 @@ const makeTrendStyles = (theme: ThemePalette) =>
       flexWrap: 'wrap',
     },
     rankTag: {
+      ...Typography.captionSmall,
       color: theme.text.secondary,
-      fontSize: 11,
-      fontWeight: '500',
     },
     rankScore: {
       flexDirection: 'row',
@@ -1043,8 +1033,8 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 3,
     },
     rankScoreText: {
+      ...Typography.captionSmall,
       color: theme.accent,
-      fontSize: 11,
       fontWeight: '700',
     },
 
@@ -1079,9 +1069,8 @@ const makeTrendStyles = (theme: ThemePalette) =>
       borderWidth: 1,
     },
     pilgrimageRankText: {
-      fontSize: 11,
+      ...Typography.captionSmall,
       fontWeight: '800',
-      letterSpacing: 0.5,
     },
     pilgrimageSpotPill: {
       position: 'absolute',
@@ -1095,16 +1084,15 @@ const makeTrendStyles = (theme: ThemePalette) =>
       borderRadius: 8,
     },
     pilgrimageSpotText: {
-      fontSize: 10,
-      fontWeight: '700',
+      ...Typography.badge,
     },
     pilgrimageInfo: {
       padding: 12,
       gap: 4,
     },
     pilgrimageTitle: {
+      ...Typography.titleMedium,
       color: theme.text.primary,
-      fontSize: 14,
       fontWeight: '700',
     },
     pilgrimageCityRow: {
@@ -1113,8 +1101,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 4,
     },
     pilgrimageCity: {
+      ...Typography.captionSmall,
       color: theme.text.secondary,
-      fontSize: 11,
-      fontWeight: '500',
     },
   });
