@@ -88,5 +88,8 @@ Screenshots live outside the repo (session scratchpad `baseline/`); findings bel
   G5 was not a bug: the hub header sits above the ScrollView; the "peek" is normal edge clipping.
   Open: Jujutsu Kaisen rally links Bangumi 238887, which resolves to the manga vol.1 cover
   (data mapping review, Atlas side).
-- [ ] 3 camera (root compare route, reference picker, capture upsert, preview modes)
+- [x] 3 camera — a68f8cf, 13ec2a4, 847099f (PILG-065..069; root `app/compare/*`;
+  ReferencePickerSheet; free-camera Reference pill + library import; single-shot preview;
+  Journal free shots open the preview). Device check pending: library import + pairing
+  (simulator has no camera; photo permission was not granted during testing).
 - [ ] 1b bundled display face (native rebuild, combined with Phase 3 device build)
