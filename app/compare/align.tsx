@@ -16,10 +16,7 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../components/themed';
-import {
-  locationService,
-  type LatLng,
-} from '../../libs/services/pilgrimage/location-service';
+import { locationService, type LatLng } from '../../libs/services/pilgrimage/location-service';
 import { getNumberParam, getStringParam } from '../../libs/utils/route-params';
 import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import { listItemEnter } from '../../libs/animations/presets';
