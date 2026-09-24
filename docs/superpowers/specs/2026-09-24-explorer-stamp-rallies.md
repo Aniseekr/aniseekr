@@ -4,7 +4,11 @@ Owner: **Codex implements, Claude reviews.** *(2026-09-24: Codex ran out of cred
 PILG-061–063 tests; with the user's approval Claude finished the implementation and an
 independent reviewer checked it. Deviations: `spec/` CSVs live under `docs/spec/`; leg distances
 show metres below 1 km; the Maps action is an icon button; per-stop credits are hidden when they
-repeat the rally's own source.)* Branch `feat/explorer-stamp-rallies`
+repeat the rally's own source. The Journal
+book shows at most 12 cells (stamped first) plus "+N"; rail cards omit the period (the state chip
+carries it); the rally page keeps its hero and adds a ticket *stub* under it rather than a new
+ticket header, so the organiser credit stays in the hero's attribution; components are
+`RallyTicketStub`/`RallyRouteStopRow`/`PerforatedDivider`/`useStampRallyRows`.)* Branch `feat/explorer-stamp-rallies`
 (already created in this checkout). Codex's sandbox cannot write `.git`: leave
 all changes in the working tree and propose a commit breakdown; Claude commits.
 

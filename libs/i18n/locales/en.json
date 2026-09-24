@@ -2213,6 +2213,7 @@
   },
   "explorer": {
     "rally": {
+      "openWithProgressA11y": "Open stamp rally {name}, {collected} of {total} stamped",
       "railTitle": "Stamp rallies",
       "railSubtitle": "Running now or starting soon",
       "openA11y": "Open stamp rally {name}",
@@ -2220,18 +2221,16 @@
       "progressBig": "{collected} / {total}",
       "progressLabel": "stamps collected",
       "legStraightLine": "{distance} straight-line",
-      "collectedOn": "Stamped {date}",
-      "notCollected": "Not stamped yet",
       "nodeCollectedA11y": "{stop}, stamped on {date}",
       "nodeCollectedNoDateA11y": "{stop}, stamped",
-      "nodePendingA11y": "{stop}, not stamped yet",
-      "route": "Route"
+      "nodePendingA11y": "{stop}, not stamped yet"
     },
     "stampBook": {
+      "more": "+{count}",
       "title": "Stamp book",
       "complete": "Complete",
-      "openA11y": "Open the stamp book for {name}",
-      "emptyJoinable": "No stamps yet · {count} stamp rallies are running",
+      "openA11y": "Open the stamp book for {name}, {progress}",
+      "emptyJoinable": "No stamps yet · Stamp rallies running or coming up: {count}",
       "browse": "Browse rallies"
     }
   }

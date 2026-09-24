@@ -1,17 +1,17 @@
-import type { RoleId } from '@/libs/services/pilgrimage/locality/types';
-import {
-  loadVisitedStampStopsSync,
-  stampStopVisitedAtSync,
-} from '@/libs/services/pilgrimage/visited-prefs';
+import { loadStampStopVisitedAtSync } from '@/libs/services/pilgrimage/visited-prefs';
 
-/** Stamped role id → when it was stamped (null when an older record has no time). */
+/** Stamped role id → when it was stamped (null when the record has no usable time). */
 export type StampCollectedAtMap = Readonly<Record<string, number | null>>;
 
-/** Synchronous snapshot for first-frame seeding (no await before paint). */
+/**
+ * Synchronous snapshot for first-frame seeding (no await before paint): one read
+ * of the visited blob. A stored time of 0 means "unknown", so it becomes null and
+ * every surface shows "stamped" without inventing a date.
+ */
 export function loadStampCollectedAtSync(): StampCollectedAtMap {
   const out: Record<string, number | null> = {};
-  for (const roleId of Object.keys(loadVisitedStampStopsSync())) {
-    out[roleId] = stampStopVisitedAtSync(roleId as RoleId);
+  for (const [roleId, at] of Object.entries(loadStampStopVisitedAtSync())) {
+    out[roleId] = at > 0 ? at : null;
   }
   return out;
 }

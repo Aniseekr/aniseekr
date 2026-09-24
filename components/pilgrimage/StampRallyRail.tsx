@@ -1,8 +1,8 @@
 // Discover rail of stamp rallies that are running or about to start. Owns its
 // data (sync locality snapshot + sync stamp map) so the hub root gains no state.
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -12,11 +12,7 @@ import { listItemEnter } from '@/libs/animations/presets';
 import { useI18n, useT } from '@/libs/i18n';
 import { hapticsBridge } from '@/modules/haptics/hapticsBridge';
 import { resolveLocalIntelText } from '@/libs/services/pilgrimage/local-intel/local-intel-localization';
-import {
-  getLocalityEventListRows,
-  type LocalityEventListRow,
-} from '@/libs/services/pilgrimage/locality/event-detail';
-import { localityRepository } from '@/libs/services/pilgrimage/locality/locality-repository';
+import type { LocalityEventListRow } from '@/libs/services/pilgrimage/locality/event-detail';
 import {
   buildRallyRoute,
   selectDiscoverRallies,
@@ -26,45 +22,23 @@ import { buildPilgrimageEventDetailRoute } from '@/libs/services/pilgrimage/pilg
 import { ThemedSurface, ThemedText } from '../themed';
 import { localityEventAccent, LOCALITY_CARD_RADIUS } from './common/LocalityAesthetic';
 import { EventStateChip } from './detail/IntelEventBanner';
-import {
-  loadStampCollectedAtSync,
-  sameCollectedAt,
-  type StampCollectedAtMap,
-} from './rally/rally-format';
+import type { StampCollectedAtMap } from './rally/rally-format';
 import { PerforatedDivider } from './rally/PerforatedDivider';
+import { useStampRallyRows } from './rally/useStampRallyRows';
 
 const CARD_WIDTH = 248;
-
-function subscribeLocality(listener: () => void): () => void {
-  return localityRepository.subscribe(listener);
-}
-
-function getLocalitySnapshot() {
-  return localityRepository.getSnapshot();
-}
 
 export function StampRallyRail({ onSeeAll }: { onSeeAll: () => void }) {
   const t = useT();
   const { theme } = useTheme();
   const router = useRouter();
-  const snapshot = useSyncExternalStore(
-    subscribeLocality,
-    getLocalitySnapshot,
-    getLocalitySnapshot
-  );
-  const rallies = useMemo(() => {
-    void snapshot;
-    return selectDiscoverRallies(getLocalityEventListRows(new Date(), localityRepository));
-  }, [snapshot]);
-  const [collectedAt, setCollectedAt] = useState<StampCollectedAtMap>(loadStampCollectedAtSync);
+  const { rows, collectedAt } = useStampRallyRows();
+  const rallies = useMemo(() => selectDiscoverRallies(rows), [rows]);
 
-  // Stamps change on the rally page; re-read synchronously when Discover regains focus.
-  useFocusEffect(
-    useCallback(() => {
-      const latest = loadStampCollectedAtSync();
-      setCollectedAt((current) => (sameCollectedAt(current, latest) ? current : latest));
-    }, [])
-  );
+  const seeAll = useCallback(() => {
+    hapticsBridge.selection();
+    onSeeAll();
+  }, [onSeeAll]);
 
   const openRally = useCallback(
     (row: LocalityEventListRow, name: string) => {
@@ -88,7 +62,7 @@ export function StampRallyRail({ onSeeAll }: { onSeeAll: () => void }) {
           </ThemedText>
         </View>
         <Pressable
-          onPress={onSeeAll}
+          onPress={seeAll}
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel={t('commonUi.seeAll')}
@@ -135,12 +109,15 @@ function RallyTicketCard({
   const route = buildRallyRoute(row);
   const collected = route.filter((stop) => stop.id in collectedAt).length;
   const started = collected > 0;
+  const a11yLabel = started
+    ? t('explorer.rally.openWithProgressA11y', { name, collected, total: route.length })
+    : t('explorer.rally.openA11y', { name });
 
   return (
     <Pressable
       onPress={() => onOpen(row, name)}
       accessibilityRole="button"
-      accessibilityLabel={t('explorer.rally.openA11y', { name })}
+      accessibilityLabel={a11yLabel}
       style={({ pressed }) => [styles.cardPress, pressed && styles.pressed]}>
       <ThemedSurface padded={0} radius={LOCALITY_CARD_RADIUS} style={styles.card}>
         <View style={styles.cardTop}>

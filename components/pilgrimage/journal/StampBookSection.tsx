@@ -2,8 +2,8 @@
 // in as they're collected (エキタグ-style). Reads sync snapshots only, so the
 // Journal paints its book on frame 1 and refreshes silently on focus.
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -14,63 +14,59 @@ import { listItemEnter } from '@/libs/animations/presets';
 import { useI18n, useT } from '@/libs/i18n';
 import { hapticsBridge } from '@/modules/haptics/hapticsBridge';
 import { resolveLocalIntelText } from '@/libs/services/pilgrimage/local-intel/local-intel-localization';
-import { getLocalityEventListRows } from '@/libs/services/pilgrimage/locality/event-detail';
-import { localityRepository } from '@/libs/services/pilgrimage/locality/locality-repository';
 import {
   buildStampBooks,
   countJoinableRallies,
   type StampBook,
+  type StampBookStamp,
 } from '@/libs/services/pilgrimage/locality/stamp-rally';
 import { buildPilgrimageEventDetailRoute } from '@/libs/services/pilgrimage/pilgrimage-navigation';
 
 import { localityEventAccent, LOCALITY_CARD_RADIUS } from '../common/LocalityAesthetic';
 import { EventStateChip } from '../detail/IntelEventBanner';
-import {
-  formatStampDate,
-  loadStampCollectedAtSync,
-  sameCollectedAt,
-  type StampCollectedAtMap,
-} from '../rally/rally-format';
+import { formatStampDate } from '../rally/rally-format';
+import { useStampRallyRows } from '../rally/useStampRallyRows';
 
 const STAMP = 52;
 const STAMPS_PER_ROW = 4;
+// Big rallies (Numazu has 136 stops) would push the whole Journal down; the
+// full route lives on the rally page, reached by tapping the book.
+const MAX_CELLS = 12;
 
-function subscribeLocality(listener: () => void): () => void {
-  return localityRepository.subscribe(listener);
-}
-
-function getLocalitySnapshot() {
-  return localityRepository.getSnapshot();
+/**
+ * Cells to draw: stamped stops first (route order) so progress is always visible,
+ * then the next unstamped ones, capped; `hidden` feeds the "+N" cell.
+ */
+function visibleStamps(stamps: readonly StampBookStamp[]): {
+  cells: { stamp: StampBookStamp; routeIndex: number }[];
+  hidden: number;
+} {
+  const indexed = stamps.map((stamp, routeIndex) => ({ stamp, routeIndex }));
+  const ordered = [
+    ...indexed.filter(({ stamp }) => stamp.collectedAt !== null),
+    ...indexed.filter(({ stamp }) => stamp.collectedAt === null),
+  ];
+  if (ordered.length <= MAX_CELLS) return { cells: ordered, hidden: 0 };
+  const cells = ordered.slice(0, MAX_CELLS - 1);
+  return { cells, hidden: ordered.length - cells.length };
 }
 
 export function StampBookSection({ onBrowseRallies }: { onBrowseRallies: () => void }) {
   const t = useT();
   const { theme } = useTheme();
   const router = useRouter();
-  const snapshot = useSyncExternalStore(
-    subscribeLocality,
-    getLocalitySnapshot,
-    getLocalitySnapshot
-  );
-  const [collectedAt, setCollectedAt] = useState<StampCollectedAtMap>(loadStampCollectedAtSync);
+  const { rows, collectedAt } = useStampRallyRows();
 
-  useFocusEffect(
-    useCallback(() => {
-      const latest = loadStampCollectedAtSync();
-      setCollectedAt((current) => (sameCollectedAt(current, latest) ? current : latest));
-    }, [])
-  );
-
-  const { books, joinable } = useMemo(() => {
-    void snapshot;
-    const rows = getLocalityEventListRows(new Date(), localityRepository);
-    return {
+  const { books, joinable } = useMemo(
+    () => ({
+      // null = stamped without a known time; the book still counts it as stamped.
       books: buildStampBooks(rows, (roleId) =>
         roleId in collectedAt ? (collectedAt[roleId] ?? 0) : null
       ),
       joinable: countJoinableRallies(rows),
-    };
-  }, [snapshot, collectedAt]);
+    }),
+    [rows, collectedAt]
+  );
 
   const openBook = useCallback(
     (book: StampBook, name: string) => {
@@ -128,12 +124,17 @@ function StampBookCard({
   const name = resolveLocalIntelText(book.name, language).value;
   const accent = localityEventAccent(book.state, 'stamp_rally', theme);
   const inkOn = readableTextOn(accent);
+  const progress = t('pilgrimageUi.eventDetail.progressValue', {
+    collected: book.collected,
+    total: book.total,
+  });
+  const { cells, hidden } = visibleStamps(book.stamps);
 
   return (
     <Pressable
       onPress={() => onOpen(book, name)}
       accessibilityRole="button"
-      accessibilityLabel={t('explorer.stampBook.openA11y', { name })}
+      accessibilityLabel={t('explorer.stampBook.openA11y', { name, progress })}
       style={({ pressed }) => [pressed && styles.pressed]}>
       <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.card}>
         <View style={styles.cardHeader}>
@@ -151,16 +152,13 @@ function StampBookCard({
           )}
         </View>
         <ThemedText variant="captionSmall" weight="800" style={{ color: accent }}>
-          {t('pilgrimageUi.eventDetail.progressValue', {
-            collected: book.collected,
-            total: book.total,
-          })}
+          {progress}
         </ThemedText>
-        <View style={styles.grid}>
-          {book.stamps.map((stamp, index) => {
+        <View style={styles.grid} importantForAccessibility="no-hide-descendants">
+          {cells.map(({ stamp, routeIndex }) => {
             const label = resolveLocalIntelText(stamp.label, language).value;
             const stamped = stamp.collectedAt !== null;
-            // A stamped record without a time (older data) is stored as 0 → show no date.
+            // 0 = stamped with no known time (see loadStampCollectedAtSync) → no date.
             const date = stamped && stamp.collectedAt ? formatStampDate(stamp.collectedAt) : null;
             return (
               <View key={stamp.roleId} style={styles.cell}>
@@ -172,7 +170,7 @@ function StampBookCard({
                           backgroundColor: accent,
                           borderColor: accent,
                           // Deterministic tilt so the book looks hand-stamped but never reshuffles.
-                          transform: [{ rotate: `${((index % 3) - 1) * 6}deg` }],
+                          transform: [{ rotate: `${((routeIndex % 3) - 1) * 6}deg` }],
                         }
                       : { borderColor: theme.glassBorder, borderStyle: 'dashed' },
                   ]}>
@@ -180,7 +178,7 @@ function StampBookCard({
                     <Ionicons name="checkmark" size={20} color={inkOn} />
                   ) : (
                     <ThemedText variant="captionSmall" weight="700" tone="tertiary">
-                      {index + 1}
+                      {routeIndex + 1}
                     </ThemedText>
                   )}
                 </View>
@@ -199,6 +197,15 @@ function StampBookCard({
               </View>
             );
           })}
+          {hidden > 0 ? (
+            <View style={styles.cell}>
+              <View style={[styles.stamp, { borderColor: theme.glassBorder }]}>
+                <ThemedText variant="captionSmall" weight="800" tone="secondary">
+                  {t('explorer.stampBook.more', { count: hidden })}
+                </ThemedText>
+              </View>
+            </View>
+          ) : null}
         </View>
       </ThemedSurface>
     </Pressable>

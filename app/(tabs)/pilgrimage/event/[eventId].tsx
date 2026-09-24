@@ -7,7 +7,7 @@ import {
   View,
   type ListRenderItemInfo,
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -59,6 +59,7 @@ import { localityRepository } from '../../../../libs/services/pilgrimage/localit
 import type {
   EventCategory,
   EventId,
+  IntelProvenance,
   LocalityEvent,
   RoleId,
 } from '../../../../libs/services/pilgrimage/locality/types';
@@ -85,6 +86,7 @@ import { RallyRouteStopRow } from '../../../../components/pilgrimage/rally/Rally
 import { RallyTicketStub } from '../../../../components/pilgrimage/rally/RallyTicketStub';
 import {
   loadStampCollectedAtSync,
+  sameCollectedAt,
   type StampCollectedAtMap,
 } from '../../../../components/pilgrimage/rally/rally-format';
 
@@ -160,6 +162,14 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
     [collectedAt]
   );
   const mapRef = useRef<MapSurfaceHandle>(null);
+
+  // The same rally can sit twice in the stack; re-read stamps when this copy regains focus.
+  useFocusEffect(
+    useCallback(() => {
+      const latest = loadStampCollectedAtSync();
+      setCollectedAt((current) => (sameCollectedAt(current, latest) ? current : latest));
+    }, [])
+  );
 
   const { event, stops } = detail;
   const isRally = event.category === 'stamp_rally';
@@ -582,13 +592,23 @@ function formatEventSchedule(
   return t('pilgrimageUi.eventDetail.dateTba');
 }
 
-/** Two credit lists cite the same pages (the rally hero already shows the event's credits). */
-function sameSources(
-  a: readonly { sourceUrl: string }[],
-  b: readonly { sourceUrl: string }[]
-): boolean {
-  const urls = new Set(b.map((credit) => credit.sourceUrl));
-  return a.length === b.length && a.every((credit) => urls.has(credit.sourceUrl));
+/**
+ * Two credit lists would display identically (the rally hero already shows the
+ * event's credits). Compares every displayed field, not just the URL, so a stop
+ * credit with its own licence or notice is never hidden.
+ */
+function sameSources(a: readonly IntelProvenance[], b: readonly IntelProvenance[]): boolean {
+  const shown = (credit: IntelProvenance) =>
+    JSON.stringify([
+      credit.sourceName,
+      credit.sourceUrl,
+      credit.officialUrl ?? null,
+      credit.verifiedAt,
+      credit.license ?? null,
+      credit.copyrightNotice ?? null,
+    ]);
+  const other = new Set(b.map(shown));
+  return a.length === b.length && a.every((credit) => other.has(shown(credit)));
 }
 
 function markerBounds(markers: readonly MapMarker[]): BBox | null {
