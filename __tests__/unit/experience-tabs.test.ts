@@ -94,6 +94,7 @@ describe('Experience tabs', () => {
     const removed = toggleSeekerTab(['pilgrimage', 'discover'], 'pilgrimage');
     expect(removed).toEqual(['discover']);
     expect(toggleSeekerTab(removed, 'pilgrimage')).toEqual(['discover', 'pilgrimage']);
+    expect(toggleSeekerTab(['discover'], 'discover')).toEqual(['discover']);
   });
 
   it('EXP-TABS-009 keeps Seeker within four optional tabs while still allowing removal', () => {

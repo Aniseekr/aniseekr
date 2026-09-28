@@ -69,7 +69,7 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
             {SEEKER_TAB_CATALOG.map((tab, index) => {
               const meta = EXPERIENCE_TAB_META[tab];
               const enabled = tabs.includes(tab);
-              const disabled = !enabled && atCapacity;
+              const disabled = (enabled && tabs.length <= 1) || (!enabled && atCapacity);
               return (
                 <View
                   key={tab}

@@ -129,7 +129,10 @@ export function resolveExperienceTabTarget<TFallback extends string>(
 }
 
 export function toggleSeekerTab(tabs: readonly SeekerTabId[], tab: SeekerTabId): SeekerTabId[] {
-  if (tabs.includes(tab)) return tabs.filter((candidate) => candidate !== tab);
+  if (tabs.includes(tab)) {
+    if (tabs.length <= 1) return [...tabs];
+    return tabs.filter((candidate) => candidate !== tab);
+  }
   if (tabs.length >= MAX_SEEKER_CONTENT_TABS) return [...tabs];
   return [...tabs, tab];
 }
