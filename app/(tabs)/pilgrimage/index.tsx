@@ -131,7 +131,7 @@ function ExplorerHomeList({
             <ThemedText variant="titleLarge" weight="700">
               {t('tabs.pilgrimageHome.nearby')}
             </ThemedText>
-            {data.nearbyCount > 0 ? (
+            {data.nearbyCoverage === 'known' && data.nearbyCount > 0 ? (
               <ThemedText variant="caption" tone="secondary">
                 {t('tabs.pilgrimageHome.within3km', { count: data.nearbyCount })}
               </ThemedText>
