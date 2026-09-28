@@ -131,12 +131,16 @@ export const TabBar = {
 } as const;
 
 // Font roles. `display` carries headlines and big numerals; `text` is every
-// other tier. Both resolve to the platform system face (SF / Roboto) until a
-// bundled display face lands — `undefined` means "system", which is the only
-// value iOS reliably resolves (literal names like 'SF Pro Rounded' silently
-// fall back and log "Unrecognized font family").
+// other tier and stays on the platform system face (`undefined` = SF / Roboto).
+//
+// `display` is Nunito, bundled at build time by the expo-font config plugin
+// (app.json → assets/fonts, static 400/600/700/800; OFL). iOS takes the family
+// name from the files, Android from the plugin's `fontFamily` — both are
+// "Nunito", so `fontFamily + fontWeight` picks the right file on each. Nunito
+// has no CJK glyphs: Chinese/Japanese headlines fall back to the system CJK
+// face at the same weight. Pinned by __tests__/unit/bundled-display-font.test.ts.
 export const FontFamily = {
-  display: undefined as string | undefined,
+  display: 'Nunito' as string | undefined,
   text: undefined as string | undefined,
 } as const;
 
@@ -289,6 +293,17 @@ export const Shadow = {
       shadowRadius: 16,
     },
     android: { elevation: 12 },
+    default: {},
+  }),
+  /** Chrome that floats over scrolling content (the floating tab bar). */
+  float: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.32,
+      shadowRadius: 24,
+    },
+    android: { elevation: 14 },
     default: {},
   }),
   glow: (color: string) =>
