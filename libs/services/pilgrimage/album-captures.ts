@@ -1,4 +1,5 @@
 import type { PilgrimageCapture } from './captures';
+import { FRAME_MATCH_VERSION } from './frame-match-score';
 import type { AnitabiBangumi, AnitabiPoint } from './types';
 
 /**
@@ -31,7 +32,11 @@ interface BuildAlbumEntriesInput {
 }
 
 export function getCaptureFrameMatchPercent(capture: PilgrimageCapture): number | null {
-  const value = capture.sensorSnapshot?.frameMatch;
+  const snapshot = capture.sensorSnapshot;
+  // v1 scores compared whole-frame statistics and rated unrelated scenes ~85%;
+  // they claim a match nobody measured, so only current-metric scores count.
+  if (snapshot?.frameMatchVersion !== FRAME_MATCH_VERSION) return null;
+  const value = snapshot.frameMatch;
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   const clamped = Math.max(0, Math.min(1, value));
   return Math.round(clamped * 100);

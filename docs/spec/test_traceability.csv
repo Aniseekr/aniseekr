@@ -236,3 +236,4 @@ PILG-072,__tests__/unit/pilgrimage/captures.test.ts,legacy duplicate captures,co
 PILG-073,__tests__/unit/pilgrimage/preview-capture.test.ts,camera preview params,covered
 PILG-074,__tests__/unit/pilgrimage/preview-capture.test.ts,journal preview params and preview shots,covered
 PILG-075,__tests__/unit/pilgrimage/preview-capture.test.ts,preview capture record,covered
+PILG-076,__tests__/unit/pilgrimage/frame-match.test.ts,frame match discriminates scenes (v2 layout scoring),covered

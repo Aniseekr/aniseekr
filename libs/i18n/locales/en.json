@@ -1864,7 +1864,6 @@
     "heading": "Heading",
     "headingOffset": "Heading offset",
     "helpGpsAlignment": "Help / GPS alignment",
-    "histogram": "Histogram",
     "hideOverlay": "Hide overlay",
     "imageUnavailable": "Image unavailable",
     "includeCaptureCoordinates": "Include capture coordinates",
@@ -2096,7 +2095,8 @@
         "auto": "auto",
         "torch": "torch"
       }
-    }
+    },
+    "frameLayout": "Layout"
   },
   "profile": {
     "animeFan": "Anime fan",

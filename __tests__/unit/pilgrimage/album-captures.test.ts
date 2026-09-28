@@ -59,6 +59,7 @@ describe('pilgrimage album capture entries', () => {
         tilt: -1,
         frameMatch: 0.842,
         frameValid: true,
+        frameMatchVersion: 2,
       },
     };
 
@@ -111,6 +112,7 @@ describe('pilgrimage album capture entries', () => {
           tilt: null,
           frameMatch: 0.995,
           frameValid: true,
+          frameMatchVersion: 2,
         },
       })
     ).toBe(100);
@@ -172,5 +174,23 @@ describe('imported reference free entries', () => {
     const free: PilgrimageCapture = { spotId: 'free-1', uri: 'file:///solo.jpg', capturedAt: 1 };
     const [entry] = buildPilgrimageAlbumEntries({ captures: [], free: [free], animes: [] });
     expect(entry.spot.image).toBe('');
+  });
+});
+
+describe('frame match version', () => {
+  it('PILG-076 a score from the old whole-frame metric is not shown', () => {
+    const base = {
+      spotId: 's',
+      uri: 'file:///s.jpg',
+      capturedAt: 1,
+    };
+    const snapshot = { distanceMeters: null, headingDeltaDeg: null, tilt: null, frameMatch: 0.91 };
+    expect(getCaptureFrameMatchPercent({ ...base, sensorSnapshot: snapshot })).toBeNull();
+    expect(
+      getCaptureFrameMatchPercent({
+        ...base,
+        sensorSnapshot: { ...snapshot, frameMatchVersion: 2 },
+      })
+    ).toBe(91);
   });
 });

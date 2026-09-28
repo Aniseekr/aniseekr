@@ -54,6 +54,37 @@ export interface SceneAnalysis {
   // Distributions.
   luminanceHistogram: number[]; // 16 bins, each 0–1
   palette: string[]; // up to 5 dominant hex colors, ranked by frequency
+
+  // Spatial layout — where light and detail sit in the frame, for comparing
+  // two images structurally (frame match). Row-major LAYOUT_GRID² cells.
+  layoutGrid: number[]; // mean luminance per cell, 0–1
+  edgeGrid: number[]; // mean Sobel magnitude per cell, 0–1
+}
+
+/** Side of the square layout/edge grids (64×64 sample → 4×4-pixel cells). */
+export const LAYOUT_GRID = 16;
+
+/**
+ * The centred region of a `width`×`height` image with the given aspect ratio
+ * (width / height). Frame match samples both images into the same square
+ * grid, so the user's shot is first cropped to the reference's shape — a 4:3
+ * or portrait photo of the right spot would otherwise be squashed differently
+ * from a 16:9 anime frame and read as "not matching".
+ */
+export function centerCropRect(
+  width: number,
+  height: number,
+  aspect: number
+): { x: number; y: number; width: number; height: number } {
+  if (!(width > 0 && height > 0 && aspect > 0 && Number.isFinite(aspect))) {
+    return { x: 0, y: 0, width: Math.max(0, width), height: Math.max(0, height) };
+  }
+  if (width / height > aspect) {
+    const w = height * aspect;
+    return { x: (width - w) / 2, y: 0, width: w, height };
+  }
+  const h = width / aspect;
+  return { x: 0, y: (height - h) / 2, width, height: h };
 }
 
 export function reducePixels(p: Uint8Array, W: number, H: number): SceneAnalysis {
@@ -165,6 +196,22 @@ export function reducePixels(p: Uint8Array, W: number, H: number): SceneAnalysis
     }
   }
 
+  // Luminance per layout cell.
+  const cellOf = (x: number, y: number): number =>
+    Math.min(LAYOUT_GRID - 1, ((y * LAYOUT_GRID) / H) | 0) * LAYOUT_GRID +
+    Math.min(LAYOUT_GRID - 1, ((x * LAYOUT_GRID) / W) | 0);
+  const layoutSum = new Float64Array(LAYOUT_GRID * LAYOUT_GRID);
+  const layoutN = new Uint32Array(LAYOUT_GRID * LAYOUT_GRID);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const c = cellOf(x, y);
+      layoutSum[c] += L[y * W + x];
+      layoutN[c]++;
+    }
+  }
+  const edgeGridSum = new Float64Array(LAYOUT_GRID * LAYOUT_GRID);
+  const edgeGridN = new Uint32Array(LAYOUT_GRID * LAYOUT_GRID);
+
   // Sobel magnitude accumulated into a 3×3 cell grid + totals.
   const edgeCellSum = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   const edgeCellCount = [0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -195,8 +242,16 @@ export function reducePixels(p: Uint8Array, W: number, H: number): SceneAnalysis
       const cell = cellY * 3 + cellX;
       edgeCellSum[cell] += mag;
       edgeCellCount[cell]++;
+      const gridCell = cellOf(x, y);
+      edgeGridSum[gridCell] += mag;
+      edgeGridN[gridCell]++;
     }
   }
+  const layoutGrid = Array.from(layoutSum, (sum, i) => sum / Math.max(1, layoutN[i]) / 255);
+  // Sobel |gx|+|gy| on 0–255 luminance peaks at 2040.
+  const edgeGrid = Array.from(edgeGridSum, (sum, i) =>
+    Math.min(1, sum / Math.max(1, edgeGridN[i]) / 2040)
+  );
   let maxCell = 1;
   const cellAvg = edgeCellSum.map((s, i) => {
     const v = s / Math.max(1, edgeCellCount[i]);
@@ -263,6 +318,8 @@ export function reducePixels(p: Uint8Array, W: number, H: number): SceneAnalysis
     shadowRatio,
     luminanceHistogram,
     palette,
+    layoutGrid,
+    edgeGrid,
   };
 }
 

@@ -36,7 +36,7 @@ import {
 } from '../../libs/services/pilgrimage/reference-route';
 import {
   buildPreviewCaptureRecord,
-  isFiledUnder,
+  mayWriteFrameResult,
   previewReferenceFromParams,
   snapshotFromShot,
   withoutTargetFields,
@@ -447,7 +447,7 @@ export default function ComparePreviewScreen() {
         console.warn('frame match failed', err);
         if (cancelled) return;
         setFrameMatch({
-          histogram: null,
+          layout: null,
           edge: null,
           lighting: null,
           total: null,
@@ -593,11 +593,17 @@ export default function ComparePreviewScreen() {
     if (pendingWriteRef.current && pendingWriteRef.current.uri !== focusedShot.uri) {
       flushPendingWrite();
     }
-    const stored = findCaptureByUri(focusedShot.uri);
-    const mayWriteFrame =
-      (!openedFromJournal || userEditedRef.current) &&
-      (stored ? isFiledUnder(stored, reference) : !openedFromJournal);
-    const frame = mayWriteFrame ? frameMatch : null;
+    const mayWriteFrame = mayWriteFrameResult({
+      stored: findCaptureByUri(focusedShot.uri),
+      reference,
+      openedFromJournal,
+      userEdited: userEditedRef.current,
+    });
+    // The result for *this* pairing, never the `frameMatch` state: on a focus
+    // change that state still holds the previous shot's score for one render.
+    const frame = mayWriteFrame
+      ? (frameByPairRef.current[`${reference.imageUrl}|${focusedShot.uri}`] ?? null)
+      : null;
     if (editedNote === undefined && !frame) return;
     const record = buildPreviewCaptureRecord({
       shot: focusedShot,
@@ -1235,11 +1241,11 @@ export default function ComparePreviewScreen() {
                 </ThemedText>
                 <Ionicons name="image" size={14} color={theme.accent} />
               </View>
-              {frameMatch.histogram != null ? (
+              {frameMatch.layout != null ? (
                 <AnalysisBar
-                  label={t('pilgrimageUi.histogram')}
-                  value={frameMatch.histogram * 100}
-                  rightLabel={`${Math.round(frameMatch.histogram * 100)}%`}
+                  label={t('pilgrimageUi.frameLayout')}
+                  value={frameMatch.layout * 100}
+                  rightLabel={`${Math.round(frameMatch.layout * 100)}%`}
                   theme={theme}
                   tone={theme.status.success}
                 />

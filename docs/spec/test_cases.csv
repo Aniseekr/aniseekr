@@ -234,3 +234,4 @@ PILG-072,Pilgrimage,deterministic,P1,Legacy duplicate captures,A stored index th
 PILG-073,Pilgrimage,deterministic,P0,Camera preview params,The compare camera hands the preview the shot's own sensors and the session's referenceKind so imported-reference shots are filed in the free bucket,mapping,active
 PILG-074,Pilgrimage,deterministic,P0,Journal preview params,A Journal shot opens the preview with its stored sensors and source and a leftover camera session never replaces it,mapping,active
 PILG-075,Pilgrimage,deterministic,P0,Preview capture record,The preview files a shot under its scene or the free bucket with lens-gated analysis and no composite without a reference,mapping,active
+PILG-076,Pilgrimage,deterministic,P0,Frame match discriminates scenes,Frame match compares where light and edges sit so unrelated scenes score low and the same framing scores high and scores from the retired whole-frame metric are neither shown nor kept,boundary,active

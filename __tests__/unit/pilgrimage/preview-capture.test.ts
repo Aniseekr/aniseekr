@@ -13,6 +13,7 @@ import {
   buildJournalPreviewParams,
   buildPreviewCaptureRecord,
   isFiledUnder,
+  mayWriteFrameResult,
   previewReferenceFromParams,
   withoutTargetFields,
   type PreviewReference,
@@ -277,6 +278,7 @@ describe('preview capture record', () => {
         frameMatch: 0.8,
         frameValid: true,
         frameReason: null,
+        frameMatchVersion: 2,
       },
       userLocation: { latitude: 35.1, longitude: 138.9 },
       note: '西口',
@@ -382,5 +384,47 @@ describe('preview capture record', () => {
       themeColor: '#FF9F0A',
       ep: 3,
     });
+  });
+});
+
+describe('frame result writes', () => {
+  const filed = { spotId: 'pt-1', uri: 'file:///shot.jpg', capturedAt: 1 };
+  const base = { reference: sceneReference, openedFromJournal: false, userEdited: false };
+
+  it('PILG-075 a fresh camera shot or a shot filed here gets its frame result; elsewhere never', () => {
+    expect(mayWriteFrameResult({ ...base, stored: null })).toBe(true);
+    expect(mayWriteFrameResult({ ...base, stored: filed })).toBe(true);
+    expect(mayWriteFrameResult({ ...base, stored: { ...filed, spotId: 'pt-2' } })).toBe(false);
+  });
+
+  it('PILG-076 viewing a Journal shot writes nothing, except to replace a retired v1 score', () => {
+    const journal = { ...base, openedFromJournal: true };
+    expect(mayWriteFrameResult({ ...journal, stored: null })).toBe(false);
+    const current = {
+      ...filed,
+      sensorSnapshot: {
+        distanceMeters: null,
+        headingDeltaDeg: null,
+        tilt: 1,
+        frameMatch: 0.4,
+        frameMatchVersion: 2,
+      },
+    };
+    expect(mayWriteFrameResult({ ...journal, stored: current })).toBe(false);
+    expect(mayWriteFrameResult({ ...journal, stored: current, userEdited: true })).toBe(true);
+    const legacy = {
+      ...current,
+      sensorSnapshot: { ...current.sensorSnapshot, frameMatchVersion: undefined },
+    };
+    expect(mayWriteFrameResult({ ...journal, stored: legacy })).toBe(true);
+  });
+
+  it('PILG-076 written frame results are stamped with the current metric version', () => {
+    const { capture } = buildPreviewCaptureRecord({
+      shot: shot(),
+      reference: sceneReference,
+      frame: { total: 0.5, valid: true, reason: null },
+    });
+    expect(capture.sensorSnapshot?.frameMatchVersion).toBe(2);
   });
 });

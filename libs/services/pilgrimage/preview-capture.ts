@@ -10,6 +10,7 @@ import { albumFallbackAnimeTitle, type PilgrimageAlbumEntry } from './album-capt
 import { capturedOnWideAngle } from './capture-lens-gate';
 import { sanitizeCaptureNote, type CaptureSessionShot } from './capture-session';
 import type { PilgrimageCapture, SensorSnapshot } from './captures';
+import { FRAME_MATCH_VERSION } from './frame-match-score';
 import { getPilgrimageAnimeTitles, getPilgrimageSpotTitles } from './pilgrimage-localization';
 import { resolveCaptureBucket, type CompareRouteParams } from './reference-route';
 import { resolveTargetLocation } from './target-location';
@@ -217,6 +218,28 @@ export function isFiledUnder(record: PilgrimageCapture, reference: PreviewRefere
 }
 
 /**
+ * Whether the preview may write a fresh frame-match result for a shot. Only
+ * where the shot is already filed against this reference (or a fresh camera
+ * shot with no record yet) — a write must never move a record. A Journal shot
+ * is only touched after the user changed something, or to replace a score
+ * from the retired v1 metric with a real one.
+ */
+export function mayWriteFrameResult(input: {
+  stored: PilgrimageCapture | null;
+  reference: PreviewReference;
+  openedFromJournal: boolean;
+  userEdited: boolean;
+}): boolean {
+  const { stored, reference, openedFromJournal, userEdited } = input;
+  if (!stored) return !openedFromJournal;
+  if (!isFiledUnder(stored, reference)) return false;
+  const snapshot = stored.sensorSnapshot;
+  const legacyScore =
+    snapshot?.frameMatch != null && snapshot.frameMatchVersion !== FRAME_MATCH_VERSION;
+  return !openedFromJournal || userEdited || legacyScore;
+}
+
+/**
  * The record for `shot` filed against `reference`.
  *
  * - `note`: a string is authoritative ('' clears it); `undefined` leaves the
@@ -243,7 +266,12 @@ export function buildPreviewCaptureRecord(input: {
     ? {
         ...snap,
         ...(frame
-          ? { frameMatch: frame.total, frameValid: frame.valid, frameReason: frame.reason ?? null }
+          ? {
+              frameMatch: frame.total,
+              frameValid: frame.valid,
+              frameReason: frame.reason ?? null,
+              frameMatchVersion: FRAME_MATCH_VERSION,
+            }
           : {}),
       }
     : undefined;

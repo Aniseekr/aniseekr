@@ -1864,7 +1864,6 @@
     "heading": "方位",
     "headingOffset": "方位偏差",
     "helpGpsAlignment": "說明 / GPS 對位",
-    "histogram": "直方圖",
     "hideOverlay": "隱藏疊層",
     "imageUnavailable": "無法載入圖片",
     "includeCaptureCoordinates": "附上拍攝座標",
@@ -2096,7 +2095,8 @@
         "auto": "自動",
         "torch": "手電筒"
       }
-    }
+    },
+    "frameLayout": "構圖"
   },
   "profile": {
     "animeFan": "動畫迷",

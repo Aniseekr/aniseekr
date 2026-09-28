@@ -35,6 +35,11 @@ export interface SensorSnapshot {
   frameValid?: boolean | null;
   /** Why the validity gate tripped; null/undefined when valid. */
   frameReason?: 'dark' | 'lowDetail' | 'lowContrast' | 'analysisFailed' | null;
+  /**
+   * Which frame-match metric produced `frameMatch` (see FRAME_MATCH_VERSION).
+   * Scores from an older metric (missing version) are not shown.
+   */
+  frameMatchVersion?: number;
 }
 
 export interface CaptureGeoLocation {
