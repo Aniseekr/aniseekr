@@ -19,7 +19,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { ON_DARK, ThemedText, ThemedButton, ThemedSurface } from '../../../components/themed';
-import { Radius, Spacing } from '../../../constants/DesignSystem';
+import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { CameraStage } from '../../../components/pilgrimage/camera/CameraStage';
 import type {
@@ -29,10 +29,13 @@ import type {
 import ShutterRow from '../../../components/pilgrimage/camera/ShutterRow';
 import ZoomPresets from '../../../components/pilgrimage/camera/ZoomPresets';
 import CameraScrim from '../../../components/pilgrimage/camera/CameraScrim';
-import CameraTopBar from '../../../components/pilgrimage/camera/CameraTopBar';
+import CameraTopBar, {
+  CameraHeaderButton,
+} from '../../../components/pilgrimage/camera/CameraTopBar';
 import { LevelHorizon } from '../../../components/pilgrimage/camera/LevelHorizon';
 import { FocusReticle } from '../../../components/pilgrimage/camera/FocusReticle';
 import GalleryThumb from '../../../components/pilgrimage/camera/GalleryThumb';
+import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 import CamSwitchToast, {
   type CamSwitchToastValue,
 } from '../../../components/pilgrimage/camera/CamSwitchToast';
@@ -100,6 +103,7 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   const [suggestion, setSuggestion] = useState<NearestSpotSuggestion | null>(null);
   const [savedToast, setSavedToast] = useState<CamSwitchToastValue | null>(null);
   const [referencePickerOpen, setReferencePickerOpen] = useState(false);
+  const [pickedReference, setPickedReference] = useState<PickedReference | null>(null);
   // Recent free shots this session, newest first — feeds the ShutterRow gallery
   // thumb (same bottom-row layout as compare/[spotId].tsx).
   const [shotUris, setShotUris] = useState<string[]>([]);
@@ -221,6 +225,7 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   // frame match, preview) — for a known anime scene or the user's own image.
   const openWithReference = useCallback(
     (reference: PickedReference) => {
+      setPickedReference(reference);
       const params =
         reference.kind === 'scene'
           ? buildSceneCompareParams(reference.spot, {
@@ -345,27 +350,59 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
                 router.back();
               }
         }
+        leftControl={
+          <Pressable
+            onPress={() => {
+              hapticsBridge.tap();
+              setReferencePickerOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('pilgrimageUi.referencePicker.openA11y')}
+            style={({ pressed }) => [styles.referencePill, pressed && { opacity: 0.7 }]}>
+            {pickedReference ? (
+              <SpotImage
+                uri={
+                  pickedReference.kind === 'scene'
+                    ? pickedReference.spot.image
+                    : pickedReference.uri
+                }
+                style={styles.referenceThumb}
+                contentFit="cover"
+              />
+            ) : (
+              <Ionicons name="images-outline" size={16} color={ON_DARK} />
+            )}
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              numberOfLines={1}
+              style={styles.referenceText}>
+              {pickedReference?.kind === 'scene'
+                ? getPilgrimageSpotTitles(pickedReference.spot).primary
+                : pickedReference?.kind === 'imported'
+                  ? t('pilgrimageUi.referencePicker.importedLabel')
+                  : t('pilgrimageUi.referencePicker.open')}
+            </ThemedText>
+          </Pressable>
+        }
+        actions={
+          <CameraHeaderButton
+            icon="camera-reverse-outline"
+            accessibilityLabel={t('pilgrimage.capture.flipCamera')}
+            themeColor={theme.accent}
+            active={facing === 'front'}
+            accessibilityState={{ selected: facing === 'front' }}
+            onPress={() => {
+              hapticsBridge.selection();
+              setFacing((f) => (f === 'back' ? 'front' : 'back'));
+            }}
+          />
+        }
       />
       <SafeAreaView style={styles.overlay} pointerEvents="box-none" edges={['bottom']}>
         <View style={[styles.bottom, tabRoot && { paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET }]}>
           <View style={styles.toastWrap}>
             <CamSwitchToast toast={savedToast} themeColor={theme.accent} />
-          </View>
-          <View style={styles.referenceWrap}>
-            <Pressable
-              onPress={() => {
-                hapticsBridge.tap();
-                setReferencePickerOpen(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('pilgrimageUi.referencePicker.openA11y')}
-              hitSlop={8}
-              style={({ pressed }) => [styles.referencePill, pressed && { opacity: 0.7 }]}>
-              <Ionicons name="images-outline" size={16} color={ON_DARK} />
-              <ThemedText variant="caption" weight="700" style={{ color: ON_DARK }}>
-                {t('pilgrimageUi.referencePicker.open')}
-              </ThemedText>
-            </Pressable>
           </View>
           <View style={styles.zoomWrap}>
             <ZoomPresets
@@ -386,6 +423,21 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
                 hapticsBridge.selection();
                 setFacing((f) => (f === 'back' ? 'front' : 'back'));
               }}
+              rightNode={
+                <Pressable
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    router.push('/pilgrimage/identify');
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('pilgrimage.detail.identifyScene')}
+                  style={({ pressed }) => [styles.identifyButton, pressed && { opacity: 0.7 }]}>
+                  <Ionicons name="scan-outline" size={18} color={ON_DARK} />
+                  <ThemedText variant="captionSmall" weight="700" style={{ color: ON_DARK }}>
+                    {t('pilgrimage.capture.identifyShort')}
+                  </ThemedText>
+                </Pressable>
+              }
               galleryNode={
                 <GalleryThumb
                   uris={shotUris}
@@ -484,14 +536,31 @@ const styles = StyleSheet.create({
   },
   bottom: { gap: Spacing.sm, paddingBottom: Spacing.xs },
   toastWrap: { alignItems: 'center' },
-  referenceWrap: { alignItems: 'center' },
   // Floats over the live preview, so it uses the camera chrome, not theme surfaces.
   referencePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xxs,
-    minHeight: 36,
+    minHeight: Size.minTouchTarget,
+    maxWidth: 170,
     paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.full,
+    backgroundColor: CameraChrome.controlFill,
+    borderWidth: 1,
+    borderColor: CameraChrome.border,
+    ...cameraControlShadow,
+  },
+  referenceThumb: { width: 25, height: 25, borderRadius: Radius.sm },
+  referenceText: { color: ON_DARK, flexShrink: 1 },
+  identifyButton: {
+    minHeight: Size.minTouchTarget,
+    minWidth: 88,
+    maxWidth: 112,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xxs,
+    paddingHorizontal: Spacing.xs,
     borderRadius: Radius.full,
     backgroundColor: CameraChrome.controlFill,
     borderWidth: 1,

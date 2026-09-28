@@ -32,6 +32,8 @@ interface ShutterRowProps {
   burst?: { active: boolean; captured: number; total: number };
   /** Replaces the built-in library button (e.g. the merged GalleryThumb) in the left slot. */
   galleryNode?: ReactNode;
+  /** Replaces the flip button in the right slot; compare callers keep the default. */
+  rightNode?: ReactNode;
   /** Rotate the side-button glyphs 90° in place (landscape-locked interface convention). */
   rotateGlyphs?: boolean;
 }
@@ -59,6 +61,7 @@ export default function ShutterRow({
   onLongPress,
   burst,
   galleryNode,
+  rightNode,
   rotateGlyphs = false,
 }: ShutterRowProps) {
   const t = useT();
@@ -160,6 +163,15 @@ export default function ShutterRow({
 
   // Bottom row stays horizontal in BOTH orientations (Samsung/Apple convention) — only the
   // glyphs rotate in place; it never reflows to a right-edge vertical column.
+  if (rightNode) {
+    return (
+      <View style={[styles.clusterRow, styles.customClusterRow]}>
+        <View style={styles.sideSlot}>{leftSlot}</View>
+        {shutter}
+        <View style={[styles.sideSlot, styles.rightSlot]}>{rightNode}</View>
+      </View>
+    );
+  }
   return (
     <View style={styles.clusterRow}>
       {leftSlot}
@@ -212,6 +224,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 36,
   },
+  customClusterRow: { paddingHorizontal: 16 },
+  sideSlot: { flex: 1 },
+  rightSlot: { alignItems: 'flex-end' },
   // Shutter — a white ring with a white core, the universal capture affordance.
   shutterRing: {
     borderWidth: 3,
