@@ -893,13 +893,13 @@ function makeStyles(theme: ThemePalette) {
     heroThumb: {
       width: 92,
       height: 92,
-      borderRadius: 10,
+      borderRadius: Radius.md,
       backgroundColor: theme.background.tertiary,
     },
     heroPlaceholder: {
       width: 92,
       height: 92,
-      borderRadius: 10,
+      borderRadius: Radius.md,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.tertiary,
@@ -914,7 +914,7 @@ function makeStyles(theme: ThemePalette) {
       backgroundColor: `${theme.status.warning}14`,
       borderColor: `${theme.status.warning}55`,
       borderWidth: 1,
-      borderRadius: 14,
+      borderRadius: Radius.lg,
     },
     section: { gap: 12 },
     sectionHeader: {
@@ -949,7 +949,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 3,
       paddingHorizontal: 6,
       paddingVertical: 3,
-      borderRadius: 6,
+      borderRadius: Radius.full,
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
     popularMeta: { paddingTop: 8, paddingHorizontal: 2, gap: 2 },
@@ -975,7 +975,7 @@ function makeStyles(theme: ThemePalette) {
     spotThumb: {
       width: 64,
       height: 64,
-      borderRadius: 10,
+      borderRadius: Radius.md,
       backgroundColor: theme.background.tertiary,
     },
     spotBody: { flex: 1, gap: 3 },

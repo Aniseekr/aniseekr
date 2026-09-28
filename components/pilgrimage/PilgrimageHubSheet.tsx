@@ -737,7 +737,7 @@ function makeStyles(theme: ThemePalette) {
     sheetHandle: {
       width: 44,
       height: 4,
-      borderRadius: 2,
+      borderRadius: Radius.full,
     },
     sheetContent: {
       paddingBottom: Spacing.xxl,
@@ -807,7 +807,7 @@ function makeStyles(theme: ThemePalette) {
     collectionPill: {
       width: 18,
       height: 18,
-      borderRadius: 9,
+      borderRadius: Radius.full,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
@@ -828,7 +828,7 @@ function makeStyles(theme: ThemePalette) {
     swapBtn: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: Radius.full,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: StyleSheet.hairlineWidth,
@@ -836,7 +836,7 @@ function makeStyles(theme: ThemePalette) {
     openBtn: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: Radius.full,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -914,7 +914,7 @@ function makeStyles(theme: ThemePalette) {
       right: 4,
       width: 16,
       height: 16,
-      borderRadius: 8,
+      borderRadius: Radius.full,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
@@ -960,7 +960,7 @@ function makeStyles(theme: ThemePalette) {
       right: 6,
       width: 18,
       height: 18,
-      borderRadius: 9,
+      borderRadius: Radius.full,
       alignItems: 'center',
       justifyContent: 'center',
     },

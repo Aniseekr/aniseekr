@@ -105,5 +105,24 @@ Screenshots live outside the repo (session scratchpad `baseline/`); findings bel
   from the record, written only when edited, and flushed on leave; frame results written only
   where the shot is already filed; composites keyed by pairing; field-level `sensorSnapshot`
   merge; imported references released when the camera closes. Final verdict: APPROVE.
-  Follow-up (out of scope): frame-match scores unrelated scenes ~90%.
-- [ ] 1b bundled display face (native rebuild, combined with Phase 3 device build)
+  Follow-up (done below): frame-match scores unrelated scenes ~90%.
+- [x] 1b bundled display face — Nunito (static 400/600/700/800, OFL, `assets/fonts/`), picked for
+  continuity with the original "rounded" display intent. expo-font config plugin: iOS files (the
+  family comes from name ID 1/16 = "Nunito"), Android XML family "Nunito". Applies to the
+  display/headline tiers and direct `FontFamily.display` users; body text stays on the system face;
+  CJK falls back to PingFang/Noto at the same weight. Guard: `bundled-display-font.test.ts`.
+  Simulator-verified after a clean prebuild: UIAppFonts lists the 4 files, and a Latin headline
+  renders in Nunito. Android verified at config level only (no SDK on this machine).
+- [x] Frame match v2 (PILG-076). Correlates 16×16 luminance and edge grids instead of whole-frame
+  stats. On 6 real photos, unrelated pairs 74–92% → 0–31%; the same framing re-rendered 70–92%.
+  Stored v1 scores are hidden until recomputed (`frameMatchVersion`).
+- [x] Leftovers from the punch-list audit:
+  - Journal radii → tokens; Journal title = tab label (足跡); empty character tile widened.
+  - Profile: duplicate Settings row removed; one icon-disc shape.
+  - Mode-switcher icons → `IconSize`; `Shadow.float` token for the tab bar.
+  - Discover and hub radii → tokens.
+  - Gacha strings → `t()`; its dead "+ ADD" button removed.
+  - Jujutsu Kaisen rally now links the TV anime (294993), not the manga (238887).
+  - Metro ignores `.rnrepo-cache`: a native build rewrites it and the watcher crashed.
+  Still needs a real device: picker keyboard (M5), pairing a camera shot, CJK fallback weight on
+  Android.

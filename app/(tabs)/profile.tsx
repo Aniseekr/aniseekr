@@ -432,35 +432,9 @@ export default function ProfileScreen() {
             <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
           </Animated.View>
 
-          {/* Settings Row */}
-          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}>
-            <Pressable
-              onPress={handleOpenSettings}
-              style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
-              <ThemedSurface
-                variant="card"
-                radius={Radius.lg}
-                style={[styles.settingsRow, { borderColor: theme.glassBorder }]}>
-                <View
-                  style={[styles.settingsIconWrap, { backgroundColor: theme.background.tertiary }]}>
-                  <Ionicons name="settings-outline" size={18} color={theme.text.primary} />
-                </View>
-                <View style={styles.settingsLabel}>
-                  <ThemedText variant="titleSmall" weight="600">
-                    {t('tabs.profileScreen.settings')}
-                  </ThemedText>
-                  <ThemedText variant="bodySmall" tone="tertiary">
-                    {t('tabs.profileScreen.settingsSubtitle')}
-                  </ThemedText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.text.secondary} />
-              </ThemedSurface>
-            </Pressable>
-          </Animated.View>
-
           {connectedPlatforms.length > 0 ? (
             <Animated.View
-              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 7 : 6)}
+              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}
               style={styles.platformsSection}>
               <PlatformSwitcher
                 platforms={switcherPlatforms}
@@ -639,10 +613,11 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     padding: Spacing.md,
   },
+  // Same icon disc as the shortcut tiles below (ProfileShortcutsGrid iconWrap).
   statsHeroIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -680,23 +655,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
     borderRadius: Radius.full,
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm + 2,
-    padding: Spacing.md + 2,
-  },
-  settingsIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsLabel: {
-    flex: 1,
-    gap: 2,
   },
   platformsSection: {
     marginTop: Spacing.xs,

@@ -820,7 +820,7 @@ const makeStyles = (theme: ThemePalette) =>
     iconButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: Radius.full,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -884,7 +884,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 6,
+      borderRadius: Radius.sm,
       backgroundColor: `${theme.accent}29`,
       borderWidth: 1,
       borderColor: `${theme.accent}A6`,
@@ -959,7 +959,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
       flexDirection: 'row',
       alignSelf: 'flex-start',
       padding: 3,
-      borderRadius: 999,
+      borderRadius: Radius.full,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -968,7 +968,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
     rangePillItem: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.full,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1003,7 +1003,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
     rankThumb: {
       width: 48,
       height: 64,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.tertiary,
     },
     rankBody: {
@@ -1063,7 +1063,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
       left: 10,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 8,
+      borderRadius: Radius.full,
       backgroundColor: 'rgba(0,0,0,0.55)',
       borderWidth: 1,
     },
@@ -1080,7 +1080,7 @@ const makeTrendStyles = (theme: ThemePalette) =>
       gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 8,
+      borderRadius: Radius.full,
     },
     pilgrimageSpotText: {
       ...Typography.badge,

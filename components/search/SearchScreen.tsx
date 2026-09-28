@@ -753,7 +753,7 @@ interface ResultCardProps {
   pending?: boolean;
   /**
    * Whether the L2 Anitabi cross-index resolved a pilgrimage entry for this
-   * anime. Renders a 📍 marker on the title row so users can see at a glance
+   * anime. Renders a location-pin icon on the title row so users can see at a glance
    * which results have real pilgrimage data — no fake markers; falsy = no
    * marker, never a placeholder.
    */

@@ -848,7 +848,6 @@
         "tabsSeparator": "、"
       },
       "settings": "設定",
-      "settingsSubtitle": "偏好、帳號、其他",
       "statLabel": {
         "cards": "卡片",
         "liked": "喜愛",
@@ -1200,7 +1199,6 @@
       "tagLibrary": "相簿",
       "tagScene": "場景",
       "tagYours": "你的",
-      "title": "巡禮相簿",
       "weeksAgo": "{count} 週前"
     },
     "camera": {
@@ -1752,7 +1750,12 @@
     "rarity": "稀有度",
     "shards": "碎片",
     "sortCollection": "收藏排序",
-    "standardSignal": "標準訊號"
+    "standardSignal": "標準訊號",
+    "scannerTitle": "訊號掃描",
+    "containsPrefix": "內含 ",
+    "containsSuffix": " 個訊號",
+    "scanNow": "立即掃描",
+    "pullCost": "{cost} 金幣"
   },
   "misc": {
     "apiKey": "API 金鑰",

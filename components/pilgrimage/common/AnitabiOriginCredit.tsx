@@ -43,7 +43,7 @@ export interface AnitabiOriginCreditProps {
 }
 
 /**
- * Render the "📷 via {origin}" credit when the point has attribution data.
+ * Render the camera-icon "via {origin}" credit when the point has attribution data.
  * Returns null otherwise so callers can mount it unconditionally.
  */
 export function AnitabiOriginCredit({

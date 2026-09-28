@@ -463,7 +463,8 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
     ? selectedFolder
       ? folderTitle(selectedFolder.anime, t)
       : t('pilgrimage.album.albumFallback')
-    : t('pilgrimage.album.title');
+    : // Same name as the tab that opens it (足跡 / Journal), in every language.
+      t('tabs.explorerJournal');
 
   return (
     <View style={styles.root}>
@@ -616,6 +617,8 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: PilgrimageJ
                   }
                   style={({ pressed }) => [
                     styles.charAddTile,
+                    // Alone (no characters yet) it carries the full CTA; give it room.
+                    characters.length === 0 && styles.charAddTileEmpty,
                     { borderColor: theme.glassBorder, backgroundColor: theme.background.secondary },
                     pressed && { opacity: 0.8 },
                   ]}>
@@ -1228,7 +1231,7 @@ function makeStyles(theme: ThemePalette) {
     statCard: {
       flex: 1,
       padding: 12,
-      borderRadius: 14,
+      borderRadius: Radius.lg,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -1270,7 +1273,7 @@ function makeStyles(theme: ThemePalette) {
     charThumb: {
       width: 72,
       height: 92,
-      borderRadius: 12,
+      borderRadius: Radius.md,
       overflow: 'hidden',
       borderWidth: 1,
     },
@@ -1280,13 +1283,17 @@ function makeStyles(theme: ThemePalette) {
     charAddTile: {
       width: 72,
       height: 92,
-      borderRadius: 12,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderStyle: 'dashed',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 4,
       paddingHorizontal: 4,
+    },
+    charAddTileEmpty: {
+      width: 140,
+      paddingHorizontal: Spacing.sm,
     },
     charAddLabel: {
       textAlign: 'center',
@@ -1302,7 +1309,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 18,
+      borderRadius: Radius.full,
       borderWidth: 1,
       minHeight: 36,
       maxWidth: 180,
@@ -1310,7 +1317,7 @@ function makeStyles(theme: ThemePalette) {
     chipCount: {
       paddingHorizontal: 6,
       paddingVertical: 1,
-      borderRadius: 8,
+      borderRadius: Radius.full,
       minWidth: 18,
       alignItems: 'center',
     },
@@ -1327,7 +1334,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 14,
+      borderRadius: Radius.full,
       borderWidth: 1,
     },
     emptyState: {
@@ -1338,7 +1345,7 @@ function makeStyles(theme: ThemePalette) {
     emptyIcon: {
       width: 64,
       height: 64,
-      borderRadius: 32,
+      borderRadius: Radius.full,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 6,
@@ -1356,7 +1363,7 @@ function makeStyles(theme: ThemePalette) {
       flex: 1,
     },
     folderCard: {
-      borderRadius: 18,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       overflow: 'hidden',
     },
@@ -1385,7 +1392,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 10,
+      borderRadius: Radius.full,
       backgroundColor: 'rgba(0,0,0,0.6)',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.15)',
@@ -1400,7 +1407,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 10,
+      borderRadius: Radius.full,
       backgroundColor: 'rgba(0,0,0,0.6)',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.15)',
@@ -1414,7 +1421,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 10,
+      borderRadius: Radius.full,
     },
     folderBody: {
       padding: 12,
@@ -1442,7 +1449,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 12,
     },
     compareCard: {
-      borderRadius: 18,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       overflow: 'hidden',
     },
@@ -1464,7 +1471,7 @@ function makeStyles(theme: ThemePalette) {
       right: 6,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: Radius.full,
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
     divider: {
@@ -1480,7 +1487,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 10,
+      borderRadius: Radius.full,
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',

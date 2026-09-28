@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import {
   CAPS_TRACKING,
   Radius,
+  Shadow,
   TabBar as TabBarTokens,
   Typography,
   bottomPad,
@@ -323,15 +324,7 @@ const makeStyles = (theme: ThemePalette) =>
       overflow: 'hidden',
       paddingHorizontal: PILL_INNER_PADDING,
       height: TabBarTokens.height,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.32,
-          shadowRadius: 24,
-        },
-        android: { elevation: 14 },
-      }),
+      ...Shadow.float,
     },
     pillBackground: {
       ...StyleSheet.absoluteFill,

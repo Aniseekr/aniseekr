@@ -464,7 +464,8 @@ const styles = StyleSheet.create({
   masterpieceStampText: {
     color: '#FF453A',
     fontSize: 32,
-    fontWeight: '900',
+    // The bundled display face ships up to 800 (ExtraBold).
+    fontWeight: '800',
     fontFamily: FontFamily.display,
     textAlign: 'center',
     lineHeight: 36,

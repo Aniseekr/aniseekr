@@ -848,7 +848,6 @@
         "tabsSeparator": ", "
       },
       "settings": "Settings",
-      "settingsSubtitle": "Preferences, account, more",
       "statLabel": {
         "cards": "Cards",
         "liked": "Liked",
@@ -1200,7 +1199,6 @@
       "tagLibrary": "LIBRARY",
       "tagScene": "SCENE",
       "tagYours": "YOURS",
-      "title": "Pilgrimage Album",
       "weeksAgo": "{count}w ago"
     },
     "camera": {
@@ -1752,7 +1750,12 @@
     "rarity": "Rarity",
     "shards": "Shards",
     "sortCollection": "Sort Collection",
-    "standardSignal": "Standard Signal"
+    "standardSignal": "Standard Signal",
+    "scannerTitle": "SIGNAL SCANNER",
+    "containsPrefix": "CONTAINS ",
+    "containsSuffix": " SIGNALS",
+    "scanNow": "SCAN NOW",
+    "pullCost": "{cost} COINS"
   },
   "misc": {
     "apiKey": "API Key",

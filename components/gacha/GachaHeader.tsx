@@ -2,7 +2,7 @@ import { View, Text, Pressable, Platform, StyleSheet } from 'react-native';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { CapsText } from '../themed/CapsText';
+import { useT } from '../../libs/i18n';
 
 interface GachaHeaderProps {
   coinBalance: number;
@@ -15,18 +15,16 @@ export function GachaHeader({
   onShowDropRates,
   onShowReconstruction,
 }: GachaHeaderProps) {
+  const t = useT();
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
-        <Text style={styles.label}>SIGNAL SCANNER</Text>
+        <Text style={styles.label}>{t('gacha.scannerTitle')}</Text>
         <View style={styles.coinCard}>
           <View style={styles.coinIconContainer}>
             <FontAwesome5 name="coins" size={18} color="#fbbf24" />
           </View>
           <Text style={styles.coinBalance}>{coinBalance}</Text>
-          <Pressable style={styles.addButton}>
-            <CapsText style={styles.addButtonText}>+ ADD</CapsText>
-          </Pressable>
         </View>
       </View>
       <View style={styles.actionsRow}>
@@ -94,24 +92,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     letterSpacing: -0.5,
-  },
-  addButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fbbf24',
-    borderRadius: 20,
-    ...Platform.select({
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  addButtonText: {
-    color: '#000',
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
   },
   actionsRow: {
     flexDirection: 'row',

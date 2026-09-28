@@ -33,7 +33,9 @@ export function PackCarousel({
           </View>
           <Text style={styles.title}>{t('gacha.standardSignal')}</Text>
           <Text style={styles.subtitle}>
-            CONTAINS <Text style={styles.subtitleHighlight}>{cardsPerPull}</Text> SIGNALS
+            {t('gacha.containsPrefix')}
+            <Text style={styles.subtitleHighlight}>{cardsPerPull}</Text>
+            {t('gacha.containsSuffix')}
           </Text>
 
           <Pressable
@@ -44,9 +46,9 @@ export function PackCarousel({
               <ActivityIndicator color="#000" size="large" />
             ) : (
               <View style={styles.pullButtonContent}>
-                <Text style={styles.pullButtonText}>SCAN NOW</Text>
+                <Text style={styles.pullButtonText}>{t('gacha.scanNow')}</Text>
                 <View style={styles.pullButtonDot} />
-                <Text style={styles.pullButtonCost}>{pullCost} COINS</Text>
+                <Text style={styles.pullButtonCost}>{t('gacha.pullCost', { cost: pullCost })}</Text>
               </View>
             )}
           </Pressable>
