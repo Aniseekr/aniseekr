@@ -129,6 +129,7 @@ export interface MapSurfaceProps {
   /** Pixels to lift in-map controls/attribution off the bottom edge. */
   controlsBottomOffset?: number;
   onMarkerPress?: (marker: MapMarker) => void;
+  onMapPress?: () => void;
   /** Long-press on a marker → contextual quick actions. */
   onMarkerLongPress?: (marker: MapMarker) => void;
   onClusterPress?: (markers: readonly MapMarker[]) => void;

@@ -1,5 +1,5 @@
 // Data cluster for the pilgrimage hub map
-// (components/pilgrimage/screens/PilgrimageMapScreen.tsx).
+// (components/pilgrimage/home/ExplorerMapView.tsx).
 //
 // Owns the "known anime" set and everything that feeds it: the synchronous
 // snapshot/index seed (so the map + sheet render on frame 1, CLAUDE.md Rule
