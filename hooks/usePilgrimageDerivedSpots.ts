@@ -41,11 +41,8 @@ export interface UsePilgrimageDerivedSpotsResult {
   groupedSpotByPointId: Map<string, AnitabiSpot>;
   filteredGroupedSpots: readonly AnitabiSpot[];
   filteredPoints: readonly AnitabiPoint[];
-  filteredPointIds: Set<string>;
-  filteredMappablePointCount: number;
   groupedCounts: ReturnType<typeof countPilgrimageSpotFilters>;
   normalizedSpotSearchQuery: string;
-  fallbackSelectedSpotId: string | null;
   spotStats: SpotStats;
   userStats: UserSpotStats;
   distanceFor: (spot: AnitabiPoint) => number | null;
@@ -62,7 +59,6 @@ export interface UsePilgrimageDerivedSpotsArgs {
   spotIntents: SpotIntentMap;
   spotFilter: PilgrimageSpotFilter;
   spotSearchQuery: string;
-  viewMode: 'list' | 'map';
 }
 
 export function usePilgrimageDerivedSpots({
@@ -74,7 +70,6 @@ export function usePilgrimageDerivedSpots({
   spotIntents,
   spotFilter,
   spotSearchQuery,
-  viewMode,
 }: UsePilgrimageDerivedSpotsArgs): UsePilgrimageDerivedSpotsResult {
   // Phase 4: spotStats only depends on the immutable side (anime + points).
   // Toggling visited / capturing a photo no longer reruns N haversines.
@@ -159,29 +154,10 @@ export function usePilgrimageDerivedSpots({
     return out;
   }, [filteredGroupedSpots]);
 
-  const filteredPointIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const point of filteredPoints) ids.add(point.id);
-    return ids;
-  }, [filteredPoints]);
-
-  const filteredMappablePointCount = useMemo(
-    () => filteredPoints.reduce((count, point) => count + (hasValidGeo(point.geo) ? 1 : 0), 0),
-    [filteredPoints]
-  );
-
   const groupedCounts = useMemo(
     () => countPilgrimageSpotFilters(searchedGroupedSpots, visited, captures, spotIntents),
     [searchedGroupedSpots, visited, captures, spotIntents]
   );
-
-  const fallbackSelectedSpotId = useMemo(() => {
-    if (viewMode !== 'map' || filteredGroupedSpots.length === 0) return null;
-    const firstValid = filteredGroupedSpots
-      .map((spot) => getNearestSceneForSpot(spot, userLocation))
-      .find((point) => hasValidGeo(point.geo));
-    return firstValid ? firstValid.id : null;
-  }, [viewMode, filteredGroupedSpots, userLocation]);
 
   const distanceFor = useCallback(
     (spot: AnitabiPoint): number | null => {
@@ -210,11 +186,8 @@ export function usePilgrimageDerivedSpots({
     groupedSpotByPointId,
     filteredGroupedSpots,
     filteredPoints,
-    filteredPointIds,
-    filteredMappablePointCount,
     groupedCounts,
     normalizedSpotSearchQuery,
-    fallbackSelectedSpotId,
     spotStats,
     userStats,
     distanceFor,

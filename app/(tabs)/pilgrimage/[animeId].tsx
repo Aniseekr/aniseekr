@@ -4,9 +4,9 @@
 // Spec: spec/pilgrimage_spec.md §8 (Routes).
 //
 // Visual language: map-first. The native map fills the screen; only
-// navigation and one layers/tools affordance float above it. Search, filter,
-// Grid / Rows / Map and anime context live together in the persistent content
-// sheet. Dragging it up focuses on scenes; Map peeks it back down.
+// navigation and one tools affordance float above it. Search, filter and
+// anime context live in the persistent content sheet. Dragging it up focuses
+// on scenes.
 //
 // CLAUDE.md Rule 9: this file is the route shell. State + side effects live
 // in feature hooks (usePilgrimageDetailData / Interactions / DerivedSpots /
@@ -43,7 +43,6 @@ import { PLATFORM_CONFIGS, type PlatformType } from '../../../libs/services/auth
 import { isSupportedBrowseSource } from '../../../libs/services/data-source-config';
 import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
 import {
-  formatPilgrimageSubtitle,
   getPilgrimageAnimeTitles,
   getPilgrimageSpotTitles,
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
@@ -59,13 +58,7 @@ import {
   mergePilgrimageSeriesEntries,
   type PilgrimageSeriesSelection,
 } from '../../../libs/services/pilgrimage/pilgrimage-series';
-import {
-  getPilgrimageDetailViewPreset,
-  resolvePilgrimageDetailViewPreset,
-  type PilgrimageDetailViewPreset,
-} from '../../../libs/services/pilgrimage/pilgrimage-detail-flow';
 import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
-import type { SpotArea } from '../../../libs/services/pilgrimage/spot-areas';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
@@ -96,7 +89,6 @@ import {
   getPointSourceBangumiId,
   hasValidGeo,
   makePilgrimageDetailStyles,
-  type FilterCyclePillState,
   type SpotMapViewHandle,
 } from '../../../components/pilgrimage/detail';
 import { useI18n, useT } from '../../../libs/i18n';
@@ -177,12 +169,14 @@ export default function PilgrimageDetailScreen() {
   const {
     seriesSelection,
     viewMode,
-    listLayout,
+    searchOpen,
     mapMarkerMode,
     mapOfflineOnly,
     spotFilter,
     spotSearchQuery,
   } = view;
+  const mainSpotFilter =
+    spotFilter === 'unvisited' || spotFilter === 'visited' ? spotFilter : 'all';
 
   const resetSeriesSelection = useCallback(() => {
     setView({ seriesSelection: 'all' });
@@ -212,7 +206,6 @@ export default function PilgrimageDetailScreen() {
   const themeColorFg = readableTextOn(themeColor);
   const styles = useMemo(() => makePilgrimageDetailStyles(theme, insets.top), [theme, insets.top]);
   const animeTitles = useMemo(() => (anime ? getPilgrimageAnimeTitles(anime) : null), [anime]);
-  const animeSubtitle = animeTitles ? formatPilgrimageSubtitle(animeTitles) : undefined;
   const localityAnimeId = anime?.id ?? bangumiId;
   const localityMarkers = useMemo<MapMarker[]>(() => {
     void localitySnapshot;
@@ -265,20 +258,15 @@ export default function PilgrimageDetailScreen() {
     visited,
     captures,
     spotIntents,
-    spotFilter,
+    spotFilter: mainSpotFilter,
     spotSearchQuery,
-    viewMode,
   });
   const {
-    groupedSpots,
     groupedSpotByPointId,
     filteredGroupedSpots,
     filteredPoints,
-    filteredPointIds,
-    filteredMappablePointCount,
     groupedCounts,
     normalizedSpotSearchQuery,
-    fallbackSelectedSpotId,
     spotStats,
     userStats,
     distanceFor,
@@ -334,9 +322,13 @@ export default function PilgrimageDetailScreen() {
     activeSpot,
     clusterSpots,
     selectedSpotId,
-    setSelectedSpotId,
+    focusRequest,
+    menuSpotId,
+    setMenuSpotId,
     openGroup,
     openSpot,
+    selectSpot,
+    openDetails,
     openCluster,
     closeSheet,
     closeCluster,
@@ -365,26 +357,8 @@ export default function PilgrimageDetailScreen() {
       consumedKey: consumedSpotFocusRef.current,
     });
     consumedSpotFocusRef.current = resolved.consumedKey;
-    if (resolved.spotId && focusedSpot) openSpot(focusedSpot);
-  }, [bangumiId, focusSpotId, groupedSpotByPointId, openSpot]);
-
-  // Keep the map's chip-strip selection in sync with the current filtered
-  // pointset. If the previous pick was filtered out, fall back to the first
-  // valid scene so the strip never lands on a blank chip.
-  useEffect(() => {
-    setSelectedSpotId((current) => {
-      if (viewMode !== 'map' || filteredGroupedSpots.length === 0) {
-        return current === null ? current : null;
-      }
-      return current && filteredPointIds.has(current) ? current : fallbackSelectedSpotId;
-    });
-  }, [
-    viewMode,
-    filteredGroupedSpots.length,
-    filteredPointIds,
-    fallbackSelectedSpotId,
-    setSelectedSpotId,
-  ]);
+    if (resolved.spotId && focusedSpot) selectSpot(focusedSpot);
+  }, [bangumiId, focusSpotId, groupedSpotByPointId, selectSpot]);
 
   const posterUri = useMemo(() => {
     // Prefer covers we already hold (anitabi CDN / the route-param seed) —
@@ -439,36 +413,6 @@ export default function PilgrimageDetailScreen() {
         cn: anime?.cn || undefined,
       }),
     [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
-  );
-
-  const activeViewPreset = getPilgrimageDetailViewPreset(viewMode, listLayout);
-
-  const handleViewPresetChange = useCallback(
-    (preset: PilgrimageDetailViewPreset) => {
-      Haptics.selectionAsync().catch(() => undefined);
-      const next = resolvePilgrimageDetailViewPreset(preset);
-      setView({ viewMode: next.viewMode, listLayout: next.listLayout });
-    },
-    [setView]
-  );
-
-  // Rows-mode area section header tap — peek the sheet so the map is
-  // dominant, then fit the camera to that area's bounds. A singleton-area
-  // (or otherwise degenerate) box has south===north / west===east, which
-  // fitBounds can't meaningfully zoom to — recenter instead, same guard as
-  // map.tsx's handleClusterPress.
-  const handleAreaPress = useCallback(
-    (area: SpotArea) => {
-      Haptics.selectionAsync().catch(() => undefined);
-      setView({ viewMode: 'map' });
-      const { bounds, center } = area;
-      if (bounds.north - bounds.south < 0.0005 && bounds.east - bounds.west < 0.0005) {
-        spotMapRef.current?.recenter(center.lat, center.lng, 16, { animate: true });
-        return;
-      }
-      spotMapRef.current?.fitBounds(bounds, { animate: true });
-    },
-    [setView]
   );
 
   const handleOpenBrowse = useCallback(() => {
@@ -599,15 +543,14 @@ export default function PilgrimageDetailScreen() {
     [setView]
   );
   const handleSearchClear = useCallback(() => {
-    Haptics.selectionAsync().catch(() => undefined);
-    setView({ spotSearchQuery: '' });
+    setView({ spotSearchQuery: '', searchOpen: false });
   }, [setView]);
+  const handleSearchOpen = useCallback(() => setView({ searchOpen: true }), [setView]);
 
   const handleSpotFilterChange = useCallback(
     (
       filter: import('../../../libs/services/pilgrimage/pilgrimage-detail-filter').PilgrimageSpotFilter
     ) => {
-      Haptics.selectionAsync().catch(() => undefined);
       setView({ spotFilter: filter });
     },
     [setView]
@@ -625,60 +568,6 @@ export default function PilgrimageDetailScreen() {
   const emptyMessage = normalizedSpotSearchQuery
     ? t('pilgrimage.detail.emptySearch')
     : t('pilgrimage.detail.emptyFilter');
-
-  // Build the ordered list of filter states the cycle pill walks through.
-  // Always include all / unvisited / visited; conditionally extend with
-  // planned / saved / photos when they have data (or when the current
-  // selection is one of them, so the cycle can return through it).
-  const filterCycleStates = useMemo<readonly FilterCyclePillState[]>(() => {
-    const states: FilterCyclePillState[] = [
-      { filter: 'all', label: t('pilgrimage.detail.filter.all'), badge: groupedCounts.all },
-      {
-        filter: 'unvisited',
-        label: t('pilgrimage.detail.filter.unvisited'),
-        badge: groupedCounts.unvisited,
-      },
-      {
-        filter: 'visited',
-        label: t('pilgrimage.detail.filter.visited'),
-        badge: groupedCounts.visited,
-      },
-    ];
-    if (groupedCounts.planned > 0 || spotFilter === 'planned') {
-      states.push({
-        filter: 'planned',
-        label: t('pilgrimage.detail.filter.planned'),
-        badge: groupedCounts.planned,
-        icon: 'flag',
-      });
-    }
-    if (groupedCounts.saved > 0 || spotFilter === 'saved') {
-      states.push({
-        filter: 'saved',
-        label: t('pilgrimage.detail.filter.saved'),
-        badge: groupedCounts.saved,
-        icon: 'bookmark',
-      });
-    }
-    if (groupedCounts.photos > 0 || spotFilter === 'photos') {
-      states.push({
-        filter: 'photos',
-        label: t('pilgrimage.detail.filter.photos'),
-        badge: groupedCounts.photos,
-        icon: 'camera',
-      });
-    }
-    return states;
-  }, [
-    groupedCounts.all,
-    groupedCounts.unvisited,
-    groupedCounts.visited,
-    groupedCounts.planned,
-    groupedCounts.saved,
-    groupedCounts.photos,
-    spotFilter,
-    t,
-  ]);
 
   // The bottom sheet writes its top-edge Y into this shared value. Native map
   // controls use it directly, avoiding JS state on every drag frame.
@@ -748,7 +637,7 @@ export default function PilgrimageDetailScreen() {
                   focusSpotId={selectedSpotId}
                   controlsBottomOffset={sheetPeekOffset}
                   theme={theme}
-                  onSpotPress={openSpot}
+                  onSpotPress={selectSpot}
                   onClusterPick={openCluster}
                   onLocalityMarkerPress={handleLocalityMarkerPress}
                   onUserPan={tracking.onUserPan}
@@ -853,38 +742,39 @@ export default function PilgrimageDetailScreen() {
             <PilgrimageDetailSheet
               anime={anime}
               animeTitles={animeTitles}
-              animeSubtitle={animeSubtitle}
               browseLabel={browseLabel}
               posterUri={posterUri}
               spotStats={spotStats}
               userStats={userStats}
               filteredGroupedSpots={filteredGroupedSpots}
-              totalSpotCount={groupedSpots.length}
-              listLayout={listLayout}
               viewMode={viewMode}
               themeColor={themeColor}
-              themeColorFg={themeColorFg}
               theme={theme}
               visited={visited}
-              captures={captures}
-              spotIntents={spotIntents}
               spotSearchQuery={spotSearchQuery}
-              filterCycleStates={filterCycleStates}
-              spotFilter={spotFilter}
-              activeViewPreset={activeViewPreset}
-              filteredMappablePointCount={filteredMappablePointCount}
+              searchOpen={searchOpen}
+              groupedCounts={groupedCounts}
+              spotFilter={mainSpotFilter}
+              selectedSpotId={selectedSpotId}
+              focusRequest={focusRequest}
+              menuSpotId={menuSpotId}
               emptyMessage={isEmpty ? t('pilgrimage.detail.emptyNoData') : emptyMessage}
               animatedPosition={sheetPosition}
               onOpenBrowse={handleOpenBrowse}
               onSearchChange={handleSearchChange}
               onSearchClear={handleSearchClear}
+              onSearchOpen={handleSearchOpen}
               onSpotFilterChange={handleSpotFilterChange}
-              onViewPresetChange={handleViewPresetChange}
               onSpotPress={openGroup}
               onToggleVisited={toggleGroupedVisited}
-              onAreaPress={handleAreaPress}
               onOpenMaps={handleOpenMaps}
-              onTakeComparison={handleFrameShot}
+              onStartCamera={handleStartCamera}
+              onFrameShot={handleFrameShot}
+              onIdentifyScene={handleIdentifyScene}
+              onToggleSaved={handleToggleSaved}
+              onOpenDetails={openDetails}
+              onMenuOpen={setMenuSpotId}
+              onMenuClose={() => setMenuSpotId(null)}
               representativeForGroup={representativeForGroup}
               distanceForGroup={distanceForGroup}
               hasIntentForGroup={hasIntentForGroup}

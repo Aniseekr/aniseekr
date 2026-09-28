@@ -30,8 +30,13 @@ export interface UsePilgrimageSpotSheetResult {
   clusterSpots: readonly AnitabiPoint[] | null;
   selectedSpotId: string | null;
   setSelectedSpotId: React.Dispatch<React.SetStateAction<string | null>>;
+  focusRequest: number;
+  menuSpotId: string | null;
+  setMenuSpotId: React.Dispatch<React.SetStateAction<string | null>>;
   openGroup: (group: AnitabiSpot) => void;
   openSpot: (spot: AnitabiPoint) => void;
+  selectSpot: (spot: AnitabiPoint) => void;
+  openDetails: (spot: AnitabiPoint) => void;
   openCluster: (spots: readonly AnitabiPoint[]) => void;
   closeSheet: () => void;
   closeCluster: () => void;
@@ -58,18 +63,31 @@ export function usePilgrimageSpotSheet({
   const [activeSpot, setActiveSpot] = useState<AnitabiPoint | null>(null);
   const [clusterSpots, setClusterSpots] = useState<readonly AnitabiPoint[] | null>(null);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const [menuSpotId, setMenuSpotId] = useState<string | null>(null);
 
   const openGroup = useCallback((group: AnitabiSpot) => {
     Haptics.selectionAsync().catch(() => undefined);
     const initialScene = getInitialSpotSheetScene(group);
-    if (initialScene) setActiveSpot(initialScene);
+    if (initialScene) {
+      setSelectedSpotId((current) =>
+        group.scenes.some((scene) => scene.id === current) ? null : initialScene.id
+      );
+    }
   }, []);
 
   const openSpot = useCallback((spot: AnitabiPoint) => {
     Haptics.selectionAsync().catch(() => undefined);
-    setSelectedSpotId(spot.id);
     setActiveSpot(spot);
   }, []);
+
+  const selectSpot = useCallback((spot: AnitabiPoint) => {
+    Haptics.selectionAsync().catch(() => undefined);
+    setSelectedSpotId(spot.id);
+    setFocusRequest((request) => request + 1);
+  }, []);
+
+  const openDetails = openSpot;
 
   const openCluster = useCallback((spots: readonly AnitabiPoint[]) => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -126,8 +144,13 @@ export function usePilgrimageSpotSheet({
     clusterSpots,
     selectedSpotId,
     setSelectedSpotId,
+    focusRequest,
+    menuSpotId,
+    setMenuSpotId,
     openGroup,
     openSpot,
+    selectSpot,
+    openDetails,
     openCluster,
     closeSheet,
     closeCluster,

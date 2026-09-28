@@ -23,6 +23,8 @@ export const overlayExit = () => FadeOutDown.duration(180);
 
 export const overlayLayout = () => Layout.duration(150);
 
+export const spotRowLayout = () => Layout.springify().damping(20).stiffness(220);
+
 export const fabEnter = () => ZoomIn.duration(220).easing(Easing.out(Easing.cubic));
 
 export const fabExit = () => ZoomOut.duration(160);

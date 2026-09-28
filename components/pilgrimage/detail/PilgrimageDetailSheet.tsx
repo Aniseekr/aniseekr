@@ -1,331 +1,192 @@
-// PilgrimageDetailSheet — the persistent pull-up sheet that hosts the
-// anime info card, stats and scene-spot grid for the redesigned detail
-// screen. The map sits behind the sheet as the primary surface; the user
-// drags this sheet up to focus on scenes and back down to focus on the map.
-//
-// Snap points:
-//   • peek  (~16%) — drag handle + section title row, map dominant
-//   • mid   (~58%) — anime card + stats + first rows of scenes
-//   • full  (~92%) — everything visible
-//
-// The grid/rows layout toggle is owned by the parent (`listLayout`); we
-// remount the inner FlatList when it flips so numColumns can change.
-// `viewMode` purely selects the default snap point — `map` peeks the sheet
-// so the map is dominant; `list` mid-snaps it so the grid is visible.
-//
-// CLAUDE.md Rule 9: this component owns nothing persistent. It mirrors the
-// parent's `viewMode` into a snap index via a controlled effect and forwards
-// every interaction to handler props.
-
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetFlatList,
+  type BottomSheetFlatListMethods,
+} from '@gorhom/bottom-sheet';
+
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ThemedText } from '../../themed';
+import type { ThemePalette } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
-import type { ThemePalette } from '../../../context/ThemeContext';
 import type {
   AnitabiBangumi,
   AnitabiPoint,
   AnitabiSpot,
 } from '../../../libs/services/pilgrimage/types';
 import type { PilgrimageDisplayTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
-import type { SpotIntentKind, SpotIntentMap } from '../../../libs/services/pilgrimage/spot-intents';
+import type { SpotIntentKind } from '../../../libs/services/pilgrimage/spot-intents';
 import type { PilgrimageSpotFilter } from '../../../libs/services/pilgrimage/pilgrimage-detail-filter';
-import type { PilgrimageDetailViewPreset } from '../../../libs/services/pilgrimage/pilgrimage-detail-flow';
-import {
-  composeAreaRows,
-  groupSpotsIntoAreas,
-  type SpotArea,
-  type SpotAreaRow,
-} from '../../../libs/services/pilgrimage/spot-areas';
+import { ThemedBottomSheet, ThemedButton, ThemedIconButton, ThemedText } from '../../themed';
+import { AnitabiAttributionFooter } from '../common/AnitabiAttributionFooter';
 import { IntelEventsList } from './IntelEventsList';
 import { PilgrimageDetailControls } from './PilgrimageDetailControls';
-import type { FilterCyclePillState } from './FilterCyclePill';
-import { SceneTile } from './SceneTile';
 import { SpotRow } from './SpotRow';
-import { formatDistanceKm } from './_helpers';
-import { AnitabiAttributionFooter } from '../common/AnitabiAttributionFooter';
 
 export interface PilgrimageDetailSheetProps {
   anime: AnitabiBangumi | null;
   animeTitles: PilgrimageDisplayTitles | null;
-  animeSubtitle?: string;
   browseLabel: string;
   posterUri: string;
   spotStats: { spotCount: number; radiusKm: number };
   userStats: { visitedCount: number; capturedCount: number };
   filteredGroupedSpots: readonly AnitabiSpot[];
-  totalSpotCount: number;
-  listLayout: 'grid' | 'rows';
   viewMode: 'list' | 'map';
   themeColor: string;
-  themeColorFg: string;
   theme: ThemePalette;
   visited: VisitedMap;
-  captures: Record<string, PilgrimageCapture>;
-  spotIntents: SpotIntentMap;
   spotSearchQuery: string;
-  filterCycleStates: readonly FilterCyclePillState[];
+  searchOpen: boolean;
+  groupedCounts: { all: number; unvisited: number; visited: number };
   spotFilter: PilgrimageSpotFilter;
-  activeViewPreset: PilgrimageDetailViewPreset;
-  filteredMappablePointCount: number;
+  selectedSpotId: string | null;
+  focusRequest: number;
+  menuSpotId: string | null;
   emptyMessage: string;
-  /** Optional shared value that exposes the sheet's top-edge Y to native map
-   * controls such as the locate button. */
   animatedPosition?: SharedValue<number>;
   onOpenBrowse: () => void;
-  onOpenAnimePoster?: () => void;
+  onSearchOpen: () => void;
   onSearchChange: (text: string) => void;
   onSearchClear: () => void;
-  onSpotFilterChange: (filter: PilgrimageSpotFilter) => void;
-  onViewPresetChange: (preset: PilgrimageDetailViewPreset) => void;
+  onSpotFilterChange: (filter: 'all' | 'unvisited' | 'visited') => void;
   onSpotPress: (group: AnitabiSpot) => void;
   onToggleVisited: (group: AnitabiSpot) => void;
-  /** rows-mode area section header tap — jumps the map to that area's bounds. */
-  onAreaPress?: (area: SpotArea) => void;
   onOpenMaps: (spot: AnitabiPoint) => void;
-  onTakeComparison: (spot: AnitabiPoint) => void;
+  onStartCamera: (spot: AnitabiPoint) => void;
+  onFrameShot: (spot: AnitabiPoint) => void;
+  onIdentifyScene: (spot: AnitabiPoint) => void;
+  onToggleSaved: (spot: AnitabiPoint) => void;
+  onOpenDetails: (spot: AnitabiPoint) => void;
+  onMenuOpen: (spotId: string) => void;
+  onMenuClose: () => void;
   representativeForGroup: (group: AnitabiSpot) => AnitabiPoint;
   distanceForGroup: (group: AnitabiSpot) => number | null;
   hasIntentForGroup: (group: AnitabiSpot, intent: SpotIntentKind) => boolean;
 }
 
-// Sheet snap points. Tuned so:
-//  • peek leaves room for the floating view-mode toggle above it
-//  • mid shows anime card + stats + start of scene grid
-//  • full reveals everything (with safe-area handled by gorhom internals)
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
 
-function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
-  const {
-    anime,
-    animeTitles,
-    animeSubtitle,
-    browseLabel,
-    posterUri,
-    spotStats,
-    userStats,
-    filteredGroupedSpots,
-    totalSpotCount,
-    listLayout,
-    viewMode,
-    themeColor,
-    themeColorFg,
-    theme,
-    visited,
-    captures,
-    spotSearchQuery,
-    filterCycleStates,
-    spotFilter,
-    activeViewPreset,
-    filteredMappablePointCount,
-    emptyMessage,
-    animatedPosition,
-    onOpenBrowse,
-    onOpenAnimePoster,
-    onSearchChange,
-    onSearchClear,
-    onSpotFilterChange,
-    onViewPresetChange,
-    onSpotPress,
-    onToggleVisited,
-    onAreaPress,
-    onOpenMaps,
-    onTakeComparison,
-    representativeForGroup,
-    distanceForGroup,
-    hasIntentForGroup,
-  } = props;
-
+function PilgrimageDetailSheetImpl({
+  anime,
+  animeTitles,
+  browseLabel,
+  posterUri,
+  spotStats,
+  userStats,
+  filteredGroupedSpots,
+  viewMode,
+  themeColor,
+  theme,
+  visited,
+  spotSearchQuery,
+  searchOpen,
+  groupedCounts,
+  spotFilter,
+  selectedSpotId,
+  focusRequest,
+  menuSpotId,
+  emptyMessage,
+  animatedPosition,
+  onOpenBrowse,
+  onSearchOpen,
+  onSearchChange,
+  onSearchClear,
+  onSpotFilterChange,
+  onSpotPress,
+  onToggleVisited,
+  onOpenMaps,
+  onStartCamera,
+  onFrameShot,
+  onIdentifyScene,
+  onToggleSaved,
+  onOpenDetails,
+  onMenuOpen,
+  onMenuClose,
+  representativeForGroup,
+  distanceForGroup,
+  hasIntentForGroup,
+}: PilgrimageDetailSheetProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
+  const listRef = useRef<BottomSheetFlatListMethods>(null);
   const snapPoints = useMemo(() => [...SHEET_SNAPS], []);
+  const progress =
+    spotStats.spotCount > 0 ? Math.min(1, userStats.visitedCount / spotStats.spotCount) : 0;
 
-  // Re-snap when the parent's viewMode flips. Map mode → peek so the map is
-  // primary; list mode → mid so the user sees the grid immediately.
   useEffect(() => {
-    sheetRef.current?.snapToIndex(viewMode === 'map' ? 0 : 1);
+    if (viewMode === 'map') sheetRef.current?.snapToIndex(0);
   }, [viewMode]);
 
-  // Adapter callbacks: SceneTile / SpotRow speak AnitabiPoint, but the parent
-  // owns group-level toggles. We look up the group from the rep at call-time
-  // so the per-item callback stays stable across data slices.
-  const handleTilePress = useCallback(
-    (spot: AnitabiPoint) => {
-      const group = filteredGroupedSpots.find((g) => g.scenes.some((s) => s.id === spot.id));
-      if (group) onSpotPress(group);
-    },
-    [filteredGroupedSpots, onSpotPress]
-  );
-  const handleTileToggleVisited = useCallback(
-    (spot: AnitabiPoint) => {
-      const group = filteredGroupedSpots.find((g) => g.scenes.some((s) => s.id === spot.id));
-      if (group) onToggleVisited(group);
-    },
-    [filteredGroupedSpots, onToggleVisited]
-  );
+  useEffect(() => {
+    if (!selectedSpotId) return;
+    const index = filteredGroupedSpots.findIndex((group) =>
+      group.scenes.some((scene) => scene.id === selectedSpotId)
+    );
+    if (index < 0) return;
+    sheetRef.current?.snapToIndex(1);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.25 });
+    });
+  }, [filteredGroupedSpots, focusRequest, selectedSpotId]);
 
-  const renderTile = useCallback(
-    ({ item: gs }: { item: AnitabiSpot }) => {
-      const rep = representativeForGroup(gs);
-      const captured = gs.scenes.find((p) => captures[p.id]);
-      return (
-        <View style={styles.gridCell}>
-          <SceneTile
-            spot={rep}
-            sceneCount={gs.scenes.length}
-            themeColor={themeColor}
-            themeColorFg={themeColorFg}
-            distanceKm={distanceForGroup(gs)}
-            visited={gs.scenes.some((p) => visited[p.id] === true)}
-            saved={hasIntentForGroup(gs, 'saved')}
-            planned={hasIntentForGroup(gs, 'planned')}
-            hasCapture={!!captured}
-            captureUri={captured ? (captures[captured.id]?.uri ?? null) : null}
-            theme={theme}
-            onPress={handleTilePress}
-            onToggleVisited={handleTileToggleVisited}
-            onTakeComparison={onTakeComparison}
-          />
-        </View>
-      );
-    },
-    [
-      captures,
-      distanceForGroup,
-      handleTilePress,
-      handleTileToggleVisited,
-      hasIntentForGroup,
-      onTakeComparison,
-      representativeForGroup,
-      styles.gridCell,
-      theme,
-      themeColor,
-      themeColorFg,
-      visited,
-    ]
-  );
+  const menuGroup = menuSpotId
+    ? filteredGroupedSpots.find((group) => group.scenes.some((scene) => scene.id === menuSpotId))
+    : null;
+  const menuSpot = menuGroup
+    ? (menuGroup.scenes.find((scene) => scene.id === menuSpotId) ??
+      representativeForGroup(menuGroup))
+    : null;
+  const menuSaved = menuGroup ? hasIntentForGroup(menuGroup, 'saved') : false;
+
+  const runMenuAction = (action: (spot: AnitabiPoint) => void) => {
+    if (!menuSpot) return;
+    onMenuClose();
+    action(menuSpot);
+  };
 
   const renderRow = useCallback(
-    ({ item: gs }: { item: AnitabiSpot }) => {
-      const rep = representativeForGroup(gs);
-      const captured = gs.scenes.find((p) => captures[p.id]);
-      return (
-        <View style={styles.rowCell}>
-          <SpotRow
-            spot={rep}
-            sceneCount={gs.scenes.length}
-            themeColor={themeColor}
-            themeColorFg={themeColorFg}
-            distanceKm={distanceForGroup(gs)}
-            visited={gs.scenes.some((p) => visited[p.id] === true)}
-            saved={hasIntentForGroup(gs, 'saved')}
-            planned={hasIntentForGroup(gs, 'planned')}
-            hasCapture={!!captured}
-            captureUri={captured ? (captures[captured.id]?.uri ?? null) : null}
-            theme={theme}
-            onPress={handleTilePress}
-            onToggleVisited={handleTileToggleVisited}
-            onOpenMaps={onOpenMaps}
-          />
-        </View>
-      );
-    },
+    ({ item, index }: { item: AnitabiSpot; index: number }) => (
+      <SpotRow
+        group={item}
+        spot={representativeForGroup(item)}
+        index={index}
+        selected={item.scenes.some((scene) => scene.id === selectedSpotId)}
+        themeColor={themeColor}
+        distanceKm={distanceForGroup(item)}
+        visited={item.scenes.some((scene) => visited[scene.id] === true)}
+        theme={theme}
+        onPress={onSpotPress}
+        onToggleVisited={onToggleVisited}
+        onOpenMaps={onOpenMaps}
+        onStartCamera={onStartCamera}
+        onMenuOpen={onMenuOpen}
+      />
+    ),
     [
-      captures,
       distanceForGroup,
-      handleTilePress,
-      handleTileToggleVisited,
-      hasIntentForGroup,
+      onMenuOpen,
       onOpenMaps,
+      onSpotPress,
+      onStartCamera,
+      onToggleVisited,
       representativeForGroup,
-      styles.rowCell,
+      selectedSpotId,
       theme,
       themeColor,
-      themeColorFg,
       visited,
     ]
   );
 
-  // Rows-mode area section headers — a pure grid-cluster memo over the already
-  // loaded spots (CLAUDE.md Rule 9: no new state/effects). Grid mode never
-  // sections; rows mode only sections when there's more than one area to make
-  // the split worth the header rows. `composeAreaRows` is the pure, unit-
-  // tested helper (spot-areas.ts) that guarantees every spot gets a row even
-  // when `groupSpotsIntoAreas` drops it for having no usable geo — those
-  // spots come back as plain trailing rows after the sectioned ones.
-  const rowData = useMemo<SpotAreaRow[]>(() => {
-    if (listLayout !== 'rows') return [];
-    const areas = groupSpotsIntoAreas(filteredGroupedSpots);
-    return composeAreaRows(filteredGroupedSpots, areas);
-  }, [listLayout, filteredGroupedSpots]);
-
-  const renderRowItem = useCallback(
-    ({ item }: { item: SpotAreaRow }) => {
-      if (item.kind === 'header') {
-        const label = t('pilgrimage.detail.areaLabel', {
-          index: item.areaNumber,
-          count: item.area.spots.length,
-        });
-        return (
-          <Pressable
-            onPress={() => onAreaPress?.(item.area)}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.areaHeader, pressed && { opacity: 0.7 }]}>
-            <ThemedText variant="titleSmall" weight="800">
-              {label}
-            </ThemedText>
-            <Ionicons name="map-outline" size={15} color={theme.text.tertiary} />
-          </Pressable>
-        );
-      }
-      return renderRow({ item: item.spot });
-    },
-    [onAreaPress, renderRow, styles.areaHeader, t, theme.text.tertiary]
-  );
-
-  const listKey = listLayout;
-  const numColumns = listLayout === 'grid' ? 2 : 1;
-
-  const subtitleLine = animeSubtitle ?? anime?.city ?? '';
-
-  const radiusValue = spotStats.radiusKm > 0 ? `~${formatDistanceKm(spotStats.radiusKm)}` : '—';
-
   const headerNode = (
-    <View style={styles.headerWrap}>
-      <PilgrimageDetailControls
-        spotSearchQuery={spotSearchQuery}
-        filterCycleStates={filterCycleStates}
-        spotFilter={spotFilter}
-        activeViewPreset={activeViewPreset}
-        filteredMappablePointCount={filteredMappablePointCount}
-        themeColor={themeColor}
-        themeColorFg={themeColorFg}
-        theme={theme}
-        onSearchChange={onSearchChange}
-        onSearchClear={onSearchClear}
-        onSpotFilterChange={onSpotFilterChange}
-        onViewPresetChange={onViewPresetChange}
-      />
-
+    <View style={styles.header}>
       <View style={styles.titleRow}>
-        <Pressable
-          onPress={onOpenAnimePoster}
-          disabled={!onOpenAnimePoster || !anime}
-          style={({ pressed }) => [
-            styles.posterWrap,
-            { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
-            pressed && onOpenAnimePoster && { opacity: 0.86 },
-          ]}>
+        <View style={styles.posterWrap}>
           {posterUri ? (
             <Image
               source={anitabiImageSource(posterUri)}
@@ -333,287 +194,174 @@ function PilgrimageDetailSheetImpl(props: PilgrimageDetailSheetProps) {
               contentFit="cover"
             />
           ) : null}
-        </Pressable>
+        </View>
         <View style={styles.titleColumn}>
-          <ThemedText variant="headlineMedium" weight="800" numberOfLines={2}>
+          <ThemedText variant="titleLarge" weight="800" numberOfLines={2}>
             {animeTitles?.primary ?? '—'}
           </ThemedText>
-          {subtitleLine ? (
-            <ThemedText variant="bodySmall" tone="secondary" numberOfLines={2}>
-              {subtitleLine}
-            </ThemedText>
-          ) : null}
-          {anime ? (
-            <Pressable
-              onPress={onOpenBrowse}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.browseChip,
-                {
-                  borderColor: `${themeColor}55`,
-                  backgroundColor: `${themeColor}1A`,
-                },
-                pressed && { opacity: 0.85 },
-              ]}>
-              <Ionicons name="library-outline" size={11} color={themeColor} />
-              <ThemedText
-                variant="captionSmall"
-                weight="700"
-                style={{ color: themeColor }}
-                numberOfLines={1}>
-                {browseLabel}
-              </ThemedText>
-            </Pressable>
-          ) : null}
+          <ThemedText variant="captionSmall" tone="secondary">
+            {t('pilgrimage.detail.progressSummary', {
+              count: spotStats.spotCount,
+              visited: userStats.visitedCount,
+            })}
+          </ThemedText>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${progress * 100}%`, backgroundColor: themeColor },
+              ]}
+            />
+          </View>
         </View>
+        <ThemedIconButton
+          variant="ghost"
+          icon={(color) => <Ionicons name="search" size={22} color={color} />}
+          accessibilityLabel={t('pilgrimage.detail.searchA11y')}
+          onPress={onSearchOpen}
+        />
       </View>
 
       {anime ? (
-        <View style={styles.statsSummary}>
-          <View style={styles.statItem}>
-            <Ionicons name="location-outline" size={14} color={themeColor} />
-            <ThemedText variant="captionSmall" weight="600" tone="secondary">
-              {t('pilgrimage.detail.stats.scenes', { count: spotStats.spotCount })}
-            </ThemedText>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="scan-outline" size={14} color={theme.text.tertiary} />
-            <ThemedText variant="captionSmall" weight="600" tone="secondary">
-              {t('pilgrimage.detail.stats.radius', { distance: radiusValue })}
-            </ThemedText>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={14}
-              color={userStats.visitedCount > 0 ? theme.status.success : theme.text.tertiary}
-            />
-            <ThemedText variant="captionSmall" weight="600" tone="secondary">
-              {t('pilgrimage.detail.stats.visited', { count: userStats.visitedCount })}
-            </ThemedText>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons
-              name="camera-outline"
-              size={14}
-              color={userStats.capturedCount > 0 ? themeColor : theme.text.tertiary}
-            />
-            <ThemedText variant="captionSmall" weight="600" tone="secondary">
-              {t('pilgrimage.detail.stats.photos', { count: userStats.capturedCount })}
-            </ThemedText>
-          </View>
-        </View>
+        <ThemedButton
+          label={browseLabel}
+          variant="ghost"
+          size="md"
+          onPress={onOpenBrowse}
+          style={styles.browseButton}
+        />
       ) : null}
 
-      {/* Curated collab events for this anime (spec §13) — self-contained
-          sync reads, hides itself when nothing is active or upcoming. */}
+      <PilgrimageDetailControls
+        spotSearchQuery={spotSearchQuery}
+        searchOpen={searchOpen}
+        groupedCounts={groupedCounts}
+        spotFilter={spotFilter}
+        themeColor={themeColor}
+        theme={theme}
+        onSearchChange={onSearchChange}
+        onSearchClear={onSearchClear}
+        onSpotFilterChange={onSpotFilterChange}
+      />
+    </View>
+  );
+
+  const footerNode = (
+    <View style={styles.footer}>
       <IntelEventsList
         bangumiId={anime?.id ?? null}
         theme={theme}
         themeColor={themeColor}
         title={t('pilgrimageUi.intel.events')}
       />
-
       <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="footer" />
-
-      <View style={styles.sectionTitleRow}>
-        <ThemedText variant="titleMedium" weight="800">
-          {t('pilgrimageUi.sceneSpots')}
-        </ThemedText>
-        <ThemedText variant="bodySmall" tone="secondary">
-          {totalSpotCount} {totalSpotCount === 1 ? 'place' : 'places'}
-        </ThemedText>
-      </View>
     </View>
   );
 
-  const emptyNode = (
-    <View>
-      <View style={styles.emptyCard}>
-        <MaterialIcons name="explore-off" size={32} color={theme.text.tertiary} />
-        <ThemedText variant="bodyMedium" tone="secondary" align="center">
-          {emptyMessage}
-        </ThemedText>
-      </View>
-      <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="empty" />
-    </View>
-  );
-
-  const footerNode =
-    filteredGroupedSpots.length > 0 ? (
-      <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="footer" />
-    ) : null;
-
   return (
-    <BottomSheet
-      ref={sheetRef}
-      index={viewMode === 'map' ? 0 : 1}
-      snapPoints={snapPoints}
-      enableDynamicSizing={false}
-      enableContentPanningGesture
-      animatedPosition={animatedPosition}
-      backgroundStyle={[styles.sheetBg, { backgroundColor: theme.background.primary }]}
-      handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]}>
-      <BottomSheetFlatList
-        key={listKey}
-        data={
-          (listLayout === 'grid'
-            ? (filteredGroupedSpots as AnitabiSpot[])
-            : rowData) as readonly unknown[] as never[]
-        }
-        keyExtractor={(item: unknown, index: number) =>
-          listLayout === 'grid'
-            ? (item as AnitabiSpot).id
-            : (item as SpotAreaRow).kind === 'header'
-              ? `h:${(item as { area: SpotArea }).area.id}`
-              : `s:${(item as { spot: AnitabiSpot }).spot.id}`
-        }
-        renderItem={listLayout === 'grid' ? (renderTile as never) : (renderRowItem as never)}
-        numColumns={numColumns}
-        ListHeaderComponent={headerNode}
-        ListEmptyComponent={emptyNode}
-        ListFooterComponent={footerNode}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.sheetContent}
-        columnWrapperStyle={listLayout === 'grid' ? styles.gridRow : undefined}
-      />
-    </BottomSheet>
+    <>
+      <BottomSheet
+        ref={sheetRef}
+        index={viewMode === 'map' ? 0 : 1}
+        snapPoints={snapPoints}
+        enableDynamicSizing={false}
+        enableContentPanningGesture
+        animatedPosition={animatedPosition}
+        backgroundStyle={[styles.sheetBg, { backgroundColor: theme.background.primary }]}
+        handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]}>
+        <BottomSheetFlatList
+          ref={listRef}
+          data={filteredGroupedSpots as AnitabiSpot[]}
+          keyExtractor={(item: AnitabiSpot) => item.id}
+          renderItem={renderRow}
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: true });
+          }}
+          ListHeaderComponent={headerNode}
+          ListEmptyComponent={
+            <View style={styles.emptyCard}>
+              <MaterialIcons name="explore-off" size={30} color={theme.text.tertiary} />
+              <ThemedText variant="bodyMedium" tone="secondary" align="center">
+                {emptyMessage}
+              </ThemedText>
+            </View>
+          }
+          ListFooterComponent={footerNode}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.sheetContent}
+        />
+      </BottomSheet>
+
+      <ThemedBottomSheet visible={menuSpot !== null} onClose={onMenuClose} maxHeightPct={0.55}>
+        <View style={styles.menuActions}>
+          <ThemedText variant="titleMedium" weight="700">
+            {t('pilgrimage.detail.moreSpotActions')}
+          </ThemedText>
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            icon={
+              <Ionicons
+                name={menuSaved ? 'bookmark' : 'bookmark-outline'}
+                size={18}
+                color={theme.text.primary}
+              />
+            }
+            label={t(menuSaved ? 'pilgrimage.detail.unsaveScene' : 'pilgrimage.detail.saveScene')}
+            onPress={() => runMenuAction(onToggleSaved)}
+          />
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimage.detail.frameShot')}
+            onPress={() => runMenuAction(onFrameShot)}
+          />
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimage.detail.identifyScene')}
+            onPress={() => runMenuAction(onIdentifyScene)}
+          />
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimage.detail.sceneDetails')}
+            onPress={() => runMenuAction(onOpenDetails)}
+          />
+        </View>
+      </ThemedBottomSheet>
+    </>
   );
 }
 
-function areEqual(prev: PilgrimageDetailSheetProps, next: PilgrimageDetailSheetProps): boolean {
-  return (
-    prev.anime === next.anime &&
-    prev.animeTitles === next.animeTitles &&
-    prev.animeSubtitle === next.animeSubtitle &&
-    prev.browseLabel === next.browseLabel &&
-    prev.posterUri === next.posterUri &&
-    prev.spotStats === next.spotStats &&
-    prev.userStats === next.userStats &&
-    prev.filteredGroupedSpots === next.filteredGroupedSpots &&
-    prev.totalSpotCount === next.totalSpotCount &&
-    prev.listLayout === next.listLayout &&
-    prev.viewMode === next.viewMode &&
-    prev.themeColor === next.themeColor &&
-    prev.themeColorFg === next.themeColorFg &&
-    prev.theme === next.theme &&
-    prev.visited === next.visited &&
-    prev.captures === next.captures &&
-    prev.spotIntents === next.spotIntents &&
-    prev.spotSearchQuery === next.spotSearchQuery &&
-    prev.filterCycleStates === next.filterCycleStates &&
-    prev.spotFilter === next.spotFilter &&
-    prev.activeViewPreset === next.activeViewPreset &&
-    prev.filteredMappablePointCount === next.filteredMappablePointCount &&
-    prev.emptyMessage === next.emptyMessage &&
-    prev.animatedPosition === next.animatedPosition &&
-    prev.onOpenBrowse === next.onOpenBrowse &&
-    prev.onOpenAnimePoster === next.onOpenAnimePoster &&
-    prev.onSearchChange === next.onSearchChange &&
-    prev.onSearchClear === next.onSearchClear &&
-    prev.onSpotFilterChange === next.onSpotFilterChange &&
-    prev.onViewPresetChange === next.onViewPresetChange &&
-    prev.onSpotPress === next.onSpotPress &&
-    prev.onToggleVisited === next.onToggleVisited &&
-    prev.onAreaPress === next.onAreaPress &&
-    prev.onOpenMaps === next.onOpenMaps &&
-    prev.onTakeComparison === next.onTakeComparison &&
-    prev.representativeForGroup === next.representativeForGroup &&
-    prev.distanceForGroup === next.distanceForGroup &&
-    prev.hasIntentForGroup === next.hasIntentForGroup
-  );
-}
-
-export const PilgrimageDetailSheet = memo(PilgrimageDetailSheetImpl, areEqual);
+export const PilgrimageDetailSheet = memo(PilgrimageDetailSheetImpl);
 
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
-    sheetBg: {
-      borderTopLeftRadius: Radius.xl,
-      borderTopRightRadius: Radius.xl,
-    },
-    sheetHandle: {
-      width: 44,
-      height: 4,
-      borderRadius: 2,
-    },
-    sheetContent: {
-      paddingBottom: Spacing.xxl,
-      paddingHorizontal: Spacing.screenPadding,
-    },
-    headerWrap: {
-      gap: Spacing.md,
-      paddingBottom: Spacing.md,
-    },
-    titleRow: {
-      flexDirection: 'row',
-      gap: Spacing.md,
-      alignItems: 'flex-start',
-    },
+    sheetBg: { borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl },
+    sheetHandle: { width: 44, height: 4, borderRadius: 2 },
+    sheetContent: { paddingHorizontal: Spacing.screenPadding, paddingBottom: Spacing.xxl },
+    header: { gap: Spacing.sm, paddingBottom: Spacing.md },
+    titleRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
     posterWrap: {
-      width: 84,
-      height: 84,
-      borderRadius: Radius.lg,
-      borderWidth: 1,
+      width: 72,
+      height: 96,
       overflow: 'hidden',
+      borderRadius: Radius.md,
+      backgroundColor: theme.background.tertiary,
     },
-    poster: {
-      width: '100%',
-      height: '100%',
-    },
-    titleColumn: {
-      flex: 1,
-      gap: 4,
-      paddingTop: 2,
-    },
-    browseChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      alignSelf: 'flex-start',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
+    poster: { width: '100%', height: '100%' },
+    titleColumn: { flex: 1, gap: 3 },
+    progressTrack: {
+      height: 3,
       borderRadius: Radius.full,
-      borderWidth: 1,
-      marginTop: 6,
+      overflow: 'hidden',
+      backgroundColor: theme.background.tertiary,
+      marginTop: 3,
     },
-    statsSummary: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      columnGap: Spacing.md,
-      rowGap: Spacing.xs,
-    },
-    statItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    sectionTitleRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'baseline',
-      paddingTop: 4,
-      paddingBottom: 4,
-    },
-    gridRow: {
-      gap: Spacing.sm,
-      paddingBottom: Spacing.sm,
-    },
-    gridCell: {
-      flex: 1,
-      maxWidth: '50%',
-    },
-    rowCell: {
-      paddingBottom: Spacing.sm,
-    },
-    areaHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingTop: Spacing.sm,
-      paddingBottom: Spacing.xs,
-    },
+    progressFill: { height: '100%', borderRadius: Radius.full },
+    browseButton: { alignSelf: 'flex-start' },
+    footer: { gap: Spacing.md, paddingTop: Spacing.lg },
     emptyCard: {
       marginTop: Spacing.lg,
       paddingVertical: Spacing.xl,
@@ -625,5 +373,6 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
       gap: Spacing.xs,
     },
+    menuActions: { gap: Spacing.sm },
   });
 }

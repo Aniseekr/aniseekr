@@ -15,18 +15,14 @@ import {
   filterPillPropsEqual,
   flattenScenesFromGroups,
   hasIntentForSpot,
-  sceneTilePropsEqual,
   seriesSwitchChipPropsEqual,
   spotChipPropsEqual,
-  spotRowPropsEqual,
   statCellPropsEqual,
   visitedCountForPoints,
   type FilterPillEqualityProps,
   type MapMarkerStructural,
-  type SceneTileEqualityProps,
   type SeriesSwitchChipEqualityProps,
   type SpotChipEqualityProps,
-  type SpotRowEqualityProps,
   type StatCellEqualityProps,
 } from '../../../components/pilgrimage/detail/_equality';
 import type { AnitabiPoint, AnitabiSpot } from '../../../libs/services/pilgrimage/types';
@@ -48,46 +44,6 @@ const theme = { __sentinel: 'theme' } as unknown as ThemePalette;
 // Shared at module scope so equality compares stable references — handlers
 // passed from the parent via useCallback are similarly stable in real usage.
 const noop = () => undefined;
-
-function sceneTileProps(overrides: Partial<SceneTileEqualityProps> = {}): SceneTileEqualityProps {
-  return {
-    spot: sampleSpot,
-    sceneCount: 1,
-    themeColor: '#FF9F0A',
-    themeColorFg: '#000',
-    distanceKm: null,
-    visited: false,
-    saved: false,
-    planned: false,
-    hasCapture: false,
-    captureUri: null,
-    theme,
-    onPress: noop,
-    onToggleVisited: noop,
-    onTakeComparison: noop,
-    ...overrides,
-  };
-}
-
-function spotRowProps(overrides: Partial<SpotRowEqualityProps> = {}): SpotRowEqualityProps {
-  return {
-    spot: sampleSpot,
-    sceneCount: 1,
-    themeColor: '#FF9F0A',
-    themeColorFg: '#000',
-    distanceKm: null,
-    visited: false,
-    saved: false,
-    planned: false,
-    hasCapture: false,
-    captureUri: null,
-    theme,
-    onPress: noop,
-    onToggleVisited: noop,
-    onOpenMaps: noop,
-    ...overrides,
-  };
-}
 
 function spotChipProps(overrides: Partial<SpotChipEqualityProps> = {}): SpotChipEqualityProps {
   return {
@@ -147,74 +103,6 @@ function statCellProps(overrides: Partial<StatCellEqualityProps> = {}): StatCell
     ...overrides,
   };
 }
-
-describe('sceneTilePropsEqual', () => {
-  it('returns true when no tracked prop changed', () => {
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps())).toBe(true);
-  });
-
-  it.each([
-    ['visited', { visited: true }],
-    ['sceneCount', { sceneCount: 5 }],
-    ['themeColor', { themeColor: '#000' }],
-    ['themeColorFg', { themeColorFg: '#fff' }],
-    ['distanceKm', { distanceKm: 1.5 }],
-    ['saved', { saved: true }],
-    ['planned', { planned: true }],
-    ['hasCapture', { hasCapture: true }],
-    ['captureUri', { captureUri: 'file://x.jpg' }],
-  ] as const)('returns false when %s changes', (_label, patch) => {
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps(patch))).toBe(false);
-  });
-
-  it('returns false when handlers change identity', () => {
-    const otherNoop = () => undefined;
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ onPress: otherNoop }))).toBe(
-      false
-    );
-  });
-
-  it('returns false when the underlying spot image changes', () => {
-    const nextSpot: AnitabiPoint = { ...sampleSpot, image: 'https://img/2.jpg' };
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ spot: nextSpot }))).toBe(false);
-  });
-
-  it('returns false when the underlying spot name changes', () => {
-    // Lite→detailed fetch can replace `spot.name` while keeping `id`+`image`.
-    // The equality fn must catch this so the displayed title refreshes.
-    const nextSpot: AnitabiPoint = { ...sampleSpot, name: 'Updated Name' };
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ spot: nextSpot }))).toBe(false);
-  });
-});
-
-describe('spotRowPropsEqual', () => {
-  it('returns true when no tracked prop changed', () => {
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps())).toBe(true);
-  });
-
-  it('returns false when visited flips', () => {
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ visited: true }))).toBe(false);
-  });
-
-  it('returns false when sceneCount changes', () => {
-    expect(
-      spotRowPropsEqual(spotRowProps({ sceneCount: 1 }), spotRowProps({ sceneCount: 3 }))
-    ).toBe(false);
-  });
-
-  it('returns false when the underlying spot name changes', () => {
-    const nextSpot: AnitabiPoint = { ...sampleSpot, name: 'Updated' };
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ spot: nextSpot }))).toBe(false);
-  });
-
-  it('returns false when captureUri changes', () => {
-    // captureUri toggles the rows' single-image / REAL+ANIME split layout, so
-    // the memo must invalidate when it flips between null and a real uri.
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ captureUri: 'file://x.jpg' }))).toBe(
-      false
-    );
-  });
-});
 
 describe('spotChipPropsEqual', () => {
   it('returns true when no tracked prop changed', () => {
