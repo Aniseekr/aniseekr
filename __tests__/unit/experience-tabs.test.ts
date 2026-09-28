@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import {
   DEFAULT_EXPERIENCE_PREFS,
+  SEEKER_TAB_CATALOG,
   normalizeExperiencePrefs,
   resolveExperienceLandingHref,
   resolveExperienceRouteNames,
@@ -52,9 +53,8 @@ describe('Experience tabs', () => {
   it('EXP-TABS-004 resolves the fixed Explorer and Collector presets', () => {
     expect(resolveExperienceTabs({ mode: 'explorer', seekerTabs: [] })).toEqual([
       'pilgrimage',
-      'explorerJournal',
       'explorerCamera',
-      'explorerSearch',
+      'explorerJournal',
       'profile',
     ]);
     expect(resolveExperienceTabs({ mode: 'collector', seekerTabs: [] })).toEqual([
@@ -97,10 +97,10 @@ describe('Experience tabs', () => {
   });
 
   it('EXP-TABS-009 keeps Seeker within four optional tabs while still allowing removal', () => {
-    const full = ['discover', 'bangumi', 'collection', 'explorerMap'] as const;
+    const full = ['discover', 'bangumi', 'collection', 'explorerJournal'] as const;
 
     expect(toggleSeekerTab(full, 'explorerCamera')).toEqual([...full]);
-    expect(toggleSeekerTab(full, 'collection')).toEqual(['discover', 'bangumi', 'explorerMap']);
+    expect(toggleSeekerTab(full, 'collection')).toEqual(['discover', 'bangumi', 'explorerJournal']);
   });
 
   it('EXP-TABS-010 clamps persisted Seeker tabs to the visible navigation capacity', () => {
@@ -113,9 +113,17 @@ describe('Experience tabs', () => {
           'explorerMap',
           'explorerJournal',
           'discover',
+          'bangumi',
+          'collection',
         ],
       }).seekerTabs
-    ).toEqual(['explorerCamera', 'explorerSearch', 'explorerMap', 'explorerJournal']);
+    ).toEqual(['explorerCamera', 'explorerJournal', 'discover', 'bangumi']);
+  });
+
+  it('normalizes saved Seeker tabs containing only removed routes to the default four', () => {
+    expect(
+      normalizeExperiencePrefs({ mode: 'seeker', seekerTabs: ['explorerMap', 'explorerSearch'] })
+    ).toEqual(DEFAULT_EXPERIENCE_PREFS);
   });
 
   it('EXP-TABS-011 persists mode changes and notifies mounted navigation', async () => {
@@ -131,29 +139,36 @@ describe('Experience tabs', () => {
     expect(observedMode).toBe('explorer');
   });
 
-  it('EXP-TABS-012 falls back to a returnable legacy route when a Seeker tab is hidden', () => {
-    expect(
-      resolveExperienceTabTarget(
-        ['explorerCamera', 'profile'],
-        'explorerJournal',
-        '/pilgrimage/album'
-      )
-    ).toEqual({ href: '/pilgrimage/album', isVisibleTab: false });
+  it('EXP-TABS-012 falls back to a stack route when a Seeker tab is hidden', () => {
     expect(
       resolveExperienceTabTarget(
         ['explorerJournal', 'profile'],
-        'explorerJournal',
-        '/pilgrimage/album'
+        'explorerCamera',
+        '/pilgrimage/capture'
       )
-    ).toEqual({ href: '/explorer-journal', isVisibleTab: true });
+    ).toEqual({ href: '/pilgrimage/capture', isVisibleTab: false });
+    expect(
+      resolveExperienceTabTarget(
+        ['explorerCamera', 'profile'],
+        'explorerCamera',
+        '/pilgrimage/capture'
+      )
+    ).toEqual({ href: '/explorer-camera', isVisibleTab: true });
   });
 
   it('EXP-TABS-013 exposes only the registered routes for the active mode with Profile fixed', () => {
+    expect(SEEKER_TAB_CATALOG).toEqual([
+      'discover',
+      'bangumi',
+      'collection',
+      'pilgrimage',
+      'explorerCamera',
+      'explorerJournal',
+    ]);
     expect(resolveExperienceRouteNames({ mode: 'explorer', seekerTabs: [] })).toEqual([
       'pilgrimage',
-      'explorer-journal',
       'explorer-camera',
-      'explorer-search',
+      'explorer-journal',
       'profile',
     ]);
     expect(resolveExperienceRouteNames({ mode: 'collector', seekerTabs: [] })).toEqual([

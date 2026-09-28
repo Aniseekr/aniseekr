@@ -1,15 +1,7 @@
 import { getNumberParam, getStringParam, type RouterParams } from '../../utils/route-params';
 import type { AnitabiPoint } from './types';
 
-export type PilgrimageDetailReturnTo =
-  | 'hub'
-  | 'search'
-  | 'map'
-  | 'album'
-  | 'plan'
-  | 'explorer-search'
-  | 'explorer-map'
-  | 'explorer-journal';
+export type PilgrimageDetailReturnTo = 'hub' | 'search' | 'map' | 'album' | 'explorer-journal';
 
 export interface PilgrimageRoute {
   pathname: string;
@@ -219,13 +211,6 @@ export function getPilgrimageDetailBackRoute(params: RouterParams): PilgrimageRo
           q: getStringParam(params, 'returnQuery') ?? '',
         },
       };
-    case 'explorer-search':
-      return {
-        pathname: '/explorer-search',
-        params: { q: getStringParam(params, 'returnQuery') ?? '' },
-      };
-    case 'explorer-map':
-      return { pathname: '/explorer-map' };
     case 'explorer-journal':
       return { pathname: '/explorer-journal' };
     case 'map':
@@ -237,8 +222,6 @@ export function getPilgrimageDetailBackRoute(params: RouterParams): PilgrimageRo
         params: animeId ? { animeId } : undefined,
       };
     }
-    case 'plan':
-      return { pathname: '/pilgrimage/plan' };
     case 'hub':
       return { pathname: '/pilgrimage' };
     default:

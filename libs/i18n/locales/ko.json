@@ -46,14 +46,12 @@
   },
 
   "tabs": {
-    "rate": "홈",
-    "collection": "컬렉션",
+    "rate": "탐색",
+    "collection": "보관함",
     "pilgrimage": "성지순례",
     "explorerCamera": "카메라",
-    "explorerSearch": "검색",
-    "explorerMap": "지도",
     "explorerJournal": "기록",
-    "bangumi": "Bangumi",
+    "bangumi": "방영 일정",
     "profile": "프로필"
   }
 }

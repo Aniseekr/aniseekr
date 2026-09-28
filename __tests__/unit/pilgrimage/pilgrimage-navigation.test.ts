@@ -66,19 +66,16 @@ describe('pilgrimage navigation', () => {
     });
   });
 
-  it('PILG-060 returns Explorer detail flows to their first-class tabs', () => {
-    expect(
-      getPilgrimageDetailBackRoute({ returnTo: 'explorer-search', returnQuery: 'mono' })
-    ).toEqual({
-      pathname: '/explorer-search',
-      params: { q: 'mono' },
-    });
-    expect(getPilgrimageDetailBackRoute({ returnTo: 'explorer-map' })).toEqual({
-      pathname: '/explorer-map',
-    });
+  it('PILG-060 returns journal and search detail flows without removed Explorer tabs', () => {
     expect(getPilgrimageDetailBackRoute({ returnTo: 'explorer-journal' })).toEqual({
       pathname: '/explorer-journal',
     });
+    expect(getPilgrimageDetailBackRoute({ returnTo: 'search', returnQuery: 'mono' })).toEqual({
+      pathname: '/search',
+      params: { context: 'pilgrimage', q: 'mono' },
+    });
+    expect(getPilgrimageDetailBackRoute({ returnTo: 'explorer-search' })).toBeNull();
+    expect(getPilgrimageDetailBackRoute({ returnTo: 'explorer-map' })).toBeNull();
   });
 
   it('returns pilgrimage detail back to the hub instead of the default home tab', () => {

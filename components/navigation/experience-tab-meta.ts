@@ -9,13 +9,11 @@ export interface ExperienceTabMeta {
 }
 
 export const EXPERIENCE_TAB_META: Record<ExperienceTabId, ExperienceTabMeta> = {
-  discover: { labelKey: 'tabs.rate', icon: 'home-filled' },
+  discover: { labelKey: 'tabs.rate', icon: 'explore' },
   bangumi: { labelKey: 'tabs.bangumi', icon: 'date-range' },
   collection: { labelKey: 'tabs.collection', icon: 'bookmark' },
   pilgrimage: { labelKey: 'tabs.pilgrimage', icon: 'place' },
   explorerCamera: { labelKey: 'tabs.explorerCamera', icon: 'photo-camera' },
-  explorerSearch: { labelKey: 'tabs.explorerSearch', icon: 'search' },
-  explorerMap: { labelKey: 'tabs.explorerMap', icon: 'map' },
   explorerJournal: { labelKey: 'tabs.explorerJournal', icon: 'photo-library' },
   profile: { labelKey: 'tabs.profile', icon: 'person' },
 };

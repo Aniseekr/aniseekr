@@ -112,7 +112,6 @@ export default function PilgrimageHubScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const t = useT();
   const { mode, visibleTabs } = useExperienceMode();
-  const searchTarget = resolveExperienceTabTarget(visibleTabs, 'explorerSearch', '/search');
   const journalTarget = resolveExperienceTabTarget(
     visibleTabs,
     'explorerJournal',
@@ -269,15 +268,11 @@ export default function PilgrimageHubScreen() {
 
   const handleSearch = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    if (searchTarget.isVisibleTab) {
-      router.navigate(searchTarget.href);
-      return;
-    }
     // context=pilgrimage tells /search to route picked results to
     // /pilgrimage/[bangumiId] instead of /anime/[id] so the user stays
     // inside the pilgrimage flow.
     router.push({ pathname: '/search', params: { context: 'pilgrimage' } });
-  }, [router, searchTarget.href, searchTarget.isVisibleTab]);
+  }, [router]);
 
   const handleOpenAlbum = useCallback(() => {
     if (journalTarget.isVisibleTab) {

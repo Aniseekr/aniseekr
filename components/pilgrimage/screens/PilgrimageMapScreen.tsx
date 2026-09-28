@@ -16,10 +16,6 @@
 // to one anime. The swap arrow on the focused card cycles the nearest list
 // without leaving this screen.
 //
-// The same implementation serves the legacy stack route and the first-class
-// Explorer Map tab. `tabRoot` adjusts navigation chrome without forking data,
-// map, or sheet behavior.
-//
 // Route params:
 //   - focus?: number — bangumi id to focus the map on (initial centre)
 
@@ -116,12 +112,7 @@ import {
   buildCanonicalLocalityMarkers,
 } from '../../../libs/services/pilgrimage/locality/map-markers';
 import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
-import { useExperienceMode } from '../../../hooks/useExperienceMode';
-import {
-  EXPERIENCE_TAB_HREFS,
-  resolveExperienceTabTarget,
-} from '../../../libs/navigation/experience-tabs';
-import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../../libs/navigation/floating-tab-bar-layout';
+import { EXPERIENCE_TAB_HREFS } from '../../../libs/navigation/experience-tabs';
 
 // 7-region taxonomy from animetourism88.com — Tokyo is split from Kanto.
 // Values point into the shared `pilgrimage.regions.*` catalog so this rail,
@@ -195,11 +186,7 @@ function isValidGeo(geo: readonly [number, number] | null | undefined): boolean 
 const SHEET_PEEK_FRACTION = 0.16;
 const VIEW_MODE_TOGGLE_HEIGHT = 52;
 
-interface PilgrimageMapScreenProps {
-  tabRoot?: boolean;
-}
-
-export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapScreenProps) {
+export default function PilgrimageMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
@@ -208,21 +195,6 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
   const initialMode = useMemo(() => resolvePilgrimageMapInitialMode(params.mode), [params.mode]);
   const focusBangumiIdParam = getNumberParam(params, 'focus');
   const { theme, effectiveMode } = useTheme();
-  const { visibleTabs } = useExperienceMode();
-  const tabTargets = {
-    search: resolveExperienceTabTarget(tabRoot ? visibleTabs : [], 'explorerSearch', '/search'),
-    journal: resolveExperienceTabTarget(
-      tabRoot ? visibleTabs : [],
-      'explorerJournal',
-      '/pilgrimage/album'
-    ),
-    camera: resolveExperienceTabTarget(
-      tabRoot ? visibleTabs : [],
-      'explorerCamera',
-      '/pilgrimage/capture'
-    ),
-  } as const;
-  const collectionTabVisible = visibleTabs.includes('collection');
   const { pref: mapThemePref } = useMapThemePref();
   const styles = useMemo(() => makeStyles(theme, insets.top), [theme, insets.top]);
   const themeColor = theme.accent;
@@ -666,7 +638,7 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
       Haptics.selectionAsync().catch(() => undefined);
       router.push(
         buildPilgrimageDetailRoute(bangumiId, {
-          returnTo: tabRoot ? 'explorer-map' : 'map',
+          returnTo: 'map',
           title: anime?.title || anime?.cn || null,
           titleSecondary: anime?.cn && anime.cn !== anime.title ? anime.cn : null,
           poster: anime?.cover ?? null,
@@ -674,7 +646,7 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
         })
       );
     },
-    [router, tabRoot]
+    [router]
   );
 
   const handleAnimeMarkerPress = useCallback(
@@ -750,18 +722,11 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
   // (local index ∪ Bangumi fallback) instead of dead-ending.
   const handleSearchAll = useCallback(() => {
     hapticsBridge.selection();
-    if (tabTargets.search.isVisibleTab) {
-      router.navigate({
-        pathname: tabTargets.search.href,
-        params: { q: searchQuery.trim() },
-      });
-      return;
-    }
     router.push({
       pathname: '/search',
       params: { context: 'pilgrimage', q: searchQuery.trim() },
     });
-  }, [router, searchQuery, tabTargets.search.href, tabTargets.search.isVisibleTab]);
+  }, [router, searchQuery]);
 
   const handleMapLoadError = useCallback(() => setMapLoadFailed(true), []);
   const handleMapLoadSuccess = useCallback(() => setMapLoadFailed(false), []);
@@ -773,21 +738,13 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
 
   const handleOpenAlbum = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    if (tabTargets.journal.isVisibleTab) {
-      router.navigate(tabTargets.journal.href);
-      return;
-    }
-    router.push(tabTargets.journal.href);
-  }, [router, tabTargets.journal.href, tabTargets.journal.isVisibleTab]);
+    router.push('/pilgrimage/album');
+  }, [router]);
 
   const handleOpenCamera = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    if (tabTargets.camera.isVisibleTab) {
-      router.navigate(tabTargets.camera.href);
-      return;
-    }
-    router.push(tabTargets.camera.href);
-  }, [router, tabTargets.camera.href, tabTargets.camera.isVisibleTab]);
+    router.push('/pilgrimage/capture');
+  }, [router]);
 
   const flyToUserLocation = useCallback(
     (loc: LatLng | null = userLocation) => {
@@ -818,12 +775,11 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
   const sheetPosition = useSharedValue(screenHeight);
 
   const sheetPeekOffset = useMemo(() => {
-    const tabBarInset = tabRoot ? FLOATING_TAB_BAR_CONTENT_INSET : 0;
     return Math.max(
-      VIEW_MODE_TOGGLE_HEIGHT + insets.bottom + 12 + tabBarInset,
-      Math.round(SHEET_PEEK_FRACTION * screenHeight) + 12 + tabBarInset
+      VIEW_MODE_TOGGLE_HEIGHT + insets.bottom + 12,
+      Math.round(SHEET_PEEK_FRACTION * screenHeight) + 12
     );
-  }, [insets.bottom, screenHeight, tabRoot]);
+  }, [insets.bottom, screenHeight]);
 
   const initialSheetIndex = initialMode === 'list' ? 2 : 1;
 
@@ -946,14 +902,12 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
 
   return (
     <>
-      {tabRoot ? null : (
-        <Stack.Screen
-          options={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.background.primary },
-          }}
-        />
-      )}
+      <Stack.Screen
+        options={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.background.primary },
+        }}
+      />
       {/* root is box-none so empty-map taps fall through the overlays to the
           full-bleed native map beneath; the search pill / region chips / bottom
           chrome / FABs / sheet stay real hit targets. */}
@@ -1002,17 +956,13 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
               style={styles.topOverlay}
               pointerEvents="box-none">
               <View style={styles.headerActions}>
-                {tabRoot ? (
-                  <View style={styles.headerActionSpacer} />
-                ) : (
-                  <RoundHeaderButton
-                    icon="chevron-back"
-                    onPress={handleBack}
-                    accessibilityLabel={t('common.back')}
-                    tint={theme.text.primary}
-                    theme={theme}
-                  />
-                )}
+                <RoundHeaderButton
+                  icon="chevron-back"
+                  onPress={handleBack}
+                  accessibilityLabel={t('common.back')}
+                  tint={theme.text.primary}
+                  theme={theme}
+                />
                 <View style={styles.headerRightGroup}>
                   <RoundHeaderButton
                     icon={mapViewMode === 'myLocation' ? 'film-outline' : 'location'}
@@ -1103,7 +1053,7 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
               theme={theme}
               searchQuery={searchQuery}
               filterMode={hubFilter}
-              onGoToCollection={!tabRoot || collectionTabVisible ? handleGoToCollection : undefined}
+              onGoToCollection={handleGoToCollection}
               onSearchAll={handleSearchAll}
               initialIndex={initialSheetIndex}
               animatedPosition={sheetPosition}
@@ -1112,7 +1062,7 @@ export default function PilgrimageMapScreen({ tabRoot = false }: PilgrimageMapSc
               nearbySpots={visibleNearbySpots}
               onPickNearbySpot={handlePickNearbySpot}
               headerControls={hubHeaderControls}
-              bottomContentInset={tabRoot ? insets.bottom + FLOATING_TAB_BAR_CONTENT_INSET : 0}
+              bottomContentInset={0}
             />
 
             {/* Long-press quick actions — anime-centroid honest actions only
@@ -1398,11 +1348,6 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       flexDirection: 'row',
       gap: Spacing.sm,
     },
-    headerActionSpacer: {
-      width: 44,
-      height: 44,
-    },
-
     // In-page search field — sized so the clear-X has comfortable hit area.
     searchPill: {
       minHeight: 44,

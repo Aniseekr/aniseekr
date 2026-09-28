@@ -43,11 +43,10 @@ import { sameArrayBy } from '../../libs/utils/state-array';
 
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
 import { SEARCH_RECENT_KEY } from '../../libs/services/storage/keys';
-import { Skeleton, ThemedButton, ThemedIconButton, ThemedText } from '../themed';
+import { Skeleton, ThemedButton, ThemedIconButton } from '../themed';
 import { useT } from '../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { listItemEnter } from '../../libs/animations/presets';
-import { floatingTabBarOverlayBottom } from '../../libs/navigation/floating-tab-bar-layout';
 
 const MAX_RECENT = 8;
 
@@ -113,11 +112,7 @@ function sameSearchResults(current: SearchAnime[], next: SearchAnime[]): boolean
   ]);
 }
 
-interface SearchScreenProps {
-  tabRoot?: boolean;
-}
-
-export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
+export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -127,7 +122,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
   // /pilgrimage/[bangumiId] instead of /anime/[id]. Any other value falls
   // through to the default global-search behaviour.
   const params = useLocalSearchParams<{ context?: string; q?: string }>();
-  const isPilgrimageMode = tabRoot || params.context === 'pilgrimage';
+  const isPilgrimageMode = params.context === 'pilgrimage';
   const initialQuery = getStringParam(params, 'q') ?? '';
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchAnime[]>([]);
@@ -270,11 +265,10 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
           titleSecondary: anime.secondaryTitle ?? anime.titleEnglish ?? null,
           poster: anime.image,
         };
-        const returnTarget = tabRoot ? 'explorer-search' : 'search';
         if (typeof anime.bangumiId === 'number') {
           router.push(
             buildPilgrimageDetailRoute(anime.bangumiId, {
-              returnTo: returnTarget,
+              returnTo: 'search',
               returnQuery: query,
               ...chromeSeed,
             })
@@ -301,7 +295,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
           }
           router.push(
             buildPilgrimageDetailRoute(bangumiId, {
-              returnTo: returnTarget,
+              returnTo: 'search',
               returnQuery: query,
               ...chromeSeed,
             })
@@ -320,7 +314,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
 
       pushAnimeDetail(router, anime);
     },
-    [recent, persistRecent, router, isPilgrimageMode, query, t, tabRoot]
+    [recent, persistRecent, router, isPilgrimageMode, query, t]
   );
 
   const handleBookmarkToggle = useCallback(
@@ -445,31 +439,18 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
 
   return (
     <View style={styles.root}>
-      {tabRoot ? null : <Stack.Screen options={{ headerShown: false }} />}
+      <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View
           style={[styles.headerShell, { paddingTop: insets.top > 0 ? Spacing.xs : Spacing.sm }]}>
-          {tabRoot ? (
-            <View style={styles.tabTitleBlock}>
-              <ThemedText variant="headlineMedium" weight="700">
-                {t('search.pilgrimage.title')}
-              </ThemedText>
-              <ThemedText variant="bodySmall" tone="secondary">
-                {t('search.pilgrimage.description')}
-              </ThemedText>
-            </View>
-          ) : null}
-
           <View style={styles.searchHeader}>
-            {!tabRoot ? (
-              <ThemedIconButton
-                onPress={handleClose}
-                accessibilityLabel={t('common.back')}
-                haptic="none"
-                icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
-              />
-            ) : null}
+            <ThemedIconButton
+              onPress={handleClose}
+              accessibilityLabel={t('common.back')}
+              haptic="none"
+              icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+            />
 
             <View style={styles.searchBar}>
               <Ionicons
@@ -478,7 +459,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                 color={isPilgrimageMode ? theme.accent : theme.text.secondary}
               />
               <TextInput
-                autoFocus={!tabRoot}
+                autoFocus
                 placeholder={
                   isPilgrimageMode
                     ? t('search.placeholder.pilgrimage')
@@ -730,12 +711,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
           style={[
             styles.toast,
             {
-              bottom:
-                keyboardHeight > 0
-                  ? keyboardHeight + Spacing.sm
-                  : tabRoot
-                    ? floatingTabBarOverlayBottom(insets.bottom)
-                    : insets.bottom + Spacing.lg,
+              bottom: keyboardHeight > 0 ? keyboardHeight + Spacing.sm : insets.bottom + Spacing.lg,
             },
           ]}>
           <Ionicons name="bookmark" size={16} color={theme.accent} />
@@ -920,11 +896,6 @@ function makeStyles(theme: ThemePalette) {
     root: { flex: 1, backgroundColor: theme.background.primary },
     safe: { flex: 1 },
     headerShell: { gap: Spacing.xs, paddingBottom: Spacing.sm },
-    tabTitleBlock: {
-      gap: Spacing.xxs,
-      paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.xs,
-    },
     searchHeader: {
       flexDirection: 'row',
       alignItems: 'center',

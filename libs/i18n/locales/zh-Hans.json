@@ -90,6 +90,11 @@
       "toggleSubtitle": "默认：关闭",
       "cta": "继续"
     },
+    "mode": {
+      "title": "你想怎么用 Aniseekr？",
+      "mixMyOwn": "自己配",
+      "cta": "继续"
+    },
     "done": {
       "title": "一切就绪",
       "body": "开始评分、收藏、探索吧。",
@@ -160,14 +165,12 @@
   },
 
   "tabs": {
-    "rate": "首页",
+    "rate": "探索",
     "collection": "收藏",
-    "pilgrimage": "圣地巡礼",
+    "pilgrimage": "巡礼",
     "explorerCamera": "相机",
-    "explorerSearch": "搜索",
-    "explorerMap": "地图",
     "explorerJournal": "足迹",
-    "bangumi": "Bangumi",
+    "bangumi": "追番",
     "profile": "我的"
   }
 }

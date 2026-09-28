@@ -6,8 +6,6 @@ export type ExperienceTabId =
   | 'collection'
   | 'pilgrimage'
   | 'explorerCamera'
-  | 'explorerSearch'
-  | 'explorerMap'
   | 'explorerJournal'
   | 'profile';
 
@@ -18,8 +16,6 @@ export type ExperienceTabRouteName =
   | 'collection'
   | 'pilgrimage'
   | 'explorer-camera'
-  | 'explorer-search'
-  | 'explorer-map'
   | 'explorer-journal'
   | 'profile';
 export type ExperienceTabHref =
@@ -28,8 +24,6 @@ export type ExperienceTabHref =
   | '/collection'
   | '/pilgrimage'
   | '/explorer-camera'
-  | '/explorer-search'
-  | '/explorer-map'
   | '/explorer-journal'
   | '/profile';
 
@@ -46,8 +40,6 @@ export const SEEKER_TAB_CATALOG: readonly SeekerTabId[] = [
   'collection',
   'pilgrimage',
   'explorerCamera',
-  'explorerSearch',
-  'explorerMap',
   'explorerJournal',
 ] as const;
 
@@ -62,8 +54,6 @@ export const EXPERIENCE_TAB_HREFS: Record<ExperienceTabId, ExperienceTabHref> = 
   collection: '/collection',
   pilgrimage: '/pilgrimage',
   explorerCamera: '/explorer-camera',
-  explorerSearch: '/explorer-search',
-  explorerMap: '/explorer-map',
   explorerJournal: '/explorer-journal',
   profile: '/profile',
 };
@@ -74,14 +64,12 @@ export const EXPERIENCE_TAB_ROUTE_NAMES: Record<ExperienceTabId, ExperienceTabRo
   collection: 'collection',
   pilgrimage: 'pilgrimage',
   explorerCamera: 'explorer-camera',
-  explorerSearch: 'explorer-search',
-  explorerMap: 'explorer-map',
   explorerJournal: 'explorer-journal',
   profile: 'profile',
 };
 
 const FIXED_TABS: Record<Exclude<ExperienceMode, 'seeker'>, readonly ExperienceTabId[]> = {
-  explorer: ['pilgrimage', 'explorerJournal', 'explorerCamera', 'explorerSearch', 'profile'],
+  explorer: ['pilgrimage', 'explorerCamera', 'explorerJournal', 'profile'],
   collector: ['discover', 'bangumi', 'collection', 'profile'],
 };
 
@@ -108,7 +96,8 @@ export function normalizeExperiencePrefs(input: unknown): ExperiencePrefs {
       if (!seekerTabs.includes(valid)) seekerTabs.push(valid);
       if (seekerTabs.length === MAX_SEEKER_CONTENT_TABS) break;
     }
-  } else {
+  }
+  if (seekerTabs.length === 0) {
     seekerTabs.push(...DEFAULT_EXPERIENCE_PREFS.seekerTabs);
   }
   return { mode, seekerTabs };
