@@ -19,7 +19,8 @@ export type ShortcutId =
   | 'attribution'
   | 'terms'
   | 'theme-preview'
-  | 'design-tokens';
+  | 'design-tokens'
+  | 'characters';
 
 export interface ShortcutSpec {
   id: ShortcutId;
@@ -118,6 +119,12 @@ const SHORTCUT_CATALOG: Record<ShortcutId, ShortcutSpec> = {
     labelKey: 'profile.shortcut.tokens',
     icon: 'cube-outline',
     route: '/(setting)/design-tokens',
+  },
+  characters: {
+    id: 'characters',
+    labelKey: 'profile.shortcut.characters',
+    icon: 'people-outline',
+    route: '/companion/library',
   },
 };
 
