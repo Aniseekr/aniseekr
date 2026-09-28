@@ -268,7 +268,6 @@ export default function PilgrimageDetailScreen() {
     groupedCounts,
     normalizedSpotSearchQuery,
     spotStats,
-    userStats,
     distanceFor,
     distanceForGroup,
     representativeForGroup,
@@ -357,8 +356,14 @@ export default function PilgrimageDetailScreen() {
       consumedKey: consumedSpotFocusRef.current,
     });
     consumedSpotFocusRef.current = resolved.consumedKey;
-    if (resolved.spotId && focusedSpot) selectSpot(focusedSpot);
-  }, [bangumiId, focusSpotId, groupedSpotByPointId, selectSpot]);
+    if (resolved.spotId && focusedSpot) {
+      // The route target must enter the sheet's list before selectSpot asks it to scroll.
+      if (!filteredGroupedSpots.some((group) => group.id === focusedGroup?.id)) {
+        setView({ spotFilter: 'all', spotSearchQuery: '' });
+      }
+      selectSpot(focusedSpot);
+    }
+  }, [bangumiId, focusSpotId, groupedSpotByPointId, filteredGroupedSpots, selectSpot, setView]);
 
   const posterUri = useMemo(() => {
     // Prefer covers we already hold (anitabi CDN / the route-param seed) —
@@ -744,8 +749,6 @@ export default function PilgrimageDetailScreen() {
               animeTitles={animeTitles}
               browseLabel={browseLabel}
               posterUri={posterUri}
-              spotStats={spotStats}
-              userStats={userStats}
               filteredGroupedSpots={filteredGroupedSpots}
               viewMode={viewMode}
               themeColor={themeColor}

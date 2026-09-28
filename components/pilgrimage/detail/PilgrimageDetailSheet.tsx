@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -33,8 +33,6 @@ export interface PilgrimageDetailSheetProps {
   animeTitles: PilgrimageDisplayTitles | null;
   browseLabel: string;
   posterUri: string;
-  spotStats: { spotCount: number; radiusKm: number };
-  userStats: { visitedCount: number; capturedCount: number };
   filteredGroupedSpots: readonly AnitabiSpot[];
   viewMode: 'list' | 'map';
   themeColor: string;
@@ -76,8 +74,6 @@ function PilgrimageDetailSheetImpl({
   animeTitles,
   browseLabel,
   posterUri,
-  spotStats,
-  userStats,
   filteredGroupedSpots,
   viewMode,
   themeColor,
@@ -117,7 +113,7 @@ function PilgrimageDetailSheetImpl({
   const listRef = useRef<BottomSheetFlatListMethods>(null);
   const snapPoints = useMemo(() => [...SHEET_SNAPS], []);
   const progress =
-    spotStats.spotCount > 0 ? Math.min(1, userStats.visitedCount / spotStats.spotCount) : 0;
+    groupedCounts.all > 0 ? Math.min(1, groupedCounts.visited / groupedCounts.all) : 0;
 
   useEffect(() => {
     if (viewMode === 'map') sheetRef.current?.snapToIndex(0);
@@ -199,12 +195,25 @@ function PilgrimageDetailSheetImpl({
           <ThemedText variant="titleLarge" weight="800" numberOfLines={2}>
             {animeTitles?.primary ?? '—'}
           </ThemedText>
-          <ThemedText variant="captionSmall" tone="secondary">
-            {t('pilgrimage.detail.progressSummary', {
-              count: spotStats.spotCount,
-              visited: userStats.visitedCount,
-            })}
-          </ThemedText>
+          <View style={styles.subtitleRow}>
+            <ThemedText variant="captionSmall" tone="secondary">
+              {t('pilgrimage.detail.progressSummary', {
+                count: groupedCounts.all,
+                visited: groupedCounts.visited,
+              })}
+            </ThemedText>
+            {anime ? (
+              <Pressable
+                onPress={onOpenBrowse}
+                hitSlop={16}
+                accessibilityRole="button"
+                accessibilityLabel={browseLabel}>
+                <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
+                  {browseLabel}
+                </ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
           <View style={styles.progressTrack}>
             <View
               style={[
@@ -221,16 +230,6 @@ function PilgrimageDetailSheetImpl({
           onPress={onSearchOpen}
         />
       </View>
-
-      {anime ? (
-        <ThemedButton
-          label={browseLabel}
-          variant="ghost"
-          size="md"
-          onPress={onOpenBrowse}
-          style={styles.browseButton}
-        />
-      ) : null}
 
       <PilgrimageDetailControls
         spotSearchQuery={spotSearchQuery}
@@ -360,7 +359,7 @@ function makeStyles(theme: ThemePalette) {
       marginTop: 3,
     },
     progressFill: { height: '100%', borderRadius: Radius.full },
-    browseButton: { alignSelf: 'flex-start' },
+    subtitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm },
     footer: { gap: Spacing.md, paddingTop: Spacing.lg },
     emptyCard: {
       marginTop: Spacing.lg,
