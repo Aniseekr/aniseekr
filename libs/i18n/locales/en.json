@@ -787,49 +787,29 @@
       },
       "untitled": "Untitled"
     },
+    "pilgrimageHome": {
+      "showMap": "Show map",
+      "showList": "Show list",
+      "search": "Search anime or places",
+      "nearby": "Nearby",
+      "within3km": "{count} within 3 km",
+      "locationNeeded": "Turn on location to find pilgrimage spots near you.",
+      "enableLocation": "Enable location",
+      "openSettings": "Open Settings",
+      "noNearby": "No pilgrimage spots within 50 km",
+      "nearbyUnavailable": "Nearby spots are unavailable",
+      "depart": "Directions",
+      "myWorks": "My pilgrimages",
+      "explore": "Explore more",
+      "popular": "Popular",
+      "tourism88": "Anime 88",
+      "rallies": "Stamp rallies",
+      "all": "All",
+      "spotCount": "{count} spots",
+      "visitedProgress": "{visited} / {total} visited"
+    },
     "pilgrimageScreen": {
-      "explorerSubtitle": "Find anime scenes and plan your next pilgrimage.",
-      "explorerTitle": "Discover",
-      "errorLoadFailed": "Failed to load",
-      "hero": {
-        "closest": "Closest: {title}",
-        "closestWithDistance": "Closest: {title} · {distance} away",
-        "countLabel": "{count} {animeWord} · {tier}",
-        "labelAccessibility": "Open pilgrimage map",
-        "nearestSpotCaps": "Nearest sacred site",
-        "noMappedAnime": "No mapped anime yet — tap to open the map",
-        "title": "Pilgrimage Map",
-        "withoutLocation": "Tap to browse pilgrimage spots across Japan"
-      },
-      "intro": {
-        "body": {
-          "empty": "Choose an anime and find walkable spots near you.",
-          "withCollection": "Anime from your collection, plus picks near you."
-        },
-        "caps": "PLAN YOUR DAY"
-      },
-      "myAlbumA11y": "My pilgrimage album",
-      "charactersA11y": "Characters",
-      "moreActions": "Tools",
-      "searchA11y": "Search",
-      "section": {
-        "explore": "Explore",
-        "featuredSpots": "Featured Spots",
-        "myPilgrimage": "My Pilgrimage",
-        "popularAnimes": "Popular Animes",
-        "seeAll": "See all",
-        "viewMap": "View map",
-        "yourAnimesAndMore": "Your Animes & More"
-      },
-      "tier": {
-        "dayTrip": "day trip · 100 km",
-        "farAway": "far away",
-        "inRegion": "in region · 500 km",
-        "walking": "walking · 30 km"
-      },
-      "title": "Pilgrimage",
-      "wordAnime": "anime",
-      "wordAnimes": "animes"
+      "errorLoadFailed": "Failed to load"
     },
     "profileScreen": {
       "anonName": "Anime fan",
@@ -1329,44 +1309,11 @@
       "title": "Street View"
     },
     "map": {
-      "allJapan": "All Japan",
-      "clearSearchA11y": "Clear search",
-      "filter": {
-        "all": "All",
-        "collection": "In collection",
-        "official88": "Tourism 88"
-      },
-      "layout": {
-        "grid": "Grid",
-        "rows": "Rows"
-      },
       "locateIdleA11y": "Show my location",
       "locateFollowingA11y": "Stop following my location",
       "locateCompassA11y": "Stop compass mode",
-      "locationPromptAllow": "Allow location",
-      "locationPromptBody": "Allow location access to open the map around you and show nearby pilgrimage scenes immediately.",
-      "locationPromptNotNow": "Not now",
-      "locationPromptOpenSettings": "Open Settings",
-      "locationPromptTitle": "Show scenes near you",
-      "emptyCollection": "No pilgrimage spots in your collection yet.",
-      "emptyNearby": "No nearby anime yet. Try panning the map to a different region.",
-      "emptySearch": "No anime match \"{query}\".",
-      "nearbySpotsTitle": "Sacred sites near you",
-      "goToCollection": "Go to Collection",
-      "searchAllAnime": "Search all anime",
-      "mapLoadError": "Couldn't load the map.",
       "offlineBody": "You're offline or the connection dropped. Check your network and try again — areas you've already viewed still work offline.",
-      "offlineTitle": "Can't load the map",
-      "openAlbumA11y": "Open pilgrimage album",
-      "quickAction": {
-        "navigate": "Navigate here",
-        "openDetail": "View sacred site"
-      },
-      "searchA11y": "Search anime",
-      "searchPlaceholder": "Search anime or city",
-      "viewModeAnime": "Scene locations",
-      "viewModeMyLocation": "My location",
-      "wholeJapanA11y": "View whole Japan"
+      "offlineTitle": "Can't load the map"
     },
     "sceneSwitcher": {
       "clearSearchA11y": "Clear search",

@@ -237,3 +237,4 @@ PILG-073,__tests__/unit/pilgrimage/preview-capture.test.ts,camera preview params
 PILG-074,__tests__/unit/pilgrimage/preview-capture.test.ts,journal preview params and preview shots,covered
 PILG-075,__tests__/unit/pilgrimage/preview-capture.test.ts,preview capture record,covered
 PILG-076,__tests__/unit/pilgrimage/frame-match.test.ts,frame match discriminates scenes (v2 layout scoring),covered
+PILG-077,__tests__/unit/pilgrimage/home-nearby-spots.test.ts,PILG-077 home nearby fallback,covered

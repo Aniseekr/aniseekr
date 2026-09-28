@@ -277,7 +277,9 @@ export default function LocalityHubScreen() {
             />
           )}
           onPress={() =>
-            router.push(activeTab === 'news' ? '/pilgrimage/news/sources' : '/pilgrimage/map')
+            activeTab === 'news'
+              ? router.push('/pilgrimage/news/sources')
+              : router.push({ pathname: '/pilgrimage', params: { view: 'map' } })
           }
         />
       </View>

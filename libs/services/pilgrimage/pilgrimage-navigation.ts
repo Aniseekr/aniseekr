@@ -214,7 +214,7 @@ export function getPilgrimageDetailBackRoute(params: RouterParams): PilgrimageRo
     case 'explorer-journal':
       return { pathname: '/explorer-journal' };
     case 'map':
-      return { pathname: '/pilgrimage/map' };
+      return { pathname: '/pilgrimage', params: { view: 'map' } };
     case 'album': {
       const animeId = getStringParam(params, 'albumAnimeId') ?? getStringParam(params, 'animeId');
       return {

@@ -787,49 +787,29 @@
       },
       "untitled": "未命名"
     },
+    "pilgrimageHome": {
+      "showMap": "顯示地圖",
+      "showList": "顯示列表",
+      "search": "搜尋作品或地點",
+      "nearby": "附近",
+      "within3km": "3 km 內 {count} 處",
+      "locationNeeded": "開啟定位，尋找附近的聖地。",
+      "enableLocation": "開啟定位",
+      "openSettings": "開啟設定",
+      "noNearby": "附近 50 km 內沒有聖地",
+      "nearbyUnavailable": "無法載入附近聖地",
+      "depart": "出發",
+      "myWorks": "我的作品",
+      "explore": "探索更多",
+      "popular": "熱門",
+      "tourism88": "88 選",
+      "rallies": "集章活動",
+      "all": "全部",
+      "spotCount": "{count} 個場景",
+      "visitedProgress": "{visited} / {total} 已去"
+    },
     "pilgrimageScreen": {
-      "explorerSubtitle": "尋找動畫場景，規劃下一次聖地巡禮。",
-      "explorerTitle": "探索",
-      "errorLoadFailed": "載入失敗",
-      "hero": {
-        "closest": "最近：{title}",
-        "closestWithDistance": "最近：{title} · 距離 {distance}",
-        "countLabel": "{count} {animeWord} · {tier}",
-        "labelAccessibility": "開啟聖地地圖",
-        "nearestSpotCaps": "最近的聖地",
-        "noMappedAnime": "尚未有對應動畫——點擊開啟地圖",
-        "title": "聖地地圖",
-        "withoutLocation": "點擊瀏覽日本各地的聖地"
-      },
-      "intro": {
-        "body": {
-          "empty": "選一部動畫，找出你附近可步行抵達的場景。",
-          "withCollection": "來自你收藏的動畫，加上附近的精選。"
-        },
-        "caps": "規劃今天行程"
-      },
-      "myAlbumA11y": "我的聖地相簿",
-      "charactersA11y": "角色",
-      "moreActions": "巡禮工具",
-      "searchA11y": "搜尋",
-      "section": {
-        "explore": "探索",
-        "featuredSpots": "精選景點",
-        "myPilgrimage": "我的巡禮",
-        "popularAnimes": "熱門動畫",
-        "seeAll": "查看全部",
-        "viewMap": "查看地圖",
-        "yourAnimesAndMore": "你的動畫與更多"
-      },
-      "tier": {
-        "dayTrip": "一日遊 · 100 公里",
-        "farAway": "遠方聖地",
-        "inRegion": "同區 · 500 公里",
-        "walking": "步行範圍 · 30 公里"
-      },
-      "title": "聖地巡禮",
-      "wordAnime": "部動畫",
-      "wordAnimes": "部動畫"
+      "errorLoadFailed": "載入失敗"
     },
     "profileScreen": {
       "anonName": "動畫迷",
@@ -1329,44 +1309,11 @@
       "title": "街景"
     },
     "map": {
-      "allJapan": "全日本",
-      "clearSearchA11y": "清除搜尋",
-      "filter": {
-        "all": "全部",
-        "collection": "收藏中",
-        "official88": "88 選"
-      },
-      "layout": {
-        "grid": "格狀",
-        "rows": "列表"
-      },
       "locateIdleA11y": "顯示我的位置",
       "locateFollowingA11y": "停止跟隨我的位置",
       "locateCompassA11y": "停止指南針模式",
-      "locationPromptAllow": "允許位置存取",
-      "locationPromptBody": "允許位置存取後，地圖會直接顯示你附近的動畫場景。",
-      "locationPromptNotNow": "暫時不要",
-      "locationPromptOpenSettings": "開啟設定",
-      "locationPromptTitle": "顯示你附近的場景",
-      "emptyCollection": "你的收藏中還沒有聖地巡禮景點。",
-      "emptyNearby": "附近還沒有動畫。試著拖曳地圖到其他地區看看。",
-      "emptySearch": "沒有符合「{query}」的動畫。",
-      "searchAllAnime": "搜尋全部動畫",
-      "nearbySpotsTitle": "你附近的聖地",
-      "goToCollection": "前往收藏",
-      "mapLoadError": "無法載入地圖。",
       "offlineBody": "你目前離線或連線中斷。請檢查網路後重試 — 已瀏覽過的區域仍可離線使用。",
-      "offlineTitle": "無法載入地圖",
-      "openAlbumA11y": "開啟巡禮相簿",
-      "quickAction": {
-        "navigate": "導航到這裡",
-        "openDetail": "查看聖地"
-      },
-      "searchA11y": "搜尋動畫",
-      "searchPlaceholder": "搜尋動畫或城市",
-      "viewModeAnime": "場景位置",
-      "viewModeMyLocation": "我的位置",
-      "wholeJapanA11y": "查看全日本"
+      "offlineTitle": "無法載入地圖"
     },
     "sceneSwitcher": {
       "clearSearchA11y": "清除搜尋",

@@ -76,6 +76,10 @@ describe('pilgrimage navigation', () => {
     });
     expect(getPilgrimageDetailBackRoute({ returnTo: 'explorer-search' })).toBeNull();
     expect(getPilgrimageDetailBackRoute({ returnTo: 'explorer-map' })).toBeNull();
+    expect(getPilgrimageDetailBackRoute({ returnTo: 'map' })).toEqual({
+      pathname: '/pilgrimage',
+      params: { view: 'map' },
+    });
   });
 
   it('returns pilgrimage detail back to the hub instead of the default home tab', () => {
