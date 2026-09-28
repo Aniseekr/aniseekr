@@ -20,6 +20,10 @@ const blocked = [
   // `spec/` folder; a bare /\/spec\// blocks their TurboModule specs and breaks
   // the build with "Unable to resolve module ../spec/NativeGoogleSignin.js".
   /^(?!.*\/node_modules\/).*\/spec\//,
+  // RNRepo's prebuilt-framework cache (@rnrepo/expo-config-plugin). A native
+  // build rewrites it under node_modules mid-session and the file watcher
+  // crashes on the half-written tree ("TreeFS: Failed to make parent directory").
+  /\/\.rnrepo-cache\//,
 ];
 const existing = config.resolver.blockList;
 config.resolver.blockList = Array.isArray(existing)
