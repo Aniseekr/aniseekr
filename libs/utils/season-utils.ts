@@ -27,3 +27,9 @@ export function getCurrentYear(now: Date = new Date()): number {
 export function getCurrentSeason(now: Date = new Date()): Season {
   return getSeasonForMonth(now.getMonth() + 1);
 }
+
+/** Broadcast cours: Jan–Mar / Apr–Jun / Jul–Sep / Oct–Dec, in local time. */
+export function getBroadcastSeason(now = new Date()): { season: Season; year: number } {
+  const seasons: Season[] = ['WINTER', 'SPRING', 'SUMMER', 'FALL'];
+  return { season: seasons[Math.floor(now.getMonth() / 3)], year: now.getFullYear() };
+}

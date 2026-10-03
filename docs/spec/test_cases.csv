@@ -236,3 +236,4 @@ PILG-074,Pilgrimage,deterministic,P0,Journal preview params,A Journal shot opens
 PILG-075,Pilgrimage,deterministic,P0,Preview capture record,The preview files a shot under its scene or the free bucket with lens-gated analysis and no composite without a reference,mapping,active
 PILG-076,Pilgrimage,deterministic,P0,Frame match discriminates scenes,Frame match compares where light and edges sit so unrelated scenes score low and the same framing scores high and scores from the retired whole-frame metric are neither shown nor kept,boundary,active
 PILG-077,Pilgrimage,deterministic,P0,Home nearby fallback,An empty fresh-install spot index uses real anime litePoints for nearest and nearby count and cannot claim radius coverage until the index has rows,fallback,active
+REPO-031,Repository,deterministic,P0,Broadcast season defaults,Seasonal defaults pair calendar year with Jan-Apr-Jul-Oct broadcast cours,mapping,active

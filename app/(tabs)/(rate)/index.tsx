@@ -15,7 +15,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { clearAllDecks } from '../../../libs/services/rate/deck-cache';
 import { loadGenreSwipePage } from '../../../libs/services/rate/genre-deck-prefetch';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
-import { getCurrentSeason } from '../../../libs/utils/season-utils';
+import { getBroadcastSeason } from '../../../libs/utils/season-utils';
 import { useT } from '../../../libs/i18n';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 
@@ -37,7 +37,7 @@ export default function DiscoverHome() {
   const [refreshing, setRefreshing] = useState(false);
   const refreshInFlight = useRef(false);
   const genreWarmupsRef = useRef(new Set<string>());
-  const now = new Date();
+  const currentSeason = getBroadcastSeason();
 
   const warmGenreDeck = useCallback((genre: Genre) => {
     if (genreWarmupsRef.current.has(genre.id)) return;
@@ -118,8 +118,8 @@ export default function DiscoverHome() {
                   size="sm"
                   haptic="none"
                   label={t('tabs.discoverHome.seasonAll', {
-                    year: now.getFullYear(),
-                    season: t(SEASON_KEYS[getCurrentSeason(now)]),
+                    year: currentSeason.year,
+                    season: t(SEASON_KEYS[currentSeason.season]),
                   })}
                   onPress={() =>
                     router.push({ pathname: '/(tabs)/bangumi', params: { segment: 'season' } })

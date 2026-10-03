@@ -54,7 +54,7 @@ import { idMappingService } from '../services/sync/id-mapping-service';
 import { AnnictClient } from '../clients/annict-client';
 import { expandSearchVariants } from '../utils/chinese-converter';
 import { Logger } from '../utils/logger';
-import { getCurrentSeason } from '../utils/season-utils';
+import { getBroadcastSeason } from '../utils/season-utils';
 import { achievementService } from '../services/achievements/achievement-service';
 import { getOverrides as getGenreCoverOverrides } from '../services/rate/genre-cover-override';
 
@@ -906,12 +906,10 @@ export class AnimeRepository {
     return cached ? filterAniListAnime(cached).map(mapAniListToAnime) : null;
   }
 
-  static getSeasonalAnimeSync(
-    season = getCurrentSeason(),
-    year = new Date().getFullYear()
-  ): Anime[] | null {
+  static getSeasonalAnimeSync(season?: string, year?: number): Anime[] | null {
+    const current = getBroadcastSeason();
     const cached = CacheService.getSync<SeasonalPageCacheEntry>(
-      `seasonal_${season}_${year}_p1_pp50_r${r18CacheFlag()}`
+      `seasonal_${season ?? current.season}_${year ?? current.year}_p1_pp50_r${r18CacheFlag()}`
     );
     return cached ? filterAniListAnime(cached.media).map(mapAniListDetailToAnime) : null;
   }
@@ -939,10 +937,9 @@ export class AnimeRepository {
     page = 1,
     options: SeasonalFetchOptions = {}
   ): Promise<Anime[]> {
-    const targetSeason = season ?? getCurrentSeason();
-    const currentYear = new Date().getFullYear();
-
-    const targetYear = year ?? currentYear;
+    const current = getBroadcastSeason();
+    const targetSeason = season ?? current.season;
+    const targetYear = year ?? current.year;
     const perPage = Math.max(1, Math.min(options.perPage ?? 50, 50));
     const maxItems = Math.max(perPage, options.maxItems ?? perPage);
     const forceRefresh = options.forceRefresh === true;

@@ -138,3 +138,7 @@ Used in `case_id` prefix (e.g., `UAI-001`):
 This spec is at v1.0 (2026-04-28). Bump minor for additive cases, major for contract changes.
 Provider behavior changes that break parity with iOS aniseeker → flag in the relevant case row's
 `status` column and open a follow-up.
+
+Seasonal defaults use local broadcast cours (Jan–Mar WINTER; Apr–Jun SPRING;
+Jul–Sep SUMMER; Oct–Dec FALL) paired with the calendar year, including sync
+repository cache keys, AniList queries, and the Discover/Schedule UI (REPO-031).
