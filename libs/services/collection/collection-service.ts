@@ -62,6 +62,32 @@ const SYSTEM_FOLDERS: Omit<CollectionFolder, 'animeCount' | 'sharedBy' | 'create
   },
 ];
 
+export interface FolderAnimeWithProgress {
+  id: string;
+  title: string | null;
+  imageUrl: string | null;
+  progress: number;
+  totalEpisodes: number | null;
+  status: string;
+  score: number;
+  notes: string;
+  rewatchCount: number;
+  updatedAt: number | null;
+}
+
+type TrackingRow = {
+  anime_id: string;
+  title: string | null;
+  image_url: string | null;
+  progress: number | null;
+  total_episodes: number | null;
+  status: string;
+  score: number | null;
+  notes: string | null;
+  rewatch_count: number | null;
+  updated_at: number | null;
+};
+
 class CollectionService {
   private static instance: CollectionService;
 
@@ -267,6 +293,48 @@ class CollectionService {
     );
 
     return [...systemFolders, ...customFolders];
+  }
+
+  async getFolderAnimeWithProgress(folderId: string): Promise<FolderAnimeWithProgress[]> {
+    const db = await LocalDB.getDatabase();
+    // Favorites can exist without tracking; their own title/poster remain authoritative.
+    const favorites =
+      folderId === 'system_favorites'
+        ? await db.getAllAsync<{ id: string; title: string | null; image: string | null }>(
+            'SELECT id, title, image FROM favorites ORDER BY addedAt DESC'
+          )
+        : null;
+    const ids = favorites ? favorites.map((row) => row.id) : await this.getFolderItems(folderId);
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const rows = await db.getAllAsync<TrackingRow>(
+      `SELECT anime_id, title, image_url, progress, total_episodes, status, score,
+              notes, rewatch_count, updated_at
+         FROM user_anime
+        WHERE anime_id IN (${placeholders})`,
+      ...ids
+    );
+    const byId = new Map(rows.map((row) => [row.anime_id, row]));
+    const favoriteById = new Map(favorites?.map((row) => [row.id, row]));
+    return ids.flatMap((id) => {
+      const row = byId.get(id);
+      const favorite = favoriteById.get(id);
+      if (!row && !favorite) return [];
+      return [
+        {
+          id,
+          title: favorite ? favorite.title : (row?.title ?? null),
+          imageUrl: favorite ? favorite.image : (row?.image_url ?? null),
+          progress: row?.progress ?? 0,
+          totalEpisodes: row?.total_episodes ?? null,
+          status: row?.status ?? 'favorites',
+          score: row?.score ?? 0,
+          notes: row?.notes ?? '',
+          rewatchCount: row?.rewatch_count ?? 0,
+          updatedAt: row?.updated_at ?? null,
+        },
+      ];
+    });
   }
 
   async getFolderItems(folderId: string): Promise<string[]> {
