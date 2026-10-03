@@ -68,6 +68,8 @@ export interface PilgrimageDetailSheetProps {
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
+/** Rows (after the header) that fit the mid detent without scrolling. */
+const VISIBLE_AT_MID_DETENT = 3;
 
 function PilgrimageDetailSheetImpl({
   anime,
@@ -119,17 +121,65 @@ function PilgrimageDetailSheetImpl({
     if (viewMode === 'map') sheetRef.current?.snapToIndex(0);
   }, [viewMode]);
 
+  const sheetIndexRef = useRef(viewMode === 'map' ? 0 : 1);
+  const pendingRevealRef = useRef<{ row: number; request: number } | null>(null);
+  const revealedFocusRef = useRef(0);
+  const scrollRetryRef = useRef(0);
+  const scrollFrameRef = useRef<number | null>(null);
+  const scrollRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelRevealScroll = useCallback(() => {
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+    if (scrollRetryTimerRef.current !== null) clearTimeout(scrollRetryTimerRef.current);
+    scrollFrameRef.current = null;
+    scrollRetryTimerRef.current = null;
+  }, []);
+
+  const revealPending = useCallback(() => {
+    const pending = pendingRevealRef.current;
+    if (!pending || viewMode === 'map') return;
+    // Bottom-sheet locks list scrolling below the highest detent.
+    const needsScroll = pending.row >= VISIBLE_AT_MID_DETENT;
+    const target = needsScroll ? SHEET_SNAPS.length - 1 : 1;
+    if (sheetIndexRef.current !== target) {
+      sheetRef.current?.snapToIndex(target);
+      return;
+    }
+    pendingRevealRef.current = null;
+    revealedFocusRef.current = pending.request;
+    scrollRetryRef.current = 0;
+    if (needsScroll) {
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = null;
+        listRef.current?.scrollToIndex({ index: pending.row, animated: true, viewPosition: 0.2 });
+      });
+    }
+  }, [viewMode]);
+
+  // A new request or map view must cancel an older queued scroll.
+  useEffect(() => cancelRevealScroll, [cancelRevealScroll, focusRequest, selectedSpotId, viewMode]);
+
   useEffect(() => {
-    if (!selectedSpotId) return;
-    const index = filteredGroupedSpots.findIndex((group) =>
+    pendingRevealRef.current = null;
+    // Series resolution reloads the points; reveal again after an emptied list.
+    if (filteredGroupedSpots.length === 0) {
+      revealedFocusRef.current = 0;
+      cancelRevealScroll();
+    }
+    if (viewMode === 'map' || !selectedSpotId || focusRequest === revealedFocusRef.current) return;
+    const row = filteredGroupedSpots.findIndex((group) =>
       group.scenes.some((scene) => scene.id === selectedSpotId)
     );
-    if (index < 0) return;
-    sheetRef.current?.snapToIndex(1);
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.25 });
-    });
-  }, [filteredGroupedSpots, focusRequest, selectedSpotId]);
+    if (row < 0) return;
+    pendingRevealRef.current = { row, request: focusRequest };
+    revealPending();
+  }, [
+    cancelRevealScroll,
+    filteredGroupedSpots,
+    focusRequest,
+    revealPending,
+    selectedSpotId,
+    viewMode,
+  ]);
 
   const menuGroup = menuSpotId
     ? filteredGroupedSpots.find((group) => group.scenes.some((scene) => scene.id === menuSpotId))
@@ -262,6 +312,11 @@ function PilgrimageDetailSheetImpl({
       <BottomSheet
         ref={sheetRef}
         index={viewMode === 'map' ? 0 : 1}
+        onChange={(index) => {
+          sheetIndexRef.current = index;
+          // Mount-time snaps can be dropped before layout; initial onChange retries them.
+          revealPending();
+        }}
         snapPoints={snapPoints}
         enableDynamicSizing={false}
         enableContentPanningGesture
@@ -274,7 +329,16 @@ function PilgrimageDetailSheetImpl({
           keyExtractor={(item: AnitabiSpot) => item.id}
           renderItem={renderRow}
           onScrollToIndexFailed={({ index, averageItemLength }) => {
-            listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: true });
+            if (viewMode === 'map') return;
+            // Rows past the rendered window aren't measured yet: jump near the
+            // estimate so they render, then retry the exact index.
+            listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
+            if (scrollRetryRef.current >= 2) return;
+            scrollRetryRef.current += 1;
+            scrollRetryTimerRef.current = setTimeout(() => {
+              scrollRetryTimerRef.current = null;
+              listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.2 });
+            }, 120);
           }}
           ListHeaderComponent={headerNode}
           ListEmptyComponent={
