@@ -93,6 +93,8 @@ export default function BangumiScreen() {
     [schedule.rawAnime, prefs.typeFilter]
   );
   const trackedCount = schedule.rawAnime.filter((anime) => trackedIds.has(anime.id)).length;
+  const segmentPending =
+    segmentChoice === null && !trackingReady && params.segment !== 'season' && !trackingError;
   const segment =
     params.segment === 'season'
       ? 'season'
@@ -276,7 +278,8 @@ export default function BangumiScreen() {
                 />
               </ThemedSurface>
             ) : null}
-            {(schedule.status === 'loading' && schedule.rawAnime.length === 0) ||
+            {segmentPending ||
+            (schedule.status === 'loading' && schedule.rawAnime.length === 0) ||
             (!trackingReady && !trackingError && segment === 'tracking') ? (
               <Skeleton.ListRow count={5} avatarSize={56} avatarShape="square" />
             ) : dayAnime.length ? (
@@ -299,7 +302,10 @@ export default function BangumiScreen() {
                 ) : null}
               </View>
             )}
-            {segment === 'season' && prefs.showUnknownDays && grouped.unknown.length > 0 ? (
+            {!segmentPending &&
+            segment === 'season' &&
+            prefs.showUnknownDays &&
+            grouped.unknown.length > 0 ? (
               <View>
                 <ThemedText variant="titleMedium" weight="700">
                   {t('tabs.schedule.undated')}
@@ -307,7 +313,10 @@ export default function BangumiScreen() {
                 {renderRows(grouped.unknown)}
               </View>
             ) : null}
-            {segment === 'season' && prefs.typeFilter === 'all' && special.length > 0 ? (
+            {!segmentPending &&
+            segment === 'season' &&
+            prefs.typeFilter === 'all' &&
+            special.length > 0 ? (
               <SpecialContentSection
                 title={t('tabs.bangumiScreen.movieAndSpecialsTitle')}
                 anime={special}
