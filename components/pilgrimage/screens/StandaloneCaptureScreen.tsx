@@ -18,7 +18,13 @@ import { useCameraPermission } from 'react-native-vision-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
-import { ON_DARK, ThemedText, ThemedButton, ThemedSurface } from '../../../components/themed';
+import {
+  ON_DARK,
+  ThemedText,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedSurface,
+} from '../../../components/themed';
 import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { CameraStage } from '../../../components/pilgrimage/camera/CameraStage';
@@ -284,6 +290,17 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
     return (
       <View style={[styles.permRoot, { backgroundColor: theme.background.primary }]}>
         {tabRoot ? null : <Stack.Screen options={{ headerShown: false }} />}
+        {tabRoot ? null : (
+          // As a pushed route the gate must not be a dead end (edge-swipe only).
+          <View style={[styles.permClose, { top: insets.top + Spacing.xs }]}>
+            <ThemedIconButton
+              variant="ghost"
+              accessibilityLabel={t('common.close')}
+              icon={(color) => <Ionicons name="close" size={22} color={color} />}
+              onPress={() => router.back()}
+            />
+          </View>
+        )}
         <SafeAreaView style={styles.permBody}>
           <ThemedText variant="titleLarge" weight="700">
             {t('pilgrimage.capture.permTitle')}
@@ -521,6 +538,7 @@ function MountSuggestion({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   permRoot: { flex: 1 },
+  permClose: { position: 'absolute', left: Spacing.md, zIndex: 1 },
   permBody: {
     flex: 1,
     alignItems: 'center',
