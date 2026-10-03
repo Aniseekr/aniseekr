@@ -1,19 +1,58 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Anime, Genre, PersonalizedPickState, Recommendation, ViewMode } from './types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { PersonalizedPickState } from './types';
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
 import { pickPersonalized } from '../../libs/services/recommendation/personalized-pick';
 
-type DiscoveryMode = 'genres' | 'mood' | 'duration';
+export type Resource<T> = { data: T[]; status: 'loading' | 'ready' | 'error' };
+
+function useResource<T>(readSync: () => T[] | null, fetchData: (force: boolean) => Promise<T[]>) {
+  const [resource, setResource] = useState<Resource<T>>(() => {
+    const cached = readSync();
+    return { data: cached ?? [], status: cached === null ? 'loading' : 'ready' };
+  });
+  const request = useRef(0);
+  const load = useCallback(
+    async (force = false) => {
+      const id = ++request.current;
+      setResource((prev) =>
+        prev.status === 'ready' || prev.data.length > 0
+          ? { ...prev, status: 'ready' }
+          : { ...prev, status: 'loading' }
+      );
+      try {
+        const data = await fetchData(force);
+        if (id === request.current) setResource({ data, status: 'ready' });
+      } catch {
+        if (id === request.current)
+          setResource((prev) => ({
+            ...prev,
+            status: prev.status === 'ready' || prev.data.length > 0 ? 'ready' : 'error',
+          }));
+      }
+    },
+    [fetchData]
+  );
+  useEffect(() => {
+    void load();
+    return () => {
+      request.current += 1;
+    };
+  }, [load]);
+  return { ...resource, load };
+}
+
+const readGenres = () => AnimeRepository.getGenresSync();
+const readSeasonal = () => AnimeRepository.getSeasonalAnimeSync();
+const readWeekly = () => AnimeRepository.getTrendingAnimeSync();
+const fetchGenres = (force: boolean) => AnimeRepository.getGenres(force);
+const fetchSeasonal = (force: boolean) =>
+  AnimeRepository.getSeasonalAnime(undefined, undefined, 1, { forceRefresh: force });
+const fetchWeekly = (force: boolean) => AnimeRepository.getTrendingAnime(1, 20, force);
 
 export function useRateData() {
-  const [viewMode, setViewMode] = useState<ViewMode>('discovery');
-  const [discoveryMode, setDiscoveryMode] = useState<DiscoveryMode>('genres');
-  const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
-  const [genresLoading, setGenresLoading] = useState(true);
-  const [trendAnime, setTrendAnime] = useState<Anime[]>([]);
-  const [weeklyTrendAnime, setWeeklyTrendAnime] = useState<Anime[]>([]);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [seasonalAnime, setSeasonalAnime] = useState<Anime[]>([]); // [NEW]
+  const genres = useResource(readGenres, fetchGenres);
+  const seasonal = useResource(readSeasonal, fetchSeasonal);
+  const weeklyTrend = useResource(readWeekly, fetchWeekly);
   const [personalizedPick, setPersonalizedPick] = useState<PersonalizedPickState>({
     status: 'idle',
     anime: null,
@@ -21,71 +60,6 @@ export function useRateData() {
     sourceTitles: [],
     matchedTags: [],
   });
-
-  // These were for direct API rate limiting visibility,
-  // but JikanClient now handles it internally.
-  // We can keep them if we want to expose client state later,
-  // but for now let's simplify or mock them if the UI depends on them.
-  const [queueSize, setQueueSize] = useState(0);
-  const [nextAvailableAt, setNextAvailableAt] = useState<Date | null>(null);
-
-  const loadGenres = useCallback(async () => {
-    setGenresLoading(true);
-    try {
-      const genres = await AnimeRepository.getGenres();
-      setAvailableGenres(genres);
-    } catch (error) {
-      console.error('Failed to load genres:', error);
-    } finally {
-      setGenresLoading(false);
-    }
-  }, []);
-
-  const loadTrend = useCallback(async () => {
-    if (trendAnime.length > 0) return;
-    try {
-      const anime = await AnimeRepository.getTopAnime();
-      setTrendAnime(anime);
-    } catch (error) {
-      console.error('Failed to load trending anime:', error);
-    }
-  }, [trendAnime.length]);
-
-  const loadWeeklyTrend = useCallback(async () => {
-    if (weeklyTrendAnime.length > 0) return;
-    try {
-      const anime = await AnimeRepository.getTrendingAnime();
-      setWeeklyTrendAnime(anime);
-    } catch (error) {
-      console.error('Failed to load weekly trending anime:', error);
-    }
-  }, [weeklyTrendAnime.length]);
-
-  const loadRecommendations = useCallback(async () => {
-    if (recommendations.length > 0) return;
-    try {
-      // Improve logic later to be "Personalized"
-      const anime = await AnimeRepository.getSeasonalAnime();
-      const recs: Recommendation[] = anime.slice(0, 5).map((a) => ({
-        id: `rec-${a.id}`,
-        anime: a,
-        reason: 'Trending this season',
-      }));
-      setRecommendations(recs);
-    } catch (error) {
-      console.error('Failed to load recommendations:', error);
-    }
-  }, [recommendations.length]);
-
-  const loadSeasonal = useCallback(async () => {
-    if (seasonalAnime.length > 0) return;
-    try {
-      const anime = await AnimeRepository.getSeasonalAnime();
-      setSeasonalAnime(anime);
-    } catch (error) {
-      console.error('Failed to load seasonal anime:', error);
-    }
-  }, [seasonalAnime.length]);
 
   const loadPersonalizedPick = useCallback(async () => {
     setPersonalizedPick((prev) => ({ ...prev, status: 'loading' }));
@@ -130,69 +104,13 @@ export function useRateData() {
     }
   }, []);
 
-  useEffect(() => {
-    loadGenres();
-  }, [loadGenres]);
-
-  useEffect(() => {
-    if (viewMode === 'trend') {
-      loadTrend();
-      loadWeeklyTrend();
-    }
-    if (viewMode === 'tracking') {
-      loadSeasonal();
-    }
-  }, [loadTrend, loadWeeklyTrend, loadSeasonal, viewMode]);
-
-  const state = useMemo(
-    () => ({
-      viewMode,
-      discoveryMode,
-      availableGenres,
-      genresLoading,
-      trendAnime,
-      weeklyTrendAnime,
-      recommendations,
-      seasonalAnime,
-      personalizedPick,
-      queueSize,
-      nextAvailableAt,
-    }),
-    [
-      personalizedPick,
-      availableGenres,
-      genresLoading,
-      discoveryMode,
-      nextAvailableAt,
-      queueSize,
-      recommendations,
-      seasonalAnime,
-      trendAnime,
-      weeklyTrendAnime,
-      viewMode,
-    ]
-  );
-
-  const actions = useMemo(
-    () => ({
-      setViewMode,
-      setDiscoveryMode,
-      loadGenres,
-      loadTrend,
-      loadWeeklyTrend,
-      loadRecommendations,
-      loadSeasonal,
+  return {
+    state: { genres, seasonal, weeklyTrend, personalizedPick },
+    actions: {
+      loadGenres: genres.load,
+      loadSeasonal: seasonal.load,
+      loadWeeklyTrend: weeklyTrend.load,
       loadPersonalizedPick,
-    }),
-    [
-      loadPersonalizedPick,
-      loadGenres,
-      loadRecommendations,
-      loadSeasonal,
-      loadTrend,
-      loadWeeklyTrend,
-    ]
-  );
-
-  return { state, actions };
+    },
+  };
 }

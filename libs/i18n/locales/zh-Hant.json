@@ -848,39 +848,6 @@
       },
       "title": "個人"
     },
-    "rateScreen": {
-      "mode": {
-        "discovery": "探索",
-        "seasonal": "季番",
-        "trend": "趨勢"
-      },
-      "subtitle": {
-        "discovery": "探索類型",
-        "tracking": "我的清單",
-        "trend": "排行榜"
-      },
-      "trend": {
-        "bookmarkA11y": "收藏",
-        "heroTrendingBadge": "趨勢 #1",
-        "hotBadge": "熱門",
-        "loadingTrends": "趨勢載入中…",
-        "noPilgrimages": "目前沒有可瀏覽的聖地。",
-        "openA11y": "開啟詳情",
-        "openLabel": "開啟",
-        "pilgrimagesA11y": "查看全部聖地",
-        "pilgrimagesSubtitle": "可實地造訪的動畫場景",
-        "pilgrimagesTitle": "熱門聖地",
-        "rangeAllTime": "歷年",
-        "rangeWeek": "本週",
-        "seeAll": "查看全部",
-        "seeAllAnimeA11y": "查看全部熱門動畫",
-        "spotsLabel": "{count} 個景點",
-        "subtitleAllTime": "歷年最受歡迎",
-        "subtitleWeek": "現在大家都在看",
-        "titleAllTime": "歷年 Top {count}",
-        "titleWeek": "本週 Top {count}"
-      }
-    },
     "ratingScreen": {
       "addToPlanA11y": "加入想看清單",
       "allCaughtUp": "都看完了",
@@ -903,6 +870,18 @@
         "title": "重新開始這個類型？"
       },
       "skipA11y": "略過"
+    },
+    "discoverHome": {
+      "search": "搜尋動畫",
+      "seasonal": "本季新番",
+      "seasonAll": "{year} {season} · 全部",
+      "airingSlot": "週{weekday} {time}",
+      "trending": "本週熱門",
+      "fullChart": "完整排行",
+      "episodes": "{count} 集",
+      "rateByGenre": "照類型滑卡評分",
+      "pickedForYou": "為你挑選",
+      "unavailable": "無法載入，請重試。"
     }
   },
   "anime": {
@@ -1991,8 +1970,6 @@
     "anyEpisodeDuration": "不限單集長度",
     "carousel": "輪播",
     "comedic": "搞笑",
-    "continueWatching": "繼續觀看",
-    "continueWatching2": "繼續觀看",
     "couldnTBuildAPick": "暫時無法產生推薦",
     "cozy": "療癒",
     "createAdd": "建立並加入",
@@ -2013,7 +1990,6 @@
     "howDoYouWantTo": "你想要什麼感覺?",
     "imageFit": "圖片縮放",
     "inspiring": "勵志",
-    "latestSeason": "最新季度",
     "laughOutLoud": "大笑出聲",
     "longForm": "長篇",
     "melancholic": "惆悵",
@@ -2022,7 +1998,6 @@
     "mysterious": "懸疑",
     "newFolderName": "新資料夾名稱",
     "nothingFreshThatMatchesToday": "今天沒有符合的新作品",
-    "nowAiring": "播出中",
     "onTheEdge": "緊張刺激",
     "openDetails": "開啟詳情",
     "originalTitles": "原文標題",
@@ -2051,17 +2026,13 @@
     "summer": "夏",
     "tapForInfo": "點一下查看資訊",
     "tapToChange": "點一下變更。",
-    "tapToExplore": "點一下探索",
     "thrilling": "驚悚",
-    "topOfTheSeason": "本季之最",
     "trackingShortcut": "追蹤捷徑",
     "tryAgain": "再試一次",
     "tryAgainInAMoment": "請稍後再試。",
-    "tunedToYourTaste": "貼合你的口味",
     "twistsTurns": "峰迴路轉",
     "under13Min": "13 分鐘以下",
     "upliftingStories": "振奮人心",
-    "viewCalendar": "查看番組表",
     "winter": "冬",
     "year": "年份",
     "openDetail": "開啟詳情",

@@ -848,39 +848,6 @@
       },
       "title": "Profile"
     },
-    "rateScreen": {
-      "mode": {
-        "discovery": "Discovery",
-        "seasonal": "Seasonal",
-        "trend": "Trend"
-      },
-      "subtitle": {
-        "discovery": "Explore Genres",
-        "tracking": "My Feed",
-        "trend": "Top Charts"
-      },
-      "trend": {
-        "bookmarkA11y": "Bookmark",
-        "heroTrendingBadge": "TRENDING #1",
-        "hotBadge": "HOT",
-        "loadingTrends": "Loading trends…",
-        "noPilgrimages": "No pilgrimages available yet.",
-        "openA11y": "Open detail",
-        "openLabel": "Open",
-        "pilgrimagesA11y": "See all pilgrimages",
-        "pilgrimagesSubtitle": "Real-world anime locations to visit",
-        "pilgrimagesTitle": "Trending Pilgrimages",
-        "rangeAllTime": "All Time",
-        "rangeWeek": "This Week",
-        "seeAll": "See all",
-        "seeAllAnimeA11y": "See all trending anime",
-        "spotsLabel": "{count} spots",
-        "subtitleAllTime": "Highest popularity across all seasons",
-        "subtitleWeek": "What everyone is watching right now",
-        "titleAllTime": "Top {count} All Time",
-        "titleWeek": "Top {count} This Week"
-      }
-    },
     "ratingScreen": {
       "addToPlanA11y": "Add to Plan to Watch",
       "allCaughtUp": "You're all caught up",
@@ -903,6 +870,18 @@
         "title": "Restart this genre?"
       },
       "skipA11y": "Skip"
+    },
+    "discoverHome": {
+      "search": "Search anime",
+      "seasonal": "New this season",
+      "seasonAll": "{season} {year} · All",
+      "airingSlot": "{weekday} {time}",
+      "trending": "Trending this week",
+      "fullChart": "Full chart",
+      "episodes": "{count} eps",
+      "rateByGenre": "Rate by genre",
+      "pickedForYou": "Picked for you",
+      "unavailable": "Unable to load. Please try again."
     }
   },
   "anime": {
@@ -1991,8 +1970,6 @@
     "anyEpisodeDuration": "Any episode duration",
     "carousel": "Carousel",
     "comedic": "Comedic",
-    "continueWatching": "Continue watching",
-    "continueWatching2": "Continue Watching",
     "couldnTBuildAPick": "Couldn’t build a pick right now",
     "cozy": "Cozy",
     "createAdd": "Create & add",
@@ -2013,7 +1990,6 @@
     "howDoYouWantTo": "How do you want to feel?",
     "imageFit": "Image fit",
     "inspiring": "Inspiring",
-    "latestSeason": "Latest Season",
     "laughOutLoud": "Laugh out loud",
     "longForm": "Long Form",
     "melancholic": "Melancholic",
@@ -2022,7 +1998,6 @@
     "mysterious": "Mysterious",
     "newFolderName": "New folder name",
     "nothingFreshThatMatchesToday": "Nothing fresh that matches today",
-    "nowAiring": "Now Airing",
     "onTheEdge": "On the edge",
     "openDetails": "Open Details",
     "originalTitles": "Original titles",
@@ -2051,17 +2026,13 @@
     "summer": "Summer",
     "tapForInfo": "Tap for info",
     "tapToChange": "Tap to change.",
-    "tapToExplore": "Tap to Explore",
     "thrilling": "Thrilling",
-    "topOfTheSeason": "Top of the Season",
     "trackingShortcut": "Tracking shortcut",
     "tryAgain": "Try Again",
     "tryAgainInAMoment": "Try again in a moment.",
-    "tunedToYourTaste": "Tuned to your taste",
     "twistsTurns": "Twists & turns",
     "under13Min": "Under 13 min",
     "upliftingStories": "Uplifting stories",
-    "viewCalendar": "View calendar",
     "winter": "Winter",
     "year": "Year",
     "openDetail": "Open detail",

@@ -1,5 +1,3 @@
-export type ViewMode = 'discovery' | 'tracking' | 'trend';
-
 export interface Anime {
   id: string;
   title: string;
@@ -37,12 +35,6 @@ export type Genre = {
   id: string;
   displayName: string;
   image: string;
-};
-
-export type Recommendation = {
-  id: string;
-  anime: Anime;
-  reason: string;
 };
 
 export type Photo = {
