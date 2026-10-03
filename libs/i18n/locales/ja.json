@@ -1,6 +1,5 @@
 {
   "$comment": "日本語 — 部分翻訳。未翻訳のキーは英語にフォールバックします。",
-
   "common": {
     "continue": "続ける",
     "cancel": "キャンセル",
@@ -33,7 +32,6 @@
     "disabled": "無効",
     "comingSoon": "近日公開"
   },
-
   "language": {
     "screenTitle": "言語",
     "appLanguageTitle": "アプリの言語",
@@ -44,7 +42,6 @@
     "japanese": "日本語",
     "korean": "한국어"
   },
-
   "tabs": {
     "rate": "探す",
     "collection": "ライブラリ",

@@ -1,6 +1,5 @@
 {
   "$comment": "한국어 — 부분 번역. 미번역 키는 영어로 폴백됩니다.",
-
   "common": {
     "continue": "계속",
     "cancel": "취소",
@@ -33,7 +32,6 @@
     "disabled": "비활성화됨",
     "comingSoon": "곧 출시"
   },
-
   "language": {
     "screenTitle": "언어",
     "appLanguageTitle": "앱 언어",
@@ -44,7 +42,6 @@
     "japanese": "日本語",
     "korean": "한국어"
   },
-
   "tabs": {
     "rate": "탐색",
     "collection": "보관함",

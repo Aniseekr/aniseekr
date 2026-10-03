@@ -227,9 +227,7 @@
       "includeGames": "Include games",
       "includeGamesDesc": "Show video games in Bangumi calendar",
       "showScore": "Show score prominently",
-      "showScoreDesc": "Display rating in card header",
-      "showEmptySystemFolders": "Show empty system folders",
-      "showEmptySystemFoldersDesc": "Keep Watching/Completed/… tiles visible even with 0 anime"
+      "showScoreDesc": "Display rating in card header"
     },
     "accentColor": {
       "apply": "Apply",
@@ -739,35 +737,7 @@
       "unknownTitle": "Unknown Title"
     },
     "collectionScreen": {
-      "categoryAll": "All",
-      "categoryDone": "Done",
-      "categoryPlanned": "Planned",
-      "categoryWatching": "Watching",
-      "emptyAnimeBody": {
-        "all": "Rate or import anime to start building your library.",
-        "category": "Nothing marked as {category} yet."
-      },
-      "emptyAnimeTitle": "No anime here yet",
-      "emptyFolderBody": {
-        "all": "Create a folder to organize the anime you love.",
-        "category": "Anime with this status will appear here."
-      },
-      "emptyFolderTitle": {
-        "all": "No folders yet",
-        "category": "No {category} folders"
-      },
-      "folderCount": {
-        "one": "{count} folder",
-        "other": "{count} folders"
-      },
-      "libraryStats": "Library stats",
-      "statsLine": "{total} anime · {watching} watching",
-      "metaAnimeCount": "{count} anime",
-      "myFolders": "My Folders",
-      "newFolder": "New folder",
-      "recentAnime": "Recent anime",
-      "recentAnimeForCategory": "{category} anime",
-      "seeAllCount": "See all {count}",
+      "newFolder": "New list",
       "share": {
         "addAtLeastOne": "Add at least one anime",
         "couldNotRender": "Could not render poster",
@@ -776,13 +746,28 @@
         "pickTemplate": "Pick a template first",
         "rendererNotReady": "Renderer not ready"
       },
-      "sort": {
-        "count": "Count",
-        "newest": "Newest",
-        "oldest": "Oldest",
-        "rarity": "Rarity"
+      "untitled": "Untitled",
+      "titleCount": "{count} titles",
+      "status": {
+        "watching": "Watching",
+        "wishlist": "Want to watch",
+        "completed": "Completed",
+        "favorites": "Favorites",
+        "dropped": "Dropped",
+        "custom": "My lists"
       },
-      "untitled": "Untitled"
+      "emptyStatus": {
+        "watching": "No titles you’re watching yet",
+        "wishlist": "No titles you want to watch yet",
+        "completed": "No completed titles yet",
+        "favorites": "No favorites yet",
+        "dropped": "No dropped titles yet",
+        "custom": "No lists yet"
+      },
+      "explore": "Explore",
+      "episodeProgress": "{progress} / {total}",
+      "episodesWatched": "{count} eps watched",
+      "menu": "Library options"
     },
     "pilgrimageHome": {
       "showMap": "Show map",
@@ -1524,7 +1509,6 @@
     "watchHoursEst": "Watch hours (est.)",
     "yearInReview": "Year in Review",
     "yearlyBest": "Yearly Best",
-    "yourSavedAnimeLibrary": "Your saved anime library",
     "yourWatchingYearRecapped": "Your watching year, recapped",
     "editFolder": "Edit folder",
     "manageFolder": "Manage folder",

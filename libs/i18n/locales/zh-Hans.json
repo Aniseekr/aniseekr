@@ -1,6 +1,5 @@
 {
   "$comment": "简体中文（Mainland）。缺键时先经 zh-Hant 通过 OpenCC 简化 fallback，再到英文。只在词汇真的不同（视频 vs 影片、软件 vs 软体）时才覆盖，否则可以省略让 OpenCC 处理。",
-
   "common": {
     "continue": "继续",
     "cancel": "取消",
@@ -33,7 +32,6 @@
     "disabled": "已停用",
     "comingSoon": "即将推出"
   },
-
   "language": {
     "screenTitle": "语言",
     "screenSubtitle": "界面语言和动画数据显示方式",
@@ -61,7 +59,6 @@
     "helpTranslateTitle": "帮助翻译 Aniseekr",
     "helpTranslateBody": "Aniseekr 是开源项目，翻译由社区贡献。请参考 CONTRIBUTING.md 了解如何新增或改进语言。"
   },
-
   "onboarding": {
     "skip": "跳过",
     "skipA11y": "跳过引导",
@@ -102,7 +99,6 @@
       "busy": "加载中…"
     }
   },
-
   "settings": {
     "title": "设置",
     "longPressHint": "长按条目可打开快速操作",
@@ -147,7 +143,6 @@
       "showScoreDesc": "在卡片标题栏显示评分"
     }
   },
-
   "titleLanguage": {
     "intro": "标题将以你优先级最高、且该作品提供的语言显示。点击箭头可调整顺序。",
     "english": "English",
@@ -157,13 +152,11 @@
     "russian": "Русский",
     "resetA11y": "改回跟随 App 语言"
   },
-
   "translation": {
     "machineBadge": "机翻",
     "showOriginalA11y": "显示原文",
     "hideOriginalA11y": "隐藏原文"
   },
-
   "tabs": {
     "rate": "探索",
     "collection": "收藏",

@@ -227,9 +227,7 @@
       "includeGames": "包含遊戲",
       "includeGamesDesc": "在 Bangumi 日曆顯示電子遊戲",
       "showScore": "突顯評分",
-      "showScoreDesc": "在卡片標題列顯示評分",
-      "showEmptySystemFolders": "顯示空的系統資料夾",
-      "showEmptySystemFoldersDesc": "追番中/看完等資料夾即使 0 部也保留顯示"
+      "showScoreDesc": "在卡片標題列顯示評分"
     },
     "accentColor": {
       "apply": "套用",
@@ -739,35 +737,7 @@
       "unknownTitle": "未知標題"
     },
     "collectionScreen": {
-      "categoryAll": "全部",
-      "categoryDone": "已看完",
-      "categoryPlanned": "想看",
-      "categoryWatching": "觀看中",
-      "emptyAnimeBody": {
-        "all": "評分或匯入動畫，開始建立你的資料庫。",
-        "category": "尚未有任何標記為「{category}」的作品。"
-      },
-      "emptyAnimeTitle": "這裡還沒有動畫",
-      "emptyFolderBody": {
-        "all": "建立資料夾，整理你喜愛的動畫。",
-        "category": "符合此狀態的動畫會出現在這裡。"
-      },
-      "emptyFolderTitle": {
-        "all": "尚未建立資料夾",
-        "category": "沒有 {category} 資料夾"
-      },
-      "folderCount": {
-        "one": "{count} 個資料夾",
-        "other": "{count} 個資料夾"
-      },
-      "libraryStats": "資料庫統計",
-      "statsLine": "{total} 部 · 追番中 {watching}",
-      "metaAnimeCount": "{count} 部動畫",
-      "myFolders": "我的資料夾",
-      "newFolder": "新增資料夾",
-      "recentAnime": "最近的動畫",
-      "recentAnimeForCategory": "{category} 動畫",
-      "seeAllCount": "查看全部 {count} 部",
+      "newFolder": "新清單",
       "share": {
         "addAtLeastOne": "至少加入一部動畫",
         "couldNotRender": "無法繪製海報",
@@ -776,13 +746,28 @@
         "pickTemplate": "請先選一個版型",
         "rendererNotReady": "渲染器尚未就緒"
       },
-      "sort": {
-        "count": "數量",
-        "newest": "最新",
-        "oldest": "最舊",
-        "rarity": "稀有度"
+      "untitled": "未命名",
+      "titleCount": "{count} 部",
+      "status": {
+        "watching": "在看",
+        "wishlist": "想看",
+        "completed": "看完",
+        "favorites": "最愛",
+        "dropped": "棄番",
+        "custom": "我的清單"
       },
-      "untitled": "未命名"
+      "emptyStatus": {
+        "watching": "還沒有在看的作品",
+        "wishlist": "還沒有想看的作品",
+        "completed": "還沒有看完的作品",
+        "favorites": "還沒有最愛的作品",
+        "dropped": "還沒有棄番的作品",
+        "custom": "還沒有自己的清單"
+      },
+      "explore": "去探索",
+      "episodeProgress": "{progress} / {total}",
+      "episodesWatched": "已看 {count} 集",
+      "menu": "收藏選項"
     },
     "pilgrimageHome": {
       "showMap": "顯示地圖",
@@ -1524,7 +1509,6 @@
     "watchHoursEst": "觀看時數(估計)",
     "yearInReview": "年度回顧",
     "yearlyBest": "年度最佳",
-    "yourSavedAnimeLibrary": "你收藏的動畫庫",
     "yourWatchingYearRecapped": "回顧你這一年的觀影",
     "editFolder": "編輯資料夾",
     "manageFolder": "管理資料夾",

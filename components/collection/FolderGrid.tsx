@@ -30,7 +30,7 @@ interface FolderCardProps {
   onManage?: () => void;
 }
 
-function FolderCard({ folder, cover, onPress, onLongPress, onManage }: FolderCardProps) {
+export function FolderGridItem({ folder, cover, onPress, onLongPress, onManage }: FolderCardProps) {
   const { theme } = useTheme();
   const t = useT();
 
@@ -137,7 +137,7 @@ function FolderGridComponent({
           {row.map((folder, colIdx) => {
             const entryIndex = idx * 2 + colIdx;
             const card = (
-              <FolderCard
+              <FolderGridItem
                 folder={folder}
                 cover={covers?.[folder.id]}
                 onPress={() => onPressFolder?.(folder)}
