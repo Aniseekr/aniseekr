@@ -19,7 +19,7 @@ import {
 } from '../../../hooks/usePilgrimageHubScreenData';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { useTheme } from '../../../context/ThemeContext';
-import { bottomPad, Radius, Size, Spacing, TabBar } from '../../../constants/DesignSystem';
+import { bottomPad, Radius, Spacing, TabBar } from '../../../constants/DesignSystem';
 import { useT } from '../../../libs/i18n';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { normalizeAnitabiImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
@@ -28,6 +28,7 @@ import { buildMapsURL } from '../../../components/pilgrimage/detail';
 import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
 import { CollectionPoster } from '../../../components/pilgrimage/home/ExplorerHomeRows';
 import { ExplorerDiscoverSection } from '../../../components/pilgrimage/home/ExplorerDiscoverSection';
+import { HomeSearchField } from '../../../components/common/HomeSearchField';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 const RAIL_LIMIT = 8;
@@ -96,16 +97,10 @@ function ExplorerHomeList({
             onPress={onShowMap}
           />
         </View>
-        <Pressable
-          accessibilityRole="search"
-          accessibilityLabel={t('tabs.pilgrimageHome.search')}
+        <HomeSearchField
+          label={t('tabs.pilgrimageHome.search')}
           onPress={() => router.push({ pathname: '/search', params: { context: 'pilgrimage' } })}
-          style={[styles.search, { backgroundColor: theme.background.secondary }]}>
-          <Ionicons name="search" size={20} color={theme.text.tertiary} />
-          <ThemedText variant="bodyMedium" tone="tertiary">
-            {t('tabs.pilgrimageHome.search')}
-          </ThemedText>
-        </Pressable>
+        />
         {!visibleTabs.includes('explorerCamera') || !visibleTabs.includes('explorerJournal') ? (
           <View style={styles.shortcuts}>
             {!visibleTabs.includes('explorerCamera') ? (
@@ -255,14 +250,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, gap: Spacing.lg },
   flex: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  search: {
-    minHeight: Size.minTouchTarget,
-    borderRadius: Radius.card,
-    paddingHorizontal: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   shortcuts: { flexDirection: 'row', gap: Spacing.sm },
   section: { gap: Spacing.sm },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
