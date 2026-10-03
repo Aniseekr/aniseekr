@@ -122,6 +122,7 @@ function PilgrimageDetailSheetImpl({
   }, [viewMode]);
 
   const sheetIndexRef = useRef(viewMode === 'map' ? 0 : 1);
+  const listMayBeScrolledRef = useRef(false);
   const pendingRevealRef = useRef<{ row: number; request: number } | null>(null);
   const revealedFocusRef = useRef(0);
   const scrollRetryRef = useRef(0);
@@ -138,7 +139,7 @@ function PilgrimageDetailSheetImpl({
     const pending = pendingRevealRef.current;
     if (!pending || viewMode === 'map') return;
     // Bottom-sheet locks list scrolling below the highest detent.
-    const needsScroll = pending.row >= VISIBLE_AT_MID_DETENT;
+    const needsScroll = pending.row >= VISIBLE_AT_MID_DETENT || listMayBeScrolledRef.current;
     const target = needsScroll ? SHEET_SNAPS.length - 1 : 1;
     if (sheetIndexRef.current !== target) {
       sheetRef.current?.snapToIndex(target);
@@ -151,6 +152,7 @@ function PilgrimageDetailSheetImpl({
       scrollFrameRef.current = requestAnimationFrame(() => {
         scrollFrameRef.current = null;
         listRef.current?.scrollToIndex({ index: pending.row, animated: true, viewPosition: 0.2 });
+        listMayBeScrolledRef.current = pending.row >= VISIBLE_AT_MID_DETENT;
       });
     }
   }, [viewMode]);
@@ -328,6 +330,10 @@ function PilgrimageDetailSheetImpl({
           data={filteredGroupedSpots as AnitabiSpot[]}
           keyExtractor={(item: AnitabiSpot) => item.id}
           renderItem={renderRow}
+          onScrollBeginDrag={() => {
+            // Stay conservative through momentum; a near-row reveal resets this.
+            listMayBeScrolledRef.current = true;
+          }}
           onScrollToIndexFailed={({ index, averageItemLength }) => {
             if (viewMode === 'map') return;
             // Rows past the rendered window aren't measured yet: jump near the
