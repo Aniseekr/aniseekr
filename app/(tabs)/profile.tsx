@@ -63,8 +63,6 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [cardsCount, setCardsCount] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [shards, setShards] = useState(0);
   // Seed sync from MMKV so the platform switcher renders on the user's
   // chosen primary on frame 1 instead of momentarily showing `DEFAULT`.
   const [selectedPlatform, setSelectedPlatform] = useState<string>(
@@ -107,11 +105,7 @@ export default function ProfileScreen() {
       setUser(data);
       try {
         const cards = await gachaService.getUserCards();
-        const userCoins = await gachaService.getCoins();
-        const userShards = await gachaService.getShards();
         setCardsCount(cards.length);
-        setCoins(userCoins);
-        setShards(userShards);
       } catch (e) {
         console.error('Error loading gacha data:', e);
       }
@@ -269,45 +263,6 @@ export default function ProfileScreen() {
                     </View>
                   ) : null}
                 </Pressable>
-
-                <View
-                  style={[
-                    styles.currencyPill,
-                    {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
-                    },
-                  ]}>
-                  <View
-                    style={[
-                      styles.betaTag,
-                      {
-                        backgroundColor: theme.accent + '24',
-                        borderColor: theme.accent + '66',
-                      },
-                    ]}>
-                    <ThemedText
-                      variant="captionSmall"
-                      weight="800"
-                      style={[styles.betaTagText, { color: theme.accent }]}>
-                      BETA
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
-                  <View style={styles.currencyItem}>
-                    <MaterialIcons name="monetization-on" size={16} color={theme.status.warning} />
-                    <ThemedText variant="bodyMedium" weight="600">
-                      {coins}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
-                  <View style={styles.currencyItem}>
-                    <MaterialIcons name="diamond" size={16} color={theme.status.info} />
-                    <ThemedText variant="bodyMedium" weight="600">
-                      {shards}
-                    </ThemedText>
-                  </View>
-                </View>
               </ThemedSurface>
             </Animated.View>
           )}
@@ -557,36 +512,6 @@ const styles = StyleSheet.create({
   proBadgeText: {
     textTransform: 'uppercase',
     letterSpacing: 1,
-  },
-  currencyPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.xs,
-  },
-  currencyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  currencyDivider: {
-    width: 1,
-    height: 18,
-  },
-  betaTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    marginLeft: 4,
-    marginRight: 4,
-  },
-  betaTagText: {
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
   statsRow: {
     flexDirection: 'row',
