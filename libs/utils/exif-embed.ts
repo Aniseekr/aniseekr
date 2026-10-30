@@ -274,5 +274,5 @@ export async function embedExifIntoJpegFile(
 
   if (file.exists) file.delete();
   file.create();
-  file.write(newBytes);
+  file.writeSync(newBytes);
 }

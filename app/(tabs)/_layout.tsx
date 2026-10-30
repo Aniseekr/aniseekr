@@ -28,7 +28,11 @@ export default function TabsLayout() {
           title: t(EXPERIENCE_TAB_META.discover.labelKey),
           href: href('discover'),
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name={EXPERIENCE_TAB_META.discover.icon} size={size} color={color} />
+            <MaterialIcons
+              name={EXPERIENCE_TAB_META.discover.icon}
+              size={size}
+              color={color as string}
+            />
           ),
         }}
       />
@@ -38,7 +42,11 @@ export default function TabsLayout() {
           title: t(EXPERIENCE_TAB_META.bangumi.labelKey),
           href: href('bangumi'),
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name={EXPERIENCE_TAB_META.bangumi.icon} size={size} color={color} />
+            <MaterialIcons
+              name={EXPERIENCE_TAB_META.bangumi.icon}
+              size={size}
+              color={color as string}
+            />
           ),
         }}
       />
@@ -48,7 +56,11 @@ export default function TabsLayout() {
           title: t(EXPERIENCE_TAB_META.collection.labelKey),
           href: href('collection'),
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name={EXPERIENCE_TAB_META.collection.icon} size={size} color={color} />
+            <MaterialIcons
+              name={EXPERIENCE_TAB_META.collection.icon}
+              size={size}
+              color={color as string}
+            />
           ),
         }}
       />
@@ -58,7 +70,11 @@ export default function TabsLayout() {
           title: t(EXPERIENCE_TAB_META.pilgrimage.labelKey),
           href: href('pilgrimage'),
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name={EXPERIENCE_TAB_META.pilgrimage.icon} size={size} color={color} />
+            <MaterialIcons
+              name={EXPERIENCE_TAB_META.pilgrimage.icon}
+              size={size}
+              color={color as string}
+            />
           ),
         }}
       />
@@ -71,7 +87,7 @@ export default function TabsLayout() {
             <MaterialIcons
               name={EXPERIENCE_TAB_META.explorerCamera.icon}
               size={size}
-              color={color}
+              color={color as string}
             />
           ),
         }}
@@ -85,7 +101,7 @@ export default function TabsLayout() {
             <MaterialIcons
               name={EXPERIENCE_TAB_META.explorerJournal.icon}
               size={size}
-              color={color}
+              color={color as string}
             />
           ),
         }}
@@ -96,7 +112,11 @@ export default function TabsLayout() {
           title: t(EXPERIENCE_TAB_META.profile.labelKey),
           href: EXPERIENCE_TAB_HREFS.profile,
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name={EXPERIENCE_TAB_META.profile.icon} size={size} color={color} />
+            <MaterialIcons
+              name={EXPERIENCE_TAB_META.profile.icon}
+              size={size}
+              color={color as string}
+            />
           ),
         }}
       />

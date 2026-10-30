@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  type TextInputInstance,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -87,7 +88,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
   const [indexReady, setIndexReady] = useState(false);
   const [titleCacheVersion, setTitleCacheVersion] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   // `recent` is seeded synchronously from MMKV above; modal opens with the
   // user's history already rendered. No async re-read needed.

@@ -103,7 +103,7 @@ export async function compositeSubjectIntoPhoto(
     const file = new File(Paths.cache, `subject-composite-${Date.now()}.jpg`);
     if (file.exists) file.delete();
     file.create();
-    file.write(jpegBytes);
+    file.writeSync(jpegBytes);
 
     if (input.exif && typeof input.exif === 'object') {
       try {

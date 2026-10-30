@@ -3,7 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { GestureDetector } from 'react-native-gesture-handler';
-import type { ComposedGesture } from 'react-native-gesture-handler';
+import type { LegacyComposedGesture } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import type { AnimatedStyle } from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
@@ -19,7 +19,7 @@ interface OverlayLayerProps {
   opacity: number;
   editMode: boolean;
   themeColor: string;
-  composedGesture: ComposedGesture;
+  composedGesture: LegacyComposedGesture;
   animatedStyle: StyleProp<AnimatedStyle<ViewStyle>>;
   edgeOrSketchImage: SkImage | null;
   edgeOrSketchLoading: boolean;

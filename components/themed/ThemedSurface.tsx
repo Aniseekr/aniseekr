@@ -1,5 +1,5 @@
 import { ReactNode, type Ref } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle, type ViewInstance } from 'react-native';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -11,7 +11,7 @@ export interface ThemedSurfaceProps {
   padded?: boolean | number;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 }
 
 export function ThemedSurface({

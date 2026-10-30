@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { Share, StyleSheet, View, type ViewInstance } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { CollectionFloatingActionBar } from '../CollectionFloatingActionBar';
 import { ShareImageRenderer } from '../ShareImageRenderer';
@@ -28,7 +28,7 @@ export function LibraryShareMode({ active, onClose }: { active: boolean; onClose
   const [capturing, setCapturing] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [username, setUsername] = useState<string | undefined>(undefined);
-  const rendererRef = useRef<View>(null);
+  const rendererRef = useRef<ViewInstance>(null);
   useEffect(() => {
     let cancelled = false;
     UserRepository.getProfile()

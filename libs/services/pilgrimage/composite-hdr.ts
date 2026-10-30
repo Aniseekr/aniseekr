@@ -448,7 +448,7 @@ export async function compositeHdr(input: CompositeHdrInput): Promise<CompositeH
     const file = new File(Paths.cache, filename);
     if (file.exists) file.delete();
     file.create();
-    file.write(jpegBytes);
+    file.writeSync(jpegBytes);
 
     return withExif(file.uri, width, height, fusionPath);
   } catch (error) {

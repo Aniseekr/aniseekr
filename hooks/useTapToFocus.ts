@@ -13,7 +13,7 @@
 // The hook does NOT import the engine directly — the screen wires the tap to
 // the engine via `onFocus`, keeping the hook reusable / decoupled.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Gesture, type TapGesture } from 'react-native-gesture-handler';
+import { Gesture, type LegacyTapGesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import type { FocusPoint } from '../components/pilgrimage/camera/types';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
@@ -29,7 +29,7 @@ interface UseTapToFocusInput {
 }
 
 interface UseTapToFocusOutput {
-  tapGesture: TapGesture;
+  tapGesture: LegacyTapGesture;
   focusPoint: FocusPoint | null;
   /** True while the JS-side lock timer is running — drives reticle highlight. */
   afLocked: boolean;

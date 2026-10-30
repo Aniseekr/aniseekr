@@ -1,6 +1,13 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/immutability -- Existing compare preview state/gesture model is out of scope for the Phase 2 motion pass. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+  type ViewInstance,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,7 +15,8 @@ import Animated, { FadeIn, useAnimatedStyle, useSharedValue } from 'react-native
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as MediaLibrary from 'expo-media-library';
+// The root export throws for these since SDK 56; the legacy entry keeps them.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bottomPad, Size, Typography } from '../../constants/DesignSystem';
@@ -490,7 +498,7 @@ export default function ComparePreviewScreen() {
     }
   }, [frameMatch, t]);
 
-  const stageRef = useRef<View>(null);
+  const stageRef = useRef<ViewInstance>(null);
   // Saved composites by `${reference}|${shot uri}` — a composite shows one
   // pairing and must not follow the shot to another reference.
   const compositeByPairRef = useRef<Record<string, string>>({});

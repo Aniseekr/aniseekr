@@ -148,7 +148,7 @@ export default function CollectionScreen() {
         }
         ListEmptyComponent={empty}
         ListFooterComponent={
-          data.length > 0 && library.error ? <ErrorStateView onRetry={library.reload} /> : null
+          data.length > 0 && library.error ? <ErrorStateView onRetry={library.reload} /> : undefined
         }
         renderItem={({ item: entry }) => (
           <View style={{ width: cardWidth }}>

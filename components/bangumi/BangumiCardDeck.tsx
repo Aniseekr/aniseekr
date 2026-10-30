@@ -7,7 +7,8 @@
 // (also serves as a discoverability cue on first run).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { runAfterInteractions } from '../../libs/utils/after-interactions';
 import { AnimeTitleText, ThemedButton, readableTextOn } from '../themed';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -113,7 +114,7 @@ export function BangumiCardDeck({
   const queueSwipeSideEffect = useCallback((direction: 'left' | 'right', item: Anime) => {
     const timer = setTimeout(() => {
       persistenceTimersRef.current.delete(timer);
-      InteractionManager.runAfterInteractions(() => {
+      runAfterInteractions(() => {
         if (direction === 'left') onSwipeSkipRef.current(item);
         else onSwipeWantRef.current(item);
       });

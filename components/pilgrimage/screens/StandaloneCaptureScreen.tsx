@@ -15,7 +15,8 @@ import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useSharedValue } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useCameraPermission } from 'react-native-vision-camera';
-import * as MediaLibrary from 'expo-media-library';
+// The root export throws for these since SDK 56; the legacy entry keeps them.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import {

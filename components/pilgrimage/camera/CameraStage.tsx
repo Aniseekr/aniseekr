@@ -41,8 +41,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Gesture,
   GestureDetector,
-  type PinchGesture,
-  type TapGesture,
+  type LegacyPinchGesture,
+  type LegacyTapGesture,
 } from 'react-native-gesture-handler';
 import {
   Camera,
@@ -110,8 +110,8 @@ export interface CameraStageProps {
   /** Whether the next capture should fire the system shutter sound. Defaults to true. */
   enableShutterSound?: boolean;
 
-  pinchGesture: PinchGesture;
-  tapGesture: TapGesture;
+  pinchGesture: LegacyPinchGesture;
+  tapGesture: LegacyTapGesture;
 
   /** Fired when the underlying session first starts streaming preview frames. */
   onCameraReady?: () => void;

@@ -4,7 +4,8 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '../global.css';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Stack, useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
-import { InteractionManager, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { runAfterInteractions } from '../libs/utils/after-interactions';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -47,8 +48,10 @@ export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const navigationRef = useNavigationContainerRef();
+  // Expo Router 58 dropped the container's 'ready' event (isReady() is always
+  // true there); 'state' is the remaining signal that the container settled.
   const subscribeRootNavigationReady = useCallback(
-    (onStoreChange: () => void) => navigationRef.addListener('ready', onStoreChange),
+    (onStoreChange: () => void) => navigationRef.addListener('state', onStoreChange),
     [navigationRef]
   );
   const getRootNavigationReady = useCallback(() => navigationRef.isReady(), [navigationRef]);
@@ -88,7 +91,7 @@ export default function RootLayout() {
     // doesn't compete with the JS thread while the launch screen crossfades
     // into the first route. Each service short-circuits when its local copy
     // is still fresh, so deferral is cheap on warm launches.
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runAfterInteractions(() => {
       initClarity();
       void authService.initialize();
       void notificationService.initialize();
