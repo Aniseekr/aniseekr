@@ -16,10 +16,15 @@ import { join } from 'node:path';
 import { LocalDB } from '../../../libs/db';
 import { AnitabiService } from '../../../libs/services/pilgrimage/anitabi-service';
 import { PilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
-import {
-  NearbyPilgrimageBadge,
-  type NearbyPilgrimageBadgeProps,
-} from '../../../components/pilgrimage/NearbyPilgrimageBadge';
+import type { NearbyPilgrimageBadgeProps } from '../../../components/pilgrimage/NearbyPilgrimageBadge';
+
+// The badge only takes readableTextOn from the themed barrel; the real barrel
+// pulls in the bottom sheet's native gesture/animation modules, which bun
+// can't load.
+mock.module('../../../components/themed', () => ({ readableTextOn: () => '#000' }));
+const { NearbyPilgrimageBadge } = await import(
+  '../../../components/pilgrimage/NearbyPilgrimageBadge'
+);
 
 const COMPONENT_SOURCE = readFileSync(
   join(process.cwd(), 'components/pilgrimage/NearbyPilgrimageBadge.tsx'),

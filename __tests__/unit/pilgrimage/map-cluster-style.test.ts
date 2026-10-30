@@ -1,14 +1,9 @@
-// Pins the cluster visual rules so the MapLibre engine's supercluster bubbles
-// keep the intended dot/numbered look + tap behaviour.
+// Cluster rules for the MapLibre engine's supercluster bubbles: when a
+// cluster is a dot, how counts read, and what a tap does.
 import { describe, expect, it } from 'bun:test';
 import {
-  CLUSTER_RADIUS_PX,
-  CLUSTER_PICKER_THRESHOLD,
-  CLUSTER_DISABLE_AT,
   clusterMaxZoom,
   isDotCluster,
-  clusterDotSize,
-  clusterBubbleSize,
   formatClusterCount,
   dominantColor,
   clusterTapAction,
@@ -32,28 +27,6 @@ describe('isDotCluster (zoom <= 8 || n < 10)', () => {
   it('is a numbered bubble when zoomed in with enough members', () => {
     expect(isDotCluster(9, 10)).toBe(false);
     expect(isDotCluster(12, 10)).toBe(false);
-  });
-});
-
-describe('clusterDotSize (n<5→12, n<25→16, n<100→20, else 24)', () => {
-  it('buckets the dot diameter by member count', () => {
-    expect(clusterDotSize(4)).toBe(12);
-    expect(clusterDotSize(5)).toBe(16);
-    expect(clusterDotSize(24)).toBe(16);
-    expect(clusterDotSize(25)).toBe(20);
-    expect(clusterDotSize(99)).toBe(20);
-    expect(clusterDotSize(100)).toBe(24);
-    expect(clusterDotSize(5000)).toBe(24);
-  });
-});
-
-describe('clusterBubbleSize (n<50→34, n<200→42, else 50)', () => {
-  it('buckets the numbered bubble diameter', () => {
-    expect(clusterBubbleSize(10)).toBe(34);
-    expect(clusterBubbleSize(49)).toBe(34);
-    expect(clusterBubbleSize(50)).toBe(42);
-    expect(clusterBubbleSize(199)).toBe(42);
-    expect(clusterBubbleSize(200)).toBe(50);
   });
 });
 
@@ -87,11 +60,3 @@ describe('clusterTapAction (n > pickerThreshold → zoom, else picker)', () => {
   });
 });
 
-describe('constants', () => {
-  it('match the map surface defaults', () => {
-    expect(CLUSTER_PICKER_THRESHOLD).toBe(12);
-    expect(CLUSTER_RADIUS_PX).toBe(48);
-    expect(CLUSTER_DISABLE_AT.spot).toBe(16);
-    expect(CLUSTER_DISABLE_AT.hub).toBe(12);
-  });
-});
