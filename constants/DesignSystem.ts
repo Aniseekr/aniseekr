@@ -138,7 +138,7 @@ export const TabBar = {
 // name from the files, Android from the plugin's `fontFamily` — both are
 // "Nunito", so `fontFamily + fontWeight` picks the right file on each. Nunito
 // has no CJK glyphs: Chinese/Japanese headlines fall back to the system CJK
-// face at the same weight. Pinned by __tests__/unit/bundled-display-font.test.ts.
+// face at the same weight.
 export const FontFamily = {
   display: 'Nunito' as string | undefined,
   text: undefined as string | undefined,
