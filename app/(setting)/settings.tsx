@@ -22,6 +22,8 @@ import {
 } from '../../components/settings/SettingsList';
 import { QuickActionSheet, type QuickAction } from '../../components/settings/QuickActionSheet';
 import { ThemedText, readableTextOn } from '../../components/themed';
+import { AniseekrLogo } from '../../components/brand/AniseekrLogo';
+import { supportsAlternateIcons } from '../../libs/brand/app-icon';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -625,6 +627,13 @@ export default function SettingsScreen() {
               description={t('settings.languageSubtitle')}
               onPress={() => router.push('/(setting)/language')}
             />
+            {supportsAlternateIcons ? (
+              <SettingsRow
+                icon="apps-outline"
+                label={t('brand.appIcon.title')}
+                onPress={() => router.push('/(setting)/app-icon')}
+              />
+            ) : null}
           </SettingsSection>
 
           <SettingsSection title={t('settings.sections.preferences')}>
@@ -673,6 +682,13 @@ export default function SettingsScreen() {
               onPress={() => router.push('/(setting)/terms')}
             />
           </SettingsSection>
+
+          <View style={styles.brandFooter}>
+            <AniseekrLogo height={34} />
+            <ThemedText variant="bodySmall" tone="secondary" align="center">
+              {t('brand.tagline')}
+            </ThemedText>
+          </View>
 
           <Pressable
             onPress={() => {
@@ -808,8 +824,12 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 1,
   },
+  brandFooter: {
+    marginTop: Spacing.xxl,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   versionRow: {
-    marginTop: Spacing.md,
     minHeight: Size.minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',

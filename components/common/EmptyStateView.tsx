@@ -1,14 +1,18 @@
 import { memo, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
-import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { ThemedButton, ThemedText } from '../themed';
+import { SeekrPose, type SeekrPoseName } from '../brand/SeekrPose';
+import { ScreentoneDisc } from '../brand/MangaFx';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
 interface EmptyStateViewProps {
+  /** Small badge on Seekr that hints what is empty (search, wifi-off, …). */
   icon?: IconName;
+  pose?: SeekrPoseName;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -19,8 +23,13 @@ interface EmptyStateViewProps {
   iconNode?: ReactNode;
 }
 
+const POSE_H = 128;
+const TONE = 150;
+const BADGE = 36;
+
 function EmptyStateViewComponent({
   icon = 'inbox',
+  pose = 'read',
   title,
   description,
   actionLabel,
@@ -32,46 +41,41 @@ function EmptyStateViewComponent({
 }: EmptyStateViewProps) {
   const { theme } = useTheme();
 
-  const handleAction = () => {
-    hapticsBridge.tap();
-    onAction?.();
-  };
-
-  const handleSecondary = () => {
-    hapticsBridge.selection();
-    onSecondaryAction?.();
-  };
-
   return (
     <View style={[styles.container, style]}>
-      <View style={[styles.iconCircle, { backgroundColor: theme.background.secondary }]}>
-        {iconNode ?? <MaterialIcons name={icon} size={36} color={theme.accent} />}
+      <View style={styles.hero}>
+        <ScreentoneDisc size={TONE} color={theme.accent} opacity={0.4} style={styles.tone} />
+        <SeekrPose pose={pose} height={POSE_H} />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.badge,
+            { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+          ]}>
+          {iconNode ?? <MaterialIcons name={icon} size={18} color={theme.accent} />}
+        </View>
       </View>
-      <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
+      <ThemedText variant="headlineSmall" align="center">
+        {title}
+      </ThemedText>
       {description ? (
-        <Text style={[styles.description, { color: theme.text.secondary }]}>{description}</Text>
+        <ThemedText variant="bodyMedium" tone="secondary" align="center" style={styles.description}>
+          {description}
+        </ThemedText>
       ) : null}
       {actionLabel && onAction ? (
-        <Pressable
-          onPress={handleAction}
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-          ]}>
-          <Text style={styles.buttonLabel}>{actionLabel}</Text>
-        </Pressable>
+        <View style={styles.action}>
+          <ThemedButton label={actionLabel} onPress={onAction} haptic="tap" />
+        </View>
       ) : null}
       {secondaryActionLabel && onSecondaryAction ? (
-        <Pressable
-          onPress={handleSecondary}
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            { borderColor: theme.glassBorder, opacity: pressed ? 0.7 : 1 },
-          ]}>
-          <Text style={[styles.secondaryLabel, { color: theme.text.secondary }]}>
-            {secondaryActionLabel}
-          </Text>
-        </Pressable>
+        <ThemedButton
+          variant="secondary"
+          size="sm"
+          label={secondaryActionLabel}
+          onPress={onSecondaryAction}
+          haptic="selection"
+        />
       ) : null}
     </View>
   );
@@ -85,46 +89,33 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xxl,
     gap: Spacing.sm,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  hero: {
+    width: TONE,
+    height: TONE,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xs,
   },
-  title: {
-    ...Typography.headlineSmall,
-    textAlign: 'center',
+  tone: {
+    position: 'absolute',
+  },
+  badge: {
+    position: 'absolute',
+    right: Spacing.xs,
+    bottom: Spacing.xs,
+    width: BADGE,
+    height: BADGE,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   description: {
-    ...Typography.bodyMedium,
-    textAlign: 'center',
     maxWidth: 320,
   },
-  button: {
+  action: {
     marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: 24,
     minWidth: 160,
-    alignItems: 'center',
-  },
-  buttonLabel: {
-    ...Typography.titleMedium,
-    color: '#0E0A06',
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    marginTop: Spacing.xs,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: 20,
-    borderWidth: 1,
-    backgroundColor: Colors.glass.dark,
-  },
-  secondaryLabel: {
-    ...Typography.titleSmall,
   },
 });
 

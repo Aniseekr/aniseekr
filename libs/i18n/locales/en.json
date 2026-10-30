@@ -2189,5 +2189,31 @@
       "emptyJoinable": "No stamps yet · Stamp rallies running or coming up: {count}",
       "browse": "Browse rallies"
     }
+  },
+  "brand": {
+    "tagline": "Next anime? I'm on it.",
+    "sfx": {
+      "hop": "HOP!",
+      "nin": "NIN!",
+      "whoosh": "WHOOSH!"
+    },
+    "appIcon": {
+      "title": "App icon",
+      "subtitle": "Pick how Seekr shows up on your home screen.",
+      "current": "Current",
+      "names": {
+        "default": "Peek",
+        "nightLines": "Night lines",
+        "oneEye": "One eye",
+        "mangaOrange": "Manga orange",
+        "mangaNight": "Manga night"
+      },
+      "androidTitle": "Switch app icon?",
+      "androidBody": "Android may close Aniseekr to apply the new icon. Just open it again from your home screen.",
+      "confirm": "Switch",
+      "cancel": "Cancel",
+      "failed": "Couldn't change the icon. Try again.",
+      "unsupported": "This device can't change app icons."
+    }
   }
 }

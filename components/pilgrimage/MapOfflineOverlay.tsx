@@ -22,6 +22,7 @@ function MapOfflineOverlayImpl({ onRetry }: MapOfflineOverlayProps) {
       pointerEvents="auto">
       <EmptyStateView
         icon="cloud-off"
+        pose="phone"
         title={t('pilgrimage.map.offlineTitle')}
         description={t('pilgrimage.map.offlineBody')}
         actionLabel={t('common.retry')}

@@ -127,6 +127,17 @@ const DEFAULT_STATUS: ThemeStatus = {
   info: '#0A84FF',
 };
 
+// Seekr the mascot is artwork, not UI: his body, headband and lemon eye stay
+// the same under every theme (same values as the v6 landing brand.json).
+export const SEEKR_COLORS = {
+  body: '#0B0C10',
+  band: '#2A2D36',
+  eye: '#1B1E28',
+  iris: '#FFD966',
+  outline: '#F4F1EA',
+  shine: '#FFFFFF',
+} as const;
+
 export const THEMES: Record<ThemeId, ThemePalette> = {
   aniseeker: {
     id: 'aniseeker',
