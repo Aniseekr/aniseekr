@@ -2189,5 +2189,31 @@
       "emptyJoinable": "還沒有集章紀錄・進行中或即將開始的集章活動：{count} 個",
       "browse": "看看集章活動"
     }
+  },
+  "brand": {
+    "tagline": "番，交給我找。",
+    "sfx": {
+      "hop": "咻！",
+      "nin": "忍！",
+      "whoosh": "唰！"
+    },
+    "appIcon": {
+      "title": "App 圖示",
+      "subtitle": "選一個 Seekr 出現在主畫面的樣子。",
+      "current": "使用中",
+      "names": {
+        "default": "偷看",
+        "nightLines": "夜之集中線",
+        "oneEye": "獨眼",
+        "mangaOrange": "漫畫橘",
+        "mangaNight": "漫畫夜"
+      },
+      "androidTitle": "要換 App 圖示嗎？",
+      "androidBody": "Android 可能會先關掉 Aniseekr 才能套用新圖示，從主畫面再打開就好。",
+      "confirm": "換",
+      "cancel": "取消",
+      "failed": "圖示換不了，再試一次。",
+      "unsupported": "這台裝置不能換 App 圖示。"
+    }
   }
 }

@@ -9,12 +9,14 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ScrollViewInstance,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Colors, Radius, Size, Spacing, Typography } from '../constants/DesignSystem';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { useTheme } from '../context/ThemeContext';
@@ -37,17 +39,23 @@ import {
   type ExperienceMode,
 } from '../libs/navigation/experience-tabs';
 import { ThemedSwitch } from '../components/themed/ThemedSwitch';
+import { AniseekrLogo } from '../components/brand/AniseekrLogo';
+import { FocusLines, ScreentoneDisc } from '../components/brand/MangaFx';
+import { SeekrPose } from '../components/brand/SeekrPose';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STEP_GRADIENTS: ([string, string, ...string[]] | 'theme')[] = [
-  ['#1A0B2E', '#3D1A6B', '#1A0B2E'],
+  'theme',
   ['#2C1810', '#7A3B1F', '#2C1810'],
   ['#04101A', '#0A1F30', '#04101A'],
   ['#0B1F1A', '#13452F', '#0B1F1A'],
   'theme',
   ['#180A06', '#FF9F0A22', '#180A06'],
 ];
+
+const HERO_POSE = 220;
+const HERO_TONE = 260;
 
 const STEPS = ['welcome', 'browseSource', 'notifications', 'adultContent', 'mode', 'done'] as const;
 
@@ -57,7 +65,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const [stepIndex, setStepIndex] = useState(0);
   const [browseSource, setBrowseSource] = useState<PlatformType>(DEFAULT_BROWSE_SOURCE);
@@ -152,6 +160,17 @@ export default function OnboardingScreen() {
         <LinearGradient colors={currentGradient} style={StyleSheet.absoluteFill} />
       </Animated.View>
 
+      {stepIndex === 0 || stepIndex === STEPS.length - 1 ? (
+        <Reanimated.View
+          key={stepIndex}
+          entering={FadeIn.duration(260)}
+          exiting={FadeOut.duration(180)}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}>
+          <FocusLines color={theme.accent} opacity={0.3} inner={20} />
+        </Reanimated.View>
+      ) : null}
+
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           {stepIndex < STEPS.length - 1 ? (
@@ -219,14 +238,22 @@ export default function OnboardingScreen() {
 type T = ReturnType<typeof useT>;
 
 function WelcomeStep({ onContinue, t }: { onContinue: () => void; t: T }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.page}>
-      <View style={styles.iconHalo}>
-        <MaterialIcons name="remove-red-eye" size={96} color="#FFFFFF" />
+      <View style={styles.hero}>
+        <ScreentoneDisc size={HERO_TONE} color={theme.accent} style={styles.heroTone} />
+        <SeekrPose pose="leap" height={HERO_POSE} />
       </View>
-      <Text style={styles.wordmark}>Aniseekr</Text>
-      <Text style={styles.tagline}>{t('onboarding.welcome.tagline')}</Text>
-      <Text style={styles.subtitle}>{t('onboarding.welcome.subtitle')}</Text>
+      <AniseekrLogo height={36} />
+      <ThemedText variant="headlineMedium" align="center" weight="800">
+        {t('brand.tagline')}
+      </ThemedText>
+      <ThemedText variant="bodyLarge" tone="secondary" align="center">
+        {t('onboarding.welcome.tagline')}
+        {'\n'}
+        {t('onboarding.welcome.subtitle')}
+      </ThemedText>
       <ThemedButton label={t('onboarding.welcome.cta')} onPress={onContinue} size="lg" fullWidth />
     </View>
   );
@@ -451,9 +478,13 @@ function ModeStep({
 }
 
 function DoneStep({ onFinish, busy, t }: { onFinish: () => void; busy: boolean; t: T }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.page}>
-      <MaterialIcons name="celebration" size={96} color="#FFFFFF" />
+      <View style={styles.hero}>
+        <ScreentoneDisc size={HERO_TONE} color={theme.accent} style={styles.heroTone} />
+        <SeekrPose pose="point" height={HERO_POSE} />
+      </View>
       <Text style={styles.title}>{t('onboarding.done.title')}</Text>
       <Text style={styles.body}>{t('onboarding.done.body')}</Text>
       <ThemedButton
@@ -549,31 +580,12 @@ const styles = StyleSheet.create({
   modeCardPressed: {
     opacity: 0.85,
   },
-  iconHalo: {
-    width: 144,
-    height: 144,
-    borderRadius: 72,
+  hero: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
   },
-  wordmark: {
-    ...Typography.displayLarge,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  tagline: {
-    ...Typography.bodyLarge,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-    paddingHorizontal: Spacing.md,
-  },
-  subtitle: {
-    ...Typography.titleMedium,
-    color: 'rgba(255,255,255,0.55)',
-    textAlign: 'center',
+  heroTone: {
+    position: 'absolute',
   },
   title: {
     ...Typography.headlineLarge,

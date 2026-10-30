@@ -140,8 +140,7 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.4",
-            "enableSceneSupport": true
+            "deploymentTarget": "16.4"
           },
           "android": {
             "minSdkVersion": 26,
@@ -153,10 +152,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#0A1929",
-          "enableFullScreenImage_legacy": true
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 140,
+          "resizeMode": "contain",
+          "backgroundColor": "#080808"
         }
       ],
       [
@@ -196,6 +195,43 @@
             ]
           }
         }
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "NightLines",
+            "ios": "./assets/app-icons/night-lines.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/night-lines-android.png",
+              "backgroundColor": "#121212"
+            }
+          },
+          {
+            "name": "OneEye",
+            "ios": "./assets/app-icons/one-eye.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/one-eye-android.png",
+              "backgroundColor": "#0B0C10"
+            }
+          },
+          {
+            "name": "MangaOrange",
+            "ios": "./assets/app-icons/manga-orange.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/manga-orange-android.png",
+              "backgroundColor": "#FE9702"
+            }
+          },
+          {
+            "name": "MangaNight",
+            "ios": "./assets/app-icons/manga-night.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/manga-night-android.png",
+              "backgroundColor": "#0B0B0B"
+            }
+          }
+        ]
       ],
       "@rnrepo/expo-config-plugin",
       "expo-image",
@@ -276,7 +312,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A1929"
+        "backgroundColor": "#FE9202"
       },
       "package": "com.kidneyweakx.aniseekr",
       "permissions": [
