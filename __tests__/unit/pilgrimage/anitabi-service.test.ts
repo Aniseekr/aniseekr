@@ -14,7 +14,7 @@ import {
 import type {
   AnitabiBangumi,
   AnitabiPoint,
-  RawAnitabiBangumiPoints,
+  RawAnitabiPointsDetail,
 } from '../../../libs/services/pilgrimage/types';
 
 const SUBJECT_ID = 7157;
@@ -52,21 +52,19 @@ function fakeResponse(status: number, body: unknown): Response {
   return new Response(status === 204 ? null : JSON.stringify(body), init);
 }
 
-// Raw GET /bangumi/{id}/points payload — an object wrapping the point list,
-// not a bare array. AnitabiService normalises it before caching.
-const samplePointsResponse = (): RawAnitabiBangumiPoints => ({
-  points: [
-    {
-      id: 'p1',
-      name: 'Kamiyama High School',
-      cn: '神山高中',
-      image: 'https://image.anitabi.cn/scenes/7157/p1.jpg',
-      ep: 1,
-      s: 90,
-      geo: [35.51, 136.91],
-    },
-  ],
-});
+// Raw GET /bangumi/{id}/points/detail payload — a flat point array.
+// AnitabiService normalises it before caching.
+const samplePointsResponse = (): RawAnitabiPointsDetail => [
+  {
+    id: 'p1',
+    name: 'Kamiyama High School',
+    cn: '神山高中',
+    image: 'https://image.anitabi.cn/scenes/7157/p1.jpg',
+    ep: 1,
+    s: 90,
+    geo: [35.51, 136.91],
+  },
+];
 
 const RELATIVE_LITE = {
   id: 115908,
@@ -182,31 +180,25 @@ describe('AnitabiService', () => {
 
     expect(first.length).toBe(1);
     expect(second).toBe(first);
-    // getDetailedPoints fans out to BOTH /points (complete list) and
-    // /points/detail (originURL attribution); the second call is a memory hit.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    const urls = fetchSpy.mock.calls.map((c: unknown[]) => String(c[0]));
-    expect(urls[0]).toBe(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points`);
-    expect(
-      urls.some((u: string) =>
-        u.startsWith(`https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points/detail`)
-      )
-    ).toBe(true);
+    // Only the documented /points/detail endpoint; the second call is a memory hit.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toBe(
+      `https://api.anitabi.cn/bangumi/${SUBJECT_ID}/points/detail?haveImage=true`
+    );
   });
 
   it('PILG-006 getDetailedPoints persists to SQLite — survives a fresh instance', async () => {
     fetchSpy.mockImplementation(async () => fakeResponse(200, samplePointsResponse()));
     const svc1 = AnitabiService.resetForTests();
     await svc1.getDetailedPoints(SUBJECT_ID);
-    // cold call fans out to /points + /points/detail
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     // New instance forgets in-memory cache; SQLite still has the row.
     const svc2 = AnitabiService.resetForTests();
     const points = await svc2.getDetailedPoints(SUBJECT_ID);
     expect(points.length).toBe(1);
     // svc2 is served entirely from SQLite — no extra network calls.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it('PILG-007 getDetailedPoints dedupes concurrent calls — single network request', async () => {
@@ -225,9 +217,8 @@ describe('AnitabiService', () => {
     ]);
 
     expect(resA).toBe(resB);
-    // concurrent calls dedupe to ONE cold execution, which itself fans out to
-    // /points + /points/detail — so 2 network calls, not 4.
-    expect(fetchCount).toBe(2);
+    // concurrent calls dedupe to ONE network request.
+    expect(fetchCount).toBe(1);
   });
 
   it('PILG-008 getDetailedPoints returns [] on 404 and remembers the miss', async () => {
@@ -239,8 +230,8 @@ describe('AnitabiService', () => {
 
     expect(first).toEqual([]);
     expect(second).toEqual([]);
-    // cold 404 still probes both endpoints; the miss is then cached in memory.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // the cold 404 miss is cached in memory.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it('PILG-004 refetches once the SQLite row has passed its 7-day TTL', async () => {
@@ -289,11 +280,11 @@ describe('AnitabiService', () => {
     });
     const out = await svc.getAnimePilgrimage(115908);
     expect(out?.litePoints[0]?.image).toBe(
-      'https://img-tc.anitabi.cn/points/115908/pt1.jpg?plan=h160'
+      'https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160'
     );
-    expect(out?.cover).toBe('https://img-tc.anitabi.cn/bangumi/115908.jpg?plan=h160');
+    expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
     expect(saved?.litePointsJson ?? '').toContain(
-      'https://img-tc.anitabi.cn/points/115908/pt1.jpg?plan=h160'
+      'https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160'
     );
   });
 
@@ -333,9 +324,9 @@ describe('AnitabiService', () => {
     });
     const out = await svc.getAnimePilgrimage(115908);
     expect(out?.litePoints[0]?.image).toBe(
-      'https://img-tc.anitabi.cn/points/115908/pt1.jpg?plan=h160'
+      'https://image.anitabi.cn/points/115908/pt1.jpg?plan=h160'
     );
-    expect(out?.cover).toBe('https://img-tc.anitabi.cn/bangumi/115908.jpg?plan=h160');
+    expect(out?.cover).toBe('https://image.anitabi.cn/bangumi/115908.jpg?plan=h160');
   });
 
   test('lite: expired SQLite row is served when the network fails', async () => {
@@ -384,9 +375,6 @@ describe('AnitabiService', () => {
     ];
     const svc = AnitabiService.resetForTests({
       client: {
-        getPoints: async () => {
-          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
-        },
         getPointsDetail: async () => {
           throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
         },
@@ -414,6 +402,36 @@ describe('AnitabiService', () => {
     const out = await svc.getDetailedPoints(42);
     expect(out).toHaveLength(1);
     expect(out[0]?.id).toBe('p1');
+  });
+
+  test('PILG-078 a transient 404 keeps the stale cached points (anitabi.cn-document#93)', async () => {
+    const stalePoints = [
+      {
+        id: 'p1',
+        name: '駅前',
+        image: 'https://image.anitabi.cn/points/42/p1.jpg?plan=h160',
+        ep: 1,
+        s: 0,
+        geo: [1, 2] as [number, number],
+      },
+    ];
+    const svc = AnitabiService.resetForTests({
+      client: { getPointsDetail: async () => null } as unknown as typeof AnitabiClient,
+      db: {
+        getPilgrimage: async () => null,
+        savePilgrimage: async () => undefined,
+      } as unknown as typeof LocalDB,
+      cache: {
+        ...noopCache,
+        getWithMeta: async () => ({
+          value: stalePoints,
+          age: PILGRIMAGE_TTL_MS + 1000,
+          isStale: true,
+        }),
+      } as unknown as typeof CacheService,
+    });
+    const out = await svc.getDetailedPoints(42);
+    expect(out.map((p) => p.id)).toEqual(['p1']);
   });
 
   test('lite: a stale-served row does not poison memCache — the next call with a healthy network returns fresh data', async () => {
@@ -475,18 +493,16 @@ describe('AnitabiService', () => {
         geo: [1, 2],
       },
     ];
-    const freshRaw: RawAnitabiBangumiPoints = {
-      points: [
-        {
-          id: 'r2',
-          name: '新宿',
-          image: 'https://image.anitabi.cn/scenes/990001/r2.jpg',
-          ep: 2,
-          s: 30,
-          geo: [3, 4],
-        },
-      ],
-    };
+    const freshRaw: RawAnitabiPointsDetail = [
+      {
+        id: 'r2',
+        name: '新宿',
+        image: 'https://image.anitabi.cn/scenes/990001/r2.jpg',
+        ep: 2,
+        s: 30,
+        geo: [3, 4],
+      },
+    ];
 
     // Scaled-down stand-ins for (PILGRIMAGE_TTL_MS, DETAIL_STALE_GRACE_MS) —
     // small enough to sleep past in a test, same shape: the BASE ttl expires
@@ -520,12 +536,8 @@ describe('AnitabiService', () => {
       // Mutable fake client so the SAME service instance can "recover"
       // between calls (same rationale as the lite no-poisoning test above).
       const client: {
-        getPoints: () => Promise<RawAnitabiBangumiPoints | null>;
-        getPointsDetail: () => Promise<unknown>;
+        getPointsDetail: () => Promise<RawAnitabiPointsDetail | null>;
       } = {
-        getPoints: async () => {
-          throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
-        },
         getPointsDetail: async () => {
           throw new DataSourceError('SERVER_ERROR', 'HTTP 500');
         },
@@ -553,8 +565,7 @@ describe('AnitabiService', () => {
 
       // Network recovers — the stale serve above must NOT have been
       // memoized, so this call retries SQLite+network and gets fresh data.
-      client.getPoints = async () => freshRaw;
-      client.getPointsDetail = async () => [];
+      client.getPointsDetail = async () => freshRaw;
       const freshResult = await svc.getDetailedPoints(REGRESSION_ID);
       expect(freshResult).toHaveLength(1);
       expect(freshResult[0]?.id).toBe('r2');

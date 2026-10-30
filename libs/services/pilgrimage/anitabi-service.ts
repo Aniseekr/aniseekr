@@ -5,12 +5,7 @@ import { LocalDB, type PilgrimageRow, type PilgrimageSaveInput } from '../../db'
 import { AnitabiClient, DataSourceError } from '../../clients/anitabi-client';
 import { CacheService } from '../cache-service';
 import { normalizeLiteBangumi, normalizeRawPoints } from './anitabi-points';
-import type {
-  AnitabiBangumi,
-  AnitabiPoint,
-  RawAnitabiBangumiPoints,
-  RawAnitabiPointsDetail,
-} from './types';
+import type { AnitabiBangumi, AnitabiPoint, RawAnitabiPointsDetail } from './types';
 
 /** Default lite-cache TTL (7 days) in milliseconds. */
 export const PILGRIMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -150,6 +145,9 @@ export class AnitabiService {
       }
 
       if (fresh === null) {
+        // anitabi briefly 404s works it does have while its own data refresh
+        // fails (anitabi.cn-document#93) — keep the row we already hold.
+        if (staleRow) return this.rowToBangumi(staleRow);
         this.memCache.set(bangumiId, { kind: 'miss' });
         return null;
       }
@@ -193,13 +191,12 @@ export class AnitabiService {
   }
 
   /**
-   * Fetch the COMPLETE point list for an anime — every scene-cut Anitabi has.
+   * Fetch the point list (with screenshots) for an anime.
    * Returns [] when the anime has no pilgrimage data (HTTP 404 / empty).
    *
-   * Backed by `GET /bangumi/{id}/points` (see {@link AnitabiClient.getPoints}
-   * for why this is not `/points/detail`). The raw payload is large — folder /
-   * theme metadata plus hundreds of points — so we normalise it down to the
-   * fields we render before caching. Lookup order matches getAnimePilgrimage:
+   * Backed by `GET /bangumi/{id}/points/detail` (see
+   * {@link AnitabiClient.getPointsDetail}), normalised down to the fields we
+   * render before caching. Lookup order matches getAnimePilgrimage:
    * in-memory → SQLite (via CacheService) → network, 7-day TTL.
    */
   async getDetailedPoints(bangumiId: number): Promise<AnitabiPoint[]> {
@@ -252,39 +249,12 @@ export class AnitabiService {
         console.warn('[AnitabiService] points cache read failed:', err);
       }
 
-      // 4. Network. `/points` carries the complete payload (every scene-cut)
-      // but no `originURL`; `/points/detail` is server-deduped (~22–80% subset)
-      // but is the only endpoint that exposes the originator URL. Fire both in
-      // parallel and merge the URLs onto the full point list by id, so we keep
-      // /points' breadth and pick up /points/detail's attribution links.
-      let raw: RawAnitabiBangumiPoints | null;
-      let detail: RawAnitabiPointsDetail | null = null;
+      // 4. Network. `/points/detail` is the only documented point endpoint
+      // (see AnitabiClient.getPointsDetail) — a server-side subset of
+      // `pointsLength`, but it carries origin/originURL for attribution.
+      let raw: RawAnitabiPointsDetail | null;
       try {
-        const [pointsResult, detailResult] = await Promise.allSettled([
-          this.client.getPoints(bangumiId),
-          this.client.getPointsDetail(bangumiId),
-        ]);
-
-        if (pointsResult.status === 'rejected') {
-          const err = pointsResult.reason;
-          if (err instanceof DataSourceError && err.code === 'NOT_FOUND') {
-            this.detailMemCache.set(bangumiId, { kind: 'miss' });
-            return [];
-          }
-          if (staleCandidate) {
-            // Stale serves are per-call, not memoized, so recovery is
-            // picked up on the next call once the network is healthy again.
-            return staleCandidate;
-          }
-          throw err;
-        }
-        raw = pointsResult.value;
-        // /points/detail failing is non-fatal — we still render points without
-        // an originURL link. The `origin` text label still comes through from
-        // /points itself.
-        if (detailResult.status === 'fulfilled') {
-          detail = detailResult.value;
-        }
+        raw = await this.client.getPointsDetail(bangumiId);
       } catch (err) {
         if (err instanceof DataSourceError && err.code === 'NOT_FOUND') {
           this.detailMemCache.set(bangumiId, { kind: 'miss' });
@@ -298,25 +268,11 @@ export class AnitabiService {
         throw err;
       }
 
-      const fresh = raw === null ? [] : normalizeRawPoints(raw.points, bangumiId);
-      if (fresh.length > 0 && detail && detail.length > 0) {
-        const urlById = new Map<string, string>();
-        for (const item of detail) {
-          if (!item || typeof item !== 'object') continue;
-          const id = typeof item.id === 'string' ? item.id.trim() : '';
-          const url = typeof item.originURL === 'string' ? item.originURL.trim() : '';
-          if (id.length > 0 && url.length > 0) urlById.set(id, url);
-        }
-        if (urlById.size > 0) {
-          for (let i = 0; i < fresh.length; i++) {
-            const url = urlById.get(fresh[i].id);
-            if (url && !fresh[i].originURL) {
-              fresh[i] = { ...fresh[i], originURL: url };
-            }
-          }
-        }
-      }
+      // anitabi briefly 404s works it does have while its own data refresh
+      // fails (anitabi.cn-document#93) — keep the points we already hold.
+      if (raw === null && staleCandidate) return staleCandidate;
 
+      const fresh = raw === null ? [] : normalizeRawPoints(raw, bangumiId);
       if (fresh.length === 0) {
         this.detailMemCache.set(bangumiId, { kind: 'miss' });
         return [];

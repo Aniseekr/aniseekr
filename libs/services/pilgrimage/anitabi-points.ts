@@ -1,4 +1,4 @@
-// Normalisation + grouping for the Anitabi `/bangumi/{id}/points` payload.
+// Normalisation + grouping for the Anitabi `/bangumi/{id}/points/detail` payload.
 //
 // Two transforms live here:
 //   - normalizeRawPoints: loose RawAnitabiPoint[] -> clean AnitabiPoint[].
@@ -22,7 +22,7 @@ const ANGLE_WORD_SUFFIX_RE = /[\s　_-]*(?:別角度|別カット|アングル|�
 const TRAILING_NUMBER_SUFFIX_RE = /[\s　_-]*(?:\d+|[①②③④⑤⑥⑦⑧⑨⑩])\s*$/u;
 
 /**
- * Narrow a raw `/points` payload into clean {@link AnitabiPoint}s.
+ * Narrow a raw `/points/detail` payload into clean {@link AnitabiPoint}s.
  *
  * - `ep`/`s` arrive as number | numeric-string | "" | null — coerced to a
  *   finite number, defaulting to 0 when Anitabi has no value.

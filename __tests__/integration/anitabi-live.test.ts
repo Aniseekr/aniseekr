@@ -1,6 +1,4 @@
-// Live integration smoke for Anitabi's API-first transport. In regions where
-// the API responds with HTTP 403, the same call exercises the official static
-// fallback.
+// Live integration smoke for Anitabi's documented API (api.md /lite).
 // Spec case: PILG-013.
 // Runs only when SKIP_INTEGRATION !== '1'. The skip is gated by an env var
 // (per spec/SPEC.md §6) so this is not a permanent skip.
@@ -24,7 +22,7 @@ suite('Anitabi live API', () => {
     expect(typeof lite.title).toBe('string');
     expect(lite.title.length).toBeGreaterThan(0);
     expect(Array.isArray(lite.litePoints)).toBe(true);
-    expect(lite.cover.startsWith('https://img-tc.anitabi.cn/')).toBe(true);
+    expect(lite.cover.startsWith('https://image.anitabi.cn/')).toBe(true);
     const coverResponse = await fetch(lite.cover);
     expect(coverResponse.ok).toBe(true);
     expect(coverResponse.headers.get('content-type')?.startsWith('image/')).toBe(true);

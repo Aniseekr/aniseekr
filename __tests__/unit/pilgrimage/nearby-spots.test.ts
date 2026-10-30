@@ -124,7 +124,7 @@ describe('buildNearbySpotsFromIndex', () => {
   it('normalizes image to an absolute CDN url and prefers cn name', () => {
     const out = buildNearbySpotsFromIndex(hits, lookup, new Set());
     const p1 = out.find((s) => s.id === 'p1')!;
-    expect(p1.image).toBe('https://img-tc.anitabi.cn/points/1/p1.jpg?plan=h160');
+    expect(p1.image).toBe('https://image.anitabi.cn/points/1/p1.jpg?plan=h160');
     expect(p1.name).toBe('车站前');
     expect(p1.animeTitle).toBe('动画一');
     expect(p1.markerId).toBe('1:p1');

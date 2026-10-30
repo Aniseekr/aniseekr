@@ -33,7 +33,7 @@ const DEFAULT_CHANNELS: Record<RateLimiterChannel, RateLimiterChannelConfig> = {
   kitsu: { minIntervalMs: 333 },
   shikimori: { minIntervalMs: 200 },
   simkl: { minIntervalMs: 500 },
-  anitabi: { minIntervalMs: 200 },
+  anitabi: { minIntervalMs: 500 },
   rss: { minIntervalMs: 250 },
   traceMoe: { minIntervalMs: 1_000 },
 };

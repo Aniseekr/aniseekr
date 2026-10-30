@@ -8,19 +8,22 @@ filming/inspiration locations (聖地巡礼) when the anime has Anitabi data.
 ## 2. Data Source: Anitabi
 
 Anitabi is maintained by the anitabi.cn community and links anime by Bangumi
-subject ID. JSON requests use `https://api.anitabi.cn` first. Only an explicit
-HTTP 403 falls back to the same official static files as the website:
+subject ID. The app calls ONLY the endpoints documented in anitabi's
+[api.md](https://github.com/anitabi/anitabi.cn-document/blob/main/api.md):
 
-- `https://www.anitabi.cn/d/g.json` for the complete anime catalog and compact point coordinates.
-- `https://www.anitabi.cn/d/g{page}.json` for per-anime point metadata.
-- `https://img-tc.anitabi.cn/...` for covers and scene images (the origin used
-  by Anitabi's own `www.anitabi.cn` frontend).
+- `GET https://api.anitabi.cn/bangumi/{id}/lite` — anime container + 10 sample points.
+- `GET https://api.anitabi.cn/bangumi/{id}/points/detail?haveImage=true` — points
+  with screenshots and `origin` / `originURL`. A server-side subset of
+  `pointsLength` (anitabi.cn-document#83); we accept the smaller list.
+- `https://image.anitabi.cn/...?plan=h160|h360` (or no plan for full size) for images.
 
-No authentication is required. Images use `https://img-tc.anitabi.cn/...`.
-`https://www.anitabi.cn/images/...` is not an image endpoint: it returns the
-website HTML shell with HTTP 200 and must never be handed to an image decoder.
-The legacy `https://image.anitabi.cn/...` origin is WAF-blocked in Japan;
-cached URLs from that origin are rewritten to `img-tc.anitabi.cn`.
+Any other path — `/bangumi/{id}/points`, `/bangumi`, `www.anitabi.cn/d/*.json`,
+`img-tc.anitabi.cn` — puts the caller's IP on Cloudflare risk control
+(anitabi.cn-document#94), after which even the documented endpoints answer 403.
+Requests send `User-Agent: Aniseekr/1.0 (https://aniseekr.moe)` and no Referer.
+On HTTP 403 the client backs off for 30 minutes and requests nothing else.
+`https://www.anitabi.cn/images/...` and `img-tc.anitabi.cn` URLs cached by older
+builds are rewritten to `image.anitabi.cn`.
 
 ## 3. Types
 
@@ -210,14 +213,13 @@ https://www.google.com/maps/search/?api=1&query={lat},{lng}
 
 ## 9. Anitabi Data Behavior Notes
 
-- API 404 maps to `null`. API 403 alone activates the static fallback; 429,
-  5xx, decoding failures, and network errors keep their normal error semantics.
-- A Bangumi ID absent from fallback `g.json` also maps to `null`.
-- The static catalog stores point coordinates in groups of four
-  (`id, lat, lng, priority`); the matching `g{page}.json` row supplies names,
-  images, episode markers, folders, and attribution links.
-- `litePoints` is the first 10 displayable points; full detail retains every
-  point with an image.
+- API 404 maps to `null`, except that a work we already cached keeps serving
+  the stale cache (anitabi briefly 404s works during its own refresh, #93).
+- API 403 starts a 30-minute backoff; it never triggers requests to other URLs.
+  429, 5xx, decoding failures, and network errors keep their normal error
+  semantics and fall back to stale cache when present.
+- `litePoints` is the first 10 displayable points; detail retains every
+  `/points/detail` point with an image.
 - `geo` is sometimes `[0, 0]` for old/incomplete entries → treat as missing.
 - Relative image paths are resolved against `https://img-tc.anitabi.cn`.
   Invalid `https://www.anitabi.cn/images/...` values persisted by older builds

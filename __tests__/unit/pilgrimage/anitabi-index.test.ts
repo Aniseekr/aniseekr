@@ -209,7 +209,7 @@ describe('anitabi-index', () => {
     expect(indexModule.getIndexVersion()).toBe(before + 1);
     expect(notifications).toBe(1);
     expect(indexModule.getAllIndexed()[0].cover).toBe(
-      'https://img-tc.anitabi.cn/bangumi/1.jpg?plan=h160'
+      'https://image.anitabi.cn/bangumi/1.jpg?plan=h160'
     );
 
     unsubscribe();

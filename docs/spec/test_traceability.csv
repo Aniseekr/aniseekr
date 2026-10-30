@@ -160,7 +160,7 @@ PILG-014,__tests__/unit/pilgrimage/anitabi-static-data.test.ts,decodes and joins
 PILG-015,__tests__/unit/pilgrimage/anitabi-runtime-coverage.test.ts,rejects degraded runtime coverage,covered
 PILG-016,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,matches localized and official English titles,covered
 PILG-017,__tests__/unit/pilgrimage/anitabi-image.test.ts,keeps CDN URLs and heals invalid website image URLs,covered
-PILG-018,__tests__/unit/pilgrimage/anitabi-client.test.ts,uses website static JSON only after API HTTP 403,covered
+PILG-018,__tests__/unit/pilgrimage/anitabi-client.test.ts,requests only documented endpoints and backs off after HTTP 403,covered
 PILG-019,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,unions Bangumi fallback with weak local hits instead of suppressing it,covered
 PILG-020,__tests__/unit/pilgrimage/street-view-service.test.ts,resolves Look Around first on iOS and falls back to Mapillary,covered
 PILG-021,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,missing token returns null without fetch,covered
@@ -239,3 +239,4 @@ PILG-075,__tests__/unit/pilgrimage/preview-capture.test.ts,preview capture recor
 PILG-076,__tests__/unit/pilgrimage/frame-match.test.ts,frame match discriminates scenes (v2 layout scoring),covered
 PILG-077,__tests__/unit/pilgrimage/home-nearby-spots.test.ts,PILG-077 home nearby fallback,covered
 REPO-031,__tests__/unit/bangumi-schedule.test.ts,broadcast season boundaries,covered
+PILG-078,__tests__/unit/pilgrimage/anitabi-service.test.ts,a transient 404 keeps the stale cached points,covered

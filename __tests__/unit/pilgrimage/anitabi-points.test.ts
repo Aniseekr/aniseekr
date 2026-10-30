@@ -32,7 +32,7 @@ describe('normalizeRawPoints', () => {
       [{ id: 'a', name: 'A', image: '/images/points/7157/a.jpg', geo: [1, 2] }],
       BANGUMI_ID
     );
-    expect(out[0].image).toBe('https://img-tc.anitabi.cn/points/7157/a.jpg?plan=h160');
+    expect(out[0].image).toBe('https://image.anitabi.cn/points/7157/a.jpg?plan=h160');
   });
 
   it('drops points with no image, id, or name', () => {

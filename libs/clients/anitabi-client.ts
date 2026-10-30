@@ -1,17 +1,19 @@
-// Anitabi transport facade. The JSON API remains the primary source. When it
-// explicitly returns HTTP 403 (the regional Cloudflare block seen in Japan),
-// requests fall back to the official static files used by anitabi.cn itself.
+// Anitabi transport facade. Calls ONLY the endpoints documented in
+// https://github.com/anitabi/anitabi.cn-document/blob/main/api.md — anitabi's
+// Cloudflare puts an IP on temporary risk control when it requests paths
+// outside that surface (anitabi/anitabi.cn-document#94), after which even the
+// documented endpoints answer 403. On a 403 we stop calling anitabi for a
+// while instead of trying other URLs; callers serve their cached data.
 
-import type {
-  AnitabiBangumi,
-  RawAnitabiBangumiPoints,
-  RawAnitabiPointsDetail,
-} from '../services/pilgrimage/types';
+import type { AnitabiBangumi, RawAnitabiPointsDetail } from '../services/pilgrimage/types';
 import { normalizeLiteBangumi } from '../services/pilgrimage/anitabi-points';
-import { AnitabiStaticClient } from './anitabi-static-client';
+import { rateLimiter } from '../services/rate-limiter';
 
 const ANITABI_BASE_URL = 'https://api.anitabi.cn';
-const USER_AGENT = 'Aniseekr/1.0';
+const USER_AGENT = 'Aniseekr/1.0 (https://aniseekr.moe)';
+
+/** How long to stay off anitabi after it answers 403. */
+export const ANITABI_FORBIDDEN_BACKOFF_MS = 30 * 60 * 1000;
 
 /**
  * Local DataSourceError used by the Anitabi client.
@@ -54,56 +56,21 @@ interface FetchOptions {
 }
 
 export class AnitabiClient {
-  /**
-   * Load the anime container and sample points from the API. A 403 retries via
-   * official static data. Returns null when the primary API returns 404.
-   */
-  static async getLite(bangumiId: number, opts: FetchOptions = {}): Promise<AnitabiBangumi | null> {
-    try {
-      const bangumi = await AnitabiClient.request<AnitabiBangumi>(
-        `/bangumi/${bangumiId}/lite`,
-        opts
-      );
-      return bangumi ? normalizeLiteBangumi(bangumi) : null;
-    } catch (err) {
-      if (!isForbidden(err)) throw err;
-      console.warn('[AnitabiClient] API returned 403; using official static lite source');
-      return (await AnitabiStaticClient.getBangumi(bangumiId, opts))?.anime ?? null;
-    }
-  }
+  private static forbiddenUntil = 0;
 
   /**
-   * Load the COMPLETE point list for an anime.
-   *
-   * This is deliberately NOT `/points/detail`: that endpoint returns a
-   * server-side-deduplicated subset (~22–80% of the real points — e.g. ぼっち
-   * ざ ろっく returns 91 of 414) and exposes no paging param to widen it.
-   * `/points` returns every point — its count matches the `pointsLength`
-   * reported by `/lite` — wrapped in a `{ points: [...] }` object alongside
-   * folder/theme metadata. {@link normalizeRawPoints} narrows the payload.
-   *
+   * Load the anime container and sample points (`GET /bangumi/{id}/lite`).
    * Returns null when the anime has no pilgrimage entry (HTTP 404).
    */
-  static async getPoints(
-    bangumiId: number,
-    opts: FetchOptions = {}
-  ): Promise<RawAnitabiBangumiPoints | null> {
-    try {
-      return await AnitabiClient.request<RawAnitabiBangumiPoints>(
-        `/bangumi/${bangumiId}/points`,
-        opts
-      );
-    } catch (err) {
-      if (!isForbidden(err)) throw err;
-      console.warn('[AnitabiClient] API returned 403; using official static points source');
-      const decoded = await AnitabiStaticClient.getBangumi(bangumiId, opts);
-      return decoded ? { points: decoded.points } : null;
-    }
+  static async getLite(bangumiId: number, opts: FetchOptions = {}): Promise<AnitabiBangumi | null> {
+    const bangumi = await AnitabiClient.request<AnitabiBangumi>(`/bangumi/${bangumiId}/lite`, opts);
+    return bangumi ? normalizeLiteBangumi(bangumi) : null;
   }
 
   /**
-   * Load point attribution details. Official static rows already contain the
-   * origin link and are decoded only when the API returns HTTP 403.
+   * Load the point list with screenshots (`GET /bangumi/{id}/points/detail`).
+   * This is a server-side subset of `pointsLength` (anitabi.cn-document#83);
+   * it is the only documented point endpoint, so we accept the smaller list.
    *
    * Returns null when the anime has no pilgrimage entry (HTTP 404).
    */
@@ -111,17 +78,15 @@ export class AnitabiClient {
     bangumiId: number,
     opts: FetchOptions = {}
   ): Promise<RawAnitabiPointsDetail | null> {
-    try {
-      return await AnitabiClient.request<RawAnitabiPointsDetail>(
-        `/bangumi/${bangumiId}/points/detail?haveImage=true`,
-        opts
-      );
-    } catch (err) {
-      if (!isForbidden(err)) throw err;
-      console.warn('[AnitabiClient] API returned 403; using official static detail source');
-      const decoded = await AnitabiStaticClient.getBangumi(bangumiId, opts);
-      return decoded?.points ?? null;
-    }
+    return AnitabiClient.request<RawAnitabiPointsDetail>(
+      `/bangumi/${bangumiId}/points/detail?haveImage=true`,
+      opts
+    );
+  }
+
+  /** Test-only seam: forget a previous 403 backoff. */
+  static resetForTests(): void {
+    AnitabiClient.forbiddenUntil = 0;
   }
 
   private static async request<T>(path: string, opts: FetchOptions): Promise<T | null> {
@@ -129,6 +94,15 @@ export class AnitabiClient {
     if (typeof fetchImpl !== 'function') {
       throw new DataSourceError('NETWORK_ERROR', 'fetch is not available in this environment');
     }
+    if (Date.now() < AnitabiClient.forbiddenUntil) {
+      throw new DataSourceError(
+        'UNAUTHORIZED',
+        'Anitabi answered 403 recently; backing off',
+        undefined,
+        403
+      );
+    }
+    await rateLimiter.waitForAvailability('anitabi');
 
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
     const timeoutMs = opts.timeoutMs ?? 30_000;
@@ -141,11 +115,7 @@ export class AnitabiClient {
     try {
       response = await fetchImpl(`${ANITABI_BASE_URL}${path}`, {
         method: 'GET',
-        headers: {
-          'User-Agent': USER_AGENT,
-          Accept: 'application/json',
-          Referer: 'https://anitabi.cn/',
-        },
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
         signal: controller?.signal,
       });
     } catch (err) {
@@ -160,6 +130,15 @@ export class AnitabiClient {
 
     if (response.status === 404) {
       return null;
+    }
+    if (response.status === 403) {
+      AnitabiClient.forbiddenUntil = Date.now() + ANITABI_FORBIDDEN_BACKOFF_MS;
+      throw new DataSourceError(
+        'UNAUTHORIZED',
+        'Anitabi request forbidden: HTTP 403',
+        undefined,
+        403
+      );
     }
     if (response.status === 429) {
       throw new DataSourceError('RATE_LIMITED', 'Anitabi rate limit exceeded');
@@ -183,8 +162,4 @@ export class AnitabiClient {
       );
     }
   }
-}
-
-function isForbidden(error: unknown): error is DataSourceError {
-  return error instanceof DataSourceError && error.status === 403;
 }

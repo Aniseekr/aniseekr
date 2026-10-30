@@ -40,8 +40,7 @@ export interface AnitabiPoint {
   origin?: string;
   /**
    * Canonical URL the screenshot's originator should link to (Google Maps
-   * viewer link, blog post, etc.). Only present for points returned via
-   * `/points/detail`; merged onto `/points` rows by id during fetch.
+   * viewer link, blog post, etc.), from `/points/detail`.
    */
   originURL?: string;
 }
@@ -100,7 +99,7 @@ export interface AnitabiSpot {
 }
 
 /**
- * Loosely-typed point exactly as returned by `GET /bangumi/{id}/points`
+ * Loosely-typed point exactly as returned by `GET /bangumi/{id}/points/detail`
  * (pre-normalisation). Field types are intentionally `unknown` — the live API
  * returns `ep`/`s` as number, numeric string, empty string, or null, and image
  * URLs as relative paths. {@link normalizeRawPoints} narrows everything.
@@ -119,14 +118,9 @@ export interface RawAnitabiPoint {
   originURL?: unknown;
 }
 
-/** `GET /bangumi/{id}/points` response wrapper (the full, complete point list). */
-export interface RawAnitabiBangumiPoints {
-  points?: RawAnitabiPoint[];
-}
-
 /**
- * `GET /bangumi/{id}/points/detail` response — a flat array, NOT wrapped in
- * `{ points: [...] }`. Server-side deduplicated (smaller than `/points`),
- * but the only endpoint that includes `originURL` per point.
+ * `GET /bangumi/{id}/points/detail` response — a flat array. A server-side
+ * subset of `pointsLength` (anitabi.cn-document#83), and the only documented
+ * point endpoint.
  */
 export type RawAnitabiPointsDetail = RawAnitabiPoint[];

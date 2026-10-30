@@ -10,10 +10,12 @@
 
 import { normalizeBangumiImage } from '../../clients/bangumi-client';
 
-// This is the image origin selected by Anitabi's own frontend on
-// www.anitabi.cn. The legacy image.anitabi.cn origin is WAF-blocked in Japan.
-const ANITABI_IMAGE_ORIGIN = 'https://img-tc.anitabi.cn';
-const BLOCKED_IMAGE_ORIGIN = 'https://image.anitabi.cn';
+// The image origin documented in anitabi's api.md. Requests outside the
+// documented surface trip anitabi's Cloudflare IP risk control
+// (anitabi/anitabi.cn-document#94), so never route to its frontend-only hosts.
+// img-tc.anitabi.cn URLs written by older builds are rewritten back here.
+const ANITABI_IMAGE_ORIGIN = 'https://image.anitabi.cn';
+const BLOCKED_IMAGE_ORIGIN = 'https://img-tc.anitabi.cn';
 const INVALID_WEBSITE_IMAGE_ORIGIN = 'https://www.anitabi.cn';
 const INVALID_WEBSITE_IMAGE_PREFIX = '/images';
 const DEFAULT_THUMBNAIL_PLAN = 'h160';
@@ -66,8 +68,8 @@ const LEGACY_ANITABI_IMAGE_HOST = 'image.anitabi.cn';
 /**
  * When non-empty, legacy anitabi CDN images are routed through our Cloudflare
  * Workers proxy (`aniseeker_backend` GET /anitabi/img/*) instead of hitting
- * image.anitabi.cn directly. The proxy remains disabled because its upstream
- * is also WAF-blocked; normal rendering uses Anitabi's img-tc origin above.
+ * image.anitabi.cn directly. The proxy remains disabled: normal rendering uses
+ * the documented image.anitabi.cn origin above.
  */
 export const ANITABI_PROXY_BASE = '';
 
