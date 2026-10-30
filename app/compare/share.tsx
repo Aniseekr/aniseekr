@@ -5,12 +5,21 @@
 // platform-specific share intent (or the OS share sheet) delivers.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ViewInstance,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated from 'react-native-reanimated';
-import * as MediaLibrary from 'expo-media-library';
+// The root export throws for these since SDK 56; the legacy entry keeps them.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, bottomPad } from '../../constants/DesignSystem';
@@ -185,7 +194,7 @@ export default function ShareComparisonScreen() {
     autoMatchEnabled && imageUrl && effectiveShotUri ? autoMatchMatrix : null;
   const filterMatrix = effectiveAutoMatchMatrix ? effectiveAutoMatchMatrix : presetMatrix;
 
-  const cardRef = useRef<View>(null);
+  const cardRef = useRef<ViewInstance>(null);
   const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
     granularPermissions: ['photo'],
   });

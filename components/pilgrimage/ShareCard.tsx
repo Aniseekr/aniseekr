@@ -8,7 +8,7 @@
 // every ratio.
 
 import { useCallback, useMemo, useState, type Ref } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent, type ViewInstance } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -102,7 +102,7 @@ export type ShareCardProps = {
    */
   shotWidth?: number;
   shotHeight?: number;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 };
 
 const RATIO_VALUES: Record<ShareRatio, number> = {

@@ -22,15 +22,8 @@ import React, {
   useState,
   useSyncExternalStore,
 } from 'react';
-import {
-  Dimensions,
-  InteractionManager,
-  Linking,
-  Pressable,
-  Share,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Dimensions, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
+import { runAfterInteractions } from '../../../libs/utils/after-interactions';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -483,14 +476,14 @@ export default function PilgrimageDetailScreen() {
   );
 
   // Phase 3: close the sheet first, then push the route after the dismiss
-  // animation lands. `InteractionManager` defers the navigation until the
+  // animation lands. `runAfterInteractions` defers the navigation until the
   // sheet's spring settles, so the screen never crossfades two animations.
   const handleFrameShot = useCallback(
     (spot: AnitabiPoint) => {
       Haptics.selectionAsync().catch(() => undefined);
       const params = buildCompareParams(spot);
       closeSheet();
-      InteractionManager.runAfterInteractions(() => {
+      runAfterInteractions(() => {
         router.push({ pathname: '/compare/tips', params });
       });
     },
@@ -502,7 +495,7 @@ export default function PilgrimageDetailScreen() {
       Haptics.selectionAsync().catch(() => undefined);
       const params = buildCompareParams(spot);
       closeSheet();
-      InteractionManager.runAfterInteractions(() => {
+      runAfterInteractions(() => {
         router.push({ pathname: '/compare/[spotId]', params });
       });
     },
@@ -525,7 +518,7 @@ export default function PilgrimageDetailScreen() {
         themeColor: sourceAnime?.color ?? themeColor,
       });
       closeSheet();
-      InteractionManager.runAfterInteractions(() => router.push(route));
+      runAfterInteractions(() => router.push(route));
     },
     [anime, animeTitles, bangumiId, closeSheet, posterUri, router, seriesEntries, themeColor]
   );

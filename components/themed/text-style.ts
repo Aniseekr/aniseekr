@@ -26,13 +26,13 @@ export function composeThemedTextStyle({
   cjk,
 }: ThemedTextStyleInput): TextStyle {
   const token: TextStyle = Typography[variant];
-  const style: TextStyle = { ...token, color };
-  if (weight != null) style.fontWeight = weight;
-  if (align != null) style.textAlign = align;
-  if (token.letterSpacing != null) {
-    style.letterSpacing = cjk ? 0 : token.letterSpacing;
-  }
-  return style;
+  return {
+    ...token,
+    color,
+    ...(weight != null && { fontWeight: weight }),
+    ...(align != null && { textAlign: align }),
+    ...(token.letterSpacing != null && { letterSpacing: cjk ? 0 : token.letterSpacing }),
+  };
 }
 
 const CJK_TRACKING_RESET: TextStyle = { letterSpacing: 0 };

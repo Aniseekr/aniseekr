@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
-import type { ComposedGesture } from 'react-native-gesture-handler';
+import type { LegacyComposedGesture } from 'react-native-gesture-handler';
 import {
   runOnJS,
   useAnimatedStyle,
@@ -18,7 +18,7 @@ interface UseOverlayTransformInput {
 }
 
 interface UseOverlayTransformOutput {
-  composedGesture: ComposedGesture;
+  composedGesture: LegacyComposedGesture;
   animatedStyle: StyleProp<AnimatedStyle<ViewStyle>>;
   transformed: boolean;
   rotationDisplayDeg: number;

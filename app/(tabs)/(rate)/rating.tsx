@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { runAfterInteractions } from '../../../libs/utils/after-interactions';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Photo, DeckItem } from '../../../components/rate/types';
@@ -107,7 +108,7 @@ function scheduleSwipePersistence(photo: Photo, rating: RatingType): void {
   swipePersistenceTimer = setTimeout(() => {
     swipePersistenceTimer = null;
     const jobs = swipePersistenceQueue.splice(0);
-    InteractionManager.runAfterInteractions(() => {
+    runAfterInteractions(() => {
       for (const job of jobs) {
         void persistSwipeJob(job, {
           applyOutcome,
@@ -416,7 +417,7 @@ export default function RatingScreen() {
     if (deck.length === 0) return;
     const nextPhotos = getUpcomingPhotoUrls(deck, currentIndex, PREFETCH_PHOTO_COUNT);
     if (nextPhotos.length === 0) return;
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       ImagePreloader.preload(nextPhotos);
     });
     return () => task.cancel();

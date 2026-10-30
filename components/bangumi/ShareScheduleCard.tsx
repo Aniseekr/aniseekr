@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, type ViewInstance } from 'react-native';
 import { AnimeTitleText } from '../themed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Anime } from '../rate/types';
@@ -16,7 +16,7 @@ export interface ShareScheduleCardProps {
   seasonLabel: string;
   groupedAnime: DailyAnime[];
   totalCount: number;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 }
 
 const POSTER_WIDTH = 1080;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View, type ViewInstance } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -69,7 +69,7 @@ export default function BangumiScreen() {
   const [deckAnime, setDeckAnime] = useState<Anime[] | null>(null);
   const [sharing, setSharing] = useState(false);
   const menuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shareRef = useRef<View>(null);
+  const shareRef = useRef<ViewInstance>(null);
   const deckOpen = deckAnime !== null;
   const {
     prefs,

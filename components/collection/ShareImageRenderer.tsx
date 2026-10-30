@@ -1,5 +1,5 @@
 import { useMemo, type Ref } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type ViewInstance } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAppLanguageSync, useT } from '../../libs/i18n';
@@ -23,7 +23,7 @@ const POSTER_HEIGHT = 1920;
 
 interface ShareImageRendererProps {
   build: ShareTemplateBuild;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 }
 
 function PosterFooter() {

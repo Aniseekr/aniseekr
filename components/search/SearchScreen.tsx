@@ -701,7 +701,7 @@ export default function SearchScreen() {
                 <View style={styles.footerLoader}>
                   <Skeleton.AnimeCardList count={2} />
                 </View>
-              ) : null
+              ) : undefined
             }
           />
         )}

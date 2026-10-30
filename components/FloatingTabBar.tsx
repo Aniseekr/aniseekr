@@ -69,7 +69,8 @@ const isTransientlyHidden = (options: any) =>
 export default function FloatingTabBar({
   state,
   descriptors,
-  navigation,
+  emitter,
+  navigateToTab,
   visibleRouteNames,
 }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -175,19 +176,19 @@ export default function FloatingTabBar({
                   : route.name;
 
             const onPress = () => {
-              const event = navigation.emit({
+              const event = emitter.emit({
                 type: 'tabPress',
                 target: route.key,
                 canPreventDefault: true,
               });
               if (!isFocused && !event.defaultPrevented) {
                 Haptics.selectionAsync().catch(() => undefined);
-                navigation.navigate(route.name, route.params);
+                navigateToTab(route.key);
               }
             };
 
             const onLongPress = () => {
-              navigation.emit({ type: 'tabLongPress', target: route.key });
+              emitter.emit({ type: 'tabLongPress', target: route.key });
             };
 
             return (
