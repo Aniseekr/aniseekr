@@ -6,7 +6,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -31,6 +30,8 @@ import {
   saveNotificationPrefs,
 } from '../../libs/services/notifications/notification-service';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../../components/themed/CapsText';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 // Storage now lives on MMKV via notification-service.saveNotificationPrefs.
 
@@ -383,9 +384,9 @@ export default function NotificationsScreen() {
           groupedPending.map((group, gIdx) => (
             <View key={group.key}>
               {group.label ? (
-                <Text style={[styles.groupHeader, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.groupHeader, { color: theme.text.secondary }]}>
                   {group.label}
-                </Text>
+                </CapsText>
               ) : null}
               {group.items.map((item, idx) => (
                 <View key={item.identifier}>
@@ -493,15 +494,8 @@ function ToggleSwitchRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
-      />
+      {/* The row callers' update helper already fires the selection haptic. */}
+      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
     </View>
   );
 }

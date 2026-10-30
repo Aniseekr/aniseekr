@@ -350,7 +350,7 @@ function CharacterCard({
             },
           ]}>
           <Ionicons
-            name={cut ? 'sparkles' : 'image-outline'}
+            name={cut ? 'cut' : 'image-outline'}
             size={10}
             color={cut ? readableTextOn(theme.accent) : theme.text.secondary}
           />

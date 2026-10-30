@@ -6,9 +6,10 @@
 
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { appStorage, __resetAppStorageForTests } from '../../../libs/services/storage/app-storage';
-import { CAPTURES_STORAGE_KEY } from '../../../libs/services/storage/keys';
+import { CAPTURES_STORAGE_KEY, CAPTURES_STORAGE_KEY_V2 } from '../../../libs/services/storage/keys';
 import {
   clearCapture,
+  findCaptureByUri,
   clearFreeCapture,
   getCapture,
   listCaptures,
@@ -118,5 +119,221 @@ describe('pilgrimage captures v2', () => {
     );
     __resetCapturesCacheForTests();
     expect(Object.keys(loadCapturesV2Sync().spots).sort()).toEqual(['shrine', 'tower']);
+  });
+});
+
+describe('capture upsert by uri', () => {
+  it('PILG-065 re-recording the same uri updates the capture in place instead of duplicating it', async () => {
+    await recordCapture(capture('shrine', 'file:///a.jpg', 1));
+    await recordCapture(capture('shrine', 'file:///b.jpg', 2));
+    // Preview re-saves the same shot (frame score arrives later, note edited).
+    await recordCapture({ ...capture('shrine', 'file:///a.jpg', 1), note: 'sunset' });
+    const shots = loadCapturesV2Sync().spots.shrine;
+    expect(shots.map((c) => c.uri)).toEqual(['file:///b.jpg', 'file:///a.jpg']);
+    expect(shots[1].note).toBe('sunset');
+  });
+
+  it('PILG-065 moving a shot to another spot or out of the free bucket leaves exactly one record', async () => {
+    await recordFreeCapture(capture('free-1', 'file:///shot.jpg', 5));
+    await recordCapture(capture('shrine', 'file:///shot.jpg', 5));
+    let idx = loadCapturesV2Sync();
+    expect(idx.free).toEqual([]);
+    expect(idx.spots.shrine.map((c) => c.uri)).toEqual(['file:///shot.jpg']);
+
+    // Swapping the reference scene re-files the shot under the new spot.
+    await recordCapture(capture('tower', 'file:///shot.jpg', 5));
+    idx = loadCapturesV2Sync();
+    expect(idx.spots.shrine).toBeUndefined();
+    expect(idx.spots.tower.map((c) => c.uri)).toEqual(['file:///shot.jpg']);
+    expect(loadAllCapturesSync()).toHaveLength(1);
+  });
+
+  it('PILG-065 re-recording a free capture (e.g. attaching a reference) keeps one free record', async () => {
+    await recordFreeCapture(capture('free-1', 'file:///shot.jpg', 5));
+    await recordFreeCapture({
+      ...capture('free-1', 'file:///shot.jpg', 5),
+      referenceUri: 'file:///ref.jpg',
+    });
+    const { free } = loadCapturesV2Sync();
+    expect(free).toHaveLength(1);
+    expect(free[0].referenceUri).toBe('file:///ref.jpg');
+  });
+});
+
+describe('capture re-save merges', () => {
+  const snapshot = { distanceMeters: 12, headingDeltaDeg: -8, tilt: 3, frameMatch: 0.72 };
+
+  function full(spotId = 'shrine'): PilgrimageCapture {
+    return {
+      ...capture(spotId, 'file:///shot.jpg', 5),
+      heading: 90,
+      sensorSnapshot: snapshot,
+      compositeUri: 'file:///composite.png',
+      userLocation: { latitude: 35, longitude: 139 },
+      note: 'sunset',
+      source: 'auto',
+      animeId: 1,
+      animeTitle: 'A',
+      spotName: '駅',
+      spotImage: 'https://image.anitabi.cn/p.jpg',
+    };
+  }
+
+  it('PILG-070 re-saving with fewer fields keeps what the writer did not supply', async () => {
+    await recordCapture(full());
+    // A preview opened from the Journal knows the uri and note, not the rest.
+    await recordCapture({ ...capture('shrine', 'file:///shot.jpg', 5), note: 'golden hour' });
+    const [shot] = loadCapturesV2Sync().spots.shrine;
+    expect(shot).toEqual({ ...full(), note: 'golden hour' });
+  });
+
+  it('PILG-070 an empty note clears the stored note', async () => {
+    await recordCapture(full());
+    await recordCapture({ ...capture('shrine', 'file:///shot.jpg', 5), note: '' });
+    const [shot] = loadCapturesV2Sync().spots.shrine;
+    expect('note' in shot).toBe(false);
+    expect(shot.sensorSnapshot).toEqual(snapshot);
+  });
+
+  it('PILG-070 re-saving a free capture against the same imported reference merges too', async () => {
+    await recordFreeCapture({ ...full('free-1'), referenceUri: 'file:///ref.jpg' });
+    await recordFreeCapture({ ...capture('free-1', 'file:///shot.jpg', 5), note: 'x' });
+    const [shot] = loadCapturesV2Sync().free;
+    expect(shot.referenceUri).toBe('file:///ref.jpg');
+    expect(shot.compositeUri).toBe('file:///composite.png');
+    expect(shot.note).toBe('x');
+  });
+});
+
+describe('capture re-pair carry-over', () => {
+  const tiltOnly = { distanceMeters: null, headingDeltaDeg: null, tilt: 3 };
+
+  function fromSpot(): PilgrimageCapture {
+    return {
+      ...capture('shrine', 'file:///shot.jpg', 5),
+      heading: 90,
+      sensorSnapshot: { distanceMeters: 12, headingDeltaDeg: -8, tilt: 3, frameMatch: 0.72 },
+      compositeUri: 'file:///composite.png',
+      userLocation: { latitude: 35, longitude: 139 },
+      note: 'sunset',
+      source: 'auto',
+      animeId: 1,
+      animeTitle: 'A',
+      spotName: '駅',
+      spotImage: 'https://image.anitabi.cn/p.jpg',
+      spotEp: 3,
+      spotGeo: [35.1, 139.1],
+    };
+  }
+
+  it('PILG-071 a shot re-paired with another scene keeps its photo fields, not the old scene', async () => {
+    await recordCapture(fromSpot());
+    await recordCapture({
+      ...capture('tower', 'file:///shot.jpg', 5),
+      animeId: 2,
+      spotName: '塔',
+      spotImage: 'https://image.anitabi.cn/t.jpg',
+    });
+    const idx = loadCapturesV2Sync();
+    expect(idx.spots.shrine).toBeUndefined();
+    expect(idx.spots.tower).toEqual([
+      {
+        ...capture('tower', 'file:///shot.jpg', 5),
+        heading: 90,
+        sensorSnapshot: tiltOnly,
+        userLocation: { latitude: 35, longitude: 139 },
+        note: 'sunset',
+        source: 'auto',
+        animeId: 2,
+        spotName: '塔',
+        spotImage: 'https://image.anitabi.cn/t.jpg',
+      },
+    ]);
+  });
+
+  it('PILG-071 a scene shot moved to an imported reference drops every scene field', async () => {
+    await recordCapture(fromSpot());
+    await recordFreeCapture({
+      ...capture('ref-9-1', 'file:///shot.jpg', 5),
+      referenceUri: 'file:///ref.jpg',
+    });
+    const idx = loadCapturesV2Sync();
+    expect(idx.spots).toEqual({});
+    expect(idx.free).toEqual([
+      {
+        ...capture('ref-9-1', 'file:///shot.jpg', 5),
+        heading: 90,
+        sensorSnapshot: tiltOnly,
+        userLocation: { latitude: 35, longitude: 139 },
+        note: 'sunset',
+        source: 'auto',
+        referenceUri: 'file:///ref.jpg',
+      },
+    ]);
+  });
+
+  it('PILG-071 swapping one imported reference for another drops the old comparison', async () => {
+    await recordFreeCapture({
+      ...capture('ref-1-1', 'file:///shot.jpg', 5),
+      referenceUri: 'file:///old.jpg',
+      compositeUri: 'file:///old-composite.png',
+      sensorSnapshot: { distanceMeters: null, headingDeltaDeg: null, tilt: 3, frameMatch: 0.4 },
+    });
+    await recordFreeCapture(capture('free-2', 'file:///other.jpg', 9));
+    await recordFreeCapture({
+      ...capture('ref-2-2', 'file:///shot.jpg', 5),
+      referenceUri: 'file:///new.jpg',
+    });
+    const { free } = loadCapturesV2Sync();
+    expect(free.map((c) => c.uri)).toEqual(['file:///other.jpg', 'file:///shot.jpg']);
+    expect(free[1]).toEqual({
+      ...capture('ref-2-2', 'file:///shot.jpg', 5),
+      referenceUri: 'file:///new.jpg',
+      sensorSnapshot: tiltOnly,
+    });
+  });
+});
+
+describe('legacy duplicate captures', () => {
+  it('PILG-072 a uri stored more than once in one list reads back as its newest record', () => {
+    appStorage.set(
+      CAPTURES_STORAGE_KEY_V2,
+      JSON.stringify({
+        spots: {
+          shrine: [
+            { ...capture('shrine', 'file:///a.jpg', 3), note: 'newest' },
+            capture('shrine', 'file:///b.jpg', 2),
+            { ...capture('shrine', 'file:///a.jpg', 3), note: 'older' },
+          ],
+        },
+        free: [capture('free-1', 'file:///f.jpg', 1), capture('free-1', 'file:///f.jpg', 1)],
+      })
+    );
+    const idx = loadCapturesV2Sync();
+    expect(idx.spots.shrine.map((c) => c.note ?? c.uri)).toEqual(['newest', 'file:///b.jpg']);
+    expect(idx.free).toHaveLength(1);
+  });
+});
+
+describe('sensor snapshot merge', () => {
+  it('PILG-070 a re-save without frame fields keeps the stored frame match', async () => {
+    await recordCapture({
+      ...capture('shrine', 'file:///shot.jpg', 5),
+      sensorSnapshot: { distanceMeters: 12, headingDeltaDeg: -8, tilt: 3, frameMatch: 0.72 },
+    });
+    await recordCapture({
+      ...capture('shrine', 'file:///shot.jpg', 5),
+      note: 'edited offline',
+      sensorSnapshot: { distanceMeters: 12, headingDeltaDeg: -8, tilt: 3 },
+    });
+    const [shot] = loadCapturesV2Sync().spots.shrine;
+    expect(shot.sensorSnapshot).toEqual({
+      distanceMeters: 12,
+      headingDeltaDeg: -8,
+      tilt: 3,
+      frameMatch: 0.72,
+    });
+    expect(findCaptureByUri('file:///shot.jpg')?.note).toBe('edited offline');
+    expect(findCaptureByUri('file:///missing.jpg')).toBeNull();
   });
 });

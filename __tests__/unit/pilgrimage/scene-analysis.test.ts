@@ -48,6 +48,8 @@ function baseAnalysis(overrides: Partial<SceneAnalysis> = {}): SceneAnalysis {
     shadowRatio: 0.02,
     luminanceHistogram: Array.from({ length: 16 }, () => 1 / 16),
     palette: ['#AABBCC', '#998877', '#665544', '#332211', '#FFEEDD'],
+    layoutGrid: new Array(256).fill(0.5),
+    edgeGrid: new Array(256).fill(0.2),
     ...overrides,
   };
 }

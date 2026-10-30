@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -8,9 +8,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { useI18n, useT } from '../../libs/i18n';
 import type { NewsArticle, NewsSource } from '../../libs/services/news/types';
 import { newsImageSource } from '../../libs/services/news/news-image';
+import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { resolveLocalIntelText } from '../../libs/services/pilgrimage/local-intel/local-intel-localization';
-import { LOCALITY_CARD_RADIUS, LocalityMiniStamp } from '../pilgrimage/common/LocalityAesthetic';
-import { ThemedButton, ThemedSurface, ThemedText } from '../themed';
+import { LOCALITY_CARD_RADIUS } from '../pilgrimage/common/LocalityAesthetic';
+import { ThemedSurface, ThemedText } from '../themed';
 
 export function NewsArticleRow({
   article,
@@ -35,50 +36,53 @@ export function NewsArticleRow({
   const sourceName = source ? resolveLocalIntelText(source.name, language).value : null;
 
   return (
-    <ThemedSurface padded={Spacing.md} radius={LOCALITY_CARD_RADIUS} style={styles.row}>
-      {!imageHidden && imageSource ? (
-        <View style={[styles.thumbFrame, { borderColor: theme.status.info }]}>
+    <Pressable
+      onPress={() => {
+        hapticsBridge.tap();
+        onOpen();
+      }}
+      accessibilityRole="link"
+      accessibilityLabel={[article.title, sourceName, relativeTime].filter(Boolean).join(', ')}
+      accessibilityHint={t('news.openArticle')}
+      style={({ pressed }) => [pressed && styles.pressed]}>
+      <ThemedSurface padded={Spacing.md} radius={LOCALITY_CARD_RADIUS} style={styles.row}>
+        <View style={styles.body}>
+          <View style={styles.metaRow}>
+            {sourceName ? (
+              <ThemedText variant="captionSmall" weight="700" tone="secondary" numberOfLines={1}>
+                {sourceName}
+              </ThemedText>
+            ) : null}
+            <ThemedText variant="captionSmall" tone="tertiary">
+              {relativeTime}
+            </ThemedText>
+            <Ionicons
+              name="open-outline"
+              size={12}
+              color={theme.text.tertiary}
+              style={styles.openGlyph}
+            />
+          </View>
+          <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
+            {article.title}
+          </ThemedText>
+          {article.excerpt ? (
+            <ThemedText variant="bodySmall" tone="secondary" numberOfLines={2}>
+              {article.excerpt}
+            </ThemedText>
+          ) : null}
+        </View>
+        {/* Only real article art; no placeholder glyph when a feed ships none. */}
+        {!imageHidden && imageSource ? (
           <Image
             source={imageSource}
-            style={styles.thumb}
+            style={[styles.thumb, { backgroundColor: theme.background.tertiary }]}
             contentFit="cover"
             onError={() => setImageHidden(true)}
           />
-        </View>
-      ) : (
-        <LocalityMiniStamp accent={theme.status.info} icon="newspaper-outline" />
-      )}
-      <View style={styles.body}>
-        <View style={styles.metaRow}>
-          {sourceName ? (
-            <View style={[styles.chip, { backgroundColor: theme.background.tertiary }]}>
-              <ThemedText variant="captionSmall" weight="700" numberOfLines={1}>
-                {sourceName}
-              </ThemedText>
-            </View>
-          ) : null}
-          <ThemedText variant="captionSmall" tone="tertiary">
-            {relativeTime}
-          </ThemedText>
-        </View>
-        <ThemedText variant="bodyMedium" weight="800" numberOfLines={2}>
-          {article.title}
-        </ThemedText>
-        {article.excerpt ? (
-          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={2}>
-            {article.excerpt}
-          </ThemedText>
         ) : null}
-        <ThemedButton
-          label={t('news.openArticle')}
-          variant="secondary"
-          size="sm"
-          onPress={onOpen}
-          icon={<Ionicons name="open-outline" size={15} color={theme.text.primary} />}
-          style={styles.openButton}
-        />
-      </View>
-    </ThemedSurface>
+      </ThemedSurface>
+    </Pressable>
   );
 }
 
@@ -86,21 +90,14 @@ function makeStyles() {
   return StyleSheet.create({
     row: {
       flexDirection: 'row',
+      alignItems: 'flex-start',
       gap: Spacing.md,
       ...Shadow.subtle,
     },
-    thumbFrame: {
+    thumb: {
       width: Size.cardSmall,
       height: Size.cardSmall,
       borderRadius: Radius.md,
-      borderWidth: 1.5,
-      padding: Spacing.xxs,
-      transform: [{ rotate: '-1deg' }],
-    },
-    thumb: {
-      width: '100%',
-      height: '100%',
-      borderRadius: Radius.sm,
     },
     body: {
       flex: 1,
@@ -111,17 +108,12 @@ function makeStyles() {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.xs,
-      minHeight: 22,
     },
-    chip: {
-      maxWidth: 148,
-      borderRadius: Radius.full,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 4,
+    openGlyph: {
+      marginLeft: 'auto',
     },
-    openButton: {
-      alignSelf: 'flex-start',
-      marginTop: Spacing.xs,
+    pressed: {
+      opacity: 0.84,
     },
   });
 }

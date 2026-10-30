@@ -1,18 +1,12 @@
 import { Children, Fragment, ReactNode, isValidElement } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 /**
  * Static layout values that don't depend on theme.
@@ -89,7 +83,7 @@ export function SettingsSection({
   return (
     <View style={style}>
       {title ? (
-        <Text style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</Text>
+        <CapsText style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</CapsText>
       ) : null}
       <View
         style={[
@@ -222,8 +216,6 @@ export function SettingsSwitchRow({
   value,
   onValueChange,
   onLongPress,
-  trackColor,
-  thumbColor,
   hidden: _hidden,
 }: {
   icon: IoniconName;
@@ -233,8 +225,6 @@ export function SettingsSwitchRow({
   value: boolean;
   onValueChange: (next: boolean) => void;
   onLongPress?: () => void;
-  trackColor?: { false: string; true: string };
-  thumbColor?: string;
   hidden?: boolean;
 }) {
   const { theme } = useTheme();
@@ -259,12 +249,7 @@ export function SettingsSwitchRow({
           ) : null}
         </View>
       </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={trackColor ?? { false: theme.background.tertiary, true: theme.accent }}
-        thumbColor={thumbColor ?? theme.text.primary}
-      />
+      <ThemedSwitch value={value} onValueChange={onValueChange} />
     </RowShell>
   );
 }

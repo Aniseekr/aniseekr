@@ -63,8 +63,6 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [cardsCount, setCardsCount] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [shards, setShards] = useState(0);
   // Seed sync from MMKV so the platform switcher renders on the user's
   // chosen primary on frame 1 instead of momentarily showing `DEFAULT`.
   const [selectedPlatform, setSelectedPlatform] = useState<string>(
@@ -107,11 +105,7 @@ export default function ProfileScreen() {
       setUser(data);
       try {
         const cards = await gachaService.getUserCards();
-        const userCoins = await gachaService.getCoins();
-        const userShards = await gachaService.getShards();
         setCardsCount(cards.length);
-        setCoins(userCoins);
-        setShards(userShards);
       } catch (e) {
         console.error('Error loading gacha data:', e);
       }
@@ -193,7 +187,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={[styles.headerRow, { paddingTop: Math.max(top * 0.25, Spacing.xs) }]}>
           <View style={styles.headerSide} />
           <ExperienceModeSwitcher mode={mode} onChange={(next) => void setMode(next)} />
@@ -269,45 +263,6 @@ export default function ProfileScreen() {
                     </View>
                   ) : null}
                 </Pressable>
-
-                <View
-                  style={[
-                    styles.currencyPill,
-                    {
-                      backgroundColor: theme.background.tertiary,
-                      borderColor: theme.glassBorder,
-                    },
-                  ]}>
-                  <View
-                    style={[
-                      styles.betaTag,
-                      {
-                        backgroundColor: theme.accent + '24',
-                        borderColor: theme.accent + '66',
-                      },
-                    ]}>
-                    <ThemedText
-                      variant="captionSmall"
-                      weight="800"
-                      style={[styles.betaTagText, { color: theme.accent }]}>
-                      BETA
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
-                  <View style={styles.currencyItem}>
-                    <MaterialIcons name="monetization-on" size={16} color={theme.status.warning} />
-                    <ThemedText variant="bodyMedium" weight="600">
-                      {coins}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.currencyDivider, { backgroundColor: theme.glassBorder }]} />
-                  <View style={styles.currencyItem}>
-                    <MaterialIcons name="diamond" size={16} color={theme.status.info} />
-                    <ThemedText variant="bodyMedium" weight="600">
-                      {shards}
-                    </ThemedText>
-                  </View>
-                </View>
               </ThemedSurface>
             </Animated.View>
           )}
@@ -347,26 +302,28 @@ export default function ProfileScreen() {
                 hapticsBridge.tap();
                 router.push('/collection/stats');
               }}
-              style={({ pressed }) => [styles.statsHero, pressed && { opacity: 0.92 }]}>
-              <LinearGradient
-                colors={[theme.accent + 'CC', theme.accentDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
+              style={({ pressed }) => [
+                styles.statsHero,
+                {
+                  backgroundColor: theme.background.secondary,
+                  borderColor: theme.glassBorder,
+                },
+                pressed && { opacity: 0.92 },
+              ]}>
               <View style={styles.statsHeroContent}>
-                <View style={[styles.statsHeroIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-                  <MaterialIcons name="bar-chart" size={20} color={ctaFg} />
+                <View
+                  style={[styles.statsHeroIcon, { backgroundColor: theme.background.tertiary }]}>
+                  <MaterialIcons name="bar-chart" size={20} color={theme.accent} />
                 </View>
                 <View style={styles.statsHeroText}>
-                  <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
+                  <ThemedText variant="titleMedium" weight="700">
                     {t('tabs.profileScreen.statsHero.title')}
                   </ThemedText>
-                  <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
+                  <ThemedText variant="bodySmall" tone="secondary">
                     {t('tabs.profileScreen.statsHero.subtitle')}
                   </ThemedText>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={ctaFg} />
+                <Ionicons name="chevron-forward" size={20} color={theme.text.tertiary} />
               </View>
             </Pressable>
           </Animated.View>
@@ -386,7 +343,7 @@ export default function ProfileScreen() {
                 <View style={styles.premiumCtaContent}>
                   <View style={styles.premiumCtaText}>
                     <View style={styles.premiumTitleRow}>
-                      <Ionicons name="sparkles" size={16} color={ctaFg} />
+                      <Ionicons name="ribbon" size={16} color={ctaFg} />
                       <ThemedText
                         variant="titleMedium"
                         weight="700"
@@ -430,35 +387,9 @@ export default function ProfileScreen() {
             <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
           </Animated.View>
 
-          {/* Settings Row */}
-          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}>
-            <Pressable
-              onPress={handleOpenSettings}
-              style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
-              <ThemedSurface
-                variant="card"
-                radius={Radius.lg}
-                style={[styles.settingsRow, { borderColor: theme.glassBorder }]}>
-                <View
-                  style={[styles.settingsIconWrap, { backgroundColor: theme.background.tertiary }]}>
-                  <Ionicons name="settings-outline" size={18} color={theme.text.primary} />
-                </View>
-                <View style={styles.settingsLabel}>
-                  <ThemedText variant="titleSmall" weight="600">
-                    {t('tabs.profileScreen.settings')}
-                  </ThemedText>
-                  <ThemedText variant="bodySmall" tone="tertiary">
-                    {t('tabs.profileScreen.settingsSubtitle')}
-                  </ThemedText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.text.secondary} />
-              </ThemedSurface>
-            </Pressable>
-          </Animated.View>
-
           {connectedPlatforms.length > 0 ? (
             <Animated.View
-              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 7 : 6)}
+              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}
               style={styles.platformsSection}>
               <PlatformSwitcher
                 platforms={switcherPlatforms}
@@ -582,36 +513,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  currencyPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.xs,
-  },
-  currencyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  currencyDivider: {
-    width: 1,
-    height: 18,
-  },
-  betaTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    marginLeft: 4,
-    marginRight: 4,
-  },
-  betaTagText: {
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.sm - 2,
@@ -628,6 +529,7 @@ const styles = StyleSheet.create({
   },
   statsHero: {
     borderRadius: Radius.card,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   statsHeroContent: {
@@ -636,10 +538,11 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     padding: Spacing.md,
   },
+  // Same icon disc as the shortcut tiles below (ProfileShortcutsGrid iconWrap).
   statsHeroIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -677,23 +580,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
     borderRadius: Radius.full,
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm + 2,
-    padding: Spacing.md + 2,
-  },
-  settingsIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsLabel: {
-    flex: 1,
-    gap: 2,
   },
   platformsSection: {
     marginTop: Spacing.xs,

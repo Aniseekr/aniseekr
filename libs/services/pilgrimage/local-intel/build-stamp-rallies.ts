@@ -191,7 +191,7 @@ const RALLIES: RallySource[] = [
   },
   {
     id: 'jujutsu-jr-central-nagoya-stamp',
-    bangumiIds: [238887, 369304],
+    bangumiIds: [294993, 369304],
     name: {
       ja: 'JR東海×呪術廻戦 じゅじゅ探訪 in 名古屋 デジタルスタンプラリー',
       en: 'JR Central × Jujutsu Kaisen Jujutanbo in Nagoya Stamp Rally',

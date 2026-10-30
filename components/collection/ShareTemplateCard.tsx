@@ -1,9 +1,12 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import type { ShareTemplate } from '../../libs/services/collection/share-templates';
+import { useT } from '../../libs/i18n';
+import { readableTextOn } from '../themed';
 
 interface ShareTemplateCardProps {
   template: ShareTemplate;
@@ -13,6 +16,8 @@ interface ShareTemplateCardProps {
 
 function ShareTemplateCardComponent({ template, active, onSelect }: ShareTemplateCardProps) {
   const { theme } = useTheme();
+  const t = useT();
+  const onAccent = readableTextOn(theme.accent);
 
   return (
     <Pressable
@@ -29,18 +34,18 @@ function ShareTemplateCardComponent({ template, active, onSelect }: ShareTemplat
         },
       ]}>
       <View style={styles.row}>
-        <Text style={styles.emoji}>{template.emoji}</Text>
+        <Ionicons name={template.icon} size={22} color={active ? onAccent : theme.text.secondary} />
         <View style={styles.copy}>
-          <Text style={[styles.title, { color: active ? '#0E0A06' : theme.text.primary }]}>
-            {template.title}
+          <Text style={[styles.title, { color: active ? onAccent : theme.text.primary }]}>
+            {t(template.titleKey)}
           </Text>
           <Text
             style={[
               styles.description,
-              { color: active ? 'rgba(14,10,6,0.7)' : theme.text.secondary },
+              { color: active ? onAccent : theme.text.secondary, opacity: active ? 0.75 : 1 },
             ]}
             numberOfLines={2}>
-            {template.description}
+            {t(template.descriptionKey)}
           </Text>
         </View>
       </View>
@@ -61,9 +66,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  emoji: {
-    fontSize: 24,
   },
   copy: {
     flex: 1,

@@ -78,7 +78,9 @@
       "emptyTitle": "目前沒有即將到來的活動",
       "emptyBody": "已驗證的聖地巡禮活動正在進行、常設或即將開始時，會顯示在這裡。",
       "stopCount": "{count} 個停靠點",
-      "locationMore": "{location}，另有 {count} 處"
+      "locationMore": "{location}，另有 {count} 處",
+      "sourceLine": "來源：{source}",
+      "sourceLineMore": "來源：{source} 等 {count} 個"
     },
     "tags": {
       "allWorks": "全部作品",
@@ -172,6 +174,11 @@
       "toggleSubtitle": "預設：關閉",
       "cta": "繼續"
     },
+    "mode": {
+      "title": "你想怎麼用 Aniseekr？",
+      "mixMyOwn": "自己配",
+      "cta": "繼續"
+    },
     "done": {
       "title": "一切就緒",
       "body": "開始評分、收藏、探索吧。",
@@ -220,9 +227,7 @@
       "includeGames": "包含遊戲",
       "includeGamesDesc": "在 Bangumi 日曆顯示電子遊戲",
       "showScore": "突顯評分",
-      "showScoreDesc": "在卡片標題列顯示評分",
-      "showEmptySystemFolders": "顯示空的系統資料夾",
-      "showEmptySystemFoldersDesc": "追番中/看完等資料夾即使 0 部也保留顯示"
+      "showScoreDesc": "在卡片標題列顯示評分"
     },
     "accentColor": {
       "apply": "套用",
@@ -336,7 +341,7 @@
       "cloudkitUnavailable": "目前無法使用 — 請重新建置 dev client 並包含 bridge",
       "encrypt": "加密備份檔",
       "encryptDesc": "以裝置金鑰進行 AES-256-GCM 加密。需在同一台裝置才能還原。",
-      "encryptedTag": "🔒 已加密 (AES-256-GCM)",
+      "encryptedTag": "已加密 (AES-256-GCM)",
       "google": {
         "signIn": "以 Google 登入",
         "signInPrompt": "登入以啟用 Google Drive 備份。",
@@ -659,6 +664,20 @@
         "none": "尚未選擇任何平台",
         "withPrimary": "已啟用 {count} 個 · 主要:{primary}"
       }
+    },
+    "appearanceTitle": "外觀",
+    "watchPlatformsHint": "選擇你在哪裡看（Netflix、巴哈姆特動畫瘋、Crunchyroll…）",
+    "watchPlatformsSummary": "已啟用 {count} 個 · 主要：{primary}",
+    "watchPlatformsNoPrimary": "未設定",
+    "backupHint": "iCloud · Google Drive · 匯入舊版 aniseeker 資料",
+    "connectedNone": "未連結",
+    "premium": {
+      "active": "Premium 已啟用",
+      "unlock": "解鎖 Premium",
+      "activeDesc": "管理訂閱與權益",
+      "pitch": "無廣告、全部主題、無限同步",
+      "manage": "管理",
+      "upgrade": "升級"
     }
   },
   "titleLanguage": {
@@ -676,29 +695,22 @@
     "hideOriginalA11y": "隱藏原文"
   },
   "tabs": {
-    "rate": "首頁",
+    "rate": "探索",
     "collection": "收藏",
-    "pilgrimage": "聖地巡禮",
+    "pilgrimage": "巡禮",
     "explorerCamera": "相機",
-    "explorerSearch": "搜尋",
-    "explorerMap": "地圖",
     "explorerJournal": "足跡",
-    "explorerDiscover": "探索",
-    "collectorSchedule": "追番",
-    "bangumi": "Bangumi",
-    "profile": "個人",
+    "bangumi": "追番",
+    "profile": "我的",
     "bangumiScreen": {
       "errorLoadFailed": "本季載入失敗。下拉重新整理。",
-      "movieAndSpecialsSubtitle": "本季共 {count} 部上映",
       "movieAndSpecialsTitle": "電影與特別篇",
       "releaseDate": "上映 {date}",
-      "retry": "重試",
       "snackbar": {
         "addedToWishlist": "已將「{title}」加入想看清單",
         "couldntAddToWishlist": "無法加入想看清單",
         "noUpcomingEpisode": "「{title}」沒有即將播出的集數",
         "reminderCancelled": "已取消提醒",
-        "reminderSet": "已為「{title}」設定提醒",
         "skippedForSeason": "本季已略過「{title}」",
         "undo": "復原",
         "wantToWatchWithReminder": "已加入「{title}」— 新集數會通知你"
@@ -725,35 +737,7 @@
       "unknownTitle": "未知標題"
     },
     "collectionScreen": {
-      "categoryAll": "全部",
-      "categoryDone": "已看完",
-      "categoryPlanned": "想看",
-      "categoryWatching": "觀看中",
-      "emptyAnimeBody": {
-        "all": "評分或匯入動畫，開始建立你的資料庫。",
-        "category": "尚未有任何標記為「{category}」的作品。"
-      },
-      "emptyAnimeTitle": "這裡還沒有動畫",
-      "emptyFolderBody": {
-        "all": "建立資料夾，整理你喜愛的動畫。",
-        "category": "符合此狀態的動畫會出現在這裡。"
-      },
-      "emptyFolderTitle": {
-        "all": "尚未建立資料夾",
-        "category": "沒有 {category} 資料夾"
-      },
-      "folderCount": {
-        "one": "{count} 個資料夾",
-        "other": "{count} 個資料夾"
-      },
-      "libraryStats": "資料庫統計",
-      "statsLine": "{total} 部 · 追番中 {watching}",
-      "metaAnimeCount": "{count} 部動畫",
-      "myFolders": "我的資料夾",
-      "newFolder": "新增資料夾",
-      "recentAnime": "最近的動畫",
-      "recentAnimeForCategory": "{category} 動畫",
-      "seeAllCount": "查看全部 {count} 部",
+      "newFolder": "新清單",
       "share": {
         "addAtLeastOne": "至少加入一部動畫",
         "couldNotRender": "無法繪製海報",
@@ -762,57 +746,52 @@
         "pickTemplate": "請先選一個版型",
         "rendererNotReady": "渲染器尚未就緒"
       },
-      "sort": {
-        "count": "數量",
-        "newest": "最新",
-        "oldest": "最舊",
-        "rarity": "稀有度"
+      "untitled": "未命名",
+      "titleCount": "{count} 部",
+      "status": {
+        "watching": "在看",
+        "wishlist": "想看",
+        "completed": "看完",
+        "favorites": "最愛",
+        "dropped": "棄番",
+        "custom": "我的清單"
       },
-      "untitled": "未命名"
+      "emptyStatus": {
+        "watching": "還沒有在看的作品",
+        "wishlist": "還沒有想看的作品",
+        "completed": "還沒有看完的作品",
+        "favorites": "還沒有最愛的作品",
+        "dropped": "還沒有棄番的作品",
+        "custom": "還沒有自己的清單"
+      },
+      "explore": "去探索",
+      "episodeProgress": "{progress} / {total}",
+      "episodesWatched": "已看 {count} 集",
+      "menu": "收藏選項"
+    },
+    "pilgrimageHome": {
+      "showMap": "顯示地圖",
+      "showList": "顯示列表",
+      "search": "搜尋作品或地點",
+      "nearby": "附近",
+      "within3km": "3 km 內 {count} 處",
+      "locationNeeded": "開啟定位，尋找附近的聖地。",
+      "enableLocation": "開啟定位",
+      "openSettings": "開啟設定",
+      "noNearby": "附近 50 km 內沒有聖地",
+      "nearbyUnavailable": "無法載入附近聖地",
+      "depart": "出發",
+      "myWorks": "我的作品",
+      "explore": "探索更多",
+      "popular": "熱門",
+      "tourism88": "88 選",
+      "rallies": "集章活動",
+      "all": "全部",
+      "spotCount": "{count} 個場景",
+      "visitedProgress": "{visited} / {total} 已去"
     },
     "pilgrimageScreen": {
-      "explorerSubtitle": "尋找動畫場景，規劃下一次聖地巡禮。",
-      "explorerTitle": "探索",
-      "errorLoadFailed": "載入失敗",
-      "hero": {
-        "closest": "最近：{title}",
-        "closestWithDistance": "最近：{title} · 距離 {distance}",
-        "countLabel": "{count} {animeWord} · {tier}",
-        "labelAccessibility": "開啟聖地地圖",
-        "nearestSpotCaps": "最近的聖地",
-        "noMappedAnime": "尚未有對應動畫——點擊開啟地圖",
-        "title": "聖地地圖",
-        "withoutLocation": "點擊瀏覽日本各地的聖地"
-      },
-      "intro": {
-        "body": {
-          "empty": "選一部動畫，找出你附近可步行抵達的場景。",
-          "withCollection": "來自你收藏的動畫，加上附近的精選。"
-        },
-        "caps": "規劃今天行程"
-      },
-      "myAlbumA11y": "我的聖地相簿",
-      "charactersA11y": "角色",
-      "moreActions": "巡禮工具",
-      "searchA11y": "搜尋",
-      "section": {
-        "explore": "探索",
-        "featuredSpots": "精選景點",
-        "myPilgrimage": "我的巡禮",
-        "popularAnimes": "熱門動畫",
-        "seeAll": "查看全部",
-        "viewMap": "查看地圖",
-        "yourAnimesAndMore": "你的動畫與更多"
-      },
-      "tier": {
-        "dayTrip": "一日遊 · 100 公里",
-        "farAway": "遠方聖地",
-        "inRegion": "同區 · 500 公里",
-        "walking": "步行範圍 · 30 公里"
-      },
-      "title": "聖地巡禮",
-      "wordAnime": "部動畫",
-      "wordAnimes": "部動畫"
+      "errorLoadFailed": "載入失敗"
     },
     "profileScreen": {
       "anonName": "動畫迷",
@@ -828,10 +807,10 @@
         "seekerDescription": "自由組合 Explorer 與 Collector 的頁面。",
         "tabsSubtitle": "選擇要顯示在下方導覽列的頁面。",
         "tabsLimit": "最多選擇四個頁面，個人頁面會固定保留。",
-        "tabsTitle": "Seeker 頁面"
+        "tabsTitle": "Seeker 頁面",
+        "tabsSeparator": "、"
       },
       "settings": "設定",
-      "settingsSubtitle": "偏好、帳號、其他",
       "statLabel": {
         "cards": "卡片",
         "liked": "喜愛",
@@ -850,39 +829,6 @@
         "upgrade": "升級"
       },
       "title": "個人"
-    },
-    "rateScreen": {
-      "mode": {
-        "discovery": "探索",
-        "seasonal": "季番",
-        "trend": "趨勢"
-      },
-      "subtitle": {
-        "discovery": "探索類型",
-        "tracking": "我的清單",
-        "trend": "排行榜"
-      },
-      "trend": {
-        "bookmarkA11y": "收藏",
-        "heroTrendingBadge": "趨勢 #1",
-        "hotBadge": "熱門",
-        "loadingTrends": "趨勢載入中…",
-        "noPilgrimages": "目前沒有可瀏覽的聖地。",
-        "openA11y": "開啟詳情",
-        "openLabel": "開啟",
-        "pilgrimagesA11y": "查看全部聖地",
-        "pilgrimagesSubtitle": "可實地造訪的動畫場景",
-        "pilgrimagesTitle": "熱門聖地",
-        "rangeAllTime": "歷年",
-        "rangeWeek": "本週",
-        "seeAll": "查看全部",
-        "seeAllAnimeA11y": "查看全部熱門動畫",
-        "spotsLabel": "{count} 個景點",
-        "subtitleAllTime": "歷年最受歡迎",
-        "subtitleWeek": "現在大家都在看",
-        "titleAllTime": "歷年 Top {count}",
-        "titleWeek": "本週 Top {count}"
-      }
     },
     "ratingScreen": {
       "addToPlanA11y": "加入想看清單",
@@ -906,6 +852,46 @@
         "title": "重新開始這個類型？"
       },
       "skipA11y": "略過"
+    },
+    "discoverHome": {
+      "search": "搜尋動畫",
+      "seasonal": "本季新番",
+      "seasonAll": "{year} {season} · 全部",
+      "airingSlot": "週{weekday} {time}",
+      "trending": "本週熱門",
+      "fullChart": "完整排行",
+      "episodes": "{count} 集",
+      "rateByGenre": "照類型滑卡評分",
+      "pickedForYou": "為你挑選",
+      "unavailable": "無法載入，請重試。"
+    },
+    "schedule": {
+      "today": "今天",
+      "tomorrow": "明天",
+      "episodeTime": "第 {episode} 集 · {time}",
+      "undated": "播出日期未定",
+      "follow": "追番並提醒",
+      "cancelReminder": "取消提醒",
+      "pickSeason": "選擇季度與年份",
+      "seasonYear": "{year} {season}",
+      "tracking": "我在追 {count}",
+      "season": "本季全部 {count}",
+      "emptyTracking": "這天沒有正在追的動畫。",
+      "emptySeason": "這天沒有排定播出的動畫。",
+      "showSeason": "看本季全部",
+      "triageTitle": "還沒決定追什麼？",
+      "triageAction": "滑卡片篩選本季 {count} 部",
+      "deck": "卡片篩選",
+      "options": "追番選項",
+      "permissionDenied": "提醒已關閉，請在系統設定中允許通知。",
+      "openSettings": "開啟設定",
+      "remindersOff": "集數提醒已關閉。",
+      "manageReminders": "管理提醒",
+      "shareFailed": "無法分享番表。",
+      "ova": "OVA",
+      "trackingLabel": "我在追",
+      "seasonLabel": "本季全部",
+      "trackingFailed": "無法載入追番清單。"
     }
   },
   "anime": {
@@ -988,13 +974,11 @@
     "noMatchesDescription": "目前篩選下沒有「{query}」的結果,試試其他關鍵字或更換篩選。",
     "noMatchesTitle": "沒有結果",
     "pilgrimage": {
-      "description": "找到作品後，直接查看它的實景地點。",
       "emptyDescription": "用動畫名稱或地名，尋找已有實景資料的場景。",
       "emptyTitle": "尋找巡禮地點",
       "noMapping": "「{title}」沒有對應的巡禮資料。",
       "noMatchesDescription": "找不到符合「{query}」的巡禮地點，試試其他動畫或地名。",
-      "resolveFailed": "無法解析這部作品。",
-      "title": "搜尋巡禮"
+      "resolveFailed": "無法解析這部作品。"
     },
     "placeholder": {
       "default": "搜尋動畫、角色、製作公司…",
@@ -1110,56 +1094,69 @@
     "share": {
       "appMissingBody": "未安裝 {app}。照片已儲存到「照片」，標題文字已複製。",
       "appMissingTitle": "未安裝 {app}",
-      "shareAnotherWay": "用其他方式分享"
+      "shareAnotherWay": "用其他方式分享",
+      "realFirst": "實景在前",
+      "animeFirst": "動漫在前",
+      "filter": "濾鏡",
+      "crop": "裁切",
+      "cropped": "已裁切",
+      "background": "背景",
+      "watermark": "浮水印",
+      "watermarkPlaceholder": "@你的帳號、旅程名稱…",
+      "autoColorMatch": "自動配色",
+      "autoColorMatchNeed": "需要兩張圖都載入",
+      "analysing": "分析中…",
+      "autoColorMatchDesc": "把實拍調成動漫色調",
+      "autoPerspective": "自動透視",
+      "autoPerspectiveDesc": "用拍攝感測器校正傾斜",
+      "autoPerspectiveNoData": "這張沒有感測器資料",
+      "manualWarp": "手動透視",
+      "manualWarpApplied": "已套用四角變形",
+      "manualWarpHint": "拖曳四角對齊",
+      "edit": "編輯",
+      "a11y": {
+        "swapOrder": "交換圖片順序",
+        "export": "匯出 {label}（{hint}）",
+        "cropPhoto": "裁切實拍照片",
+        "filter": "濾鏡 {label}",
+        "resetWarp": "重設手動透視",
+        "openWarp": "開啟手動透視編輯器",
+        "bgSwatch": "背景 {label}",
+        "watermarkPosition": "浮水印位置 {label}",
+        "watermarkFont": "浮水印字體 {label}",
+        "watermarkColor": "浮水印顏色 {label}"
+      }
     },
     "album": {
-      "addPhotoA11y": "在此資料夾新增照片",
-      "addPilgrimage": "新增巡禮",
-      "albumFallback": "相簿",
-      "capturesShort": "{count} 張拍攝",
-      "chipAll": "全部",
       "compareA11y": "比對 {title}",
-      "daysAgo": "{count} 天前",
       "deleteBody": "要移除你在「{title}」的照片嗎？此操作無法復原。",
       "deleteConfirm": "刪除",
       "deleteHint": "長按以刪除這張拍攝",
       "deleteTitle": "刪除這張拍攝？",
-      "detailSubtitle": "{captures} 張拍攝 · {spots} 個地點",
-      "emptyBody": "在動畫場景的真實地點拍下照片,即可建立第一個資料夾。",
-      "emptyFolderBody": "拍下這部動畫地點的對照照片,即可填滿資料夾。",
-      "emptyFolderTitle": "這個資料夾還沒有拍攝",
-      "emptyRegionBody": "試試其他區域 — 或點選「全部」查看所有造訪過的動畫。",
-      "emptyRegionTitle": "此區域尚無資料夾",
-      "emptyTitle": "還沒有巡禮資料夾",
       "epLabel": "第 {ep} 集",
       "folderPhotosCount": "{count} 張照片",
-      "foldersByAnime": "依動畫分類",
-      "folderSpotsCount": "{count} 個地點",
-      "folderSpotsRatio": "{visited}/{total} 個地點",
+      "folderSummary": "{spots} 個場景 · {photos} 張",
+      "emptyJournal": "拍下第一張照片後，足跡會出現在這裡。",
+      "segmentPhotos": "照片",
+      "segmentStamps": "集章冊",
+      "statVisitedScenes": "去過的場景",
+      "statPhotoCount": "張照片",
+      "statStamps": "枚集章",
       "freeCapturesFolder": "自由拍攝",
-      "hoursAgo": "{count} 小時前",
-      "justNow": "剛剛",
       "loadingFolder": "載入資料夾中…",
       "openFolderA11y": "開啟資料夾 {title}",
       "startCapture": "開始拍攝",
-      "startPilgrimageA11y": "開始新的巡禮",
-      "statAverage": "平均",
-      "statAvgMatch": "平均相符度",
-      "statCaptures": "張拍攝",
-      "statPhotos": "照片",
-      "statSpots": "個地點",
-      "statVisited": "已造訪",
       "tagLibrary": "相簿",
       "tagScene": "場景",
-      "tagYours": "你的",
-      "title": "巡禮相簿",
-      "weeksAgo": "{count} 週前"
+      "tagYours": "你的"
     },
     "camera": {
       "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）"
     },
     "capture": {
       "title": "自由拍攝",
+      "flipCamera": "切換相機",
+      "identifyShort": "辨識截圖",
       "permTitle": "需要相機權限",
       "permBody": "允許相機權限即可拍攝巡禮照片。",
       "permCta": "開啟設定",
@@ -1171,7 +1168,6 @@
       "entryA11y": "自由拍攝相機"
     },
     "detail": {
-      "areaLabel": "區域 {index}（{count} 點）",
       "bearing": {
         "n": "北",
         "ne": "東北",
@@ -1184,22 +1180,21 @@
       },
       "browseFallback": "瀏覽",
       "clearSearchA11y": "清除搜尋",
+      "cameraCompare": "拍照比對",
+      "directions": "導航",
       "distanceAway": "距離 {distance}",
-      "directionsA11y": "導航至{title}",
       "emptyFilter": "沒有符合此篩選的場景。",
       "emptyNoData": "這部動畫尚無巡禮資料。",
       "emptySearch": "沒有符合的搜尋結果。",
       "errorTitle": "無法載入巡禮",
       "filter": {
         "all": "全部",
-        "photos": "照片",
-        "planned": "計畫",
-        "saved": "收藏",
-        "unvisited": "未造訪",
-        "visited": "已造訪"
+        "unvisited": "還沒去",
+        "visited": "去過"
       },
       "goBack": "返回",
-      "filterCycleA11y": "篩選：{label}。點一下切換下一個篩選。",
+      "frameShot": "構圖拍攝",
+      "identifyScene": "辨識截圖",
       "nearSpotPrompt": "你在 {name} 附近",
       "openAlbumA11y": "開啟巡禮相簿",
       "openSpotA11y": "開啟{title}",
@@ -1207,33 +1202,24 @@
       "toolsTitle": "地圖工具",
       "markNotVisitedA11y": "標記為未造訪",
       "markVisitedA11y": "標記為已造訪",
+      "moreSpotActions": "更多場景操作",
+      "progressSummary": "{count} 個地點 · 已去 {visited}",
+      "saveScene": "收藏場景",
       "sceneLocation": "場景位置",
-      "scene": "場景",
+      "sceneDetails": "場景詳情",
+      "spotNumber": "{index}",
       "episodeShort": "第 {episode} 集",
       "sceneOfCount": "第 {index}／{count} 個場景",
       "searchA11y": "搜尋巡禮地點或集數",
       "searchPlaceholder": "搜尋地點或集數",
       "shareA11y": "分享",
       "shareMessage": "{title} · {count} 個場景{urlLine}",
-      "stats": {
-        "scenes": "{count} 個場景",
-        "radius": "範圍 {distance}",
-        "visited": "已造訪 {count}",
-        "photos": "{count} 張照片"
-      },
       "title": "聖地巡禮",
+      "unsaveScene": "取消收藏場景",
       "useCachedTilesA11y": "只使用快取地圖圖磚",
       "useDotMarkersA11y": "使用圓點地圖標記",
       "useOnlineTilesA11y": "使用線上地圖圖磚",
-      "usePhotoMarkersA11y": "使用照片地圖標記",
-      "showSceneImageA11y": "顯示動畫場景圖",
-      "showYourPhotoA11y": "顯示你的照片",
-      "toggleVisitedHint": "長按可切換造訪狀態",
-      "viewMode": {
-        "grid": "格狀",
-        "map": "地圖",
-        "rows": "列表"
-      }
+      "usePhotoMarkersA11y": "使用照片地圖標記"
     },
     "image": {
       "sourceLinkA11y": "圖片來源:{origin}。開啟投稿者連結。",
@@ -1284,44 +1270,11 @@
       "title": "街景"
     },
     "map": {
-      "allJapan": "全日本",
-      "clearSearchA11y": "清除搜尋",
-      "filter": {
-        "all": "全部",
-        "collection": "收藏中",
-        "official88": "★ 88"
-      },
-      "layout": {
-        "grid": "格狀",
-        "rows": "列表"
-      },
       "locateIdleA11y": "顯示我的位置",
       "locateFollowingA11y": "停止跟隨我的位置",
       "locateCompassA11y": "停止指南針模式",
-      "locationPromptAllow": "允許位置存取",
-      "locationPromptBody": "允許位置存取後，地圖會直接顯示你附近的動畫場景。",
-      "locationPromptNotNow": "暫時不要",
-      "locationPromptOpenSettings": "開啟設定",
-      "locationPromptTitle": "顯示你附近的場景",
-      "emptyCollection": "你的收藏中還沒有聖地巡禮景點。",
-      "emptyNearby": "附近還沒有動畫。試著拖曳地圖到其他地區看看。",
-      "emptySearch": "沒有符合「{query}」的動畫。",
-      "searchAllAnime": "搜尋全部動畫",
-      "nearbySpotsTitle": "你附近的聖地",
-      "goToCollection": "前往收藏",
-      "mapLoadError": "無法載入地圖。",
       "offlineBody": "你目前離線或連線中斷。請檢查網路後重試 — 已瀏覽過的區域仍可離線使用。",
-      "offlineTitle": "無法載入地圖",
-      "openAlbumA11y": "開啟巡禮相簿",
-      "quickAction": {
-        "navigate": "導航到這裡",
-        "openDetail": "查看聖地"
-      },
-      "searchA11y": "搜尋動畫",
-      "searchPlaceholder": "搜尋動畫或城市",
-      "viewModeAnime": "場景位置",
-      "viewModeMyLocation": "我的位置",
-      "wholeJapanA11y": "查看全日本"
+      "offlineTitle": "無法載入地圖"
     },
     "sceneSwitcher": {
       "clearSearchA11y": "清除搜尋",
@@ -1339,59 +1292,10 @@
       "spots": "景點最多",
       "title": "標題 A–Z"
     },
-    "plan": {
-      "aiComingSoon": "即將推出",
-      "buildOwnA11y": "自訂一日行程",
-      "buildOwnBody": "選擇區域、動畫與路線 — 我們會為你最佳化順序。",
-      "buildOwnTitle": "自訂一日行程",
-      "daysShort": "{count} 天",
-      "daysSuffix": "{count} 天",
-      "emptyBody": "在任一地點點旗標，就會加進你的巡禮清單。",
-      "emptyCta": "去地圖探索",
-      "emptyTitle": "還沒有計畫的地點",
-      "featuredBadge": "精選行程",
-      "featuredDestinationFallback": "精選目的地",
-      "featuredTitleLine": "{title} · {days} 日遊",
-      "featuredTripA11y": "精選行程:{title}",
-      "groupProgress": "已走 {visited}/{total}",
-      "moreOptionsA11y": "更多選項",
-      "multipleAreas": "多個地點",
-      "plannedHeader": "你的巡禮計畫",
-      "preset": {
-        "aiLabel": "AI 規劃",
-        "aiSubtitle": "依你的清單客製",
-        "fullLabel": "全日",
-        "fullSubtitle": "5–7 地 · 8 小時",
-        "quickLabel": "快走",
-        "quickSubtitle": "約 3 地 · 半日",
-        "weekendLabel": "週末",
-        "weekendSubtitle": "2 天 · 多城市"
-      },
-      "quickPresets": "快速範本",
-      "quickPresetsHint": "點選開始規劃",
-      "seeAll": "全部",
-      "spotsShort": "{count} 個地點",
-      "startTrip": "開始巡禮",
-      "startTripA11y": "開始 {title} 的巡禮",
-      "statDestinations": "目的地",
-      "statSaved": "已收藏",
-      "statVisited": "造訪地點",
-      "subtitle": "規劃你的步行路線",
-      "suggestedEmptyBody": "巡禮資料載入後,精選行程會出現在這裡。",
-      "suggestedEmptyTitle": "尚無推薦行程",
-      "suggestedSubtitle": "受精選動畫啟發的一日行程",
-      "suggestedTitle": "推薦行程",
-      "title": "行程規劃",
-      "uncategorizedBody": "在這 {count} 個地點重新點旗標即可歸入行程。",
-      "uncategorizedTitle": "未分類",
-      "untitled": "未命名",
-      "walkHoursLong": "約 {hours} 小時步行",
-      "walkHoursShort": "約 {hours} 小時"
-    },
     "tourism88": {
       "entryA11y": "{title}，動畫聖地巡禮 88 選",
       "moreCities": "+{count} 個城市",
-      "official": "★ 官方"
+      "official": "官方"
     },
     "trip": {
       "nextStop": "下一站",
@@ -1436,8 +1340,6 @@
     },
     "openA11y": "開啟 {name}",
     "deleteAngleA11y": "刪除這個角度",
-    "albumSectionTitle": "我的角色",
-    "albumSectionManage": "管理",
     "composer": {
       "title": "角色合成",
       "ready": "去背就緒",
@@ -1503,10 +1405,8 @@
     "bangumiOptions": "番組表選項",
     "clearAll": "全部清除",
     "defaultFolder": "預設資料夾",
-    "dismissSwipeHint": "關閉滑動提示",
     "displaySeriesWithUnknownAir": "顯示播出日未定的作品",
     "episodeReminders": "集數提醒",
-    "filter": "篩選",
     "filterByYear": "依年份篩選…",
     "folder": "資料夾",
     "generatedWithAniseekr": "由 Aniseekr 產生",
@@ -1514,11 +1414,9 @@
     "manageReminders": "管理提醒",
     "movie": "劇場版",
     "nextYear": "下一年",
-    "noAnimeScheduled": "沒有排播的動畫",
     "noMatches": "沒有符合的結果。",
     "noPendingReminders": "沒有待執行的提醒",
     "noReleases": "沒有播出資訊",
-    "noSignal": "無訊號",
     "paused": "已暫停",
     "pickAYear": "選擇年份",
     "previousYear": "上一年",
@@ -1532,14 +1430,7 @@
     "special": "特別篇",
     "tapTheBellOnAn": "點集數旁的鈴鐺即可排程提醒。",
     "testReminder": "測試提醒",
-    "today": "今天",
     "type": "類型",
-    "viewMode": "檢視模式",
-    "calendar": "行事曆",
-    "list": "列表",
-    "tracking": "追蹤中",
-    "allSeries": "所有作品",
-    "unknownAirDate": "播出日未定",
     "youReAllCaughtUp": "你已全部看完",
     "noMoreAnimeToTriage": "這個檢視沒有更多動畫可整理了。切換季度或篩選條件找更多。",
     "wantToWatch": "想看",
@@ -1618,7 +1509,6 @@
     "watchHoursEst": "觀看時數(估計)",
     "yearInReview": "年度回顧",
     "yearlyBest": "年度最佳",
-    "yourSavedAnimeLibrary": "你收藏的動畫庫",
     "yourWatchingYearRecapped": "回顧你這一年的觀影",
     "editFolder": "編輯資料夾",
     "manageFolder": "管理資料夾",
@@ -1642,7 +1532,20 @@
     "indexingYourCollection": "正在建立收藏索引…",
     "couldnTLoadStats": "無法載入統計",
     "yourRecentPicksWillAppear": "你最近挑選的作品會顯示在這裡。",
-    "noPicksYetTapAdd": "尚未挑選。點下方的「新增動畫」。"
+    "noPicksYetTapAdd": "尚未挑選。點下方的「新增動畫」。",
+    "rateCount": "評分 {count} 部",
+    "unratedCount": "{count} 部未評分",
+    "shareTemplate": {
+      "top10Title": "前 10 名",
+      "top10Desc": "你評分最高的動畫",
+      "yearlyBestTitle": "年度最佳",
+      "yearlyBestDesc": "近四年每年的前 3 名",
+      "starterPackTitle": "入坑包",
+      "starterPackDesc": "推薦給新手的六部動畫",
+      "masterpieceTitle": "代表作",
+      "masterpieceDesc": "一部值得做成海報的作品"
+    },
+    "sharePicks": "已選 {count}/{limit}"
   },
   "commonUi": {
     "achievements": "成就",
@@ -1680,19 +1583,6 @@
     "email": "電子郵件",
     "username": "使用者名稱"
   },
-  "gacha": {
-    "count": "數量",
-    "exchangeRate": "兌換比率",
-    "history": "紀錄",
-    "newest": "最新",
-    "oldest": "最舊",
-    "popularity": "人氣",
-    "ranking": "排行",
-    "rarity": "稀有度",
-    "shards": "碎片",
-    "sortCollection": "收藏排序",
-    "standardSignal": "標準訊號"
-  },
   "misc": {
     "apiKey": "API 金鑰",
     "connect": "連線",
@@ -1718,7 +1608,6 @@
     "allowCameraSoYouCan": "允許相機權限,即可對照動畫場景取景。",
     "altitude": "海拔",
     "animateShutter": "快門動畫",
-    "anime": "動畫",
     "animePilgrimageA11y": "{title} 聖地巡禮",
     "animeTourism88": "動畫旅遊 88 選",
     "apply": "套用",
@@ -1803,7 +1692,6 @@
     "heading": "方位",
     "headingOffset": "方位偏差",
     "helpGpsAlignment": "說明 / GPS 對位",
-    "histogram": "直方圖",
     "hideOverlay": "隱藏疊層",
     "imageUnavailable": "無法載入圖片",
     "includeCaptureCoordinates": "附上拍攝座標",
@@ -1818,7 +1706,6 @@
       "events": "在地活動",
       "nearbyShops": "周邊聖地店家",
       "officialSite": "官網",
-      "planEvents": "行程期間活動",
       "reminderBody": "{date} 開始",
       "reminderOff": "提醒我",
       "reminderOn": "已設提醒",
@@ -1924,9 +1811,7 @@
     "saveImage": "儲存圖片",
     "saveToCameraRoll": "儲存到相機膠卷",
     "sceneGps": "場景 GPS",
-    "sceneSpots": "場景巡禮點",
     "scenes": "場景",
-    "scenesCount": "{count} 個場景",
     "selfTimer": "自拍計時",
     "shareToInstagram": "分享到 Instagram",
     "shareToSocial": "分享到社群",
@@ -1971,37 +1856,110 @@
     "white": "白色",
     "yellow": "黃色",
     "yourShot": "你的照片",
-    "yours": "你的"
+    "yours": "你的",
+    "preview": {
+      "retakeTurnRight": "下次再往右轉一點，對齊參考畫面的方向。",
+      "retakeTurnLeft": "下次再往左轉一點，對齊參考畫面的方向。",
+      "retakeMoveCloser": "下次再靠近一點，距離對構圖吻合度影響很大。",
+      "retakeLevel": "下次把手機再放平一點，避免地面歪斜。",
+      "retakeTiltDown": "下次把手機稍微往下，減少畫面裡多餘的天空。",
+      "frameDark": "這張照片一片漆黑，鏡頭可能被擋住了，請再拍一次。",
+      "frameLowDetail": "這張照片沒有細節，請檢查對焦和鏡頭。",
+      "frameLowContrast": "這張照片太平淡，請調整曝光或換個有紋理的場景。",
+      "frameAnalysisFailed": "無法分析這張照片，暫時沒有構圖吻合度。",
+      "sceneFallback": "場景",
+      "shotsCount": "{count} 張",
+      "modeStacked": "上下",
+      "modeSideBySide": "左右",
+      "modeOverlay": "疊圖",
+      "modeSlider": "滑桿",
+      "modeFull": "單張",
+      "yourShotFull": "你的照片",
+      "saveCountA11y": "將 {count} 張照片存到相簿",
+      "saveA11y": "存到相簿",
+      "save": "儲存",
+      "saveCount": "儲存 {count} 張",
+      "saved": "已儲存",
+      "badgeLibrary": "相簿",
+      "badgeBurst": "連拍",
+      "badgeHdr": "HDR",
+      "focusedShotA11y": "目前檢視的照片",
+      "focusShotA11y": "檢視這張照片",
+      "selectShotA11y": "選取照片",
+      "deselectShotA11y": "取消選取照片",
+      "positionLockPercent": "位置鎖定 {percent}%"
+    },
+    "referencePicker": {
+      "title": "選擇參考圖",
+      "importFromLibrary": "從相簿匯入",
+      "searchPlaceholder": "搜尋作品",
+      "animeSection": "有巡禮場景的作品",
+      "spotCount": "{count} 個場景",
+      "allAnime": "所有作品",
+      "noScenes": "這部作品還沒有場景。",
+      "noAnimeMatch": "找不到符合的作品。",
+      "importFailed": "無法匯入這張圖片，請換一張試試。",
+      "importedLabel": "匯入的參考圖",
+      "open": "參考圖",
+      "openA11y": "選擇要對照的參考圖",
+      "change": "更換參考圖",
+      "pair": "配對參考圖",
+      "tagReference": "參考",
+      "loadingScenes": "載入場景中…",
+      "sceneCountInAnime": "這部作品共 {count} 個場景",
+      "noOtherScenes": "這部作品沒有其他場景。"
+    },
+    "camera": {
+      "openSettings": "開啟設定",
+      "grantAccess": "允許存取",
+      "flashA11y": "閃光燈：{mode}",
+      "captureModeA11y": "拍攝模式：{mode}",
+      "flashMode": {
+        "off": "關閉",
+        "on": "開啟",
+        "auto": "自動",
+        "torch": "手電筒"
+      }
+    },
+    "frameLayout": "構圖"
   },
   "profile": {
     "animeFan": "動畫迷",
-    "backup": "備份",
-    "cards": "卡片",
     "couldNotSave": "無法儲存。",
-    "couldNotUpdateAvatarPleaseMessage": "請再試一次。",
-    "couldNotUpdateAvatarPleaseTitle": "無法更新頭像",
     "displayNamePleaseEnterAMessage": "請輸入名稱。",
     "displayNamePleaseEnterATitle": "顯示名稱",
     "editDisplayName": "編輯顯示名稱",
-    "liked": "喜歡",
-    "otakuDna": "宅力 DNA",
-    "overview": "總覽",
-    "photoAccessNeededAllowPhotoMessage": "允許圖庫存取以選擇頭像。",
-    "photoAccessNeededAllowPhotoTitle": "需要照片權限",
     "platforms": "平台",
-    "premium": "進階版",
-    "quickActions": "快速操作",
     "quickShortcuts": "快速捷徑",
-    "rated": "已評分",
-    "remove": "移除",
     "replaceShortcut": "更換捷徑",
     "saveFailed": "儲存失敗",
-    "storageUnavailableCouldNotAccessMessage": "無法存取本機儲存空間。",
-    "storageUnavailableCouldNotAccessTitle": "儲存空間無法使用",
     "storedOnThisDeviceOnly": "只儲存在這台裝置上,不需帳號。",
-    "sync": "同步",
     "tapAShortcutToPut": "點選捷徑放進這個欄位",
-    "total": "總計"
+    "shortcut": {
+      "characters": "角色",
+      "notifications": "通知",
+      "appearance": "外觀",
+      "language": "語言",
+      "privacy": "隱私",
+      "cache": "快取",
+      "syncHub": "同步中心",
+      "sources": "資料來源",
+      "otakuDna": "宅力 DNA",
+      "accounts": "帳號",
+      "trophies": "成就",
+      "import": "匯入",
+      "credits": "致謝",
+      "terms": "條款",
+      "preview": "主題預覽",
+      "tokens": "設計參數",
+      "empty": "空位",
+      "swapHint": "與其他位置交換",
+      "a11yTapToReplace": "{label}。點一下以更換。",
+      "a11yLongPressToReplace": "{label}。長按以更換。",
+      "a11yEmptySlot": "空的捷徑位置",
+      "a11yEdit": "編輯捷徑",
+      "a11yFinishEdit": "完成編輯捷徑"
+    }
   },
   "rate": {
     "addAnimeToListsDirectly": "直接從滑卡將動畫加入清單",
@@ -2011,8 +1969,6 @@
     "anyEpisodeDuration": "不限單集長度",
     "carousel": "輪播",
     "comedic": "搞笑",
-    "continueWatching": "繼續觀看",
-    "continueWatching2": "繼續觀看",
     "couldnTBuildAPick": "暫時無法產生推薦",
     "cozy": "療癒",
     "createAdd": "建立並加入",
@@ -2033,7 +1989,6 @@
     "howDoYouWantTo": "你想要什麼感覺?",
     "imageFit": "圖片縮放",
     "inspiring": "勵志",
-    "latestSeason": "最新季度",
     "laughOutLoud": "大笑出聲",
     "longForm": "長篇",
     "melancholic": "惆悵",
@@ -2042,18 +1997,15 @@
     "mysterious": "懸疑",
     "newFolderName": "新資料夾名稱",
     "nothingFreshThatMatchesToday": "今天沒有符合的新作品",
-    "nowAiring": "播出中",
     "onTheEdge": "緊張刺激",
     "openDetails": "開啟詳情",
     "originalTitles": "原文標題",
-    "personalizedPicks": "個人化精選",
     "pickSeason": "選擇季度",
     "pickedFromYourTaste": "依你的口味挑選",
     "quietlyMoving": "靜靜感動",
     "rateAFewFirst": "先評幾部吧",
     "rateThisAnime": "評分這部動畫",
     "ratingButtonsLikeMode": "評分按鈕(喜歡模式)",
-    "refresh": "重新整理",
     "restartThisGenre": "重置這個類型",
     "restartThisGenreCardsYouMessage": "你在「{genreName}」滑過的卡片會從頭開始。收藏、最愛與追蹤狀態不受影響。",
     "restartThisGenreCardsYouTitle": "重置這個類型?",
@@ -2073,20 +2025,22 @@
     "summer": "夏",
     "tapForInfo": "點一下查看資訊",
     "tapToChange": "點一下變更。",
-    "tapToExplore": "點一下探索",
     "thrilling": "驚悚",
-    "topOfTheSeason": "本季之最",
     "trackingShortcut": "追蹤捷徑",
     "tryAgain": "再試一次",
     "tryAgainInAMoment": "請稍後再試。",
-    "tunedToYourTaste": "貼合你的口味",
     "twistsTurns": "峰迴路轉",
     "under13Min": "13 分鐘以下",
     "upliftingStories": "振奮人心",
-    "viewCalendar": "查看番組表",
     "winter": "冬",
     "year": "年份",
-    "openDetail": "開啟詳情"
+    "openDetail": "開啟詳情",
+    "seasonRange": {
+      "winter": "1–3 月",
+      "spring": "4–6 月",
+      "summer": "7–9 月",
+      "fall": "10–12 月"
+    }
   },
   "settingsUi": {
     "accent": "強調色",
@@ -2223,7 +2177,9 @@
       "legStraightLine": "直線 {distance}",
       "nodeCollectedA11y": "{stop}，{date} 已蓋章",
       "nodeCollectedNoDateA11y": "{stop}，已蓋章",
-      "nodePendingA11y": "{stop}，尚未蓋章"
+      "nodePendingA11y": "{stop}，尚未蓋章",
+      "stamped": "已蓋章",
+      "stampedOn": "{date} 已蓋章"
     },
     "stampBook": {
       "more": "+{count}",
@@ -2232,6 +2188,32 @@
       "openA11y": "開啟 {name} 的集章冊，{progress}",
       "emptyJoinable": "還沒有集章紀錄・進行中或即將開始的集章活動：{count} 個",
       "browse": "看看集章活動"
+    }
+  },
+  "brand": {
+    "tagline": "番，交給我找。",
+    "sfx": {
+      "hop": "咻！",
+      "nin": "忍！",
+      "whoosh": "唰！"
+    },
+    "appIcon": {
+      "title": "App 圖示",
+      "subtitle": "選一個 Seekr 出現在主畫面的樣子。",
+      "current": "使用中",
+      "names": {
+        "default": "偷看",
+        "nightLines": "夜之集中線",
+        "oneEye": "獨眼",
+        "mangaOrange": "漫畫橘",
+        "mangaNight": "漫畫夜"
+      },
+      "androidTitle": "要換 App 圖示嗎？",
+      "androidBody": "Android 可能會先關掉 Aniseekr 才能套用新圖示，從主畫面再打開就好。",
+      "confirm": "換",
+      "cancel": "取消",
+      "failed": "圖示換不了，再試一次。",
+      "unsupported": "這台裝置不能換 App 圖示。"
     }
   }
 }

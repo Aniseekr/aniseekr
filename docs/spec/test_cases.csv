@@ -202,7 +202,7 @@ PILG-056,Pilgrimage,deterministic,P0,Canonical event detail wiring,Event detail 
 PILG-057,Pilgrimage,deterministic,P0,Stamp-stop progress persistence,Stamp collection persists by namespaced canonical role id without colliding with scene point state,boundary,active
 PILG-058,Pilgrimage,deterministic,P0,Typed locality map markers,Stamp shop and festival roles render as distinct exact pins while Anime Tourism 88 rows remain labelled non-visitable areas,mapping,active
 PILG-059,Pilgrimage,deterministic,P0,Canonical event calendar mapping,Active and upcoming real occurrence windows expand to requested-month day keys while ongoing unannounced and ended events never receive a date,mapping,active
-PILG-060,Pilgrimage,deterministic,P0,Explorer tab return routing,Pilgrimage detail flows return to their first-class Explorer search map or journal tab without falling into the compact hub,navigation,active
+PILG-060,Pilgrimage,deterministic,P0,Journal and search return routing,Pilgrimage detail opened from the Explorer journal tab returns to that tab and detail opened from pilgrimage search returns to the search route without routing to removed Explorer search or map tabs,navigation,active
 NEWS-001,News,deterministic,P0,RSS2 feed parse,RSS 2.0 items parse guid link title pubDate and description with CDATA and HTML entities decoded,mapping,active
 NEWS-002,News,deterministic,P0,Atom feed parse,Atom entries parse id title updated and the alternate link,mapping,active
 NEWS-003,News,deterministic,P0,RDF feed parse,RSS 1.0 RDF items parse title link description and dc date,mapping,active
@@ -223,3 +223,17 @@ PILG-061,Pilgrimage,deterministic,P0,Rally route derivation,Published stamp orde
 PILG-062,Pilgrimage,deterministic,P0,Rally progress,Counts only collected route stops and handles an empty route,mapping,active
 PILG-063,Pilgrimage,deterministic,P0,Discover rally selection,Only active or upcoming stamp rallies retain input order and obey cap,mapping,active
 PILG-064,Pilgrimage,deterministic,P0,Stamp book derivation,Collected rally books preserve labels timestamps and order by completion recency and ended state,mapping,active
+PILG-065,Pilgrimage,deterministic,P0,Capture upsert by uri,Recording a capture whose uri already exists updates it in place and moving it between a spot and the free bucket leaves exactly one record,boundary,active
+PILG-066,Pilgrimage,deterministic,P0,Imported reference free entry,A free capture paired with an imported reference image stays in the free bucket and the album renders it as a comparison without a synthetic spot or anime,mapping,active
+PILG-067,Pilgrimage,deterministic,P0,Blank target coordinates,Empty or non-numeric spot latitude or longitude params resolve to an unknown target instead of the 0 0 null island,boundary,active
+PILG-068,Pilgrimage,deterministic,P0,Reference camera route params,Anime-scene and imported references build compare params from real spot fields only with no invented geo or scene names,mapping,active
+PILG-069,Pilgrimage,deterministic,P0,Preview modes without reference,A shot without a reference image offers only the single-photo preview mode,boundary,active
+PILG-070,Pilgrimage,deterministic,P0,Capture re-save merges,Re-recording a capture against the same reference keeps every field the writer did not supply and an empty note clears the stored note,boundary,active
+PILG-071,Pilgrimage,deterministic,P0,Capture re-pair carry-over,Filing a capture against another scene or imported reference keeps only the photo's own fields and drops distance heading offset frame match composite and old scene metadata,mapping,active
+PILG-072,Pilgrimage,deterministic,P1,Legacy duplicate captures,A stored index that repeats a uri within one list reads back as that uri's newest record only,boundary,active
+PILG-073,Pilgrimage,deterministic,P0,Camera preview params,The compare camera hands the preview the shot's own sensors and the session's referenceKind so imported-reference shots are filed in the free bucket,mapping,active
+PILG-074,Pilgrimage,deterministic,P0,Journal preview params,A Journal shot opens the preview with its stored sensors and source and a leftover camera session never replaces it,mapping,active
+PILG-075,Pilgrimage,deterministic,P0,Preview capture record,The preview files a shot under its scene or the free bucket with lens-gated analysis and no composite without a reference,mapping,active
+PILG-076,Pilgrimage,deterministic,P0,Frame match discriminates scenes,Frame match compares where light and edges sit so unrelated scenes score low and the same framing scores high and scores from the retired whole-frame metric are neither shown nor kept,boundary,active
+PILG-077,Pilgrimage,deterministic,P0,Home nearby fallback,An empty fresh-install spot index uses real anime litePoints for nearest and nearby count and cannot claim radius coverage until the index has rows,fallback,active
+REPO-031,Repository,deterministic,P0,Broadcast season defaults,Seasonal defaults pair calendar year with Jan-Apr-Jul-Oct broadcast cours,mapping,active

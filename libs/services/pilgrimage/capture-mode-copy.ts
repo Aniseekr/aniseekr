@@ -31,7 +31,7 @@ const MODE_COPY: Record<CaptureModeCopyMode, CaptureModeCopy> = {
   auto: {
     label: 'pilgrimageUi.captureModeAutoLabel',
     hint: 'pilgrimageUi.captureModeAutoHint',
-    icon: 'sparkles-outline',
+    icon: 'aperture-outline',
   },
 };
 

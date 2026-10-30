@@ -1,4 +1,4 @@
-// Track B of the composer pipeline plan (docs/superpowers/plans/2026-05-26-composer-pipeline.md):
+// Track B of the composer pipeline plan:
 //   #4 — Photo filter presets (Skia ColorMatrix)
 //   #5 — Auto color match (used by Track C, the math lives here so the helper
 //        stays self-contained)

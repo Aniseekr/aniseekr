@@ -64,10 +64,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     paddingHorizontal: 4,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
   optionsRow: {
     flexDirection: 'row',
@@ -102,10 +98,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 14,
     fontWeight: '500',
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
 });
 

@@ -66,7 +66,7 @@ export default function PersonaExhibit() {
     return (
       <StatsExhibitFrame title={t('collectionStats.persona.title')}>
         <EmptyStateView
-          icon="auto-awesome"
+          icon="psychology"
           title={t('collectionStats.persona.emptyTitle')}
           description={t('collectionStats.persona.emptyBody')}
         />

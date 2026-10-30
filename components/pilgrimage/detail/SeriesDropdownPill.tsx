@@ -8,7 +8,15 @@
 // it in the header).
 
 import React, { memo, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, type View as RNView } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type View as RNView,
+  type ViewInstance,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
@@ -47,7 +55,7 @@ function SeriesDropdownPillImpl({
 }: SeriesDropdownPillProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const pillRef = useRef<RNView>(null);
+  const pillRef = useRef<ViewInstance>(null);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
 

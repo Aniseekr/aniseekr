@@ -1,6 +1,5 @@
 {
   "$comment": "日本語 — 部分翻訳。未翻訳のキーは英語にフォールバックします。",
-
   "common": {
     "continue": "続ける",
     "cancel": "キャンセル",
@@ -33,7 +32,6 @@
     "disabled": "無効",
     "comingSoon": "近日公開"
   },
-
   "language": {
     "screenTitle": "言語",
     "appLanguageTitle": "アプリの言語",
@@ -44,16 +42,39 @@
     "japanese": "日本語",
     "korean": "한국어"
   },
-
   "tabs": {
-    "rate": "ホーム",
-    "collection": "コレクション",
+    "rate": "探す",
+    "collection": "ライブラリ",
     "pilgrimage": "聖地巡礼",
     "explorerCamera": "カメラ",
-    "explorerSearch": "検索",
-    "explorerMap": "マップ",
     "explorerJournal": "記録",
-    "bangumi": "Bangumi",
+    "bangumi": "放送予定",
     "profile": "プロフィール"
+  },
+  "brand": {
+    "tagline": "アニメ探しは、まかせてニン。",
+    "sfx": {
+      "hop": "ピョン！",
+      "nin": "ニン！",
+      "whoosh": "シュッ！"
+    },
+    "appIcon": {
+      "title": "アプリアイコン",
+      "subtitle": "ホーム画面の Seekr を選べます。",
+      "current": "使用中",
+      "names": {
+        "default": "のぞき見",
+        "nightLines": "夜の集中線",
+        "oneEye": "ひとつ目",
+        "mangaOrange": "マンガ・オレンジ",
+        "mangaNight": "マンガ・ナイト"
+      },
+      "androidTitle": "アイコンを変更しますか？",
+      "androidBody": "新しいアイコンを反映するため、Android が Aniseekr を閉じることがあります。ホーム画面からもう一度開いてください。",
+      "confirm": "変更",
+      "cancel": "キャンセル",
+      "failed": "アイコンを変更できませんでした。もう一度お試しください。",
+      "unsupported": "この端末ではアプリアイコンを変更できません。"
+    }
   }
 }

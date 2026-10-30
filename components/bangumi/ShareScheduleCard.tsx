@@ -1,10 +1,11 @@
 import type { Ref } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, type ViewInstance } from 'react-native';
 import { AnimeTitleText } from '../themed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Anime } from '../rate/types';
 import { Colors, FontFamily, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 interface DailyAnime {
   day: string;
@@ -15,7 +16,7 @@ export interface ShareScheduleCardProps {
   seasonLabel: string;
   groupedAnime: DailyAnime[];
   totalCount: number;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 }
 
 const POSTER_WIDTH = 1080;
@@ -79,7 +80,7 @@ export function ShareScheduleCard({
           return (
             <View key={day} style={styles.column}>
               <View style={styles.columnHeader}>
-                <Text style={styles.columnDay}>{dayShort[day] ?? day}</Text>
+                <CapsText style={styles.columnDay}>{dayShort[day] ?? day}</CapsText>
               </View>
               <View style={styles.columnBody}>
                 {items.length === 0 ? (
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
     fontSize: 96,
     lineHeight: 104,
     color: Colors.primary,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     fontWeight: '800',
     letterSpacing: -1,
   },
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
     fontSize: 56,
     lineHeight: 64,
     color: Colors.text.primary,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     fontWeight: '700',
     marginTop: Spacing.sm,
   },
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: Colors.primary,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },

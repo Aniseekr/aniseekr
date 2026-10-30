@@ -21,6 +21,7 @@ import { CollectionFolder } from '../../types';
 import { asIoniconsName } from '../../libs/utils/icon-types';
 import { useT } from '../../libs/i18n';
 import { ThemedBottomSheet, readableTextOn } from '../themed';
+import { CapsText } from '../themed/CapsText';
 
 const ICON_OPTIONS = [
   'folder',
@@ -140,9 +141,9 @@ function FolderPickerComponent({
 
           {showCreate ? (
             <View>
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                 {t('rate.newFolderName')}
-              </Text>
+              </CapsText>
               <TextInput
                 value={newName}
                 onChangeText={setNewName}
@@ -157,9 +158,9 @@ function FolderPickerComponent({
                   },
                 ]}
               />
-              <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+              <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                 {t('commonUi.icon')}
-              </Text>
+              </CapsText>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}

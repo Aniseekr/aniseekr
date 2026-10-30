@@ -68,7 +68,7 @@ export default function AutoCaptureToast({ toast, themeColor }: AutoCaptureToast
       pointerEvents="none"
       style={[styles.toast, animatedStyle]}>
       <View style={[styles.iconBadge, { backgroundColor: themeColor }]}>
-        <Ionicons name="sparkles-outline" size={15} color={readableTextOn(themeColor)} />
+        <Ionicons name="aperture-outline" size={15} color={readableTextOn(themeColor)} />
       </View>
       <ThemedText variant="caption" weight="700" style={styles.label}>
         {t('pilgrimageUi.autoCaptured', { count: toast.sessionCount })}

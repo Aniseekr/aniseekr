@@ -17,7 +17,7 @@ import type { PlatformType } from '../auth/types';
 import { AniListClient } from '../../clients/anilist-client';
 import { dataSourceConfig } from '../data-source-config';
 import { idMappingService } from '../sync/id-mapping-service';
-import { getCurrentSeason, getCurrentYear } from '../../utils/season-utils';
+import { getBroadcastSeason } from '../../utils/season-utils';
 import {
   type AnimeDataSource,
   type AnimeGenre,
@@ -293,8 +293,9 @@ export class AniListDataSource implements AnimeDataSource {
     year?: number,
     options: AnimePageOptions = {}
   ): Promise<UnifiedAnimeItem[]> {
-    const seasonUpper = (season ?? getCurrentSeason()).toUpperCase();
-    const targetYear = year ?? getCurrentYear();
+    const current = getBroadcastSeason();
+    const seasonUpper = (season ?? current.season).toUpperCase();
+    const targetYear = year ?? current.year;
     const vars: Record<string, unknown> = {
       season: seasonUpper,
       year: targetYear,

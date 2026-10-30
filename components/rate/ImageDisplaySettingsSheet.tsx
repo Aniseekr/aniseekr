@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
@@ -8,12 +8,14 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
-import { ON_DARK, ThemedBottomSheet, readableTextOn } from '../themed';
+import { ThemedBottomSheet, readableTextOn } from '../themed';
 import type {
   SwipeContentMode,
   SwipePrefs,
   SwipeRatingButtons,
 } from '../../libs/services/user-prefs';
+import { CapsText } from '../themed/CapsText';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 // Re-export aliases for any legacy importers (kept stable across the swipe-prefs migration).
 export type ImageContentMode = SwipeContentMode;
@@ -68,9 +70,9 @@ function ImageDisplaySettingsSheetComponent({
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('commonUi.dataSource')}
-        </Text>
+        </CapsText>
         <View style={styles.sourceRow}>
           <BrowseSourceChip
             onPress={() => {
@@ -81,9 +83,9 @@ function ImageDisplaySettingsSheetComponent({
           />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('rate.imageFit')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['fill', 'fit'] as SwipeContentMode[]).map((mode) => {
             const active = preferences.contentMode === mode;
@@ -112,9 +114,9 @@ function ImageDisplaySettingsSheetComponent({
           })}
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('rate.ratingButtonsLikeMode')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['three', 'five'] as SwipeRatingButtons[]).map((mode) => {
             const active = preferences.ratingButtons === mode;
@@ -139,7 +141,7 @@ function ImageDisplaySettingsSheetComponent({
         </View>
 
         <ToggleRow
-          icon="auto-awesome"
+          icon="lightbulb-outline"
           label={t('rate.aiInsights')}
           description={t('rate.showAiGeneratedRecommendationsOn')}
           value={preferences.showAIInsights}
@@ -162,9 +164,9 @@ function ImageDisplaySettingsSheetComponent({
 
         {onRestartGenre ? (
           <>
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.deck')}
-            </Text>
+            </CapsText>
             <ActionRow
               icon="refresh"
               label={t('rate.restartThisGenre')}
@@ -250,15 +252,8 @@ function ToggleRow({
           {description}
         </Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? ON_DARK : theme.text.tertiary}
-      />
+      {/* The row callers' update helper already fires the selection haptic. */}
+      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
     </View>
   );
 }

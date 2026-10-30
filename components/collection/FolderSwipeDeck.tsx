@@ -24,6 +24,7 @@ import { useT } from '../../libs/i18n';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { readableTextOn } from '../themed';
+import { CapsText } from '../themed/CapsText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - Spacing.lg * 2, 360);
@@ -308,9 +309,9 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
           <View style={[styles.indicatorBubble, { borderColor: theme.text.primary }]}>
             <MaterialIcons name="bookmark-border" size={28} color={theme.text.primary} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.text.primary }]}>
+          <CapsText style={[styles.indicatorLabel, { color: theme.text.primary }]}>
             {t('collectionUi.havenTWatched')}
-          </Text>
+          </CapsText>
         </Animated.View>
 
         <Animated.View
@@ -319,9 +320,9 @@ function TopCard({ item, theme, onSwipe, onOpenDetail }: TopCardProps) {
           <View style={[styles.indicatorBubble, { borderColor: theme.accent }]}>
             <MaterialIcons name="favorite" size={28} color={theme.accent} />
           </View>
-          <Text style={[styles.indicatorLabel, { color: theme.accent }]}>
+          <CapsText style={[styles.indicatorLabel, { color: theme.accent }]}>
             {t('collectionUi.like')}
-          </Text>
+          </CapsText>
         </Animated.View>
       </Animated.View>
     </GestureDetector>
@@ -365,7 +366,7 @@ const makeStyles = (theme: ThemePalette) =>
     counterText: {
       ...Typography.titleSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     counterTextMuted: {
       color: theme.text.tertiary,
@@ -420,7 +421,7 @@ const makeStyles = (theme: ThemePalette) =>
     cardTitle: {
       ...Typography.headlineSmall,
       color: '#FFFFFF',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     cardMetaRow: {
       flexDirection: 'row',
@@ -534,7 +535,7 @@ const makeStyles = (theme: ThemePalette) =>
     emptyTitle: {
       ...Typography.headlineSmall,
       color: theme.text.primary,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
     },
     emptySubtitle: {
       ...Typography.bodySmall,

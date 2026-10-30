@@ -7,8 +7,9 @@
 //   1 finger   — paint (fails over to pinch when a 2nd finger lands)
 //   2 fingers  — pinch zoom (focal-anchored) + pan
 //   double tap — reset view to fit
-// The live stroke is an SkPath in a SharedValue mutated in worklets via
-// notifyChange; React only hears about the stroke once, on commit.
+// The live stroke grows in an SkPathBuilder SharedValue (SkPath is immutable
+// since Skia 2.10); each update publishes builder.build() to the rendered path.
+// React only hears about the stroke once, on commit.
 
 import { useCallback, useMemo } from 'react';
 import {
@@ -22,9 +23,8 @@ import {
   Path,
   Rect,
   Skia,
-  notifyChange,
 } from '@shopify/react-native-skia';
-import type { SkImage, SkPath } from '@shopify/react-native-skia';
+import type { SkImage, SkPath, SkPathBuilder } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useDerivedValue, useSharedValue } from 'react-native-reanimated';
 import { useTheme } from '../../../context/ThemeContext';
@@ -96,6 +96,7 @@ export function CutoutEditorCanvas({
   const fitScale = useSharedValue(initialFit.scale);
 
   const livePath = useSharedValue<SkPath>(Skia.Path.Make());
+  const liveBuilder = useSharedValue<SkPathBuilder>(Skia.PathBuilder.Make());
   const livePoints = useSharedValue<StrokePoint[]>([]);
   const cursorX = useSharedValue(-1000);
   const cursorY = useSharedValue(-1000);
@@ -123,10 +124,11 @@ export function CutoutEditorCanvas({
           'worklet';
           const ix = (e.x - offX.value) / scale.value;
           const iy = (e.y - offY.value) / scale.value;
-          const p = Skia.Path.Make();
-          p.moveTo(ix, iy);
-          p.lineTo(ix + 0.01, iy);
-          livePath.value = p;
+          const b = Skia.PathBuilder.Make()
+            .moveTo(ix, iy)
+            .lineTo(ix + 0.01, iy);
+          liveBuilder.value = b;
+          livePath.value = b.build();
           livePoints.value = [{ x: ix, y: iy }];
           cursorX.value = e.x;
           cursorY.value = e.y;
@@ -135,8 +137,7 @@ export function CutoutEditorCanvas({
           'worklet';
           const ix = (e.x - offX.value) / scale.value;
           const iy = (e.y - offY.value) / scale.value;
-          livePath.value.lineTo(ix, iy);
-          notifyChange(livePath);
+          livePath.value = liveBuilder.value.lineTo(ix, iy).build();
           livePoints.value.push({ x: ix, y: iy });
           cursorX.value = e.x;
           cursorY.value = e.y;

@@ -1,5 +1,5 @@
 // Standalone companion composer entry (Track D Phase 1 of the composer
-// pipeline plan: docs/superpowers/plans/2026-05-26-composer-pipeline.md).
+// pipeline plan).
 //
 // This route lets the user import / pick a character and place it atop a
 // chosen background image. Capture writes the composed image to the user's
@@ -7,12 +7,13 @@
 // HUD) is a Phase 1B follow-up.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions, type ViewInstance } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
+// The root export throws for these since SDK 56; the legacy entry keeps them.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, ThemedButton, readableTextOn } from '../../components/themed';
@@ -48,7 +49,7 @@ export default function CompanionScreen() {
   const [tintEnabled, setTintEnabled] = useState(true);
   const [shadowEnabled, setShadowEnabled] = useState(true);
   const [tintMatrix, setTintMatrix] = useState<number[] | null>(null);
-  const stageRef = useRef<View>(null);
+  const stageRef = useRef<ViewInstance>(null);
 
   // Phase 2 — derive character tint from the bg whenever either changes.
   // Only for real cut-outs: a non-去背 entry is a full rectangular image, so

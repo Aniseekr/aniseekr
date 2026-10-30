@@ -59,6 +59,11 @@ class TrackingService {
     }
   }
 
+  /** Return the in-memory tracked ids, or null before the first successful load. */
+  getTrackedIdSetSync(): Set<string> | null {
+    return this.trackedIdsCache;
+  }
+
   /**
    * Returns the set of anime ids the user is tracking. Cached in memory; reads
    * after the first call are O(1) until a write invalidates the cache.
@@ -72,10 +77,11 @@ class TrackingService {
       const rows = await db.getAllAsync<{ anime_id: string }>('SELECT anime_id FROM user_anime');
       const set = new Set(rows.map((r) => r.anime_id));
       this.trackedIdsCache = set;
-      this.trackedIdsPromise = null;
       this.notifyTrackedIdsChanged(set);
       return set;
-    })();
+    })().finally(() => {
+      this.trackedIdsPromise = null;
+    });
 
     return this.trackedIdsPromise;
   }

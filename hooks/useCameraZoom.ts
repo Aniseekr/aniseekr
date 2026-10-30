@@ -10,7 +10,7 @@
 // stable without forcing the camera surface through React state on every
 // gesture frame.
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Gesture, type PinchGesture } from 'react-native-gesture-handler';
+import { Gesture, type LegacyPinchGesture } from 'react-native-gesture-handler';
 import {
   Easing,
   runOnJS,
@@ -126,7 +126,7 @@ export interface UseCameraZoomOutput {
   activeStop: FocalStop | null;
   setZoom: (z: number) => void;
   setStop: (s: FocalStop) => void;
-  pinchGesture: PinchGesture;
+  pinchGesture: LegacyPinchGesture;
   /**
    * Live UI-thread zoom in real factor units. Pinch and the ZoomDial write to
    * this directly; pass it straight through to `<CameraStage zoomShared={...}/>`.

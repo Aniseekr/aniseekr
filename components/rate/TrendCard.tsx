@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { memo } from 'react';
-import { Pressable, Text, View, StyleSheet, Platform } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Anime } from './types';
 import { GlassCard } from '../common/GlassCard';
@@ -39,11 +39,7 @@ function TrendCardComponent({ anime, rank, onPress }: Props) {
         className="flex-row items-center p-4">
         {/* Rank Badge */}
         <View style={styles.rankContainer}>
-          <Text
-            style={[
-              styles.rankText,
-              { color: rankColor, fontSize: isTop3 ? 26 : 18, fontWeight: isTop3 ? '800' : '700' },
-            ]}>
+          <Text style={[isTop3 ? styles.rankTextTop : styles.rankText, { color: rankColor }]}>
             #{rank}
           </Text>
           {isTop3 && (
@@ -110,7 +106,14 @@ const styles = StyleSheet.create({
     marginRight: Spacing.xs,
   },
   rankText: {
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Rounded' : 'Roboto',
+    ...Typography.headlineSmall,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  rankTextTop: {
+    ...Typography.headlineLarge,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   infoContainer: {
     flex: 1,
@@ -135,8 +138,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.chip,
   },
   typeText: {
+    ...Typography.badge,
     color: Colors.text.secondary,
-    fontSize: 10,
     fontWeight: '600',
   },
   scoreContainer: {
@@ -145,8 +148,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   scoreText: {
+    ...Typography.caption,
     color: Colors.primary,
-    fontSize: 12,
     fontWeight: '700',
   },
   tagsContainer: {
@@ -155,8 +158,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagText: {
+    ...Typography.captionSmall,
     color: Colors.text.tertiary,
-    fontSize: 11,
   },
 });
 

@@ -54,6 +54,7 @@ import { idMappingService } from '../services/sync/id-mapping-service';
 import { AnnictClient } from '../clients/annict-client';
 import { expandSearchVariants } from '../utils/chinese-converter';
 import { Logger } from '../utils/logger';
+import { getBroadcastSeason } from '../utils/season-utils';
 import { achievementService } from '../services/achievements/achievement-service';
 import { getOverrides as getGenreCoverOverrides } from '../services/rate/genre-cover-override';
 
@@ -898,10 +899,30 @@ export class AnimeRepository {
     return data.map(mapAniListToAnime);
   }
 
-  static async getTrendingAnime(page = 1, perPage = 20): Promise<Anime[]> {
+  static getTrendingAnimeSync(page = 1, perPage = 20): Anime[] | null {
+    const cached = CacheService.getSync<AniListAnime[]>(
+      `trending_anime_${page}_pp${perPage}_r${r18CacheFlag()}`
+    );
+    return cached ? filterAniListAnime(cached).map(mapAniListToAnime) : null;
+  }
+
+  static getSeasonalAnimeSync(season?: string, year?: number): Anime[] | null {
+    const current = getBroadcastSeason();
+    const cached = CacheService.getSync<SeasonalPageCacheEntry>(
+      `seasonal_${season ?? current.season}_${year ?? current.year}_p1_pp50_r${r18CacheFlag()}`
+    );
+    return cached ? filterAniListAnime(cached.media).map(mapAniListDetailToAnime) : null;
+  }
+
+  static getGenresSync(): Genre[] | null {
+    const cached = CacheService.getSync<Genre[]>(`genres_list_v2_r${r18CacheFlag()}`);
+    return cached ? filterGenreCards(cached) : null;
+  }
+
+  static async getTrendingAnime(page = 1, perPage = 20, forceRefresh = false): Promise<Anime[]> {
     const cacheKey = `trending_anime_${page}_pp${perPage}_r${r18CacheFlag()}`;
-    const cached = await CacheService.get<AniListAnime[]>(cacheKey);
-    if (cached) return cached.map(mapAniListToAnime);
+    const cached = forceRefresh ? null : await CacheService.get<AniListAnime[]>(cacheKey);
+    if (cached) return filterAniListAnime(cached).map(mapAniListToAnime);
 
     const data = filterAniListAnime(
       await AniListClient.getTrendingAnime(page, perPage, legacyAniListOptions())
@@ -916,19 +937,9 @@ export class AnimeRepository {
     page = 1,
     options: SeasonalFetchOptions = {}
   ): Promise<Anime[]> {
-    const date = new Date();
-    const currentMonth = date.getMonth();
-    const currentYear = date.getFullYear();
-
-    let targetSeason = season;
-    if (!targetSeason) {
-      if (currentMonth >= 2 && currentMonth <= 4) targetSeason = 'SPRING';
-      else if (currentMonth >= 5 && currentMonth <= 7) targetSeason = 'SUMMER';
-      else if (currentMonth >= 8 && currentMonth <= 10) targetSeason = 'FALL';
-      else targetSeason = 'WINTER';
-    }
-
-    const targetYear = year ?? currentYear;
+    const current = getBroadcastSeason();
+    const targetSeason = season ?? current.season;
+    const targetYear = year ?? current.year;
     const perPage = Math.max(1, Math.min(options.perPage ?? 50, 50));
     const maxItems = Math.max(perPage, options.maxItems ?? perPage);
     const forceRefresh = options.forceRefresh === true;
@@ -1065,10 +1076,10 @@ export class AnimeRepository {
     return data.map(mapAniListToAnime);
   }
 
-  static async getGenres(): Promise<Genre[]> {
+  static async getGenres(forceRefresh = false): Promise<Genre[]> {
     const cacheKey = `genres_list_v2_r${r18CacheFlag()}`;
     const overrides = await getGenreCoverOverrides();
-    const cached = await CacheService.get<Genre[]>(cacheKey);
+    const cached = forceRefresh ? null : await CacheService.get<Genre[]>(cacheKey);
     if (cached) {
       // Treat an all-empty cached payload as a miss and re-fetch. Without this,
       // a single failed cold start (e.g. AniList 429-ing the 20-genre burst
@@ -1110,7 +1121,7 @@ export class AnimeRepository {
     if (genresWithImages.some((g) => g.image !== '')) {
       await CacheService.set(cacheKey, genresWithImages, LEGACY_DETAIL_CACHE_TTL_MS);
     }
-    return genresWithImages;
+    return filterGenreCards(genresWithImages);
   }
 
   /**
@@ -1201,7 +1212,8 @@ function mapAniListToAnime(item: AniListAnime): Anime {
     titleJapanese: item.title.native || undefined,
     image: item.coverImage.extraLarge || item.coverImage.large,
     rank: item.averageScore || 0,
-    score: item.averageScore || 0,
+    score: item.averageScore ?? undefined,
+    episodes: item.episodes ?? undefined,
     type: item.format || 'TV',
     tags: item.genres.slice(0, 3),
     mood: item.description

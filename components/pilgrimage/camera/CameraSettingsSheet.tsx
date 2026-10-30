@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedBottomSheet, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
@@ -17,6 +17,7 @@ import {
 } from '../../../hooks/useCameraSettings';
 import type { AspectRatio } from './types';
 import { CAPTURE_MODE_HELP_TEXT_KEY } from '../../../libs/services/pilgrimage/capture-mode-copy';
+import { ThemedSwitch } from '../../themed/ThemedSwitch';
 
 const CAPTURE_MODES: CaptureMode[] = ['single', 'burst', 'auto'];
 const CAPTURE_MODE_LABEL: Record<CaptureMode, string> = {
@@ -76,7 +77,6 @@ export default function CameraSettingsSheet({
   };
 
   const handleSwitch = <K extends keyof CameraSettings>(key: K, value: boolean) => {
-    hapticsBridge.selection();
     onSettingsChange({ [key]: value } as Partial<CameraSettings>);
   };
 
@@ -285,13 +285,7 @@ function SwitchRow({ label, description, value, onValueChange }: SwitchRowProps)
           </ThemedText>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: theme.background.tertiary, true: theme.accent }}
-        thumbColor={theme.text.primary}
-        accessibilityLabel={label}
-      />
+      <ThemedSwitch value={value} onValueChange={onValueChange} accessibilityLabel={label} />
     </View>
   );
 }

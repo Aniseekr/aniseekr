@@ -1,18 +1,17 @@
 // usePilgrimageHubScreenData — data cluster for the pilgrimage hub list screen
 // (app/(tabs)/pilgrimage/index.tsx). Mirrors usePilgrimageHubData (the map's
 // sibling): owns the snapshot/offline-index seed, the collection + featured
-// /lite backfill, MMKV-seeded visited/spot-intents, the location fix, and the
+// /lite backfill, MMKV-seeded visits, the location fix, and the
 // nearest-spot lookup that follows it, so the route file stays a view
-// orchestrator (CLAUDE.md Rule 9). View controls (sort key) and the 88 rail's
-// index-version subscription stay in the screen.
-import { useCallback, useEffect, useRef, useState } from 'react';
+// orchestrator (CLAUDE.md Rule 9).
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../libs/services/pilgrimage/featured-anime';
 import { collectionPilgrimageService } from '../libs/services/pilgrimage/collection-pilgrimage-service';
 import { locationService, type LatLng } from '../libs/services/pilgrimage/location-service';
 import { loadVisitedSpotsSync, type VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
-import { loadSpotIntentsSync, type SpotIntentMap } from '../libs/services/pilgrimage/spot-intents';
 import {
   getPilgrimageHubSnapshot,
   updatePilgrimageHubSnapshot,
@@ -21,18 +20,18 @@ import {
 } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { buildSeededPilgrimageAnimes } from '../libs/services/pilgrimage/pilgrimage-screen-state';
 import { buildPilgrimageCollectionState } from '../libs/services/pilgrimage/pilgrimage-hub-collection-state';
-import { getSpotsNear } from '../libs/services/pilgrimage/spot-index-service';
+import { getSpotIndexCount, getSpotsNear } from '../libs/services/pilgrimage/spot-index-service';
 import type { NearbySpotHit } from '../libs/services/pilgrimage/spot-index';
+import { resolveHomeNearbySpots } from '../libs/services/pilgrimage/home-nearby-spots';
 import type { AnitabiBangumi } from '../libs/services/pilgrimage/types';
 import { useT } from '../libs/i18n';
+import { getUnique88AnimeByPopularity } from '../libs/services/pilgrimage/anime88-repository';
 
 export interface UsePilgrimageHubScreenData {
   collectionAnimes: AnitabiBangumi[];
   featuredAnimes: AnitabiBangumi[];
-  loading: boolean; // collectionLoading || featuredLoading
   error: string | null;
   visited: VisitedMap; // MMKV-seeded, read-only this screen
-  spotIntents: SpotIntentMap; // MMKV-seeded, read-only this screen
   userLocation: LatLng | null;
   // Nearest single point-level spot for the hero card, resolved off
   // userLocation once a fix lands. Not in the original brief's interface —
@@ -40,6 +39,16 @@ export interface UsePilgrimageHubScreenData {
   // extension of the location-fix data flow this hook already owns, so it
   // moves in with the rest of the data cluster rather than staying screen-side.
   nearestSpot: NearbySpotHit | null;
+  nearbyCount: number;
+  nearbyPending: boolean;
+  nearbyError: boolean;
+  nearbyCoverage: 'known' | 'unknown';
+  locationStatus: 'pending' | 'granted' | 'denied' | 'unavailable';
+  locationCanAskAgain: boolean;
+  requestLocation: () => Promise<void>;
+  collectionWithSpots: AnitabiBangumi[];
+  popularList: AnitabiBangumi[];
+  tourism88Entries: ReturnType<typeof getUnique88AnimeByPopularity>;
 }
 
 function hasSnapshotSlice<K extends keyof PilgrimageHubSnapshot>(
@@ -62,6 +71,8 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
   const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot(HUB_SNAPSHOT_PERSIST_TTL_MS));
   const hasInitialCollection = hasSnapshotSlice(initialSnapshot, 'collectionAnimes');
   const hasInitialFeatured = hasSnapshotSlice(initialSnapshot, 'featuredAnimes');
+  const [collectionResolved, setCollectionResolved] = useState(hasInitialCollection);
+  const [featuredResolved, setFeaturedResolved] = useState(hasInitialFeatured);
 
   const [collectionAnimes, setCollectionAnimes] = useState<AnitabiBangumi[]>(
     () => initialSnapshot?.collectionAnimes ?? []
@@ -75,26 +86,21 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
     if (cached && cached.length > 0) return cached;
     return buildSeededFeatured();
   });
-  const [collectionLoading, setCollectionLoading] = useState(!hasInitialCollection);
-  // `featuredLoading` now means "still filling in litePoints", not "no cards
-  // at all" — the seed gives us cards from the start. The skeleton below
-  // gates on `animeCards.length === 0`, so it only shows when we genuinely
-  // have nothing to render.
-  const [featuredLoading, setFeaturedLoading] = useState(!hasInitialFeatured);
-  // Visited / spot-intents are seeded synchronously from live MMKV — never
+  // Visits are seeded synchronously from live MMKV — never
   // from the snapshot slice, which can be up to 24h stale (persist TTL) and
-  // would freeze the hub's visited/planned markers behind a check-in the
+  // would freeze the hub's progress behind a check-in the
   // user made on another screen after the snapshot was last written. Per-spot
   // toggles flow through their own atomic writers; this hook only re-reads
   // on focus below (mirrors plan.tsx's skip-first-focus re-seed).
   const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
-  const [spotIntents, setSpotIntents] = useState<SpotIntentMap>(loadSpotIntentsSync);
   const [userLocation, setUserLocation] = useState<LatLng | null>(
     () => initialSnapshot?.userLocation ?? null
   );
   const [error, setError] = useState<string | null>(null);
-
-  const loading = collectionLoading || featuredLoading;
+  const [locationStatus, setLocationStatus] = useState<
+    'pending' | 'granted' | 'denied' | 'unavailable'
+  >(() => (initialSnapshot?.userLocation ? 'granted' : 'pending'));
+  const [locationCanAskAgain, setLocationCanAskAgain] = useState(true);
 
   const refreshCollectionAnimes = useCallback(
     async ({
@@ -134,7 +140,7 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
       )
       .catch(() => undefined)
       .finally(() => {
-        if (!cancelled) setCollectionLoading(false);
+        if (!cancelled) setCollectionResolved(true);
       });
     return () => {
       cancelled = true;
@@ -148,13 +154,11 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
         focusRefreshSeenRef.current = true;
         return;
       }
-      // Screens pushed on top (spot detail check-in, save/plan toggles, the
-      // trip map) can change visited/spot-intents in MMKV while the hub stays
+      // Screens pushed on top can change visits in MMKV while the hub stays
       // mounted underneath — re-seed on every focus after the first so
       // returning here shows current state instead of the value frozen at
       // mount (mirrors plan.tsx).
       setVisited(loadVisitedSpotsSync());
-      setSpotIntents(loadSpotIntentsSync());
       let active = true;
       refreshCollectionAnimes({
         isActive: () => active,
@@ -167,7 +171,6 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
 
   useEffect(() => {
     let cancelled = false;
-    setFeaturedLoading(!hasInitialFeatured);
 
     // Stream the per-anime `/lite` responses in instead of waiting for all
     // ~30 to settle. The seeded list is rendered first; each successful HTTP
@@ -233,7 +236,7 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
             } else {
               setError(null);
             }
-            setFeaturedLoading(false);
+            setFeaturedResolved(true);
           }
         });
     }
@@ -250,7 +253,7 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasInitialFeatured]);
 
-  // Visited / spot-intents are seeded synchronously above from MMKV; no
+  // Visits are seeded synchronously above from MMKV; no
   // async reconcile needed. The snapshot is also primed from those seeds.
   useEffect(() => {
     updatePilgrimageHubSnapshot({ visited });
@@ -259,54 +262,131 @@ export function usePilgrimageHubScreenData(): UsePilgrimageHubScreenData {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    locationService
-      .getCurrentLocation()
-      .then((loc) => {
-        if (!cancelled) {
-          setUserLocation(loc ?? null);
-          updatePilgrimageHubSnapshot({ userLocation: loc ?? null });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) updatePilgrimageHubSnapshot({ userLocation: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Nearest single point-level spot for the hero card (spec 2.4). Loaded lazily
-  // off the SQLite spots index when a location fix lands; null when we have no
-  // location or the index has nothing within 50km (honest empty state).
-  const [nearestSpot, setNearestSpot] = useState<NearbySpotHit | null>(null);
-  useEffect(() => {
-    if (!userLocation) {
-      setNearestSpot(null);
+  const refreshLocation = useCallback(async () => {
+    const permission = await locationService.getPermission();
+    setLocationCanAskAgain(permission.canAskAgain);
+    if (permission.status !== 'granted') {
+      setLocationStatus(permission.status);
+      setUserLocation(null);
       return;
     }
+    setLocationStatus(initialSnapshot?.userLocation ? 'granted' : 'pending');
+    const loc = await locationService.getCurrentLocation();
+    if (!loc) {
+      setLocationStatus('unavailable');
+      setUserLocation(null);
+      return;
+    }
+    setUserLocation(loc);
+    setLocationStatus('granted');
+    updatePilgrimageHubSnapshot({ userLocation: loc });
+  }, [initialSnapshot]);
+
+  useEffect(() => {
+    refreshLocation().catch(() => setLocationStatus('unavailable'));
+  }, [refreshLocation]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshLocation().catch(() => setLocationStatus('unavailable'));
+      }
+    });
+    return () => subscription.remove();
+  }, [refreshLocation]);
+
+  const requestLocation = useCallback(async () => {
+    if (await locationService.requestPermission()) await refreshLocation();
+    else {
+      const permission = await locationService.getPermission();
+      setLocationCanAskAgain(permission.canAskAgain);
+      setLocationStatus(permission.status);
+    }
+  }, [refreshLocation]);
+
+  // SQLite's spot index starts empty on a fresh install. The visible nearest
+  // spot also considers real litePoints from collection/featured data; an
+  // unpopulated index cannot support a "nothing within 50 km" claim.
+  const locationKey = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : null;
+  const [indexedNearby, setIndexedNearby] = useState<{
+    key: string;
+    count: number | null;
+    nearest: NearbySpotHit | null;
+    within3Km: NearbySpotHit[];
+    error: boolean;
+  } | null>(null);
+  const currentIndex = indexedNearby?.key === locationKey ? indexedNearby : null;
+  const nearbyPending = Boolean(userLocation && !currentIndex);
+  const nearbyError = currentIndex?.error ?? false;
+  const nearby = useMemo(
+    () =>
+      userLocation
+        ? resolveHomeNearbySpots({
+            userLocation,
+            animes: [...collectionAnimes, ...featuredAnimes],
+            indexNearest: currentIndex?.nearest ?? null,
+            indexWithin3Km: currentIndex?.within3Km ?? [],
+            indexCount: currentIndex?.count ?? null,
+          })
+        : { nearestSpot: null, nearbyCount: 0, coverage: 'unknown' as const },
+    [userLocation, collectionAnimes, featuredAnimes, currentIndex]
+  );
+  useEffect(() => {
+    if (!userLocation || !locationKey) return;
     let active = true;
-    getSpotsNear(userLocation, 50, 1)
-      .then((hits) => {
-        if (active) setNearestSpot(hits[0] ?? null);
+    getSpotIndexCount()
+      .then(async (count) => {
+        if (count === 0) return { count, nearest: null, within3Km: [] };
+        const [hits, within3Km] = await Promise.all([
+          getSpotsNear(userLocation, 50, 1),
+          getSpotsNear(userLocation, 3, 0),
+        ]);
+        return { count, nearest: hits[0] ?? null, within3Km };
+      })
+      .then((result) => {
+        if (active) setIndexedNearby({ key: locationKey, ...result, error: false });
       })
       .catch(() => {
-        if (active) setNearestSpot(null);
+        if (active)
+          setIndexedNearby({
+            key: locationKey,
+            count: null,
+            nearest: null,
+            within3Km: [],
+            error: true,
+          });
       });
     return () => {
       active = false;
     };
-  }, [userLocation]);
+  }, [userLocation, locationKey]);
+
+  const collectionWithSpots = useMemo(
+    () => collectionAnimes.filter((anime) => anime.pointsLength > 0),
+    [collectionAnimes]
+  );
+  const popularList = useMemo(() => {
+    const collectionIds = new Set(collectionAnimes.map((anime) => anime.id));
+    return featuredAnimes.filter((anime) => anime.pointsLength > 0 && !collectionIds.has(anime.id));
+  }, [collectionAnimes, featuredAnimes]);
+  const tourism88Entries = useMemo(() => getUnique88AnimeByPopularity(), []);
 
   return {
     collectionAnimes,
     featuredAnimes,
-    loading,
     error,
     visited,
-    spotIntents,
     userLocation,
-    nearestSpot,
+    nearestSpot: nearby.nearestSpot,
+    nearbyCount: nearby.nearbyCount,
+    nearbyPending,
+    nearbyError,
+    nearbyCoverage: collectionResolved && featuredResolved ? nearby.coverage : 'unknown',
+    locationStatus,
+    locationCanAskAgain,
+    requestLocation,
+    collectionWithSpots,
+    popularList,
+    tourism88Entries,
   };
 }

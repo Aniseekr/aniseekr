@@ -15,6 +15,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { CapsText } from '../themed/CapsText';
 
 interface SettingsScreenLayoutProps {
   title: string;
@@ -109,7 +110,7 @@ export function SettingsSection({ title, children, style }: SectionProps) {
   return (
     <View style={[styles.section, style]}>
       {title ? (
-        <Text style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</Text>
+        <CapsText style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</CapsText>
       ) : null}
       <View
         style={[

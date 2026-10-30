@@ -11,7 +11,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   TextInput,
   View,
 } from 'react-native';
@@ -32,6 +31,7 @@ import {
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
 import { FILTER_PRESETS, type FilterPresetId } from '../../libs/services/pilgrimage/share-filters';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 // Watermark ink swatches. `null` means "auto" — derive from canvas contrast.
 // `label` holds a TranslationKey resolved via t() at render (ids/hex unchanged).
@@ -665,16 +665,7 @@ function SmartToggle({
           {subtitle}
         </ThemedText>
       </View>
-      <Switch
-        value={value}
-        disabled={disabled}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.tertiary, true: accent }}
-        thumbColor={theme.text.primary}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} disabled={disabled} accent={accent} />
     </View>
   );
 }

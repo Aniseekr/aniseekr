@@ -101,7 +101,7 @@ export function PilgrimageDetailToolsMenu({
           },
           pressed && { opacity: 0.78 },
         ]}>
-        <Ionicons name="layers-outline" size={19} color={themeColor} />
+        <Ionicons name="ellipsis-horizontal" size={19} color={themeColor} />
       </Pressable>
 
       <Modal

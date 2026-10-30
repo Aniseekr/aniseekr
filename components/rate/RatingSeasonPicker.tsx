@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react';
 import { memo, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing, Typography } from '../../constants/DesignSystem';
@@ -8,14 +10,20 @@ import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { sheetEnter } from '../../libs/animations/presets';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 export type Season = 'winter' | 'spring' | 'summer' | 'fall';
 
-const SEASONS: { key: Season; labelKey: TranslationKey; emoji: string; range: string }[] = [
-  { key: 'winter', labelKey: 'rate.winter', emoji: '❄️', range: 'Jan – Mar' },
-  { key: 'spring', labelKey: 'rate.spring', emoji: '🌸', range: 'Apr – Jun' },
-  { key: 'summer', labelKey: 'rate.summer', emoji: '☀️', range: 'Jul – Sep' },
-  { key: 'fall', labelKey: 'rate.fall', emoji: '🍂', range: 'Oct – Dec' },
+const SEASONS: {
+  key: Season;
+  labelKey: TranslationKey;
+  rangeKey: TranslationKey;
+  icon: ComponentProps<typeof Ionicons>['name'];
+}[] = [
+  { key: 'winter', labelKey: 'rate.winter', rangeKey: 'rate.seasonRange.winter', icon: 'snow' },
+  { key: 'spring', labelKey: 'rate.spring', rangeKey: 'rate.seasonRange.spring', icon: 'flower' },
+  { key: 'summer', labelKey: 'rate.summer', rangeKey: 'rate.seasonRange.summer', icon: 'sunny' },
+  { key: 'fall', labelKey: 'rate.fall', rangeKey: 'rate.seasonRange.fall', icon: 'leaf' },
 ];
 
 interface RatingSeasonPickerProps {
@@ -93,9 +101,9 @@ function RatingSeasonPickerComponent({
               </Pressable>
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.season')}
-            </Text>
+            </CapsText>
             <View style={styles.seasonRow}>
               {SEASONS.map((s) => {
                 const active = s.key === selectedSeason;
@@ -114,7 +122,12 @@ function RatingSeasonPickerComponent({
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}>
-                    <Text style={styles.seasonEmoji}>{s.emoji}</Text>
+                    <Ionicons
+                      name={s.icon}
+                      size={22}
+                      color={active ? theme.accent : theme.text.secondary}
+                      style={styles.seasonIcon}
+                    />
                     <Text
                       style={[
                         styles.seasonLabel,
@@ -125,16 +138,16 @@ function RatingSeasonPickerComponent({
                       {t(s.labelKey)}
                     </Text>
                     <Text style={[styles.seasonRange, { color: theme.text.tertiary }]}>
-                      {s.range}
+                      {t(s.rangeKey)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.year')}
-            </Text>
+            </CapsText>
             {view === 'grid' ? (
               <ScrollView style={{ maxHeight: 240 }}>
                 <View style={styles.yearGrid}>
@@ -269,9 +282,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
-  seasonEmoji: {
-    fontSize: 22,
-    marginBottom: 4,
+  seasonIcon: {
+    marginBottom: Spacing.xxs,
   },
   seasonLabel: {
     ...Typography.titleSmall,

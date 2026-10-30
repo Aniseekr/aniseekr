@@ -520,6 +520,7 @@ machine translation as native text.
 - PILG-057: stamp progress persists by namespaced canonical stamp-stop role id without colliding with scene visit state
 - PILG-058: canonical stamp, shop, and festival roles project as distinct exact pins while all 124 Anime Tourism 88 rows remain labelled non-visitable areas
 - PILG-059: canonical calendar mapping expands only real active/upcoming occurrence windows into requested-month day keys and clips cross-month ranges
+- PILG-077: the home picks the closer real spot from the SQLite index and collection/featured litePoints; an empty fresh-install index cannot justify a "none within 50 km" claim
 
 ## 15. Future Extensions (out of MVP scope)
 

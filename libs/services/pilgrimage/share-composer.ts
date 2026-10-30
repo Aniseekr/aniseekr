@@ -1,5 +1,4 @@
-// Composer state for the share card (Track A of the composer pipeline plan:
-// docs/superpowers/plans/2026-05-26-composer-pipeline.md).
+// Composer state for the share card (Track A of the composer pipeline plan).
 //
 // These are pure helpers — no React, no react-native. They are the
 // "below-the-render" layer shared by the pilgrimage compare flow and the

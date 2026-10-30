@@ -76,6 +76,7 @@ export function MapLibreEngine({
   styleUrl,
   controlsBottomOffset = 0,
   onMarkerPress,
+  onMapPress,
   onMarkerLongPress,
   onClusterPress,
   onPanned,
@@ -88,6 +89,16 @@ export function MapLibreEngine({
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivationRef = useRef<{ key: string; at: number } | null>(null);
+
+  const activateOnce = (key: string, action: () => void) => {
+    // Native Marker.onPress and its React child can report the same tap.
+    const now = Date.now();
+    const previous = lastActivationRef.current;
+    if (previous?.key === key && now - previous.at < 250) return;
+    lastActivationRef.current = { key, at: now };
+    action();
+  };
 
   // Coarse, settle-time viewport (zoom + bbox): drives clustering + bounds emit.
   const [viewport, setViewport] = useState<ClusterViewport>({ zoom, bbox: null });
@@ -197,6 +208,7 @@ export function MapLibreEngine({
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         mapStyle={styleURL}
+        onPress={onMapPress}
         attributionPosition={{ bottom: 8 + controlsBottomOffset, right: 8 }}
         logoPosition={{ bottom: 8 + controlsBottomOffset, left: 8 }}
         onRegionWillChange={(e) => {
@@ -236,12 +248,24 @@ export function MapLibreEngine({
         {items.map((it) => {
           if (it.type === 'cluster') {
             return (
-              <Marker key={`c:${it.clusterId}`} lngLat={[it.lng, it.lat]} anchor="center">
+              <Marker
+                key={`c:${it.clusterId}`}
+                lngLat={[it.lng, it.lat]}
+                anchor="center"
+                onPress={() =>
+                  activateOnce(`c:${it.clusterId}`, () =>
+                    handleClusterPress(it.clusterId, it.count)
+                  )
+                }>
                 <ClusterBubble
                   count={it.count}
                   color={it.color}
                   zoom={viewport.zoom}
-                  onPress={() => handleClusterPress(it.clusterId, it.count)}
+                  onPress={() =>
+                    activateOnce(`c:${it.clusterId}`, () =>
+                      handleClusterPress(it.clusterId, it.count)
+                    )
+                  }
                 />
               </Marker>
             );
@@ -252,12 +276,13 @@ export function MapLibreEngine({
             <Marker
               key={`m:${it.id}`}
               lngLat={[it.lng, it.lat]}
-              anchor={resolveMarkerVisual(m, markerMode).anchor}>
+              anchor={resolveMarkerVisual(m, markerMode).anchor}
+              onPress={() => activateOnce(m.id, () => onMarkerPress?.(m))}>
               <NativeMapMarker
                 marker={m}
                 defaultMode={markerMode}
                 chrome={markerChrome}
-                onPress={onMarkerPress}
+                onPress={() => activateOnce(m.id, () => onMarkerPress?.(m))}
                 onLongPress={onMarkerLongPress}
               />
             </Marker>

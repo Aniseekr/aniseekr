@@ -5,43 +5,59 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ScrollViewInstance,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Radius, Spacing, Typography } from '../constants/DesignSystem';
+import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { Colors, Radius, Size, Spacing, Typography } from '../constants/DesignSystem';
 import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { useTheme } from '../context/ThemeContext';
-import { ThemedButton } from '../components/themed';
+import { ThemedButton, ThemedSurface, ThemedText } from '../components/themed';
 import {
   BROWSE_SUPPORTED_PLATFORMS,
   DEFAULT_BROWSE_SOURCE,
   dataSourceConfig,
 } from '../libs/services/data-source-config';
 import { PLATFORM_CONFIGS, type PlatformType } from '../libs/services/auth/types';
-import { loadUserPrefsSync, patchUserPrefs } from '../libs/services/user-prefs';
+import {
+  loadUserPrefsSync,
+  patchExperiencePrefs,
+  patchUserPrefs,
+} from '../libs/services/user-prefs';
 import { markOnboardingComplete } from '../libs/services/onboarding-service';
 import { useT } from '../libs/i18n';
-import { resolveExperienceLandingHref } from '../libs/navigation/experience-tabs';
+import {
+  resolveExperienceLandingHref,
+  type ExperienceMode,
+} from '../libs/navigation/experience-tabs';
+import { ThemedSwitch } from '../components/themed/ThemedSwitch';
+import { AniseekrLogo } from '../components/brand/AniseekrLogo';
+import { FocusLines, ScreentoneDisc } from '../components/brand/MangaFx';
+import { SeekrPose } from '../components/brand/SeekrPose';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const STEP_GRADIENTS: [string, string, ...string[]][] = [
-  ['#1A0B2E', '#3D1A6B', '#1A0B2E'],
+const STEP_GRADIENTS: ([string, string, ...string[]] | 'theme')[] = [
+  'theme',
   ['#2C1810', '#7A3B1F', '#2C1810'],
   ['#04101A', '#0A1F30', '#04101A'],
   ['#0B1F1A', '#13452F', '#0B1F1A'],
+  'theme',
   ['#180A06', '#FF9F0A22', '#180A06'],
 ];
 
-const STEPS = ['welcome', 'browseSource', 'notifications', 'adultContent', 'done'] as const;
+const HERO_POSE = 220;
+const HERO_TONE = 260;
+
+const STEPS = ['welcome', 'browseSource', 'notifications', 'adultContent', 'mode', 'done'] as const;
 
 const BROWSE_OPTIONS: PlatformType[] = ['anilist', 'myanimelist', 'bangumi', 'kitsu'];
 
@@ -49,13 +65,14 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const [stepIndex, setStepIndex] = useState(0);
   const [browseSource, setBrowseSource] = useState<PlatformType>(DEFAULT_BROWSE_SOURCE);
   const [notifGranted, setNotifGranted] = useState<boolean | null>(null);
   const [notifBusy, setNotifBusy] = useState(false);
   const [allowAdult, setAllowAdult] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<ExperienceMode | null>(null);
   const [completing, setCompleting] = useState(false);
 
   const goToStep = useCallback((idx: number) => {
@@ -99,14 +116,19 @@ export default function OnboardingScreen() {
   }, [goToStep, stepIndex]);
 
   const handleToggleAdult = useCallback((value: boolean) => {
-    hapticsBridge.selection();
     setAllowAdult(value);
+  }, []);
+
+  const handleSelectMode = useCallback((mode: ExperienceMode) => {
+    hapticsBridge.selection();
+    setSelectedMode(mode);
   }, []);
 
   const handleFinish = useCallback(async () => {
     if (completing) return;
     setCompleting(true);
     try {
+      if (selectedMode) await patchExperiencePrefs({ mode: selectedMode });
       await dataSourceConfig.init();
       await dataSourceConfig.setBrowseSource(browseSource);
       await patchUserPrefs({ allowAdultContent: allowAdult });
@@ -117,10 +139,11 @@ export default function OnboardingScreen() {
     } finally {
       router.replace(resolveExperienceLandingHref(loadUserPrefsSync().experience));
     }
-  }, [allowAdult, browseSource, completing, router]);
+  }, [allowAdult, browseSource, completing, router, selectedMode]);
 
   const skipToLast = useCallback(() => {
     hapticsBridge.tap();
+    setSelectedMode(null);
     goToStep(STEPS.length - 1);
   }, [goToStep]);
 
@@ -128,13 +151,25 @@ export default function OnboardingScreen() {
     void dataSourceConfig.init();
   }, []);
 
-  const currentGradient = STEP_GRADIENTS[stepIndex] ?? STEP_GRADIENTS[0];
+  const stepGradient = STEP_GRADIENTS[stepIndex] ?? STEP_GRADIENTS[0];
+  const currentGradient = stepGradient === 'theme' ? theme.gradient : stepGradient;
 
   return (
     <View style={styles.root}>
       <Animated.View style={StyleSheet.absoluteFill}>
         <LinearGradient colors={currentGradient} style={StyleSheet.absoluteFill} />
       </Animated.View>
+
+      {stepIndex === 0 || stepIndex === STEPS.length - 1 ? (
+        <Reanimated.View
+          key={stepIndex}
+          entering={FadeIn.duration(260)}
+          exiting={FadeOut.duration(180)}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}>
+          <FocusLines color={theme.accent} opacity={0.3} inner={20} />
+        </Reanimated.View>
+      ) : null}
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
@@ -155,6 +190,7 @@ export default function OnboardingScreen() {
           ref={scrollRef}
           horizontal
           pagingEnabled
+          scrollEnabled={false}
           showsHorizontalScrollIndicator={false}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
             useNativeDriver: true,
@@ -163,11 +199,11 @@ export default function OnboardingScreen() {
           scrollEventThrottle={16}
           bounces={false}
           style={styles.pager}>
-          <WelcomeStep onContinue={() => goToStep(1)} t={t} />
+          <WelcomeStep onContinue={() => goToStep(STEPS.indexOf('browseSource'))} t={t} />
           <BrowseSourceStep
             selected={browseSource}
             onSelect={handleSelectBrowseSource}
-            onContinue={() => goToStep(2)}
+            onContinue={() => goToStep(STEPS.indexOf('notifications'))}
             t={t}
           />
           <NotificationsStep
@@ -180,8 +216,14 @@ export default function OnboardingScreen() {
           <AdultContentStep
             value={allowAdult}
             onToggle={handleToggleAdult}
-            onContinue={() => goToStep(4)}
+            onContinue={() => goToStep(STEPS.indexOf('mode'))}
             accent={theme.accent}
+            t={t}
+          />
+          <ModeStep
+            selected={selectedMode}
+            onSelect={handleSelectMode}
+            onContinue={() => goToStep(STEPS.indexOf('done'))}
             t={t}
           />
           <DoneStep onFinish={handleFinish} busy={completing} t={t} />
@@ -196,14 +238,22 @@ export default function OnboardingScreen() {
 type T = ReturnType<typeof useT>;
 
 function WelcomeStep({ onContinue, t }: { onContinue: () => void; t: T }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.page}>
-      <View style={styles.iconHalo}>
-        <MaterialIcons name="remove-red-eye" size={96} color="#FFFFFF" />
+      <View style={styles.hero}>
+        <ScreentoneDisc size={HERO_TONE} color={theme.accent} style={styles.heroTone} />
+        <SeekrPose pose="leap" height={HERO_POSE} />
       </View>
-      <Text style={styles.wordmark}>Aniseekr</Text>
-      <Text style={styles.tagline}>{t('onboarding.welcome.tagline')}</Text>
-      <Text style={styles.subtitle}>{t('onboarding.welcome.subtitle')}</Text>
+      <AniseekrLogo height={36} />
+      <ThemedText variant="headlineMedium" align="center" weight="800">
+        {t('brand.tagline')}
+      </ThemedText>
+      <ThemedText variant="bodyLarge" tone="secondary" align="center">
+        {t('onboarding.welcome.tagline')}
+        {'\n'}
+        {t('onboarding.welcome.subtitle')}
+      </ThemedText>
       <ThemedButton label={t('onboarding.welcome.cta')} onPress={onContinue} size="lg" fullWidth />
     </View>
   );
@@ -340,22 +390,101 @@ function AdultContentStep({
           <Text style={styles.toggleTitle}>{t('onboarding.adult.toggleTitle')}</Text>
           <Text style={styles.toggleSubtitle}>{t('onboarding.adult.toggleSubtitle')}</Text>
         </View>
-        <Switch
-          value={value}
-          onValueChange={onToggle}
-          trackColor={{ true: accent, false: 'rgba(255,255,255,0.2)' }}
-          thumbColor="#FFFFFF"
-        />
+        <ThemedSwitch value={value} onValueChange={onToggle} accent={accent} />
       </View>
       <ThemedButton label={t('onboarding.adult.cta')} onPress={onContinue} size="lg" fullWidth />
     </View>
   );
 }
 
+function ModeStep({
+  selected,
+  onSelect,
+  onContinue,
+  t,
+}: {
+  selected: ExperienceMode | null;
+  onSelect: (mode: ExperienceMode) => void;
+  onContinue: () => void;
+  t: T;
+}) {
+  const { theme } = useTheme();
+  const options: {
+    mode: ExperienceMode;
+    title: string;
+    description: string;
+  }[] = [
+    {
+      mode: 'explorer',
+      title: t('tabs.profileScreen.experienceMode.explorer'),
+      description: t('tabs.profileScreen.experienceMode.explorerDescription'),
+    },
+    {
+      mode: 'collector',
+      title: t('tabs.profileScreen.experienceMode.collector'),
+      description: t('tabs.profileScreen.experienceMode.collectorDescription'),
+    },
+    {
+      mode: 'seeker',
+      title: t('onboarding.mode.mixMyOwn'),
+      description: t('tabs.profileScreen.experienceMode.seekerDescription'),
+    },
+  ];
+
+  return (
+    <View style={[styles.page, styles.modePage]}>
+      <MaterialIcons name="dashboard-customize" size={64} color={theme.accent} />
+      <ThemedText variant="headlineLarge" align="center">
+        {t('onboarding.mode.title')}
+      </ThemedText>
+      <View style={styles.modeCards} accessibilityRole="radiogroup">
+        {options.map(({ mode, title, description }) => {
+          const active = selected === mode;
+          return (
+            <Pressable
+              key={mode}
+              onPress={() => onSelect(mode)}
+              accessibilityRole="radio"
+              accessibilityLabel={title}
+              accessibilityState={{ selected: active }}
+              style={({ pressed }) => pressed && styles.modeCardPressed}>
+              <ThemedSurface
+                variant="card"
+                padded
+                style={[styles.modeCard, active && { borderColor: theme.accent, borderWidth: 2 }]}>
+                <View style={styles.modeCardCopy}>
+                  <ThemedText variant="titleLarge">{title}</ThemedText>
+                  <ThemedText variant="bodySmall" tone="secondary">
+                    {description}
+                  </ThemedText>
+                </View>
+                {active ? (
+                  <MaterialIcons name="check-circle" size={24} color={theme.accent} />
+                ) : null}
+              </ThemedSurface>
+            </Pressable>
+          );
+        })}
+      </View>
+      <ThemedButton
+        label={t('onboarding.mode.cta')}
+        onPress={onContinue}
+        disabled={selected === null}
+        size="lg"
+        fullWidth
+      />
+    </View>
+  );
+}
+
 function DoneStep({ onFinish, busy, t }: { onFinish: () => void; busy: boolean; t: T }) {
+  const { theme } = useTheme();
   return (
     <View style={styles.page}>
-      <MaterialIcons name="celebration" size={96} color="#FFFFFF" />
+      <View style={styles.hero}>
+        <ScreentoneDisc size={HERO_TONE} color={theme.accent} style={styles.heroTone} />
+        <SeekrPose pose="point" height={HERO_POSE} />
+      </View>
       <Text style={styles.title}>{t('onboarding.done.title')}</Text>
       <Text style={styles.body}>{t('onboarding.done.body')}</Text>
       <ThemedButton
@@ -431,31 +560,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.lg,
   },
-  iconHalo: {
-    width: 144,
-    height: 144,
-    borderRadius: 72,
+  modePage: {
+    gap: Spacing.md,
+  },
+  modeCards: {
+    width: '100%',
+    gap: Spacing.sm,
+  },
+  modeCard: {
+    minHeight: Size.minTouchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  modeCardCopy: {
+    flex: 1,
+    gap: Spacing.xxs,
+  },
+  modeCardPressed: {
+    opacity: 0.85,
+  },
+  hero: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
   },
-  wordmark: {
-    ...Typography.displayLarge,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  tagline: {
-    ...Typography.bodyLarge,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-    paddingHorizontal: Spacing.md,
-  },
-  subtitle: {
-    ...Typography.titleMedium,
-    color: 'rgba(255,255,255,0.55)',
-    textAlign: 'center',
+  heroTone: {
+    position: 'absolute',
   },
   title: {
     ...Typography.headlineLarge,

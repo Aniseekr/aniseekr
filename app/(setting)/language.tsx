@@ -6,12 +6,13 @@
 // downstream consumers can subscribe to just the one they need.
 
 import { useState, useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
+import { CapsText } from '../../components/themed';
 import {
   LANGUAGE_IDS,
   useI18n,
@@ -35,6 +36,7 @@ import {
   subscribeTitleOrder,
   type TitleLanguageId,
 } from '../../libs/i18n/title-language';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 // --- title-priority display metadata ---
 
@@ -120,13 +122,11 @@ export default function LanguageScreen() {
   };
 
   const toggleAutotranslate = (value: boolean) => {
-    hapticsBridge.selection();
     setAutotranslateState(value);
     setAutotranslate(value);
   };
 
   const toggleShowOriginal = (value: boolean) => {
-    hapticsBridge.selection();
     setShowOriginalState(value);
     setShowOriginal(value);
   };
@@ -323,7 +323,7 @@ export default function LanguageScreen() {
 
 function SectionHeader({ label, color, style }: { label: string; color: string; style?: object }) {
   return (
-    <Text
+    <CapsText
       style={[
         Typography.captionSmall,
         {
@@ -336,7 +336,7 @@ function SectionHeader({ label, color, style }: { label: string; color: string; 
         style,
       ]}>
       {label}
-    </Text>
+    </CapsText>
   );
 }
 
@@ -424,13 +424,7 @@ function ToggleRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        trackColor={{ true: theme.accent, false: 'rgba(255,255,255,0.2)' }}
-        thumbColor="#FFFFFF"
-      />
+      <ThemedSwitch value={value} onValueChange={onValueChange} disabled={disabled} />
     </View>
   );
 }

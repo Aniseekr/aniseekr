@@ -139,10 +139,10 @@ function ShareListEditorComponent({
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: theme.text.primary }]}>
-                {build.template.title}
+                {t(build.template.titleKey)}
               </Text>
               <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
-                {entries.length}/{limit} picks
+                {t('collectionUi.sharePicks', { count: entries.length, limit })}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={8}>

@@ -143,6 +143,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: Radius.full,
     maxWidth: 200,
+    // Shrinks (with an ellipsis) instead of being clipped when a row runs out of room.
+    flexShrink: 1,
+    minWidth: 0,
   },
   openIcon: {
     marginLeft: 'auto',

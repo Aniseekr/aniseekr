@@ -8,7 +8,7 @@
 // every ratio.
 
 import { useCallback, useMemo, useState, type Ref } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent, type ViewInstance } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -102,7 +102,7 @@ export type ShareCardProps = {
    */
   shotWidth?: number;
   shotHeight?: number;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 };
 
 const RATIO_VALUES: Record<ShareRatio, number> = {
@@ -978,18 +978,21 @@ function ComicTemplate(props: TemplateProps) {
           ) : null}
           {showDate ? (
             <ThemedText variant="captionSmall" weight="700" style={{ color: '#000' }}>
-              ✦ {date}
+              {date}
             </ThemedText>
           ) : null}
         </View>
         {showLocation && locationText ? (
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            numberOfLines={1}
-            style={{ color: '#000', maxWidth: 160 }}>
-            📍 {locationText}
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: 160 }}>
+            <Ionicons name="location" size={11} color="#000" />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              numberOfLines={1}
+              style={{ color: '#000', flexShrink: 1 }}>
+              {locationText}
+            </ThemedText>
+          </View>
         ) : null}
       </View>
     </View>
@@ -1301,14 +1304,14 @@ function SpeedLines({ side }: { side: 'left' | 'right' | 'top' | 'bottom' }) {
   );
 }
 
-// `label` holds a TranslationKey resolved via t() at the render site (ids/emoji
-// unchanged) so the template picker localizes with the user's app language.
-export const SHARE_TEMPLATES: { id: ShareTemplate; label: TranslationKey; emoji: string }[] = [
-  { id: 'polaroid', label: 'pilgrimageUi.polaroid', emoji: '📷' },
-  { id: 'classic', label: 'pilgrimageUi.classic', emoji: '◆' },
-  { id: 'minimal', label: 'pilgrimageUi.minimal', emoji: '◻' },
-  { id: 'comic', label: 'pilgrimageUi.comic', emoji: '✦' },
-  { id: 'manga', label: 'pilgrimageUi.manga', emoji: '✎' },
+// `label` holds a TranslationKey resolved via t() at the render site so the
+// template picker localizes with the user's app language.
+export const SHARE_TEMPLATES: { id: ShareTemplate; label: TranslationKey }[] = [
+  { id: 'polaroid', label: 'pilgrimageUi.polaroid' },
+  { id: 'classic', label: 'pilgrimageUi.classic' },
+  { id: 'minimal', label: 'pilgrimageUi.minimal' },
+  { id: 'comic', label: 'pilgrimageUi.comic' },
+  { id: 'manga', label: 'pilgrimageUi.manga' },
 ];
 
 export const SHARE_RATIOS: { id: ShareRatio; label: string; hint: string }[] = [

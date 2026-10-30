@@ -2,15 +2,8 @@
 /* eslint-disable react-hooks/set-state-in-effect -- Existing detail fetch effects populate local state; Phase 3 keeps first-paint data flow unchanged. */
 import { useLocalSearchParams, useNavigation, useRouter, Stack } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  InteractionManager,
-  Linking,
-  Share,
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, Share } from 'react-native';
+import { runAfterInteractions } from '../../libs/utils/after-interactions';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -228,7 +221,7 @@ export default function AnimeDetailScreen() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       void refreshCollectionFlags(id, () => cancelled).then((flags) => {
         if (cancelled || !flags) return;
         setFavorite(flags.favorite);
@@ -261,7 +254,7 @@ export default function AnimeDetailScreen() {
     const sourcePlatform = dataSourceConfig.browseSource;
     const directBangumiId = lookupBangumiByPlatformId(sourcePlatform, id);
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       pilgrimageRepository
         .getSpotsForAnime({
           sourcePlatform,
@@ -299,7 +292,7 @@ export default function AnimeDetailScreen() {
     let cancelled = false;
     const repo = AnimeRepository.defaultInstance();
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       const tasks: Promise<unknown>[] = [
         repo
           .fetchAnimeStreaming(numericId, 'anilist')

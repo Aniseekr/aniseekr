@@ -22,6 +22,7 @@ import {
 } from '../../libs/services/achievements/definitions';
 import { AchievementWithProgress } from '../../libs/services/achievements/achievement-service';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -297,7 +298,7 @@ function EmptyHintCard() {
   return (
     <GlassCard variant="frosted" style={styles.emptyCard}>
       <View style={styles.emptyIconWrap}>
-        <MaterialIcons name="auto-awesome" size={20} color={Colors.primary} />
+        <MaterialIcons name="emoji-events" size={20} color={Colors.primary} />
       </View>
       <View style={styles.emptyTextWrap}>
         <Text style={styles.emptyTitle}>{t('achievementsUi.noBadgesYet')}</Text>
@@ -402,7 +403,7 @@ function AchievementDetailSheet({ item, visible, onClose }: DetailSheetProps) {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rewardCardLabel}>{t('achievementsUi.reward')}</Text>
+              <CapsText style={styles.rewardCardLabel}>{t('achievementsUi.reward')}</CapsText>
               <Text style={styles.rewardCardValue}>{rewardText}</Text>
             </View>
           </View>

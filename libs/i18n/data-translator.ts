@@ -1,3 +1,6 @@
+import genreDictionary from './data/genres.json';
+import type { LanguageId } from './types';
+
 // Runtime data translation — distinct from UI catalog.
 //
 // UI catalog (`useT`) translates fixed app chrome. This file translates values
@@ -25,4 +28,30 @@ export type TranslationSource =
 export interface TranslatedValue {
   value: string;
   source: TranslationSource;
+}
+
+// ── Curated genre dictionary (layer 2) ───────────────────────────────────────
+
+type GenreEntry = Partial<Record<LanguageId, string>>;
+
+const GENRES: Record<string, GenreEntry> = Object.fromEntries(
+  Object.entries(genreDictionary).filter(([key]) => !key.startsWith('$'))
+) as Record<string, GenreEntry>;
+
+// Case-insensitive index: sources disagree on casing ("Slice of life" vs
+// "Slice of Life"), the dictionary keys are canonical Title Case.
+const GENRE_INDEX = new Map(Object.keys(GENRES).map((key) => [key.toLowerCase(), key]));
+
+/**
+ * Translate an API genre name into the UI language. English UI keeps the
+ * canonical name (`native`); a dictionary hit is `curated`; anything the
+ * dictionary doesn't cover is returned unchanged as `original` — never guessed.
+ */
+export function translateGenre(genre: string, language: LanguageId): TranslatedValue {
+  if (language === 'en') return { value: genre, source: 'native' };
+  const key = GENRE_INDEX.get(genre.trim().toLowerCase());
+  const translated = key ? GENRES[key]?.[language] : undefined;
+  return translated
+    ? { value: translated, source: 'curated' }
+    : { value: genre, source: 'original' };
 }

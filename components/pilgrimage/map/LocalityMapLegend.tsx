@@ -22,7 +22,7 @@ const ICONS: Record<LegendKind, ComponentProps<typeof Ionicons>['name']> = {
   scene: 'image-outline',
   stamp: 'ticket-outline',
   shop: 'storefront-outline',
-  festival: 'sparkles-outline',
+  festival: 'bonfire-outline',
   area: 'map-outline',
 };
 

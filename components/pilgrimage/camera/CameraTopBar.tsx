@@ -24,6 +24,7 @@ interface CameraTopBarProps {
   leftInset?: number;
   rightInset?: number;
   onClose?: () => void;
+  leftControl?: ReactNode;
   /** Up to 3 icon-button actions on the right side. */
   actions?: ReactNode;
   /** Second-row contextual controls (timer, aspect, orientation, guide). */
@@ -43,6 +44,7 @@ export default function CameraTopBar({
   leftInset = 0,
   rightInset = 0,
   onClose,
+  leftControl,
   actions,
   quickControls,
   showQuickControls = false,
@@ -82,6 +84,7 @@ export default function CameraTopBar({
           <View style={styles.btnSpacer} />
         )}
 
+        {leftControl}
         <View style={styles.nameSlot} pointerEvents="none">
           <ThemedText variant="captionSmall" weight="600" numberOfLines={1} style={styles.nameText}>
             {placeName}
@@ -207,6 +210,9 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: 6,
+    // Matches the close button / spacer on the left so the place name stays centred.
+    minWidth: 34,
   },
 });

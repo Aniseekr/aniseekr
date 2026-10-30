@@ -59,6 +59,7 @@ describe('pilgrimage album capture entries', () => {
         tilt: -1,
         frameMatch: 0.842,
         frameValid: true,
+        frameMatchVersion: 2,
       },
     };
 
@@ -111,6 +112,7 @@ describe('pilgrimage album capture entries', () => {
           tilt: null,
           frameMatch: 0.995,
           frameValid: true,
+          frameMatchVersion: 2,
         },
       })
     ).toBe(100);
@@ -148,5 +150,47 @@ describe('free-bucket album entries', () => {
     const entries = buildPilgrimageAlbumEntries({ captures: [spotCap], free: [free], animes: [] });
     expect(entries.map((e) => e.capture.uri)).toEqual(['file:///s1.jpg', 'file:///free.jpg']); // 200 > 100
     expect(entries.find((e) => e.isFree)?.anime.id).toBe(FREE_FOLDER_ANIME_ID);
+  });
+});
+
+describe('imported reference free entries', () => {
+  it('PILG-066 a free capture with an imported reference renders as a comparison in the free folder', () => {
+    const free: PilgrimageCapture = {
+      spotId: 'free-9',
+      uri: 'file:///mine.jpg',
+      capturedAt: 50,
+      referenceUri: 'file:///imported-ref.jpg',
+    };
+    const [entry] = buildPilgrimageAlbumEntries({ captures: [], free: [free], animes: [] });
+    expect(entry.isFree).toBe(true);
+    expect(entry.anime.id).toBe(FREE_FOLDER_ANIME_ID);
+    // The imported image is the comparison's reference half — no invented scene data.
+    expect(entry.spot.image).toBe('file:///imported-ref.jpg');
+    expect(entry.spot.name).toBe('');
+    expect(entry.matchPercent).toBeNull();
+  });
+
+  it('PILG-066 a free capture without a reference stays a single photo', () => {
+    const free: PilgrimageCapture = { spotId: 'free-1', uri: 'file:///solo.jpg', capturedAt: 1 };
+    const [entry] = buildPilgrimageAlbumEntries({ captures: [], free: [free], animes: [] });
+    expect(entry.spot.image).toBe('');
+  });
+});
+
+describe('frame match version', () => {
+  it('PILG-076 a score from the old whole-frame metric is not shown', () => {
+    const base = {
+      spotId: 's',
+      uri: 'file:///s.jpg',
+      capturedAt: 1,
+    };
+    const snapshot = { distanceMeters: null, headingDeltaDeg: null, tilt: null, frameMatch: 0.91 };
+    expect(getCaptureFrameMatchPercent({ ...base, sensorSnapshot: snapshot })).toBeNull();
+    expect(
+      getCaptureFrameMatchPercent({
+        ...base,
+        sensorSnapshot: { ...snapshot, frameMatchVersion: 2 },
+      })
+    ).toBe(91);
   });
 });

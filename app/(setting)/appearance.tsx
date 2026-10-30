@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,7 @@ import { useT } from '../../libs/i18n';
 import { loadUserPrefsSync, patchUserPrefs, type UserPrefs } from '../../libs/services/user-prefs';
 import { useMapThemePref } from '../../hooks/useMapThemePref';
 import type { MapThemePref } from '../../libs/services/pilgrimage/map-theme-prefs';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 const MODE_DEFS: { id: ThemeMode; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { id: 'light', icon: 'sunny-outline' },
@@ -131,7 +132,7 @@ export default function AppearanceScreen() {
             </ThemedText>
           </Pressable>
           <ThemedText variant="titleLarge" weight="600">
-            {t('settings.appearance.title')}
+            {t('settings.appearanceTitle')}
           </ThemedText>
           <View style={{ width: 80 }} />
         </View>
@@ -350,14 +351,10 @@ export default function AppearanceScreen() {
                 {t('settings.appearance.increaseContrastDesc')}
               </ThemedText>
             </View>
-            <Switch
+            <ThemedSwitch
               value={increaseContrast}
-              onValueChange={(v) => {
-                hapticsBridge.selection();
-                void setIncreaseContrast(v);
-              }}
-              trackColor={{ false: theme.background.tertiary, true: accent }}
-              thumbColor={theme.text.primary}
+              onValueChange={(v) => void setIncreaseContrast(v)}
+              accent={accent}
             />
           </View>
 
@@ -407,7 +404,7 @@ function PreviewCard({
       end={{ x: 1, y: 1 }}
       style={styles.previewCard}>
       <View style={[styles.previewBubble, { backgroundColor: accent }]}>
-        <Ionicons name="sparkles" size={20} color={accentFg} />
+        <Ionicons name="color-palette" size={20} color={accentFg} />
       </View>
       <View style={{ flex: 1 }}>
         <ThemedText variant="titleMedium" weight="700" style={{ color: text.primary }}>
@@ -471,7 +468,7 @@ function ThemeCard({
           {FeatureFlags.PREMIUM_ENABLED && palette.isPremium ? (
             <View style={[styles.premiumPill, { backgroundColor: palette.accent + '40' }]}>
               <Ionicons
-                name={isLocked ? 'lock-closed' : 'sparkles'}
+                name={isLocked ? 'lock-closed' : 'ribbon'}
                 size={9}
                 color={palette.accent}
               />

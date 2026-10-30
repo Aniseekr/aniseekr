@@ -1,5 +1,14 @@
 import type { PilgrimageCapture } from './captures';
+import { FRAME_MATCH_VERSION } from './frame-match-score';
 import type { AnitabiBangumi, AnitabiPoint } from './types';
+
+/**
+ * Display-only title for a capture whose anime title was never stored. It is
+ * a label, not data — never persist it back into a record.
+ */
+export function albumFallbackAnimeTitle(animeId: number): string {
+  return `Bangumi #${animeId}`;
+}
 
 /** Reserved synthetic anime id for the "自由拍攝" (free capture) folder. */
 export const FREE_FOLDER_ANIME_ID = -1;
@@ -9,7 +18,10 @@ export interface PilgrimageAlbumEntry {
   spot: AnitabiPoint;
   anime: AnitabiBangumi;
   matchPercent: number | null;
-  /** True for standalone free captures — the album renders a single photo (no comparison). */
+  /**
+   * True for standalone free captures. They render as a single photo, or as a
+   * comparison against the user's imported reference (`capture.referenceUri`).
+   */
   isFree?: boolean;
 }
 
@@ -20,7 +32,11 @@ interface BuildAlbumEntriesInput {
 }
 
 export function getCaptureFrameMatchPercent(capture: PilgrimageCapture): number | null {
-  const value = capture.sensorSnapshot?.frameMatch;
+  const snapshot = capture.sensorSnapshot;
+  // v1 scores compared whole-frame statistics and rated unrelated scenes ~85%;
+  // they claim a match nobody measured, so only current-metric scores count.
+  if (snapshot?.frameMatchVersion !== FRAME_MATCH_VERSION) return null;
+  const value = snapshot.frameMatch;
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   const clamped = Math.max(0, Math.min(1, value));
   return Math.round(clamped * 100);
@@ -62,7 +78,9 @@ function buildFreeEntry(capture: PilgrimageCapture): PilgrimageAlbumEntry {
   const spot: AnitabiPoint = {
     id: capture.spotId,
     name: '', // no reference scene name — folder label comes from i18n, not this
-    image: '', // empty -> album renders the single captured photo, no comparison
+    // An imported reference becomes the comparison's reference half; without
+    // one this stays empty and the album renders the single captured photo.
+    image: capture.referenceUri ?? '',
     ep: 0,
     s: 0,
     geo,
@@ -117,7 +135,7 @@ function buildEntryFromCaptureMetadata(capture: PilgrimageCapture): PilgrimageAl
   };
   const anime: AnitabiBangumi = {
     id: capture.animeId,
-    title: capture.animeTitle || `Bangumi #${capture.animeId}`,
+    title: capture.animeTitle || albumFallbackAnimeTitle(capture.animeId),
     cn: capture.animeTitleCn ?? '',
     city: capture.animeCity ?? '',
     cover: capture.animeCover ?? '',

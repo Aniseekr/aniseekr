@@ -69,14 +69,14 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
       const usedElsewhere = inUse.has(spec.id) && spec.id !== current;
       return {
         key: spec.id,
-        label: spec.label,
-        description: usedElsewhere ? 'Swap with another slot' : undefined,
+        label: t(spec.labelKey),
+        description: usedElsewhere ? t('profile.shortcut.swapHint') : undefined,
         icon: spec.icon,
         selected: spec.id === current,
         onPress: () => handlePick(spec.id),
       };
     });
-  }, [editingSlot, shortcuts]);
+  }, [editingSlot, shortcuts, t]);
 
   const rows: (ShortcutSpec | null)[][] = [slots.slice(0, 4), slots.slice(4, 8)];
 
@@ -89,19 +89,18 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <ThemedText variant="titleLarge" weight="700">
-            {t('profile.quickShortcuts')}
-          </ThemedText>
-          <Ionicons name="sparkles" size={14} color={theme.accent} />
-        </View>
+        <ThemedText variant="titleLarge" weight="700">
+          {t('profile.quickShortcuts')}
+        </ThemedText>
         <Pressable
           onPress={() => {
             hapticsBridge.selection();
             setEditMode((v) => !v);
           }}
           accessibilityRole="button"
-          accessibilityLabel={editMode ? 'Finish editing shortcuts' : 'Edit shortcuts'}
+          accessibilityLabel={
+            editMode ? t('profile.shortcut.a11yFinishEdit') : t('profile.shortcut.a11yEdit')
+          }
           style={({ pressed }) => [
             styles.editPill,
             { backgroundColor: pillBg, borderColor: pillBorder },
@@ -158,9 +157,10 @@ function ShortcutTile({
   onLongPress: () => void;
 }) {
   const { theme } = useTheme();
+  const t = useT();
   const borderColor = editMode && spec ? theme.accent : theme.glassBorder;
   const bg = theme.background.secondary;
-  const tint = spec?.tint ?? theme.text.tertiary;
+  const label = spec ? t(spec.labelKey) : null;
 
   return (
     <Pressable
@@ -176,39 +176,24 @@ function ShortcutTile({
       ]}
       accessibilityRole="button"
       accessibilityLabel={
-        spec
+        label
           ? editMode
-            ? `${spec.label}. Tap to replace.`
-            : `${spec.label}. Long-press to replace.`
-          : 'Empty shortcut slot'
+            ? t('profile.shortcut.a11yTapToReplace', { label })
+            : t('profile.shortcut.a11yLongPressToReplace', { label })
+          : t('profile.shortcut.a11yEmptySlot')
       }>
-      <View style={[styles.iconWrap, { backgroundColor: tintWithAlpha(tint, 0.14) }]}>
-        <Ionicons name={spec?.icon ?? 'add'} size={20} color={tint} />
+      <View style={[styles.iconWrap, { backgroundColor: theme.background.tertiary }]}>
+        <Ionicons
+          name={spec?.icon ?? 'add'}
+          size={20}
+          color={spec ? theme.text.primary : theme.text.tertiary}
+        />
       </View>
       <ThemedText variant="captionSmall" weight="500" numberOfLines={1} style={styles.tileLabel}>
-        {spec?.label ?? 'Empty'}
+        {label ?? t('profile.shortcut.empty')}
       </ThemedText>
     </Pressable>
   );
-}
-
-function tintWithAlpha(hex: string, alpha: number): string {
-  // Accepts #RGB, #RRGGBB, or rgba()-like; falls back to original on failure.
-  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex);
-  if (!m) return hex;
-  const raw = m[1];
-  const expanded =
-    raw.length === 3
-      ? raw
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : raw;
-  const a = Math.max(0, Math.min(1, alpha));
-  const aa = Math.round(a * 255)
-    .toString(16)
-    .padStart(2, '0');
-  return `#${expanded}${aa}`;
 }
 
 const styles = StyleSheet.create({
@@ -220,11 +205,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
   },
   editPill: {
     flexDirection: 'row',

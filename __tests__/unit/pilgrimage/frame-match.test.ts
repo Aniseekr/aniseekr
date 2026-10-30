@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'bun:test';
 import {
   DARK_BRIGHTNESS_FLOOR,
+  FRAME_MATCH_VERSION,
   FRAME_MATCH_WEIGHTS,
+  gridCorrelation,
   INVALID_MAX_TOTAL,
   LOW_CONTRAST_FLOOR,
   LOW_DETAIL_EDGE_FLOOR,
   scoreFrameMatch,
-} from '../../../libs/services/pilgrimage/frame-match';
-import type { SceneAnalysis } from '../../../libs/services/pilgrimage/scene-analysis';
+} from '../../../libs/services/pilgrimage/frame-match-score';
+import {
+  centerCropRect,
+  reducePixels,
+  type SceneAnalysis,
+} from '../../../libs/services/pilgrimage/scene-analysis';
 
 // Baseline neutral scene — mirrors __tests__/unit/pilgrimage/scene-analysis.test.ts
 // so the math operates on shapes we know reducePixels emits in production.
@@ -41,6 +47,8 @@ function baseAnalysis(overrides: Partial<SceneAnalysis> = {}): SceneAnalysis {
     shadowRatio: 0.02,
     luminanceHistogram: Array.from({ length: 16 }, () => 1 / 16),
     palette: ['#AABBCC', '#998877', '#665544', '#332211', '#FFEEDD'],
+    layoutGrid: Array.from({ length: 256 }, (_, i) => ((i * 37) % 100) / 100),
+    edgeGrid: Array.from({ length: 256 }, (_, i) => ((i * 53) % 100) / 100),
     ...overrides,
   };
 }
@@ -94,7 +102,7 @@ describe('scoreFrameMatch', () => {
     const ref = baseAnalysis();
     const user = baseAnalysis();
     const r = scoreFrameMatch(ref, user);
-    expect(r.histogram).toBeCloseTo(1, 5);
+    expect(r.layout).toBeCloseTo(1, 5);
     expect(r.edge).toBeCloseTo(1, 5);
     expect(r.lighting).toBeCloseTo(1, 5);
     expect(r.total).toBeCloseTo(1, 5);
@@ -154,57 +162,148 @@ describe('scoreFrameMatch', () => {
     expect(r.reason).toBeNull();
   });
 
-  it('rewards histogram similarity even when exposure shifts', () => {
-    // Same histogram shape, but the user is slightly darker overall.
-    const histA = Array.from({ length: 16 }, (_, i) => (i === 5 || i === 6 ? 0.4 : 0.0125));
-    const histB = Array.from({ length: 16 }, (_, i) => (i === 4 || i === 5 ? 0.4 : 0.0125));
-    const ref = baseAnalysis({ luminanceHistogram: histA });
-    const user = baseAnalysis({ luminanceHistogram: histB, brightness: 0.45 });
-    const r = scoreFrameMatch(ref, user);
-    // Histograms partially overlap in bin 5 → BC ≈ 0.4 + spread, not 1.
-    expect(r.histogram ?? -1).toBeGreaterThan(0.2);
-    expect(r.histogram ?? 2).toBeLessThan(1);
-    expect(r.valid).toBe(true);
-  });
-
-  it('penalises a wildly different edge density', () => {
-    const ref = baseAnalysis({ edgeMagnitude: 0.7 });
-    const user = baseAnalysis({ edgeMagnitude: 0.1 });
-    const r = scoreFrameMatch(ref, user);
-    expect(r.edge ?? 2).toBeLessThan(0.5);
-  });
-
-  it('uses the documented weight mix to compute total', () => {
+  it('uses the documented weight mix: structure scaled by lighting', () => {
     const ref = baseAnalysis();
-    const user = baseAnalysis();
+    const user = baseAnalysis({ brightness: 0.35, contrast: 0.6 });
     const r = scoreFrameMatch(ref, user);
+    const structure =
+      (r.layout ?? 0) * FRAME_MATCH_WEIGHTS.layout + (r.edge ?? 0) * FRAME_MATCH_WEIGHTS.edge;
     const recomputed =
-      (r.histogram ?? 0) * FRAME_MATCH_WEIGHTS.histogram +
-      (r.edge ?? 0) * FRAME_MATCH_WEIGHTS.edge +
-      (r.lighting ?? 0) * FRAME_MATCH_WEIGHTS.lighting;
+      structure *
+      (1 - FRAME_MATCH_WEIGHTS.lighting + FRAME_MATCH_WEIGHTS.lighting * (r.lighting ?? 0));
     expect(r.total).toBeCloseTo(recomputed, 5);
   });
 
-  it('produces total = 0 for fully disjoint histograms and inverse exposure', () => {
-    // Ref puts all weight in the bottom bins; user in the top bins → BC = 0.
-    const refHist = Array.from({ length: 16 }, (_, i) => (i < 4 ? 0.25 : 0));
-    const userHist = Array.from({ length: 16 }, (_, i) => (i >= 12 ? 0.25 : 0));
-    const ref = baseAnalysis({
-      luminanceHistogram: refHist,
-      brightness: 0.1,
-      contrast: 0.1,
-      edgeMagnitude: 0.0,
-    });
+  it('an inverted layout scores zero structure, however similar the exposure', () => {
+    const grid = Array.from({ length: 256 }, (_, i) => (i < 128 ? 0.9 : 0.1));
+    const ref = baseAnalysis({ layoutGrid: grid, edgeGrid: grid });
     const user = baseAnalysis({
-      luminanceHistogram: userHist,
-      brightness: 0.9,
-      contrast: 0.9,
-      edgeMagnitude: 1.0,
+      layoutGrid: [...grid].reverse(),
+      edgeGrid: [...grid].reverse(),
     });
     const r = scoreFrameMatch(ref, user);
-    expect(r.histogram).toBeCloseTo(0, 5);
-    expect(r.edge).toBeCloseTo(0, 5);
-    // lighting: 1 − 0.5·0.8 − 0.5·0.8 = 0.2 → total still small
-    expect(r.total ?? 1).toBeLessThan(0.05);
+    expect(r.layout).toBe(0);
+    expect(r.edge).toBe(0);
+    expect(r.total).toBe(0);
+  });
+
+  it('a flat grid has no structure to match', () => {
+    expect(gridCorrelation([0.5, 0.5, 0.5], [0.1, 0.9, 0.4])).toBeNull();
+    expect(gridCorrelation([0.1, 0.2, 0.3], [0.2, 0.4, 0.6])).toBeCloseTo(1, 9);
+  });
+});
+
+// Synthetic 64×64 greyscale scenes run through the real reducePixels, so the
+// score is exercised on the same features production computes.
+function scene(draw: (x: number, y: number) => number): SceneAnalysis {
+  const W = 64;
+  const H = 64;
+  const px = new Uint8Array(W * H * 4);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const v = Math.max(0, Math.min(255, Math.round(draw(x, y))));
+      const i = (y * W + x) * 4;
+      px[i] = v;
+      px[i + 1] = v;
+      px[i + 2] = v;
+      px[i + 3] = 255;
+    }
+  }
+  return reducePixels(px, W, H);
+}
+
+// A station-like frame: bright sky, a dark building with lit windows on the
+// left, a pole on the right, textured ground.
+function station(x: number, y: number): number {
+  if (x >= 44 && x <= 46 && y >= 4) return 40; // pole
+  if (x >= 6 && x <= 30 && y >= 18 && y < 50) {
+    const window = (x - 8) % 6 < 3 && (y - 22) % 8 < 4 && x >= 8 && y >= 22;
+    return window ? 225 : 55;
+  }
+  if (y < 22) return 190 + y; // sky gradient
+  return 110 + ((x * 7 + y * 3) % 11); // ground texture
+}
+
+// The same place drawn differently: shifted 2px, posterised to 4 tones,
+// re-exposed, with mild deterministic noise — roughly anime still vs. photo.
+function stationRedrawn(x: number, y: number): number {
+  const v = station(Math.max(0, x - 2), y);
+  const posterised = Math.round(v / 64) * 64;
+  const noise = ((x * 31 + y * 17) % 13) - 6;
+  return posterised * 0.85 + 25 + noise;
+}
+
+// An unrelated frame: dark rock walls either side, a bright vertical stream.
+function waterfall(x: number, y: number): number {
+  const center = 32 + Math.sin(y / 6) * 4;
+  if (Math.abs(x - center) < 8) return 215 + ((y * 5) % 30);
+  return 60 + ((x * 3 + y * 11) % 25) + (y > 48 ? 40 : 0);
+}
+
+describe('frame match discriminates scenes (v2 layout scoring)', () => {
+  const reference = scene(station);
+
+  it('the same place drawn differently scores high', () => {
+    const r = scoreFrameMatch(reference, scene(stationRedrawn));
+    expect(r.valid).toBe(true);
+    expect(r.total ?? 0).toBeGreaterThan(0.7);
+  });
+
+  it('an unrelated scene scores low even with similar exposure', () => {
+    const r = scoreFrameMatch(reference, scene(waterfall));
+    expect(r.valid).toBe(true);
+    expect(r.total ?? 1).toBeLessThan(0.3);
+  });
+
+  it('the same pixels in a different arrangement do not match (identical histogram)', () => {
+    // Swap the left and right halves: every luminance value survives, so the
+    // v1 histogram score would be 100%; the layout is different.
+    const swapped = scene((x, y) => station((x + 32) % 64, y));
+    const r = scoreFrameMatch(reference, swapped);
+    expect(reference.luminanceHistogram).toEqual(swapped.luminanceHistogram);
+    expect(r.total ?? 1).toBeLessThan(0.5);
+  });
+
+  it('is scored as version 2', () => {
+    expect(FRAME_MATCH_VERSION).toBe(2);
+  });
+});
+
+// Nearest-neighbour stand-in for Skia's drawImageRect: sample `src` of a
+// `w`×`h` greyscale draw function into the 64×64 grid.
+function sampled(
+  draw: (x: number, y: number) => number,
+  src: { x: number; y: number; width: number; height: number }
+): SceneAnalysis {
+  return scene((x, y) =>
+    draw(src.x + ((x + 0.5) * src.width) / 64, src.y + ((y + 0.5) * src.height) / 64)
+  );
+}
+
+describe('frame match compares the same shape of frame', () => {
+  it('PILG-076 the centre crop matches the target aspect ratio', () => {
+    expect(centerCropRect(4000, 3000, 16 / 9)).toEqual({ x: 0, y: 375, width: 4000, height: 2250 });
+    expect(centerCropRect(1920, 1080, 4 / 3)).toEqual({ x: 240, y: 0, width: 1440, height: 1080 });
+    expect(centerCropRect(3000, 4000, 16 / 9).width).toBe(3000);
+    expect(centerCropRect(100, 100, Number.NaN)).toEqual({ x: 0, y: 0, width: 100, height: 100 });
+  });
+
+  it('PILG-076 a 4:3 shot of the same framing matches once cropped to the 16:9 reference', () => {
+    // A 16:9 "anime frame" (160×90) of the station, and a 4:3 photo (160×120)
+    // of the same place with extra sky above and ground below.
+    const wide = (x: number, y: number) => station((x / 160) * 64, (y / 90) * 64);
+    const tall = (x: number, y: number) => (y < 15 ? 200 : y >= 105 ? 115 : wide(x, y - 15));
+    const reference = sampled(wide, { x: 0, y: 0, width: 160, height: 90 });
+    const squashed = scoreFrameMatch(
+      reference,
+      sampled(tall, { x: 0, y: 0, width: 160, height: 120 })
+    );
+    const cropped = scoreFrameMatch(reference, sampled(tall, centerCropRect(160, 120, 16 / 9)));
+    expect(cropped.total ?? 0).toBeGreaterThan(0.9);
+    expect(cropped.total ?? 0).toBeGreaterThan(squashed.total ?? 1);
+  });
+
+  it('PILG-076 a non-finite correlation never becomes a score', () => {
+    expect(gridCorrelation([0, 1, Number.NaN], [1, 0, 1])).toBeNull();
   });
 });

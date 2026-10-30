@@ -1,138 +1,43 @@
-// Home / Rate screen — three modes (Discovery / Seasonal / Trend).
-// Uses ModeSelector for the pill control, GenreCarousel for Discovery,
-// SeasonalCarousel for Seasonal (matches "03 — Home Carousel (Seasonal)"
-// in japanwalker.pen), and a hero + ranked-list layout for Trend.
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  Skeleton,
-  ThemedButton,
-  ThemedIconButton,
-  readableTextOn,
-} from '../../../components/themed';
-import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
-import { GenreCarousel, GenreCarouselSkeleton } from '../../../components/rate/GenreCarousel';
-import { SeasonalView } from '../../../components/rate/seasonal/SeasonalView';
+import { Skeleton, ThemedButton, ThemedText } from '../../../components/themed';
+import { HomeSearchField } from '../../../components/common/HomeSearchField';
+import { SeasonalPoster, TrendingRow } from '../../../components/rate/discover/DiscoverAnimeCards';
+import { GenreChip } from '../../../components/rate/discover/GenreChip';
 import { PersonalizedPickSheet } from '../../../components/rate/PersonalizedPickSheet';
-import { ModeSelector } from '../../../components/rate/ModeSelector';
-import { ImageDisplaySettingsSheet } from '../../../components/rate/ImageDisplaySettingsSheet';
 import { useRateData } from '../../../components/rate/useRateData';
-import { Anime, Genre, ViewMode } from '../../../components/rate/types';
-import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { FontFamily, Radius, Spacing, Typography } from '../../../constants/DesignSystem';
-import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
-import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
+import type { Genre } from '../../../components/rate/types';
+import { bottomPad, Radius, Spacing, TabBar } from '../../../constants/DesignSystem';
+import { useTheme } from '../../../context/ThemeContext';
 import { clearAllDecks } from '../../../libs/services/rate/deck-cache';
-import { FEATURED_PILGRIMAGE_ANIME } from '../../../libs/services/pilgrimage/featured-anime';
-import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import {
-  loadUserPrefsSync,
-  patchSwipePrefs,
-  patchUserPrefs,
-  type SeasonalLayout,
-  type SwipePrefs,
-} from '../../../libs/services/user-prefs';
 import { loadGenreSwipePage } from '../../../libs/services/rate/genre-deck-prefetch';
+import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
+import { getBroadcastSeason } from '../../../libs/utils/season-utils';
 import { useT } from '../../../libs/i18n';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
-import { trackingService } from '../../../libs/services/tracking/tracking-service';
 
-type TrendRange = 'week' | 'all';
+const SEASON_KEYS = {
+  WINTER: 'rate.winter',
+  SPRING: 'rate.spring',
+  SUMMER: 'rate.summer',
+  FALL: 'rate.fall',
+} as const;
 
-const TREND_PILGRIMAGE_LIMIT = 6;
-
-export default function HomeRateScreen() {
-  const { top } = useSafeAreaInsets();
+export default function DiscoverHome() {
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { state, actions } = useRateData();
   const router = useRouter();
   const t = useT();
-  const { mode } = useExperienceMode();
-  const showPilgrimageTrend = mode !== 'collector';
-  const MODE_OPTIONS: readonly { value: ViewMode; label: string }[] = useMemo(
-    () => [
-      { value: 'discovery', label: t('tabs.rateScreen.mode.discovery') },
-      { value: 'tracking', label: t('tabs.rateScreen.mode.seasonal') },
-      { value: 'trend', label: t('tabs.rateScreen.mode.trend') },
-    ],
-    [t]
-  );
-  const TREND_RANGE_OPTIONS: readonly { value: TrendRange; label: string }[] = useMemo(
-    () => [
-      { value: 'week', label: t('tabs.rateScreen.trend.rangeWeek') },
-      { value: 'all', label: t('tabs.rateScreen.trend.rangeAllTime') },
-    ],
-    [t]
-  );
-  const [showAI, setShowAI] = useState(false);
-  const [showDisplaySettings, setShowDisplaySettings] = useState(false);
-  // Seed both prefs synchronously from MMKV so the deck render and settings
-  // sheet open with the user's real values on the first frame — no async
-  // round-trip, no flash of defaults.
-  const [bootstrapPrefs] = useState(loadUserPrefsSync);
-  const [swipePrefs, setSwipePrefs] = useState<SwipePrefs>(() => bootstrapPrefs.swipe);
-  const [seasonalLayout, setSeasonalLayout] = useState<SeasonalLayout>(
-    () => bootstrapPrefs.seasonalLayout
-  );
-  const [trendPilgrimages, setTrendPilgrimages] = useState<AnitabiBangumi[]>([]);
-  const [loadingTrendPilgrimages, setLoadingTrendPilgrimages] = useState(false);
-  const [trendRange, setTrendRange] = useState<TrendRange>('week');
+  const { visibleTabs } = useExperienceMode();
+  const [showPick, setShowPick] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshInFlight = useRef(false);
   const genreWarmupsRef = useRef(new Set<string>());
-
-  const styles = useMemo(() => makeStyles(theme), [theme]);
-
-  const handleSwipePrefsChange = useCallback((next: SwipePrefs) => {
-    setSwipePrefs(next);
-    void patchSwipePrefs(next);
-  }, []);
-
-  const handleSeasonalLayoutChange = useCallback((next: SeasonalLayout) => {
-    setSeasonalLayout(next);
-    void patchUserPrefs({ seasonalLayout: next });
-  }, []);
-
-  // Lazy-load trending pilgrimages once when the user first opens Trend mode.
-  // Reuses the curated list from the pilgrimage hub, sorted by spot count so
-  // the most-documented locations float to the top.
-  useEffect(() => {
-    if (!showPilgrimageTrend) return;
-    if (state.viewMode !== 'trend') return;
-    if (trendPilgrimages.length > 0 || loadingTrendPilgrimages) return;
-    let cancelled = false;
-    setLoadingTrendPilgrimages(true);
-    Promise.allSettled(
-      FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) =>
-        pilgrimageRepository.getSpotsByBangumiId(bangumiId)
-      )
-    )
-      .then((results) => {
-        if (cancelled) return;
-        const fulfilled = results
-          .filter(
-            (r): r is PromiseFulfilledResult<AnitabiBangumi | null> => r.status === 'fulfilled'
-          )
-          .map((r) => r.value)
-          .filter((v): v is AnitabiBangumi => v !== null)
-          .sort((a, b) => (b.pointsLength ?? 0) - (a.pointsLength ?? 0))
-          .slice(0, TREND_PILGRIMAGE_LIMIT);
-        setTrendPilgrimages(fulfilled);
-        setLoadingTrendPilgrimages(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoadingTrendPilgrimages(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [state.viewMode, trendPilgrimages.length, loadingTrendPilgrimages, showPilgrimageTrend]);
+  const currentSeason = getBroadcastSeason();
 
   const warmGenreDeck = useCallback((genre: Genre) => {
     if (genreWarmupsRef.current.has(genre.id)) return;
@@ -143,978 +48,199 @@ export default function HomeRateScreen() {
     });
   }, []);
 
-  const handleGenreSelect = useCallback(
-    (genre: Genre) => {
-      warmGenreDeck(genre);
-      router.push({
-        pathname: '/(rate)/rating',
-        params: { genreId: genre.id, genreName: genre.displayName },
-      });
-    },
-    [router, warmGenreDeck]
-  );
-
-  const handleAnimeSelect = useCallback(
-    (anime: Anime) => {
-      pushAnimeDetail(router, anime);
-    },
-    [router]
-  );
-
-  const handlePilgrimageSelect = useCallback(
-    (pilgrim: AnitabiBangumi) => {
-      hapticsBridge.tap();
-      router.push(`/pilgrimage/${pilgrim.id}`);
-    },
-    [router]
-  );
-
-  const handlePullAI = useCallback(async () => {
-    setShowAI(true);
-    await actions.loadPersonalizedPick();
-  }, [actions]);
-
-  const handlePickAnimeSelect = useCallback(() => {
-    const picked = state.personalizedPick.anime;
-    setShowAI(false);
-    if (picked) {
-      pushAnimeDetail(router, picked);
-    }
-  }, [router, state.personalizedPick.anime]);
-
-  const onRefresh = useCallback(() => {
-    if (state.viewMode === 'discovery') {
-      void clearAllDecks();
-      actions.loadGenres();
-    }
-    if (state.viewMode === 'tracking') actions.loadSeasonal();
-    if (state.viewMode === 'trend') {
-      actions.loadTrend();
-      actions.loadWeeklyTrend();
-    }
-  }, [actions, state.viewMode]);
-
-  const handleSeeAllAnime = useCallback(() => {
-    hapticsBridge.tap();
-    router.push({ pathname: '/trending', params: { range: trendRange } });
-  }, [router, trendRange]);
-
-  const handleSeeAllPilgrimages = useCallback(() => {
-    hapticsBridge.tap();
-    router.push('/(tabs)/pilgrimage');
-  }, [router]);
-
-  const handleTrendRangeChange = useCallback(
-    (next: TrendRange) => {
-      if (next === trendRange) return;
-      hapticsBridge.selection();
-      setTrendRange(next);
-    },
-    [trendRange]
-  );
-
-  const subtitle =
-    state.viewMode === 'discovery'
-      ? t('tabs.rateScreen.subtitle.discovery')
-      : state.viewMode === 'tracking'
-        ? t('tabs.rateScreen.subtitle.tracking')
-        : t('tabs.rateScreen.subtitle.trend');
-
-  const headerBlock = (
-    <View>
-      <View style={styles.headerRow}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.appTitle}>AniSeekr</Text>
-          <Text style={styles.appSubtitle}>{subtitle}</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              router.push('/search');
-            }}
-            style={styles.iconButton}
-            hitSlop={8}>
-            <Ionicons name="search" size={20} color={theme.text.secondary} />
-          </Pressable>
-          <Pressable onPress={handlePullAI} style={styles.iconButton} hitSlop={8}>
-            <MaterialIcons name="auto-awesome" size={22} color={theme.accent} />
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              setShowDisplaySettings(true);
-            }}
-            style={styles.iconButton}
-            hitSlop={8}>
-            <Ionicons name="settings-outline" size={20} color={theme.text.secondary} />
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.modeSelectorRow}>
-        <ModeSelector
-          options={MODE_OPTIONS}
-          value={state.viewMode}
-          onChange={actions.setViewMode}
-          accentColor={theme.accent}
-        />
-      </View>
-    </View>
-  );
-
-  return (
-    <View style={styles.root}>
-      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-
-      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
-        <ImageDisplaySettingsSheet
-          visible={showDisplaySettings}
-          preferences={swipePrefs}
-          onClose={() => setShowDisplaySettings(false)}
-          onChange={handleSwipePrefsChange}
-        />
-
-        <PersonalizedPickSheet
-          visible={showAI}
-          data={state.personalizedPick}
-          onClose={() => setShowAI(false)}
-          onSelect={handlePickAnimeSelect}
-          onRefresh={actions.loadPersonalizedPick}
-        />
-
-        {state.viewMode === 'trend' ? (
-          <TrendView
-            weeklyAnime={state.weeklyTrendAnime}
-            allTimeAnime={state.trendAnime}
-            range={trendRange}
-            rangeOptions={TREND_RANGE_OPTIONS}
-            onRangeChange={handleTrendRangeChange}
-            pilgrimages={trendPilgrimages}
-            loadingPilgrimages={loadingTrendPilgrimages}
-            showPilgrimages={showPilgrimageTrend}
-            headerBlock={headerBlock}
-            onAnimePress={handleAnimeSelect}
-            onPilgrimagePress={handlePilgrimageSelect}
-            onSeeAllAnime={handleSeeAllAnime}
-            onSeeAllPilgrimages={handleSeeAllPilgrimages}
-            onRefresh={onRefresh}
-          />
-        ) : (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-              paddingTop: Spacing.md,
-              paddingBottom: 140,
-            }}
-            refreshControl={
-              <RefreshControl
-                tintColor={theme.text.primary}
-                refreshing={false}
-                onRefresh={onRefresh}
-              />
-            }>
-            {headerBlock}
-
-            {state.viewMode === 'discovery' ? (
-              <View style={styles.discoveryWrap}>
-                {state.genresLoading && state.availableGenres.length === 0 ? (
-                  <GenreCarouselSkeleton />
-                ) : (
-                  <GenreCarousel
-                    data={state.availableGenres}
-                    onPreview={warmGenreDeck}
-                    onSelect={handleGenreSelect}
-                  />
-                )}
-              </View>
-            ) : null}
-
-            {state.viewMode === 'tracking' ? (
-              <View style={styles.trackingWrap}>
-                <SeasonalView
-                  data={state.seasonalAnime}
-                  layout={seasonalLayout}
-                  onSelect={handleAnimeSelect}
-                  onLayoutChange={handleSeasonalLayoutChange}
-                />
-              </View>
-            ) : null}
-          </ScrollView>
-        )}
-      </SafeAreaView>
-    </View>
-  );
-}
-
-interface TrendViewProps {
-  weeklyAnime: Anime[];
-  allTimeAnime: Anime[];
-  range: TrendRange;
-  rangeOptions: readonly { value: TrendRange; label: string }[];
-  onRangeChange: (next: TrendRange) => void;
-  pilgrimages: AnitabiBangumi[];
-  loadingPilgrimages: boolean;
-  showPilgrimages: boolean;
-  headerBlock: React.ReactNode;
-  onAnimePress: (anime: Anime) => void;
-  onPilgrimagePress: (pilgrim: AnitabiBangumi) => void;
-  onSeeAllAnime: () => void;
-  onSeeAllPilgrimages: () => void;
-  onRefresh: () => void;
-}
-
-function TrendView({
-  weeklyAnime,
-  allTimeAnime,
-  range,
-  rangeOptions,
-  onRangeChange,
-  pilgrimages,
-  loadingPilgrimages,
-  showPilgrimages,
-  headerBlock,
-  onAnimePress,
-  onPilgrimagePress,
-  onSeeAllAnime,
-  onSeeAllPilgrimages,
-  onRefresh,
-}: TrendViewProps) {
-  const { theme } = useTheme();
-  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
-  const t = useT();
-
-  const anime = range === 'week' ? weeklyAnime : allTimeAnime;
-  // Hero anchors to "This Week #1" so the headline stays current even when the
-  // user is browsing the all-time list below.
-  const hero = weeklyAnime[0] ?? allTimeAnime[0];
-  const rest = anime.slice(0, 10);
-  const sectionTitle =
-    range === 'week'
-      ? t('tabs.rateScreen.trend.titleWeek', { count: String(Math.min(10, rest.length)) })
-      : t('tabs.rateScreen.trend.titleAllTime', { count: String(Math.min(10, rest.length)) });
-  const sectionSubtitle =
-    range === 'week'
-      ? t('tabs.rateScreen.trend.subtitleWeek')
-      : t('tabs.rateScreen.trend.subtitleAllTime');
-
-  return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ paddingTop: Spacing.md, paddingBottom: 140 }}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl tintColor={theme.text.primary} refreshing={false} onRefresh={onRefresh} />
-      }>
-      {headerBlock}
-
-      {hero ? (
-        <View style={trendStyles.heroWrap}>
-          <TrendingHeroCard anime={hero} onPress={() => onAnimePress(hero)} />
-        </View>
-      ) : (
-        <View style={[trendStyles.heroWrap, trendStyles.heroPlaceholder]}>
-          <Text style={trendStyles.placeholderText}>
-            {t('tabs.rateScreen.trend.loadingTrends')}
-          </Text>
-        </View>
-      )}
-
-      {rest.length > 0 ? (
-        <View style={trendStyles.section}>
-          <View style={trendStyles.sectionHead}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={trendStyles.sectionTitle}>{sectionTitle}</Text>
-              <Text style={trendStyles.sectionSubtitle}>{sectionSubtitle}</Text>
-            </View>
-            <ThemedButton
-              onPress={onSeeAllAnime}
-              label={t('tabs.rateScreen.trend.seeAll')}
-              accessibilityLabel={t('tabs.rateScreen.trend.seeAllAnimeA11y')}
-              variant="ghost"
-              haptic="none"
-              iconRight={<Ionicons name="chevron-forward" size={14} color={theme.accent} />}
-            />
-          </View>
-          <View style={trendStyles.rangePillRow}>
-            <TrendRangePill options={rangeOptions} value={range} onChange={onRangeChange} />
-          </View>
-          <View style={trendStyles.list}>
-            {rest.map((item, idx) => (
-              <CompactRankRow
-                key={`compact-${range}-${item.id}`}
-                anime={item}
-                rank={idx + 1}
-                onPress={() => onAnimePress(item)}
-              />
-            ))}
-          </View>
-        </View>
-      ) : null}
-
-      {showPilgrimages ? (
-        <View style={trendStyles.section}>
-          <View style={trendStyles.sectionHead}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={trendStyles.titleRow}>
-                <Text style={trendStyles.sectionTitle}>
-                  {t('tabs.rateScreen.trend.pilgrimagesTitle')}
-                </Text>
-                <View style={trendStyles.trendBadge}>
-                  <Ionicons name="trending-up" size={10} color={theme.accent} />
-                  <Text style={trendStyles.trendBadgeText}>
-                    {t('tabs.rateScreen.trend.hotBadge')}
-                  </Text>
-                </View>
-              </View>
-              <Text style={trendStyles.sectionSubtitle}>
-                {t('tabs.rateScreen.trend.pilgrimagesSubtitle')}
-              </Text>
-            </View>
-            <ThemedButton
-              onPress={onSeeAllPilgrimages}
-              label={t('tabs.rateScreen.trend.seeAll')}
-              accessibilityLabel={t('tabs.rateScreen.trend.pilgrimagesA11y')}
-              variant="ghost"
-              haptic="none"
-              iconRight={<Ionicons name="chevron-forward" size={14} color={theme.accent} />}
-            />
-          </View>
-          {loadingPilgrimages && pilgrimages.length === 0 ? (
-            <Skeleton.AnimeCardList horizontal count={4} paddingHorizontal={16} />
-          ) : pilgrimages.length === 0 ? (
-            <View style={trendStyles.pilgrimageEmpty}>
-              <Text style={trendStyles.placeholderText}>
-                {t('tabs.rateScreen.trend.noPilgrimages')}
-              </Text>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={trendStyles.pilgrimageList}>
-              {pilgrimages.map((p, idx) => (
-                <TrendingPilgrimageCard
-                  key={`pilg-${p.id}`}
-                  pilgrim={p}
-                  rank={idx + 1}
-                  onPress={() => onPilgrimagePress(p)}
-                />
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      ) : null}
-    </ScrollView>
-  );
-}
-
-interface TrendRangePillProps {
-  options: readonly { value: TrendRange; label: string }[];
-  value: TrendRange;
-  onChange: (next: TrendRange) => void;
-}
-
-function TrendRangePill({ options, value, onChange }: TrendRangePillProps) {
-  const { theme } = useTheme();
-  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
-  const activeFg = useMemo(() => readableTextOn(theme.accent), [theme.accent]);
-  return (
-    <View style={trendStyles.rangePill}>
-      {options.map((opt) => {
-        const active = opt.value === value;
-        return (
-          <Pressable
-            key={opt.value}
-            onPress={() => onChange(opt.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={opt.label}
-            hitSlop={6}
-            style={({ pressed }) => [
-              trendStyles.rangePillItem,
-              active && { backgroundColor: theme.accent },
-              pressed && !active && { opacity: 0.7 },
-            ]}>
-            <Text
-              style={[
-                trendStyles.rangePillText,
-                active ? { color: activeFg, fontWeight: '700' } : { color: theme.text.secondary },
-              ]}>
-              {opt.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-interface TrendingHeroCardProps {
-  anime: Anime;
-  onPress: () => void;
-}
-
-function TrendingHeroCard({ anime, onPress }: TrendingHeroCardProps) {
-  const { theme } = useTheme();
-  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
-  const t = useT();
-  const [tracked, setTracked] = useState(false);
-  const [trackingPending, setTrackingPending] = useState(false);
-  const score = anime.score != null ? formatScore(anime.score) : null;
-  const description = anime.description?.replace(/<[^>]+>/g, '').trim();
-
-  useEffect(() => {
-    let cancelled = false;
-    void trackingService
-      .getTrackedIdSet()
-      .then((ids) => {
-        if (!cancelled) setTracked(ids.has(anime.id));
-      })
-      .catch(() => undefined);
-    const unsubscribe = trackingService.onTrackedIdsChange((ids) => {
-      setTracked(ids.has(anime.id));
+  const handleGenreSelect = (genre: Genre) => {
+    warmGenreDeck(genre);
+    router.push({
+      pathname: '/(rate)/rating',
+      params: { genreId: genre.id, genreName: genre.displayName },
     });
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [anime.id]);
-
-  const handleTrackingToggle = useCallback(async () => {
-    if (trackingPending) return;
-    const wasTracked = tracked;
-    setTrackingPending(true);
-    setTracked(!wasTracked);
+  };
+  const openPick = () => {
+    setShowPick(true);
+    void actions.loadPersonalizedPick();
+  };
+  const selectPick = () => {
+    setShowPick(false);
+    if (state.personalizedPick.anime) pushAnimeDetail(router, state.personalizedPick.anime);
+  };
+  const onRefresh = async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    setRefreshing(true);
+    genreWarmupsRef.current.clear();
     try {
-      if (wasTracked) {
-        await trackingService.removeTracking(anime.id);
-      } else {
-        await trackingService.updateStatus(anime.id, 'planned', {
-          id: anime.id,
-          title: anime.title,
-          imageUrl: anime.image,
-        });
-      }
-      hapticsBridge.success();
-    } catch (error) {
-      console.warn('[TrendingHeroCard] tracking toggle failed', error);
-      setTracked(wasTracked);
-      hapticsBridge.warning();
+      await Promise.allSettled([
+        clearAllDecks(),
+        actions.loadGenres(true),
+        actions.loadSeasonal(true),
+        actions.loadWeeklyTrend(true),
+      ]);
     } finally {
-      setTrackingPending(false);
+      refreshInFlight.current = false;
+      setRefreshing(false);
     }
-  }, [anime, tracked, trackingPending]);
+  };
 
   return (
-    <View style={trendStyles.heroCard}>
-      <Image
-        source={{ uri: anime.bannerImage ?? anime.image }}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        transition={120}
-        cachePolicy="memory-disk"
-        recyclingKey={anime.id}
-      />
-      <LinearGradient
-        colors={['rgba(8,8,8,0)', 'rgba(8,8,8,0.78)', 'rgba(8,8,8,0.96)']}
-        locations={[0, 0.55, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={trendStyles.heroContent}>
-        <View style={trendStyles.heroBadgeRow}>
-          <View style={trendStyles.trendBadge}>
-            <Ionicons name="trending-up" size={11} color={theme.accent} />
-            <Text style={trendStyles.trendBadgeText}>
-              {t('tabs.rateScreen.trend.heroTrendingBadge')}
-            </Text>
-          </View>
-          {anime.episodes ? <Text style={trendStyles.heroMeta}>EP {anime.episodes}</Text> : null}
-          {anime.status ? <Text style={trendStyles.heroMeta}>· {anime.status}</Text> : null}
-          {score ? (
-            <View style={trendStyles.heroScore}>
-              <Ionicons name="star" size={11} color={theme.accent} />
-              <Text style={trendStyles.heroScoreText}>{score}</Text>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.root, { backgroundColor: theme.background.primary }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: bottomPad(insets) + TabBar.height },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void onRefresh()}
+            tintColor={theme.accent}
+            colors={[theme.accent]}
+          />
+        }>
+        <ThemedText variant="headlineLarge" weight="700">
+          {t('tabs.rate')}
+        </ThemedText>
+        <HomeSearchField
+          label={t('tabs.discoverHome.search')}
+          onPress={() => router.push('/search')}
+        />
+        {state.seasonal.status !== 'ready' || state.seasonal.data.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.header}>
+              <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
+                {t('tabs.discoverHome.seasonal')}
+              </ThemedText>
+              {visibleTabs.includes('bangumi') ? (
+                <ThemedButton
+                  variant="ghost"
+                  size="sm"
+                  haptic="none"
+                  label={t('tabs.discoverHome.seasonAll', {
+                    year: currentSeason.year,
+                    season: t(SEASON_KEYS[currentSeason.season]),
+                  })}
+                  onPress={() =>
+                    router.push({ pathname: '/(tabs)/bangumi', params: { segment: 'season' } })
+                  }
+                />
+              ) : null}
             </View>
+            {state.seasonal.status === 'loading' ? (
+              <Skeleton.AnimeCardList horizontal count={3} />
+            ) : state.seasonal.status === 'error' ? (
+              <SectionError onRetry={() => void actions.loadSeasonal(true)} />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rail}>
+                {state.seasonal.data.slice(0, 15).map((anime) => (
+                  <SeasonalPoster key={anime.id} anime={anime} />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
+        {state.weeklyTrend.status !== 'ready' || state.weeklyTrend.data.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.header}>
+              <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
+                {t('tabs.discoverHome.trending')}
+              </ThemedText>
+              <ThemedButton
+                variant="ghost"
+                size="sm"
+                haptic="none"
+                label={t('tabs.discoverHome.fullChart')}
+                onPress={() => router.push({ pathname: '/trending', params: { range: 'week' } })}
+              />
+            </View>
+            {state.weeklyTrend.status === 'loading' ? (
+              <Skeleton.ListRow count={5} avatarShape="square" />
+            ) : state.weeklyTrend.status === 'error' ? (
+              <SectionError onRetry={() => void actions.loadWeeklyTrend(true)} />
+            ) : (
+              state.weeklyTrend.data
+                .slice(0, 5)
+                .map((anime, index) => (
+                  <TrendingRow key={anime.id} anime={anime} rank={index + 1} />
+                ))
+            )}
+          </View>
+        ) : null}
+        <View style={styles.section}>
+          <ThemedText variant="titleLarge" weight="700">
+            {t('tabs.discoverHome.rateByGenre')}
+          </ThemedText>
+          <View style={styles.chips}>
+            <ThemedButton
+              size="sm"
+              label={t('tabs.discoverHome.pickedForYou')}
+              onPress={openPick}
+            />
+            {state.genres.status === 'ready'
+              ? state.genres.data.map((genre) => (
+                  <GenreChip
+                    key={genre.id}
+                    genre={genre}
+                    onPress={() => handleGenreSelect(genre)}
+                  />
+                ))
+              : null}
+            {state.genres.status === 'loading'
+              ? Array.from({ length: 6 }, (_, index) => (
+                  <Skeleton.Block key={index} width={90} height={36} borderRadius={Radius.full} />
+                ))
+              : null}
+          </View>
+          {state.genres.status === 'error' ? (
+            <SectionError onRetry={() => void actions.loadGenres(true)} />
           ) : null}
         </View>
-        <Text style={trendStyles.heroTitle} numberOfLines={2}>
-          {anime.title}
-        </Text>
-        {description ? (
-          <Text style={trendStyles.heroDescription} numberOfLines={2}>
-            {description}
-          </Text>
-        ) : null}
-        <View style={trendStyles.heroActions}>
-          <ThemedButton
-            onPress={onPress}
-            label={t('tabs.rateScreen.trend.openLabel')}
-            accessibilityLabel={t('tabs.rateScreen.trend.openA11y')}
-            icon={<Ionicons name="play" size={14} color={readableTextOn(theme.accent)} />}
-          />
-          <ThemedIconButton
-            onPress={handleTrackingToggle}
-            disabled={trackingPending}
-            haptic="none"
-            accessibilityLabel={t(tracked ? 'search.bookmarkRemoveA11y' : 'search.bookmarkAddA11y')}
-            icon={() => (
-              <Ionicons
-                name={tracked ? 'bookmark' : 'bookmark-outline'}
-                size={18}
-                color={tracked ? theme.accent : theme.text.primary}
-              />
-            )}
-          />
-        </View>
-      </View>
+      </ScrollView>
+      <PersonalizedPickSheet
+        visible={showPick}
+        data={state.personalizedPick}
+        onClose={() => setShowPick(false)}
+        onSelect={selectPick}
+        onRefresh={actions.loadPersonalizedPick}
+      />
+    </SafeAreaView>
+  );
+}
+
+function SectionError({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
+  return (
+    <View style={styles.section}>
+      <ThemedText variant="bodyMedium" tone="secondary">
+        {t('tabs.discoverHome.unavailable')}
+      </ThemedText>
+      <ThemedButton
+        variant="ghost"
+        size="sm"
+        label={t('common.retry')}
+        onPress={onRetry}
+        style={styles.retry}
+      />
     </View>
   );
 }
 
-interface CompactRankRowProps {
-  anime: Anime;
-  rank: number;
-  onPress: () => void;
-}
-
-function CompactRankRow({ anime, rank, onPress }: CompactRankRowProps) {
-  const { theme } = useTheme();
-  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
-  const score = anime.score != null ? formatScore(anime.score) : null;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [trendStyles.rankRow, pressed && { opacity: 0.85 }]}
-      accessibilityRole="button"
-      accessibilityLabel={`Rank ${rank}, ${anime.title}`}>
-      <Text style={trendStyles.rankNumber}>{String(rank).padStart(2, '0')}</Text>
-      <Image
-        source={{ uri: anime.image }}
-        style={trendStyles.rankThumb}
-        contentFit="cover"
-        transition={80}
-        cachePolicy="memory-disk"
-        recyclingKey={anime.id}
-      />
-      <View style={trendStyles.rankBody}>
-        <Text style={trendStyles.rankTitle} numberOfLines={2}>
-          {anime.title}
-        </Text>
-        <View style={trendStyles.rankMetaRow}>
-          {anime.tags?.[0] ? (
-            <Text style={trendStyles.rankTag}>{anime.tags[0]}</Text>
-          ) : anime.type ? (
-            <Text style={trendStyles.rankTag}>{anime.type}</Text>
-          ) : null}
-          {score ? (
-            <View style={trendStyles.rankScore}>
-              <Ionicons name="star" size={10} color={theme.accent} />
-              <Text style={trendStyles.rankScoreText}>{score}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
-    </Pressable>
-  );
-}
-
-interface TrendingPilgrimageCardProps {
-  pilgrim: AnitabiBangumi;
-  rank: number;
-  onPress: () => void;
-}
-
-function TrendingPilgrimageCard({ pilgrim, rank, onPress }: TrendingPilgrimageCardProps) {
-  const { theme } = useTheme();
-  const trendStyles = useMemo(() => makeTrendStyles(theme), [theme]);
-  const themeColor = pilgrim.color || theme.accent;
-  const spotPillFg = useMemo(() => readableTextOn(themeColor), [themeColor]);
-  const t = useT();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [trendStyles.pilgrimageCard, pressed && { opacity: 0.85 }]}
-      accessibilityRole="button"
-      accessibilityLabel={`Trending pilgrimage ${rank}: ${pilgrim.title}`}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.secondary }]} />
-      {pilgrim.cover ? (
-        <Image
-          // Anitabi CDN serves bangumi covers only at h160/h360/full — h720 404s.
-          source={{ uri: pilgrim.cover.replace('?plan=h160', '?plan=h360') }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={180}
-          cachePolicy="memory-disk"
-          recyclingKey={String(pilgrim.id)}
-        />
-      ) : null}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.92)']}
-        locations={[0.3, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={[trendStyles.pilgrimageRankPill, { borderColor: `${themeColor}88` }]}>
-        <Text style={[trendStyles.pilgrimageRankText, { color: themeColor }]}>#{rank}</Text>
-      </View>
-      <View style={[trendStyles.pilgrimageSpotPill, { backgroundColor: `${themeColor}E6` }]}>
-        <Ionicons name="location" size={10} color={spotPillFg} />
-        <Text style={[trendStyles.pilgrimageSpotText, { color: spotPillFg }]}>
-          {t('tabs.rateScreen.trend.spotsLabel', { count: String(pilgrim.pointsLength) })}
-        </Text>
-      </View>
-      <View style={trendStyles.pilgrimageInfo}>
-        <Text style={trendStyles.pilgrimageTitle} numberOfLines={1}>
-          {pilgrim.title}
-        </Text>
-        {pilgrim.city ? (
-          <View style={trendStyles.pilgrimageCityRow}>
-            <Ionicons name="map" size={10} color={theme.text.secondary} />
-            <Text style={trendStyles.pilgrimageCity} numberOfLines={1}>
-              {pilgrim.city}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
-function formatScore(score: number): string {
-  if (score > 10) return (score / 10).toFixed(1);
-  return score.toFixed(1);
-}
-
-const makeStyles = (theme: ThemePalette) =>
-  StyleSheet.create({
-    root: {
-      flex: 1,
-      backgroundColor: theme.background.primary,
-    },
-    safe: {
-      flex: 1,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: Spacing.md,
-      marginBottom: Spacing.md,
-    },
-    headerLeft: {
-      flex: 1,
-    },
-    appTitle: {
-      ...Typography.headlineLarge,
-      fontFamily: FontFamily.rounded,
-      color: theme.text.primary,
-    },
-    appSubtitle: {
-      ...Typography.bodySmall,
-      color: theme.text.secondary,
-      marginTop: 2,
-    },
-    headerIcons: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-    iconButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modeSelectorRow: {
-      paddingHorizontal: Spacing.md,
-      marginBottom: Spacing.lg,
-    },
-    discoveryWrap: {
-      paddingTop: 0,
-    },
-    trackingWrap: {
-      paddingTop: Spacing.xs,
-      minHeight: 500,
-    },
-  });
-
-const makeTrendStyles = (theme: ThemePalette) =>
-  StyleSheet.create({
-    heroWrap: {
-      paddingHorizontal: Spacing.md,
-      marginBottom: Spacing.lg,
-    },
-    heroPlaceholder: {
-      height: 220,
-      borderRadius: Radius.cardLg,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-      backgroundColor: theme.background.secondary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    placeholderText: {
-      color: theme.text.secondary,
-      ...Typography.bodyMedium,
-    },
-    heroCard: {
-      height: 380,
-      borderRadius: Radius.xl,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-      backgroundColor: theme.background.secondary,
-      justifyContent: 'flex-end',
-    },
-    heroContent: {
-      padding: 18,
-      gap: 10,
-    },
-    heroBadgeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap',
-    },
-    trendBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 6,
-      backgroundColor: `${theme.accent}29`,
-      borderWidth: 1,
-      borderColor: `${theme.accent}A6`,
-    },
-    trendBadgeText: {
-      color: theme.accent,
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.6,
-    },
-    heroMeta: {
-      color: theme.text.secondary,
-      fontSize: 11,
-      fontWeight: '600',
-    },
-    heroScore: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-    },
-    heroScoreText: {
-      color: theme.accent,
-      fontSize: 11,
-      fontWeight: '700',
-    },
-    heroTitle: {
-      color: theme.text.primary,
-      fontSize: 28,
-      fontWeight: '800',
-      lineHeight: 32,
-      letterSpacing: 0.2,
-    },
-    heroDescription: {
-      color: theme.text.secondary,
-      fontSize: 12,
-      lineHeight: 18,
-    },
-    heroActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginTop: 6,
-    },
-    section: {
-      marginTop: Spacing.xs,
-      marginBottom: Spacing.lg,
-    },
-    sectionHead: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      paddingHorizontal: Spacing.md,
-      marginBottom: Spacing.sm,
-      gap: Spacing.sm,
-    },
-    titleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap',
-    },
-    sectionTitle: {
-      color: theme.text.primary,
-      fontSize: 18,
-      fontWeight: '700',
-      letterSpacing: 0.2,
-    },
-    sectionSubtitle: {
-      color: theme.text.tertiary,
-      fontSize: 12,
-      marginTop: 2,
-    },
-    rangePillRow: {
-      paddingHorizontal: Spacing.md,
-      marginBottom: Spacing.sm,
-    },
-    rangePill: {
-      flexDirection: 'row',
-      alignSelf: 'flex-start',
-      padding: 3,
-      borderRadius: 999,
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-      gap: 2,
-    },
-    rangePillItem: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    rangePillText: {
-      fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 0.1,
-    },
-    list: {
-      paddingHorizontal: Spacing.md,
-      gap: 10,
-    },
-
-    // Compact rank row
-    rankRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      borderRadius: Radius.lg,
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-    },
-    rankNumber: {
-      color: theme.text.tertiary,
-      fontSize: 22,
-      fontWeight: '800',
-      fontFamily: FontFamily.rounded,
-      minWidth: 28,
-    },
-    rankThumb: {
-      width: 48,
-      height: 64,
-      borderRadius: 8,
-      backgroundColor: theme.background.tertiary,
-    },
-    rankBody: {
-      flex: 1,
-      minWidth: 0,
-      gap: 4,
-    },
-    rankTitle: {
-      color: theme.text.primary,
-      fontSize: 14,
-      fontWeight: '700',
-      lineHeight: 18,
-    },
-    rankMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap',
-    },
-    rankTag: {
-      color: theme.text.secondary,
-      fontSize: 11,
-      fontWeight: '500',
-    },
-    rankScore: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-    },
-    rankScoreText: {
-      color: theme.accent,
-      fontSize: 11,
-      fontWeight: '700',
-    },
-
-    // Pilgrimage card
-    pilgrimageList: {
-      paddingHorizontal: Spacing.md,
-      gap: 12,
-    },
-    pilgrimageEmpty: {
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.lg,
-      alignItems: 'center',
-    },
-    pilgrimageCard: {
-      width: 230,
-      height: 200,
-      borderRadius: Radius.lg,
-      overflow: 'hidden',
-      backgroundColor: theme.background.secondary,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
-      justifyContent: 'flex-end',
-    },
-    pilgrimageRankPill: {
-      position: 'absolute',
-      top: 10,
-      left: 10,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 8,
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      borderWidth: 1,
-    },
-    pilgrimageRankText: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.5,
-    },
-    pilgrimageSpotPill: {
-      position: 'absolute',
-      top: 10,
-      right: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 8,
-    },
-    pilgrimageSpotText: {
-      fontSize: 10,
-      fontWeight: '700',
-    },
-    pilgrimageInfo: {
-      padding: 12,
-      gap: 4,
-    },
-    pilgrimageTitle: {
-      color: theme.text.primary,
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    pilgrimageCityRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    pilgrimageCity: {
-      color: theme.text.secondary,
-      fontSize: 11,
-      fontWeight: '500',
-    },
-  });
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  content: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, gap: Spacing.lg },
+  section: { gap: Spacing.sm },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.xs,
+  },
+  headerTitle: { flex: 1 },
+  rail: { gap: Spacing.sm, paddingRight: Spacing.screenPadding },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  retry: { alignSelf: 'flex-start' },
+});

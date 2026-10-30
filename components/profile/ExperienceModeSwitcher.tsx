@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SheetBackdrop, ThemedButton, ThemedSurface, ThemedText } from '../themed';
 import { useTheme } from '../../context/ThemeContext';
-import { Radius, Shadow, Spacing } from '../../constants/DesignSystem';
+import { IconSize, Radius, Shadow, Spacing } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import type { ExperienceMode } from '../../libs/navigation/experience-tabs';
 
@@ -41,7 +41,7 @@ export function ExperienceModeSwitcher({ mode, onChange }: ExperienceModeSwitche
         size="md"
         shape="pill"
         haptic="tap"
-        iconRight={<Ionicons name="chevron-down" size={15} color={theme.text.secondary} />}
+        iconRight={<Ionicons name="chevron-down" size={IconSize.sm} color={theme.text.secondary} />}
         style={styles.trigger}
       />
 
@@ -81,7 +81,7 @@ export function ExperienceModeSwitcher({ mode, onChange }: ExperienceModeSwitche
                     }
                     iconRight={
                       selected ? (
-                        <Ionicons name="checkmark-circle" size={20} color={theme.accent} />
+                        <Ionicons name="checkmark-circle" size={IconSize.md} color={theme.accent} />
                       ) : undefined
                     }
                   />
@@ -99,10 +99,11 @@ export function ExperienceModeSwitcher({ mode, onChange }: ExperienceModeSwitche
 }
 
 function ModeIcon({ mode, color }: { mode: ExperienceMode; color: string }) {
-  if (mode === 'explorer') return <MaterialIcons name="explore" size={22} color={color} />;
+  // One size for all three so the rows line up; the glyph sets differ, not the box.
+  if (mode === 'explorer') return <MaterialIcons name="explore" size={IconSize.md} color={color} />;
   if (mode === 'collector')
-    return <MaterialIcons name="collections-bookmark" size={21} color={color} />;
-  return <Ionicons name="sparkles" size={20} color={color} />;
+    return <MaterialIcons name="collections-bookmark" size={IconSize.md} color={color} />;
+  return <Ionicons name="apps" size={IconSize.md} color={color} />;
 }
 
 const makeStyles = (safeTop: number) =>

@@ -97,10 +97,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-    }),
   },
 });
 
