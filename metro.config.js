@@ -1,4 +1,5 @@
 // Learn more https://docs.expo.io/guides/customizing-metro
+const path = require('node:path');
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativewind } = require('nativewind/metro');
 
@@ -32,4 +33,21 @@ config.resolver.blockList = Array.isArray(existing)
     ? [existing, ...blocked]
     : blocked;
 
-module.exports = withNativewind(config);
+// react-native-css swaps every `react-native` import for its own facade so
+// className works, but the facade lists only some exports (no
+// NativeComponentRegistry, EventEmitter, …). expo-modules-core 58 calls
+// NativeComponentRegistry.get at module load, so the release build died
+// before the first frame and sat on the splash (TestFlight 1.3.0 (43)).
+// Packages never take className, so they get the real react-native; app
+// code keeps the facade.
+const baseResolveRequest = config.resolver.resolveRequest;
+const nativewindConfig = withNativewind(config);
+const cssResolveRequest = nativewindConfig.resolver.resolveRequest;
+nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === 'react-native' && context.originModulePath.includes(`${path.sep}node_modules${path.sep}`)) {
+    return (baseResolveRequest ?? context.resolveRequest)(context, moduleName, platform);
+  }
+  return cssResolveRequest(context, moduleName, platform);
+};
+
+module.exports = nativewindConfig;
