@@ -30,6 +30,7 @@ export interface ResolvedField<T> {
 export interface MergeResult {
   merged: UniversalAnimeItem;
   conflictIds: number[];
+  conflictFields: ConflictField[];
 }
 
 const STATUS_PRIORITY: Record<AnimeStatus, number> = {
@@ -55,7 +56,7 @@ class ConflictResolutionService {
       throw new Error('Cannot merge empty group');
     }
     if (group.length === 1) {
-      return { merged: group[0], conflictIds: [] };
+      return { merged: group[0], conflictIds: [], conflictFields: [] };
     }
 
     const conflictIds: number[] = [];
@@ -121,6 +122,11 @@ class ConflictResolutionService {
         score: score?.value as number | undefined,
       },
       conflictIds,
+      conflictFields: [
+        ...(progress.conflictId !== undefined ? ['progress' as const] : []),
+        ...(status.conflictId !== undefined ? ['status' as const] : []),
+        ...(score?.conflictId !== undefined ? ['score' as const] : []),
+      ],
     };
   }
 
@@ -157,14 +163,46 @@ class ConflictResolutionService {
 
   async resolveManually(conflictId: number, picked: PlatformType): Promise<void> {
     const db = await LocalDB.getDatabase();
-    await db.runAsync(
-      `UPDATE sync_conflicts
-       SET resolved = 1, resolution = ?, resolved_at = ?
-       WHERE id = ?`,
-      `manual:${picked}`,
-      Date.now(),
+    const row = await db.getFirstAsync<{ anime_id: string; field: string; values_json: string }>(
+      'SELECT anime_id, field, values_json FROM sync_conflicts WHERE id = ? AND resolved = 0',
       conflictId
     );
+    if (!row) throw new Error('Conflict not found or already resolved');
+
+    const prefixes: Record<string, string> = {
+      anilist: 'anilist_', myanimelist: 'mal_', bangumi: 'bangumi_', kitsu: 'kitsu_',
+      shikimori: 'shikimori_', simkl: 'simkl_', annict: 'annict_', kavita: 'kavita_',
+    };
+    const platformIds: Partial<Record<PlatformType, string>> = {};
+    const aliases = new Set<string>();
+    for (const part of row.anime_id.split('|')) {
+      const match = /^([a-z]+):([1-9][0-9]*)$/.exec(part);
+      if (!match || !prefixes[match[1]] || !Number.isSafeInteger(Number(match[2]))) {
+        throw new Error('Cannot reliably identify the local anime for this conflict');
+      }
+      const platform = match[1] as PlatformType;
+      if (platformIds[platform] && platformIds[platform] !== match[2]) {
+        throw new Error('Conflicting platform IDs for this conflict');
+      }
+      platformIds[platform] = match[2];
+      aliases.add(`${prefixes[platform]}${match[2]}`);
+      if (platform === 'anilist') aliases.add(match[2]);
+    }
+    const choices = parseValues(row.values_json).filter((entry) => entry?.platform === picked);
+    if (choices.length !== 1) throw new Error('Selected conflict value is missing or ambiguous');
+    const value = choices[0].value;
+    const valid = row.field === 'status'
+      ? typeof value === 'string' && Object.hasOwn(STATUS_PRIORITY, value)
+      : row.field === 'progress'
+        ? typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+        : row.field === 'score' && typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10;
+    if (!valid) throw new Error('Invalid conflict value');
+
+    const { trackingService } = await import('../tracking/tracking-service');
+    await trackingService.applyConflictResolution({
+      conflictId, picked, animeId: row.anime_id, valuesJson: row.values_json,
+      field: row.field as ConflictField, value, platformIds, aliases: [...aliases],
+    });
   }
 
   async dismiss(conflictId: number): Promise<void> {

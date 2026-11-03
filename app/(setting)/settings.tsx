@@ -268,8 +268,23 @@ export default function SettingsScreen() {
         description: t('settingsUi.pullTheLatestFromConnected'),
         icon: 'refresh-circle-outline',
         onPress: () => {
-          void UserRepository.syncAllPlatforms();
-          hapticsBridge.success();
+          UserRepository.syncAllPlatforms().then(
+            (result) => {
+              if (result.errors.length > 0) {
+                hapticsBridge.error();
+                Alert.alert(
+                  t('settingsUi.syncNow'),
+                  result.errors.map((e) => `${e.platform}: ${e.error}`).join('\n')
+                );
+              } else {
+                hapticsBridge.success();
+              }
+            },
+            (e) => {
+              hapticsBridge.error();
+              Alert.alert(t('settingsUi.syncNow'), e instanceof Error ? e.message : String(e));
+            }
+          );
         },
       },
       {

@@ -1,3 +1,4 @@
+import { kavitaProvider } from '@/libs/services/providers/kavita-provider';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -121,12 +122,19 @@ export default function AccountScreen() {
     const platform = sheet.platform;
     if (sheet.kind === 'password') {
       if (!input.username || !input.password) {
-        throw new Error('Username and password are required');
+        throw new Error(t('settings.accountScreen.usernamePasswordRequired'));
       }
       await authService.connectWithPassword(platform.id, input.username, input.password);
     } else {
       if (!input.apiKey) {
-        throw new Error('API key is required');
+        throw new Error(t('settings.accountScreen.apiKeyRequired'));
+      }
+      if (platform.id === 'kavita') {
+        if (!input.serverUrl) {
+          throw new Error(t('settings.accountScreen.serverUrlRequired'));
+        }
+        // Reject bad keys / unreachable servers instead of saving them as "Connected".
+        await kavitaProvider.verify(input.apiKey, input.serverUrl);
       }
       await authService.connectWithApiKey(platform.id, input.apiKey, input.serverUrl);
     }

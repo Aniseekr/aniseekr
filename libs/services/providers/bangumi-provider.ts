@@ -28,6 +28,10 @@ interface BangumiCollection {
 
 export class BangumiProvider implements WritableAnimeProvider {
   platform: PlatformType = 'bangumi';
+  supportsProgressUpdates = false;
+  supportsScoreClearing = true;
+  // The documented collection API has no DELETE operation; don't remove remotely.
+  supportsListRemoval = false;
 
   private async request<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${BANGUMI_API}${endpoint}`, {
@@ -95,11 +99,14 @@ export class BangumiProvider implements WritableAnimeProvider {
   }
 
   async updateScore(animeId: string, score: number, token: string): Promise<void> {
-    const bangumiScore = Math.round(score * 2);
     await this.request(`/v0/users/-/collections/${animeId}`, token, {
       method: 'PATCH',
-      body: JSON.stringify({ rate: bangumiScore }),
+      body: JSON.stringify({ rate: Math.round(score) }),
     });
+  }
+
+  async clearScore(animeId: string, token: string): Promise<void> {
+    await this.updateScore(animeId, 0, token);
   }
 
   async updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void> {
@@ -118,7 +125,18 @@ export class BangumiProvider implements WritableAnimeProvider {
   }
 
   async addToList(animeId: string, status: AnimeStatus, token: string): Promise<void> {
-    await this.updateStatus(animeId, status, token);
+    const statusMap: Record<AnimeStatus, number> = {
+      planned: 1,
+      completed: 2,
+      watching: 3,
+      on_hold: 4,
+      dropped: 5,
+    };
+
+    await this.request(`/v0/users/-/collections/${animeId}`, token, {
+      method: 'POST',
+      body: JSON.stringify({ type: statusMap[status] }),
+    });
   }
 
   async removeFromList(animeId: string, token: string): Promise<void> {
@@ -147,7 +165,7 @@ export class BangumiProvider implements WritableAnimeProvider {
       status: statusMap[item.type] || 'watching',
       progress: item.ep_status,
       totalEpisodes: item.subject.eps,
-      score: item.rate > 0 ? item.rate / 2 : undefined,
+      score: item.rate > 0 ? item.rate : undefined,
       notes: item.comment,
       updatedAt: new Date(),
       source: 'bangumi',

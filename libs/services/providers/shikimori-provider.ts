@@ -8,7 +8,7 @@ import {
 import { PlatformType, AnimeStatus, UniversalAnimeItem } from '../auth/types';
 import { authService } from '../auth/auth-service';
 
-const SHIKIMORI_API = 'https://shikimori.one/api';
+const SHIKIMORI_API = 'https://shikimori.io/api';
 
 interface ShikimoriUserRate {
   id: number;
@@ -62,6 +62,8 @@ interface ShikimoriUser {
 
 export class ShikimoriProvider implements WritableAnimeProvider {
   platform: PlatformType = 'shikimori';
+  supportsScoreClearing = true;
+  supportsListRemoval = true;
 
   private async request<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${SHIKIMORI_API}${endpoint}`, {
@@ -78,7 +80,17 @@ export class ShikimoriProvider implements WritableAnimeProvider {
       throw new Error(`Shikimori API Error: ${response.status}`);
     }
 
-    return response.json();
+    const body = await response.text();
+    if (!body.trim()) return undefined as T;
+    return JSON.parse(body) as T;
+  }
+
+  private async getCurrentUser(token: string): Promise<ShikimoriUser> {
+    const user = await this.request<ShikimoriUser | null>('/users/whoami', token);
+    if (!user || !Number.isInteger(user.id)) {
+      throw new Error('Invalid Shikimori account response');
+    }
+    return user;
   }
 
   async authenticate(): Promise<string> {
@@ -88,7 +100,7 @@ export class ShikimoriProvider implements WritableAnimeProvider {
   }
 
   async fetchUserList(token: string): Promise<UniversalAnimeItem[]> {
-    const user = await this.fetchUserProfile(token);
+    const user = await this.getCurrentUser(token);
     let allItems: UniversalAnimeItem[] = [];
     let page = 1;
     let hasMore = true;
@@ -96,9 +108,10 @@ export class ShikimoriProvider implements WritableAnimeProvider {
     // Shikimori user_rates endpoint is paginated
     while (hasMore) {
       const rates = await this.request<ShikimoriUserRate[]>(
-        `/v2/user_rates?user_id=${user.username}&target_type=Anime&limit=100&page=${page}`,
+        `/v2/user_rates?user_id=${user.id}&target_type=Anime&limit=100&page=${page}`,
         token
       );
+      if (!Array.isArray(rates)) throw new Error('Invalid Shikimori user rates response');
 
       if (rates.length === 0) {
         hasMore = false;
@@ -118,7 +131,7 @@ export class ShikimoriProvider implements WritableAnimeProvider {
   }
 
   async fetchUserProfile(token: string): Promise<ImportedUserProfile> {
-    const user = await this.request<ShikimoriUser>('/users/whoami', token);
+    const user = await this.getCurrentUser(token);
 
     return {
       username: user.nickname,
@@ -149,6 +162,16 @@ export class ShikimoriProvider implements WritableAnimeProvider {
       });
     } else {
       await this.createUserRate(animeId, { score }, token);
+    }
+  }
+
+  async clearScore(animeId: string, token: string): Promise<void> {
+    const rateId = await this.getUserRateId(animeId, token);
+    if (rateId) {
+      await this.request(`/v2/user_rates/${rateId}`, token, {
+        method: 'PATCH',
+        body: JSON.stringify({ user_rate: { score: 0 } }),
+      });
     }
   }
 
@@ -186,11 +209,12 @@ export class ShikimoriProvider implements WritableAnimeProvider {
   }
 
   private async getUserRateId(animeId: string, token: string): Promise<number | null> {
-    const user = await this.fetchUserProfile(token);
+    const user = await this.getCurrentUser(token);
     const rates = await this.request<ShikimoriUserRate[]>(
-      `/v2/user_rates?user_id=${user.username}&target_id=${animeId}&target_type=Anime`,
+      `/v2/user_rates?user_id=${user.id}&target_id=${animeId}&target_type=Anime`,
       token
     );
+    if (!Array.isArray(rates)) throw new Error('Invalid Shikimori user rates response');
     return rates.length > 0 ? rates[0].id : null;
   }
 
@@ -199,12 +223,12 @@ export class ShikimoriProvider implements WritableAnimeProvider {
     attributes: Partial<ShikimoriUserRate>,
     token: string
   ): Promise<void> {
-    const user = await this.fetchUserProfile(token);
+    const user = await this.getCurrentUser(token);
     await this.request('/v2/user_rates', token, {
       method: 'POST',
       body: JSON.stringify({
         user_rate: {
-          user_id: user.username,
+          user_id: user.id,
           target_id: animeId,
           target_type: 'Anime',
           ...attributes,
@@ -216,7 +240,7 @@ export class ShikimoriProvider implements WritableAnimeProvider {
   private mapEntry(rate: ShikimoriUserRate): UniversalAnimeItem {
     const anime = rate.anime;
     const imageUrl = anime
-      ? `https://shikimori.one${anime.image.original || anime.image.preview}`
+      ? new URL(anime.image.original || anime.image.preview, 'https://shikimori.io').toString()
       : '';
 
     return {

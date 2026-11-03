@@ -72,11 +72,12 @@ export class UserRepository {
     };
   }
 
-  static async syncAllPlatforms(): Promise<void> {
+  static async syncAllPlatforms() {
     const result = await multiPlatformSyncService.syncAll();
     if (result.errors.length > 0) {
       console.warn('[sync] partial failure', result.errors);
     }
+    return result;
   }
 
   /** Get sync status for all platforms */

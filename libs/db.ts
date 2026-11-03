@@ -2,7 +2,8 @@ import * as SQLite from 'expo-sqlite';
 
 import type { LatLngBox, SpotIndexRow } from './services/pilgrimage/spot-index';
 
-const DB_NAME = 'aniseekr.db';
+export const LOCAL_DB_NAME = 'aniseekr.db';
+const DB_NAME = LOCAL_DB_NAME;
 
 export interface FavoriteItem {
   id: string;
@@ -331,6 +332,11 @@ const DDL = `
         updated_at INTEGER
       );
       CREATE INDEX IF NOT EXISTS idx_status ON user_anime(status);
+      CREATE TABLE IF NOT EXISTS tracking_tombstones (
+        anime_id TEXT PRIMARY KEY NOT NULL,
+        platform_ids TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
 
       CREATE TABLE IF NOT EXISTS collection_folders (
         id TEXT PRIMARY KEY NOT NULL,

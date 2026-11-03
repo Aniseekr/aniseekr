@@ -38,6 +38,8 @@ interface MALUserResponse {
 
 export class MALProvider implements WritableAnimeProvider {
   platform: PlatformType = 'myanimelist';
+  supportsScoreClearing = true;
+  supportsListRemoval = true;
 
   private async request<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${MAL_API_BASE}${endpoint}`, {
@@ -94,7 +96,7 @@ export class MALProvider implements WritableAnimeProvider {
 
   async updateProgress(animeId: string, progress: number, token: string): Promise<void> {
     await this.request(`/anime/${animeId}/my_list_status`, token, {
-      method: 'PATCH',
+      method: 'PUT',
       body: `num_watched_episodes=${progress}`,
     });
   }
@@ -102,9 +104,13 @@ export class MALProvider implements WritableAnimeProvider {
   async updateScore(animeId: string, score: number, token: string): Promise<void> {
     const malScore = Math.round(score);
     await this.request(`/anime/${animeId}/my_list_status`, token, {
-      method: 'PATCH',
+      method: 'PUT',
       body: `score=${malScore}`,
     });
+  }
+
+  async clearScore(animeId: string, token: string): Promise<void> {
+    await this.updateScore(animeId, 0, token);
   }
 
   async updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void> {
@@ -117,7 +123,7 @@ export class MALProvider implements WritableAnimeProvider {
     };
 
     await this.request(`/anime/${animeId}/my_list_status`, token, {
-      method: 'PATCH',
+      method: 'PUT',
       body: `status=${statusMap[status]}`,
     });
   }
@@ -127,9 +133,15 @@ export class MALProvider implements WritableAnimeProvider {
   }
 
   async removeFromList(animeId: string, token: string): Promise<void> {
-    await this.request(`/anime/${animeId}/my_list_status`, token, {
-      method: 'DELETE',
-    });
+    try {
+      await this.request(`/anime/${animeId}/my_list_status`, token, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      // MAL returns 404 when an entry is already absent, including safe retries.
+      if (error instanceof Error && error.message === 'MAL API Error: 404') return;
+      throw error;
+    }
   }
 
   private mapEntry(item: MALAnimeListItem): UniversalAnimeItem {
