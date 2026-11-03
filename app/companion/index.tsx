@@ -16,7 +16,12 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText, ThemedButton, readableTextOn } from '../../components/themed';
+import {
+  readableTextOn,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+} from '../../components/themed';
 import { Radius, Spacing, bottomPad } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
@@ -131,14 +136,11 @@ export default function CompanionScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={14}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-          </Pressable>
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+          />
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
               {t('companion.composer.title')}
@@ -332,7 +334,7 @@ function makeStyles(theme: ThemePalette) {
     headerBtn: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.secondary,
@@ -376,7 +378,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     footerBtn: {
@@ -391,7 +393,7 @@ function makeStyles(theme: ThemePalette) {
     toast: {
       paddingHorizontal: 16,
       paddingVertical: 10,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
   });

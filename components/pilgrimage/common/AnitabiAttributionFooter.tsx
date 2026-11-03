@@ -18,7 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedButton, ThemedText, readableTextOn } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
-import { Spacing } from '../../../constants/DesignSystem';
+import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { buildAnitabiMapUrl, getAnitabiSiteUrl } from '../detail/_helpers';
 
 export interface AnitabiAttributionFooterProps {
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     marginBottom: Spacing.lg,
     padding: Spacing.md,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     gap: Spacing.sm,
   },

@@ -1,6 +1,13 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { Colors, Spacing, Typography, FontFamily, Shadow } from '../../constants/DesignSystem';
+import {
+  Colors,
+  FontFamily,
+  Radius,
+  Shadow,
+  Spacing,
+  Typography,
+} from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import { CapsText } from '../themed/CapsText';
 
@@ -104,7 +111,7 @@ const styles = StyleSheet.create({
   icon: {
     width: '100%',
     height: '100%',
-    borderRadius: 22,
+    borderRadius: Radius.xl,
   },
   initial: {
     color: '#fff',

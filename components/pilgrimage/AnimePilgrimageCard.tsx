@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { readableTextOn } from '../themed/contrast';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
-import { Shadow } from '../../constants/DesignSystem';
+import { Radius, Shadow } from '../../constants/DesignSystem';
 import { cityToColor } from '../../libs/services/pilgrimage/region-color';
 import {
   formatPilgrimageSubtitle,
@@ -158,7 +158,7 @@ function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
     card: {
       backgroundColor: theme.background.secondary,
-      borderRadius: 16,
+      borderRadius: Radius.card,
       overflow: 'hidden',
       borderWidth: 1,
       ...Shadow.medium,
@@ -180,7 +180,7 @@ function makeStyles(theme: ThemePalette) {
       backgroundColor: theme.status.success,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
     },
     collectedBadgeText: {
       fontSize: 10,
@@ -217,7 +217,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       ...Shadow.subtle,
     },
@@ -230,7 +230,7 @@ function makeStyles(theme: ThemePalette) {
     distanceBadge: {
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
     },
     distanceText: {
       fontSize: 11,
@@ -243,7 +243,7 @@ function makeStyles(theme: ThemePalette) {
       backgroundColor: theme.background.secondary,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
@@ -273,7 +273,7 @@ function makeStyles(theme: ThemePalette) {
     previewThumb: {
       width: 48,
       height: 36,
-      borderRadius: 6,
+      borderRadius: Radius.sm,
       overflow: 'hidden',
       position: 'relative',
     },

@@ -189,6 +189,6 @@ const styles = StyleSheet.create({
   name: { alignSelf: 'stretch' },
   cardFoot: { marginTop: 'auto', alignSelf: 'stretch', gap: Spacing.xxs },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  track: { flex: 1, height: Spacing.xxs, borderRadius: Radius.full, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: Radius.full },
+  track: { flex: 1, height: Spacing.xxs, borderRadius: Radius.sm, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: Radius.sm },
 });

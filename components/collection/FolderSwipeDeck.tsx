@@ -435,7 +435,7 @@ const makeStyles = (theme: ThemePalette) =>
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: Radius.card,
       backgroundColor: 'rgba(0,0,0,0.5)',
     },
     metaText: {
@@ -501,7 +501,7 @@ const makeStyles = (theme: ThemePalette) =>
       justifyContent: 'center',
       gap: 8,
       paddingVertical: Spacing.sm + 2,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     actionHavent: {
@@ -524,7 +524,7 @@ const makeStyles = (theme: ThemePalette) =>
     emptyIconWrap: {
       width: 72,
       height: 72,
-      borderRadius: 36,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: `${theme.accent}22`,

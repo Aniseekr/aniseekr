@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { sheetEnter } from '../../libs/animations/presets';
@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
     borderTopWidth: 1,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: Spacing.sm,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   seasonIcon: {
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   yearChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   yearLabel: {
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: Radius.card,
   },
   yearRowLabel: {
     ...Typography.titleMedium,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   footerButton: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     alignItems: 'center',
   },
   cancelButton: {

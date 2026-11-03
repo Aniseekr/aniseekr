@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(48,209,88,0.15)',
     borderWidth: 1,
     borderColor: 'rgba(48,209,88,0.4)',
@@ -678,6 +678,6 @@ const styles = StyleSheet.create({
   },
   dot: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: Radius.sm,
   },
 });

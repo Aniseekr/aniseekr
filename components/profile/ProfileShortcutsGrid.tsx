@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 6,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   grid: {
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

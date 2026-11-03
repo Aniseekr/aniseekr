@@ -17,6 +17,7 @@ import { useT } from '../../libs/i18n';
 import { readableTextOn } from '../themed';
 import type { IoniconsName } from '../../libs/utils/icon-types';
 import { ThemedSwitch } from '../themed/ThemedSwitch';
+import { Radius } from '../../constants/DesignSystem';
 
 export interface NewFolderData {
   name: string;
@@ -198,8 +199,8 @@ function makeStyles(theme: ThemePalette) {
     },
     modalContainer: {
       backgroundColor: theme.background.secondary,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
       padding: 24,
       paddingBottom: 40,
     },
@@ -225,7 +226,7 @@ function makeStyles(theme: ThemePalette) {
     },
     input: {
       backgroundColor: theme.background.tertiary,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       padding: 16,
       color: theme.text.primary,
       fontSize: 16,
@@ -237,7 +238,7 @@ function makeStyles(theme: ThemePalette) {
     iconButton: {
       width: 48,
       height: 48,
-      borderRadius: 24,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.tertiary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -254,7 +255,7 @@ function makeStyles(theme: ThemePalette) {
     },
     createButton: {
       backgroundColor: theme.accent,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       padding: 16,
       alignItems: 'center',
       marginTop: 16,

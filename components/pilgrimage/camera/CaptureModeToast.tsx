@@ -14,6 +14,7 @@ import type { CaptureMode } from '../../../hooks/useCameraSettings';
 import { captureModeToastCopy } from '../../../libs/services/pilgrimage/capture-mode-copy';
 import { CameraChrome } from './cameraChrome';
 import { toastEnter, toastExit } from '../../../libs/animations/presets';
+import { Radius } from '../../../constants/DesignSystem';
 
 // Frame counts are the real values the capture hooks use. Burst still picks
 // the best alignment score, not sharpness. HDR copy is resolved at render time:
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     maxWidth: '92%',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
     backgroundColor: 'rgba(0,0,0,0.82)',

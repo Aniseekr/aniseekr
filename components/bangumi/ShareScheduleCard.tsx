@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     borderColor: Colors.glass.borderHeavy,
     backgroundColor: Colors.glass.medium,

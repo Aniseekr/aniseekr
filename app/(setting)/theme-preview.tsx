@@ -6,8 +6,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import {
+  readableTextOn,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+} from '../../components/themed';
 import { useT } from '../../libs/i18n';
+import { Radius } from '../../constants/DesignSystem';
 
 export default function ThemePreviewScreen() {
   const router = useRouter();
@@ -23,17 +29,11 @@ export default function ThemePreviewScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.navBar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('settingsUi.backToSettings')}
-            style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-            <ThemedText variant="bodyMedium" weight="500">
-              {t('common.settings')}
-            </ThemedText>
-          </Pressable>
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+          />
           <ThemedText variant="titleLarge" weight="600">
             {t('settingsUi.livePreview')}
           </ThemedText>
@@ -263,23 +263,22 @@ function makeStyles(theme: ThemePalette) {
       paddingHorizontal: 16,
       height: 52,
     },
-    navBack: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 100 },
     switchPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       minWidth: 100,
       justifyContent: 'center',
     },
-    pillDot: { width: 8, height: 8, borderRadius: 4 },
+    pillDot: { width: 8, height: 8, borderRadius: Radius.sm },
     scroll: { padding: 16, gap: 14 },
     heroCard: {
       height: 200,
-      borderRadius: 20,
+      borderRadius: Radius.card,
       overflow: 'hidden',
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
@@ -298,19 +297,19 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
     },
     heroBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
     chipsRow: { flexDirection: 'row', gap: 8 },
     chip: {
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     progressCard: {
       backgroundColor: theme.background.secondary,
-      borderRadius: 20,
+      borderRadius: Radius.card,
       borderWidth: 1,
       borderColor: theme.glassBorder,
       padding: 16,
@@ -340,7 +339,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     tabBar: {

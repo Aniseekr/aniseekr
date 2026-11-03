@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   monthChip: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   footerRow: {
     flexDirection: 'row',

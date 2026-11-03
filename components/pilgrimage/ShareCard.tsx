@@ -35,6 +35,7 @@ import {
   shotContentFitForCell,
   shotOrientation,
 } from '../../libs/services/pilgrimage/share-aspect';
+import { Radius } from '../../constants/DesignSystem';
 
 export type ShareTemplate = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
 export type ShareRatio = '1:1' | '9:16' | '16:9';
@@ -450,7 +451,7 @@ function ImageCell({
             gap: 4,
             paddingHorizontal: 6,
             paddingVertical: 3,
-            borderRadius: 999,
+            borderRadius: Radius.sm,
             backgroundColor: 'rgba(0,0,0,0.55)',
             borderWidth: 1,
             borderColor: color,
@@ -531,7 +532,7 @@ function PolaroidTemplate(props: TemplateProps) {
           successColor={successColor}
           swapOrder={swapOrder}
           badgeStyle="pill"
-          borderRadius={4}
+          borderRadius={Radius.sm}
           gap={6}
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
@@ -684,7 +685,7 @@ function ClassicTemplate(props: TemplateProps) {
               gap: 4,
               paddingHorizontal: 10,
               paddingVertical: 5,
-              borderRadius: 999,
+              borderRadius: Radius.sm,
               backgroundColor: `${successColor}22`,
               borderWidth: 1,
               borderColor: successColor,
@@ -751,7 +752,7 @@ function ClassicTemplate(props: TemplateProps) {
           style={{
             width: 24,
             height: 24,
-            borderRadius: 6,
+            borderRadius: Radius.sm,
             backgroundColor: accent,
             alignItems: 'center',
             justifyContent: 'center',
@@ -919,7 +920,7 @@ function ComicTemplate(props: TemplateProps) {
             backgroundColor: '#000',
             paddingHorizontal: 10,
             paddingVertical: 6,
-            borderRadius: 4,
+            borderRadius: Radius.sm,
             transform: [{ rotate: '-1deg' }],
           }}>
           <ThemedText
@@ -1008,7 +1009,7 @@ function SpeechBubble({ children, color }: { children: string; color: string }) 
         borderColor: '#000',
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 16,
+        borderRadius: Radius.card,
         transform: [{ rotate: '4deg' }],
       }}>
       <ThemedText variant="titleSmall" weight="700" style={{ color, letterSpacing: 0.5 }}>

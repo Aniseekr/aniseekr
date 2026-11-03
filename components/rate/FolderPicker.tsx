@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { collectionService } from '../../libs/services/collection/collection-service';
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   input: {
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: Spacing.sm,
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   iconBubble: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -363,14 +363,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     marginBottom: Spacing.xs,
   },
   folderIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   footerButton: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     alignItems: 'center',
   },
   cancelButton: {

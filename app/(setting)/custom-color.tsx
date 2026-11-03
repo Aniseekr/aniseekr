@@ -8,8 +8,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { normalizeHex, useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import { ScreenHeader, ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 import { useT } from '../../libs/i18n';
+import { Radius } from '../../constants/DesignSystem';
 
 const HUE_STOPS: [string, string, ...string[]] = [
   '#FF0000',
@@ -136,29 +137,18 @@ export default function CustomColorScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.navBar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-          </Pressable>
-          <ThemedText variant="titleLarge" weight="600">
-            {t('settings.customColor.title')}
-          </ThemedText>
-          <Pressable
-            onPress={apply}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('settings.customColor.saveA11y')}
-            style={({ pressed }) => [styles.navSave, pressed && { opacity: 0.6 }]}>
-            <ThemedText variant="bodyMedium" weight="600" style={{ color: hex }}>
-              {t('common.save')}
-            </ThemedText>
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title={t('settings.customColor.title')}
+          right={
+            <ThemedButton
+              size="sm"
+              accent={hex}
+              label={t('common.save')}
+              accessibilityLabel={t('settings.customColor.saveA11y')}
+              onPress={apply}
+            />
+          }
+        />
 
         <KeyboardAwareScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -401,15 +391,6 @@ function SliderRow({
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background.primary },
-    navBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      height: 52,
-    },
-    navBack: { minWidth: 60 },
-    navSave: { minWidth: 60, alignItems: 'flex-end' },
     scroll: { paddingHorizontal: 20, paddingBottom: 24, gap: 18 },
     previewWrap: { alignItems: 'center', paddingVertical: 12 },
     previewRing: {
@@ -446,7 +427,7 @@ function makeStyles(theme: ThemePalette) {
     },
     valuesCard: {
       backgroundColor: theme.background.secondary,
-      borderRadius: 14,
+      borderRadius: Radius.card,
       borderWidth: 1,
       borderColor: theme.glassBorder,
       paddingHorizontal: 14,
@@ -469,7 +450,7 @@ function makeStyles(theme: ThemePalette) {
       width: 54,
       height: 38,
       backgroundColor: theme.background.tertiary,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       borderColor: theme.glassBorder,
       alignItems: 'center',

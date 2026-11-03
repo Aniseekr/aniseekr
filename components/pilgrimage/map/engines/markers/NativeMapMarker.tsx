@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Colors, Shadow, Typography } from '../../../../../constants/DesignSystem';
+import { Colors, Radius, Shadow, Typography } from '../../../../../constants/DesignSystem';
 import type {
   MapMarker,
   MapMarkerMode,
@@ -309,11 +309,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stampDisc: {
-    borderRadius: 18,
+    borderRadius: Radius.card,
     borderStyle: 'dashed',
   },
   shopFrame: {
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   shopTape: {
     position: 'absolute',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     marginTop: 3,
-    borderRadius: 5,
+    borderRadius: Radius.sm,
     transform: [{ rotate: '45deg' }],
   },
   festivalIcon: {
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 17,
     height: 17,
-    borderRadius: 9,
+    borderRadius: Radius.sm,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: 18,
+    borderRadius: Radius.card,
     paddingHorizontal: 8,
   },
   areaText: {
@@ -371,13 +371,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   dotBox: { alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
+  dot: { width: 18, height: 18, borderRadius: Radius.card, borderWidth: 3 },
   badge: {
     position: 'absolute',
     minWidth: 18,
     paddingHorizontal: 4,
     paddingVertical: 1,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

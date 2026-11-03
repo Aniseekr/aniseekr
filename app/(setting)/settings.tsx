@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
   proBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   proBadgeText: {
     letterSpacing: 1,
@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
   upgradePill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   accentSwatch: {
     width: 22,

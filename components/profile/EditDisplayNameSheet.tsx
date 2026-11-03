@@ -4,7 +4,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
@@ -129,13 +129,13 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     paddingHorizontal: Spacing.md,
     paddingVertical: Platform.select({ ios: 14, android: 12 }),
     ...Typography.bodyLarge,
   },
   saveButton: {
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: Spacing.lg,

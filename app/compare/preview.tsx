@@ -19,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { captureRef } from 'react-native-view-shot';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { bottomPad, Size, Typography } from '../../constants/DesignSystem';
+import { bottomPad, Radius, Size, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT, type TranslationKey } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -28,6 +28,7 @@ import {
   readableTextOn,
   Skeleton,
   ThemedButton,
+  ThemedIconButton,
   ThemedSurface,
   ThemedText,
 } from '../../components/themed';
@@ -786,14 +787,11 @@ export default function ComparePreviewScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.header}>
-            <Pressable
+            <ThemedIconButton
+              accessibilityLabel={t('common.back')}
+              icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
               onPress={() => router.back()}
-              hitSlop={14}
-              style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.back')}>
-              <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-            </Pressable>
+            />
             <View style={styles.headerMid}>
               <ThemedText variant="titleLarge" weight="700" align="center" numberOfLines={1}>
                 {t('pilgrimageUi.comparisonResult')}
@@ -982,7 +980,7 @@ export default function ComparePreviewScreen() {
               <View style={styles.overallWrap}>
                 {frameLoading ? (
                   <Animated.View entering={FadeIn}>
-                    <Skeleton.Block width={58} height={36} borderRadius={12} />
+                    <Skeleton.Block width={58} height={36} borderRadius={Radius.card} />
                   </Animated.View>
                 ) : frameMatch?.total != null ? (
                   <>
@@ -1378,7 +1376,7 @@ export default function ComparePreviewScreen() {
             }>
             {saving ? (
               <Animated.View entering={FadeIn}>
-                <Skeleton.Block width={18} height={18} borderRadius={9} />
+                <Skeleton.Block width={18} height={18} borderRadius={Radius.card} />
               </Animated.View>
             ) : (
               <Ionicons
@@ -1754,7 +1752,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 24,
     minHeight: Size.minTouchTarget,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     marginTop: 8,
   },
   filmstrip: {
@@ -1770,7 +1768,7 @@ const styles = StyleSheet.create({
   thumb: {
     width: 76,
     height: 100,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   thumbImage: {
@@ -1783,7 +1781,7 @@ const styles = StyleSheet.create({
     left: 4,
     paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   thumbSelect: {
     position: 'absolute',
@@ -1791,7 +1789,7 @@ const styles = StyleSheet.create({
     left: 4,
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: Radius.sm,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1802,7 +1800,7 @@ const styles = StyleSheet.create({
     right: 4,
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1812,7 +1810,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginHorizontal: 16,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   invalidBanner: {
@@ -1821,7 +1819,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginHorizontal: 16,
     padding: 12,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   pillRow: {
@@ -1832,7 +1830,7 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     gap: 2,
     minWidth: 84,
@@ -1845,7 +1843,7 @@ const styles = StyleSheet.create({
   analysisCard: {
     marginHorizontal: 16,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     gap: 10,
   },
@@ -1882,19 +1880,19 @@ const styles = StyleSheet.create({
     gap: 10,
     marginHorizontal: 16,
     padding: 12,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   noteCard: {
     marginHorizontal: 16,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     gap: 10,
   },
   noteInput: {
     minHeight: 84,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1926,7 +1924,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 9,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   stageWrap: {
@@ -1934,7 +1932,7 @@ const styles = StyleSheet.create({
   },
   stage: {
     height: 360,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   stackedFlow: { flex: 1, flexDirection: 'column' },
@@ -1953,7 +1951,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: 1,
   },
@@ -1975,7 +1973,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(0,0,0,0.55)',
     borderWidth: 1,
   },
@@ -1998,7 +1996,7 @@ const styles = StyleSheet.create({
   opacityChip: {
     flex: 1,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
   },
@@ -2033,7 +2031,7 @@ const styles = StyleSheet.create({
     top: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sliderHintLeft: { left: 10 },
@@ -2051,7 +2049,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
 });

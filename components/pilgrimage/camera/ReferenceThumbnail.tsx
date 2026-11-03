@@ -5,6 +5,7 @@ import { ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
+import { Radius } from '../../../constants/DesignSystem';
 
 interface ReferenceThumbnailProps {
   /** The anime reference image the user is framing against. */
@@ -83,7 +84,7 @@ export default function ReferenceThumbnail({
 
 const styles = StyleSheet.create({
   root: {
-    borderRadius: 14,
+    borderRadius: Radius.card,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.32)',
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     left: 5,
     paddingHorizontal: 6,
     height: 17,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

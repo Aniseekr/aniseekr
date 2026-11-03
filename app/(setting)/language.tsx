@@ -8,7 +8,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
@@ -435,7 +435,7 @@ function Divider({ color }: { color: string }) {
 
 const styles = StyleSheet.create({
   list: {
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   priorityBadge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   arrowButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',

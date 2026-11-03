@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import type { AuthFormKind } from '../../libs/services/auth/auth-errors';
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   card: {
-    borderRadius: 24,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     padding: Spacing.lg,
     gap: Spacing.sm,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   input: {
     ...Typography.bodyMedium,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: Spacing.sm,
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   submit: {
     marginTop: Spacing.md,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     paddingVertical: Spacing.sm + 4,
     alignItems: 'center',
   },

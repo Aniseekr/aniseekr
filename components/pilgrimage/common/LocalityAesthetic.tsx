@@ -70,7 +70,7 @@ export function LocalityMiniStamp({
 
 const styles = StyleSheet.create({
   miniStamp: {
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',

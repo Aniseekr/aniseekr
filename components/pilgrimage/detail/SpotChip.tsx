@@ -114,7 +114,7 @@ function makeSpotChipStyles(theme: ThemePalette) {
       paddingLeft: 6,
       paddingRight: 12,
       paddingVertical: 6,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       maxWidth: 280,
       minHeight: 36,
@@ -122,7 +122,7 @@ function makeSpotChipStyles(theme: ThemePalette) {
     epBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       minWidth: 40,
       alignItems: 'center',
       justifyContent: 'center',
@@ -134,7 +134,7 @@ function makeSpotChipStyles(theme: ThemePalette) {
     distanceBadge: {
       paddingHorizontal: 7,
       paddingVertical: 3,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },

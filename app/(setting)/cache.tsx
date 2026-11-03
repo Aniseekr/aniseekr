@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   bucketIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   bucketAction: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   subAction: {
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   subActionLabel: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   dangerLabel: {

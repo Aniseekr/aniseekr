@@ -5,7 +5,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedButton, ThemedIconButton } from '../../themed';
-import { Spacing } from '../../../constants/DesignSystem';
+import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   compareBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

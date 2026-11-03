@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { Radius } from '../../../constants/DesignSystem';
 
 interface CaptureHistoryStripProps {
   /** Most-recent-first list of captured photo URIs (cap maintained by parent hook). */
@@ -78,12 +79,12 @@ const styles = StyleSheet.create({
   // preview, not a theme surface. Allowed per CLAUDE.md (rgba on camera scrims).
   containerRow: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     paddingVertical: 4,
   },
   containerColumn: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     paddingHorizontal: 4,
   },
   contentRow: {

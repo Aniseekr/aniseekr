@@ -11,6 +11,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn, ThemedText } from '../../themed';
 import { CameraChrome } from './cameraChrome';
 import { toastEnter, toastExit } from '../../../libs/animations/presets';
+import { Radius } from '../../../constants/DesignSystem';
 
 export interface CamSwitchToastValue {
   icon: keyof typeof Ionicons.glyphMap;
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingVertical: 7,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
     backgroundColor: 'rgba(0,0,0,0.84)',

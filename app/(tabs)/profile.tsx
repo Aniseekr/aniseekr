@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: Spacing.xs,
     paddingVertical: 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     marginLeft: Spacing.xxs,
   },
   proBadgeText: {
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
   statsHeroIcon: {
     width: 40,
     height: 40,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   upgradePill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   platformsSection: {
     marginTop: Spacing.xs,

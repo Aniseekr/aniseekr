@@ -13,11 +13,11 @@ import { Image } from 'expo-image';
 import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraPermission } from 'react-native-vision-camera';
-import { bottomPad } from '../../constants/DesignSystem';
+import { bottomPad, Radius } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT, type TranslationKey } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../components/themed';
+import { readableTextOn, ThemedIconButton, ThemedText } from '../../components/themed';
 import { useSceneAnalysis } from '../../components/pilgrimage/SceneAnalyzer';
 import {
   inferAspectRatio,
@@ -157,14 +157,11 @@ export default function PhotoTipsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={14}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="arrow-back" size={18} color={theme.text.primary} />
-          </Pressable>
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+          />
           <View style={styles.headerCenter}>
             <ThemedText
               variant="titleSmall"
@@ -727,7 +724,7 @@ const diagStyles = StyleSheet.create({
   box: {
     width: 56,
     height: 56,
-    borderRadius: 10,
+    borderRadius: Radius.card,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
@@ -760,7 +757,7 @@ const diagStyles = StyleSheet.create({
     right: 10,
     bottom: 10,
     borderWidth: 1.5,
-    borderRadius: 4,
+    borderRadius: Radius.sm,
   },
   dot: {
     position: 'absolute',
@@ -813,7 +810,7 @@ function makeStyles(theme: ThemePalette) {
     iconBtn: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.secondary,
@@ -831,7 +828,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 10,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -842,7 +839,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 14,
     },
     heroCard: {
-      borderRadius: 18,
+      borderRadius: Radius.card,
       overflow: 'hidden',
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
@@ -867,7 +864,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
       paddingHorizontal: 9,
       paddingVertical: 5,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       backgroundColor: 'rgba(0,0,0,0.7)',
     },
     heroCaption: {
@@ -903,7 +900,7 @@ function makeStyles(theme: ThemePalette) {
     tile: {
       width: '48%',
       padding: 12,
-      borderRadius: 14,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -917,13 +914,13 @@ function makeStyles(theme: ThemePalette) {
     tileIcon: {
       width: 28,
       height: 28,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
     tipsList: {
       padding: 4,
-      borderRadius: 14,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -950,7 +947,7 @@ function makeStyles(theme: ThemePalette) {
     numberBadge: {
       width: 20,
       height: 20,
-      borderRadius: 10,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -960,7 +957,7 @@ function makeStyles(theme: ThemePalette) {
       marginHorizontal: 10,
     },
     warnBox: {
-      borderRadius: 14,
+      borderRadius: Radius.card,
       backgroundColor: `${theme.status.error}10`,
       borderWidth: 1,
       borderColor: `${theme.status.error}40`,
@@ -975,7 +972,7 @@ function makeStyles(theme: ThemePalette) {
     warnIcon: {
       width: 28,
       height: 28,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -994,7 +991,7 @@ function makeStyles(theme: ThemePalette) {
       justifyContent: 'center',
       gap: 10,
       height: 54,
-      borderRadius: 16,
+      borderRadius: Radius.card,
     },
   });
 }

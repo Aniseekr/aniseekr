@@ -121,8 +121,7 @@ function EventNotFound() {
       <View style={styles.notFoundHeader}>
         <ThemedIconButton
           accessibilityLabel={t('common.back')}
-          variant="ghost"
-          icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+          icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
           onPress={() => router.back()}
         />
       </View>
@@ -283,8 +282,7 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
       <View style={styles.header}>
         <ThemedIconButton
           accessibilityLabel={t('common.back')}
-          variant="ghost"
-          icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+          icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
           onPress={() => router.back()}
         />
         <ThemedText variant="titleMedium" weight="800" style={styles.headerTitle}>
@@ -638,7 +636,7 @@ const styles = StyleSheet.create({
   heroTitleCol: { flex: 1, minWidth: 0, gap: Spacing.xs },
   heroChips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.xs },
   categoryChip: {
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xxs,
   },
@@ -648,8 +646,8 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'space-between',
   },
-  track: { height: Spacing.xs, borderRadius: Radius.full, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: Radius.full },
+  track: { height: Spacing.xs, borderRadius: Radius.sm, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: Radius.sm },
   animeTie: {
     flexDirection: 'row',
     alignItems: 'center',

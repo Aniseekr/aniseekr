@@ -254,8 +254,7 @@ export default function LocalityHubScreen() {
       <View style={styles.header}>
         <ThemedIconButton
           accessibilityLabel={t('common.back')}
-          variant="ghost"
-          icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+          icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
           onPress={() => router.back()}
         />
         <View style={styles.headerText}>
@@ -669,7 +668,7 @@ function makeStyles() {
     eventChip: {
       flexShrink: 0,
       maxWidth: 104,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       paddingHorizontal: Spacing.sm,
       paddingVertical: Spacing.xxs,
     },
@@ -683,7 +682,7 @@ function makeStyles() {
     calendarSelectionCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
     calendarCountChip: {
       minHeight: Spacing.xxl,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',

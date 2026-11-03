@@ -469,21 +469,11 @@ export default function FolderDetailScreen() {
       />
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable
-          onPress={handleBack}
-          hitSlop={10}
-          accessibilityRole="button"
+        <ThemedIconButton
           accessibilityLabel={t('tabs.collectionFolderScreen.back')}
-          style={({ pressed }) => [
-            styles.headerBtn,
-            {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
-            },
-            pressed && { opacity: 0.78 },
-          ]}>
-          <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
-        </Pressable>
+          icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+          onPress={handleBack}
+        />
         <View style={styles.headerText}>
           <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
             {name || t('tabs.collectionFolderScreen.folder')}
@@ -704,7 +694,7 @@ const styles = StyleSheet.create({
   headerBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -738,7 +728,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   searchInput: {
@@ -754,7 +744,7 @@ const styles = StyleSheet.create({
   sortChip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   swipeWrap: {

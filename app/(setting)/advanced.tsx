@@ -5,7 +5,12 @@ import { Stack, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Size, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import { ThemedSurface, ThemedText, readableTextOn } from '../../components/themed';
+import {
+  readableTextOn,
+  ThemedIconButton,
+  ThemedSurface,
+  ThemedText,
+} from '../../components/themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 
@@ -75,24 +80,14 @@ export default function AdvancedScreen() {
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={[styles.header, { paddingTop: insets.top > 0 ? 0 : Spacing.sm }]}>
-          <Pressable
+          <ThemedIconButton
+            accessibilityLabel={t('common.back')}
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
             onPress={() => {
               hapticsBridge.tap();
               router.back();
             }}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [
-              styles.backButton,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}>
-            <Ionicons name="arrow-back" size={20} color={theme.text.primary} />
-          </Pressable>
+          />
           <View style={styles.headerTitleWrap}>
             <ThemedText variant="titleLarge" weight="700">
               {t('settings.advanced.title')}
@@ -192,14 +187,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
-  backButton: {
-    width: Size.minTouchTarget,
-    height: Size.minTouchTarget,
-    borderRadius: Size.minTouchTarget / 2,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerTitleWrap: {
     flex: 1,
     gap: 2,
@@ -235,7 +222,7 @@ const styles = StyleSheet.create({
   rowIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -250,7 +237,7 @@ const styles = StyleSheet.create({
   betaPill: {
     paddingHorizontal: Spacing.xs + 2,
     paddingVertical: 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   betaPillText: {
     letterSpacing: 1,

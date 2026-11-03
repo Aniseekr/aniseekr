@@ -3,6 +3,7 @@ import { Pressable, Text, View, Platform, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { MaterialIconsName } from '../../libs/utils/icon-types';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { Radius } from '../../constants/DesignSystem';
 
 type Option = {
   key: string;
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',

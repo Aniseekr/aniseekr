@@ -7,6 +7,7 @@ import { readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import type { SwipeMode } from '../../libs/services/user-prefs';
+import { Radius } from '../../constants/DesignSystem';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -121,7 +122,7 @@ const makeStyles = (theme: ThemePalette) =>
       maxWidth: 420,
     },
     sheet: {
-      borderRadius: 28,
+      borderRadius: Radius.xl,
       overflow: 'hidden',
       backgroundColor: 'rgba(15,15,18,0.92)',
     },
@@ -131,7 +132,7 @@ const makeStyles = (theme: ThemePalette) =>
     },
     sheetBorder: {
       ...StyleSheet.absoluteFill,
-      borderRadius: 28,
+      borderRadius: Radius.xl,
       borderWidth: 1,
       borderColor: theme.glassBorder,
     },
@@ -160,7 +161,7 @@ const makeStyles = (theme: ThemePalette) =>
       alignSelf: 'stretch',
       gap: 8,
       padding: 6,
-      borderRadius: 18,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.tertiary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -173,7 +174,7 @@ const makeStyles = (theme: ThemePalette) =>
       gap: 8,
       paddingVertical: 12,
       paddingHorizontal: 12,
-      borderRadius: 14,
+      borderRadius: Radius.card,
     },
     segmentLabel: {
       fontSize: 15,

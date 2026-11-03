@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import type { ShareTemplate } from '../../libs/services/collection/share-templates';
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     width: 200,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 18,
+    borderRadius: Radius.card,
     borderWidth: 1,
     marginRight: Spacing.xs,
   },

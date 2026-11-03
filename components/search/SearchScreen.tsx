@@ -449,7 +449,7 @@ export default function SearchScreen() {
               onPress={handleClose}
               accessibilityLabel={t('common.back')}
               haptic="none"
-              icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+              icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
             />
 
             <View style={styles.searchBar}>
@@ -478,7 +478,7 @@ export default function SearchScreen() {
                 // Old results stay visible while a new query runs — without this
                 // spinner the screen reads as stale/stuck (the skeleton only
                 // covers the zero-results case).
-                <Skeleton.Block width={18} height={18} borderRadius={9} />
+                <Skeleton.Block width={18} height={18} borderRadius={Radius.card} />
               ) : null}
               {query.length > 0 ? (
                 <ThemedIconButton
@@ -985,7 +985,7 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
       gap: Spacing.xs,
       paddingHorizontal: Spacing.sm,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -1041,7 +1041,7 @@ function makeStyles(theme: ThemePalette) {
     bookmarkBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.tertiary,

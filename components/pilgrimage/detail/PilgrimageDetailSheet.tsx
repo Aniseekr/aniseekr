@@ -423,12 +423,12 @@ function makeStyles(theme: ThemePalette) {
     titleColumn: { flex: 1, gap: 3 },
     progressTrack: {
       height: 3,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       overflow: 'hidden',
       backgroundColor: theme.background.tertiary,
       marginTop: 3,
     },
-    progressFill: { height: '100%', borderRadius: Radius.full },
+    progressFill: { height: '100%', borderRadius: Radius.sm },
     subtitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm },
     footer: { gap: Spacing.md, paddingTop: Spacing.lg },
     emptyCard: {

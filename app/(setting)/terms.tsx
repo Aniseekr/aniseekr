@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
 import { useT } from '../../libs/i18n';
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     padding: Spacing.md,
     gap: 6,

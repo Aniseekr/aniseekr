@@ -12,6 +12,7 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
 import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
+import { Radius } from '../../constants/DesignSystem';
 
 export type NearbyPilgrimageBadgeVariant = 'icon' | 'pill';
 
@@ -118,7 +119,7 @@ function makeStyles(theme: ThemePalette) {
       backgroundColor: theme.accent,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       alignSelf: 'flex-start',
     },
     pillPressed: {
@@ -132,7 +133,7 @@ function makeStyles(theme: ThemePalette) {
       backgroundColor: theme.accent,
       width: 22,
       height: 22,
-      borderRadius: 11,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },

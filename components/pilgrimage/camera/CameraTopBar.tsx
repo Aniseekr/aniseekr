@@ -9,6 +9,7 @@ import {
   CAMERA_TOP_BAR_ROW2_HEIGHT,
 } from '../../../libs/services/pilgrimage/camera-ui';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
+import { Radius } from '../../../constants/DesignSystem';
 
 const TEXT_SHADOW = {
   textShadowColor: 'rgba(0,0,0,0.7)',
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   btn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: CameraChrome.controlFill,

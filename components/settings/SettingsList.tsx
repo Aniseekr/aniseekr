@@ -2,7 +2,7 @@ import { Children, Fragment, ReactNode, isValidElement } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import { CapsText } from '../themed/CapsText';
@@ -16,7 +16,7 @@ export const SettingsLayout = {
   rowPaddingV: 14,
   rowPaddingH: 14,
   rowGap: 12,
-  cardRadius: 16,
+  cardRadius: Radius.card,
   iconSize: 20,
   chevronSize: 18,
   labelFontSize: 14,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9999,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   headerTextWrap: {

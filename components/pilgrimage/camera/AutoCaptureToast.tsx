@@ -12,6 +12,7 @@ import { ON_DARK, readableTextOn, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { CameraChrome } from './cameraChrome';
 import { toastEnter, toastExit } from '../../../libs/animations/presets';
+import { Radius } from '../../../constants/DesignSystem';
 
 /**
  * A fresh object identity each time auto-capture fires re-triggers the toast —
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
     backgroundColor: 'rgba(0,0,0,0.82)',

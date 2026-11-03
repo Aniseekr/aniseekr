@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   cover: {
     width: 56,
     height: 80,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
   },
   metaRow: {
     flexDirection: 'row',
@@ -163,6 +163,6 @@ const styles = StyleSheet.create({
   score: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
 });

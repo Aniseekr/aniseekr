@@ -10,6 +10,7 @@ import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
 import type { SkImage } from '@shopify/react-native-skia';
 import { ThemedText } from '../../themed';
 import type { OverlayMode } from './types';
+import { Radius } from '../../../constants/DesignSystem';
 
 interface OverlayLayerProps {
   mode: OverlayMode;
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
   errorTile: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
     backgroundColor: 'rgba(0,0,0,0.7)',

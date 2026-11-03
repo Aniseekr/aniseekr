@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   highlight: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   highlightText: {
     letterSpacing: 0.5,

@@ -49,8 +49,7 @@ export default function NewsSourcesScreen() {
       <View style={styles.header}>
         <ThemedIconButton
           accessibilityLabel={t('common.back')}
-          variant="ghost"
-          icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+          icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
           onPress={() => router.back()}
         />
         <View style={styles.headerText}>

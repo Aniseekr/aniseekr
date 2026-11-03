@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   rowIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

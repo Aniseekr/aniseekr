@@ -203,7 +203,7 @@ function makeStyles(theme: ThemePalette, topInset: number) {
     headerButtonStub: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: Radius.sm,
       borderWidth: StyleSheet.hairlineWidth,
       backgroundColor: `${theme.background.secondary}99`,
     },
@@ -265,7 +265,7 @@ function makeStyles(theme: ThemePalette, topInset: number) {
       alignSelf: 'flex-start',
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       marginTop: 8,
     },

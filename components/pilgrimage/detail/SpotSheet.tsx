@@ -658,7 +658,7 @@ function makeSheetStyles(theme: ThemePalette) {
       height: 32,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 16,
+      borderRadius: Radius.sm,
       backgroundColor: 'rgba(0,0,0,0.46)',
     },
     identifyBtn: {
@@ -675,7 +675,7 @@ function makeSheetStyles(theme: ThemePalette) {
     sceneThumbBtn: {
       width: 78,
       height: 56,
-      borderRadius: 14,
+      borderRadius: Radius.card,
       overflow: 'hidden',
       borderWidth: 2,
       backgroundColor: theme.background.tertiary,
@@ -695,7 +695,7 @@ function makeSheetStyles(theme: ThemePalette) {
       maxWidth: 64,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
     },
     sceneVisitedDot: {
       position: 'absolute',

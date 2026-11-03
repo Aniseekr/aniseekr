@@ -160,7 +160,7 @@ function makePickerStyles(theme: ThemePalette) {
       height: 30,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 15,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.tertiary,
     },
     list: {
@@ -183,7 +183,7 @@ function makePickerStyles(theme: ThemePalette) {
     thumbWrap: {
       width: 60,
       height: 60,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       overflow: 'hidden',
       borderWidth: 2,
       backgroundColor: theme.background.tertiary,
@@ -199,7 +199,7 @@ function makePickerStyles(theme: ThemePalette) {
       bottom: 4,
       paddingHorizontal: 5,
       paddingVertical: 1,
-      borderRadius: 5,
+      borderRadius: Radius.sm,
     },
     rowBody: {
       flex: 1,

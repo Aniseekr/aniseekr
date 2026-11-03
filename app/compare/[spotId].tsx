@@ -16,7 +16,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { bottomPad } from '../../constants/DesignSystem';
+import { bottomPad, Radius } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../components/themed';
@@ -1739,7 +1739,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     gap: 12,
   },
-  permBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, marginTop: 12 },
+  permBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.sm, marginTop: 12 },
   refThumbWrap: { position: 'absolute', zIndex: 66 },
   refThumbCredit: {
     marginTop: 6,
@@ -1747,7 +1747,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: Radius.card,
   },
   autoModeBadgeWrap: { position: 'absolute', zIndex: 66 },
   autoModeBadge: {
@@ -1756,7 +1756,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   // Banded chrome — every band is full-width and positioned by `bottom` from the resolver,

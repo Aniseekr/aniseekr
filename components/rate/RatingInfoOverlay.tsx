@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { overlayEnter, overlayExit, overlayLayout } from '../../libs/animations/presets';
+import { Radius } from '../../constants/DesignSystem';
 
 type Props = {
   photo: Photo | null;
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   card: {
-    borderRadius: 24,
+    borderRadius: Radius.xl,
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderWidth: 1,
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.3)',
   },
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },

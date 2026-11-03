@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   title: { ...Typography.bodySmall, marginTop: Spacing.xs },
   track: {
     height: 3,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
     marginTop: Spacing.xxs,
     marginBottom: Spacing.xxs,

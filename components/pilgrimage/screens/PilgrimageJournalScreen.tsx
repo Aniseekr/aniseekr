@@ -104,7 +104,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
               onPress={handleBack}
               accessibilityLabel={t('common.back')}
               haptic="none"
-              icon={(color) => <Ionicons name="chevron-back" size={22} color={color} />}
+              icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
             />
           ) : null}
           <ThemedText variant="headlineLarge" weight="700" numberOfLines={1} style={styles.title}>
@@ -404,7 +404,7 @@ function makeStyles(theme: ThemePalette) {
     segments: {
       flexDirection: 'row',
       borderWidth: 1,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       padding: Spacing.xxs,
     },
     segmentButton: { flex: 1 },
@@ -431,7 +431,7 @@ function makeStyles(theme: ThemePalette) {
       right: 6,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
     divider: { height: 3, backgroundColor: 'rgba(255,255,255,0.85)' },
@@ -444,7 +444,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',

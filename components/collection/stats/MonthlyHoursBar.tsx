@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: '100%',
-    borderRadius: 4,
+    borderRadius: Radius.sm,
     minHeight: 4,
   },
   barLabel: {

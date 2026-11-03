@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import type { TranslationKey } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   statusLabel: {
@@ -328,13 +328,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     paddingVertical: 4,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   counterButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     minHeight: 80,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     padding: Spacing.sm + 2,
     ...Typography.bodyMedium,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   footerButton: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     alignItems: 'center',
   },
   cancelButton: {

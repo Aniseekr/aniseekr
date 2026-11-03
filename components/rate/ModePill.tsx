@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { Radius } from '../../constants/DesignSystem';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -50,7 +51,7 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     paddingRight: 10,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     minHeight: 36,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

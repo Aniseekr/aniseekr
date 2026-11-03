@@ -191,7 +191,7 @@ export default function DiscoverHome() {
               : null}
             {state.genres.status === 'loading'
               ? Array.from({ length: 6 }, (_, index) => (
-                  <Skeleton.Block key={index} width={90} height={36} borderRadius={Radius.full} />
+                  <Skeleton.Block key={index} width={90} height={36} borderRadius={Radius.sm} />
                 ))
               : null}
           </View>

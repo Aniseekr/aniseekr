@@ -15,7 +15,7 @@ import { Radius, bottomPad } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../components/themed';
+import { readableTextOn, ThemedIconButton, ThemedText } from '../../components/themed';
 import { locationService, type LatLng } from '../../libs/services/pilgrimage/location-service';
 import { getNumberParam, getStringParam } from '../../libs/utils/route-params';
 import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
@@ -134,14 +134,11 @@ export default function GpsAlignScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={14}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-          </Pressable>
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+          />
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
               {t('pilgrimageUi.precisionAlignment')}
@@ -444,7 +441,7 @@ function makeStyles(theme: ThemePalette) {
     headerBtn: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.secondary,
@@ -469,7 +466,7 @@ function makeStyles(theme: ThemePalette) {
     targetThumb: {
       width: 64,
       height: 64,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       backgroundColor: theme.background.tertiary,
     },
     targetBody: { flex: 1, gap: 4 },
@@ -477,12 +474,12 @@ function makeStyles(theme: ThemePalette) {
       alignSelf: 'flex-start',
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 6,
+      borderRadius: Radius.sm,
     },
     distanceBadge: {
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       borderWidth: 1,
       alignItems: 'center',
     },
@@ -504,8 +501,8 @@ function makeStyles(theme: ThemePalette) {
       justifyContent: 'center',
       position: 'relative',
     },
-    radarRingInner: { width: 140, height: 140, borderRadius: 70, position: 'absolute' },
-    radarRingInnermost: { width: 70, height: 70, borderRadius: 35, position: 'absolute' },
+    radarRingInner: { width: 140, height: 140, borderRadius: Radius.xl, position: 'absolute' },
+    radarRingInnermost: { width: 70, height: 70, borderRadius: Radius.xl, position: 'absolute' },
     radarYou: {
       width: 36,
       height: 36,
@@ -519,7 +516,7 @@ function makeStyles(theme: ThemePalette) {
       position: 'absolute',
       width: 38,
       height: 24,
-      borderRadius: 6,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -529,7 +526,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.tertiary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -561,7 +558,7 @@ function makeStyles(theme: ThemePalette) {
     stepIcon: {
       width: 30,
       height: 30,
-      borderRadius: 15,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
@@ -577,7 +574,7 @@ function makeStyles(theme: ThemePalette) {
       justifyContent: 'center',
       gap: 10,
       paddingVertical: 16,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
     },
   });
 }

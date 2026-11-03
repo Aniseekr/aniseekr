@@ -82,7 +82,7 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
       paddingRight: 8,
       paddingVertical: 7,
       minHeight: 36,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -122,7 +122,7 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
       gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       marginTop: Spacing.xs,
     },
   });

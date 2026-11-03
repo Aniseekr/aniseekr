@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     ...Typography.titleMedium,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
     textAlign: 'center',
     textAlignVertical: 'center',
@@ -595,13 +595,13 @@ const styles = StyleSheet.create({
   progressTrack: {
     width: '100%',
     height: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
     backgroundColor: Colors.glass.medium,
   },
   progressFill: {
     height: '100%',
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.primary,
   },
   progressText: {

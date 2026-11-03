@@ -123,12 +123,12 @@ const styles = StyleSheet.create({
     height: 6,
     top: '50%',
     marginTop: -3,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   fill: {
     position: 'absolute',
     height: 12,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
   },
   knob: {

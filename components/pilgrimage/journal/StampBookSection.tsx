@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   completeBadge: {
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xxs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Spacing.sm },
   cell: { width: `${100 / STAMPS_PER_ROW}%`, alignItems: 'center', gap: Spacing.xxs },

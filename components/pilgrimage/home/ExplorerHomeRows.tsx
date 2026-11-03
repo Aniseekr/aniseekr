@@ -117,7 +117,7 @@ export const rowThumbStyle = { width: 56, height: 56, borderRadius: Radius.sm } 
 const styles = StyleSheet.create({
   posterCard: { width: 112, gap: Spacing.xxs },
   poster: { width: 112, height: 158, borderRadius: Radius.sm },
-  track: { height: Spacing.xxs, borderRadius: Radius.full, overflow: 'hidden' },
+  track: { height: Spacing.xxs, borderRadius: Radius.sm, overflow: 'hidden' },
   trackFill: { height: '100%' },
   row: {
     minHeight: 68,

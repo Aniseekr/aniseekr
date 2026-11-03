@@ -12,8 +12,9 @@ import {
   useTheme,
 } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import { ScreenHeader, ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 import { useT } from '../../libs/i18n';
+import { Radius } from '../../constants/DesignSystem';
 
 export default function AccentColorScreen() {
   const router = useRouter();
@@ -50,38 +51,19 @@ export default function AccentColorScreen() {
     <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.navBar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('settingsUi.backToSettings')}
-            style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-            <ThemedText variant="bodyMedium" weight="500">
-              {t('settings.title')}
-            </ThemedText>
-          </Pressable>
-          <ThemedText variant="titleLarge" weight="600">
-            {t('settings.accentColor.title')}
-          </ThemedText>
-          <Pressable
-            onPress={handleReset}
-            hitSlop={12}
-            disabled={!customAccent}
-            accessibilityRole="button"
-            accessibilityLabel={t('settingsUi.resetAccentColor')}
-            accessibilityState={{ disabled: !customAccent }}
-            style={({ pressed }) => [
-              styles.navReset,
-              !customAccent && { opacity: 0.35 },
-              pressed && customAccent ? { opacity: 0.6 } : null,
-            ]}>
-            <ThemedText variant="bodyMedium" tone="accent" weight="500">
-              {t('common.reset')}
-            </ThemedText>
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title={t('settings.accentColor.title')}
+          right={
+            <ThemedButton
+              size="sm"
+              variant="ghost"
+              label={t('common.reset')}
+              accessibilityLabel={t('settingsUi.resetAccentColor')}
+              disabled={!customAccent}
+              onPress={handleReset}
+            />
+          }
+        />
 
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
@@ -288,28 +270,13 @@ function GradientCard({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  safe: { flex: 1 },
-  navBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    height: 48,
-  },
-  navBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    minWidth: 80,
-  },
-  navReset: { minWidth: 80, alignItems: 'flex-end' },
   scroll: {
     paddingTop: 8,
     paddingHorizontal: 0,
     gap: 18,
   },
+  root: { flex: 1 },
+  safe: { flex: 1 },
   subtitle: {
     lineHeight: 18,
     paddingHorizontal: 24,
@@ -347,14 +314,14 @@ const styles = StyleSheet.create({
     right: -4,
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
   },
   gradientList: { gap: 10 },
   gradientCard: {
-    borderRadius: 16,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   gradientFill: {

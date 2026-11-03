@@ -3,7 +3,7 @@ import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { listItemEnter } from '../../libs/animations/presets';
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   cardWrap: {
-    borderRadius: 18,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   card: {

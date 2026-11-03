@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Anime } from '../rate/types';
 import { RatingSlider } from '../common/RatingSlider';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   cover: {
     width: 56,
     height: 80,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   headerText: {
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   statusChipLabel: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   stepperButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   stepperValue: {
     flex: 1,
     height: 40,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   folderChip: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   folderChipLabel: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
   },

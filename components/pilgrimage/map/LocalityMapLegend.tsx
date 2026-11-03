@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   festivalIcon: { transform: [{ rotate: '-45deg' }] },
   area: {
     width: Spacing.xxl,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderStyle: 'dashed',
   },
 });

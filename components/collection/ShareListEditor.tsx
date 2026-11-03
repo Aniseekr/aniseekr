@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   cover: {
     width: 40,
     height: 56,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     backgroundColor: '#222',
   },
   coverFallback: {
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    borderRadius: 22,
+    borderRadius: Radius.xl,
     borderWidth: 1,
   },
   footerButtonText: {
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   search: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     marginBottom: Spacing.sm,
     ...Typography.bodyMedium,

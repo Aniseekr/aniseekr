@@ -557,7 +557,7 @@ const makeStyles = (theme: ThemePalette) =>
       gap: 3,
       paddingHorizontal: 7,
       paddingVertical: 2,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       backgroundColor: 'rgba(0,0,0,0.45)',
     },
     scoreText: {
@@ -610,7 +610,7 @@ const makeStyles = (theme: ThemePalette) =>
       justifyContent: 'center',
       gap: 8,
       paddingVertical: Spacing.sm + 2,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     actionSkip: {
@@ -633,7 +633,7 @@ const makeStyles = (theme: ThemePalette) =>
     emptyIconWrap: {
       width: 72,
       height: 72,
-      borderRadius: 36,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: `${theme.accent}22`,

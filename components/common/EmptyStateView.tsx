@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     bottom: Spacing.xs,
     width: BADGE,
     height: BADGE,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

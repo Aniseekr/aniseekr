@@ -30,6 +30,7 @@ import {
   STACK_REVEAL_DISTANCE,
   runSwipeHandoff,
 } from '../../libs/services/rate/swipe-animation';
+import { Radius } from '../../constants/DesignSystem';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -512,7 +513,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#1a1a1a',
-    borderRadius: 24,
+    borderRadius: Radius.xl,
     overflow: 'hidden',
     // Shadow for depth
     shadowColor: '#000',
@@ -566,7 +567,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     backgroundColor: 'rgba(0,0,0,0.45)',
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.35)',

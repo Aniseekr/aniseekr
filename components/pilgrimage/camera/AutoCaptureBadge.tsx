@@ -6,6 +6,7 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { ON_DARK, ThemedText } from '../../themed';
+import { Radius } from '../../../constants/DesignSystem';
 
 export interface AutoCaptureBadgeProps {
   /** ms remaining before fire; null = not arming, render nothing. */
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
     minWidth: 132,
     maxWidth: 160,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     // Dark scrim so the white label and accent bar are legible over any
     // camera preview. Not a theme surface — this lives over the camera
     // viewfinder, which is always effectively dark mode.

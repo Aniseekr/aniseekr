@@ -682,7 +682,7 @@ const smartStyles = StyleSheet.create({
   icon: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -710,7 +710,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     resGroup: {
@@ -721,7 +721,7 @@ function makeStyles(theme: ThemePalette) {
     resChip: {
       paddingHorizontal: 10,
       paddingVertical: 7,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     section: {
@@ -734,7 +734,7 @@ function makeStyles(theme: ThemePalette) {
     filterChip: {
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     cropChip: {
@@ -743,7 +743,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     smartGroup: {

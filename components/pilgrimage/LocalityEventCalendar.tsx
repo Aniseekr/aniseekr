@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   dayNumber: {
     minWidth: Spacing.xl,
     height: Spacing.xl,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xxs,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     height: MARKER_SIZE,
     marginLeft: -Spacing.xxs,
     paddingHorizontal: Spacing.xxs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

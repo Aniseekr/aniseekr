@@ -25,7 +25,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, bottomPad } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ON_DARK, ThemedText, readableTextOn } from '../../components/themed';
+import { ON_DARK, readableTextOn, ThemedIconButton, ThemedText } from '../../components/themed';
 import {
   formatShareLocation,
   getShareEpisode,
@@ -339,14 +339,11 @@ export default function ShareComparisonScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={14}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-          </Pressable>
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+          />
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
               {t('pilgrimageUi.shareYourPilgrimage')}
@@ -742,7 +739,7 @@ const shareBtnStyles = StyleSheet.create({
   btn: {
     flex: 1,
     height: 56,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -761,7 +758,7 @@ function makeStyles(theme: ThemePalette) {
     headerBtn: {
       width: 36,
       height: 36,
-      borderRadius: 18,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.secondary,
@@ -777,7 +774,7 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
     },
     cardShadow: {
-      borderRadius: 4,
+      borderRadius: Radius.sm,
       shadowColor: 'rgb(0,0,0)',
       shadowOpacity: 0.3,
       shadowRadius: 16,
@@ -794,7 +791,7 @@ function makeStyles(theme: ThemePalette) {
       maxWidth: 110,
       paddingHorizontal: 14,
       paddingVertical: 10,
-      borderRadius: 14,
+      borderRadius: Radius.card,
       borderWidth: 1,
       alignItems: 'center',
       gap: 1,
@@ -806,7 +803,7 @@ function makeStyles(theme: ThemePalette) {
     templateChip: {
       paddingHorizontal: 14,
       paddingVertical: 9,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     toggleGroup: {
@@ -827,7 +824,7 @@ function makeStyles(theme: ThemePalette) {
     toggleIcon: {
       width: 34,
       height: 34,
-      borderRadius: 10,
+      borderRadius: Radius.card,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
@@ -848,7 +845,7 @@ function makeStyles(theme: ThemePalette) {
       justifyContent: 'center',
       gap: 8,
       paddingVertical: 14,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
     },
     toastWrap: {
       position: 'absolute',
@@ -859,7 +856,7 @@ function makeStyles(theme: ThemePalette) {
     toast: {
       paddingHorizontal: 16,
       paddingVertical: 10,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
   });

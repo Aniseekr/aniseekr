@@ -240,7 +240,7 @@ export default function PilgrimageSceneIdScreen() {
       <SafeAreaView style={[styles.root, { backgroundColor: theme.background.primary }]}>
         <View style={styles.header}>
           <ThemedIconButton
-            icon={(color) => <Ionicons name="chevron-back" size={22} color={color} />}
+            icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
             accessibilityLabel={t('common.back')}
             onPress={handleBack}
             variant="ghost"
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   scanIcon: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xs,

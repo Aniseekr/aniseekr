@@ -5,7 +5,7 @@
 // skeleton — everything is seeded synchronously from MMKV (Rule 10).
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,7 +13,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
-import { ThemedButton, ThemedText } from '../../../../components/themed';
+import { ThemedButton, ThemedIconButton, ThemedText } from '../../../../components/themed';
 import { SpotImage } from '../../../../components/pilgrimage/SpotImage';
 import { MapSurface } from '../../../../components/pilgrimage/map/MapSurface';
 import { LocateFab } from '../../../../components/pilgrimage/LocateFab';
@@ -188,18 +188,11 @@ export default function PilgrimageTripScreen() {
 
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
-        <Pressable
-          onPress={handleBack}
-          hitSlop={8}
-          accessibilityRole="button"
+        <ThemedIconButton
           accessibilityLabel={t('pilgrimage.trip.back')}
-          style={({ pressed }) => [
-            styles.roundBtn,
-            { backgroundColor: `${theme.background.secondary}E6`, borderColor: theme.glassBorder },
-            pressed && { opacity: 0.8 },
-          ]}>
-          <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
-        </Pressable>
+          icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+          onPress={handleBack}
+        />
         <View
           style={[
             styles.titlePill,
@@ -281,19 +274,11 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.screenPadding,
   },
-  roundBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
   titlePill: {
     flex: 1,
     minWidth: 0,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 14,
@@ -307,5 +292,5 @@ const styles = StyleSheet.create({
   },
   card: { borderRadius: Radius.lg, borderWidth: 1, padding: Spacing.md, gap: Spacing.sm },
   nextRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  nextThumb: { width: 56, height: 42, borderRadius: 8 },
+  nextThumb: { width: 56, height: 42, borderRadius: Radius.sm },
 });

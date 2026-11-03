@@ -12,6 +12,7 @@ import {
   dataSourceSwitchingCoordinator,
   type SwitchingState,
 } from '../../libs/services/data-source-switching-coordinator';
+import { Radius } from '../../constants/DesignSystem';
 
 export interface BrowseSourceChipProps {
   /** Override navigation target (defaults to /(setting)/data-source). */
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
     alignSelf: 'flex-start',

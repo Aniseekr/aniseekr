@@ -5,6 +5,7 @@ import React, { memo } from 'react';
 import { Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ThemePalette } from '../../../context/ThemeContext';
+import { Radius } from '../../../constants/DesignSystem';
 
 export interface LayoutModeButtonProps {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -32,7 +33,7 @@ function LayoutModeButtonImpl({
         {
           width: 34,
           height: 30,
-          borderRadius: 10,
+          borderRadius: Radius.card,
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 1,

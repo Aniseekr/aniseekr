@@ -6,6 +6,7 @@ import { useT } from '../../../libs/i18n';
 import { roundExposureValue } from '../../../libs/services/pilgrimage/camera-ui';
 import { CameraChrome } from './cameraChrome';
 import type { FocusPoint } from './types';
+import { Radius } from '../../../constants/DesignSystem';
 
 interface FocusExposureBarProps {
   value: number;
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 560,
     minHeight: 54,
-    borderRadius: 18,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
     backgroundColor: 'rgba(0,0,0,0.66)',

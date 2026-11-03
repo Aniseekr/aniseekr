@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     right: Spacing.xs,
     width: 22,
     height: 22,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
