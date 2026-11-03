@@ -394,15 +394,13 @@ export default function BangumiScreen() {
             ) : null}
           </View>
           {trackingReady && schedule.status === 'ready' && untriaged.length > 0 ? (
-            <ThemedSurface padded style={styles.section}>
-              <ThemedText variant="titleLarge" weight="700">
-                {t('tabs.schedule.triageTitle')}
-              </ThemedText>
-              <ThemedButton
-                label={t('tabs.schedule.triageAction', { count: untriaged.length })}
-                onPress={openDeck}
-              />
-            </ThemedSurface>
+            <ThemedButton
+              variant="secondary"
+              fullWidth
+              icon={<MaterialIcons name="style" size={18} color={theme.text.primary} />}
+              label={t('tabs.schedule.triageAction', { count: untriaged.length })}
+              onPress={openDeck}
+            />
           ) : null}
         </ScrollView>
       )}

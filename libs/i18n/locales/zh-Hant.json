@@ -188,7 +188,6 @@
   },
   "settings": {
     "title": "設定",
-    "longPressHint": "長按項目可開啟快速操作",
     "account": "帳號",
     "appearanceSubtitle": "主題、強調色、對比",
     "language": "語言",
@@ -719,10 +718,9 @@
       }
     },
     "appearanceTitle": "外觀",
-    "watchPlatformsHint": "選擇你在哪裡看（Netflix、巴哈姆特動畫瘋、Crunchyroll…）",
     "watchPlatformsSummary": "已啟用 {count} 個 · 主要：{primary}",
     "watchPlatformsNoPrimary": "未設定",
-    "backupHint": "iCloud · Google Drive · 匯入舊版 aniseeker 資料",
+    "backupHint": "iCloud · Google Drive",
     "connectedNone": "未連結",
     "premium": {
       "active": "Premium 已啟用",
@@ -952,7 +950,6 @@
       "emptyTracking": "這天沒有正在追的動畫。",
       "emptySeason": "這天沒有排定播出的動畫。",
       "showSeason": "看本季全部",
-      "triageTitle": "還沒決定追什麼？",
       "triageAction": "滑卡片篩選本季 {count} 部",
       "deck": "卡片篩選",
       "options": "追番選項",

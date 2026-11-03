@@ -33,6 +33,7 @@ import {
   type UserPrefs,
 } from '../../libs/services/user-prefs';
 import { UserRepository, type UserProfile } from '../../libs/repositories/user-repository';
+import { SEEKR_POSES } from '../../components/brand/SeekrPose';
 import { authService } from '../../libs/services/auth/auth-service';
 
 interface PurchasesShowManage {
@@ -447,14 +448,9 @@ export default function SettingsScreen() {
     setUser(next);
   }, []);
 
-  const displayName = user?.username ?? t('profile.animeFan');
+  const displayName = user?.username || t('tabs.profileScreen.anonName');
   const avatarUri = user?.avatarUrl ?? '';
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase())
-    .join('');
+  const mascot = prefs.profileMascot;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
@@ -462,7 +458,6 @@ export default function SettingsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <SettingsHeader
           title={t('settings.title')}
-          subtitle={t('settings.longPressHint')}
           onBack={() => router.back()}
         />
 
@@ -496,9 +491,12 @@ export default function SettingsScreen() {
                 {avatarUri ? (
                   <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                 ) : (
-                  <ThemedText variant="titleMedium" weight="800" style={{ color: ctaFg }}>
-                    {initials || 'A'}
-                  </ThemedText>
+                  <Image
+                    source={SEEKR_POSES[mascot]}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    contentPosition="top"
+                  />
                 )}
               </LinearGradient>
 
@@ -603,7 +601,7 @@ export default function SettingsScreen() {
                       primary:
                         prefs.streamingPlatforms.primary ?? t('settings.watchPlatformsNoPrimary'),
                     })
-                  : t('settings.watchPlatformsHint')
+                  : undefined
               }
               onPress={() => router.push('/(setting)/watch-platforms')}
             />

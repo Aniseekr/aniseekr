@@ -188,7 +188,6 @@
   },
   "settings": {
     "title": "Settings",
-    "longPressHint": "Long-press a row for quick actions",
     "account": "Account",
     "appearanceSubtitle": "Theme, accent, contrast",
     "language": "Language",
@@ -719,10 +718,9 @@
       }
     },
     "appearanceTitle": "Appearance",
-    "watchPlatformsHint": "Pick where you watch (Netflix, Bahamut, Crunchyroll…)",
     "watchPlatformsSummary": "{count} enabled · primary: {primary}",
     "watchPlatformsNoPrimary": "none",
-    "backupHint": "iCloud · Google Drive · import old aniseeker data",
+    "backupHint": "iCloud · Google Drive",
     "connectedNone": "None",
     "premium": {
       "active": "Premium active",
@@ -952,7 +950,6 @@
       "emptyTracking": "Nothing you follow airs on this day.",
       "emptySeason": "No shows scheduled for this day.",
       "showSeason": "See all this season",
-      "triageTitle": "Still deciding what to watch?",
       "triageAction": "Swipe through {count} shows this season",
       "deck": "Filter with cards",
       "options": "Schedule options",

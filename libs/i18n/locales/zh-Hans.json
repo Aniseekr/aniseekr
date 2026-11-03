@@ -101,7 +101,6 @@
   },
   "settings": {
     "title": "设置",
-    "longPressHint": "长按条目可打开快速操作",
     "account": "账号",
     "appearanceSubtitle": "主题、强调色、对比度",
     "language": "语言",
