@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '../../themed';
 import { SpotImage } from '../SpotImage';
+import { bangumiSubjectImageUrl } from '../../../libs/clients/bangumi-client';
 import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useT } from '../../../libs/i18n';
@@ -36,7 +37,12 @@ export function CollectionPoster({
         onPress();
       }}
       style={styles.posterCard}>
-      <SpotImage uri={anime.cover} style={styles.poster} />
+      <SpotImage
+        uri={anime.cover}
+        fallbackUri={bangumiSubjectImageUrl(anime.id, 'common')}
+        contentPosition="top"
+        style={styles.poster}
+      />
       <ThemedText variant="caption" weight="700" numberOfLines={1}>
         {getPilgrimageAnimeTitles(anime).primary}
       </ThemedText>
@@ -71,7 +77,14 @@ export function AnimeRow({ anime, onPress }: { anime: AnitabiBangumi; onPress: (
     <DiscoveryRow
       title={getPilgrimageAnimeTitles(anime).primary}
       subtitle={t('tabs.pilgrimageHome.spotCount', { count: anime.pointsLength })}
-      image={<SpotImage uri={anime.cover} style={styles.rowThumb} />}
+      image={
+        <SpotImage
+          uri={anime.cover}
+          fallbackUri={bangumiSubjectImageUrl(anime.id, 'common')}
+          contentPosition="top"
+          style={styles.rowThumb}
+        />
+      }
       onPress={() => {
         hapticsBridge.tap();
         onPress();

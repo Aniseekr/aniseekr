@@ -523,6 +523,9 @@ export default function AnimeDetailScreen() {
             source={{ uri: anime.bannerImage || anime.image }}
             style={{ width: '100%', height: '100%', opacity: 0.6 }}
             contentFit="cover"
+            // Without a banner the portrait poster fills this wide strip; keep
+            // the top (faces, logo) instead of the centre.
+            contentPosition={anime.bannerImage ? 'center' : 'top'}
             transition={120}
             cachePolicy="memory-disk"
             recyclingKey={anime.id}

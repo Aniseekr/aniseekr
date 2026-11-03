@@ -57,7 +57,12 @@ export function FolderGridItem({ folder, cover, onPress, onLongPress, onManage }
         style={({ pressed }) => [styles.cardContent, { opacity: pressed ? 0.88 : 1 }]}>
         <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]}>
           {cover ? (
-            <Image source={{ uri: cover }} style={styles.coverImage} contentFit="cover" />
+            <Image
+              source={{ uri: cover }}
+              style={styles.coverImage}
+              contentFit="cover"
+              contentPosition="top"
+            />
           ) : (
             <LinearGradient
               colors={[`${theme.accent}33`, 'transparent']}

@@ -16,6 +16,10 @@ export interface SpotImageProps {
   uri: string | null | undefined;
   style?: StyleProp<ImageStyle>;
   contentFit?: ImageContentFit;
+  /** 'top' for portrait posters in wider frames so faces aren't cropped. */
+  contentPosition?: 'center' | 'top';
+  /** Tried once when `uri` fails (e.g. anitabi 403) before the no-image tile. */
+  fallbackUri?: string | null;
   recyclingKey?: string;
   accessibilityLabel?: string;
   fallbackIconSize?: number;
@@ -25,16 +29,25 @@ export function SpotImage({
   uri,
   style,
   contentFit = 'cover',
+  contentPosition = 'center',
+  fallbackUri,
   recyclingKey,
   accessibilityLabel,
   fallbackIconSize = 18,
 }: SpotImageProps) {
   const { theme } = useTheme();
   const t = useT();
-  const [failedUri, setFailedUri] = useState<string | null>(null);
-  const clean = sanitizeImageUri(uri);
+  const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
+  const primary = sanitizeImageUri(uri);
+  const fallback = sanitizeImageUri(fallbackUri);
+  const clean =
+    primary !== null && !failed.has(primary)
+      ? primary
+      : fallback !== null && !failed.has(fallback)
+        ? fallback
+        : null;
 
-  if (clean === null || failedUri === clean) {
+  if (clean === null) {
     return (
       <View
         accessible
@@ -50,11 +63,12 @@ export function SpotImage({
       source={anitabiImageSource(clean)}
       style={style}
       contentFit={contentFit}
+      contentPosition={contentPosition}
       cachePolicy="memory-disk"
       transition={150}
       recyclingKey={recyclingKey}
       accessibilityLabel={accessibilityLabel}
-      onError={() => setFailedUri(clean)}
+      onError={() => setFailed((prev) => new Set(prev).add(clean))}
     />
   );
 }
