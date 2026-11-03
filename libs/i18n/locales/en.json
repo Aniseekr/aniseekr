@@ -519,7 +519,12 @@
         "scheduledWithCount": "Scheduled reminders ({count})",
         "whatToSend": "What to send"
       },
-      "subtitle": "{count} scheduled · {status}"
+      "subtitle": "{count} scheduled · {status}",
+      "permissionStatus": {
+        "granted": "On",
+        "denied": "Off",
+        "undetermined": "Not set"
+      }
     },
     "otakuDna": {
       "title": "Otaku DNA"
@@ -584,7 +589,6 @@
       "conflictChoose": "Choose which platform’s value to keep. The choice will be saved and queued for connected platforms.",
       "conflictOption": "Use {platform}: {value}",
       "resolveError": "Could not resolve this conflict. Please try again.",
-
       "checkError": "Unable to check platforms. Please try again.",
       "checkTitle": "Platform connection check",
       "checkDescription": "Check whether connected platforms can return your list. This does not update your library or sync changes between platforms.",
@@ -2196,7 +2200,8 @@
     "unavailableProviderlabelNextIsNotTitle": "Unavailable",
     "unknownError": "Unknown error",
     "unlockThemesSyncNoAds": "Unlock themes, sync, no ads",
-    "upgradeNow": "Upgrade now"
+    "upgradeNow": "Upgrade now",
+    "cameraDiagnosticsSubtitle": "Hardware fingerprint + cohort classification"
   },
   "subscription": {
     "allPremiumThemes": "All premium themes",

@@ -1,5 +1,5 @@
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import {
   SettingsScreenLayout,
@@ -7,12 +7,12 @@ import {
   SettingsSection,
 } from '../../components/setting/SettingsScreenLayout';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { useT } from '../../libs/i18n';
+import { useT, type TranslationKey } from '../../libs/i18n';
 
 interface Source {
   name: string;
   url: string;
-  descKey: string;
+  descKey: TranslationKey;
   icon: 'public' | 'data-usage' | 'language' | 'translate' | 'place' | 'collections';
 }
 
@@ -20,43 +20,43 @@ const DATA_SOURCES: Source[] = [
   {
     name: 'AniList',
     url: 'https://anilist.co/',
-    descKey: 'settings.attribution.source.anilist',
+    descKey: 'settings.attributionScreen.source.anilist',
     icon: 'public',
   },
   {
     name: 'MyAnimeList',
     url: 'https://myanimelist.net/',
-    descKey: 'settings.attribution.source.myanimelist',
+    descKey: 'settings.attributionScreen.source.myanimelist',
     icon: 'data-usage',
   },
   {
     name: 'Bangumi',
     url: 'https://bgm.tv/',
-    descKey: 'settings.attribution.source.bangumi',
+    descKey: 'settings.attributionScreen.source.bangumi',
     icon: 'translate',
   },
   {
     name: 'Kitsu',
     url: 'https://kitsu.io/',
-    descKey: 'settings.attribution.source.kitsu',
+    descKey: 'settings.attributionScreen.source.kitsu',
     icon: 'collections',
   },
   {
     name: 'Annict',
     url: 'https://annict.com/',
-    descKey: 'settings.attribution.source.annict',
+    descKey: 'settings.attributionScreen.source.annict',
     icon: 'language',
   },
   {
     name: 'Jikan / MAL',
     url: 'https://jikan.moe/',
-    descKey: 'settings.attribution.source.jikan',
+    descKey: 'settings.attributionScreen.source.jikan',
     icon: 'data-usage',
   },
   {
     name: 'Anitabi',
     url: 'https://www.anitabi.cn/',
-    descKey: 'settings.attribution.source.anitabi',
+    descKey: 'settings.attributionScreen.source.anitabi',
     icon: 'place',
   },
 ];
@@ -65,7 +65,7 @@ const MAP_SOURCES: Source[] = [
   {
     name: 'OpenStreetMap',
     url: 'https://www.openstreetmap.org/copyright',
-    descKey: 'settings.attribution.source.osm',
+    descKey: 'settings.attributionScreen.source.osm',
     icon: 'place',
   },
 ];
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   tagText: {

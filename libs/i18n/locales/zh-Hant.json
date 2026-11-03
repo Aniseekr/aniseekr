@@ -519,7 +519,12 @@
         "scheduledWithCount": "已排程的提醒({count})",
         "whatToSend": "通知內容"
       },
-      "subtitle": "{count} 項已排程 · {status}"
+      "subtitle": "{count} 項已排程 · {status}",
+      "permissionStatus": {
+        "granted": "已開啟",
+        "denied": "已關閉",
+        "undetermined": "尚未設定"
+      }
     },
     "otakuDna": {
       "title": "御宅 DNA"
@@ -584,7 +589,6 @@
       "conflictChoose": "選擇要保留的平台數值。選擇將儲存並加入已連結平台的同步佇列。",
       "conflictOption": "使用 {platform}：{value}",
       "resolveError": "無法解決此衝突，請重試。",
-
       "checkError": "無法檢查平台，請再試一次。",
       "checkTitle": "平台連線檢查",
       "checkDescription": "檢查已連結的平台能否回傳清單。這不會更新本機收藏，也不會在平台之間同步變更。",
@@ -2196,7 +2200,8 @@
     "unavailableProviderlabelNextIsNotTitle": "無法使用",
     "unknownError": "未知錯誤",
     "unlockThemesSyncNoAds": "解鎖主題、同步、無廣告",
-    "upgradeNow": "立即升級"
+    "upgradeNow": "立即升級",
+    "cameraDiagnosticsSubtitle": "硬體指紋＋相機分組"
   },
   "subscription": {
     "allPremiumThemes": "所有進階主題",
