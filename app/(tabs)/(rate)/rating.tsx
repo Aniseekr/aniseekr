@@ -15,19 +15,15 @@ import {
   subscribeRateNativeAdReady,
 } from '../../../libs/services/ads/rate-native-ad-pool';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ModePill } from '../../../components/rate/ModePill';
-import { ModeSwitcherSheet, type ModeOption } from '../../../components/rate/ModeSwitcherSheet';
-import { RatingActionButtons, type RatingType } from '../../../components/rate/RatingActionButtons';
+import type { RatingType } from '../../../components/rate/RatingActionButtons';
 import { ImageDisplaySettingsSheet } from '../../../components/rate/ImageDisplaySettingsSheet';
 import { SwipeDeck, type SwipeDeckRef } from '../../../components/rate/SwipeDeck';
 import { ImagePreloader } from '../../../libs/image-preloader';
 import { trackingService } from '../../../libs/services/tracking/tracking-service';
 import { LocalDB } from '../../../libs/db';
 import {
-  DEFAULT_SWIPE_PREFS,
   loadUserPrefsSync,
   patchSwipePrefs,
-  type SwipeMode,
   type SwipePrefs,
 } from '../../../libs/services/user-prefs';
 import { useTheme } from '../../../context/ThemeContext';
@@ -68,16 +64,17 @@ const LOAD_MORE_TARGET_PHOTOS = PREFETCH_THRESHOLD + 4;
 const FILTERED_EMPTY_PAGE_SKIP_LIMIT = 2;
 const PREFETCH_PHOTO_COUNT = 5;
 // Card sizing — the top padding stacks on top of the safe-area inset so the
-// card always clears the X + ModePill on notched devices (otherwise the
+// card always clears the header buttons on notched devices (otherwise the
 // inline Tap-for-info chip sits behind the pill). The bottom only needs to
 // clear the action buttons since the hint now lives inside the card.
 const CARD_HORIZONTAL_PADDING = 28;
 const CARD_TOP_GAP = 56;
 const CARD_PADDING_BOTTOM = 125;
 
-function deriveRatingFromDirection(direction: 'left' | 'right', mode: SwipeMode): RatingType {
-  if (direction === 'left') return 'skip';
-  return mode === 'plan' ? 'tracking' : 'like';
+// One gesture vocabulary: right = want to watch, left = skip. "Seen it and
+// liked it" is the heart button, so there is no mode to switch.
+function deriveRatingFromDirection(direction: 'left' | 'right'): RatingType {
+  return direction === 'left' ? 'skip' : 'tracking';
 }
 
 function isPositiveRating(rating: RatingType): boolean {
@@ -99,8 +96,15 @@ async function applyOutcome(photo: Photo, rating: RatingType): Promise<void> {
     }
 
     if (rating === 'like' || rating === 'love') {
-      // Existing path: addRating('like') + addFavorite.
+      // ♥ means "seen it, liked it": record the like/favorite and, unless the
+      // user already tracks it, file it under Completed so it shows in Library.
       await AnimeRepository.rateAnime(photo.id, 'like');
+      if (!(await trackingService.getStatus(photo.id))) {
+        await trackingService.updateStatus(photo.id, 'completed', {
+          title: photo.title,
+          imageUrl: photo.url,
+        });
+      }
       return;
     }
 
@@ -144,11 +148,6 @@ function releaseQueuedSwipeSeen(ids: string[]): void {
   }
 }
 
-const RIGHT_ICON_BY_MODE: Record<SwipeMode, 'bookmark' | 'heart'> = {
-  plan: 'bookmark',
-  like: 'heart',
-};
-
 export default function RatingScreen() {
   const { top, bottom } = useSafeAreaInsets();
   const router = useRouter();
@@ -157,23 +156,6 @@ export default function RatingScreen() {
   const { theme } = useTheme();
   const subscription = useSubscription();
   const t = useT();
-  const MODE_OPTIONS: readonly ModeOption[] = useMemo(
-    () => [
-      {
-        value: 'plan',
-        label: t('tabs.ratingScreen.mode.plan'),
-        icon: 'bookmark',
-        color: theme.accent,
-      },
-      {
-        value: 'like',
-        label: t('tabs.ratingScreen.mode.like'),
-        icon: 'heart',
-        color: theme.status.error,
-      },
-    ],
-    [t, theme.accent, theme.status.error]
-  );
   // Swipe stamps follow the theme: plan = accent, like/skip = the error red.
   const skipIndicator = useMemo(
     () => ({ icon: 'close', color: theme.status.error }) as const,
@@ -199,7 +181,6 @@ export default function RatingScreen() {
   // from a tab).
   const [swipePrefs, setSwipePrefs] = useState<SwipePrefs>(() => loadUserPrefsSync().swipe);
   const [showSettings, setShowSettings] = useState(false);
-  const [showModeSwitcher, setShowModeSwitcher] = useState(false);
   const [restartableSeenIds, setRestartableSeenIds] = useState<string[]>([]);
   // Bumped on restart to force-remount the SwipeDeck so its internal topIndex
   // and outgoing-card list start clean.
@@ -218,7 +199,6 @@ export default function RatingScreen() {
   const photosRef = useRef<Photo[]>([]);
   const deckRef = useRef<DeckItem[]>([]);
   const animeIdRef = useRef<string | undefined>(undefined);
-  const swipeModeRef = useRef<SwipeMode>(DEFAULT_SWIPE_PREFS.mode);
   // The initial top index for SwipeDeck at mount/remount time. Resetting this
   // alongside deckGeneration is how cache hydration and restart drop the user
   // onto the right card without SwipeDeck reacting to startIndex changes
@@ -228,14 +208,9 @@ export default function RatingScreen() {
   photosRef.current = photos;
   deckRef.current = deck;
   animeIdRef.current = params.animeId;
-  swipeModeRef.current = swipePrefs.mode;
   const rightIndicator = useMemo(
-    () =>
-      ({
-        icon: RIGHT_ICON_BY_MODE[swipePrefs.mode],
-        color: swipePrefs.mode === 'plan' ? theme.accent : theme.status.error,
-      }) as const,
-    [swipePrefs.mode, theme.accent, theme.status.error]
+    () => ({ icon: 'bookmark', color: theme.accent }) as const,
+    [theme.accent]
   );
 
   // Imperative handle into SwipeDeck — bottom buttons commit via swipeDeckRef.
@@ -256,12 +231,6 @@ export default function RatingScreen() {
 
   // Swipe prefs are seeded synchronously above via `loadUserPrefsSync` so the
   // deck opens in the user's chosen mode on frame 1. No async hydrate needed.
-
-  const handleModeChange = useCallback((mode: SwipeMode) => {
-    setSwipePrefs((prev) => ({ ...prev, mode }));
-    void patchSwipePrefs({ mode });
-    hapticsBridge.selection();
-  }, []);
 
   const handleSwipePrefsChange = useCallback((next: SwipePrefs) => {
     setSwipePrefs(next);
@@ -532,7 +501,7 @@ export default function RatingScreen() {
       if (item.kind === 'photo') {
         const pending = pendingRatingRef.current;
         const rating: RatingType =
-          pending ?? deriveRatingFromDirection(direction, swipeModeRef.current);
+          pending ?? deriveRatingFromDirection(direction);
         // Persist that we've shown this card, regardless of action. The next
         // session's deck filters by this set so the user resumes where they
         // left off instead of re-seeing the same items.
@@ -656,7 +625,6 @@ export default function RatingScreen() {
 
   const currentItem = deck[currentIndex];
   const currentPhoto = currentItem?.kind === 'photo' ? currentItem.photo : undefined;
-  const activeModeOption = MODE_OPTIONS.find((m) => m.value === swipePrefs.mode) ?? MODE_OPTIONS[0];
   const canRestartCurrentGenre = !!params.genreId && !params.animeId;
   const showEmptyRestart = canRestartCurrentGenre && restartableSeenIds.length > 0;
   const showDeck = !loading && deck.length > 0;
@@ -680,12 +648,6 @@ export default function RatingScreen() {
               accessibilityLabel={t('tabs.ratingScreen.closeA11y')}
               icon={(c) => <Ionicons name="close" size={20} color={c} />}
               onPress={handleClose}
-            />
-            <ModePill
-              icon={activeModeOption.icon}
-              label={activeModeOption.label}
-              color={activeModeOption.color ?? theme.accent}
-              onPress={() => setShowModeSwitcher(true)}
             />
           </View>
 
@@ -762,49 +724,39 @@ export default function RatingScreen() {
         style={[styles.overlayContainer, { paddingBottom: bottom + 16 }]}
         pointerEvents="box-none">
         {currentPhoto ? (
-          swipePrefs.mode === 'plan' ? (
-            <View style={styles.planButtonsRow}>
-              <Pressable
-                onPress={() => triggerSwipe('left')}
-                style={[
-                  styles.planSideButton,
-                  {
-                    backgroundColor: theme.background.secondary,
-                    borderColor: theme.status.error,
-                  },
-                ]}
-                accessibilityLabel={t('tabs.ratingScreen.skipA11y')}>
-                <Ionicons name="close" size={26} color={theme.status.error} />
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleRateFromButton('tracking')}
-                style={[
-                  styles.planSideButton,
-                  styles.planSidePrimary,
-                  { backgroundColor: theme.background.secondary, borderColor: theme.accent },
-                ]}
-                accessibilityLabel={t('tabs.ratingScreen.addToPlanA11y')}>
-                <Ionicons name="bookmark" size={24} color={theme.accent} />
-              </Pressable>
-            </View>
-          ) : (
-            <RatingActionButtons
-              style={styles.likeModeButtons}
-              mode={swipePrefs.ratingButtons === 'five' ? 'fiveButtons' : 'threeButtons'}
-              onRate={handleRateFromButton}
-            />
-          )
+          <View style={styles.planButtonsRow}>
+            <Pressable
+              onPress={() => triggerSwipe('left')}
+              style={[
+                styles.planSideButton,
+                { backgroundColor: theme.background.secondary, borderColor: theme.status.error },
+              ]}
+              accessibilityLabel={t('tabs.ratingScreen.skipA11y')}>
+              <Ionicons name="close" size={26} color={theme.status.error} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleRateFromButton('like')}
+              style={[
+                styles.planSideButton,
+                styles.likeButton,
+                { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+              ]}
+              accessibilityLabel={t('tabs.ratingScreen.likeA11y')}>
+              <Ionicons name="heart" size={22} color={theme.status.error} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleRateFromButton('tracking')}
+              style={[
+                styles.planSideButton,
+                styles.planSidePrimary,
+                { backgroundColor: theme.background.secondary, borderColor: theme.accent },
+              ]}
+              accessibilityLabel={t('tabs.ratingScreen.addToPlanA11y')}>
+              <Ionicons name="bookmark" size={24} color={theme.accent} />
+            </Pressable>
+          </View>
         ) : null}
       </View>
-
-      <ModeSwitcherSheet
-        visible={showModeSwitcher}
-        value={swipePrefs.mode}
-        options={MODE_OPTIONS}
-        onSelect={handleModeChange}
-        onClose={() => setShowModeSwitcher(false)}
-      />
 
       <ImageDisplaySettingsSheet
         visible={showSettings}
@@ -935,11 +887,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
   },
+  likeButton: { width: 52, height: 52 },
   planSidePrimary: {
     borderWidth: 1.5,
-  },
-  likeModeButtons: {
-    marginTop: 16,
-    paddingTop: 16,
   },
 });

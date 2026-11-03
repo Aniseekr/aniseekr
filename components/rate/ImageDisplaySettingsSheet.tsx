@@ -15,7 +15,6 @@ import type {
   SwipeRatingButtons,
 } from '../../libs/services/user-prefs';
 import { CapsText } from '../themed/CapsText';
-import { ThemedSwitch } from '../themed/ThemedSwitch';
 
 // Re-export aliases for any legacy importers (kept stable across the swipe-prefs migration).
 export type ImageContentMode = SwipeContentMode;
@@ -114,54 +113,6 @@ function ImageDisplaySettingsSheetComponent({
           })}
         </View>
 
-        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-          {t('rate.ratingButtonsLikeMode')}
-        </CapsText>
-        <View style={styles.segmented}>
-          {(['three', 'five'] as SwipeRatingButtons[]).map((mode) => {
-            const active = preferences.ratingButtons === mode;
-            return (
-              <Pressable
-                key={mode}
-                onPress={() => update('ratingButtons', mode)}
-                style={({ pressed }) => [
-                  styles.segmentItem,
-                  {
-                    backgroundColor: active ? theme.accent : theme.background.tertiary,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}>
-                <Text
-                  style={[styles.segmentLabel, { color: active ? activeFg : theme.text.primary }]}>
-                  {mode === 'three' ? '3 buttons' : '5 buttons'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <ToggleRow
-          icon="lightbulb-outline"
-          label={t('rate.aiInsights')}
-          description={t('rate.showAiGeneratedRecommendationsOn')}
-          value={preferences.showAIInsights}
-          onChange={(v) => update('showAIInsights', v)}
-        />
-        <ToggleRow
-          icon="bookmark"
-          label={t('rate.trackingShortcut')}
-          description={t('rate.addAnimeToListsDirectly')}
-          value={preferences.trackingShortcut}
-          onChange={(v) => update('trackingShortcut', v)}
-        />
-        <ToggleRow
-          icon="translate"
-          label={t('rate.originalTitles')}
-          description={t('rate.showRomajiOrJapaneseTitles')}
-          value={preferences.showOriginalTitle}
-          onChange={(v) => update('showOriginalTitle', v)}
-        />
-
         {onRestartGenre ? (
           <>
             <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
@@ -225,38 +176,6 @@ function ActionRow({
   );
 }
 
-function ToggleRow({
-  icon,
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  label: string;
-  description: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View
-      style={[
-        styles.toggleRow,
-        { borderColor: theme.glassBorder, backgroundColor: theme.background.tertiary },
-      ]}>
-      <MaterialIcons name={icon} size={22} color={theme.accent} />
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.toggleLabel, { color: theme.text.primary }]}>{label}</Text>
-        <Text style={[styles.toggleDescription, { color: theme.text.secondary }]}>
-          {description}
-        </Text>
-      </View>
-      {/* The row callers' update helper already fires the selection haptic. */}
-      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   headerRow: {

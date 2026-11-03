@@ -11,7 +11,6 @@ import { useTheme } from '../../../../context/ThemeContext';
 import { AnimeRepository } from '../../../../libs/repositories/anime-repository';
 import { peekDeck } from '../../../../libs/services/rate/deck-cache';
 import { loadGenreSwipePage } from '../../../../libs/services/rate/genre-deck-prefetch';
-import { loadUserPrefsSync } from '../../../../libs/services/user-prefs';
 import { useT } from '../../../../libs/i18n';
 import { useTranslatedGenre } from '../../../../libs/i18n/use-translated-genre';
 
@@ -58,7 +57,6 @@ export default function GenreScreen() {
   const startDeck = () =>
     router.push({ pathname: '/(rate)/rating', params: { genreId: id, genreName: label.value } });
   const hero = image || popular.data[0]?.image;
-  const mode = loadUserPrefsSync().swipe.mode;
   const subtitle =
     label.value === id
       ? t('tabs.genrePage.subtitle')
@@ -100,7 +98,7 @@ export default function GenreScreen() {
             onPress={startDeck}
           />
           <ThemedText variant="bodySmall" tone="secondary" align="center">
-            {t(mode === 'plan' ? 'tabs.genrePage.hintPlan' : 'tabs.genrePage.hintLike')}
+            {t('tabs.genrePage.hint')}
           </ThemedText>
         </View>
         <View style={styles.section}>
