@@ -557,6 +557,9 @@ export class AniListClient {
    * that wanted to hit AniList at the same time. One alias-bundled query
    * spends a single rate-limit slot and returns in network-RTT.
    *
+   * Each genre fetches its top 6 so a cover already used by an earlier genre
+   * can be skipped.
+   *
    * The returned map is keyed by the **original** genre string and carries
    * `null` for genres whose popular-anime query returned no SFW match (or
    * whose alias was malformed). Callers fall back to whatever placeholder
@@ -587,7 +590,7 @@ export class AniListClient {
       variables[variableName] = genre;
       variableDecls.push(`$${variableName}: String`);
       fieldBlocks.push(
-        `        ${alias}: Page(page: 1, perPage: 1) {
+        `        ${alias}: Page(page: 1, perPage: 6) {
           media(genre: $${variableName}, type: ANIME, isAdult: $isAdult, sort: [POPULARITY_DESC]) {
             coverImage { large extraLarge }
           }
@@ -612,9 +615,18 @@ ${fieldBlocks.join('\n')}
       variables
     );
 
+    // The same few hits top most genres; take each genre's most popular cover
+    // that an earlier genre hasn't already used so the tiles stay distinct.
+    const used = new Set<string>();
     for (const [alias, genre] of aliasToGenre) {
-      const block = data[alias];
-      const cover = block?.media?.[0]?.coverImage;
+      const covers = (data[alias]?.media ?? []).map((media) => media.coverImage);
+      const cover =
+        covers.find((candidate) => {
+          const key = candidate.extraLarge ?? candidate.large;
+          return key != null && !used.has(key);
+        }) ?? covers[0];
+      const coverKey = cover?.extraLarge ?? cover?.large;
+      if (coverKey) used.add(coverKey);
       if (cover) {
         result.set(genre, {
           extraLarge: cover.extraLarge ?? cover.large ?? '',

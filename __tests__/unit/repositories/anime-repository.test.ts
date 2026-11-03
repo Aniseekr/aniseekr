@@ -693,7 +693,7 @@ describe('AnimeRepository', () => {
 
   it('REPO-042 legacy getGenres filters adult genre cards read from stale cache', async () => {
     await CacheService.set(
-      'genres_list_v2_r0',
+      'genres_list_v3_r0',
       [
         { id: 'Action', displayName: 'Action', image: 'action.jpg' },
         { id: 'Ecchi', displayName: 'Ecchi', image: 'ecchi.jpg' },

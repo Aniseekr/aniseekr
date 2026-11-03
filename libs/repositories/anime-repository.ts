@@ -915,7 +915,7 @@ export class AnimeRepository {
   }
 
   static getGenresSync(): Genre[] | null {
-    const cached = CacheService.getSync<Genre[]>(`genres_list_v2_r${r18CacheFlag()}`);
+    const cached = CacheService.getSync<Genre[]>(`genres_list_v3_r${r18CacheFlag()}`);
     return cached ? filterGenreCards(cached) : null;
   }
 
@@ -1064,6 +1064,11 @@ export class AnimeRepository {
     return data.map(mapAniListToAnime);
   }
 
+  static getAnimeByGenreSync(genre: string, page = 1): Anime[] | null {
+    const cached = CacheService.getSync<AniListAnime[]>(`genre_${genre}_${page}_r${r18CacheFlag()}`);
+    return cached ? cached.map(mapAniListToAnime) : null;
+  }
+
   static async getAnimeByGenre(genre: string, page = 1): Promise<Anime[]> {
     const cacheKey = `genre_${genre}_${page}_r${r18CacheFlag()}`;
     const cached = await CacheService.get<AniListAnime[]>(cacheKey);
@@ -1077,7 +1082,7 @@ export class AnimeRepository {
   }
 
   static async getGenres(forceRefresh = false): Promise<Genre[]> {
-    const cacheKey = `genres_list_v2_r${r18CacheFlag()}`;
+    const cacheKey = `genres_list_v3_r${r18CacheFlag()}`;
     const overrides = await getGenreCoverOverrides();
     const cached = forceRefresh ? null : await CacheService.get<Genre[]>(cacheKey);
     if (cached) {
@@ -1194,9 +1199,9 @@ export class AnimeRepository {
       enTitle: anime.titleEnglish,
       jpTitle: anime.titleJapanese,
       tags: anime.tags,
-      score: anime.rank,
-      year: new Date().getFullYear(),
-      type: 'Anime',
+      score: anime.score,
+      year: anime.startDate?.year ?? undefined,
+      type: anime.format ?? anime.type,
     };
   }
 }
@@ -1220,6 +1225,8 @@ function mapAniListToAnime(item: AniListAnime): Anime {
       ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...'
       : '',
     durationMinutes: item.duration || 24,
+    startDate: item.startDate || undefined,
+    format: item.format || undefined,
   };
 }
 
