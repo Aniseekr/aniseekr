@@ -1449,9 +1449,9 @@
     "startRatingAnimeToUnlock": "Start rating anime to unlock your first badge."
   },
   "ads": {
-    "continueInAMoment": "Continue in a moment",
-    "loadingAd": "Loading ad",
-    "sponsored": "Sponsored"
+    "badge": "Ad",
+    "sponsored": "Sponsored",
+    "swipeToContinue": "Swipe to continue"
   },
   "bangumiTab": {
     "addToPlan": "Add to plan",

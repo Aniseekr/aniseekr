@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { runAfterInteractions } from '../../../libs/utils/after-interactions';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,13 @@ import { Photo, DeckItem } from '../../../components/rate/types';
 import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { isAdSlotEnabled } from '../../../libs/services/ads/ad-config';
-import { isRateNativeAdSuppressedSync } from '../../../libs/services/ads/rate-native-ad-session';
+import {
+  claimRateNativeAd,
+  hasReadyRateNativeAd,
+  preloadRateNativeAd,
+  releaseAllClaimedRateNativeAds,
+  subscribeRateNativeAdReady,
+} from '../../../libs/services/ads/rate-native-ad-pool';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ModePill } from '../../../components/rate/ModePill';
 import { ModeSwitcherSheet, type ModeOption } from '../../../components/rate/ModeSwitcherSheet';
@@ -36,7 +42,9 @@ import { isExhaustedSwipeDeck } from '../../../libs/services/rate/swipe-paginati
 import { loadNextUsableSwipePage } from '../../../libs/services/rate/swipe-page-loader';
 import {
   buildRatingDeck,
+  findAdInsertIndex,
   getUpcomingPhotoUrls,
+  insertAdCard,
   removeAdCardsPreservingPhotoIndex,
 } from '../../../libs/services/rate/rating-deck';
 import { SWIPE_PERSISTENCE_DELAY_MS } from '../../../libs/services/rate/swipe-animation';
@@ -191,8 +199,10 @@ export default function RatingScreen() {
   // Bumped on restart to force-remount the SwipeDeck so its internal topIndex
   // and outgoing-card list start clean.
   const [deckGeneration, setDeckGeneration] = useState(0);
-  const adsEnabled =
-    !subscription.isPro && isAdSlotEnabled('rate_native') && !isRateNativeAdSuppressedSync();
+  // Load failures only stop the background preloader (see rate-native-ad-pool);
+  // they never pull an already-loaded ad card out of the deck.
+  const adsEnabled = !subscription.adFree && !params.animeId && isAdSlotEnabled('rate_native');
+  const adReady = useSyncExternalStore(subscribeRateNativeAdReady, hasReadyRateNativeAd);
 
   // IDs the user has already swiped past in any previous session. Mirrored from
   // SQLite once on mount; new swipes are pushed into both the local ref and the
@@ -282,9 +292,12 @@ export default function RatingScreen() {
             ) {
               await clearDeck(params.genreId);
             } else {
-              const cachedDeck = adsEnabled
-                ? { deck: snapshot.deck, currentIndex: snapshot.currentIndex }
-                : removeAdCardsPreservingPhotoIndex(snapshot.deck, snapshot.currentIndex);
+              // Cached ad cards have no loaded ad behind them; fresh ones are
+              // inserted as the preloader delivers.
+              const cachedDeck = removeAdCardsPreservingPhotoIndex(
+                snapshot.deck,
+                snapshot.currentIndex
+              );
               setPhotos(snapshot.photos);
               setDeck(cachedDeck.deck);
               setCurrentIndex(cachedDeck.currentIndex);
@@ -351,7 +364,7 @@ export default function RatingScreen() {
         console.log('First photo URL:', validPhotos[0].url);
       }
       setPhotos(validPhotos);
-      setDeck(buildRatingDeck(validPhotos, adsEnabled));
+      setDeck(buildRatingDeck(validPhotos));
       setCurrentIndex(0);
       startIndexRef.current = 0;
       setCurrentPage(nextCurrentPage);
@@ -405,7 +418,7 @@ export default function RatingScreen() {
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
-      setDeck((prev) => [...prev, ...buildRatingDeck(newPhotos, adsEnabled)]);
+      setDeck((prev) => [...prev, ...buildRatingDeck(newPhotos)]);
       setCurrentPage(pageResult.currentPage);
       setHasMore(pageResult.hasMore);
     } catch (err) {
@@ -414,7 +427,6 @@ export default function RatingScreen() {
       setLoadingMore(false);
     }
   }, [
-    adsEnabled,
     currentPage,
     hasMore,
     loading,
@@ -436,6 +448,27 @@ export default function RatingScreen() {
     });
     return () => task.cancel();
   }, [currentIndex, deck]);
+
+  useEffect(() => {
+    if (!adsEnabled) return;
+    preloadRateNativeAd();
+    return releaseAllClaimedRateNativeAds;
+  }, [adsEnabled]);
+
+  // Insert an ad card only once one has loaded, behind the visible stack.
+  useEffect(() => {
+    if (!adsEnabled || loading) return;
+    const at = findAdInsertIndex(deck, currentIndex);
+    if (at === null) return;
+    if (!adReady) {
+      // No-op while a load is in flight or the failure cooldown is active.
+      preloadRateNativeAd();
+      return;
+    }
+    const id = claimRateNativeAd();
+    if (!id) return;
+    setDeck((prev) => insertAdCard(prev, at, id));
+  }, [adReady, adsEnabled, currentIndex, deck, loading]);
 
   useEffect(() => {
     if (adsEnabled) return;

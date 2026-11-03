@@ -1,8 +1,9 @@
 import { kvGet, kvRemove, kvSet } from '../storage/app-storage';
 import { RATE_NATIVE_AD_SUPPRESS_UNTIL_KEY } from '../storage/keys';
 
-export const RATE_NATIVE_AD_LOAD_TIMEOUT_MS = 5_000;
-export const RATE_NATIVE_AD_PROGRESS_MS = 1_500;
+// Minimum on-screen time before the top ad card can be swiped away. Long enough
+// that a fast swipe streak can't throw it off unseen, short enough not to feel stuck.
+export const RATE_NATIVE_AD_DWELL_MS = 600;
 const RATE_NATIVE_AD_FAILURE_COOLDOWN_MS = 30 * 60_000;
 
 export type RateNativeAdSuppressionReason =

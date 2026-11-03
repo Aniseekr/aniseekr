@@ -5,6 +5,7 @@ export interface NativeAdCardRef {
 }
 
 interface Props {
+  adId?: string;
   isTop?: boolean;
   onSwipe: (direction: 'left' | 'right') => void;
   activeTranslation?: unknown;

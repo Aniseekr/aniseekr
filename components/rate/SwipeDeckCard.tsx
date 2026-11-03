@@ -152,6 +152,7 @@ export function SwipeDeckCard({
       ) : (
         <NativeAdCard
           ref={ref as React.RefObject<NativeAdCardRef>}
+          adId={item.id}
           isTop={isTop}
           onSwipe={onSwipe}
           activeTranslation={activeTranslation}

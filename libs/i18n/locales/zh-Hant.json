@@ -1449,9 +1449,9 @@
     "startRatingAnimeToUnlock": "開始評分動畫,解鎖你的第一枚徽章。"
   },
   "ads": {
-    "continueInAMoment": "稍候即可繼續",
-    "loadingAd": "廣告載入中",
-    "sponsored": "贊助內容"
+    "badge": "廣告",
+    "sponsored": "贊助內容",
+    "swipeToContinue": "滑動以繼續"
   },
   "bangumiTab": {
     "addToPlan": "加入待看",

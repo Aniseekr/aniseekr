@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import type { DeckItem, Photo } from '../../../components/rate/types';
 import {
-  buildRatingDeck,
+  findAdInsertIndex,
   getUpcomingPhotoUrls,
+  insertAdCard,
   removeAdCardsPreservingPhotoIndex,
 } from '../../../libs/services/rate/rating-deck';
 
@@ -11,19 +12,29 @@ function photo(id: string): Photo {
 }
 
 describe('rating-deck', () => {
-  it('inserts ad cards after every 12 photos when ads are enabled', () => {
-    const deck = buildRatingDeck(
-      Array.from({ length: 25 }, (_, index) => photo(String(index + 1))),
-      true
-    );
+  const photos = (count: number): DeckItem[] =>
+    Array.from({ length: count }, (_, index) => ({ kind: 'photo', photo: photo(String(index)) }));
 
-    expect(deck.map((item) => item.kind)).toEqual([
-      ...Array(12).fill('photo'),
-      'ad',
-      ...Array(12).fill('photo'),
-      'ad',
-      'photo',
-    ]);
+  it('places the next ad 12+ photos after the last one, just behind the visible window', () => {
+    expect(findAdInsertIndex(photos(11), 0)).toBeNull();
+    expect(findAdInsertIndex(photos(20), 8)).toBe(12);
+
+    const withAd = insertAdCard(photos(40), 12, 'ad-0');
+    expect(findAdInsertIndex(withAd, 20)).toBeNull();
+    expect(findAdInsertIndex(withAd, 21)).toBe(25);
+  });
+
+  it('does not pre-insert ads down the loaded deck', () => {
+    // Regression: right after one insert, every later due slot in a long
+    // deck was claimed at once, burning one ad request per slot.
+    expect(findAdInsertIndex(photos(60), 0)).toBeNull();
+    expect(findAdInsertIndex(insertAdCard(photos(60), 12, 'ad-0'), 9)).toBeNull();
+  });
+
+  it('never inserts an ad into the visible window or as the last card', () => {
+    // User already swiped past the due slot while no ad was ready.
+    expect(findAdInsertIndex(photos(30), 15)).toBe(19);
+    expect(findAdInsertIndex(photos(12), 8)).toBeNull();
   });
 
   it('removes cached ad cards while preserving the next photo index', () => {

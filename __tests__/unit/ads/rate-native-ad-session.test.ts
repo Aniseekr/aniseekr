@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { __resetAppStorageForTests, kvSet } from '../../../libs/services/storage/app-storage';
 import { RATE_NATIVE_AD_SUPPRESS_UNTIL_KEY } from '../../../libs/services/storage/keys';
 import {
-  RATE_NATIVE_AD_PROGRESS_MS,
   clearRateNativeAdSuppressionForTests,
   getRateNativeAdSuppressionSnapshot,
   isRateNativeAdSuppressedSync,
@@ -46,10 +45,5 @@ describe('rate-native-ad-session', () => {
       reason: null,
       suppressUntil: null,
     });
-  });
-
-  it('keeps loaded native ad cards gated by a short 1-2 second progress window', () => {
-    expect(RATE_NATIVE_AD_PROGRESS_MS).toBeGreaterThanOrEqual(1_000);
-    expect(RATE_NATIVE_AD_PROGRESS_MS).toBeLessThanOrEqual(2_000);
   });
 });
