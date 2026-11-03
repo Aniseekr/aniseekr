@@ -45,6 +45,7 @@ import {
   type SwipePersistenceJob,
 } from '../../../libs/services/rate/swipe-persistence';
 import { useT } from '../../../libs/i18n';
+import { Radius } from '../../../constants/DesignSystem';
 
 // Trigger and refill from remaining-card pressure, not source page length.
 // AniList pages are 20 upstream, but R18/seen/image filters can leave any
@@ -130,14 +131,9 @@ function releaseQueuedSwipeSeen(ids: string[]): void {
   }
 }
 
-const PLAN_COLOR = '#0A84FF';
-const LIKE_COLOR = '#FF4F5E';
-const SKIP_COLOR = '#FF6F60';
-
-const SKIP_INDICATOR = { icon: 'close', color: SKIP_COLOR } as const;
-const RIGHT_INDICATOR_BY_MODE: Record<SwipeMode, { icon: 'bookmark' | 'heart'; color: string }> = {
-  plan: { icon: 'bookmark', color: PLAN_COLOR },
-  like: { icon: 'heart', color: LIKE_COLOR },
+const RIGHT_ICON_BY_MODE: Record<SwipeMode, 'bookmark' | 'heart'> = {
+  plan: 'bookmark',
+  like: 'heart',
 };
 
 export default function RatingScreen() {
@@ -154,11 +150,21 @@ export default function RatingScreen() {
         value: 'plan',
         label: t('tabs.ratingScreen.mode.plan'),
         icon: 'bookmark',
-        color: PLAN_COLOR,
+        color: theme.accent,
       },
-      { value: 'like', label: t('tabs.ratingScreen.mode.like'), icon: 'heart', color: LIKE_COLOR },
+      {
+        value: 'like',
+        label: t('tabs.ratingScreen.mode.like'),
+        icon: 'heart',
+        color: theme.status.error,
+      },
     ],
-    [t]
+    [t, theme.accent, theme.status.error]
+  );
+  // Swipe stamps follow the theme: plan = accent, like/skip = the error red.
+  const skipIndicator = useMemo(
+    () => ({ icon: 'close', color: theme.status.error }) as const,
+    [theme.status.error]
   );
 
   useEffect(() => {
@@ -208,6 +214,14 @@ export default function RatingScreen() {
   deckRef.current = deck;
   animeIdRef.current = params.animeId;
   swipeModeRef.current = swipePrefs.mode;
+  const rightIndicator = useMemo(
+    () =>
+      ({
+        icon: RIGHT_ICON_BY_MODE[swipePrefs.mode],
+        color: swipePrefs.mode === 'plan' ? theme.accent : theme.status.error,
+      }) as const,
+    [swipePrefs.mode, theme.accent, theme.status.error]
+  );
 
   // Imperative handle into SwipeDeck — bottom buttons commit via swipeDeckRef.
   const swipeDeckRef = useRef<SwipeDeckRef>(null);
@@ -699,8 +713,8 @@ export default function RatingScreen() {
             onTopChange={handleTopChange}
             onNeedMore={loadMorePhotos}
             onPressTop={handlePressTopCard}
-            rightIndicator={RIGHT_INDICATOR_BY_MODE[swipePrefs.mode]}
-            leftIndicator={SKIP_INDICATOR}
+            rightIndicator={rightIndicator}
+            leftIndicator={skipIndicator}
           />
         ) : null}
 
@@ -819,7 +833,7 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(30,30,34,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -832,7 +846,7 @@ const styles = StyleSheet.create({
   actionButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(30,30,34,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -880,7 +894,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     backgroundColor: '#fff',
-    borderRadius: 24,
+    borderRadius: Radius.xl,
   },
   goBackButtonText: {
     color: '#000',
@@ -892,7 +906,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: Radius.xl,
   },
   restartButtonText: {
     fontWeight: '700',
@@ -922,7 +936,7 @@ const styles = StyleSheet.create({
   planSideButton: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(20,20,22,0.85)',

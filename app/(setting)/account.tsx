@@ -1,11 +1,11 @@
 import { kavitaProvider } from '@/libs/services/providers/kavita-provider';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { readableTextOn } from '../../components/themed';
+import { ThemedButton, contrastRatio } from '../../components/themed';
 import {
   SettingsScreenLayout,
   SettingsRow,
@@ -211,7 +211,16 @@ export default function AccountScreen() {
             <View key={platform.id}>
               <View style={styles.platformRow}>
                 <View style={[styles.platformIcon, { backgroundColor: platform.color + '24' }]}>
-                  <MaterialIcons name={platform.icon} size={20} color={platform.color} />
+                  <MaterialIcons
+                    name={platform.icon}
+                    size={20}
+                    color={
+                      // A near-black brand mark (SIMKL) vanishes on the dark card.
+                      contrastRatio(platform.color, theme.background.secondary) < 2
+                        ? theme.text.primary
+                        : platform.color
+                    }
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.platformName, { color: theme.text.primary }]}>
@@ -228,40 +237,23 @@ export default function AccountScreen() {
                   </Text>
                 </View>
                 {connected ? (
-                  <Pressable
-                    onPress={() => handleDisconnect(platform)}
-                    accessibilityRole="button"
+                  <ThemedButton
+                    size="sm"
+                    variant="outline"
+                    accent={theme.status.error}
+                    haptic="warning"
+                    label={t('settings.accountScreen.disconnect')}
                     accessibilityLabel={`Disconnect ${platform.name}`}
-                    style={({ pressed }) => [
-                      styles.actionButton,
-                      {
-                        borderColor: Colors.error + '66',
-                        backgroundColor: Colors.error + '14',
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}>
-                    <Text style={[styles.actionLabel, { color: Colors.error }]}>
-                      {t('settings.accountScreen.disconnect')}
-                    </Text>
-                  </Pressable>
+                    onPress={() => handleDisconnect(platform)}
+                  />
                 ) : (
-                  <Pressable
-                    onPress={() => handleConnect(platform)}
-                    disabled={loading}
-                    accessibilityRole="button"
+                  <ThemedButton
+                    size="sm"
+                    label={t('settings.accountScreen.connect')}
                     accessibilityLabel={`Connect ${platform.name}`}
-                    style={({ pressed }) => [
-                      styles.actionButton,
-                      {
-                        backgroundColor: theme.accent,
-                        borderColor: theme.accent,
-                        opacity: pressed || loading ? 0.7 : 1,
-                      },
-                    ]}>
-                    <Text style={[styles.actionLabel, { color: readableTextOn(theme.accent) }]}>
-                      {t('settings.accountScreen.connect')}
-                    </Text>
-                  </Pressable>
+                    disabled={loading}
+                    onPress={() => handleConnect(platform)}
+                  />
                 )}
               </View>
               {idx < PLATFORMS.length - 1 ? (
@@ -326,7 +318,7 @@ const styles = StyleSheet.create({
   platformIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -336,16 +328,6 @@ const styles = StyleSheet.create({
   platformStatus: {
     ...Typography.bodySmall,
     marginTop: 2,
-  },
-  actionButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  actionLabel: {
-    ...Typography.titleSmall,
-    fontWeight: '700',
   },
   divider: {
     height: 1,
