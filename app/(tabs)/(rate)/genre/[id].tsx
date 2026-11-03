@@ -57,10 +57,8 @@ export default function GenreScreen() {
   const startDeck = () =>
     router.push({ pathname: '/(rate)/rating', params: { genreId: id, genreName: label.value } });
   const hero = image || popular.data[0]?.image;
-  const subtitle =
-    label.value === id
-      ? t('tabs.genrePage.subtitle')
-      : `${id} · ${t('tabs.genrePage.subtitle')}`;
+  // Original genre name only when the title shows a translation.
+  const subtitle = label.value === id ? undefined : id;
 
   return (
     <SafeAreaView
@@ -97,9 +95,6 @@ export default function GenreScreen() {
             }
             onPress={startDeck}
           />
-          <ThemedText variant="bodySmall" tone="secondary" align="center">
-            {t('tabs.genrePage.hint')}
-          </ThemedText>
         </View>
         <View style={styles.section}>
           <ThemedText variant="titleLarge" weight="700">

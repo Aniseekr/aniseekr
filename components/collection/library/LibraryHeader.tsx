@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedButton, ThemedIconButton, ThemedText } from '../../themed';
 import { Spacing } from '../../../constants/DesignSystem';
@@ -20,7 +20,6 @@ export function LibraryHeader({
   onMenu: () => void;
 }) {
   const t = useT();
-  const { width } = useWindowDimensions();
   const total = folders?.find((folder) => folder.id === 'system_all')?.animeCount;
   const counts = Object.fromEntries(
     folders
@@ -55,11 +54,8 @@ export function LibraryHeader({
           icon={(color) => <Ionicons name="ellipsis-horizontal" size={20} color={color} />}
         />
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.chipViewport, { width }]}
-        contentContainerStyle={styles.chips}>
+      {/* Wraps instead of scrolling sideways: every status is visible at once. */}
+      <View style={styles.chips}>
         {statuses.map((status) => {
           const count =
             status === 'custom'
@@ -69,7 +65,7 @@ export function LibraryHeader({
           return (
             <ThemedButton
               key={status}
-              size="md"
+              size="sm"
               variant={selected === status ? 'primary' : 'secondary'}
               label={count === undefined ? label : `${label} ${count}`}
               haptic="selection"
@@ -77,7 +73,7 @@ export function LibraryHeader({
             />
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -85,6 +81,5 @@ const styles = StyleSheet.create({
   header: { paddingTop: Spacing.sm, paddingBottom: Spacing.lg, gap: Spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   title: { flex: 1, gap: Spacing.xxs },
-  chipViewport: { flexGrow: 0, marginHorizontal: -Spacing.lg },
-  chips: { gap: Spacing.xs, paddingVertical: Spacing.xxs, paddingHorizontal: Spacing.lg },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
 });

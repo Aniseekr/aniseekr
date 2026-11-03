@@ -823,7 +823,6 @@
       "menu": "Library options",
       "starter": {
         "title": "Your library is empty",
-        "body": "Titles you want to watch, are watching, or finished show up here.",
         "swipe": "Swipe by genre",
         "import": "Import from AniList / MAL",
         "schedule": "See what airs this season"
@@ -854,7 +853,7 @@
       "errorLoadFailed": "Failed to load"
     },
     "profileScreen": {
-      "anonName": "Anime fan",
+      "anonName": "Rookie Seeker",
       "experienceMode": {
         "choose": "Choose your AniSeekr mode",
         "collector": "Collector",
@@ -889,8 +888,9 @@
         "upgrade": "Upgrade"
       },
       "title": "Profile",
-      "statsEmpty": "No ratings yet. Swipe a few cards and your stats show up here.",
-      "statsEmptyAction": "Start swiping"
+      "statsEmpty": "No ratings yet.",
+      "statsEmptyAction": "Start swiping",
+      "pickAvatar": "Pick your Seekr"
     },
     "ratingScreen": {
       "addToPlanA11y": "Add to Plan to Watch",
@@ -933,12 +933,10 @@
       "fewerGenres": "Show fewer"
     },
     "genrePage": {
-      "subtitle": "Ranked by AniList popularity",
       "start": "Start swiping",
       "resume": "Continue swiping · {count} seen",
       "popular": "Most popular",
-      "empty": "No titles in this genre yet.",
-      "hint": "Swipe right for Want to watch, left to skip. Seen it and loved it? Tap ♥."
+      "empty": "No titles in this genre yet."
     },
     "schedule": {
       "today": "Today",
@@ -972,16 +970,20 @@
         "rank": "Ranking"
       },
       "rank": {
-        "listCount": "{count} on AniList lists",
         "starts": "Starts {date}",
         "pick": "Add to my season",
         "unpick": "Remove from my season",
         "removed": "Removed {title} from Want to watch",
-        "byScore": "Ranked by AniList average score.",
-        "byListCount": "Ranked by how many AniList users have it on a list — the pre-season hype signal.",
         "empty": "No titles for this season yet.",
-        "emptyPicks": "You haven't picked anything for this season. Tap the bookmark on a title to add it.",
-        "byListCountCurrent": "Ranked by how many AniList users have it on a list."
+        "emptyPicks": "You haven't picked anything for this season. Tap the bookmark on a title to add it."
+      },
+      "upNext": {
+        "title": "Up next",
+        "episode": "Ep {episode}",
+        "now": "Airing now",
+        "minutes": "in {count} min",
+        "hours": "in {count} h",
+        "days": "in {count} d"
       }
     }
   },

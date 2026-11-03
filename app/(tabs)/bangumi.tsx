@@ -34,6 +34,7 @@ import {
 } from '../../libs/services/bangumi/schedule';
 import { getBroadcastSeason, getSeasonPhase } from '../../libs/utils/season-utils';
 import { SeasonRankRow } from '../../components/bangumi/schedule/SeasonRankRow';
+import { UpNextRail } from '../../components/bangumi/schedule/UpNextRail';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
 import { bottomPad, Spacing, TabBar } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
@@ -109,6 +110,19 @@ export default function BangumiScreen() {
   // Finished seasons have no airing week left and upcoming ones rarely have
   // times yet, so both read as a ranking; only the current cour has a week.
   const phase = getSeasonPhase(selection);
+  const upNext = useMemo(
+    () =>
+      phase === 'current'
+        ? seasonAnime
+            .filter((anime) => trackedIds.has(anime.id) && anime.nextAiringEpisode)
+            .sort(
+              (a, b) =>
+                (a.nextAiringEpisode?.airingAt ?? 0) - (b.nextAiringEpisode?.airingAt ?? 0)
+            )
+            .slice(0, 10)
+        : [],
+    [phase, seasonAnime, trackedIds]
+  );
   const mode = phase === 'current' ? listMode : 'rank';
   const ranked = useMemo(() => {
     const metric = (anime: Anime) =>
@@ -273,6 +287,23 @@ export default function BangumiScreen() {
               }
               onPress={() => setSheet('season')}
             />
+            {phase === 'current' ? (
+              <ThemedIconButton
+                variant="ghost"
+                haptic="selection"
+                accessibilityLabel={t(
+                  listMode === 'week' ? 'tabs.schedule.mode.rank' : 'tabs.schedule.mode.week'
+                )}
+                onPress={() => setListMode((value) => (value === 'week' ? 'rank' : 'week'))}
+                icon={(color) => (
+                  <MaterialIcons
+                    name={listMode === 'week' ? 'leaderboard' : 'calendar-view-week'}
+                    size={22}
+                    color={color}
+                  />
+                )}
+              />
+            ) : null}
             <ThemedIconButton
               variant="ghost"
               accessibilityLabel={t('tabs.schedule.options')}
@@ -280,6 +311,7 @@ export default function BangumiScreen() {
               icon={(color) => <MaterialIcons name="more-horiz" size={24} color={color} />}
             />
           </View>
+          <UpNextRail anime={upNext} />
           <View style={styles.section}>
             {mode === 'week' ? <WeekStrip selected={day} onSelect={setDay} /> : null}
             <ScheduleSegments
@@ -288,31 +320,6 @@ export default function BangumiScreen() {
               trackedCount={trackingReady && schedule.status !== 'loading' ? trackedCount : null}
               seasonCount={schedule.status !== 'loading' ? seasonAnime.length : null}
             />
-            {phase === 'current' ? (
-              <View style={styles.modeRow}>
-                {(['week', 'rank'] as const).map((value) => (
-                  <ThemedButton
-                    key={value}
-                    size="sm"
-                    haptic="selection"
-                    variant={listMode === value ? 'primary' : 'secondary'}
-                    label={t(`tabs.schedule.mode.${value}`)}
-                    onPress={() => setListMode(value)}
-                  />
-                ))}
-              </View>
-            ) : null}
-            {mode === 'rank' ? (
-              <ThemedText variant="bodySmall" tone="secondary">
-                {t(
-                  phase === 'past'
-                    ? 'tabs.schedule.rank.byScore'
-                    : phase === 'upcoming'
-                      ? 'tabs.schedule.rank.byListCount'
-                      : 'tabs.schedule.rank.byListCountCurrent'
-                )}
-              </ThemedText>
-            ) : null}
           </View>
           <View style={styles.section}>
             {schedule.status === 'error' || trackingError ? (
@@ -464,6 +471,5 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, gap: Spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   section: { gap: Spacing.sm },
-  modeRow: { flexDirection: 'row', gap: Spacing.xs },
   offscreen: { position: 'absolute', left: -10000, top: 0 },
 });

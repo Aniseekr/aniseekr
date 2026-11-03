@@ -46,14 +46,17 @@ export const SeasonRankRow = memo(function SeasonRankRow({
   const pickStyle = useToggleBounce(picked);
   const score = formatScore(anime.score);
   const start = anime.startDate;
-  const meta = [
+  // The leading figure is the ranking metric, shown as icon + number so no
+  // caption is needed: ★ = AniList score, people = users with it on a list.
+  const metric =
     phase === 'past'
       ? score
-        ? `★ ${score}`
+        ? { icon: 'star' as const, text: score }
         : null
       : anime.anilistListCount
-        ? t('tabs.schedule.rank.listCount', { count: formatListCount(anime.anilistListCount) })
-        : null,
+        ? { icon: 'group' as const, text: formatListCount(anime.anilistListCount) }
+        : null;
+  const rest = [
     phase === 'upcoming' && start?.month && start.day
       ? t('tabs.schedule.rank.starts', { date: `${start.month}/${start.day}` })
       : null,
@@ -93,11 +96,21 @@ export const SeasonRankRow = memo(function SeasonRankRow({
             numberOfLines={2}
             style={[Typography.titleSmall, { color: theme.text.primary }]}
           />
-          {meta ? (
-            <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>
-              {meta}
-            </ThemedText>
-          ) : null}
+          <View style={styles.meta}>
+            {metric ? (
+              <>
+                <MaterialIcons name={metric.icon} size={14} color={theme.text.secondary} />
+                <ThemedText variant="bodySmall" weight="700" tone="secondary">
+                  {metric.text}
+                </ThemedText>
+              </>
+            ) : null}
+            {rest ? (
+              <ThemedText variant="bodySmall" tone="tertiary" numberOfLines={1} style={styles.rest}>
+                {metric ? ` · ${rest}` : rest}
+              </ThemedText>
+            ) : null}
+          </View>
         </View>
       </Pressable>
       <Animated.View style={pickStyle}>
@@ -131,4 +144,6 @@ const styles = StyleSheet.create({
   rank: { width: 24, textAlign: 'center', fontFamily: FontFamily.display },
   poster: { width: 48, height: 68 },
   body: { flex: 1, gap: Spacing.xxs },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  rest: { flexShrink: 1 },
 });

@@ -118,9 +118,6 @@ export default function CollectionScreen() {
       <ThemedText variant="titleLarge" weight="700">
         {t('tabs.collectionScreen.starter.title')}
       </ThemedText>
-      <ThemedText variant="bodyMedium" tone="secondary">
-        {t('tabs.collectionScreen.starter.body')}
-      </ThemedText>
       {visibleTabs.includes('discover') ? (
         <ThemedButton
           size="lg"
