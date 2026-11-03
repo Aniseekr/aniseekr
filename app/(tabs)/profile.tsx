@@ -15,6 +15,7 @@ import { ExperienceModeSwitcher } from '../../components/profile/ExperienceModeS
 import { SeekerTabEditor } from '../../components/profile/SeekerTabEditor';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import {
+  ThemedButton,
   ThemedIconButton,
   ThemedText,
   ThemedSurface,
@@ -59,9 +60,10 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const subscription = useSubscription();
   const t = useT();
-  const { mode, seekerTabs, setMode, toggleTab } = useExperienceMode();
+  const { mode, seekerTabs, setMode, toggleTab, visibleTabs } = useExperienceMode();
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState(false);
   const [cardsCount, setCardsCount] = useState(0);
   // Seed sync from MMKV so the platform switcher renders on the user's
   // chosen primary on frame 1 instead of momentarily showing `DEFAULT`.
@@ -103,6 +105,7 @@ export default function ProfileScreen() {
     try {
       const data = await UserRepository.getProfile();
       setUser(data);
+      setProfileError(false);
       try {
         const cards = await gachaService.getUserCards();
         setCardsCount(cards.length);
@@ -111,6 +114,7 @@ export default function ProfileScreen() {
       }
     } catch (e) {
       console.error('Error loading profile:', e);
+      setProfileError(true);
     }
   }, []);
 
@@ -268,7 +272,46 @@ export default function ProfileScreen() {
           )}
 
           {/* Stats Row */}
-          <Animated.View entering={listItemEnter(1)} style={styles.statsRow}>
+          {user === null && profileError ? (
+            <ThemedSurface padded style={styles.statsEmpty}>
+              <ThemedText variant="bodyMedium" tone="secondary">
+                {t('tabs.discoverHome.unavailable')}
+              </ThemedText>
+              <ThemedButton
+                variant="ghost"
+                size="sm"
+                label={t('common.retry')}
+                onPress={() => void loadData()}
+                style={styles.statsEmptyAction}
+              />
+            </ThemedSurface>
+          ) : user === null ? (
+            <View style={styles.statsRow}>
+              {[0, 1, 2].map((key) => (
+                <View key={key} style={styles.statSkeleton}>
+                  <Skeleton.Block width="100%" height={84} borderRadius={Radius.card} />
+                </View>
+              ))}
+            </View>
+          ) : watchedValue + ratedValue + likedValue === 0 ? (
+            <Animated.View entering={listItemEnter(1)}>
+              <ThemedSurface padded style={styles.statsEmpty}>
+                <ThemedText variant="bodyMedium" tone="secondary">
+                  {t('tabs.profileScreen.statsEmpty')}
+                </ThemedText>
+                {visibleTabs.includes('discover') ? (
+                  <ThemedButton
+                    variant="secondary"
+                    size="sm"
+                    label={t('tabs.profileScreen.statsEmptyAction')}
+                    onPress={() => router.push('/(rate)')}
+                    style={styles.statsEmptyAction}
+                  />
+                ) : null}
+              </ThemedSurface>
+            </Animated.View>
+          ) : (
+            <Animated.View entering={listItemEnter(1)} style={styles.statsRow}>
             <StatTile
               value={watchedValue}
               label={t('tabs.profileScreen.statLabel.cards')}
@@ -294,6 +337,7 @@ export default function ProfileScreen() {
               }}
             />
           </Animated.View>
+          )}
 
           {/* Library Stats Hero */}
           <Animated.View entering={listItemEnter(2)}>
@@ -513,6 +557,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  statSkeleton: { flex: 1 },
+  statsEmpty: { gap: Spacing.sm },
+  statsEmptyAction: { alignSelf: 'flex-start' },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.sm - 2,

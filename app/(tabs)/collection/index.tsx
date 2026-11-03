@@ -50,6 +50,8 @@ export default function CollectionScreen() {
   const [screenMode, setScreenMode] = useState<'collect' | 'share'>('collect');
   const customFolders = library.folders?.filter((folder) => !folder.isSystemFolder) ?? [];
   const custom = library.selected === 'custom';
+  const libraryEmpty =
+    library.folders?.find((folder) => folder.id === 'system_all')?.animeCount === 0;
   const data: LibraryItem[] = custom
     ? customFolders.map((item) => ({ kind: 'folder', item }))
     : (library.items ?? []).map((item) => ({ kind: 'anime', item }));
@@ -111,6 +113,37 @@ export default function CollectionScreen() {
     <ErrorStateView onRetry={library.reload} />
   ) : !library.ready ? (
     <Skeleton.PosterGrid count={9} columns={3} aspectRatio={2 / 2.8} gap={Spacing.sm} />
+  ) : libraryEmpty && !custom ? (
+    <View style={styles.starter}>
+      <ThemedText variant="titleLarge" weight="700">
+        {t('tabs.collectionScreen.starter.title')}
+      </ThemedText>
+      <ThemedText variant="bodyMedium" tone="secondary">
+        {t('tabs.collectionScreen.starter.body')}
+      </ThemedText>
+      {visibleTabs.includes('discover') ? (
+        <ThemedButton
+          size="lg"
+          fullWidth
+          label={t('tabs.collectionScreen.starter.swipe')}
+          onPress={() => router.push('/(rate)')}
+        />
+      ) : null}
+      <ThemedButton
+        variant="secondary"
+        fullWidth
+        label={t('tabs.collectionScreen.starter.import')}
+        onPress={() => router.push('/(setting)/import-wizard')}
+      />
+      {visibleTabs.includes('bangumi') ? (
+        <ThemedButton
+          variant="secondary"
+          fullWidth
+          label={t('tabs.collectionScreen.starter.schedule')}
+          onPress={() => router.push('/(tabs)/bangumi')}
+        />
+      ) : null}
+    </View>
   ) : (
     <View style={styles.empty}>
       <ThemedText variant="bodyMedium" tone="secondary" align="center">
@@ -242,5 +275,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.lg, paddingBottom: 160 },
   row: { gap: Spacing.sm, marginBottom: Spacing.md },
   empty: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.md },
+  starter: { paddingVertical: Spacing.lg, gap: Spacing.sm },
   menu: { gap: Spacing.sm },
 });
