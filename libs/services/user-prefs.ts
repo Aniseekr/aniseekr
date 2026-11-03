@@ -22,6 +22,8 @@ import { USER_PREFS_STORAGE_KEY } from './storage/keys';
 export { USER_PREFS_STORAGE_KEY };
 
 export type SwipeMode = 'plan' | 'like';
+export const PROFILE_MASCOTS = ['point', 'leap', 'phone', 'read'] as const;
+export type ProfileMascot = (typeof PROFILE_MASCOTS)[number];
 export type SwipeContentMode = 'fill' | 'fit';
 export type SwipeRatingButtons = 'three' | 'five';
 
@@ -83,6 +85,8 @@ export interface UserPrefs {
   // Custom folders are always visible (a just-created folder must not vanish).
   showEmptySystemFolders: boolean;
   profileShortcuts: ShortcutId[];
+  /** Seekr pose used as the avatar when no platform avatar is synced. */
+  profileMascot: ProfileMascot;
   // Folder targeted by the long-press quick-add on the anime detail page.
   // Stores either a system folder id (e.g. 'system_favorites') or a custom uuid.
   lastAddedFolderId: string;
@@ -99,6 +103,7 @@ export const DEFAULT_USER_PREFS: UserPrefs = {
   bangumiShowScoreProminently: true,
   showEmptySystemFolders: false,
   profileShortcuts: [...DEFAULT_PROFILE_SHORTCUTS],
+  profileMascot: 'point',
   lastAddedFolderId: 'system_favorites',
   swipe: { ...DEFAULT_SWIPE_PREFS },
   seasonalLayout: 'carousel',
@@ -162,6 +167,9 @@ export function loadUserPrefsSync(): UserPrefs {
       ...DEFAULT_USER_PREFS,
       ...parsed,
       profileShortcuts: normalizeProfileShortcuts(parsed.profileShortcuts),
+      profileMascot: PROFILE_MASCOTS.includes(parsed.profileMascot as ProfileMascot)
+        ? (parsed.profileMascot as ProfileMascot)
+        : DEFAULT_USER_PREFS.profileMascot,
       swipe: { ...DEFAULT_SWIPE_PREFS, ...(parsed.swipe ?? {}) },
       seasonalLayout: SEASONAL_LAYOUTS.includes(parsed.seasonalLayout as SeasonalLayout)
         ? (parsed.seasonalLayout as SeasonalLayout)

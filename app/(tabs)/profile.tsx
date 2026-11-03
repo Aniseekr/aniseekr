@@ -27,7 +27,13 @@ import { UserRepository, UserProfile } from '../../libs/repositories/user-reposi
 import { gachaService } from '../../libs/services/gacha-service';
 import { authService } from '../../libs/services/auth/auth-service';
 import { PLATFORM_CONFIGS, PlatformType } from '../../libs/services/auth/types';
-import { loadUserPrefsSync, patchUserPrefs } from '../../libs/services/user-prefs';
+import {
+  loadUserPrefsSync,
+  patchUserPrefs,
+  type ProfileMascot,
+} from '../../libs/services/user-prefs';
+import { SEEKR_POSES } from '../../components/brand/SeekrPose';
+import { MascotAvatarSheet } from '../../components/profile/MascotAvatarSheet';
 import { normalizeProfileShortcuts, type ShortcutId } from '../../libs/services/profile-shortcuts';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -65,6 +71,8 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState(false);
+  const [mascot, setMascot] = useState<ProfileMascot>(() => loadUserPrefsSync().profileMascot);
+  const [showMascotPicker, setShowMascotPicker] = useState(false);
   const [cardsCount, setCardsCount] = useState(0);
   // Seed sync from MMKV so the platform switcher renders on the user's
   // chosen primary on frame 1 instead of momentarily showing `DEFAULT`.
@@ -229,7 +237,11 @@ export default function ProfileScreen() {
                 radius={Radius.card}
                 style={[styles.profileCard, { borderColor: theme.glassBorder }]}>
                 <Halftone color={theme.accent} />
-                <View
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('tabs.profileScreen.pickAvatar')}
+                  disabled={!!headerAvatar}
+                  onPress={() => setShowMascotPicker(true)}
                   style={[
                     styles.avatarRing,
                     {
@@ -240,9 +252,14 @@ export default function ProfileScreen() {
                   {headerAvatar ? (
                     <Image source={{ uri: headerAvatar }} style={styles.avatarImage} />
                   ) : (
-                    <Ionicons name="person" size={36} color={theme.accent} />
+                    <Image
+                      source={SEEKR_POSES[mascot]}
+                      style={styles.avatarMascot}
+                      contentFit="cover"
+                      contentPosition="top"
+                    />
                   )}
-                </View>
+                </Pressable>
 
                 <Pressable
                   onPress={handleEditName}
@@ -448,6 +465,16 @@ export default function ProfileScreen() {
       </SafeAreaView>
 
       <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
+      <MascotAvatarSheet
+        visible={showMascotPicker}
+        value={mascot}
+        onClose={() => setShowMascotPicker(false)}
+        onSelect={(next) => {
+          setMascot(next);
+          setShowMascotPicker(false);
+          void patchUserPrefs({ profileMascot: next });
+        }}
+      />
       <EditDisplayNameSheet
         visible={nameSheetVisible}
         currentName={user?.username ?? ''}
@@ -529,6 +556,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm + 2,
     padding: Spacing.xl,
   },
+  avatarMascot: { width: '100%', height: '100%' },
   avatarRing: {
     width: 72,
     height: 72,

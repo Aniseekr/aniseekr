@@ -18,7 +18,7 @@ import { useT, type TranslationKey } from '../../libs/i18n';
 // Seekr the black ninja, in the v6 manga × cartoon-ad poses from aniseekr.moe.
 // Decorative, but alive: a tap makes him hop and pops a sound-effect word.
 
-const POSES = {
+export const SEEKR_POSES = {
   leap: require('../../assets/seekr/leap.webp'),
   phone: require('../../assets/seekr/phone.webp'),
   point: require('../../assets/seekr/point.webp'),
@@ -30,7 +30,7 @@ const ASPECT = 0.9;
 
 const SFX: TranslationKey[] = ['brand.sfx.hop', 'brand.sfx.nin', 'brand.sfx.whoosh'];
 
-export type SeekrPoseName = keyof typeof POSES;
+export type SeekrPoseName = keyof typeof SEEKR_POSES;
 
 interface SeekrPoseProps {
   pose: SeekrPoseName;
@@ -83,7 +83,7 @@ function SeekrPoseComponent({ pose, height, style }: SeekrPoseProps) {
       importantForAccessibility="no-hide-descendants">
       <Pressable onPress={onPress} style={StyleSheet.absoluteFill}>
         <Animated.View style={[StyleSheet.absoluteFill, bodyStyle]}>
-          <Image source={POSES[pose]} style={StyleSheet.absoluteFill} contentFit="contain" />
+          <Image source={SEEKR_POSES[pose]} style={StyleSheet.absoluteFill} contentFit="contain" />
         </Animated.View>
       </Pressable>
       <Animated.View pointerEvents="none" style={[styles.sfx, sfxStyle]}>
