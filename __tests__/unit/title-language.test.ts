@@ -18,6 +18,8 @@ describe('title-language', () => {
   it('TL-001 derives the default order from the app UI language', () => {
     expect(defaultTitleOrderFor('zh-Hant')[0]).toBe('chinese');
     expect(defaultTitleOrderFor('zh-Hans')[0]).toBe('chinese');
+    // Missing Chinese title falls back to the Japanese original, not English.
+    expect(defaultTitleOrderFor('zh-Hant')[1]).toBe('japanese');
     expect(defaultTitleOrderFor('ja')[0]).toBe('japanese');
     expect(defaultTitleOrderFor('ru')[0]).toBe('russian');
     expect(defaultTitleOrderFor('en')[0]).toBe('english');

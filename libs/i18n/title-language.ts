@@ -56,9 +56,12 @@ function normalizeOrder(order: readonly TitleLanguageId[]): TitleLanguageId[] {
 /** Default priority for a given app UI language (BCP-47-ish, e.g. 'zh-Hant'). */
 export function defaultTitleOrderFor(appLanguage: string): TitleLanguageId[] {
   const lang = (appLanguage || '').toLowerCase();
-  if (lang.startsWith('zh')) return ['chinese', 'english', 'romaji', 'japanese', 'russian'];
+  // No Chinese title → the Japanese original reads better to zh users than
+  // an English localization or romaji.
+  if (lang.startsWith('zh')) return ['chinese', 'japanese', 'english', 'romaji', 'russian'];
   if (lang.startsWith('ja')) return ['japanese', 'romaji', 'english', 'chinese', 'russian'];
   if (lang.startsWith('ru')) return ['russian', 'english', 'romaji', 'japanese', 'chinese'];
+  // Korean (no Korean titles in any source) and everything else: English first.
   return [...FALLBACK_ORDER];
 }
 
