@@ -21,6 +21,7 @@ import {
   ThemedSurface,
   readableTextOn,
   Skeleton,
+  Halftone,
 } from '../../components/themed';
 import { UserRepository, UserProfile } from '../../libs/repositories/user-repository';
 import { gachaService } from '../../libs/services/gacha-service';
@@ -219,7 +220,7 @@ export default function ProfileScreen() {
             />
           }>
           {/* Profile Card */}
-          {user === null && !refreshing ? (
+          {user === null && !refreshing && !profileError ? (
             <Skeleton.Profile />
           ) : (
             <Animated.View entering={listItemEnter(0)}>
@@ -227,6 +228,7 @@ export default function ProfileScreen() {
                 variant="card"
                 radius={Radius.card}
                 style={[styles.profileCard, { borderColor: theme.glassBorder }]}>
+                <Halftone color={theme.accent} />
                 <View
                   style={[
                     styles.avatarRing,
@@ -522,6 +524,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   profileCard: {
+    overflow: 'hidden',
     alignItems: 'center',
     gap: Spacing.sm + 2,
     padding: Spacing.xl,

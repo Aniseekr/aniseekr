@@ -31,6 +31,7 @@ export {
   ON_DARK,
   ON_LIGHT,
 } from './contrast';
+export { Halftone } from './Halftone';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { Skeleton } from './Skeleton';
 export { SheetBackdrop, SheetHandle, ThemedBottomSheet, useSheetDrag } from './sheet';
