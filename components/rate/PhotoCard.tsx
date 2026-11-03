@@ -31,6 +31,7 @@ import {
   runSwipeHandoff,
 } from '../../libs/services/rate/swipe-animation';
 import { Radius } from '../../constants/DesignSystem';
+import { formatScore } from '../../libs/utils/format-score';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -96,6 +97,7 @@ type Props = {
   onLongPress?: () => void;
   /** Tap the card to open details — only the top card is interactive. */
   onPress?: () => void;
+  showTapHint?: boolean;
   activeTranslation?: SharedValue<number>;
   /** Optional extra style applied to the inner card surface — used to shrink
    * the visual footprint without changing the wrapper layout. */
@@ -115,6 +117,7 @@ export function PhotoCard({
   onSwipe,
   onLongPress,
   onPress,
+  showTapHint = true,
   activeTranslation,
   cardStyle,
   rightIndicator = DEFAULT_RIGHT_INDICATOR,
@@ -375,12 +378,7 @@ export function PhotoCard({
     };
   });
 
-  const formattedScore =
-    typeof photo.score === 'number' && photo.score > 0
-      ? photo.score >= 10
-        ? photo.score.toFixed(0)
-        : photo.score.toFixed(1)
-      : null;
+  const formattedScore = formatScore(photo.score);
   const metaParts: string[] = [];
   if (photo.year) metaParts.push(String(photo.year));
   if (photo.type) metaParts.push(photo.type);
@@ -453,7 +451,7 @@ export function PhotoCard({
 
           {/* Tap-for-info chip lives at the top of the card so it reads as
                 part of the card chrome without disturbing the title. */}
-          {isTop && onPress ? (
+          {isTop && onPress && showTapHint ? (
             <View style={styles.tapHintTopWrap} pointerEvents="none">
               <View style={styles.tapHintChip}>
                 <Ionicons

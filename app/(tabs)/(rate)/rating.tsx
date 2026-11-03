@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { runAfterInteractions } from '../../../libs/utils/after-interactions';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
@@ -32,7 +32,12 @@ import {
 } from '../../../libs/services/user-prefs';
 import { useTheme } from '../../../context/ThemeContext';
 import { useSubscription } from '../../../context/SubscriptionContext';
-import { readableTextOn, Skeleton } from '../../../components/themed';
+import {
+  Skeleton,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+} from '../../../components/themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { getDeck, putDeck, clearDeck } from '../../../libs/services/rate/deck-cache';
 import { loadGenreSwipePage } from '../../../libs/services/rate/genre-deck-prefetch';
@@ -53,7 +58,7 @@ import {
   type SwipePersistenceJob,
 } from '../../../libs/services/rate/swipe-persistence';
 import { useT } from '../../../libs/i18n';
-import { Radius } from '../../../constants/DesignSystem';
+import { Radius, Spacing } from '../../../constants/DesignSystem';
 
 // Trigger and refill from remaining-card pressure, not source page length.
 // AniList pages are 20 upstream, but R18/seen/image filters can leave any
@@ -657,19 +662,25 @@ export default function RatingScreen() {
   const showDeck = !loading && deck.length > 0;
   const showEmpty = !loading && deck.length === 0;
   const showExhausted = !loading && deck.length > 0 && currentIndex >= deck.length;
+  const genreLabel = params.genreName ? String(params.genreName) : null;
+  const backLabel = genreLabel
+    ? t('tabs.ratingScreen.backTo', { genre: genreLabel })
+    : t('tabs.ratingScreen.goBack');
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: 0 }]} edges={['left', 'right']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background.primary }]}
+      edges={['left', 'right']}>
       {/* Header — close (left) + compact mode pill, then optional settings (right). */}
       <View style={[styles.headerContainer, { paddingTop: top + 10 }]}>
         <View style={styles.topBar}>
           <View style={styles.headerLeftCluster}>
-            <Pressable
+            <ThemedIconButton
+              size={36}
+              accessibilityLabel={t('tabs.ratingScreen.closeA11y')}
+              icon={(c) => <Ionicons name="close" size={20} color={c} />}
               onPress={handleClose}
-              style={styles.closeButton}
-              accessibilityLabel={t('tabs.ratingScreen.closeA11y')}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </Pressable>
+            />
             <ModePill
               icon={activeModeOption.icon}
               label={activeModeOption.label}
@@ -678,15 +689,22 @@ export default function RatingScreen() {
             />
           </View>
 
-          <Pressable
-            style={styles.actionButton}
+          {genreLabel ? (
+            <ThemedText
+              variant="titleSmall"
+              weight="700"
+              numberOfLines={1}
+              align="center"
+              style={styles.headerTitle}>
+              {genreLabel}
+            </ThemedText>
+          ) : null}
+          <ThemedIconButton
+            size={36}
             accessibilityLabel={t('tabs.ratingScreen.preferencesA11y')}
-            onPress={() => {
-              hapticsBridge.tap();
-              setShowSettings(true);
-            }}>
-            <Ionicons name="options-outline" size={20} color="#fff" />
-          </Pressable>
+            icon={(c) => <Ionicons name="options-outline" size={20} color={c} />}
+            onPress={() => setShowSettings(true)}
+          />
         </View>
       </View>
 
@@ -699,39 +717,14 @@ export default function RatingScreen() {
         ) : null}
 
         {showEmpty ? (
-          hasMore || loadingMore ? (
-            <View style={styles.loadingContainer}>
-              <Ionicons name="planet" size={48} color="#666" />
-              <Text style={styles.loadingText}>{t('tabs.ratingScreen.loadingMore')}</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#666" />
-              <Text style={styles.emptyText}>{t('tabs.ratingScreen.noPhotos')}</Text>
-              <View style={styles.emptyActions}>
-                {showEmptyRestart ? (
-                  <Pressable
-                    onPress={confirmRestart}
-                    style={[styles.restartButton, { backgroundColor: theme.accent }]}
-                    accessibilityLabel={t('tabs.ratingScreen.restartConfirm.deckA11y')}>
-                    <Ionicons
-                      name="refresh"
-                      size={16}
-                      color={readableTextOn(theme.accent)}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text
-                      style={[styles.restartButtonText, { color: readableTextOn(theme.accent) }]}>
-                      {t('tabs.ratingScreen.restart')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable onPress={handleClose} style={styles.goBackButton}>
-                  <Text style={styles.goBackButtonText}>{t('tabs.ratingScreen.goBack')}</Text>
-                </Pressable>
-              </View>
-            </View>
-          )
+          <DeckStatus
+            busy={hasMore || loadingMore}
+            icon="images-outline"
+            message={t('tabs.ratingScreen.noPhotos')}
+            backLabel={backLabel}
+            onBack={handleClose}
+            onRestart={showEmptyRestart ? confirmRestart : undefined}
+          />
         ) : null}
 
         {showDeck ? (
@@ -752,39 +745,14 @@ export default function RatingScreen() {
         ) : null}
 
         {showExhausted ? (
-          hasMore || loadingMore ? (
-            <View style={styles.loadingContainer}>
-              <Ionicons name="planet" size={48} color="#666" />
-              <Text style={styles.loadingText}>{t('tabs.ratingScreen.loadingMore')}</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="checkmark-done-circle-outline" size={64} color="#666" />
-              <Text style={styles.emptyText}>{t('tabs.ratingScreen.allCaughtUp')}</Text>
-              <View style={styles.emptyActions}>
-                {canRestartCurrentGenre ? (
-                  <Pressable
-                    onPress={confirmRestart}
-                    style={[styles.restartButton, { backgroundColor: theme.accent }]}
-                    accessibilityLabel={t('tabs.ratingScreen.restartConfirm.deckA11y')}>
-                    <Ionicons
-                      name="refresh"
-                      size={16}
-                      color={readableTextOn(theme.accent)}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text
-                      style={[styles.restartButtonText, { color: readableTextOn(theme.accent) }]}>
-                      {t('tabs.ratingScreen.restart')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable onPress={handleClose} style={styles.goBackButton}>
-                  <Text style={styles.goBackButtonText}>{t('tabs.ratingScreen.goBack')}</Text>
-                </Pressable>
-              </View>
-            </View>
-          )
+          <DeckStatus
+            busy={hasMore || loadingMore}
+            icon="checkmark-done-circle-outline"
+            message={t('tabs.ratingScreen.allCaughtUp')}
+            backLabel={backLabel}
+            onBack={handleClose}
+            onRestart={canRestartCurrentGenre ? confirmRestart : undefined}
+          />
         ) : null}
       </View>
 
@@ -798,9 +766,15 @@ export default function RatingScreen() {
             <View style={styles.planButtonsRow}>
               <Pressable
                 onPress={() => triggerSwipe('left')}
-                style={styles.planSideButton}
+                style={[
+                  styles.planSideButton,
+                  {
+                    backgroundColor: theme.background.secondary,
+                    borderColor: theme.status.error,
+                  },
+                ]}
                 accessibilityLabel={t('tabs.ratingScreen.skipA11y')}>
-                <Ionicons name="close" size={26} color="#FF6F60" />
+                <Ionicons name="close" size={26} color={theme.status.error} />
               </Pressable>
 
               <Pressable
@@ -808,7 +782,7 @@ export default function RatingScreen() {
                 style={[
                   styles.planSideButton,
                   styles.planSidePrimary,
-                  { borderColor: theme.accent },
+                  { backgroundColor: theme.background.secondary, borderColor: theme.accent },
                 ]}
                 accessibilityLabel={t('tabs.ratingScreen.addToPlanA11y')}>
                 <Ionicons name="bookmark" size={24} color={theme.accent} />
@@ -844,10 +818,58 @@ export default function RatingScreen() {
   );
 }
 
+function DeckStatus({
+  busy,
+  icon,
+  message,
+  backLabel,
+  onBack,
+  onRestart,
+}: {
+  busy: boolean;
+  icon: 'images-outline' | 'checkmark-done-circle-outline';
+  message: string;
+  backLabel: string;
+  onBack: () => void;
+  onRestart?: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = useT();
+  if (busy) {
+    return (
+      <View style={styles.statusContainer}>
+        <ActivityIndicator color={theme.text.secondary} />
+        <ThemedText variant="bodyLarge" tone="secondary">
+          {t('tabs.ratingScreen.loadingMore')}
+        </ThemedText>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.statusContainer}>
+      <Ionicons name={icon} size={56} color={theme.text.tertiary} />
+      <ThemedText variant="titleLarge" weight="700" align="center">
+        {message}
+      </ThemedText>
+      <View style={styles.statusActions}>
+        <ThemedButton size="lg" fullWidth label={backLabel} onPress={onBack} />
+        {onRestart ? (
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('tabs.ratingScreen.restart')}
+            icon={<Ionicons name="refresh" size={16} color={theme.text.primary} />}
+            onPress={onRestart}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#050505',
   },
   headerContainer: {
     position: 'absolute',
@@ -863,88 +885,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 8,
   },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    backgroundColor: 'rgba(30,30,34,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  headerTitle: { flex: 1, marginHorizontal: 8 },
   headerLeftCluster: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    backgroundColor: 'rgba(30,30,34,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   cardStackContainer: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
-  loadingContainer: {
+  statusContainer: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: Spacing.md,
     zIndex: 20,
-    paddingHorizontal: 28,
+    paddingHorizontal: CARD_HORIZONTAL_PADDING,
   },
-  loadingText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    zIndex: 20,
-    paddingHorizontal: 28,
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  emptyActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
-  goBackButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderRadius: Radius.xl,
-  },
-  goBackButtonText: {
-    color: '#000',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  restartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: Radius.xl,
-  },
-  restartButtonText: {
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  statusActions: { alignSelf: 'stretch', gap: Spacing.sm, marginTop: Spacing.xs },
   skeletonCardWrapper: {
     flex: 1,
     width: '100%',
@@ -972,14 +933,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(20,20,22,0.85)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 111, 96, 0.55)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
   },
   planSidePrimary: {
     borderWidth: 1.5,

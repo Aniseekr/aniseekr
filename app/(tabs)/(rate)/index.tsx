@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { Skeleton, ThemedButton, ThemedText } from '../../../components/themed';
 import { HomeSearchField } from '../../../components/common/HomeSearchField';
 import { SeasonalPoster, TrendingRow } from '../../../components/rate/discover/DiscoverAnimeCards';
-import { GenreChip } from '../../../components/rate/discover/GenreChip';
+import { GenreTile } from '../../../components/rate/discover/GenreTile';
 import { PersonalizedPickSheet } from '../../../components/rate/PersonalizedPickSheet';
 import { useRateData } from '../../../components/rate/useRateData';
 import type { Genre } from '../../../components/rate/types';
@@ -25,6 +25,7 @@ const SEASON_KEYS = {
   SUMMER: 'rate.summer',
   FALL: 'rate.fall',
 } as const;
+const GENRE_PREVIEW = 6;
 
 export default function DiscoverHome() {
   const insets = useSafeAreaInsets();
@@ -34,6 +35,7 @@ export default function DiscoverHome() {
   const t = useT();
   const { visibleTabs } = useExperienceMode();
   const [showPick, setShowPick] = useState(false);
+  const [allGenres, setAllGenres] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const refreshInFlight = useRef(false);
   const genreWarmupsRef = useRef(new Set<string>());
@@ -51,8 +53,8 @@ export default function DiscoverHome() {
   const handleGenreSelect = (genre: Genre) => {
     warmGenreDeck(genre);
     router.push({
-      pathname: '/(rate)/rating',
-      params: { genreId: genre.id, genreName: genre.displayName },
+      pathname: '/(rate)/genre/[id]',
+      params: { id: genre.id, image: genre.image },
     });
   };
   const openPick = () => {
@@ -143,6 +145,61 @@ export default function DiscoverHome() {
             )}
           </View>
         ) : null}
+        <View style={styles.section}>
+          <View style={styles.header}>
+            <ThemedText variant="titleLarge" weight="700" style={styles.headerTitle}>
+              {t('tabs.discoverHome.browseGenres')}
+            </ThemedText>
+            <ThemedButton
+              variant="ghost"
+              size="sm"
+              haptic="none"
+              label={t('tabs.discoverHome.pickedForYou')}
+              onPress={openPick}
+            />
+          </View>
+          {state.genres.status === 'loading' ? (
+            <View style={styles.grid}>
+              {Array.from({ length: GENRE_PREVIEW }, (_, index) => (
+                <View key={index} style={styles.gridCell}>
+                  <Skeleton.Block width="100%" height={96} borderRadius={Radius.card} />
+                </View>
+              ))}
+            </View>
+          ) : state.genres.status === 'error' ? (
+            <SectionError onRetry={() => void actions.loadGenres(true)} />
+          ) : (
+            <>
+              <View style={styles.grid}>
+                {(allGenres ? state.genres.data : state.genres.data.slice(0, GENRE_PREVIEW)).map(
+                  (genre) => (
+                    <View key={genre.id} style={styles.gridCell}>
+                      <GenreTile
+                        genre={genre}
+                        onPressIn={() => warmGenreDeck(genre)}
+                        onPress={() => handleGenreSelect(genre)}
+                      />
+                    </View>
+                  )
+                )}
+              </View>
+              {state.genres.data.length > GENRE_PREVIEW ? (
+                <ThemedButton
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  haptic="selection"
+                  label={
+                    allGenres
+                      ? t('tabs.discoverHome.fewerGenres')
+                      : t('tabs.discoverHome.allGenres', { count: state.genres.data.length })
+                  }
+                  onPress={() => setAllGenres((value) => !value)}
+                />
+              ) : null}
+            </>
+          )}
+        </View>
         {state.weeklyTrend.status !== 'ready' || state.weeklyTrend.data.length > 0 ? (
           <View style={styles.section}>
             <View style={styles.header}>
@@ -170,35 +227,6 @@ export default function DiscoverHome() {
             )}
           </View>
         ) : null}
-        <View style={styles.section}>
-          <ThemedText variant="titleLarge" weight="700">
-            {t('tabs.discoverHome.rateByGenre')}
-          </ThemedText>
-          <View style={styles.chips}>
-            <ThemedButton
-              size="sm"
-              label={t('tabs.discoverHome.pickedForYou')}
-              onPress={openPick}
-            />
-            {state.genres.status === 'ready'
-              ? state.genres.data.map((genre) => (
-                  <GenreChip
-                    key={genre.id}
-                    genre={genre}
-                    onPress={() => handleGenreSelect(genre)}
-                  />
-                ))
-              : null}
-            {state.genres.status === 'loading'
-              ? Array.from({ length: 6 }, (_, index) => (
-                  <Skeleton.Block key={index} width={90} height={36} borderRadius={Radius.sm} />
-                ))
-              : null}
-          </View>
-          {state.genres.status === 'error' ? (
-            <SectionError onRetry={() => void actions.loadGenres(true)} />
-          ) : null}
-        </View>
       </ScrollView>
       <PersonalizedPickSheet
         visible={showPick}
@@ -241,6 +269,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { flex: 1 },
   rail: { gap: Spacing.sm, paddingRight: Spacing.screenPadding },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: Spacing.md },
+  gridCell: { width: '48.5%' },
   retry: { alignSelf: 'flex-start' },
 });

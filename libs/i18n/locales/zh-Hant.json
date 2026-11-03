@@ -820,7 +820,14 @@
       "explore": "去探索",
       "episodeProgress": "{progress} / {total}",
       "episodesWatched": "已看 {count} 集",
-      "menu": "收藏選項"
+      "menu": "收藏選項",
+      "starter": {
+        "title": "收藏還是空的",
+        "body": "想看、在看、看完的作品都會出現在這裡。",
+        "swipe": "依類型滑卡",
+        "import": "從 AniList / MAL 匯入",
+        "schedule": "看本季播出表"
+      }
     },
     "pilgrimageHome": {
       "showMap": "顯示地圖",
@@ -881,7 +888,9 @@
         "unlockSubtitle": "去除廣告、所有主題、無限同步",
         "upgrade": "升級"
       },
-      "title": "個人"
+      "title": "個人",
+      "statsEmpty": "還沒有評分紀錄。滑幾張卡，這裡就會出現你的統計。",
+      "statsEmptyAction": "去滑卡"
     },
     "ratingScreen": {
       "addToPlanA11y": "加入想看清單",
@@ -904,7 +913,8 @@
         "restart": "重新開始",
         "title": "重新開始這個類型？"
       },
-      "skipA11y": "略過"
+      "skipA11y": "略過",
+      "backTo": "回到{genre}"
     },
     "discoverHome": {
       "search": "搜尋動畫",
@@ -916,7 +926,19 @@
       "episodes": "{count} 集",
       "rateByGenre": "照類型滑卡評分",
       "pickedForYou": "為你挑選",
-      "unavailable": "無法載入，請重試。"
+      "unavailable": "無法載入，請重試。",
+      "browseGenres": "依類型探索",
+      "allGenres": "全部 {count} 個類型",
+      "fewerGenres": "收起"
+    },
+    "genrePage": {
+      "subtitle": "依 AniList 人氣排序",
+      "start": "開始滑卡",
+      "resume": "繼續滑卡 · 已滑 {count} 張",
+      "hintPlan": "右滑加入想看，左滑略過。",
+      "hintLike": "右滑喜歡，左滑略過。",
+      "popular": "最熱門",
+      "empty": "這個類型還沒有作品。"
     },
     "schedule": {
       "today": "今天",
@@ -1490,7 +1512,8 @@
     "notInterested": "不想看",
     "notInterestedA11y": "不想看 — 本季不再顯示",
     "restoreSkipped": "還原 {count} 部已略過",
-    "scheduling": "排程中…"
+    "scheduling": "排程中…",
+    "notificationSettings": "提醒時間與通知設定"
   },
   "collectionUi": {
     "addAnime": "新增動畫",

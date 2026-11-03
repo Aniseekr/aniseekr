@@ -188,6 +188,8 @@ export function SwipeDeck({
             containerStyle={cardContainerStyle}
             onSwipe={handleSwipe}
             onPress={isTop && onPressTop ? () => onPressTop(entry.item) : undefined}
+            // The tap-for-info hint teaches once per visit, on the first card only.
+            showTapHint={idx === startIndex}
             rightIndicator={rightIndicator}
             leftIndicator={leftIndicator}
           />

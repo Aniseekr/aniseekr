@@ -33,6 +33,7 @@ interface Props {
   onSwipe: (direction: 'left' | 'right') => void;
   /** Tap handler — only honored for the top photo card. */
   onPress?: () => void;
+  showTapHint?: boolean;
   /** Right/left swipe indicators — forwarded to PhotoCard so the gesture
    * preview matches the screen's action buttons. */
   rightIndicator?: SwipeIndicatorConfig;
@@ -82,6 +83,7 @@ export function SwipeDeckCard({
   containerStyle,
   onSwipe,
   onPress,
+  showTapHint,
   rightIndicator,
   leftIndicator,
   ref,
@@ -145,6 +147,7 @@ export function SwipeDeckCard({
           isTop={isTop}
           onSwipe={onSwipe}
           onPress={onPress}
+          showTapHint={showTapHint}
           activeTranslation={activeTranslation}
           rightIndicator={rightIndicator}
           leftIndicator={leftIndicator}

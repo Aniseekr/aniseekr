@@ -125,6 +125,13 @@ export async function getDeck(genreId: string): Promise<DeckSnapshot | null> {
   }
 }
 
+/** Hot-layer read for first paint; never touches SQLite. */
+export function peekDeck(genreId: string): DeckSnapshot | null {
+  const hot = cache.get(genreId);
+  if (!hot || Date.now() - hot.updatedAt > TTL_MS) return null;
+  return hot;
+}
+
 export function putDeck(genreId: string, snapshot: DeckSnapshot): void {
   touchLru(genreId, snapshot);
   scheduleFlush(genreId);

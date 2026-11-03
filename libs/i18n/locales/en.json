@@ -820,7 +820,14 @@
       "explore": "Explore",
       "episodeProgress": "{progress} / {total}",
       "episodesWatched": "{count} eps watched",
-      "menu": "Library options"
+      "menu": "Library options",
+      "starter": {
+        "title": "Your library is empty",
+        "body": "Titles you want to watch, are watching, or finished show up here.",
+        "swipe": "Swipe by genre",
+        "import": "Import from AniList / MAL",
+        "schedule": "See what airs this season"
+      }
     },
     "pilgrimageHome": {
       "showMap": "Show map",
@@ -881,7 +888,9 @@
         "unlockSubtitle": "No ads, all themes, unlimited sync",
         "upgrade": "Upgrade"
       },
-      "title": "Profile"
+      "title": "Profile",
+      "statsEmpty": "No ratings yet. Swipe a few cards and your stats show up here.",
+      "statsEmptyAction": "Start swiping"
     },
     "ratingScreen": {
       "addToPlanA11y": "Add to Plan to Watch",
@@ -904,7 +913,8 @@
         "restart": "Restart",
         "title": "Restart this genre?"
       },
-      "skipA11y": "Skip"
+      "skipA11y": "Skip",
+      "backTo": "Back to {genre}"
     },
     "discoverHome": {
       "search": "Search anime",
@@ -916,7 +926,19 @@
       "episodes": "{count} eps",
       "rateByGenre": "Rate by genre",
       "pickedForYou": "Picked for you",
-      "unavailable": "Unable to load. Please try again."
+      "unavailable": "Unable to load. Please try again.",
+      "browseGenres": "Browse by genre",
+      "allGenres": "All {count} genres",
+      "fewerGenres": "Show fewer"
+    },
+    "genrePage": {
+      "subtitle": "Ranked by AniList popularity",
+      "start": "Start swiping",
+      "resume": "Continue swiping · {count} seen",
+      "hintPlan": "Swipe right to add to Want to watch, left to skip.",
+      "hintLike": "Swipe right to like, left to skip.",
+      "popular": "Most popular",
+      "empty": "No titles in this genre yet."
     },
     "schedule": {
       "today": "Today",
@@ -1490,7 +1512,8 @@
     "notInterested": "Not interested",
     "notInterestedA11y": "Not interested — hide this season",
     "restoreSkipped": "Restore {count} skipped",
-    "scheduling": "Scheduling…"
+    "scheduling": "Scheduling…",
+    "notificationSettings": "Reminder time & notifications"
   },
   "collectionUi": {
     "addAnime": "Add anime",
