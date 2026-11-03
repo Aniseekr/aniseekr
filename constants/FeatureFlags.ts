@@ -24,6 +24,8 @@ export const FeatureFlags = {
    *    (banner, native, interstitial, rewarded) renders nothing.
    *  - The `EXPO_PUBLIC_ADS_DISABLED=1` env kill switch still works the
    *    same way and is independent of this flag.
+   * Ads are gated on `useSubscription().adFree` (the real entitlement), not
+   * `isPro`, so they still show while PREMIUM_ENABLED unlocks everything.
    */
-  ADS_ENABLED: false,
+  ADS_ENABLED: true,
 } as const;

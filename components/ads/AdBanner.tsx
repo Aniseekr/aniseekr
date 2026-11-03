@@ -31,7 +31,7 @@ export function AdBanner({ slot = 'home_banner', fallbackHeight = 0 }: AdBannerP
   const subscription = useSubscription();
   const [errored, setErrored] = useState(false);
 
-  const unitId = subscription.isPro ? null : getAdUnitId(slot);
+  const unitId = subscription.adFree ? null : getAdUnitId(slot);
 
   if (!unitId || !BannerAdComponent || !BannerSize || errored) {
     return fallbackHeight > 0 ? <View style={{ height: fallbackHeight }} /> : null;
