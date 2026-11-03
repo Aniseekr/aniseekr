@@ -914,7 +914,8 @@
         "title": "Restart this genre?"
       },
       "skipA11y": "Skip",
-      "backTo": "Back to {genre}"
+      "backTo": "Back to {genre}",
+      "likeA11y": "Seen it, liked it"
     },
     "discoverHome": {
       "search": "Search anime",
@@ -935,10 +936,9 @@
       "subtitle": "Ranked by AniList popularity",
       "start": "Start swiping",
       "resume": "Continue swiping · {count} seen",
-      "hintPlan": "Swipe right to add to Want to watch, left to skip.",
-      "hintLike": "Swipe right to like, left to skip.",
       "popular": "Most popular",
-      "empty": "No titles in this genre yet."
+      "empty": "No titles in this genre yet.",
+      "hint": "Swipe right for Want to watch, left to skip. Seen it and loved it? Tap ♥."
     },
     "schedule": {
       "today": "Today",
@@ -966,7 +966,23 @@
       "ova": "OVA",
       "trackingLabel": "Following",
       "seasonLabel": "All this season",
-      "trackingFailed": "Could not load your followed shows."
+      "trackingFailed": "Could not load your followed shows.",
+      "mode": {
+        "week": "By weekday",
+        "rank": "Ranking"
+      },
+      "rank": {
+        "listCount": "{count} on AniList lists",
+        "starts": "Starts {date}",
+        "pick": "Add to my season",
+        "unpick": "Remove from my season",
+        "removed": "Removed {title} from Want to watch",
+        "byScore": "Ranked by AniList average score.",
+        "byListCount": "Ranked by how many AniList users have it on a list — the pre-season hype signal.",
+        "empty": "No titles for this season yet.",
+        "emptyPicks": "You haven't picked anything for this season. Tap the bookmark on a title to add it.",
+        "byListCountCurrent": "Ranked by how many AniList users have it on a list."
+      }
     }
   },
   "anime": {

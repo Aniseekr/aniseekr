@@ -914,7 +914,8 @@
         "title": "重新開始這個類型？"
       },
       "skipA11y": "略過",
-      "backTo": "回到{genre}"
+      "backTo": "回到{genre}",
+      "likeA11y": "看過，喜歡"
     },
     "discoverHome": {
       "search": "搜尋動畫",
@@ -935,10 +936,9 @@
       "subtitle": "依 AniList 人氣排序",
       "start": "開始滑卡",
       "resume": "繼續滑卡 · 已滑 {count} 張",
-      "hintPlan": "右滑加入想看，左滑略過。",
-      "hintLike": "右滑喜歡，左滑略過。",
       "popular": "最熱門",
-      "empty": "這個類型還沒有作品。"
+      "empty": "這個類型還沒有作品。",
+      "hint": "右滑加入想看，左滑略過。看過又喜歡就按 ♥。"
     },
     "schedule": {
       "today": "今天",
@@ -966,7 +966,23 @@
       "ova": "OVA",
       "trackingLabel": "我在追",
       "seasonLabel": "本季全部",
-      "trackingFailed": "無法載入追番清單。"
+      "trackingFailed": "無法載入追番清單。",
+      "mode": {
+        "week": "星期表",
+        "rank": "排行"
+      },
+      "rank": {
+        "listCount": "AniList {count} 人加入清單",
+        "starts": "{date} 開播",
+        "pick": "加入我的本季",
+        "unpick": "從我的本季移除",
+        "removed": "已把 {title} 從想看移除",
+        "byScore": "依 AniList 平均分數排序。",
+        "byListCount": "依 AniList 加入清單人數排序，代表開播前的期待程度。",
+        "empty": "這一季還沒有作品資料。",
+        "emptyPicks": "這一季還沒挑作品。點作品右邊的書籤就能加入。",
+        "byListCountCurrent": "依 AniList 加入清單人數排序。"
+      }
     }
   },
   "anime": {
