@@ -33,3 +33,17 @@ export function getBroadcastSeason(now = new Date()): { season: Season; year: nu
   const seasons: Season[] = ['WINTER', 'SPRING', 'SUMMER', 'FALL'];
   return { season: seasons[Math.floor(now.getMonth() / 3)], year: now.getFullYear() };
 }
+
+export type SeasonPhase = 'past' | 'current' | 'upcoming';
+
+/** Where a season sits relative to the current broadcast cour. */
+export function getSeasonPhase(
+  selection: { season: Season; year: number },
+  now = new Date()
+): SeasonPhase {
+  const order: Season[] = ['WINTER', 'SPRING', 'SUMMER', 'FALL'];
+  const current = getBroadcastSeason(now);
+  const index = (s: { season: Season; year: number }) => s.year * 4 + order.indexOf(s.season);
+  const diff = index(selection) - index(current);
+  return diff < 0 ? 'past' : diff === 0 ? 'current' : 'upcoming';
+}

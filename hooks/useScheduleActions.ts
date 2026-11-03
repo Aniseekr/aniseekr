@@ -136,6 +136,35 @@ export function useScheduleActions(
       }
     );
   };
+  // Un-pick only drops plain "want to watch" picks; anything the user has
+  // already progressed (watching, completed…) opens the full editor instead.
+  const handleUnpick = async (anime: Anime, onEdit: (anime: Anime) => void) => {
+    if (busy.current.has(anime.id)) return;
+    busy.current.add(anime.id);
+    try {
+      const prior = await trackingService.getStatus(anime.id);
+      if (prior && prior.status !== 'planned') {
+        onEdit(anime);
+        return;
+      }
+      const hadReminder = animeNotificationService.isAnimeScheduled(anime.id);
+      await trackingService.removeTracking(anime.id);
+      if (hadReminder) await animeNotificationService.cancelAnimeNotification(anime.id);
+      notify(t('tabs.schedule.rank.removed', { title: anime.title }), 'bookmark-remove', () => {
+        void trackingService.upsertTracking({
+          animeId: anime.id,
+          status: 'planned',
+          title: anime.title,
+          imageUrl: anime.image,
+          totalEpisodes: anime.episodes,
+        });
+      });
+    } catch (error) {
+      console.warn('[schedule] unpick failed', error);
+    } finally {
+      busy.current.delete(anime.id);
+    }
+  };
   const restoreSkipped = () => {
     hapticsBridge.selection();
     clearSeasonSkips(skipSeason, year);
@@ -150,6 +179,7 @@ export function useScheduleActions(
     notify,
     handleBell,
     handleWant: (anime: Anime) => handleWant(anime, false),
+    handleUnpick,
     handleSkip,
     restoreSkipped,
     skips,

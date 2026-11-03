@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Animated from 'react-native-reanimated';
 import type { Anime } from '../../rate/types';
 import { AnimeTitleText, ThemedIconButton, ThemedText } from '../../themed';
 import { ProgressiveImage } from '../../common/ProgressiveImage';
@@ -11,6 +12,7 @@ import { formatAiringClock } from '../../../libs/utils/airing';
 import { prefetchAnimeDetail, pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { useIsAnimeScheduled } from '../../../modules/notifications/animeNotificationService';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { useToggleBounce } from '../../../libs/animations/use-toggle-bounce';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 
 export const ScheduleRow = memo(function ScheduleRow({
@@ -26,6 +28,7 @@ export const ScheduleRow = memo(function ScheduleRow({
   const { theme } = useTheme();
   const t = useT();
   const scheduled = useIsAnimeScheduled(anime.id);
+  const bellStyle = useToggleBounce(scheduled, true);
   const next = anime.nextAiringEpisode;
   let relativeDay = '';
   if (next) {
@@ -79,19 +82,23 @@ export const ScheduleRow = memo(function ScheduleRow({
           </ThemedText>
         </View>
       </Pressable>
-      <ThemedIconButton
-        variant="ghost"
-        haptic="selection"
-        accessibilityLabel={t(scheduled ? 'tabs.schedule.cancelReminder' : 'tabs.schedule.follow')}
-        onPress={() => onBell(anime, scheduled)}
-        icon={(color) => (
-          <MaterialIcons
-            name={scheduled ? 'notifications-active' : 'notifications-none'}
-            size={22}
-            color={scheduled ? theme.accent : color}
-          />
-        )}
-      />
+      <Animated.View style={bellStyle}>
+        <ThemedIconButton
+          variant="ghost"
+          haptic="selection"
+          accessibilityLabel={t(
+            scheduled ? 'tabs.schedule.cancelReminder' : 'tabs.schedule.follow'
+          )}
+          onPress={() => onBell(anime, scheduled)}
+          icon={(color) => (
+            <MaterialIcons
+              name={scheduled ? 'notifications-active' : 'notifications-none'}
+              size={22}
+              color={scheduled ? theme.accent : color}
+            />
+          )}
+        />
+      </Animated.View>
     </View>
   );
 });

@@ -527,6 +527,7 @@ export class AniListDataSource implements AnimeDataSource {
       bannerImageURL: media.bannerImage ?? null,
       platformImages,
       anilistScore: media.averageScore ?? null,
+      anilistListCount: media.popularity ?? null,
       totalEpisodes: media.episodes ?? null,
       year: media.seasonYear ?? null,
       season: media.season ? media.season.toUpperCase() : null,

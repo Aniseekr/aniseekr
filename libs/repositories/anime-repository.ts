@@ -204,6 +204,7 @@ export function unifiedToLegacyAnime(item: UnifiedAnimeItem): Anime {
     bannerImage: bestImageForLegacy(item, 'banner') ?? undefined,
     rank: item.anilistScore ?? Math.round((item.normalizedScore ?? 0) * 10),
     score: item.normalizedScore ?? undefined,
+    anilistListCount: item.anilistListCount ?? undefined,
     type: item.format ?? 'TV',
     tags: item.genres.length > 0 ? item.genres : item.tags,
     mood: item.synopsis ? item.synopsis.substring(0, 100) + '...' : '',

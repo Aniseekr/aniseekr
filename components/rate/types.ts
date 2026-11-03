@@ -11,6 +11,8 @@ export interface Anime {
   bannerImage?: string;
   rank?: number;
   score?: number; // [NEW] 0-100 or 0-10
+  /** AniList users with this title on a list; null when the source has none. */
+  anilistListCount?: number;
   type?: string; // [NEW] TV, MOVIE, etc.
   tags?: string[];
   mood?: string;
