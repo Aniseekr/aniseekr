@@ -74,19 +74,36 @@ export const Spacing = {
   sectionSpacing: 24,
 } as const;
 
+/**
+ * v6 corners, shared with aniseekr.moe: controls (buttons, chips, inputs,
+ * icon buttons) are 4, cards and thumbnails 6, large panels and sheets 8.
+ * The older names stay as aliases so call sites keep compiling; `full` is
+ * only for true circles (avatars, dots, rings, switch knobs).
+ */
 export const Radius = {
-  sm: 8,
-  md: 12,
-  chip: 14,
-  chipLg: 16,
-  lg: 16,
-  card: 20,
-  cardLg: 22,
-  xl: 24,
-  tabActive: 26,
-  xxl: 32,
-  tabBar: 36,
+  sm: 4,
+  md: 4,
+  chip: 4,
+  chipLg: 4,
+  lg: 6,
+  card: 6,
+  cardLg: 6,
+  xl: 8,
+  tabActive: 4,
+  xxl: 8,
+  tabBar: 8,
   full: 9999,
+} as const;
+
+/**
+ * v6 manga ink (aniseekr.moe `border: 2px solid var(--line)` +
+ * `box-shadow: 3px 3px 0`). The ink colour is always `theme.text.primary`,
+ * so it flips with light/dark mode; the hard shadow uses ink or the accent.
+ */
+export const Ink = {
+  line: 2,
+  hairline: 1.5,
+  lift: 3,
 } as const;
 
 export const IconSize = {

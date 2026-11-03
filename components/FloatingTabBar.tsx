@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import {
+  Ink,
   CAPS_TRACKING,
   Radius,
   Shadow,
@@ -33,6 +34,7 @@ import {
 } from '../libs/navigation/floating-tab-bar-animation';
 import { Springs } from '../libs/animations/presets';
 import { CapsText } from './themed/CapsText';
+import { readableTextOn, withAlpha } from './themed/contrast';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 type FloatingTabBarProps = BottomTabBarProps & {
@@ -223,11 +225,12 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const labelTracking = isCjkLabel(label, useUiLanguage()) ? 0 : CAPS_TRACKING;
-  const activeFg = theme.accent;
+  // v6: the active tab is a solid accent tag (the web nav's current-page tag);
+  // its label/icon pick whichever ink reads on the accent.
+  const activeFg = readableTextOn(theme.accent);
   const inactiveFg = theme.text.tertiary;
-  // Active pill fill = accent at ~18% alpha (0x2E), border = accent at ~45% (0x73).
-  const activeBg = `${theme.accent}2E`;
-  const activeBorder = `${theme.accent}73`;
+  const activeBg = theme.accent;
+  const activeBorder = theme.accent;
 
   useEffect(() => {
     focusProgress.value = withSpring(isFocused ? 1 : 0, Springs.focus);
@@ -336,8 +339,8 @@ const makeStyles = (theme: ThemePalette) =>
     pillBorder: {
       ...StyleSheet.absoluteFill,
       borderRadius: Radius.tabBar,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
+      borderWidth: Ink.hairline,
+      borderColor: withAlpha(theme.text.primary, 0.22),
     },
     tabRow: {
       flex: 1,
@@ -347,11 +350,11 @@ const makeStyles = (theme: ThemePalette) =>
     },
     tabPill: {
       height: TAB_HEIGHT,
-      borderRadius: TAB_HEIGHT / 2,
+      borderRadius: Radius.sm,
       flexDirection: 'row',
       alignItems: 'center',
       overflow: 'hidden',
-      borderWidth: 1,
+      borderWidth: Ink.hairline,
     },
     iconBox: {
       width: COLLAPSED_WIDTH,

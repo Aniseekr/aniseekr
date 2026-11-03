@@ -1,9 +1,10 @@
 import { memo, ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Ink, Radius } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { readableTextOn } from './contrast';
+import { readableTextOn, withAlpha } from './contrast';
 
 export type IconButtonVariant = 'glass' | 'solid' | 'ghost';
 export type IconButtonHaptic = 'selection' | 'tap' | 'none';
@@ -46,10 +47,11 @@ function ThemedIconButtonComponent({
   let borderWidth = 0;
   let iconColor: string = theme.text.primary;
 
+  // v6: the web header buttons' small corner, with a quiet hairline frame.
   if (variant === 'glass') {
     backgroundColor = theme.background.secondary;
-    borderColor = theme.glassBorder;
-    borderWidth = 1;
+    borderColor = withAlpha(theme.text.primary, 0.22);
+    borderWidth = Ink.hairline;
     iconColor = theme.text.primary;
   } else if (variant === 'solid') {
     const a = accent ?? theme.accent;
@@ -88,7 +90,7 @@ function ThemedIconButtonComponent({
           {
             width: size,
             height: size,
-            borderRadius: size / 2,
+            borderRadius: Radius.sm,
             backgroundColor,
             borderColor,
             borderWidth,

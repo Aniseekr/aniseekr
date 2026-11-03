@@ -1,7 +1,8 @@
 import { ReactNode, type Ref } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle, type ViewInstance } from 'react-native';
-import { Radius, Spacing } from '../../constants/DesignSystem';
+import { Ink, Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { withAlpha } from './contrast';
 
 export type SurfaceVariant = 'card' | 'elevated' | 'outlined' | 'sheet';
 
@@ -24,15 +25,18 @@ export function ThemedSurface({
 }: ThemedSurfaceProps) {
   const { theme } = useTheme();
 
+  // v6 ink: cards carry a soft hairline frame; elevated panels and outlines
+  // use the full ink colour at the same hairline weight.
   let backgroundColor = theme.background.secondary;
-  let borderColor: string = theme.glassBorder;
-  let borderWidth = 1;
+  let borderColor: string = withAlpha(theme.text.primary, 0.22);
+  let borderWidth: number = Ink.hairline;
 
   if (variant === 'elevated') {
     backgroundColor = theme.background.tertiary;
+    borderColor = theme.text.primary;
   } else if (variant === 'outlined') {
     backgroundColor = 'transparent';
-    borderWidth = 1.5;
+    borderColor = theme.text.primary;
   } else if (variant === 'sheet') {
     backgroundColor = theme.background.primary;
   }

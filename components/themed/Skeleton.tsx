@@ -123,9 +123,9 @@ function HeroDetailBase({ showEpisodes = true, style }: SkeletonHeroDetailProps)
         <ShimmerEffect width="70%" height={24} />
         <ShimmerEffect width="50%" height={14} style={{ marginTop: 10 }} />
         <Row style={{ marginTop: Spacing.md, gap: Spacing.xs }}>
-          <ShimmerEffect width={64} height={22} borderRadius={11} />
-          <ShimmerEffect width={56} height={22} borderRadius={11} />
-          <ShimmerEffect width={72} height={22} borderRadius={11} />
+          <ShimmerEffect width={64} height={22} borderRadius={Radius.card} />
+          <ShimmerEffect width={56} height={22} borderRadius={Radius.card} />
+          <ShimmerEffect width={72} height={22} borderRadius={Radius.card} />
         </Row>
         <View style={{ marginTop: Spacing.lg, gap: 8 }}>
           <ShimmerEffect width="100%" height={12} />
@@ -263,7 +263,7 @@ function ListRowBase({
             <ShimmerEffect width="60%" height={14} />
             <ShimmerEffect width="40%" height={11} style={{ marginTop: 6 }} />
           </Col>
-          <ShimmerEffect width={48} height={20} borderRadius={10} />
+          <ShimmerEffect width={48} height={20} borderRadius={Radius.card} />
         </Row>
       ))}
     </View>
@@ -317,7 +317,7 @@ function TimelineBase({ count = 5, showHeader = true, style }: SkeletonTimelineP
       {Array.from({ length: count }).map((_, i) => (
         <Row key={i} style={styles.step}>
           <Col style={styles.stepRail}>
-            <ShimmerEffect width={12} height={12} borderRadius={6} />
+            <ShimmerEffect width={12} height={12} borderRadius={Radius.sm} />
             {i < count - 1 ? <View style={styles.stepConnector} /> : null}
           </Col>
           <Col style={styles.stepBody}>
@@ -350,12 +350,12 @@ function ProfileBase({ style }: SkeletonProfileProps) {
         { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
         style,
       ]}>
-      <ShimmerEffect width={72} height={72} borderRadius={36} />
+      <ShimmerEffect width={72} height={72} borderRadius={Radius.xl} />
       <ShimmerEffect width={140} height={22} style={{ marginTop: Spacing.sm + 2 }} />
       <ShimmerEffect
         width={180}
         height={36}
-        borderRadius={Radius.full}
+        borderRadius={Radius.sm}
         style={{ marginTop: Spacing.sm + 2 }}
       />
     </View>
