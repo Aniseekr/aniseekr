@@ -1,9 +1,15 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
+import {
+  loadNotificationPrefsSync,
+  refreshNotificationPrefs,
+  saveNotificationPrefs,
+} from '../../libs/services/notifications/notification-service';
 import {
   ThemedBottomSheet,
   ThemedButton,
@@ -24,6 +30,7 @@ export interface BangumiPreferences {
   filterMode: BangumiFilterMode;
   typeFilter: BangumiTypeFilter;
   showUnknownDays: boolean;
+  /** Legacy: reminders now live in notification prefs (`episodeReminders`). */
   notificationsEnabled: boolean;
   hideSwipeHint?: boolean;
 }
@@ -41,8 +48,6 @@ export const DEFAULT_BANGUMI_PREFS: BangumiPreferences = {
 interface BangumiSettingsSheetProps {
   visible: boolean;
   preferences: BangumiPreferences;
-  adultContent: boolean;
-  onAdultContentChange: (value: boolean) => void;
   onClose: () => void;
   onChange: (next: BangumiPreferences) => void;
   skippedCount?: number;
@@ -51,14 +56,25 @@ interface BangumiSettingsSheetProps {
 export const BangumiSettingsSheet = memo(function BangumiSettingsSheet({
   visible,
   preferences,
-  adultContent,
-  onAdultContentChange,
   onClose,
   onChange,
   skippedCount = 0,
   onRestoreSkipped,
 }: BangumiSettingsSheetProps) {
   const t = useT();
+  const { theme } = useTheme();
+  // Single source of truth shared with Settings → Notifications.
+  const [notificationPrefs, setNotificationPrefs] = useState(loadNotificationPrefsSync);
+  const setEpisodeReminders = (episodeReminders: boolean) => {
+    const next = { ...notificationPrefs, episodeReminders };
+    setNotificationPrefs(next);
+    saveNotificationPrefs(next);
+    void refreshNotificationPrefs();
+  };
+  const openSetting = (pathname: '/(setting)/data-source' | '/(setting)/notifications') => {
+    onClose();
+    setTimeout(() => router.push(pathname), 280);
+  };
   const update = <K extends keyof BangumiPreferences>(key: K, value: BangumiPreferences[K]) =>
     onChange({ ...preferences, [key]: value });
   const filters = {
@@ -82,14 +98,6 @@ export const BangumiSettingsSheet = memo(function BangumiSettingsSheet({
             icon={(color) => <MaterialIcons name="close" size={22} color={color} />}
           />
         </View>
-        <ThemedButton
-          variant="secondary"
-          label={t('commonUi.dataSource')}
-          onPress={() => {
-            onClose();
-            setTimeout(() => router.push('/(setting)/data-source'), 280);
-          }}
-        />
         <ThemedText variant="titleSmall" tone="secondary">
           {t('bangumiTab.type')}
         </ThemedText>
@@ -114,14 +122,22 @@ export const BangumiSettingsSheet = memo(function BangumiSettingsSheet({
         <ToggleRow
           label={t('bangumiTab.episodeReminders')}
           description={t('bangumiTab.getNotifiedBeforeEachEpisode')}
-          value={preferences.notificationsEnabled}
-          onChange={(value) => update('notificationsEnabled', value)}
+          value={notificationPrefs.episodeReminders}
+          onChange={setEpisodeReminders}
         />
-        <ToggleRow
-          label={t('bangumiTab.showAdultContent')}
-          description={t('bangumiTab.revealR18SeriesInSeasonal')}
-          value={adultContent}
-          onChange={onAdultContentChange}
+        <ThemedButton
+          variant="secondary"
+          fullWidth
+          label={t('bangumiTab.notificationSettings')}
+          iconRight={<MaterialIcons name="chevron-right" size={18} color={theme.text.secondary} />}
+          onPress={() => openSetting('/(setting)/notifications')}
+        />
+        <ThemedButton
+          variant="secondary"
+          fullWidth
+          label={t('commonUi.dataSource')}
+          iconRight={<MaterialIcons name="chevron-right" size={18} color={theme.text.secondary} />}
+          onPress={() => openSetting('/(setting)/data-source')}
         />
         {skippedCount > 0 && onRestoreSkipped ? (
           <ThemedButton

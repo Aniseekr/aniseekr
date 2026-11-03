@@ -27,7 +27,7 @@ export const ScheduleRow = memo(function ScheduleRow({
   const t = useT();
   const scheduled = useIsAnimeScheduled(anime.id);
   const next = anime.nextAiringEpisode;
-  let relativeDay: string | null = null;
+  let relativeDay = '';
   if (next) {
     const airDate = new Date(next.airingAt * 1000);
     const today = new Date();
@@ -73,15 +73,10 @@ export const ScheduleRow = memo(function ScheduleRow({
             {next
               ? t('tabs.schedule.episodeTime', {
                   episode: next.episode,
-                  time: formatAiringClock(next.airingAt),
+                  time: `${relativeDay} ${formatAiringClock(next.airingAt)}`,
                 })
               : t('tabs.schedule.undated')}
           </ThemedText>
-          {relativeDay ? (
-            <ThemedText variant="caption" tone="tertiary">
-              {relativeDay}
-            </ThemedText>
-          ) : null}
         </View>
       </Pressable>
       <ThemedIconButton

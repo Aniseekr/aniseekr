@@ -79,13 +79,11 @@ export default function BangumiScreen() {
     trackingError,
     retryTracking,
     setPrefs,
-    setAdult,
   } = useSchedulePreferences();
   const schedule = useSeasonSchedule(selection.season, selection.year, adult);
   const actions = useScheduleActions(
     selection.season,
     selection.year,
-    prefs.notificationsEnabled,
     () => setSheet('notifications')
   );
   const seasonAnime = useMemo(
@@ -360,8 +358,6 @@ export default function BangumiScreen() {
         <BangumiSettingsSheet
           visible
           preferences={prefs}
-          adultContent={adult}
-          onAdultContentChange={setAdult}
           onClose={() => setSheet(null)}
           onChange={setPrefs}
           skippedCount={actions.skips.size}

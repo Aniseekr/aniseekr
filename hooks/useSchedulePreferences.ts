@@ -5,7 +5,7 @@ import {
   loadBangumiPrefsSync,
   saveBangumiPrefs,
 } from '../libs/services/bangumi-prefs';
-import { loadUserPrefsSync, patchUserPrefs, subscribeUserPrefs } from '../libs/services/user-prefs';
+import { loadUserPrefsSync, subscribeUserPrefs } from '../libs/services/user-prefs';
 import { trackingService } from '../libs/services/tracking/tracking-service';
 
 export function useSchedulePreferences() {
@@ -53,11 +53,6 @@ export function useSchedulePreferences() {
     setPrefs: (next: BangumiPreferences) => {
       setPrefsState(next);
       void saveBangumiPrefs(next);
-    },
-    setAdult: (next: boolean) => {
-      void patchUserPrefs({ allowAdultContent: next }).catch((error) =>
-        console.warn('[schedule] adult preference failed', error)
-      );
     },
   };
 }

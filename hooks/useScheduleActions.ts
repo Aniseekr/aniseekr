@@ -25,7 +25,6 @@ type Snackbar = {
 export function useScheduleActions(
   season: Season,
   year: number,
-  notificationsEnabled: boolean,
   onManageReminders: () => void
 ) {
   const t = useT();
@@ -62,11 +61,7 @@ export function useScheduleActions(
         );
         return;
       }
-      if (
-        fromBell &&
-        notificationsEnabled &&
-        !(await animeNotificationService.requestPermissions())
-      ) {
+      if (fromBell && !(await animeNotificationService.requestPermissions())) {
         notify(
           t('tabs.schedule.permissionDenied'),
           'notifications-off',
@@ -88,7 +83,6 @@ export function useScheduleActions(
         });
       let reminderId: string | null = null;
       if (
-        notificationsEnabled &&
         getCachedNotificationPrefs().episodeReminders &&
         !animeNotificationService.isAnimeScheduled(anime.id) &&
         (fromBell || (await animeNotificationService.hasPermission().catch(() => false)))
@@ -101,7 +95,7 @@ export function useScheduleActions(
       notify(
         reminderId
           ? t('tabs.bangumiScreen.snackbar.wantToWatchWithReminder', { title: anime.title })
-          : fromBell && notificationsEnabled
+          : fromBell
             ? t('tabs.bangumiScreen.snackbar.noUpcomingEpisode', { title: anime.title })
             : t('tabs.bangumiScreen.snackbar.addedToWishlist', { title: anime.title }),
         'bookmark-added',
