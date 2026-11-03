@@ -795,7 +795,8 @@
         "dialogTitle": "Share {template}",
         "myTemplateOnAniseekr": "My {template} on Aniseekr",
         "pickTemplate": "Pick a template first",
-        "rendererNotReady": "Renderer not ready"
+        "rendererNotReady": "Renderer not ready",
+        "picks": "{count} picked"
       },
       "untitled": "Untitled",
       "titleCount": "{count} titles",
@@ -2131,7 +2132,9 @@
       "spring": "Apr – Jun",
       "summer": "Jul – Sep",
       "fall": "Oct – Dec"
-    }
+    },
+    "imageFill": "Fill",
+    "imageFitMode": "Fit"
   },
   "settingsUi": {
     "accent": "Accent",

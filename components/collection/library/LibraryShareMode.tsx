@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Share, StyleSheet, View, type ViewInstance } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { setFloatingTabBarHidden } from '../../../libs/navigation/floating-tab-bar-visibility';
 import { CollectionFloatingActionBar } from '../CollectionFloatingActionBar';
 import { ShareImageRenderer } from '../ShareImageRenderer';
 import { ShareListEditor } from '../ShareListEditor';
@@ -20,6 +23,7 @@ import {
 } from '../../../libs/services/collection/share-templates';
 
 export function LibraryShareMode({ active, onClose }: { active: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const t = useT();
   const [shareSource, setShareSource] = useState<ShareSourceItem[]>([]);
@@ -155,12 +159,23 @@ export function LibraryShareMode({ active, onClose }: { active: boolean; onClose
     }
   }, [shareBuild, t]);
 
+  // The share bar sits where the floating tab bar is; hide the tab bar while
+  // sharing so Cancel / Share are fully tappable.
+  useFocusEffect(
+    useCallback(() => {
+      if (!active) return;
+      setFloatingTabBarHidden('library-share-mode', true);
+      return () => setFloatingTabBarHidden('library-share-mode', false);
+    }, [active])
+  );
+
   if (!active) return null;
 
   return (
     <>
       <CollectionFloatingActionBar
         mode="share"
+        bottom={insets.bottom + Spacing.md}
         selectedCount={shareBuild?.entries.length ?? 0}
         selectedTemplateId={shareBuild?.template.id ?? null}
         capturing={capturing}

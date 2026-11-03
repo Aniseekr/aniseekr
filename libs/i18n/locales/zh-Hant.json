@@ -795,7 +795,8 @@
         "dialogTitle": "分享 {template}",
         "myTemplateOnAniseekr": "我在 Aniseekr 的 {template}",
         "pickTemplate": "請先選一個版型",
-        "rendererNotReady": "渲染器尚未就緒"
+        "rendererNotReady": "渲染器尚未就緒",
+        "picks": "已選 {count} 部"
       },
       "untitled": "未命名",
       "titleCount": "{count} 部",
@@ -2131,7 +2132,9 @@
       "spring": "4–6 月",
       "summer": "7–9 月",
       "fall": "10–12 月"
-    }
+    },
+    "imageFill": "填滿",
+    "imageFitMode": "完整"
   },
   "settingsUi": {
     "accent": "強調色",

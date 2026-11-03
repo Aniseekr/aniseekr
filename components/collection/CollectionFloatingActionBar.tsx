@@ -145,7 +145,7 @@ function CollectionFloatingActionBarComponent({
               {selectedCount > 0 ? (
                 <View style={styles.selectionBadge}>
                   <Text style={[styles.selectionText, { color: theme.text.primary }]}>
-                    {selectedCount} picks
+                    {t('tabs.collectionScreen.share.picks', { count: selectedCount })}
                   </Text>
                 </View>
               ) : null}

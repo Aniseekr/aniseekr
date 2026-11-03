@@ -106,7 +106,7 @@ function ImageDisplaySettingsSheetComponent({
                 />
                 <Text
                   style={[styles.segmentLabel, { color: active ? activeFg : theme.text.primary }]}>
-                  {mode === 'fill' ? 'Fill' : 'Fit'}
+                  {t(mode === 'fill' ? 'rate.imageFill' : 'rate.imageFitMode')}
                 </Text>
               </Pressable>
             );
