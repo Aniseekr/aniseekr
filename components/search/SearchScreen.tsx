@@ -21,6 +21,7 @@ import { Anime } from '../rate/types';
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { EmptyStateView } from '../common/EmptyStateView';
+import { TrendingSuggestions } from './TrendingSuggestions';
 import { ErrorStateView } from '../common/ErrorStateView';
 import { IconSize, Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
@@ -553,7 +554,7 @@ export default function SearchScreen() {
               { paddingBottom: insets.bottom + 100 },
               // The discover prompt centers in the viewport; the recents list
               // keeps normal top-aligned flow.
-              recent.length === 0 && styles.centerGrow,
+              isPilgrimageMode && recent.length === 0 && styles.centerGrow,
             ]}
             keyboardShouldPersistTaps="handled">
             {recent.length > 0 ? (
@@ -580,18 +581,19 @@ export default function SearchScreen() {
                   ))}
                 </View>
               </View>
+            ) : null}
+            {isPilgrimageMode ? (
+              recent.length === 0 ? (
+                <EmptyStateView
+                  icon="search"
+                  title={t('search.pilgrimage.emptyTitle')}
+                  description={t('search.pilgrimage.emptyDescription')}
+                />
+              ) : null
             ) : (
-              <EmptyStateView
-                icon="search"
-                title={
-                  isPilgrimageMode ? t('search.pilgrimage.emptyTitle') : t('search.discoverTitle')
-                }
-                description={
-                  isPilgrimageMode
-                    ? t('search.pilgrimage.emptyDescription')
-                    : t('search.discoverDescription')
-                }
-              />
+              <View style={styles.suggestions}>
+                <TrendingSuggestions />
+              </View>
             )}
           </ScrollView>
         ) : loading && results.length === 0 ? (
@@ -967,6 +969,7 @@ function makeStyles(theme: ThemePalette) {
       ...Shadow.heavy,
     },
     recentSection: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
+    suggestions: { paddingHorizontal: Spacing.md },
     sectionRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
