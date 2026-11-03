@@ -30,45 +30,13 @@ export type Homography = readonly [
 export const IDENTITY_HOMOGRAPHY: Homography = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
- * Solve the homography H such that for each i ∈ [0..3], H · src[i] ≈ dst[i]
- * (using homogeneous coords). Standard direct-linear-transform setup —
- * 8 equations, 8 unknowns (h33 fixed to 1). Returns `null` if the system
- * is degenerate (e.g. three collinear source points).
- */
-export function computeHomography(src: Pt[], dst: Pt[]): Homography | null {
-  if (src.length !== 4 || dst.length !== 4) return null;
-  // Build the 8×8 matrix A and 8-vector b.
-  const A: number[][] = new Array(8);
-  const b = new Array<number>(8);
-  for (let i = 0; i < 4; i++) {
-    const { x: sx, y: sy } = src[i];
-    const { x: dx, y: dy } = dst[i];
-    A[2 * i] = [sx, sy, 1, 0, 0, 0, -dx * sx, -dx * sy];
-    A[2 * i + 1] = [0, 0, 0, sx, sy, 1, -dy * sx, -dy * sy];
-    b[2 * i] = dx;
-    b[2 * i + 1] = dy;
-  }
-  const solved = solveLinearSystem(A, b);
-  if (!solved) return null;
-  // solved = [h11, h12, h13, h21, h22, h23, h31, h32]; h33 = 1.
-  return [
-    solved[0],
-    solved[1],
-    solved[2],
-    solved[3],
-    solved[4],
-    solved[5],
-    solved[6],
-    solved[7],
-    1,
-  ];
-}
-
-/**
  * Gaussian elimination with partial pivoting. Returns `null` when the
- * pivot column is degenerate (matrix is singular).
+ * pivot column is degenerate (matrix is singular). Declared above
+ * computeHomography on purpose: a worklet captures its closure when it is
+ * created, so a callee declared later would be captured as undefined.
  */
 function solveLinearSystem(A: number[][], b: number[]): number[] | null {
+  'worklet';
   const n = A.length;
   const M: number[][] = A.map((row, i) => [...row, b[i]]);
   for (let i = 0; i < n; i++) {
@@ -102,6 +70,42 @@ function solveLinearSystem(A: number[][], b: number[]): number[] | null {
 }
 
 /**
+ * Solve the homography H such that for each i ∈ [0..3], H · src[i] ≈ dst[i]
+ * (using homogeneous coords). Standard direct-linear-transform setup —
+ * 8 equations, 8 unknowns (h33 fixed to 1). Returns `null` if the system
+ * is degenerate (e.g. three collinear source points).
+ */
+export function computeHomography(src: Pt[], dst: Pt[]): Homography | null {
+  'worklet';
+  if (src.length !== 4 || dst.length !== 4) return null;
+  // Build the 8×8 matrix A and 8-vector b.
+  const A: number[][] = new Array(8);
+  const b = new Array<number>(8);
+  for (let i = 0; i < 4; i++) {
+    const { x: sx, y: sy } = src[i];
+    const { x: dx, y: dy } = dst[i];
+    A[2 * i] = [sx, sy, 1, 0, 0, 0, -dx * sx, -dx * sy];
+    A[2 * i + 1] = [0, 0, 0, sx, sy, 1, -dy * sx, -dy * sy];
+    b[2 * i] = dx;
+    b[2 * i + 1] = dy;
+  }
+  const solved = solveLinearSystem(A, b);
+  if (!solved) return null;
+  // solved = [h11, h12, h13, h21, h22, h23, h31, h32]; h33 = 1.
+  return [
+    solved[0],
+    solved[1],
+    solved[2],
+    solved[3],
+    solved[4],
+    solved[5],
+    solved[6],
+    solved[7],
+    1,
+  ];
+}
+
+/**
  * Lift a 3×3 homography to a CSS-compatible 4×4 `matrix3d(...)` string.
  * RN's native `transform: [{ matrix: ... }]` only accepts the literal 16
  * column-major numbers; emitting a CSS string lets web targets and tests
@@ -126,6 +130,7 @@ export function homographyToCss(h: Homography | readonly number[]): string {
  * manual corner-pin editor to warp a `<View>` (and any image children).
  */
 export function homographyToMatrix4(h: Homography | readonly number[]): number[] {
+  'worklet';
   const [h11, h12, h13, h21, h22, h23, h31, h32, h33] = h;
   return [h11, h21, 0, h31, h12, h22, 0, h32, 0, 0, 1, 0, h13, h23, 0, h33];
 }
@@ -135,13 +140,15 @@ export function homographyToMatrix4(h: Homography | readonly number[]): number[]
  * destination corners (in the same coordinate frame as the source rect),
  * return the homography that warps the source onto the destination.
  * Returns `null` when fewer than four corners are supplied or the corners
- * are degenerate.
+ * are degenerate. CornerPinSheet calls this from an animated style on the UI
+ * runtime, so it and the solver it uses are worklets.
  */
 export function cornerPinHomography(
   width: number,
   height: number,
   dragged: Pt[]
 ): Homography | null {
+  'worklet';
   if (dragged.length !== 4) return null;
   const src: Pt[] = [
     { x: 0, y: 0 },
