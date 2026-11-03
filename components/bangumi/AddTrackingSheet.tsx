@@ -30,6 +30,14 @@ const STATUS_OPTIONS: {
   { key: 'dropped', labelKey: 'commonUi.dropped', icon: 'cancel' },
 ];
 
+const DB_STATUS_TO_UI: Partial<Record<AnimeStatus, UiStatus>> = {
+  watching: 'watching',
+  planned: 'wishlist',
+  completed: 'completed',
+  on_hold: 'paused',
+  dropped: 'dropped',
+};
+
 const UI_STATUS_TO_DB: Record<UiStatus, AnimeStatus> = {
   watching: 'watching',
   wishlist: 'planned',
@@ -50,7 +58,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
   const t = useT();
   const activeFg = readableTextOn(theme.accent);
   const [status, setStatus] = useState<UiStatus>('watching');
-  const [score, setScore] = useState(7);
+  // 0–10 in the UI; null = not rated. Stored ×10 (user_anime.score is 0–100).
+  const [score, setScore] = useState<number | null>(null);
+  const [scoreTouched, setScoreTouched] = useState(false);
   const [progress, setProgress] = useState(0);
   const [folders, setFolders] = useState<CollectionFolder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -65,11 +75,19 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
   useEffect(() => {
     if (!visible) return;
     setStatus('watching');
-    setScore(7);
+    setScore(null);
+    setScoreTouched(false);
     setProgress(0);
     setSelectedFolderId(null);
     let cancelled = false;
     void (async () => {
+      // Open on what's saved, so editing a tracked title never resets it.
+      const existing = anime ? await trackingService.getStatus(anime.id).catch(() => null) : null;
+      if (!cancelled && existing) {
+        setStatus(DB_STATUS_TO_UI[existing.status] ?? 'watching');
+        setProgress(existing.progress ?? 0);
+        setScore(existing.score ? existing.score / 10 : null);
+      }
       try {
         const list = await collectionService.getFolders();
         if (cancelled) return;
@@ -91,7 +109,7 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
       await trackingService.upsertTracking({
         animeId: anime.id,
         status: UI_STATUS_TO_DB[status],
-        score,
+        score: scoreTouched ? (score === null ? null : Math.round(score * 10)) : undefined,
         progress,
         totalEpisodes,
         title: anime.title,
@@ -106,7 +124,18 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
     } finally {
       setSaving(false);
     }
-  }, [anime, saving, status, score, progress, totalEpisodes, selectedFolderId, onSaved, onClose]);
+  }, [
+    anime,
+    saving,
+    status,
+    score,
+    scoreTouched,
+    progress,
+    totalEpisodes,
+    selectedFolderId,
+    onSaved,
+    onClose,
+  ]);
 
   const decrementProgress = useCallback(() => {
     hapticsBridge.selection();
@@ -187,10 +216,40 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
             {t('commonUi.score')}
           </CapsText>
           <View style={styles.scoreRow}>
-            <Text style={[styles.scoreValue, { color: theme.accent }]}>{score.toFixed(1)}</Text>
-            <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
+            {score === null ? (
+              <Text style={[styles.scoreValue, { color: theme.text.tertiary }]}>
+                {t('collectionUi.unrated')}
+              </Text>
+            ) : (
+              <>
+                <Text style={[styles.scoreValue, { color: theme.accent }]}>
+                  {score.toFixed(1)}
+                </Text>
+                <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('collectionUi.clear')}
+                  hitSlop={12}
+                  style={styles.scoreClear}
+                  onPress={() => {
+                    hapticsBridge.selection();
+                    setScore(null);
+                    setScoreTouched(true);
+                  }}>
+                  <MaterialIcons name="close" size={18} color={theme.text.tertiary} />
+                </Pressable>
+              </>
+            )}
           </View>
-          <RatingSlider value={score} onChange={setScore} width={320} step={0.5} />
+          <RatingSlider
+            value={score ?? 0}
+            onChange={(next) => {
+              setScore(next);
+              setScoreTouched(true);
+            }}
+            width={320}
+            step={0.5}
+          />
 
           <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.episodes')}
@@ -390,6 +449,7 @@ const styles = StyleSheet.create({
     ...Typography.titleSmall,
     fontWeight: '600',
   },
+  scoreClear: { marginLeft: Spacing.sm, padding: 4 },
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'baseline',

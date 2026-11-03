@@ -16,6 +16,7 @@ import { useLibrary } from '../../../components/collection/library/useLibrary';
 import { FolderGridItem } from '../../../components/collection/FolderGrid';
 import { CollectionSearchModal } from '../../../components/collection/CollectionSearchModal';
 import { CreateFolderModal } from '../../../components/collection/CreateFolderModal';
+import { AddTrackingSheet } from '../../../components/bangumi/AddTrackingSheet';
 import { QuickActionSheet } from '../../../components/settings/QuickActionSheet';
 import { ErrorStateView } from '../../../components/common/ErrorStateView';
 import { Skeleton, ThemedBottomSheet, ThemedButton, ThemedText } from '../../../components/themed';
@@ -48,6 +49,7 @@ export default function CollectionScreen() {
   const cardWidth = (width - Spacing.lg * 2 - Spacing.sm * 2) / 3;
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [screenMode, setScreenMode] = useState<'collect' | 'share'>('collect');
+  const [editing, setEditing] = useState<FolderAnimeWithProgress | null>(null);
   const customFolders = library.folders?.filter((folder) => !folder.isSystemFolder) ?? [];
   const custom = library.selected === 'custom';
   const libraryEmpty =
@@ -183,7 +185,7 @@ export default function CollectionScreen() {
         renderItem={({ item: entry }) => (
           <View style={{ width: cardWidth }}>
             {entry.kind === 'anime' ? (
-              <LibraryAnimeCard item={entry.item} />
+              <LibraryAnimeCard item={entry.item} onLongPress={setEditing} />
             ) : (
               <FolderGridItem
                 folder={entry.item}
@@ -215,6 +217,21 @@ export default function CollectionScreen() {
           />
         </View>
       </ThemedBottomSheet>
+      {editing ? (
+        <AddTrackingSheet
+          visible
+          anime={{
+            id: editing.id,
+            title: editing.title ?? '',
+            image: editing.imageUrl ?? '',
+            episodes: editing.totalEpisodes || undefined,
+          }}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            void library.reload();
+          }}
+        />
+      ) : null}
       <CreateFolderModal
         visible={overlay?.kind === 'create' || overlay?.kind === 'edit'}
         onClose={() => setOverlay(null)}

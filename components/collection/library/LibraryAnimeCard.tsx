@@ -2,7 +2,8 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { AnimeTitleText, ThemedSurface, ThemedText } from '../../themed';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { AnimeTitleText, readableTextOn, ThemedSurface, ThemedText } from '../../themed';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
@@ -12,14 +13,19 @@ import type { FolderAnimeWithProgress } from '../../../libs/services/collection/
 
 export const LibraryAnimeCard = memo(function LibraryAnimeCard({
   item,
+  onLongPress,
 }: {
   item: FolderAnimeWithProgress;
+  /** Opens the status / score / progress editor. */
+  onLongPress: (item: FolderAnimeWithProgress) => void;
 }) {
   const { theme } = useTheme();
   const t = useT();
   const router = useRouter();
   const title = item.title || t('tabs.collectionScreen.untitled');
   const seed = { id: item.id, title, image: item.imageUrl ?? undefined };
+  // The user's own score (stored 0–100); the library never shows community scores.
+  const myScore = item.score > 0 ? (item.score / 10).toFixed(1) : null;
   const total = item.totalEpisodes && item.totalEpisodes > 0 ? item.totalEpisodes : null;
   return (
     <Pressable
@@ -30,6 +36,10 @@ export const LibraryAnimeCard = memo(function LibraryAnimeCard({
         hapticsBridge.tap();
         pushAnimeDetail(router, seed);
       }}
+      onLongPress={() => {
+        hapticsBridge.selection();
+        onLongPress(item);
+      }}
       style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
       <ThemedSurface style={styles.poster}>
         {item.imageUrl ? (
@@ -39,6 +49,17 @@ export const LibraryAnimeCard = memo(function LibraryAnimeCard({
             contentFit="cover"
             recyclingKey={item.id}
           />
+        ) : null}
+        {myScore ? (
+          <View style={[styles.myScore, { backgroundColor: theme.accent }]}>
+            <MaterialIcons name="star" size={11} color={readableTextOn(theme.accent)} />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              style={{ color: readableTextOn(theme.accent) }}>
+              {myScore}
+            </ThemedText>
+          </View>
         ) : null}
       </ThemedSurface>
       <AnimeTitleText
@@ -72,6 +93,17 @@ export const LibraryAnimeCard = memo(function LibraryAnimeCard({
 const styles = StyleSheet.create({
   poster: { aspectRatio: 2 / 2.8, borderRadius: Radius.md, overflow: 'hidden' },
   title: { ...Typography.bodySmall, marginTop: Spacing.xs },
+  myScore: {
+    position: 'absolute',
+    left: Spacing.xxs,
+    bottom: Spacing.xxs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+  },
   track: {
     height: 3,
     borderRadius: Radius.sm,
