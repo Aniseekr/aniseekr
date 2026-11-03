@@ -9,7 +9,6 @@ import {
   USER_PRIMARY_PLATFORM_KEY,
 } from '../services/storage/keys';
 
-const DEFAULT_DISPLAY_NAME = 'Anime fan';
 
 export interface UserProfile {
   id: string;
@@ -36,6 +35,7 @@ export class UserRepository {
     const localAvatar = UserRepository.getAvatarUriSync();
     const displayName = UserRepository.getDisplayNameSync();
 
+    const stats = await AnimeRepository.getUserStats();
     try {
       const anilistProfile = await platformSyncService.getAniListProfile();
       if (anilistProfile) {
@@ -46,7 +46,8 @@ export class UserRepository {
           source: 'platform',
           stats: {
             totalRated: anilistProfile.stats.totalAnime,
-            likedCount: Math.floor(anilistProfile.stats.completed * 0.3),
+            // AniList has no "liked" count; likes are local swipe/heart data.
+            likedCount: stats.likedCount,
             cardsCount: 0,
             foldersCount: 1,
           },
@@ -56,11 +57,10 @@ export class UserRepository {
       console.warn('Failed to get AniList profile, using local data:', error);
     }
 
-    const stats = await AnimeRepository.getUserStats();
-
     return {
       id: 'local',
-      username: displayName ?? DEFAULT_DISPLAY_NAME,
+      // Empty means "not set": the profile header shows its localized default.
+      username: displayName ?? '',
       avatarUrl: localAvatar ?? '',
       source: 'local',
       stats: {
