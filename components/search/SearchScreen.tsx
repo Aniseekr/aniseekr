@@ -47,6 +47,7 @@ import { Skeleton, ThemedButton, ThemedIconButton } from '../themed';
 import { useT } from '../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { listItemEnter } from '../../libs/animations/presets';
+import { formatScore } from '../../libs/utils/format-score';
 
 const MAX_RECENT = 8;
 
@@ -794,7 +795,7 @@ function ResultCard({
   const isPilgrimageRow = anime.pilgrimageSource !== undefined;
   const localizedTitle = useAnimeDisplayTitle(isPilgrimageRow ? null : anime);
   const displayTitle = isPilgrimageRow ? anime.title : localizedTitle || anime.title;
-  const score = typeof anime.score === 'number' ? formatScore(anime.score) : null;
+  const score = formatScore(anime.score);
   const tags = anime.tags?.slice(0, 3) ?? [];
   return (
     <Pressable
@@ -886,10 +887,6 @@ function ResultCard({
   );
 }
 
-function formatScore(score: number): string {
-  if (score > 10) return (score / 10).toFixed(1);
-  return score.toFixed(1);
-}
 
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({

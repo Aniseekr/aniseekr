@@ -43,6 +43,7 @@ import {
   type BangumiOutgoingCard,
 } from '../../libs/services/bangumi/card-deck-window';
 import { CapsText } from '../themed/CapsText';
+import { formatScore } from '../../libs/utils/format-score';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - Spacing.lg * 2, 360);
@@ -398,10 +399,10 @@ function TopCard({ anime, slot, theme, onSwipe, onOpenDetail, activeTranslation 
           <View style={styles.cardInfo} pointerEvents="none">
             <AnimeTitleText anime={anime} style={styles.cardTitle} numberOfLines={2} />
             <View style={styles.cardMetaRow}>
-              {anime.score ? (
+              {formatScore(anime.score) ? (
                 <View style={styles.scorePill}>
                   <Ionicons name="star" size={11} color={theme.status.warning} />
-                  <Text style={styles.scoreText}>{anime.score}</Text>
+                  <Text style={styles.scoreText}>{formatScore(anime.score)}</Text>
                 </View>
               ) : null}
               {anime.format || anime.type ? (

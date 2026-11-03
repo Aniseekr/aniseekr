@@ -9,6 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { readableTextOn, ThemedButton, ThemedBottomSheet, ThemedText } from '../themed';
 import { PersonalizedPickState } from './types';
+import { formatScore } from '../../libs/utils/format-score';
 
 type Props = {
   visible: boolean;
@@ -356,11 +357,6 @@ function ErrorState({ onRefresh }: { onRefresh?: () => void }) {
       ) : null}
     </Animated.View>
   );
-}
-
-function formatScore(raw: number): string {
-  const n = raw > 10 ? raw / 10 : raw;
-  return n.toFixed(1);
 }
 
 const styles = StyleSheet.create({

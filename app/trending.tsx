@@ -23,6 +23,7 @@ import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import { useT } from '../libs/i18n';
 import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
 import { listItemEnter } from '../libs/animations/presets';
+import { formatScore } from '../libs/utils/format-score';
 
 type TrendRange = 'week' | 'all';
 
@@ -239,7 +240,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const displayTitle = useAnimeDisplayTitle(anime);
-  const score = anime.score != null ? formatScore(anime.score) : null;
+  const score = formatScore(anime.score);
   const isTop3 = rank <= 3;
   return (
     <Pressable
@@ -280,11 +281,6 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
       <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
     </Pressable>
   );
-}
-
-function formatScore(score: number): string {
-  if (score > 10) return (score / 10).toFixed(1);
-  return score.toFixed(1);
 }
 
 const makeStyles = (theme: ThemePalette) =>

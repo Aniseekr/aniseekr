@@ -12,6 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
+import { formatScore } from '../../libs/utils/format-score';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { LocalDB } from '../../libs/db';
 import { Anime } from '../../components/rate/types';
@@ -565,11 +566,13 @@ export default function AnimeDetailScreen() {
                 </Text>
               ) : null}
               <View className="mt-2 flex-row flex-wrap gap-2">
-                <GlassCard intensity={20} className="rounded px-2 py-1">
-                  <Text className="text-xs font-bold text-white/90">
-                    ★ {formatScore(anime.score, anime.rank)}
-                  </Text>
-                </GlassCard>
+                {formatScore(anime.score) ? (
+                  <GlassCard intensity={20} className="rounded px-2 py-1">
+                    <Text className="text-xs font-bold text-white/90">
+                      ★ {formatScore(anime.score)}
+                    </Text>
+                  </GlassCard>
+                ) : null}
                 <GlassCard intensity={20} className="rounded px-2 py-1">
                   <Text className="text-xs font-bold text-white/90">
                     {anime.status || t('anime.detail.statusUnknown')}
@@ -797,14 +800,6 @@ async function refreshCollectionFlags(
   }
 }
 
-// AniList exposes averageScore as 0-100; rank mirrors it. Native shows it as
-// a 0-10 decimal with two-digit precision, so we divide here. Returns 'N/A'
-// when neither field carries a usable number.
-function formatScore(score: number | undefined, rank: number | undefined): string {
-  const raw = score ?? rank;
-  if (raw == null || raw <= 0) return 'N/A';
-  return (raw / 10).toFixed(1);
-}
 
 function AnimeDetailResolvedSkeleton() {
   return (
