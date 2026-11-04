@@ -120,7 +120,7 @@ export default function ComparePreviewScreen() {
   // (uri + sensors) now comes from the capture-session store, not params.
   const spotId = getStringParam(params, 'spotId') ?? '';
   const referenceKind = getStringParam(params, 'referenceKind');
-  const imageUrl = referenceKind === 'imported' ? getStringParam(params, 'imageUrl') ?? '' : '';
+  const imageUrl = referenceKind === 'imported' ? (getStringParam(params, 'imageUrl') ?? '') : '';
   // Only a real scene name is ever persisted; the fallback is display-only.
   const sceneNameParam = getStringParam(params, 'name');
   const sceneName =
@@ -835,14 +835,7 @@ export default function ComparePreviewScreen() {
                 : ''}
             </ThemedText>
           </View>
-          <Pressable
-            onPress={handleShare}
-            hitSlop={14}
-            style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('commonUi.share')}>
-            <Ionicons name="share-outline" size={22} color={theme.text.primary} />
-          </Pressable>
+          <View style={styles.headerBtn} />
         </View>
 
         <KeyboardAwareScrollView
@@ -1309,63 +1302,55 @@ export default function ComparePreviewScreen() {
           />
         </KeyboardAwareScrollView>
 
+        {/* Share is the point of a comparison shot, so it is the primary action
+            here instead of a small header icon nobody found. */}
         <View style={[styles.footer, { paddingBottom: bottomPad(insets) }]}>
-          <Pressable
+          <ThemedIconButton
+            variant="glass"
+            haptic="none"
+            accessibilityLabel={t('pilgrimageUi.retake')}
+            icon={(color) => <Ionicons name="refresh" size={20} color={color} />}
             onPress={handleRetake}
-            style={({ pressed }) => [
-              styles.footerBtn,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-              },
-              pressed && { opacity: 0.85 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t('pilgrimageUi.retake')}>
-            <Ionicons name="refresh" size={18} color={theme.text.primary} />
-            <ThemedText variant="bodyMedium" weight="600">
-              {t('pilgrimageUi.retake')}
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.footerBtn,
-              {
-                backgroundColor: themeColor,
-                borderColor: themeColor,
-                opacity: saving ? 0.7 : pressed ? 0.88 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={
-              selectedCount > 0
-                ? t('pilgrimageUi.preview.saveCountA11y', { count: selectedCount })
-                : t('pilgrimageUi.preview.saveA11y')
-            }>
-            {saving ? (
-              <Animated.View entering={FadeIn}>
-                <Skeleton.Block width={18} height={18} borderRadius={Radius.card} />
-              </Animated.View>
-            ) : (
-              <Ionicons
-                name={saved ? 'checkmark' : 'download'}
-                size={18}
-                color={readableTextOn(themeColor)}
-              />
-            )}
-            <ThemedText
-              variant="bodyMedium"
-              weight="700"
-              style={{ color: readableTextOn(themeColor) }}>
-              {saved
-                ? t('pilgrimageUi.preview.saved')
-                : selectedCount > 1
-                  ? t('pilgrimageUi.preview.saveCount', { count: selectedCount })
-                  : t('pilgrimageUi.preview.save')}
-            </ThemedText>
-          </Pressable>
+          />
+          <View style={styles.footerFlex}>
+            <ThemedButton
+              variant="secondary"
+              fullWidth
+              loading={saving}
+              disabled={saving}
+              haptic="none"
+              onPress={handleSave}
+              accessibilityLabel={
+                selectedCount > 0
+                  ? t('pilgrimageUi.preview.saveCountA11y', { count: selectedCount })
+                  : t('pilgrimageUi.preview.saveA11y')
+              }
+              icon={
+                <Ionicons
+                  name={saved ? 'checkmark' : 'download-outline'}
+                  size={18}
+                  color={theme.text.primary}
+                />
+              }
+              label={
+                saved
+                  ? t('pilgrimageUi.preview.saved')
+                  : selectedCount > 1
+                    ? t('pilgrimageUi.preview.saveCount', { count: selectedCount })
+                    : t('pilgrimageUi.preview.save')
+              }
+            />
+          </View>
+          <View style={styles.footerFlex}>
+            <ThemedButton
+              fullWidth
+              accent={themeColor}
+              haptic="none"
+              onPress={handleShare}
+              icon={<Ionicons name="share-outline" size={18} color={readableTextOn(themeColor)} />}
+              label={t('commonUi.share')}
+            />
+          </View>
         </View>
       </SafeAreaView>
       <ReferencePickerSheet
@@ -2004,18 +1989,10 @@ const styles = StyleSheet.create({
   sliderHintRight: { right: 10 },
   footer: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 14,
     gap: 10,
   },
-  footerBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-  },
+  footerFlex: { flex: 1 },
 });
