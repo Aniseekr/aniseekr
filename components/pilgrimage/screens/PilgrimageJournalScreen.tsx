@@ -1,6 +1,14 @@
 // Journal root and folder detail share the capture data and navigation flow.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -24,9 +32,20 @@ import {
 import { buildJournalPreviewParams } from '../../../libs/services/pilgrimage/preview-capture';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 import { StampBookSection } from '../../../components/pilgrimage/journal/StampBookSection';
+import { JournalTimeline } from '../../../components/pilgrimage/journal/JournalTimeline';
+import { ImportResultCard } from '../../../components/pilgrimage/journal/ImportResultCard';
+import {
+  buildTimeline,
+  type TimelineTrip,
+} from '../../../libs/services/pilgrimage/journal-timeline';
+import {
+  importTripPhotos,
+  type PhotoImportSummary,
+} from '../../../libs/services/pilgrimage/photo-import';
 
 type AlbumEntry = PilgrimageAlbumEntry;
-type JournalSegment = 'photos' | 'stamps';
+type JournalSegment = 'timeline' | 'works' | 'stamps';
+const SEGMENTS: readonly JournalSegment[] = ['timeline', 'works', 'stamps'];
 
 function folderTitle(folder: JournalFolder, t: ReturnType<typeof useT>): string {
   return folder.key === 'free' ? t('pilgrimage.album.freeCapturesFolder') : folder.title;
@@ -47,15 +66,62 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
   const { animeId: animeIdParam } = useLocalSearchParams<{ animeId?: string }>();
   const cameFromUrlRef = useRef(!!animeIdParam);
   const [selectedAnimeId, setSelectedAnimeId] = useState<string | null>(animeIdParam ?? null);
-  const [segment, setSegment] = useState<JournalSegment>('photos');
-  const { folders, stats, deleteEntry } = usePilgrimageJournalData();
+  const [segment, setSegment] = useState<JournalSegment>('timeline');
+  const { entries, folders, stats, deleteEntry, reload } = usePilgrimageJournalData();
+  const trips = useMemo(() => buildTimeline(entries), [entries]);
+  const [importing, setImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<PhotoImportSummary | null>(null);
+  // A work matched by an import loads in the background; keep its folder open
+  // while it does instead of bouncing back to the journal root.
+  const awaitingFolderRef = useRef(false);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const selectedFolder = useMemo(
     () => folders.find((folder) => folder.key === selectedAnimeId || folder.anime?.bgm?.some((id) => String(id) === selectedAnimeId)) ?? null,
     [folders, selectedAnimeId]
   );
   useEffect(() => {
-    if (selectedAnimeId && !cameFromUrlRef.current && !selectedFolder) setSelectedAnimeId(null);
+    if (selectedFolder) awaitingFolderRef.current = false;
+    if (selectedAnimeId && !cameFromUrlRef.current && !awaitingFolderRef.current && !selectedFolder)
+      setSelectedAnimeId(null);
   }, [selectedAnimeId, selectedFolder]);
+
+  const importPhotos = useCallback(async () => {
+    if (importing) return;
+    hapticsBridge.tap();
+    setImporting(true);
+    try {
+      const summary = await importTripPhotos();
+      if (summary) {
+        reload();
+        setSegment('timeline');
+        setImportSummary(summary);
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        hapticsBridge.success();
+      }
+    } catch (error) {
+      console.warn('[PilgrimageAlbum] import failed:', error);
+      hapticsBridge.error();
+      Alert.alert(t('pilgrimage.album.importFailed'));
+    } finally {
+      setImporting(false);
+    }
+  }, [importing, reload, t]);
+  const openWorkFolder = useCallback((workKey: string) => {
+    hapticsBridge.tap();
+    cameFromUrlRef.current = false;
+    awaitingFolderRef.current = true;
+    setSelectedAnimeId(workKey);
+  }, []);
+  const makeAlbum = useCallback(
+    (trip: TimelineTrip) => {
+      hapticsBridge.tap();
+      router.push({
+        pathname: '/pilgrimage/journey',
+        params: { from: String(trip.from), to: String(trip.to) },
+      });
+    },
+    [router]
+  );
 
   const openCamera = useCallback(() => {
     if (cameraTarget.isVisibleTab) router.navigate(cameraTarget.href);
@@ -63,6 +129,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
   }, [cameraTarget.href, cameraTarget.isVisibleTab, router]);
   const handleBack = useCallback(() => {
     hapticsBridge.tap();
+    awaitingFolderRef.current = false;
     if (selectedAnimeId && !cameFromUrlRef.current) setSelectedAnimeId(null);
     else router.back();
   }, [router, selectedAnimeId]);
@@ -105,8 +172,24 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
           <ThemedText variant="headlineLarge" weight="700" numberOfLines={1} style={styles.title}>
             {selectedFolder ? folderTitle(selectedFolder, t) : t('tabs.explorerJournal')}
           </ThemedText>
+          {isDetail ? null : (
+            <ThemedIconButton
+              onPress={importPhotos}
+              disabled={importing}
+              accessibilityLabel={t(importing ? 'pilgrimage.album.importing' : 'pilgrimage.album.importPhotos')}
+              haptic="none"
+              icon={(color) =>
+                importing ? (
+                  <ActivityIndicator size="small" color={color} />
+                ) : (
+                  <Ionicons name="images-outline" size={20} color={color} />
+                )
+              }
+            />
+          )}
         </View>
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 110 }]}
           showsVerticalScrollIndicator={false}>
@@ -135,6 +218,13 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
             )
           ) : (
             <>
+              {importSummary ? (
+                <ImportResultCard
+                  summary={importSummary}
+                  onOpenWork={openWorkFolder}
+                  onDismiss={() => setImportSummary(null)}
+                />
+              ) : null}
               <View style={styles.statsRow}>
                 <Stat value={stats.visited} label={t('pilgrimage.album.statVisitedScenes')} />
                 <Stat value={stats.photos} label={t('pilgrimage.album.statPhotoCount')} />
@@ -145,13 +235,15 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
                   styles.segments,
                   { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
                 ]}>
-                {(['photos', 'stamps'] as const).map((value) => (
+                {SEGMENTS.map((value) => (
                   <ThemedButton
                     key={value}
                     label={t(
-                      value === 'photos'
-                        ? 'pilgrimage.album.segmentPhotos'
-                        : 'pilgrimage.album.segmentStamps'
+                      value === 'timeline'
+                        ? 'pilgrimage.album.segmentTimeline'
+                        : value === 'works'
+                          ? 'pilgrimage.album.segmentWorks'
+                          : 'pilgrimage.album.segmentStamps'
                     )}
                     variant={segment === value ? 'primary' : 'ghost'}
                     size="md"
@@ -162,6 +254,13 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
               </View>
               {segment === 'stamps' ? (
                 <StampBookSection onBrowseRallies={() => router.push('/pilgrimage/news')} />
+              ) : folders.length && segment === 'timeline' ? (
+                <JournalTimeline
+                  trips={trips}
+                  onOpenEntry={openEntry}
+                  onDeleteEntry={deleteEntry}
+                  onMakeAlbum={makeAlbum}
+                />
               ) : folders.length ? (
                 <View style={styles.folderGrid}>
                   {folders.map((folder) => (
@@ -183,6 +282,12 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
                     {t('pilgrimage.album.emptyJournal')}
                   </ThemedText>
                   <ThemedButton label={t('pilgrimage.album.startCapture')} onPress={openCamera} />
+                  <ThemedButton
+                    variant="secondary"
+                    label={t('pilgrimage.album.importPhotos')}
+                    loading={importing}
+                    onPress={importPhotos}
+                  />
                 </View>
               )}
             </>
