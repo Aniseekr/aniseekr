@@ -2041,6 +2041,24 @@
         "on": "on",
         "auto": "auto",
         "torch": "torch"
+      },
+      "orientation": "Orientation",
+      "orientationMode": {
+        "auto": "Auto",
+        "landscape": "Landscape"
+      },
+      "lensSwitchFailed": "Couldn't switch lens — back on the main camera",
+      "landscapeSwitched": "Landscape scene — camera switched to landscape",
+      "overlayHint": {
+        "anime": "Original scene overlay",
+        "edge": "Edge detection overlay",
+        "sketch": "Sketch style overlay",
+        "subject": "Subject extract overlay"
+      },
+      "overlayError": {
+        "edge": "Couldn't load the outline",
+        "sketch": "Couldn't load the sketch",
+        "subject": "Couldn't load the subject"
       }
     },
     "frameLayout": "Layout"

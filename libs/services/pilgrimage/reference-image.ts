@@ -9,9 +9,12 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 
 import { loadAllCapturesSync } from './captures';
+import { isRememberedReference } from './spot-reference-memory';
 import { referenceResize } from './reference-image-policy';
 
-export type ImportReferenceResult = { status: 'cancelled' } | { status: 'ok'; uri: string };
+export type ImportReferenceResult =
+  | { status: 'cancelled' }
+  | { status: 'ok'; uri: string; width: number; height: number };
 
 const REFERENCE_DIR = 'pilgrimage-references';
 const LIBRARY_IMPORT_DIR = 'pilgrimage-imports';
@@ -77,7 +80,7 @@ export async function importReferenceImage(): Promise<ImportReferenceResult> {
     const saved = await image.saveAsync({ compress: 0.9, format: SaveFormat.JPEG });
     const dest = new File(appDirectory(REFERENCE_DIR), `${Crypto.randomUUID()}.jpg`);
     new File(saved.uri).move(dest);
-    return { status: 'ok', uri: dest.uri };
+    return { status: 'ok', uri: dest.uri, width: image.width, height: image.height };
   } finally {
     image?.release();
     fix?.release();
@@ -124,7 +127,18 @@ function deleteQuietly(uri: string): void {
 export function releaseImportedReference(uri: string): void {
   if (!isAppCopy(uri, REFERENCE_DIR)) return;
   if (loadAllCapturesSync().some((capture) => capture.referenceUri === uri)) return;
+  if (isRememberedReference(uri)) return;
   deleteQuietly(uri);
+}
+
+/** Whether a local reference copy is still on disk (remote URIs count as present). */
+export function referenceFileExists(uri: string): boolean {
+  if (!uri.startsWith('file://')) return true;
+  try {
+    return new File(uri).exists;
+  } catch {
+    return false;
+  }
 }
 
 /** Delete the app's copy of a library-imported photo once its record is gone. */

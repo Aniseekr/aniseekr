@@ -176,6 +176,12 @@ export interface CameraBandLayoutInput {
   bottomInset: number;
   /** Whether the zoom band participates in the stack (driven by the visibility resolver). */
   showZoomBand: boolean;
+  /**
+   * Whether the overlay-mode carousel participates. Without a reference there is
+   * nothing to overlay, so the band collapses and the zoom band sits right above
+   * the shutter row. Defaults to true.
+   */
+  showCarousel?: boolean;
 }
 
 export interface CameraBandLayout {
@@ -194,20 +200,19 @@ export interface CameraBandLayout {
  *
  * Deliberately takes NO `isLandscape` input: the bands stack identically in both
  * orientations. Landscape no longer reflows the cluster into a right-edge column —
- * only the glyphs inside each band rotate (Apple/Samsung convention). This replaces
- * the old per-layer `bottom: bottomBarHeight + N` offsets and `landscapeCluster`.
+ * only the glyphs inside each band rotate (Apple/Samsung convention). A hidden
+ * band takes no space: the bands above it drop down.
  */
 export function resolveCameraBandLayout(input: CameraBandLayoutInput): CameraBandLayout {
+  const showCarousel = input.showCarousel ?? true;
   const shutterRowBottom = input.bottomInset;
   const carouselBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP;
-  const zoomBandBottom = carouselBottom + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP;
-  const totalBottomChromeHeight = input.showZoomBand
-    ? CAMERA_BOTTOM_ROW_HEIGHT +
-      CAMERA_BAND_GAP +
-      CAMERA_CAROUSEL_BAND_HEIGHT +
-      CAMERA_BAND_GAP +
-      CAMERA_ZOOM_BAND_HEIGHT
-    : CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT;
+  const carouselSpan = showCarousel ? CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP : 0;
+  const zoomBandBottom = carouselBottom + carouselSpan;
+  const totalBottomChromeHeight =
+    CAMERA_BOTTOM_ROW_HEIGHT +
+    (showCarousel ? CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT : 0) +
+    (input.showZoomBand ? CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT : 0);
   return {
     shutterRowBottom,
     shutterRowHeight: CAMERA_BOTTOM_ROW_HEIGHT,
@@ -226,12 +231,17 @@ export interface CameraChromeVisibilityInput {
   afLocked: boolean;
   /** An overlay mode is selected (`overlayVisible === true`). */
   overlayActive: boolean;
+  /** A reference image exists. Without one every overlay control is meaningless. */
+  hasReference: boolean;
 }
 
 export interface CameraChromeVisibility {
   showZoomBand: boolean;
+  /** REF thumbnail + overlay-mode carousel. */
+  showReferenceControls: boolean;
+  /** The light "import this scene's screenshot" affordance. */
+  showImportReference: boolean;
   showOpacityPill: boolean;
-  showTopContextIcons: boolean;
   showCaptureHistory: boolean;
   showAutoCaptureBadge: boolean;
   showFocusExposureBar: boolean;
@@ -240,22 +250,25 @@ export interface CameraChromeVisibility {
 
 /**
  * Immersive-by-subtraction. The chrome is ALWAYS glass (we never change opacity); instead,
- * landscape-immersive hides the secondary controls (zoom band, opacity pill, top contextual
- * icons, capture history), leaving the shutter row, the overlay carousel, and the alignment
- * readout. A tap clears `immersive` to reveal everything again. Supersedes the dock-driven
- * `resolveTransientCameraHudVisibility`.
+ * landscape-immersive hides the secondary controls (zoom band, opacity pill, capture history),
+ * leaving the shutter row, the overlay carousel, and the alignment readout. A tap clears
+ * `immersive` to reveal everything again. Overlay controls exist only once there is a
+ * reference: the camera opens as a plain full-screen viewfinder.
  */
 export function resolveCameraChromeVisibility(
   input: CameraChromeVisibilityInput
 ): CameraChromeVisibility {
   const secondaryHidden = input.isLandscape && input.immersive;
+  const overlay = input.hasReference && input.overlayActive;
   return {
     showZoomBand: !secondaryHidden,
-    showOpacityPill: !secondaryHidden && input.overlayActive,
-    showTopContextIcons: !secondaryHidden,
+    showReferenceControls: input.hasReference,
+    showImportReference: !input.hasReference,
+    showOpacityPill: !secondaryHidden && overlay,
     showCaptureHistory: !secondaryHidden,
     showAutoCaptureBadge: true,
     showFocusExposureBar: input.afLocked,
-    showOverlayQuickControls: input.overlayActive,
+    // Landscape immersive keeps the scene clear: the per-mode tools come back on a tap.
+    showOverlayQuickControls: overlay && !secondaryHidden,
   };
 }

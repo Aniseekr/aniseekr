@@ -44,6 +44,16 @@ describe('camera band layout', () => {
   });
 });
 
+describe('camera band layout without a reference', () => {
+  it('collapses the carousel band so the zoom band sits right above the shutter row', () => {
+    const l = resolveCameraBandLayout({ bottomInset: 20, showZoomBand: true, showCarousel: false });
+    expect(l.zoomBandBottom).toBe(20 + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP);
+    expect(l.totalBottomChromeHeight).toBe(
+      CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT
+    );
+  });
+});
+
 describe('camera chrome visibility (immersive by subtraction)', () => {
   it('shows everything relevant in portrait', () => {
     const v = resolveCameraChromeVisibility({
@@ -51,10 +61,10 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
       immersive: true,
       afLocked: true,
       overlayActive: true,
+      hasReference: true,
     });
     expect(v.showZoomBand).toBe(true);
     expect(v.showOpacityPill).toBe(true);
-    expect(v.showTopContextIcons).toBe(true);
     expect(v.showCaptureHistory).toBe(true);
     expect(v.showOverlayQuickControls).toBe(true);
   });
@@ -65,10 +75,10 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
       immersive: true,
       afLocked: false,
       overlayActive: true,
+      hasReference: true,
     });
     expect(v.showZoomBand).toBe(false);
     expect(v.showOpacityPill).toBe(false);
-    expect(v.showTopContextIcons).toBe(false);
     expect(v.showCaptureHistory).toBe(false);
     expect(v.showAutoCaptureBadge).toBe(true); // alignment readout stays
   });
@@ -79,9 +89,9 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
       immersive: false,
       afLocked: false,
       overlayActive: true,
+      hasReference: true,
     });
     expect(v.showZoomBand).toBe(true);
-    expect(v.showTopContextIcons).toBe(true);
   });
 
   it('gates the opacity pill and quick-controls on an active overlay', () => {
@@ -90,9 +100,25 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
       immersive: false,
       afLocked: false,
       overlayActive: false,
+      hasReference: true,
     });
     expect(off.showOpacityPill).toBe(false);
     expect(off.showOverlayQuickControls).toBe(false);
+  });
+
+  it('opens as a plain viewfinder without a reference: no overlay controls, one import affordance', () => {
+    const v = resolveCameraChromeVisibility({
+      isLandscape: false,
+      immersive: false,
+      afLocked: false,
+      overlayActive: true,
+      hasReference: false,
+    });
+    expect(v.showReferenceControls).toBe(false);
+    expect(v.showOpacityPill).toBe(false);
+    expect(v.showOverlayQuickControls).toBe(false);
+    expect(v.showImportReference).toBe(true);
+    expect(v.showZoomBand).toBe(true);
   });
 
   it('shows the transient focus/EV bar only while AF is locked', () => {
@@ -102,6 +128,7 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
         immersive: false,
         afLocked: true,
         overlayActive: false,
+        hasReference: true,
       }).showFocusExposureBar
     ).toBe(true);
     expect(
@@ -110,6 +137,7 @@ describe('camera chrome visibility (immersive by subtraction)', () => {
         immersive: false,
         afLocked: false,
         overlayActive: false,
+        hasReference: true,
       }).showFocusExposureBar
     ).toBe(false);
   });

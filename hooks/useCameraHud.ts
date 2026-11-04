@@ -158,12 +158,17 @@ export interface UseCameraHudResult {
  * first render. Omitting it falls back to {@link INITIAL_CAMERA_HUD} defaults —
  * used only by tests that don't care about persistence.
  */
-export function useCameraHud(initialSettings?: CameraHudSeed): UseCameraHudResult {
+export function useCameraHud(
+  initialSettings?: CameraHudSeed,
+  initialPatch?: Partial<CameraHudState>
+): UseCameraHudResult {
   const [hud, setHud] = useReducer(
     cameraHudReducer,
     initialSettings,
-    (seed: CameraHudSeed | undefined): CameraHudState =>
-      seed ? cameraHudInitialState(seed) : { ...INITIAL_CAMERA_HUD }
+    (seed: CameraHudSeed | undefined): CameraHudState => ({
+      ...(seed ? cameraHudInitialState(seed) : INITIAL_CAMERA_HUD),
+      ...initialPatch,
+    })
   );
   return { hud, setHud };
 }

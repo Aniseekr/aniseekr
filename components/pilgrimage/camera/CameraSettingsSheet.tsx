@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { readableTextOn, ThemedBottomSheet, ThemedText } from '../../themed';
+import { readableTextOn, ThemedBottomSheet, ThemedButton, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
@@ -16,6 +16,7 @@ import {
   type ResolutionTier,
 } from '../../../hooks/useCameraSettings';
 import type { AspectRatio } from './types';
+import type { CameraOrientationMode } from '../../../libs/services/pilgrimage/camera-ui';
 import { CAPTURE_MODE_HELP_TEXT_KEY } from '../../../libs/services/pilgrimage/capture-mode-copy';
 import { ThemedSwitch } from '../../themed/ThemedSwitch';
 
@@ -43,7 +44,13 @@ export interface CameraSettingsSheetProps {
   onAspectChange: (a: AspectRatio) => void;
   captureMode: CaptureMode;
   onCaptureModeChange: (m: CaptureMode) => void;
+  orientationMode: CameraOrientationMode;
+  onOrientationModeChange: (m: CameraOrientationMode) => void;
+  /** Opens the GPS alignment helper; omitted when the spot has no coordinates. */
+  onOpenGuide?: () => void;
 }
+
+const ORIENTATION_MODES: CameraOrientationMode[] = ['auto', 'landscape'];
 
 const COUNTDOWN_LABEL: Record<CountdownSeconds, string> = {
   0: 'Off',
@@ -66,6 +73,9 @@ export default function CameraSettingsSheet({
   onAspectChange,
   captureMode,
   onCaptureModeChange,
+  orientationMode,
+  onOrientationModeChange,
+  onOpenGuide,
 }: CameraSettingsSheetProps) {
   const { theme } = useTheme();
   const t = useT();
@@ -116,6 +126,20 @@ export default function CameraSettingsSheet({
           <ThemedText variant="caption" tone="secondary">
             {t(CAPTURE_MODE_HELP_TEXT_KEY)}
           </ThemedText>
+        </SettingsSection>
+
+        <SettingsSection title={t('pilgrimageUi.camera.orientation')}>
+          <SegmentedRow
+            options={ORIENTATION_MODES.map((m) => ({
+              value: m,
+              label: t(`pilgrimageUi.camera.orientationMode.${m}`),
+            }))}
+            value={orientationMode}
+            onSelect={(m) => {
+              hapticsBridge.selection();
+              onOrientationModeChange(m);
+            }}
+          />
         </SettingsSection>
 
         <SettingsSection title={t('pilgrimageUi.aspectRatio')}>
@@ -172,6 +196,18 @@ export default function CameraSettingsSheet({
           value={settings.autoCapture}
           onValueChange={(v) => handleSwitch('autoCapture', v)}
         />
+        {onOpenGuide ? (
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimageUi.openFramingGuide')}
+            icon={<Ionicons name="compass-outline" size={18} color={theme.text.primary} />}
+            onPress={() => {
+              onClose();
+              onOpenGuide();
+            }}
+          />
+        ) : null}
       </ScrollView>
     </ThemedBottomSheet>
   );

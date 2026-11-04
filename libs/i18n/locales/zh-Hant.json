@@ -2041,6 +2041,24 @@
         "on": "開啟",
         "auto": "自動",
         "torch": "手電筒"
+      },
+      "orientation": "方向",
+      "orientationMode": {
+        "auto": "自動",
+        "landscape": "橫向"
+      },
+      "lensSwitchFailed": "切換失敗，已退回主鏡頭",
+      "landscapeSwitched": "橫向場景，已切成橫拍",
+      "overlayHint": {
+        "anime": "原圖疊圖",
+        "edge": "描邊疊圖",
+        "sketch": "素描疊圖",
+        "subject": "主體疊圖"
+      },
+      "overlayError": {
+        "edge": "無法載入描邊",
+        "sketch": "無法載入素描",
+        "subject": "無法載入主體"
       }
     },
     "frameLayout": "構圖"

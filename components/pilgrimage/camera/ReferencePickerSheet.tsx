@@ -12,6 +12,8 @@ import { ThemedBottomSheet, ThemedButton, ThemedText } from '../../themed';
 export interface PickedReference {
   kind: 'imported';
   uri: string;
+  width?: number;
+  height?: number;
 }
 
 interface ReferencePickerSheetProps {
@@ -41,7 +43,7 @@ export function ReferencePickerSheet({
       const result = await importReferenceImage();
       if (result.status === 'ok') {
         hapticsBridge.success();
-        onPick({ kind: 'imported', uri: result.uri });
+        onPick({ kind: 'imported', uri: result.uri, width: result.width, height: result.height });
         onClose();
       }
     } catch (error) {

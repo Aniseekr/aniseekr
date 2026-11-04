@@ -3,7 +3,6 @@ import {
   Alert,
   Linking,
   Platform,
-  Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -16,7 +15,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { bottomPad, Colors, Radius } from '../../constants/DesignSystem';
+import { bottomPad, Radius } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
@@ -63,10 +62,7 @@ import ZoomPresets from '../../components/pilgrimage/camera/ZoomPresets';
 import OverlayOpacityPill from '../../components/pilgrimage/camera/OverlayOpacityPill';
 import GalleryThumb from '../../components/pilgrimage/camera/GalleryThumb';
 import CameraScrim from '../../components/pilgrimage/camera/CameraScrim';
-import CameraChip from '../../components/pilgrimage/camera/chips/CameraChip';
-import AspectChip from '../../components/pilgrimage/camera/chips/AspectChip';
-import CountdownChip from '../../components/pilgrimage/camera/chips/CountdownChip';
-import OrientationChip from '../../components/pilgrimage/camera/chips/OrientationChip';
+import ImportReferencePill from '../../components/pilgrimage/camera/ImportReferencePill';
 import CameraSettingsSheet from '../../components/pilgrimage/camera/CameraSettingsSheet';
 import { CountdownOverlay } from '../../components/pilgrimage/camera/CountdownOverlay';
 import CamSwitchToast, {
@@ -106,15 +102,18 @@ import { locationService } from '../../libs/services/pilgrimage/location-service
 import AutoCaptureStatusBadge from '../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../components/pilgrimage/camera/CaptureHistoryStrip';
 import { captureModeToastCopy } from '../../libs/services/pilgrimage/capture-mode-copy';
-import {
-  ReferencePickerSheet,
-  type PickedReference,
-} from '../../components/pilgrimage/camera/ReferencePickerSheet';
-import {
-  buildImportedCompareParams,
-} from '../../libs/services/pilgrimage/reference-route';
 import { buildCameraPreviewParams } from '../../libs/services/pilgrimage/preview-capture';
-import { releaseImportedReference } from '../../libs/services/pilgrimage/reference-image';
+import {
+  importReferenceImage,
+  referenceFileExists,
+  releaseImportedReference,
+} from '../../libs/services/pilgrimage/reference-image';
+import {
+  forgetSpotReference,
+  getRememberedSpotReference,
+  rememberSpotReference,
+  type SpotReference,
+} from '../../libs/services/pilgrimage/spot-reference-memory';
 import CaptureModeToast from '../../components/pilgrimage/camera/CaptureModeToast';
 
 import AutoCaptureToast from '../../components/pilgrimage/camera/AutoCaptureToast';
@@ -147,24 +146,43 @@ const FLASH_REAR_CYCLE: FlashMode[] = ['off', 'auto', 'on', 'torch'];
 const FLASH_FRONT_CYCLE: FlashMode[] = ['off', 'auto', 'on'];
 
 // Overlay mode switch toast copy — shown briefly when the user taps a mode pill.
-// `labelKey` is resolved to the toast `label` via t() at the spread site (the
-// `hint` strings are not yet in the i18n catalog and stay literal).
-type OverlayModeToastSeed = Omit<CamSwitchToastValue, 'label'> & { labelKey: TranslationKey };
+// `labelKey` / `hintKey` are resolved via t() at the spread site.
+type OverlayModeToastSeed = Pick<CamSwitchToastValue, 'icon'> & {
+  labelKey: TranslationKey;
+  hintKey?: TranslationKey;
+};
 const OVERLAY_MODE_TOAST: Record<OverlayMode | 'off', OverlayModeToastSeed> = {
   off: { icon: 'eye-off-outline', labelKey: 'pilgrimageUi.overlayOff' },
-  anime: { icon: 'image-outline', labelKey: 'commonUi.anime', hint: 'Original scene overlay' },
+  anime: {
+    icon: 'image-outline',
+    labelKey: 'commonUi.anime',
+    hintKey: 'pilgrimageUi.camera.overlayHint.anime',
+  },
   edge: {
     icon: 'analytics-outline',
     labelKey: 'pilgrimageUi.edge',
-    hint: 'Edge detection overlay',
+    hintKey: 'pilgrimageUi.camera.overlayHint.edge',
   },
-  sketch: { icon: 'pencil-outline', labelKey: 'pilgrimageUi.sketch', hint: 'Sketch style overlay' },
+  sketch: {
+    icon: 'pencil-outline',
+    labelKey: 'pilgrimageUi.sketch',
+    hintKey: 'pilgrimageUi.camera.overlayHint.sketch',
+  },
   subject: {
     icon: 'person-outline',
     labelKey: 'pilgrimageUi.subject',
-    hint: 'Subject extract overlay',
+    hintKey: 'pilgrimageUi.camera.overlayHint.subject',
   },
 };
+
+function isLandscapeReference(reference: SpotReference | null): boolean {
+  return (
+    reference !== null &&
+    reference.width !== null &&
+    reference.height !== null &&
+    reference.width > reference.height
+  );
+}
 
 // Capture mode is a top-bar icon button that cycles single → burst → auto; the
 // icon mirrors the live mode and a toast explains each mode on change. 'auto'
@@ -223,15 +241,31 @@ export default function CompareCaptureScreen() {
   } = params;
   // Display-only fallback; EXIF and records only ever get a real scene name.
   const name = nameParam ?? t('pilgrimageUi.preview.sceneFallback');
-  const importedReference = referenceKind === 'imported';
   const themeColor = params.themeColor || theme.accent;
-  const hiResImageUrl = importedReference ? imageUrl : '';
-  // An imported reference this camera was opened with is deleted when the
-  // camera closes, unless a shot was filed against it.
+  const targetSpotId = params.targetSpotId ?? '';
+  // The comparison reference is always the user's own screenshot (Atlas has no
+  // scene images). It lives in local state so importing one swaps it in place:
+  // the camera session, zoom and HUD survive instead of the whole route being
+  // replaced. A spot remembers its last import, so coming back reopens with it.
+  const [reference, setReference] = useState<SpotReference | null>(() => {
+    if (referenceKind === 'imported' && imageUrl) {
+      return { uri: imageUrl, width: null, height: null };
+    }
+    if (!targetSpotId) return null;
+    const remembered = getRememberedSpotReference(targetSpotId);
+    if (remembered && referenceFileExists(remembered.uri)) return remembered;
+    if (remembered) forgetSpotReference(targetSpotId);
+    return null;
+  });
+  const [importingReference, setImportingReference] = useState(false);
+  const importedReference = reference !== null;
+  const hiResImageUrl = reference?.uri ?? '';
+  // A reference is deleted once the camera lets go of it (closed or replaced),
+  // unless a shot was filed against it or a spot still remembers it.
   useEffect(() => {
-    if (!importedReference || !imageUrl) return;
-    return () => releaseImportedReference(imageUrl);
-  }, [importedReference, imageUrl]);
+    if (!hiResImageUrl) return;
+    return () => releaseImportedReference(hiResImageUrl);
+  }, [hiResImageUrl]);
 
   const { width: winW, height: winH } = useWindowDimensions();
   const isLandscape = winW > winH;
@@ -246,7 +280,12 @@ export default function CompareCaptureScreen() {
   // not ~19 loose top-level useStates. Destructured so existing reads stay as
   // bare identifiers; writes go through `setHud(patch)`. The four persisted
   // overlay knobs seed the reducer's lazy initializer from `settings`.
-  const { hud, setHud } = useCameraHud(settings);
+  // A landscape scene (nearly every anime frame) only lines up when the camera
+  // UI is landscape too, so a remembered landscape reference opens that way.
+  const { hud, setHud } = useCameraHud(
+    settings,
+    isLandscapeReference(reference) ? { orientationMode: 'landscape' } : undefined
+  );
   const {
     facing,
     flashMode,
@@ -263,7 +302,6 @@ export default function CompareCaptureScreen() {
     captureModeToast,
     autoCaptureToast,
     switchToast,
-    sceneSwitcherOpen,
   } = hud;
   // Active overlay alpha is DERIVED from the per-mode map (Rule 9: no separate
   // mirrored value). Each mode keeps its own alpha — edge reads at ~0.75, the
@@ -405,10 +443,10 @@ export default function CompareCaptureScreen() {
     setHud({
       switchToast: {
         icon: 'alert-circle-outline',
-        label: '切換失敗，已退回主鏡頭',
+        label: t('pilgrimageUi.camera.lensSwitchFailed'),
       },
     });
-  }, [strategic.error, setHud]);
+  }, [strategic.error, setHud, t]);
 
   // Zoom is in REAL factor units now (e.g. 1×, 2×, 3×). Bounds + available
   // pillars come straight from the device — no expo-camera-era guesses.
@@ -607,37 +645,42 @@ export default function CompareCaptureScreen() {
     setHud((h) => ({ editMode: !h.editMode }));
   }, [setHud]);
 
-  // Swap the comparison reference for an image imported by the user. Replaces
-  // the route so back still returns to
-  // wherever the camera was opened from.
-  const handlePickReference = useCallback(
-    (reference: PickedReference) => {
-      setHud({ sceneSwitcherOpen: false });
-      const next = buildImportedCompareParams(reference.uri, {
-        label: t('pilgrimageUi.referencePicker.importedLabel'),
-        themeColor,
-        now: Date.now(),
-        nonce: Math.round(Math.random() * 1e6),
-        ...(params.targetSpotId
+  // Import the scene screenshot straight from the photo library and swap it in
+  // place. A landscape scene flips the camera UI to landscape so the overlay
+  // fills the frame instead of shrinking to a strip (the user can switch back in
+  // settings).
+  const handleImportReference = useCallback(async () => {
+    if (importingReference) return;
+    setImportingReference(true);
+    try {
+      const result = await importReferenceImage();
+      if (result.status !== 'ok') return;
+      const next: SpotReference = { uri: result.uri, width: result.width, height: result.height };
+      if (targetSpotId) rememberSpotReference(targetSpotId, next);
+      setReference(next);
+      hapticsBridge.success();
+      const switchToLandscape =
+        isLandscapeReference(next) && !isLandscape && orientationMode === 'auto';
+      setHud({
+        overlayVisible: true,
+        ...(switchToLandscape
           ? {
-              target: {
-                spotId: params.targetSpotId,
-                targetSpotId: params.targetSpotId,
-                name: nameParam ?? '',
-                ep: ep ?? '',
-                animeId: animeId ?? '',
-                animeTitle,
-                spotLat: params.spotLat,
-                spotLng: params.spotLng,
-                time: params.time,
+              orientationMode: 'landscape' as const,
+              switchToast: {
+                icon: 'phone-landscape-outline' as const,
+                label: t('pilgrimageUi.camera.landscapeSwitched'),
               },
             }
           : {}),
       });
-      router.replace({ pathname: '/compare/[spotId]', params: next });
-    },
-    [router, spotId, themeColor, setHud, t]
-  );
+    } catch (error) {
+      console.warn('[camera] reference import failed', error);
+      hapticsBridge.error();
+      Alert.alert(t('pilgrimageUi.referencePicker.importFailed'));
+    } finally {
+      setImportingReference(false);
+    }
+  }, [importingReference, targetSpotId, isLandscape, orientationMode, setHud, t]);
 
   // Centralised navigation: every capture mode lands on the same preview
   // screen with the same shape of route params.
@@ -1227,30 +1270,23 @@ export default function CompareCaptureScreen() {
               style={{ marginBottom: 8 }}>
               {t('pilgrimageUi.allowCameraSoYouCan')}
             </ThemedText>
-            <Pressable
+            <ThemedButton
+              label={
+                canRequestPermission
+                  ? t('pilgrimageUi.camera.grantAccess')
+                  : t('pilgrimageUi.camera.openSettings')
+              }
+              accent={themeColor}
               onPress={() => {
-                hapticsBridge.tap();
                 if (canRequestPermission) void requestPermission();
                 else Linking.openSettings().catch(() => undefined);
               }}
-              style={({ pressed }) => [
-                styles.permBtn,
-                { backgroundColor: themeColor, opacity: pressed ? 0.85 : 1 },
-              ]}>
-              <ThemedText
-                variant="titleSmall"
-                weight="700"
-                style={{ color: readableTextOn(themeColor) }}>
-                {canRequestPermission
-                  ? t('pilgrimageUi.camera.grantAccess')
-                  : t('pilgrimageUi.camera.openSettings')}
-              </ThemedText>
-            </Pressable>
-            <Pressable onPress={() => router.back()} hitSlop={12}>
-              <ThemedText variant="bodyMedium" tone="secondary">
-                {t('common.notNow')}
-              </ThemedText>
-            </Pressable>
+            />
+            <ThemedButton
+              variant="ghost"
+              label={t('common.notNow')}
+              onPress={() => router.back()}
+            />
           </View>
         </SafeAreaView>
       </View>
@@ -1278,21 +1314,25 @@ export default function CompareCaptureScreen() {
     immersive,
     afLocked: tapFocus.afLocked,
     overlayActive,
+    hasReference: importedReference,
   });
-  // Top contextual row (timer/aspect/orientation/guide) participates in the top-chrome height
-  // only while shown — it auto-hides in landscape immersive alongside the other secondary chrome.
-  const topBarBottom =
-    insets.top + resolveCameraTopChromeHeight({ quickControlsOpen: chrome.showTopContextIcons });
+  // Timer, aspect, orientation and the GPS guide live in the settings sheet; the
+  // top chrome is a single row so the viewfinder starts right under it.
+  const topBarBottom = insets.top + resolveCameraTopChromeHeight({ quickControlsOpen: false });
   const bands = resolveCameraBandLayout({
     bottomInset: safeAreaBottomPad,
     showZoomBand: chrome.showZoomBand,
+    showCarousel: chrome.showReferenceControls,
   });
+  const importPillBottom =
+    bands.zoomBandBottom + (chrome.showZoomBand ? bands.zoomBandHeight + CAMERA_BAND_GAP : 0);
   const chromeTop = safeAreaBottomPad + bands.totalBottomChromeHeight;
   const overlayQuickControlsBottom =
     (chrome.showZoomBand
       ? bands.zoomBandBottom + bands.zoomBandHeight
       : bands.carouselBottom + bands.carouselHeight) + CAMERA_BAND_GAP;
   const rotateGlyphs = isLandscape && orientationMode === 'landscape';
+  const hasSpotGeo = Boolean(params.spotLat && params.spotLng);
   const handleOpenInfo = () => {
     hapticsBridge.tap();
     router.push({ pathname: '/compare/align', params: { ...params } });
@@ -1305,7 +1345,7 @@ export default function CompareCaptureScreen() {
       const seed = OVERLAY_MODE_TOAST.off;
       setHud({
         overlayVisible: false,
-        switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+        switchToast: { icon: seed.icon, label: t(seed.labelKey) },
       });
       return;
     }
@@ -1313,7 +1353,11 @@ export default function CompareCaptureScreen() {
     setHud({
       overlayVisible: true,
       overlayMode: selection.overlayMode,
-      switchToast: { icon: seed.icon, label: t(seed.labelKey), hint: seed.hint },
+      switchToast: {
+        icon: seed.icon,
+        label: t(seed.labelKey),
+        ...(seed.hintKey ? { hint: t(seed.hintKey) } : {}),
+      },
     });
     persistOverlayKnob({ overlayMode: selection.overlayMode });
   };
@@ -1431,65 +1475,21 @@ export default function CompareCaptureScreen() {
               />
             </>
           }
-          showQuickControls={chrome.showTopContextIcons}
-          quickControls={
-            <>
-              <CountdownChip
-                seconds={settings.countdownSeconds}
-                onChange={(s) => setSettings({ countdownSeconds: s })}
-              />
-              <AspectChip aspect={aspect} onChange={(a) => setHud({ aspect: a })} />
-              <OrientationChip
-                mode={orientationMode}
-                onChange={(m) => setHud({ orientationMode: m })}
-              />
-              <CameraChip
-                icon="information-circle-outline"
-                label={t('pilgrimageUi.guide')}
-                themeColor={themeColor}
-                accessibilityLabel={t('pilgrimageUi.openFramingGuide')}
-                onPress={handleOpenInfo}
-              />
-            </>
-          }
         />
 
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.refThumbWrap,
-            { top: topBarBottom + 8, left: Math.max(14, insets.left + 12) },
-          ]}>
-          <ReferenceThumbnail
-            imageUrl={hiResImageUrl}
-            themeColor={themeColor}
-            isLandscape={isLandscape}
-            onPress={() => setHud({ sceneSwitcherOpen: true })}
-          />
-        </View>
-
-        {!hiResImageUrl ? (
+        {chrome.showReferenceControls ? (
           <View
+            pointerEvents="box-none"
             style={[
-              styles.refActionWrap,
-              {
-                top: topBarBottom + 76,
-                left: Math.max(14, insets.left + 12),
-              },
+              styles.refThumbWrap,
+              { top: topBarBottom + 8, left: Math.max(14, insets.left + 12) },
             ]}>
-            <ThemedButton
-              label={t('pilgrimage.camera.importSceneScreenshot')}
-              onPress={() => setHud({ sceneSwitcherOpen: true })}
-              size="md"
-              fullWidth
+            <ReferenceThumbnail
+              imageUrl={hiResImageUrl}
+              themeColor={themeColor}
+              isLandscape={isLandscape}
+              onPress={() => void handleImportReference()}
             />
-            {ep ? (
-              <ThemedText variant="captionSmall" style={styles.refActionHint}>
-                {params.time
-                  ? t('pilgrimage.camera.referenceHint', { episode: ep, time: params.time })
-                  : t('pilgrimage.identify.episodeLabel', { episode: ep })}
-              </ThemedText>
-            ) : null}
           </View>
         ) : null}
 
@@ -1664,16 +1664,30 @@ export default function CompareCaptureScreen() {
           </View>
         ) : null}
 
-        {/* Overlay-mode carousel — the primary align-with-scene control. */}
-        <View pointerEvents="box-none" style={[styles.bandRow, { bottom: bands.carouselBottom }]}>
-          <OverlayModeCarousel
-            index={carouselIndex}
-            onChangeIndex={handleCarouselChange}
-            themeColor={themeColor}
-            isLandscape={isLandscape}
-            orientationMode={orientationMode}
-          />
-        </View>
+        {/* Overlay-mode carousel — the primary align-with-scene control, once a reference exists. */}
+        {chrome.showReferenceControls ? (
+          <View pointerEvents="box-none" style={[styles.bandRow, { bottom: bands.carouselBottom }]}>
+            <OverlayModeCarousel
+              index={carouselIndex}
+              onChangeIndex={handleCarouselChange}
+              themeColor={themeColor}
+              isLandscape={isLandscape}
+              orientationMode={orientationMode}
+            />
+          </View>
+        ) : null}
+
+        {/* No reference yet: one light affordance, not a slab of overlay controls. */}
+        {chrome.showImportReference ? (
+          <View pointerEvents="box-none" style={[styles.bandRow, { bottom: importPillBottom }]}>
+            <ImportReferencePill
+              episode={ep}
+              time={params.time}
+              importing={importingReference}
+              onPress={() => void handleImportReference()}
+            />
+          </View>
+        ) : null}
 
         {/* Bottom row: gallery | shutter | flip — fixed bottom, glyphs rotate in landscape. */}
         <View
@@ -1727,14 +1741,9 @@ export default function CompareCaptureScreen() {
           onAspectChange={(a) => setHud({ aspect: a })}
           captureMode={settings.captureMode}
           onCaptureModeChange={(m) => setSettings({ captureMode: m })}
-        />
-
-        <ReferencePickerSheet
-          visible={sceneSwitcherOpen}
-          onClose={() => setHud({ sceneSwitcherOpen: false })}
-          onPick={handlePickReference}
-          episode={ep}
-          time={params.time}
+          orientationMode={orientationMode}
+          onOrientationModeChange={(m) => setHud({ orientationMode: m })}
+          onOpenGuide={hasSpotGeo ? handleOpenInfo : undefined}
         />
       </View>
     </GestureHandlerRootView>
@@ -1751,22 +1760,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     gap: 12,
   },
-  permBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.sm, marginTop: 12 },
   refThumbWrap: { position: 'absolute', zIndex: 66 },
-  refActionWrap: {
-    position: 'absolute',
-    zIndex: 67,
-    width: 272,
-    gap: 6,
-  },
-  refActionHint: {
-    alignSelf: 'flex-start',
-    color: Colors.text.primary,
-    backgroundColor: 'rgba(0,0,0,0.62)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: Radius.card,
-  },
   refThumbCredit: {
     marginTop: 6,
     alignSelf: 'flex-start',

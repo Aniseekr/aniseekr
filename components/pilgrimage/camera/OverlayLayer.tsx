@@ -10,6 +10,7 @@ import type { SkImage } from '@shopify/react-native-skia';
 import { ThemedText } from '../../themed';
 import type { OverlayMode } from './types';
 import { Radius } from '../../../constants/DesignSystem';
+import { useT } from '../../../libs/i18n';
 
 interface OverlayLayerProps {
   mode: OverlayMode;
@@ -107,6 +108,7 @@ function OverlayContent({
   edgeOrSketchError,
   edgeSourceOpacity,
 }: OverlayContentProps) {
+  const t = useT();
   if (mode === 'anime') {
     return (
       <ExpoImage
@@ -129,8 +131,13 @@ function OverlayContent({
         transition={120}
       />
     ) : null;
-  const errorLabel =
-    mode === 'subject' ? '無法載入主體' : mode === 'sketch' ? '無法載入草稿' : '無法載入描邊';
+  const errorLabel = t(
+    mode === 'subject'
+      ? 'pilgrimageUi.camera.overlayError.subject'
+      : mode === 'sketch'
+        ? 'pilgrimageUi.camera.overlayError.sketch'
+        : 'pilgrimageUi.camera.overlayError.edge'
+  );
 
   if (edgeOrSketchLoading) {
     return (
