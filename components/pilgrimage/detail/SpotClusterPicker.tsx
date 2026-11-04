@@ -10,21 +10,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedBottomSheet, ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
-import { SpotImage } from '../SpotImage';
-import { formatDistanceKm, getPointSourceLabel } from './_helpers';
+import { formatDistanceKm, getSpotConfidenceLabel, getSpotEpisode } from './_helpers';
+import { useT } from '../../../libs/i18n';
 
 export interface SpotClusterPickerProps {
-  spots: readonly AnitabiPoint[] | null;
+  spots: readonly PilgrimageSpot[] | null;
   themeColor: string;
   themeColorFg: string;
   visited: VisitedMap;
   theme: ThemePalette;
-  distanceFor: (spot: AnitabiPoint) => number | null;
+  distanceFor: (spot: PilgrimageSpot) => number | null;
   onClose: () => void;
-  onPick: (spot: AnitabiPoint) => void;
+  onPick: (spot: PilgrimageSpot) => void;
 }
 
 function SpotClusterPickerImpl({
@@ -37,14 +37,15 @@ function SpotClusterPickerImpl({
   onClose,
   onPick,
 }: SpotClusterPickerProps) {
+  const t = useT();
   const styles = useMemo(() => makePickerStyles(theme), [theme]);
-  const keyExtractor = useCallback((spot: AnitabiPoint) => spot.id, []);
+  const keyExtractor = useCallback((spot: PilgrimageSpot) => spot.id, []);
   const renderItem = useCallback(
-    ({ item: spot }: { item: AnitabiPoint }) => {
+    ({ item: spot }: { item: PilgrimageSpot }) => {
       const isVisited = visited[spot.id] === true;
       const km = distanceFor(spot);
       const titles = getPilgrimageSpotTitles(spot);
-      const sourceLabel = getPointSourceLabel(spot);
+      const episode = getSpotEpisode(spot);
       return (
         <Pressable
           onPress={() => onPick(spot)}
@@ -54,19 +55,12 @@ function SpotClusterPickerImpl({
             pressed && { opacity: 0.78 },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`Open ${titles.primary}`}>
+          accessibilityLabel={t('pilgrimage.detail.openSpotA11y', { title: titles.primary })}>
           <View style={[styles.thumbWrap, { borderColor: themeColor }]}>
-            <SpotImage
-              uri={spot.image}
-              style={styles.thumb}
-              contentFit="cover"
-              recyclingKey={spot.id}
-              fallbackIconSize={18}
-            />
-            {spot.ep > 0 ? (
+            {episode ? (
               <View style={[styles.epPill, { backgroundColor: `${themeColor}E6` }]}>
                 <ThemedText variant="captionSmall" weight="800" style={{ color: themeColorFg }}>
-                  {sourceLabel ? `${sourceLabel} · ` : ''}EP {spot.ep}
+                  {episode}
                 </ThemedText>
               </View>
             ) : null}
@@ -75,13 +69,21 @@ function SpotClusterPickerImpl({
             <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
               {titles.primary}
             </ThemedText>
-            {titles.secondary ? (
+            {spot.address ? (
               <ThemedText
                 variant="bodySmall"
                 tone="secondary"
                 numberOfLines={1}
                 style={{ marginTop: 1 }}>
-                {titles.secondary}
+                {spot.address}
+              </ThemedText>
+            ) : null}
+            <ThemedText variant="captionSmall" tone="tertiary">
+              {getSpotConfidenceLabel(t, spot.confidence)}
+            </ThemedText>
+            {spot.lat === null || spot.lon === null ? (
+              <ThemedText variant="captionSmall" tone="tertiary">
+                {t('pilgrimage.detail.unverified')}
               </ThemedText>
             ) : null}
             {km != null ? (
@@ -90,7 +92,7 @@ function SpotClusterPickerImpl({
                 tone="tertiary"
                 weight="500"
                 style={{ marginTop: 3 }}>
-                {formatDistanceKm(km)} away
+                {t('pilgrimage.detail.distanceAway', { distance: formatDistanceKm(km) })}
               </ThemedText>
             ) : null}
           </View>
@@ -102,7 +104,7 @@ function SpotClusterPickerImpl({
         </Pressable>
       );
     },
-    [distanceFor, onPick, styles, theme, themeColor, themeColorFg, visited]
+    [distanceFor, onPick, styles, t, theme, themeColor, themeColorFg, visited]
   );
   if (!spots || spots.length === 0) return null;
   return (
@@ -110,7 +112,7 @@ function SpotClusterPickerImpl({
       <SafeAreaView edges={['bottom']}>
         <View style={styles.headerRow}>
           <ThemedText variant="titleMedium" weight="700">
-            {spots.length} scenes here
+            {t('pilgrimage.detail.sceneLocation')}
           </ThemedText>
           <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
             <Ionicons name="close" size={20} color={theme.text.secondary} />

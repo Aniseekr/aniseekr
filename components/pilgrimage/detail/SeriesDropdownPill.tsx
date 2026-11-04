@@ -73,7 +73,7 @@ function SeriesDropdownPillImpl({
       return canSelectAll ? `${availableCount}` : null;
     }
     const match = entries.find((e) => e.subject.id === selection);
-    return match?.anime?.pointsLength ? `${match.anime.pointsLength}` : null;
+    return match?.anime?.spots.length ? `${match.anime.spots.length}` : null;
   }, [selection, entries, canSelectAll, availableCount]);
 
   const handlePress = () => {
@@ -152,7 +152,7 @@ function SeriesDropdownPillImpl({
                       sublabel={enabled ? title : t('pilgrimageUi.noSpotsYet')}
                       active={active}
                       disabled={!enabled}
-                      badge={entry.anime?.pointsLength}
+                      badge={entry.anime?.spots.length}
                       themeColor={themeColor}
                       themeColorFg={themeColorFg}
                       theme={theme}

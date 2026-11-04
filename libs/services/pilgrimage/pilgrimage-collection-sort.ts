@@ -5,11 +5,12 @@
 //
 // Every ordering is backed by real data (CLAUDE.md Rule 8): `distance` needs a
 // real user fix (undefined per-anime when the location or the anime's geo is
-// missing), `spots` is Anitabi's `pointsLength`, `title` is the displayed
+// missing), `spots` is Atlas spot count, `title` is the displayed
 // label. There is intentionally no "recently added" key — the collection comes
 // from a SQL UNION with no timestamp, so any such order would be fabricated.
 
-import type { AnitabiBangumi } from './types';
+import type { PilgrimageWork } from './types';
+import { getPilgrimageAnimeTitles } from './pilgrimage-localization';
 
 export type PilgrimageSortKey = 'distance' | 'spots' | 'title';
 
@@ -20,14 +21,14 @@ export const DEFAULT_PILGRIMAGE_SORT_KEY: PilgrimageSortKey = 'distance';
 export interface SortPilgrimageOptions {
   /** Distance in km from the user to each anime's center; undefined when
    *  unknown (no location, or the anime has no valid geo). */
-  distanceKmOf?: (anime: AnitabiBangumi) => number | undefined;
+  distanceKmOf?: (anime: PilgrimageWork) => number | undefined;
   /** Display title used for alphabetical sorting. Defaults to the Japanese
    *  title, falling back to the Chinese title. */
-  getTitle?: (anime: AnitabiBangumi) => string;
+  getTitle?: (anime: PilgrimageWork) => string;
 }
 
-function defaultTitle(anime: AnitabiBangumi): string {
-  return anime.title || anime.cn || '';
+function defaultTitle(anime: PilgrimageWork): string {
+  return getPilgrimageAnimeTitles(anime).primary;
 }
 
 function finiteDistance(value: number | undefined): number | null {
@@ -50,16 +51,16 @@ export function resolveEffectivePilgrimageSortKey(
 
 /** Returns a new, sorted array — never mutates `animes`. */
 export function sortPilgrimageAnimes(
-  animes: readonly AnitabiBangumi[],
+  animes: readonly PilgrimageWork[],
   key: PilgrimageSortKey,
   options: SortPilgrimageOptions = {}
-): AnitabiBangumi[] {
+): PilgrimageWork[] {
   const getTitle = options.getTitle ?? defaultTitle;
   const distanceKmOf = options.distanceKmOf;
 
-  const byTitle = (a: AnitabiBangumi, b: AnitabiBangumi) => getTitle(a).localeCompare(getTitle(b));
-  const bySpots = (a: AnitabiBangumi, b: AnitabiBangumi) =>
-    (b.pointsLength ?? 0) - (a.pointsLength ?? 0) || byTitle(a, b);
+  const byTitle = (a: PilgrimageWork, b: PilgrimageWork) => getTitle(a).localeCompare(getTitle(b));
+  const bySpots = (a: PilgrimageWork, b: PilgrimageWork) =>
+    b.spots.length - a.spots.length || byTitle(a, b);
 
   const next = animes.slice();
 

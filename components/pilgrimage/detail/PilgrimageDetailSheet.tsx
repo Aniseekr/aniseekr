@@ -12,28 +12,23 @@ import BottomSheet, {
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
-import type {
-  AnitabiBangumi,
-  AnitabiPoint,
-  AnitabiSpot,
-} from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageWork, PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import type { PilgrimageDisplayTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import type { SpotIntentKind } from '../../../libs/services/pilgrimage/spot-intents';
 import type { PilgrimageSpotFilter } from '../../../libs/services/pilgrimage/pilgrimage-detail-filter';
 import { ThemedBottomSheet, ThemedButton, ThemedIconButton, ThemedText } from '../../themed';
-import { AnitabiAttributionFooter } from '../common/AnitabiAttributionFooter';
 import { IntelEventsList } from './IntelEventsList';
 import { PilgrimageDetailControls } from './PilgrimageDetailControls';
 import { SpotRow } from './SpotRow';
 
 export interface PilgrimageDetailSheetProps {
-  anime: AnitabiBangumi | null;
+  anime: PilgrimageWork | null;
   animeTitles: PilgrimageDisplayTitles | null;
+  fallbackTitle: string;
   browseLabel: string;
   posterUri: string;
-  filteredGroupedSpots: readonly AnitabiSpot[];
+  filteredGroupedSpots: readonly PilgrimageSpot[];
   viewMode: 'list' | 'map';
   themeColor: string;
   theme: ThemePalette;
@@ -52,19 +47,19 @@ export interface PilgrimageDetailSheetProps {
   onSearchChange: (text: string) => void;
   onSearchClear: () => void;
   onSpotFilterChange: (filter: 'all' | 'unvisited' | 'visited') => void;
-  onSpotPress: (group: AnitabiSpot) => void;
-  onToggleVisited: (group: AnitabiSpot) => void;
-  onOpenMaps: (spot: AnitabiPoint) => void;
-  onStartCamera: (spot: AnitabiPoint) => void;
-  onFrameShot: (spot: AnitabiPoint) => void;
-  onIdentifyScene: (spot: AnitabiPoint) => void;
-  onToggleSaved: (spot: AnitabiPoint) => void;
-  onOpenDetails: (spot: AnitabiPoint) => void;
+  onSpotPress: (group: PilgrimageSpot) => void;
+  onToggleVisited: (group: PilgrimageSpot) => void;
+  onOpenMaps: (spot: PilgrimageSpot) => void;
+  onStartCamera: (spot: PilgrimageSpot) => void;
+  onFrameShot: (spot: PilgrimageSpot) => void;
+  onIdentifyScene: (spot: PilgrimageSpot) => void;
+  onToggleSaved: (spot: PilgrimageSpot) => void;
+  onOpenDetails: (spot: PilgrimageSpot) => void;
   onMenuOpen: (spotId: string) => void;
   onMenuClose: () => void;
-  representativeForGroup: (group: AnitabiSpot) => AnitabiPoint;
-  distanceForGroup: (group: AnitabiSpot) => number | null;
-  hasIntentForGroup: (group: AnitabiSpot, intent: SpotIntentKind) => boolean;
+  representativeForGroup: (group: PilgrimageSpot) => PilgrimageSpot;
+  distanceForGroup: (group: PilgrimageSpot) => number | null;
+  hasIntentForGroup: (group: PilgrimageSpot, intent: SpotIntentKind) => boolean;
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
@@ -74,6 +69,7 @@ const VISIBLE_AT_MID_DETENT = 3;
 function PilgrimageDetailSheetImpl({
   anime,
   animeTitles,
+  fallbackTitle,
   browseLabel,
   posterUri,
   filteredGroupedSpots,
@@ -168,9 +164,7 @@ function PilgrimageDetailSheetImpl({
       cancelRevealScroll();
     }
     if (viewMode === 'map' || !selectedSpotId || focusRequest === revealedFocusRef.current) return;
-    const row = filteredGroupedSpots.findIndex((group) =>
-      group.scenes.some((scene) => scene.id === selectedSpotId)
-    );
+    const row = filteredGroupedSpots.findIndex((spot) => spot.id === selectedSpotId);
     if (row < 0) return;
     pendingRevealRef.current = { row, request: focusRequest };
     revealPending();
@@ -183,31 +177,26 @@ function PilgrimageDetailSheetImpl({
     viewMode,
   ]);
 
-  const menuGroup = menuSpotId
-    ? filteredGroupedSpots.find((group) => group.scenes.some((scene) => scene.id === menuSpotId))
-    : null;
-  const menuSpot = menuGroup
-    ? (menuGroup.scenes.find((scene) => scene.id === menuSpotId) ??
-      representativeForGroup(menuGroup))
-    : null;
+  const menuGroup = menuSpotId ? filteredGroupedSpots.find((spot) => spot.id === menuSpotId) : null;
+  const menuSpot = menuGroup;
   const menuSaved = menuGroup ? hasIntentForGroup(menuGroup, 'saved') : false;
 
-  const runMenuAction = (action: (spot: AnitabiPoint) => void) => {
+  const runMenuAction = (action: (spot: PilgrimageSpot) => void) => {
     if (!menuSpot) return;
     onMenuClose();
     action(menuSpot);
   };
 
   const renderRow = useCallback(
-    ({ item, index }: { item: AnitabiSpot; index: number }) => (
+    ({ item, index }: { item: PilgrimageSpot; index: number }) => (
       <SpotRow
         group={item}
         spot={representativeForGroup(item)}
         index={index}
-        selected={item.scenes.some((scene) => scene.id === selectedSpotId)}
+        selected={item.id === selectedSpotId}
         themeColor={themeColor}
         distanceKm={distanceForGroup(item)}
-        visited={item.scenes.some((scene) => visited[scene.id] === true)}
+        visited={visited[item.id] === true}
         theme={theme}
         onPress={onSpotPress}
         onToggleVisited={onToggleVisited}
@@ -237,7 +226,7 @@ function PilgrimageDetailSheetImpl({
         <View style={styles.posterWrap}>
           {posterUri ? (
             <Image
-              source={anitabiImageSource(posterUri)}
+              source={{ uri: posterUri }}
               style={styles.poster}
               contentFit="cover"
             />
@@ -245,7 +234,7 @@ function PilgrimageDetailSheetImpl({
         </View>
         <View style={styles.titleColumn}>
           <ThemedText variant="titleLarge" weight="800" numberOfLines={2}>
-            {animeTitles?.primary ?? '—'}
+            {animeTitles?.primary ?? fallbackTitle}
           </ThemedText>
           <View style={styles.subtitleRow}>
             <ThemedText variant="captionSmall" tone="secondary">
@@ -300,12 +289,11 @@ function PilgrimageDetailSheetImpl({
   const footerNode = (
     <View style={styles.footer}>
       <IntelEventsList
-        bangumiId={anime?.id ?? null}
+        bangumiId={anime?.bgm?.[0] ?? null}
         theme={theme}
         themeColor={themeColor}
         title={t('pilgrimageUi.intel.events')}
       />
-      <AnitabiAttributionFooter bangumiId={anime?.id ?? null} variant="footer" />
     </View>
   );
 
@@ -327,8 +315,8 @@ function PilgrimageDetailSheetImpl({
         handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]}>
         <BottomSheetFlatList
           ref={listRef}
-          data={filteredGroupedSpots as AnitabiSpot[]}
-          keyExtractor={(item: AnitabiSpot) => item.id}
+          data={filteredGroupedSpots as PilgrimageSpot[]}
+          keyExtractor={(item: PilgrimageSpot) => item.id}
           renderItem={renderRow}
           onScrollBeginDrag={() => {
             // Stay conservative through momentum; a near-row reveal resets this.

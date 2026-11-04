@@ -3,30 +3,35 @@
 // useTheme(); the per-anime brand colour (anime.color) still drives the
 // region badge, gradient tint and distance badge.
 
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { readableTextOn } from '../themed/contrast';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
-import { Radius, Shadow } from '../../constants/DesignSystem';
+import { Radius, Shadow, Typography } from '../../constants/DesignSystem';
 import { cityToColor } from '../../libs/services/pilgrimage/region-color';
 import {
   formatPilgrimageSubtitle,
-  getPilgrimageAnimeTitles,
+  getPilgrimageAnimeWorkTitles,
 } from '../../libs/services/pilgrimage/pilgrimage-localization';
-import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
+import type { PilgrimageWork } from '../../libs/services/pilgrimage/types';
 import { SpotImage } from './SpotImage';
+import { bangumiSubjectImageUrl } from '../../libs/clients/bangumi-client';
+import { atlasClient, type AtlasCityLabel } from '../../libs/services/pilgrimage/atlas/atlas-client';
+import { useT } from '../../libs/i18n';
 
 export interface AnimePilgrimageCardProps {
-  anime: AnitabiBangumi;
+  anime: PilgrimageWork;
+  coverFallback?: string | null;
   /** Optional distance from the user, in kilometres. */
   distance?: number;
   /** Show a green check badge when this anime is in the user's collection. */
   inCollection?: boolean;
   /** Optional sub-label (e.g. "Watching · ep 3") rendered next to the city tag. */
   collectionLabel?: string;
-  onPress?: (anime: AnitabiBangumi) => void;
+  onPress?: (anime: PilgrimageWork) => void;
 }
 
 const styleCache = new WeakMap<ThemePalette, ReturnType<typeof makeStyles>>();
@@ -46,31 +51,54 @@ const formatDistance = (km: number): string => {
 
 export function AnimePilgrimageCard({
   anime,
+  coverFallback,
   distance,
   inCollection,
   collectionLabel,
   onPress,
 }: AnimePilgrimageCardProps) {
   const { theme } = useTheme();
+  const t = useT();
   const styles = getStyles(theme);
+  const municipalityCode = anime.cities[0] ?? null;
+  const [cityLookup, setCityLookup] = useState<{
+    municipalityCode: string;
+    lookup: ReadonlyMap<string, AtlasCityLabel>;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!municipalityCode) return;
+    void atlasClient
+      .cityLookup()
+      .then((lookup) => {
+        if (!cancelled) setCityLookup({ municipalityCode, lookup });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [municipalityCode]);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress?.(anime);
   };
 
-  // The per-anime brand colour drives the region/distance accents; fall back to
-  // the app accent when the source payload has no colour.
-  const themeColor = anime.color || theme.accent;
-  const regionColor = anime.city ? cityToColor(anime.city, themeColor) : themeColor;
+// Atlas provides the region; app theme colors drive the card accents.
+  const themeColor = theme.accent;
+  const region =
+    municipalityCode && cityLookup?.municipalityCode === municipalityCode
+      ? cityLookup.lookup.get(municipalityCode) ?? null
+      : null;
+  const regionLabel = region ? `${region.pref} ${region.name}` : null;
+  const regionColor = region ? cityToColor(region.name, themeColor) : themeColor;
   const regionFg = readableTextOn(regionColor);
   const distanceFg = readableTextOn(themeColor);
   const successFg = readableTextOn(theme.status.success);
-  // Language reactivity is transitive: this card is not memoized and every
-  // pilgrimage screen consumes the i18n context, so a language switch
-  // re-renders the tree and getPilgrimageAnimeTitles re-reads the language.
-  const titles = getPilgrimageAnimeTitles(anime);
+  const titles = getPilgrimageAnimeWorkTitles(anime);
   const subtitle = formatPilgrimageSubtitle(titles);
+  const poster = anime.bgm?.[0] ? bangumiSubjectImageUrl(anime.bgm[0], 'common') : null;
 
   return (
     <Pressable
@@ -82,14 +110,19 @@ export function AnimePilgrimageCard({
         inCollection && styles.cardInCollection,
       ]}>
       <View style={styles.imageContainer}>
-        <SpotImage uri={anime.cover} style={styles.image} contentFit="cover" />
+        <SpotImage
+          uri={poster ?? coverFallback}
+          fallbackUri={poster ? coverFallback : null}
+          style={styles.image}
+          contentFit="cover"
+        />
         <LinearGradient
           colors={['transparent', `${themeColor}40`, theme.background.secondary]}
           style={styles.imageGradient}
         />
 
         <View style={styles.topLeftStack} pointerEvents="none">
-          {anime.city ? (
+          {region && regionLabel ? (
             <View
               style={[
                 styles.regionBadge,
@@ -97,7 +130,7 @@ export function AnimePilgrimageCard({
               ]}>
               <Ionicons name="location-sharp" size={11} color={regionFg} />
               <Text style={[styles.regionText, { color: regionFg }]} numberOfLines={1}>
-                {anime.city}
+                {regionLabel}
               </Text>
             </View>
           ) : null}
@@ -111,14 +144,14 @@ export function AnimePilgrimageCard({
         </View>
 
         <View style={styles.spotCountBadge}>
-          <Text style={styles.spotCountText}>{anime.pointsLength} spots</Text>
+          <Text style={styles.spotCountText}>{t('tabs.pilgrimageHome.spotCount', { count: anime.n })}</Text>
         </View>
 
         {inCollection ? (
           <View style={styles.collectedBadge}>
             <Ionicons name="checkmark" size={11} color={successFg} />
             <Text style={[styles.collectedBadgeText, { color: successFg }]}>
-              {collectionLabel || 'In Collection'}
+              {collectionLabel || t('tabs.pilgrimageHome.myWorks')}
             </Text>
           </View>
         ) : null}
@@ -135,16 +168,16 @@ export function AnimePilgrimageCard({
           </Text>
         ) : null}
 
-        {anime.litePoints && anime.litePoints.length > 0 ? (
+        {anime.spots.length > 0 ? (
           <View style={styles.previewRow}>
-            {anime.litePoints.slice(0, 3).map((point, idx) => (
-              <View key={point.id} style={styles.previewThumb}>
-                <SpotImage uri={point.image} style={styles.previewImage} contentFit="cover" />
-                {idx === 2 && anime.litePoints.length > 3 ? (
-                  <View style={styles.moreOverlay}>
-                    <Text style={styles.moreText}>+{anime.pointsLength - 3}</Text>
-                  </View>
-                ) : null}
+            {anime.spots.slice(0, 3).map((spot) => (
+              <View key={spot.id} style={styles.previewThumb}>
+                <Text style={styles.title} numberOfLines={2}>{spot.name}</Text>
+                <Text style={styles.title} numberOfLines={1}>
+                  {spot.lat === null || spot.lon === null
+                    ? t('pilgrimage.confidence.unverified')
+                    : t(`pilgrimage.confidence.${spot.confidence}`)}
+                </Text>
               </View>
             ))}
           </View>
@@ -183,8 +216,7 @@ function makeStyles(theme: ThemePalette) {
       borderRadius: Radius.sm,
     },
     collectedBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
+      ...Typography.badge,
       letterSpacing: 0.2,
     },
     imageContainer: {
@@ -222,7 +254,7 @@ function makeStyles(theme: ThemePalette) {
       ...Shadow.subtle,
     },
     regionText: {
-      fontSize: 11,
+      ...Typography.captionSmall,
       fontWeight: '700',
       letterSpacing: 0.2,
       maxWidth: 140,
@@ -233,7 +265,7 @@ function makeStyles(theme: ThemePalette) {
       borderRadius: Radius.sm,
     },
     distanceText: {
-      fontSize: 11,
+      ...Typography.captionSmall,
       fontWeight: '700',
     },
     spotCountBadge: {
@@ -249,20 +281,20 @@ function makeStyles(theme: ThemePalette) {
     },
     spotCountText: {
       color: theme.text.primary,
-      fontSize: 11,
+      ...Typography.captionSmall,
       fontWeight: '600',
     },
     content: {
       padding: 12,
     },
     title: {
-      fontSize: 16,
+      ...Typography.titleLarge,
       fontWeight: '700',
       color: theme.text.primary,
       marginBottom: 2,
     },
     titleCN: {
-      fontSize: 12,
+      ...Typography.caption,
       color: theme.text.secondary,
       marginBottom: 12,
     },
@@ -271,28 +303,12 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
     },
     previewThumb: {
-      width: 48,
-      height: 36,
       borderRadius: Radius.sm,
-      overflow: 'hidden',
-      position: 'relative',
-    },
-    previewImage: {
-      width: '100%',
-      height: '100%',
-    },
-    moreOverlay: {
-      ...StyleSheet.absoluteFill,
-      // Scrim darkening the thumbnail behind the "+N" count — a photo
-      // darkener, not a theme surface, so it stays a fixed black wash.
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    moreText: {
-      color: theme.text.primary,
-      fontSize: 11,
-      fontWeight: '600',
+      flex: 1,
+      minHeight: 36,
+      paddingHorizontal: 6,
+      paddingVertical: 4,
+      backgroundColor: theme.background.tertiary,
     },
   });
 }

@@ -436,7 +436,7 @@ export default function FolderDetailScreen() {
           <NearbyPilgrimageBadge
             sourcePlatform="anilist"
             id={item.id}
-            onPress={(data) => router.push(`/pilgrimage/${data.id}`)}
+            onPress={(data) => router.push(`/pilgrimage/${data.key}`)}
           />
         </View>
       </View>

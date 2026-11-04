@@ -7,6 +7,12 @@ export interface Anime {
   titleChinese?: string;
   titleChineseTraditional?: string;
   titleRussian?: string;
+  idMal?: number | null;
+  platformData?: {
+    anilist?: { id?: string | null } | null;
+    myanimelist?: { id?: string | null } | null;
+    bangumi?: { id?: string | null } | null;
+  };
   image: string;
   bannerImage?: string;
   rank?: number;

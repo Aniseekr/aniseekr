@@ -25,18 +25,22 @@ import {
   type SpotChipEqualityProps,
   type StatCellEqualityProps,
 } from '../../../components/pilgrimage/detail/_equality';
-import type { AnitabiPoint, AnitabiSpot } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { SpotIntentMap } from '../../../libs/services/pilgrimage/spot-intents';
 import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 
-const sampleSpot: AnitabiPoint = {
+const sampleSpot: PilgrimageSpot = {
   id: 'p1',
   name: 'Sample',
-  image: 'https://img/1.jpg',
-  ep: 1,
-  s: 0,
-  geo: [35.6, 139.7],
+  workKey: 'sample',
+  address: '',
+  note: '',
+  lat: 35.6,
+  lon: 139.7,
+  confidence: 'confirmed',
+  scenes: [{ episode: '第1話' }],
+  sources: [],
 };
 
 const theme = { __sentinel: 'theme' } as unknown as ThemePalette;
@@ -113,8 +117,8 @@ describe('spotChipPropsEqual', () => {
     expect(spotChipPropsEqual(spotChipProps(), spotChipProps({ active: true }))).toBe(false);
   });
 
-  it('returns false when spot.ep changes', () => {
-    const nextSpot = { ...sampleSpot, ep: 5 };
+  it('returns false when spot scenes change', () => {
+    const nextSpot = { ...sampleSpot, scenes: [{ episode: '第5話' }] };
     expect(spotChipPropsEqual(spotChipProps(), spotChipProps({ spot: nextSpot }))).toBe(false);
   });
 });
@@ -220,17 +224,21 @@ describe('SpotMapView marker bridge helpers', () => {
 // ---------------------------------------------------------------------
 
 describe('hasIntentForSpot', () => {
-  const spot: AnitabiPoint = sampleSpot;
-  const otherScene: AnitabiPoint = { ...spot, id: 'p2' };
-  const group: AnitabiSpot = {
+  const spot: PilgrimageSpot = sampleSpot;
+  const group: PilgrimageSpot = {
     id: 'g1',
     name: 'Group',
-    image: spot.image,
-    geo: spot.geo,
-    scenes: [spot, otherScene],
+    workKey: spot.workKey,
+    address: '',
+    note: '',
+    lat: spot.lat,
+    lon: spot.lon,
+    confidence: 'confirmed',
+    scenes: spot.scenes,
+    sources: [],
   };
   const spotIntents: SpotIntentMap = {
-    p2: { saved: true },
+    g1: { saved: true },
   };
 
   it('returns true when any scene in the group has the intent', () => {
@@ -266,27 +274,22 @@ describe('hasIntentForSpot', () => {
 // ---------------------------------------------------------------------
 
 describe('flattenScenesFromGroups', () => {
-  const groupA: AnitabiSpot = {
+  const groupA: PilgrimageSpot = {
     id: 'g1',
     name: 'A',
-    image: 'i',
-    geo: [0, 0],
-    scenes: [
-      { id: 'a1', name: 'A1', image: 'i', ep: 1, s: 0, geo: [0, 0] },
-      { id: 'a2', name: 'A2', image: 'i', ep: 1, s: 0, geo: [0, 0] },
-    ],
+    workKey: 'sample', address: '', note: '', lat: 0, lon: 0,
+    confidence: 'confirmed', scenes: [{ episode: '第1話' }, { episode: '第2話' }], sources: [],
   };
-  const groupB: AnitabiSpot = {
+  const groupB: PilgrimageSpot = {
     id: 'g2',
     name: 'B',
-    image: 'i',
-    geo: [0, 0],
-    scenes: [{ id: 'b1', name: 'B1', image: 'i', ep: 1, s: 0, geo: [0, 0] }],
+    workKey: 'sample', address: '', note: '', lat: 0, lon: 0,
+    confidence: 'single', scenes: [{ episode: '第1話' }], sources: [],
   };
 
   it('flattens grouped scenes preserving order', () => {
     const out = flattenScenesFromGroups([groupA, groupB]);
-    expect(out.map((s) => s.id)).toEqual(['a1', 'a2', 'b1']);
+    expect(out.map((s) => s.id)).toEqual(['g1', 'g2']);
   });
 
   it('handles empty input', () => {
@@ -295,10 +298,10 @@ describe('flattenScenesFromGroups', () => {
 });
 
 describe('visitedCountForPoints / capturedCountForPoints', () => {
-  const points: AnitabiPoint[] = [
-    { id: 'p1', name: '', image: '', ep: 1, s: 0, geo: [0, 0] },
-    { id: 'p2', name: '', image: '', ep: 1, s: 0, geo: [0, 0] },
-    { id: 'p3', name: '', image: '', ep: 1, s: 0, geo: [0, 0] },
+  const points: PilgrimageSpot[] = [
+    { ...sampleSpot, id: 'p1' },
+    { ...sampleSpot, id: 'p2' },
+    { ...sampleSpot, id: 'p3' },
   ];
 
   it('counts only ids present in the visited map', () => {

@@ -25,7 +25,6 @@ import {
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
 import { FilteredImage } from './FilteredImage';
-import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import {
   cornerFractionsToMatrix4,
   type Pt,
@@ -1077,7 +1076,7 @@ function MangaTemplate(props: TemplateProps) {
     anime: (
       <View key="anime" style={{ flex: 1, position: 'relative' }}>
         <Image
-          source={anitabiImageSource(imageUrl)}
+          source={{ uri: imageUrl }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
         />

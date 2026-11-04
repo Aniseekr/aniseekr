@@ -29,7 +29,6 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { isStringArray, safeJsonParse } from '../../libs/utils/safe-json';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
-import { lookupBangumiByPlatformId } from '../../libs/services/pilgrimage/anitabi-cross-index';
 import {
   pilgrimageSearchService,
   type PilgrimageSearchResult,
@@ -68,6 +67,7 @@ type FilterKey = 'all' | 'tv' | 'movie' | 'recent';
 
 type SearchAnime = Anime & {
   bangumiId?: number;
+  pilgrimageWorkKey?: string;
   hasPilgrimage?: boolean;
   pilgrimageSource?: PilgrimageSearchResult['source'];
   secondaryTitle?: string;
@@ -192,12 +192,13 @@ export default function SearchScreen() {
     toastTimerRef.current = setTimeout(() => setBookmarkToast(null), 2000);
   }, []);
 
+  const routeQuery = getStringParam(params, 'q') ?? '';
+
   useEffect(() => {
-    const next = getStringParam(params, 'q') ?? '';
-    if (next === routeQueryRef.current) return;
-    routeQueryRef.current = next;
-    setQuery(next);
-  }, [params]);
+    if (routeQuery === routeQueryRef.current) return;
+    routeQueryRef.current = routeQuery;
+    setQuery(routeQuery);
+  }, [routeQuery]);
 
   // `recent` is seeded synchronously from MMKV above; no async hydrate.
 
@@ -269,7 +270,7 @@ export default function SearchScreen() {
         };
         if (typeof anime.bangumiId === 'number') {
           router.push(
-            buildPilgrimageDetailRoute(anime.bangumiId, {
+            buildPilgrimageDetailRoute(anime.pilgrimageWorkKey ?? String(anime.bangumiId), {
               returnTo: 'search',
               returnQuery: query,
               ...chromeSeed,
@@ -296,7 +297,7 @@ export default function SearchScreen() {
             return;
           }
           router.push(
-            buildPilgrimageDetailRoute(bangumiId, {
+            buildPilgrimageDetailRoute(String(bangumiId), {
               returnTo: 'search',
               returnQuery: query,
               ...chromeSeed,
@@ -683,10 +684,7 @@ export default function SearchScreen() {
                 <ResultCard
                   anime={item}
                   pending={resolvingId === item.id}
-                  hasPilgrimage={
-                    item.hasPilgrimage === true ||
-                    lookupBangumiByPlatformId('anilist', item.id) !== null
-                  }
+                  hasPilgrimage={item.hasPilgrimage === true}
                   isBookmarked={trackedIds.has(item.id)}
                   bookmarkPending={bookmarkPendingId === item.id}
                   onPress={() => handleSelect(item)}
@@ -731,8 +729,7 @@ interface ResultCardProps {
   anime: SearchAnime;
   pending?: boolean;
   /**
-   * Whether the L2 Anitabi cross-index resolved a pilgrimage entry for this
-   * anime. Renders a location-pin icon on the title row so users can see at a glance
+   * Whether Atlas resolved a pilgrimage entry for this anime. Renders a location-pin icon so users can see at a glance
    * which results have real pilgrimage data — no fake markers; falsy = no
    * marker, never a placeholder.
    */
@@ -751,9 +748,10 @@ function mapPilgrimageResultToAnime(
   t: ReturnType<typeof useT>
 ): SearchAnime {
   const titles = getPilgrimageAnimeTitles({
-    id: result.bangumiId,
+    bangumiId: result.bangumiId ?? undefined,
+    ja: result.title,
     title: result.title,
-    titleCn: result.titleCn,
+    zh: { hans: result.titleCn },
     titleEnglish: result.titleEnglish,
     titleRomaji: result.titleRomaji,
   });
@@ -764,7 +762,8 @@ function mapPilgrimageResultToAnime(
 
   return {
     id: String(result.bangumiId),
-    bangumiId: result.bangumiId,
+    bangumiId: result.bangumiId ?? undefined,
+    pilgrimageWorkKey: result.workKey,
     hasPilgrimage: true,
     pilgrimageSource: result.source,
     title: titles.primary,

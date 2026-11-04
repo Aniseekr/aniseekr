@@ -1,52 +1,51 @@
 import { describe, expect, test } from 'bun:test';
 import { resolveHubAnimeProgress } from '../../../libs/services/pilgrimage/pilgrimage-hub-progress';
-import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageWork } from '../../../libs/services/pilgrimage/types';
 
-function anime(litePointIds: string[]): AnitabiBangumi {
+function anime(spotIds: string[]): PilgrimageWork {
   return {
-    id: 1,
-    title: 'X',
-    cn: '',
-    city: '',
-    cover: '',
-    color: '#8DC5D8',
-    geo: [35, 139],
-    zoom: 12,
-    modified: 0,
-    pointsLength: 500,
-    imagesLength: 0,
-    litePoints: litePointIds.map((id) => ({
+    key: 'x',
+    ja: 'X',
+    en: 'X',
+    zh: { hans: '', hant: '' },
+    mal: [],
+    bgm: [],
+    n: spotIds.length,
+    conf: { c: 0, s: 0, u: 0 },
+    cities: [],
+    dataVersion: 'test',
+    titleJa: 'X',
+    titleEn: 'X',
+    titleZh: { hans: '', hant: '' },
+    spots: spotIds.map((id) => ({
       id,
       name: id,
-      image: 'https://x/a.jpg',
-      ep: 0,
-      s: 0,
-      geo: [35, 139] as [number, number],
+      workKey: 'x',
+      address: '',
+      note: '',
+      lat: 35,
+      lon: 139,
+      confidence: 'confirmed' as const,
+      scenes: [{ episode: '第1話' }],
+      sources: [],
     })),
   };
 }
 
-function points(ids: string[]): { id: string }[] {
-  return ids.map((id) => ({ id }));
-}
-
 describe('resolveHubAnimeProgress', () => {
-  test('full points list present: numerator counted against full ids, total = length', () => {
-    const p = resolveHubAnimeProgress(anime(['a', 'b']), { a: true }, points(['a', 'b', 'c', 'd']));
+  test('counts visited Atlas spots against the work spot list', () => {
+    const p = resolveHubAnimeProgress(anime(['a', 'b', 'c', 'd']), { a: true });
     expect(p.visitedCount).toBe(1);
-    expect(p.total).toBe(4); // honest denominator = full points count
+    expect(p.total).toBe(4);
   });
-  test('no full points list → total is null (show check count only, never litePoints as denominator)', () => {
-    const p = resolveHubAnimeProgress(anime(['a', 'b']), { a: true, b: true });
-    expect(p.visitedCount).toBe(2);
-    expect(p.total).toBeNull();
+  test('an empty Atlas work has no known visited spots', () => {
+    const p = resolveHubAnimeProgress(anime([]), { a: true, b: true });
+    expect(p.visitedCount).toBe(0);
+    expect(p.total).toBe(0);
   });
-  test('honesty: a visited id in litePoints but NOT in fullPoints does not count once fullPoints exists', () => {
-    // "b" is visited and present in litePoints (the sample), but the full
-    // per-anime list only has "a" and "c" — the stale/sample id must not
-    // inflate the count once we hold the real basis.
-    const p = resolveHubAnimeProgress(anime(['a', 'b']), { a: true, b: true }, points(['a', 'c']));
-    expect(p.visitedCount).toBe(1); // only "a" counts — "b" isn't in fullPoints
+  test('does not count saved ids missing from the Atlas work', () => {
+    const p = resolveHubAnimeProgress(anime(['a', 'c']), { a: true, b: true });
+    expect(p.visitedCount).toBe(1);
     expect(p.total).toBe(2);
   });
 });

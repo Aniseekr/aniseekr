@@ -1,8 +1,8 @@
-// Grid-cluster AnitabiSpots into geographic areas for the detail list's
+// Grid-cluster pilgrimage spots into geographic areas for the detail list's
 // "○○一帶" sections. Honest by construction (CLAUDE.md Rule 8): an area carries
 // no place name — the caller labels it "Area N (count)". A ~cellKm grid bucket
 // is enough to make a 600-point anime feel like a handful of neighbourhoods.
-import type { AnitabiSpot } from './types';
+import type { PilgrimageSpot } from './types';
 
 export interface SpotAreaBounds {
   south: number;
@@ -17,33 +17,40 @@ export interface SpotArea {
   /** Fed to MapSurfaceHandle.fitBounds (structurally BBox). */
   bounds: SpotAreaBounds;
   /** Input order preserved within an area. */
-  spots: AnitabiSpot[];
+  spots: PilgrimageSpot[];
 }
 
 /** Detail list row: an area section header (1-indexed, precomputed so the
  * renderer never rescans prior rows) or a spot. */
 export type SpotAreaRow =
-  { kind: 'header'; area: SpotArea; areaNumber: number } | { kind: 'spot'; spot: AnitabiSpot };
+  | { kind: 'header'; area: SpotArea; areaNumber: number }
+  | { kind: 'spot'; spot: PilgrimageSpot };
 
 const KM_PER_DEG_LAT = 111;
 
-function hasGeo(geo: readonly [number, number]): boolean {
-  const [lat, lng] = geo;
-  return Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+function hasGeo(spot: PilgrimageSpot): boolean {
+  return (
+    spot.lat !== null &&
+    spot.lon !== null &&
+    Number.isFinite(spot.lat) &&
+    Number.isFinite(spot.lon) &&
+    !(spot.lat === 0 && spot.lon === 0)
+  );
 }
 
 export function groupSpotsIntoAreas(
-  spots: readonly AnitabiSpot[],
+  spots: readonly PilgrimageSpot[],
   opts: { cellKm?: number } = {}
 ): SpotArea[] {
   const cellKm = opts.cellKm ?? 2;
   const stepDeg = cellKm / KM_PER_DEG_LAT;
   const order: string[] = [];
-  const buckets = new Map<string, AnitabiSpot[]>();
+  const buckets = new Map<string, PilgrimageSpot[]>();
 
   for (const s of spots) {
-    if (!hasGeo(s.geo)) continue;
-    const [lat, lng] = s.geo;
+    if (!hasGeo(s)) continue;
+    const lat = s.lat as number;
+    const lng = s.lon as number;
     const latIdx = Math.floor(lat / stepDeg);
     // cos-correct lng so a 2km cell is ~2km E–W too (not stretched at 35°N).
     // Derived from the *lat bucket's* center rather than each point's own lat
@@ -70,7 +77,8 @@ export function groupSpotsIntoAreas(
     let sumLat = 0;
     let sumLng = 0;
     for (const m of members) {
-      const [lat, lng] = m.geo;
+      const lat = m.lat as number;
+      const lng = m.lon as number;
       south = Math.min(south, lat);
       north = Math.max(north, lat);
       west = Math.min(west, lng);
@@ -104,7 +112,7 @@ export function groupSpotsIntoAreas(
  * spot — nothing is ever dropped.
  */
 export function composeAreaRows(
-  spots: readonly AnitabiSpot[],
+  spots: readonly PilgrimageSpot[],
   areas: readonly SpotArea[]
 ): SpotAreaRow[] {
   if (areas.length < 2) {

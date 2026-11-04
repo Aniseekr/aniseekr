@@ -70,20 +70,6 @@ export interface LocalityDataLoader {
   loadLatest(): Promise<LocalityDataEnvelope>;
 }
 
-/** Places and scene roles projected from one existing Anitabi anime payload. */
-export interface AnitabiSceneProjection {
-  places: readonly Place[];
-  roles: readonly SceneRole[];
-}
-
-/**
- * Adapter over the current Anitabi fetch/cache/grouping pipeline. It projects
- * that pipeline's output and must not ingest or persist a second scene copy.
- */
-export interface AnitabiSceneProjector {
-  getScenePlacesForAnime(animeId: BangumiId): Promise<AnitabiSceneProjection>;
-}
-
 /** Joined read model used where callers need both identity and marker semantics. */
 export interface PlaceWithRoles {
   place: Place;
@@ -96,9 +82,8 @@ export type LocalityRepositoryListener = () => void;
 /**
  * Reader-facing locality seam. Envelope queries are synchronous snapshot reads,
  * so swapping a bundled loader for a remote-backed loader does not change
- * readers or first-paint behavior. `getPlacesForAnime` is asynchronous because
- * it may delegate scene loading to the existing Anitabi projector. A failed
- * refresh must retain the last-known-good envelope.
+ * readers or first-paint behavior. A failed refresh retains the last-known-good
+ * envelope.
  */
 export interface LocalityRepository {
   getSnapshot(): LocalityDataEnvelope;
@@ -106,10 +91,7 @@ export interface LocalityRepository {
   getPlaces(query?: PlaceQuery): readonly Place[];
   getPlaceById(id: PlaceId): Place | null;
   /**
-   * Adds projected Anitabi scenes to the same relationship union used by
-   * `PlaceQuery.animeId` and returns every matching role with its Place. This
-   * is the only Place query that may perform I/O; projected entities are a
-   * read overlay and are not claimed to belong to `getSnapshot()`.
+   * Returns matching bundled Places and their roles.
    */
   getPlacesForAnime(
     animeId: BangumiId,

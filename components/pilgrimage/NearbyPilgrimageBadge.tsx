@@ -11,15 +11,16 @@ import * as Haptics from 'expo-haptics';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
-import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
-import { Radius } from '../../constants/DesignSystem';
+import type { PilgrimageWork } from '../../libs/services/pilgrimage/types';
+import { Radius, Typography } from '../../constants/DesignSystem';
+import { useT } from '../../libs/i18n';
 
 export type NearbyPilgrimageBadgeVariant = 'icon' | 'pill';
 
 interface BaseProps {
   variant?: NearbyPilgrimageBadgeVariant;
   /** Tap handler. Receives the resolved pilgrimage payload. */
-  onPress?: (anime: AnitabiBangumi) => void;
+  onPress?: (anime: PilgrimageWork) => void;
 }
 
 interface ByBangumiId extends BaseProps {
@@ -41,7 +42,8 @@ export function NearbyPilgrimageBadge(props: NearbyPilgrimageBadgeProps) {
   const bangumiId = 'bangumiId' in props ? props.bangumiId : undefined;
   const sourcePlatform = 'sourcePlatform' in props ? props.sourcePlatform : undefined;
   const sourceId = 'id' in props ? props.id : undefined;
-  const [data, setData] = useState<AnitabiBangumi | null>(null);
+  const [data, setData] = useState<PilgrimageWork | null>(null);
+  const t = useT();
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   // The badge is filled with the accent — its label/icons must use the
@@ -103,7 +105,7 @@ export function NearbyPilgrimageBadge(props: NearbyPilgrimageBadgeProps) {
       testID="pilgrimage-badge-pill">
       <Ionicons name="location" size={12} color={fg} />
       <Text style={[styles.pillText, { color: fg }]} numberOfLines={1}>
-        {data.city || `${data.pointsLength} spots`}
+        {t('tabs.pilgrimageHome.spotCount', { count: data.n })}
       </Text>
       {onPress ? <Ionicons name="chevron-forward" size={11} color={fg} /> : null}
     </Wrapper>
@@ -126,7 +128,7 @@ function makeStyles(theme: ThemePalette) {
       opacity: 0.75,
     },
     pillText: {
-      fontSize: 11,
+      ...Typography.captionSmall,
       fontWeight: '600',
     },
     iconBadge: {

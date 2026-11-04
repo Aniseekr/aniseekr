@@ -1,6 +1,5 @@
-import { getPilgrimageSpotTitles } from './pilgrimage-localization';
 import type { SpotIntentMap } from './spot-intents';
-import type { AnitabiPoint, AnitabiSpot } from './types';
+import type { PilgrimageSpot } from './types';
 
 export type PilgrimageSpotFilter = 'all' | 'visited' | 'unvisited' | 'photos' | 'saved' | 'planned';
 
@@ -21,58 +20,32 @@ export interface PilgrimageSpotFilterCounts {
   planned: number;
 }
 
-interface ParsedSearchQuery {
-  raw: string;
-  episode: number | null;
-}
-
-export function filterPilgrimagePoints(
-  points: readonly AnitabiPoint[],
-  options: PilgrimageDetailFilterOptions = {}
-): AnitabiPoint[] {
-  const parsed = parseSearchQuery(options.query);
-  return points.filter((point) => {
-    if (!pointMatchesSearch(point, parsed)) return false;
-    return pointMatchesStatus(point, options);
-  });
-}
-
 export function filterPilgrimageSpots(
-  spots: readonly AnitabiSpot[],
+  spots: readonly PilgrimageSpot[],
   options: PilgrimageDetailFilterOptions = {}
-): AnitabiSpot[] {
-  const parsed = parseSearchQuery(options.query);
+): PilgrimageSpot[] {
+  const query = normalizePilgrimageSearchQuery(options.query);
+  const episode = parseEpisodeQuery(query);
   return spots.filter((spot) => {
-    if (!spotMatchesSearch(spot, parsed)) return false;
-    return spotMatchesStatus(spot, options);
+    if (query && !matchesQuery(spot, query, episode)) return false;
+    return matchesFilter(spot, options);
   });
 }
 
 export function countPilgrimageSpotFilters(
-  spots: readonly AnitabiSpot[],
+  spots: readonly PilgrimageSpot[],
   visited: Record<string, boolean | undefined> = {},
   captures: Record<string, unknown> = {},
   intents: SpotIntentMap = {}
 ): PilgrimageSpotFilterCounts {
-  let visitedCount = 0;
-  let photoCount = 0;
-  let savedCount = 0;
-  let plannedCount = 0;
-
-  for (const spot of spots) {
-    if (spot.scenes.some((point) => visited[point.id] === true)) visitedCount += 1;
-    if (spot.scenes.some((point) => captures[point.id] != null)) photoCount += 1;
-    if (spot.scenes.some((point) => intents[point.id]?.saved === true)) savedCount += 1;
-    if (spot.scenes.some((point) => intents[point.id]?.planned === true)) plannedCount += 1;
-  }
-
+  const visitedCount = spots.filter((spot) => visited[spot.id] === true).length;
   return {
     all: spots.length,
     visited: visitedCount,
     unvisited: spots.length - visitedCount,
-    photos: photoCount,
-    saved: savedCount,
-    planned: plannedCount,
+    photos: spots.filter((spot) => captures[spot.id] != null).length,
+    saved: spots.filter((spot) => intents[spot.id]?.saved === true).length,
+    planned: spots.filter((spot) => intents[spot.id]?.planned === true).length,
   };
 }
 
@@ -81,115 +54,50 @@ export function normalizePilgrimageSearchQuery(query: string | undefined): strin
 }
 
 export function sortPilgrimageSpotsByIntent(
-  spots: readonly AnitabiSpot[],
+  spots: readonly PilgrimageSpot[],
   intents: SpotIntentMap = {}
-): AnitabiSpot[] {
+): PilgrimageSpot[] {
   return spots
-    .map((spot, index) => ({
-      spot,
-      index,
-      score: getSpotIntentScore(spot, intents),
-    }))
+    .map((spot, index) => ({ spot, index, score: getSpotIntentScore(spot, intents) }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map(({ spot }) => spot);
 }
 
-function spotMatchesSearch(spot: AnitabiSpot, query: ParsedSearchQuery): boolean {
-  if (!query.raw) return true;
-  if (spot.scenes.some((point) => pointMatchesSearch(point, query))) return true;
-
-  const fields = [spot.name, spot.cn];
-  return fields.some((field) => normalizedIncludes(field, query.raw));
+function matchesQuery(spot: PilgrimageSpot, query: string, episode: number | null): boolean {
+  if (episode !== null && spot.scenes.some((scene) => parseEpisodeQuery(normalizeText(scene.episode)) === episode)) {
+    return true;
+  }
+  if (episode !== null) return false;
+  return [spot.name, spot.address, spot.note, ...spot.scenes.map((scene) => scene.episode)]
+    .filter(Boolean)
+    .some((field) => normalizeText(field).includes(query));
 }
 
-function pointMatchesSearch(point: AnitabiPoint, query: ParsedSearchQuery): boolean {
-  if (!query.raw) return true;
-  if (query.episode !== null) return point.ep === query.episode;
-
-  const titles = getPilgrimageSpotTitles(point);
-  const fields = [
-    point.name,
-    point.cn,
-    titles.primary,
-    titles.secondary,
-    `ep ${point.ep}`,
-    `ep${point.ep}`,
-    `episode ${point.ep}`,
-  ];
-  return fields.some((field) => normalizedIncludes(field, query.raw));
-}
-
-function pointMatchesStatus(
-  point: AnitabiPoint,
-  { filter = 'all', visited = {}, captures = {}, intents = {} }: PilgrimageDetailFilterOptions
-): boolean {
+function matchesFilter(spot: PilgrimageSpot, options: PilgrimageDetailFilterOptions): boolean {
+  const { filter = 'all', visited = {}, captures = {}, intents = {} } = options;
   switch (filter) {
-    case 'visited':
-      return visited[point.id] === true;
-    case 'unvisited':
-      return visited[point.id] !== true;
-    case 'photos':
-      return captures[point.id] != null;
-    case 'saved':
-      return intents[point.id]?.saved === true;
-    case 'planned':
-      return intents[point.id]?.planned === true;
-    default:
-      return true;
+    case 'visited': return visited[spot.id] === true;
+    case 'unvisited': return visited[spot.id] !== true;
+    case 'photos': return captures[spot.id] != null;
+    case 'saved': return intents[spot.id]?.saved === true;
+    case 'planned': return intents[spot.id]?.planned === true;
+    default: return true;
   }
 }
 
-function spotMatchesStatus(
-  spot: AnitabiSpot,
-  { filter = 'all', visited = {}, captures = {}, intents = {} }: PilgrimageDetailFilterOptions
-): boolean {
-  switch (filter) {
-    case 'visited':
-      return spot.scenes.some((point) => visited[point.id] === true);
-    case 'unvisited':
-      return !spot.scenes.some((point) => visited[point.id] === true);
-    case 'photos':
-      return spot.scenes.some((point) => captures[point.id] != null);
-    case 'saved':
-      return spot.scenes.some((point) => intents[point.id]?.saved === true);
-    case 'planned':
-      return spot.scenes.some((point) => intents[point.id]?.planned === true);
-    default:
-      return true;
-  }
-}
-
-function getSpotIntentScore(spot: AnitabiSpot, intents: SpotIntentMap): number {
-  let score = 0;
-  for (const point of spot.scenes) {
-    const intent = intents[point.id];
-    if (!intent) continue;
-    if (intent.saved) score = Math.max(score, 1);
-    if (intent.planned) score = Math.max(score, 2);
-    if (intent.saved && intent.planned) score = Math.max(score, 3);
-  }
-  return score;
-}
-
-function parseSearchQuery(query: string | undefined): ParsedSearchQuery {
-  const raw = normalizeText(query ?? '');
-  return {
-    raw,
-    episode: parseEpisodeQuery(raw),
-  };
+function getSpotIntentScore(spot: PilgrimageSpot, intents: SpotIntentMap): number {
+  const intent = intents[spot.id];
+  if (intent?.saved && intent.planned) return 3;
+  if (intent?.planned) return 2;
+  if (intent?.saved) return 1;
+  return 0;
 }
 
 function parseEpisodeQuery(query: string): number | null {
-  const compact = query.replace(/\s+/g, '');
-  const match = compact.match(/^(?:ep|episode|第)?0*(\d+)(?:話|话|集)?$/);
+  const match = query.replace(/\s+/g, '').match(/^(?:ep|episode|第)?0*(\d+)(?:話|话|集)?$/);
   if (!match) return null;
   const episode = Number(match[1]);
-  return Number.isInteger(episode) && episode >= 0 ? episode : null;
-}
-
-function normalizedIncludes(value: string | undefined, query: string): boolean {
-  if (!value) return false;
-  return normalizeText(value).includes(query);
+  return Number.isInteger(episode) ? episode : null;
 }
 
 function normalizeText(value: string): string {

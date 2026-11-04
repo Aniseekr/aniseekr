@@ -54,9 +54,9 @@ const DATA_SOURCES: Source[] = [
     icon: 'data-usage',
   },
   {
-    name: 'Anitabi',
-    url: 'https://www.anitabi.cn/',
-    descKey: 'settings.attributionScreen.source.anitabi',
+    name: 'Aniseekr Atlas',
+    url: 'https://atlas.aniseekr.moe/',
+    descKey: 'settings.attributionScreen.source.atlas',
     icon: 'place',
   },
 ];

@@ -79,7 +79,7 @@ suite('AnimeRepository E2E', () => {
     const aniKey = 'seasonal_anilist_2024_WINTER_1_r0';
     const cachedAniList = await CacheService.get(aniKey);
     // Empty seasonal results don't get cached — accept either populated
-    // (typical) or null (anitabi-style empty for very stale season).
+    // (typical) or null when Atlas has no matching work for a stale season.
     if (aniListItems.length > 0) {
       expect(cachedAniList).not.toBeNull();
     }
@@ -105,7 +105,7 @@ suite('AnimeRepository E2E', () => {
     await CacheService.clear();
 
     // Hyouka (Bangumi subject 7157) is a known anime with rich pilgrimage
-    // data on Anitabi. We use the pilgrimage repo directly so this test
+    // data in Atlas. We use the pilgrimage repo directly so this test
     // doesn't depend on the search pipeline (which AniList sometimes
     // rate-limits). The orchestrator's responsibility here is to pass
     // through the bangumi id, which `getSpotsByBangumiId` exercises.
@@ -114,11 +114,8 @@ suite('AnimeRepository E2E', () => {
     const result = await pilgrimageRepository.getSpotsByBangumiId(HYOUKA_BANGUMI_ID);
     expect(result).not.toBeNull();
     if (!result) return;
-    expect(result.id).toBe(HYOUKA_BANGUMI_ID);
-    expect(typeof result.city).toBe('string');
-    // Hyouka is set in Gifu prefecture — but city varies by source data;
-    // assert non-empty rather than exact match.
-    expect(result.city.length).toBeGreaterThan(0);
+    expect(result.key).toBe('hyouka');
+    expect(result.spots.length).toBeGreaterThan(0);
   }, 60_000);
 
   it('E2E-004 fetchAnimeStaff with sourcePlatform=bangumi falls back to Jikan', async () => {

@@ -1,10 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { Radius } from '../../../constants/DesignSystem';
 
 interface ReferenceThumbnailProps {
@@ -54,12 +52,9 @@ export default function ReferenceThumbnail({
         pressed && { opacity: 0.82 },
       ]}>
       {imageUrl ? (
-        <Image
-          source={anitabiImageSource(imageUrl)}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={140}
-        />
+        <View style={[StyleSheet.absoluteFill, styles.placeholder]}>
+          <Ionicons name="image-outline" size={18} color="rgba(255,255,255,0.5)" />
+        </View>
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.placeholder]}>
           <Ionicons name="image-outline" size={18} color="rgba(255,255,255,0.5)" />

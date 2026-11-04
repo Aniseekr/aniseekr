@@ -2,7 +2,7 @@
 //
 // Sub-buckets are derived from the well-known key prefixes used by
 // anime-repository.ts (`anime_detail_`, `seasonal_`, `search_`, ...) and
-// anitabi-service.ts (`anitabi_detail_`). New prefixes that don't appear
+// Atlas (`atlas:`). New prefixes that don't appear
 // in METADATA_GROUPS fall into the `misc` sub-bucket so they remain
 // visible and clearable.
 //
@@ -32,10 +32,10 @@ const METADATA_GROUPS: readonly MetadataGroup[] = [
     prefixes: ['seasonal_', 'seasonalpage_'],
   },
   {
-    id: 'anitabi',
-    label: 'Anitabi pilgrimage data',
-    description: 'Anitabi detailed points',
-    prefixes: ['anitabi_detail_'],
+    id: 'atlas',
+    label: 'Aniseekr Atlas',
+    description: 'Pilgrimage work and spot data',
+    prefixes: ['atlas:'],
   },
   {
     id: 'search',

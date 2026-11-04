@@ -10,6 +10,7 @@ import { formatScore } from '../../../libs/utils/format-score';
 import { prefetchAnimeDetail, pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { useAnimeDisplayTitle } from '../../../libs/i18n/use-display-title';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { PosterRailCard } from '../../pilgrimage/home/PosterRailCard';
 import type { Anime } from '../types';
 
 export function SeasonalPoster({ anime }: { anime: Anime }) {
@@ -19,34 +20,32 @@ export function SeasonalPoster({ anime }: { anime: Anime }) {
   const title = useAnimeDisplayTitle(anime);
   const airingAt = anime.nextAiringEpisode?.airingAt;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <PosterRailCard
       accessibilityLabel={title}
+      imageUri={anime.image}
+      title={
+        <AnimeTitleText
+          anime={anime}
+          numberOfLines={1}
+          style={[Typography.caption, styles.title, { color: theme.text.primary }]}
+        />
+      }
+      meta={
+        airingAt != null ? (
+          <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
+            {t('tabs.discoverHome.airingSlot', {
+              weekday: t(airingWeekdayKey(airingAt)),
+              time: formatAiringClock(airingAt),
+            })}
+          </ThemedText>
+        ) : null
+      }
       onPress={() => {
         hapticsBridge.tap();
         pushAnimeDetail(router, anime);
       }}
       onPressIn={() => prefetchAnimeDetail(anime)}
-      style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}>
-      <Image
-        source={{ uri: anime.image }}
-        style={[styles.poster, { backgroundColor: theme.background.secondary }]}
-        contentFit="cover"
-      />
-      <AnimeTitleText
-        anime={anime}
-        numberOfLines={1}
-        style={[Typography.caption, styles.title, { color: theme.text.primary }]}
-      />
-      {airingAt != null ? (
-        <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-          {t('tabs.discoverHome.airingSlot', {
-            weekday: t(airingWeekdayKey(airingAt)),
-            time: formatAiringClock(airingAt),
-          })}
-        </ThemedText>
-      ) : null}
-    </Pressable>
+    />
   );
 }
 
@@ -100,14 +99,6 @@ export function TrendingRow({ anime, rank }: { anime: Anime; rank: number }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    width: 112,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    paddingHorizontal: 0,
-    gap: Spacing.xxs,
-  },
-  poster: { width: 112, height: 158, borderRadius: Radius.sm },
   title: { width: '100%' },
   row: {
     minHeight: Size.minTouchTarget,

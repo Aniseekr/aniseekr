@@ -61,7 +61,7 @@ export function useSceneSwitcherSpots(
         // user at least sees the headline scenes.
         const lite = await pilgrimageRepository.getSpotsByBangumiId(bangumiId);
         if (cancelled) return;
-        dispatch({ type: 'loaded', spots: lite?.litePoints ?? [] });
+        dispatch({ type: 'loaded', spots: lite?.spots ?? [] });
       } catch {
         if (cancelled) return;
         dispatch({ type: 'failed' });

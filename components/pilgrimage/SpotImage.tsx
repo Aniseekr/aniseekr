@@ -7,7 +7,6 @@ import { Image, type ImageContentFit, type ImageStyle } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
-import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import { sanitizeImageUri } from './spot-image-uri';
 
 export { sanitizeImageUri } from './spot-image-uri';
@@ -18,7 +17,7 @@ export interface SpotImageProps {
   contentFit?: ImageContentFit;
   /** 'top' for portrait posters in wider frames so faces aren't cropped. */
   contentPosition?: 'center' | 'top';
-  /** Tried once when `uri` fails (e.g. anitabi 403) before the no-image tile. */
+  /** Tried once when the primary image fails before showing the no-image tile. */
   fallbackUri?: string | null;
   recyclingKey?: string;
   accessibilityLabel?: string;
@@ -60,7 +59,7 @@ export function SpotImage({
   }
   return (
     <Image
-      source={anitabiImageSource(clean)}
+      source={{ uri: clean }}
       style={style}
       contentFit={contentFit}
       contentPosition={contentPosition}

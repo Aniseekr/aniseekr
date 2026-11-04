@@ -1,48 +1,36 @@
-// Thin service over the anitabi_spots SQLite table: turns a user location +
-// radius into a distance-ranked list of point-level spots. The db access is
-// injectable (deps.queryBox) so getSpotsNear is unit-testable without SQLite.
-
-import { LocalDB } from '../../db';
+import { atlasClient } from './atlas/atlas-client';
 import type { LatLng } from './location-service';
-import {
-  boundsForRadius,
-  rankSpotsByDistance,
-  type LatLngBox,
-  type NearbySpotHit,
-  type SpotIndexRow,
-} from './spot-index';
-import type { BoundingBox } from './anitabi-index';
+import { boundsForRadius, rankSpotsByDistance, type LatLngBox, type NearbySpotHit, type SpotIndexRow } from './spot-index';
 
 export async function getSpotsNear(
   userLocation: LatLng,
   radiusKm: number,
-  limit: number,
-  deps: { queryBox?: (box: LatLngBox) => Promise<SpotIndexRow[]> } = {}
+  limit: number
 ): Promise<NearbySpotHit[]> {
-  const queryBox = deps.queryBox ?? ((box: LatLngBox) => LocalDB.queryAnitabiSpotsByBox(box));
   const box = boundsForRadius(userLocation.latitude, userLocation.longitude, radiusKm);
-  const candidates = await queryBox(box);
-  return rankSpotsByDistance(
-    candidates,
-    userLocation.latitude,
-    userLocation.longitude,
-    radiusKm,
-    limit
-  );
+  const rows = await getSpotsInBounds(box, limit * 8);
+  return rankSpotsByDistance(rows, userLocation.latitude, userLocation.longitude, radiusKm, limit);
 }
 
 export async function getSpotsInBounds(
-  bbox: BoundingBox,
-  limit: number,
-  deps: {
-    queryBounds?: (b: BoundingBox, l: number) => Promise<SpotIndexRow[]>;
-  } = {}
+  bbox: LatLngBox,
+  limit: number
 ): Promise<SpotIndexRow[]> {
-  const queryBounds =
-    deps.queryBounds ?? ((b: BoundingBox, l: number) => LocalDB.queryAnitabiSpotsInBounds(b, l));
-  return queryBounds(bbox, limit);
+  const { rows } = await atlasClient.spotsLite();
+  return rows
+    .filter((row) => row[3] >= bbox.minLat && row[3] <= bbox.maxLat && row[4] >= bbox.minLng && row[4] <= bbox.maxLng)
+    .slice(0, limit > 0 ? limit : undefined)
+    .map(([spotId, workKey, name, lat, lon, confidence, episodes]) => ({
+      spotId,
+      workKey,
+      name,
+      lat,
+      lon,
+      confidence: confidence === 'c' ? 'confirmed' : confidence === 's' ? 'single' : 'unverified',
+      episodes,
+    }));
 }
 
 export async function getSpotIndexCount(): Promise<number> {
-  return LocalDB.getAnitabiSpotCount();
+  return (await atlasClient.spotsLite()).rows.length;
 }

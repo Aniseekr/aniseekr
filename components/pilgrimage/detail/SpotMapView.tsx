@@ -9,12 +9,11 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { resolveMapModeWithClock } from '../../../libs/services/pilgrimage/map-theme-clock';
-import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { LatLng } from '../../../libs/services/pilgrimage/location-service';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
 import type { MapMarkerMode } from '../../../hooks/usePilgrimageDetailView';
-import { hasValidGeo } from './_helpers';
+import { getEpisodeNumber, getSpotGeo } from './_helpers';
 import { MapSurface, type MapMarker, type MapSurfaceHandle } from '../map';
 import { CLUSTER_DISABLE_AT } from '../../../libs/services/pilgrimage/map-engine/cluster-style';
 import {
@@ -34,8 +33,12 @@ export interface SpotMapViewHandle {
   ) => void;
 }
 
+function hasValidGeo(geo: readonly [number, number]): boolean {
+  return Number.isFinite(geo[0]) && Number.isFinite(geo[1]) && (geo[0] !== 0 || geo[1] !== 0);
+}
+
 export interface SpotMapViewProps {
-  spots: readonly AnitabiPoint[];
+  spots: readonly PilgrimageSpot[];
   /** Exact typed locality pins + honest area labels, additive to scene markers. */
   localityMarkers?: readonly MapMarker[];
   visited: VisitedMap;
@@ -57,8 +60,8 @@ export interface SpotMapViewProps {
    * tab bar, etc.). Defaults to 16 (true-fullscreen maps).
    */
   controlsBottomOffset?: number;
-  onSpotPress: (spot: AnitabiPoint) => void;
-  onClusterPick: (spots: readonly AnitabiPoint[]) => void;
+  onSpotPress: (spot: PilgrimageSpot) => void;
+  onClusterPick: (spots: readonly PilgrimageSpot[]) => void;
   onLocalityMarkerPress?: (marker: MapMarker) => void;
   /** Notified the moment the user drags the map (drops follow/compass). */
   onUserPan?: () => void;
@@ -96,29 +99,29 @@ function SpotMapViewImpl({
   const maplibreRef = useRef<MapSurfaceHandle>(null);
   const styles = useMemo(() => makeMapStyles(theme), [theme]);
   const spotsById = useMemo(() => {
-    const byId = new Map<string, AnitabiPoint>();
+    const byId = new Map<string, PilgrimageSpot>();
     for (const spot of spots) {
-      if (hasValidGeo(spot.geo)) byId.set(spot.id, spot);
+      if (getSpotGeo(spot)) byId.set(spot.id, spot);
     }
     return byId;
   }, [spots]);
 
   // Engine-neutral scene markers. The memoized `spotsById` lookup resolves
-  // marker / cluster taps back to the source AnitabiPoint.
+  // marker / cluster taps back to the source PilgrimageSpot.
   const markers = useMemo<MapMarker[]>(() => {
     const out: MapMarker[] = [];
     for (const spot of spots) {
-      if (!hasValidGeo(spot.geo)) continue;
+      const geo = getSpotGeo(spot);
+      if (!geo) continue;
       out.push({
         id: spot.id,
-        lat: spot.geo[0],
-        lng: spot.geo[1],
+        lat: geo[0],
+        lng: geo[1],
         kind: 'spot',
-        title: getPilgrimageSpotTitles(spot).primary,
-        image: spot.image ?? '',
+        title: spot.name,
         color: ringColor,
         visited: visited[spot.id] === true,
-        episode: spot.ep,
+        episode: getEpisodeNumber(spot),
         markerMode: markerMode === 'dot' ? 'dot' : 'bubble',
       });
     }
@@ -130,8 +133,9 @@ function SpotMapViewImpl({
   useEffect(() => {
     if (!focusSpotId) return;
     const spot = spotsById.get(focusSpotId);
-    if (!spot || !hasValidGeo(spot.geo)) return;
-    maplibreRef.current?.focus?.({ lat: spot.geo[0], lng: spot.geo[1], zoom: 16 });
+    const geo = spot ? getSpotGeo(spot) : null;
+    if (!spot || !geo) return;
+    maplibreRef.current?.focus?.({ lat: geo[0], lng: geo[1], zoom: 16 });
   }, [focusSpotId, spotsById]);
 
   // Imperative recenter / heading — driven by the locate-FAB hook so location +
@@ -173,7 +177,7 @@ function SpotMapViewImpl({
           else onLocalityMarkerPress?.(m);
         }}
         onClusterPress={(picked) => {
-          const spotsPicked: AnitabiPoint[] = [];
+          const spotsPicked: PilgrimageSpot[] = [];
           for (const m of picked) {
             const s = spotsById.get(m.id);
             if (s) spotsPicked.push(s);

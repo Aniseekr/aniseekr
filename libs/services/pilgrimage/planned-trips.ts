@@ -14,7 +14,7 @@ export interface PlannedSpot {
 }
 
 export interface PlannedTripGroup {
-  animeId: number;
+  animeId: string;
   name: string;
   cn?: string;
   spots: PlannedSpot[];
@@ -26,7 +26,7 @@ export interface PlannedTrips {
 }
 
 export function groupPlannedIntents(map: SpotIntentMap): PlannedTrips {
-  const byAnime = new Map<number, PlannedTripGroup>();
+  const byAnime = new Map<string, PlannedTripGroup>();
   const uncategorized: string[] = [];
 
   for (const [id, intent] of Object.entries(map)) {
@@ -36,17 +36,16 @@ export function groupPlannedIntents(map: SpotIntentMap): PlannedTrips {
       uncategorized.push(id);
       continue;
     }
-    let group = byAnime.get(meta.animeId);
+    let group = byAnime.get(meta.workKey);
     if (!group) {
       group = {
-        animeId: meta.animeId,
-        name: meta.name,
-        ...(meta.cn ? { cn: meta.cn } : {}),
+        animeId: meta.workKey,
+        name: meta.workTitle,
         spots: [],
       };
-      byAnime.set(meta.animeId, group);
+      byAnime.set(meta.workKey, group);
     }
-    group.spots.push({ id, geo: meta.geo, image: meta.image });
+    if (meta.geo) group.spots.push({ id, geo: meta.geo, image: meta.image ?? '' });
   }
 
   const groups = Array.from(byAnime.values());

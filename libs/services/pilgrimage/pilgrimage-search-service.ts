@@ -3,22 +3,23 @@ import {
   type BangumiV0SearchResponse,
   type BangumiV0Subject,
 } from '../../clients/bangumi-client';
-import { getAllIndexed, type AnitabiIndexEntry } from './anitabi-index';
-import { lookupByBangumiId, type AnitabiCrossIndexEntry } from './anitabi-cross-index';
-import { normalizeAnitabiImageUrl } from './anitabi-image';
-import { normalizeTitleKey } from './bangumi-title-match';
+import { atlasClient, type AtlasCityLabel } from './atlas/atlas-client';
+import type { AtlasWork } from './atlas/types';
+import { normalizeAtlasTitle } from './atlas/atlas-resolver';
 import { pilgrimageRepository } from './pilgrimage-repository';
-import type { AnitabiBangumi } from './types';
+import type { PilgrimageWork } from './types';
 
-export type PilgrimageSearchSource = 'anitabi-index' | 'bangumi-fallback';
+export type PilgrimageSearchSource = 'atlas-index' | 'bangumi-fallback';
 
 export interface PilgrimageSearchResult {
-  bangumiId: number;
+  workKey: string;
+  bangumiId: number | null;
   title: string;
   titleCn: string;
   titleEnglish?: string;
   titleRomaji?: string;
   city: string;
+  cityCodes: string[];
   cover: string;
   color: string;
   pointsLength: number;
@@ -35,35 +36,28 @@ interface BangumiSearchClient {
 }
 
 interface RepositoryLike {
-  getSpotsByBangumiId(bangumiId: number): Promise<AnitabiBangumi | null>;
+  getSpotsByBangumiId(bangumiId: number): Promise<PilgrimageWork | null>;
 }
 
 interface ServiceOptions {
-  getIndexed?: () => readonly AnitabiIndexEntry[];
-  lookupCrossIndex?: (bangumiId: number) => AnitabiCrossIndexEntry | null;
+  works?: () => Promise<AtlasWork[]>;
+  cityLookup?: () => Promise<ReadonlyMap<string, AtlasCityLabel>>;
   bangumiClient?: BangumiSearchClient;
   repository?: RepositoryLike;
 }
 
-interface ScoredEntry {
-  entry: AnitabiIndexEntry;
-  score: number;
-}
-
 const DEFAULT_LIMIT = 20;
-// Only candidates NOT already surfaced locally cost an Anitabi verification
-// call, so a slightly deeper fallback scan is cheap post-union.
 const FALLBACK_CANDIDATE_LIMIT = 15;
 
 export class PilgrimageSearchService {
-  private readonly getIndexed: () => readonly AnitabiIndexEntry[];
-  private readonly lookupCrossIndex: (bangumiId: number) => AnitabiCrossIndexEntry | null;
+  private readonly getWorks: () => Promise<AtlasWork[]>;
+  private readonly getCityLookup: () => Promise<ReadonlyMap<string, AtlasCityLabel>>;
   private readonly bangumiClient: BangumiSearchClient;
   private readonly repository: RepositoryLike;
 
   constructor(options: ServiceOptions = {}) {
-    this.getIndexed = options.getIndexed ?? getAllIndexed;
-    this.lookupCrossIndex = options.lookupCrossIndex ?? lookupByBangumiId;
+    this.getWorks = options.works ?? (async () => (await atlasClient.works()).works);
+    this.getCityLookup = options.cityLookup ?? (() => atlasClient.cityLookup());
     this.bangumiClient = options.bangumiClient ?? BangumiClient;
     this.repository = options.repository ?? pilgrimageRepository;
   }
@@ -73,186 +67,128 @@ export class PilgrimageSearchService {
     if (!trimmed) return [];
 
     const limit = normalizeLimit(options.limit);
-    const local = searchLocalPilgrimageIndex(
-      trimmed,
-      this.getIndexed(),
-      limit,
-      this.lookupCrossIndex
-    );
-    // PILG-019: the fallback used to be gated on `local.length === 0`, so any
-    // weak local hit (a city-substring match) suppressed the broader Bangumi
-    // search and anime missing from the bundled snapshot became unfindable.
-    // Union instead: local hits first, fallback fills the remainder.
+    const works = await this.getWorks();
+    const local = searchAtlasWorks(trimmed, works, limit);
     if (local.length >= limit || options.includeBangumiFallback === false) {
-      return local;
+      return this.addCityLabels(local);
     }
 
     const extras = await this.searchBangumiFallback(
       trimmed,
+      works,
       limit - local.length,
-      new Set(local.map((result) => result.bangumiId))
+      new Set(local.flatMap((result) => (result.bangumiId === null ? [] : [result.bangumiId])))
     );
-    return [...local, ...extras];
+    return this.addCityLabels([...local, ...extras]);
+  }
+
+  private async addCityLabels(results: PilgrimageSearchResult[]): Promise<PilgrimageSearchResult[]> {
+    if (results.length === 0) return results;
+    try {
+      const lookup = await this.getCityLookup();
+      return results.map((result) => ({
+        ...result,
+        city: result.cityCodes
+          .map((code) => lookup.get(code))
+          .filter((city): city is AtlasCityLabel => city !== undefined)
+          .map((city) => `${city.pref} ${city.name}`)
+          .join(' · '),
+      }));
+    } catch {
+      return results;
+    }
   }
 
   private async searchBangumiFallback(
     query: string,
+    works: readonly AtlasWork[],
     limit: number,
-    excludeIds: ReadonlySet<number> = new Set()
+    excludeIds: ReadonlySet<number>
   ): Promise<PilgrimageSearchResult[]> {
     let response: BangumiV0SearchResponse;
     try {
       response = await this.bangumiClient.searchSubjects(query, 1);
-    } catch (err) {
-      console.warn('[PilgrimageSearchService] Bangumi fallback search failed:', err);
+    } catch (error) {
+      console.warn('[PilgrimageSearchService] Bangumi search failed:', error);
       return [];
     }
 
     const candidates = (response.data ?? [])
       .filter((subject) => subject.type === undefined || subject.type === 2)
       .slice(0, FALLBACK_CANDIDATE_LIMIT);
-
     const results: PilgrimageSearchResult[] = [];
-    const seen = new Set<number>(excludeIds);
-    const indexedById = new Map(this.getIndexed().map((entry) => [entry.id, entry]));
+    const seen = new Set(excludeIds);
+
     for (const candidate of candidates) {
       if (!isValidSubjectId(candidate.id) || seen.has(candidate.id)) continue;
       seen.add(candidate.id);
-
-      const indexed = indexedById.get(candidate.id);
-      if (indexed) {
-        results.push(resultFromIndex(indexed, this.lookupCrossIndex(candidate.id)));
-        if (results.length >= limit) break;
-        continue;
-      }
-
-      let anime: AnitabiBangumi | null;
-      try {
-        anime = await this.repository.getSpotsByBangumiId(candidate.id);
-      } catch (err) {
-        console.warn('[PilgrimageSearchService] Anitabi verification failed:', err);
-        continue;
-      }
-      if (!anime) continue;
-
-      results.push(
-        resultFromAnitabi(anime, 'bangumi-fallback', candidate, this.lookupCrossIndex(anime.id))
-      );
+      const work = works.find((item) => (item.bgm ?? []).includes(candidate.id));
+      if (!work) continue;
+      const detail = await this.repository.getSpotsByBangumiId(candidate.id).catch(() => null);
+      if (!detail) continue;
+      results.push(resultFromWork(work, 'bangumi-fallback', candidate));
       if (results.length >= limit) break;
     }
-
     return results;
   }
 }
 
-function searchLocalPilgrimageIndex(
+export function searchAtlasWorks(
   query: string,
-  entries: readonly AnitabiIndexEntry[],
-  limit: number = DEFAULT_LIMIT,
-  lookupCrossIndex: (bangumiId: number) => AnitabiCrossIndexEntry | null = lookupByBangumiId
+  works: readonly AtlasWork[],
+  limit = DEFAULT_LIMIT
 ): PilgrimageSearchResult[] {
-  const normalizedQuery = normalizeSearchKey(query);
+  const normalizedQuery = normalizeAtlasTitle(query);
   if (!normalizedQuery) return [];
 
-  const scored: ScoredEntry[] = [];
-  for (const entry of entries) {
-    const cross = lookupCrossIndex(entry.id);
-    const score = scoreEntry(entry, normalizedQuery, cross);
-    if (score === null) continue;
-    scored.push({ entry, score });
-  }
+  const scored = works.flatMap((work) => {
+    const fields = [work.ja, work.en, work.zh?.hans, work.zh?.hant, ...work.cities].filter(
+      (field): field is string => typeof field === 'string'
+    );
+    const score = fields.reduce<number | null>((best, field) => {
+      const normalized = normalizeAtlasTitle(field);
+      if (!normalized) return best;
+      const candidate = normalized === normalizedQuery
+        ? 0
+        : normalized.startsWith(normalizedQuery)
+          ? 10
+          : normalized.includes(normalizedQuery)
+            ? 20
+            : null;
+      return candidate === null || (best !== null && best <= candidate) ? best : candidate;
+    }, null);
+    return score === null ? [] : [{ work, score }];
+  });
 
   scored.sort(
-    (a, b) =>
-      a.score - b.score ||
-      (b.entry.pointsLength ?? 0) - (a.entry.pointsLength ?? 0) ||
-      a.entry.title.localeCompare(b.entry.title)
+    (a, b) => a.score - b.score || b.work.n - a.work.n || a.work.ja.localeCompare(b.work.ja)
   );
-
-  return scored
-    .slice(0, normalizeLimit(limit))
-    .map(({ entry }) => resultFromIndex(entry, lookupCrossIndex(entry.id)));
+  return scored.slice(0, normalizeLimit(limit)).map(({ work }) => resultFromWork(work));
 }
 
-function scoreEntry(
-  entry: AnitabiIndexEntry,
-  query: string,
-  cross: AnitabiCrossIndexEntry | null
-): number | null {
-  const fields: { value: string | number | null | undefined; base: number }[] = [
-    { value: entry.titleEnglish, base: 0 },
-    { value: cross?.titleEnglish, base: 0 },
-    { value: cross?.titleRomaji, base: 0 },
-    { value: cross?.titleJa, base: 0 },
-    { value: cross?.titleCn, base: 0 },
-    { value: entry.title, base: 0 },
-    { value: entry.cn, base: 0 },
-    { value: entry.city, base: 30 },
-    { value: entry.id, base: 50 },
-  ];
-
-  let best: number | null = null;
-  for (const field of fields) {
-    const value = normalizeSearchKey(String(field.value ?? ''));
-    if (!value) continue;
-    let score: number | null = null;
-    if (value === query) score = field.base;
-    else if (value.startsWith(query)) score = field.base + 10;
-    else if (value.includes(query)) score = field.base + 20;
-
-    if (score !== null && (best === null || score < best)) {
-      best = score;
-    }
-  }
-  return best;
-}
-
-function resultFromIndex(
-  entry: AnitabiIndexEntry,
-  cross: AnitabiCrossIndexEntry | null
+function resultFromWork(
+  work: AtlasWork,
+  source: PilgrimageSearchSource = 'atlas-index',
+  subject?: BangumiV0Subject
 ): PilgrimageSearchResult {
+  const bangumiId = work.bgm?.[0] ?? null;
   return {
-    bangumiId: entry.id,
-    title: cross?.titleJa || entry.title,
-    titleCn: entry.cn || cross?.titleCn || '',
-    titleEnglish: cross?.titleEnglish || entry.titleEnglish || undefined,
-    titleRomaji: cross?.titleRomaji || undefined,
-    city: entry.city,
-    cover: normalizeAnitabiImageUrl(entry.cover, entry.id),
-    color: entry.color,
-    pointsLength: entry.pointsLength,
-    source: 'anitabi-index',
-  };
-}
-
-function resultFromAnitabi(
-  anime: AnitabiBangumi,
-  source: PilgrimageSearchSource,
-  fallbackSubject?: BangumiV0Subject,
-  cross?: AnitabiCrossIndexEntry | null
-): PilgrimageSearchResult {
-  return {
-    bangumiId: anime.id,
-    title: cross?.titleJa || anime.title || fallbackSubject?.name || '',
-    titleCn: anime.cn || cross?.titleCn || fallbackSubject?.name_cn || '',
-    titleEnglish: cross?.titleEnglish || undefined,
-    titleRomaji: cross?.titleRomaji || undefined,
-    city: anime.city ?? '',
-    cover: normalizeAnitabiImageUrl(anime.cover, anime.id),
-    color: anime.color ?? '',
-    pointsLength: anime.pointsLength ?? 0,
+    workKey: work.key,
+    bangumiId,
+    title: work.ja || subject?.name || '',
+    titleCn: work.zh?.hant || work.zh?.hans || subject?.name_cn || '',
+    titleEnglish: work.en || undefined,
+    city: '',
+    cityCodes: work.cities,
+    cover: bangumiId === null ? '' : `https://api.bgm.tv/v0/subjects/${bangumiId}/image?type=common`,
+    color: '',
+    pointsLength: work.n,
     source,
   };
 }
 
-// Normalization lives in bangumi-title-match so the collection resolver and
-// this search scorer agree on what "the same title" means.
-const normalizeSearchKey = normalizeTitleKey;
-
 function normalizeLimit(limit: number | undefined): number {
-  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0) {
-    return DEFAULT_LIMIT;
-  }
+  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0) return DEFAULT_LIMIT;
   return Math.floor(limit);
 }
 

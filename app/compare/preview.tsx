@@ -41,7 +41,6 @@ import {
 import {
   availablePreviewModes,
   buildImportedCompareParams,
-  buildSceneCompareParams,
 } from '../../libs/services/pilgrimage/reference-route';
 import {
   buildPreviewCaptureRecord,
@@ -56,10 +55,6 @@ import {
   ReferencePickerSheet,
   type PickedReference,
 } from '../../components/pilgrimage/camera/ReferencePickerSheet';
-import {
-  anitabiImageSource,
-  toFullResImageUrl,
-} from '../../libs/services/pilgrimage/anitabi-image';
 import { scoreSnapshot } from '../../libs/services/pilgrimage/alignment-scoring';
 import {
   buildCaptureSessionShotFromRoute,
@@ -74,7 +69,6 @@ import { useCaptureSession, type CaptureSessionShot } from '../../hooks/useCaptu
 import { getStringParam } from '../../libs/utils/route-params';
 import { buildShareRouteParams } from '../../libs/services/pilgrimage/share-route-params';
 import { resolveCapturedPhotoDimensions } from '../../libs/services/pilgrimage/camera-engine-parity';
-import { AnitabiOriginCredit } from '../../components/pilgrimage/common/AnitabiOriginCredit';
 
 function getRetakeTip(s: SensorSnapshot | null): TranslationKey | null {
   if (!s) return null;
@@ -125,16 +119,13 @@ export default function ComparePreviewScreen() {
   // Spot-level metadata still arrives via route params. The per-shot data
   // (uri + sensors) now comes from the capture-session store, not params.
   const spotId = getStringParam(params, 'spotId') ?? '';
-  // Strip Anitabi's `?plan=h160` thumbnail token so the side-by-side / overlay
-  // / slider stage renders the original 1920×1080 frame instead of pixelating
-  // the 284×160 thumb.
-  const imageUrl = toFullResImageUrl(getStringParam(params, 'imageUrl') ?? '');
+  const referenceKind = getStringParam(params, 'referenceKind');
+  const imageUrl = referenceKind === 'imported' ? getStringParam(params, 'imageUrl') ?? '' : '';
   // Only a real scene name is ever persisted; the fallback is display-only.
   const sceneNameParam = getStringParam(params, 'name');
   const sceneName =
     sceneNameParam ??
     (imageUrl ? t('pilgrimageUi.preview.sceneFallback') : t('pilgrimage.album.freeCapturesFolder'));
-  const referenceKind = getStringParam(params, 'referenceKind');
   const ep = getStringParam(params, 'ep');
   const animeId = getStringParam(params, 'animeId');
   const animeTitle = getStringParam(params, 'animeTitle');
@@ -159,10 +150,6 @@ export default function ComparePreviewScreen() {
   const origin = getStringParam(params, 'origin');
   const openedFromJournal = origin === 'journal';
   const userEditedRef = useRef(!openedFromJournal);
-  // CC BY-NC-SA 4.0 attribution for the reference scene image — surfaced as
-  // a small "via {origin}" credit below the comparison stage.
-  const sceneOrigin = (getStringParam(params, 'sceneOrigin') ?? '').trim();
-  const sceneOriginURL = (getStringParam(params, 'sceneOriginURL') ?? '').trim();
   const routeShot = useMemo(
     () =>
       buildCaptureSessionShotFromRoute({
@@ -292,22 +279,15 @@ export default function ComparePreviewScreen() {
   // then swap the params so the stage shows the new pairing.
   const handlePickReference = useCallback(
     (picked: PickedReference) => {
-      const next =
-        picked.kind === 'scene'
-          ? buildSceneCompareParams(picked.spot, {
-              animeId: picked.animeId,
-              animeTitle: picked.animeTitle,
-              themeColor,
-            })
-          : buildImportedCompareParams(picked.uri, {
-              label: t('pilgrimageUi.referencePicker.importedLabel'),
-              themeColor,
-              now: Date.now(),
-              nonce: Math.round(Math.random() * 1e6),
-            });
+      const next = buildImportedCompareParams(picked.uri, {
+        label: t('pilgrimageUi.referencePicker.importedLabel'),
+        themeColor,
+        now: Date.now(),
+        nonce: Math.round(Math.random() * 1e6),
+      });
       const nextReference = previewReferenceFromParams(next, {
         fallbackColor: theme.accent,
-        resolveImageUrl: toFullResImageUrl,
+        resolveImageUrl: (uri) => uri,
       });
       const backToOpened =
         `${nextReference.spotId}|${nextReference.imageUrl}` === openedReferenceKey;
@@ -338,8 +318,6 @@ export default function ComparePreviewScreen() {
         ...next,
         spotLat: next.spotLat ?? '',
         spotLng: next.spotLng ?? '',
-        sceneOrigin: next.sceneOrigin ?? '',
-        sceneOriginURL: next.sceneOriginURL ?? '',
         referenceKind: next.referenceKind ?? '',
       });
       setMode(availablePreviewModes(true)[0]);
@@ -1101,7 +1079,7 @@ export default function ComparePreviewScreen() {
                 <View style={styles.overlayFlow}>
                   <Image source={{ uri: shotUri }} style={styles.fullImage} contentFit="contain" />
                   <Image
-                    source={anitabiImageSource(imageUrl)}
+                    source={{ uri: imageUrl }}
                     style={[styles.fullImage, StyleSheet.absoluteFill, { opacity: overlayOpacity }]}
                     contentFit="cover"
                   />
@@ -1124,7 +1102,7 @@ export default function ComparePreviewScreen() {
                     <Animated.View style={[styles.sliderClip, sliderClipStyle]}>
                       {stagePx.width > 0 ? (
                         <Image
-                          source={anitabiImageSource(imageUrl)}
+                          source={{ uri: imageUrl }}
                           style={{ width: stagePx.width, height: stagePx.height }}
                           contentFit="cover"
                         />
@@ -1175,17 +1153,6 @@ export default function ComparePreviewScreen() {
               )}
             </View>
           </View>
-
-          {sceneOrigin ? (
-            <View style={styles.originRow}>
-              <AnitabiOriginCredit
-                source={{ origin: sceneOrigin, originURL: sceneOriginURL || null }}
-                variant="compact"
-                tone="tertiary"
-                textVariant="captionSmall"
-              />
-            </View>
-          ) : null}
 
           {sensorSnapshot && positionScore ? (
             <View
@@ -1402,10 +1369,8 @@ export default function ComparePreviewScreen() {
         visible={referencePickerOpen}
         onClose={() => setReferencePickerOpen(false)}
         onPick={handlePickReference}
-        initialAnimeId={
-          reference.animeId != null && reference.animeId > 0 ? reference.animeId : null
-        }
-        currentSpotId={spotId}
+        episode={ep ?? undefined}
+        time={getStringParam(params, 'time') ?? undefined}
       />
     </GestureHandlerRootView>
   );
@@ -1632,9 +1597,7 @@ function LabeledImage({
 }) {
   return (
     <View style={[styles.labelWrap, compact && { flex: 1 }]}>
-      {/* anitabiImageSource adds WAF headers for anitabi scene urls and
-          no-ops for local capture uris — safe for both LabeledImage inputs. */}
-      <Image source={anitabiImageSource(uri)} style={styles.fullImage} contentFit={contentFit} />
+      <Image source={{ uri }} style={styles.fullImage} contentFit={contentFit} />
       <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']} style={styles.labelGradient} />
       <View style={[styles.labelBadge, { borderColor: accent }]}>
         <View style={[styles.labelDot, { backgroundColor: accent }]} />

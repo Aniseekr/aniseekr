@@ -14,7 +14,6 @@ import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
 import { ThemedButton, ThemedIconButton, ThemedText } from '../../../../components/themed';
-import { SpotImage } from '../../../../components/pilgrimage/SpotImage';
 import { MapSurface } from '../../../../components/pilgrimage/map/MapSurface';
 import { LocateFab } from '../../../../components/pilgrimage/LocateFab';
 import type {
@@ -31,15 +30,14 @@ import {
   orderSpotsByNearestNeighbor,
 } from '../../../../libs/services/pilgrimage/route-order';
 import { buildMultiStopDirectionsUrl } from '../../../../libs/services/pilgrimage/pilgrimage-navigation';
-import { getIndexedById } from '../../../../libs/services/pilgrimage/anitabi-index';
 import { useUserLocationTracking } from '../../../../libs/services/pilgrimage/use-user-location-tracking';
-import { getNumberParam } from '../../../../libs/utils/route-params';
+import { getStringParam } from '../../../../libs/utils/route-params';
 import { formatDistanceKm, hasValidGeo } from '../../../../components/pilgrimage/detail/_helpers';
 import { useT } from '../../../../libs/i18n';
 
 export default function PilgrimageTripScreen() {
   const params = useLocalSearchParams();
-  const animeId = getNumberParam(params, 'animeId');
+  const animeId = getStringParam(params, 'animeId');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
@@ -80,9 +78,8 @@ export default function PilgrimageTripScreen() {
     [intents, animeId]
   );
 
-  const indexed = animeId != null ? getIndexedById(animeId) : null;
-  const title = group?.name || indexed?.title || indexed?.cn || '';
-  const accent = indexed?.color || theme.accent;
+  const title = group?.name ?? '';
+  const accent = theme.accent;
 
   // Drop points with no usable geo before route-ordering them (a spot with
   // (0,0) or non-finite coords would otherwise anchor the nearest-neighbor
@@ -106,7 +103,6 @@ export default function PilgrimageTripScreen() {
         lng: s.geo[1],
         kind: 'spot',
         title,
-        image: s.image,
         color: accent,
         visited: visited[s.id] === true,
         markerMode: 'bubble',
@@ -138,9 +134,7 @@ export default function PilgrimageTripScreen() {
 
   const initialCenter = ordered[0]
     ? { lat: ordered[0].geo[0], lng: ordered[0].geo[1] }
-    : indexed
-      ? { lat: indexed.lat, lng: indexed.lng }
-      : undefined;
+    : undefined;
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -229,7 +223,13 @@ export default function PilgrimageTripScreen() {
             </ThemedText>
           ) : nextStop ? (
             <View style={styles.nextRow}>
-              <SpotImage uri={nextStop.image} style={styles.nextThumb} recyclingKey={nextStop.id} />
+              <View
+                style={[
+                  styles.nextThumb,
+                  { backgroundColor: theme.background.tertiary, alignItems: 'center', justifyContent: 'center' },
+                ]}>
+                <Ionicons name="location-outline" size={20} color={theme.text.secondary} />
+              </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <ThemedText variant="captionSmall" tone="tertiary" weight="700">
                   {t('pilgrimage.trip.nextStop')}

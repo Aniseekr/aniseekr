@@ -20,7 +20,6 @@ import { bottomPad, Radius } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { ThemedText, readableTextOn } from '../../components/themed';
-import { toFullResImageUrl } from '../../libs/services/pilgrimage/anitabi-image';
 import { compositeSubjectIntoPhoto } from '../../libs/services/pilgrimage/subject-composite';
 import { shouldCompositeSubjectOverlay } from '../../libs/services/pilgrimage/subject-composite-plan';
 import { buildAdditionalExif } from '../../libs/services/pilgrimage/build-exif-metadata';
@@ -113,14 +112,12 @@ import {
 } from '../../components/pilgrimage/camera/ReferencePickerSheet';
 import {
   buildImportedCompareParams,
-  buildSceneCompareParams,
 } from '../../libs/services/pilgrimage/reference-route';
 import { buildCameraPreviewParams } from '../../libs/services/pilgrimage/preview-capture';
 import { releaseImportedReference } from '../../libs/services/pilgrimage/reference-image';
 import CaptureModeToast from '../../components/pilgrimage/camera/CaptureModeToast';
 
 import AutoCaptureToast from '../../components/pilgrimage/camera/AutoCaptureToast';
-import { AnitabiOriginCredit } from '../../components/pilgrimage/common/AnitabiOriginCredit';
 
 type CameraRouteParams = {
   spotId: string;
@@ -132,10 +129,8 @@ type CameraRouteParams = {
   themeColor: string;
   spotLat: string;
   spotLng: string;
-  /** Anitabi `origin` attribution for the reference scene (CC BY-NC-SA). */
-  sceneOrigin?: string;
-  /** Anitabi `originURL` link for the reference scene contributor. */
-  sceneOriginURL?: string;
+  time?: string;
+  targetSpotId?: string;
   /** 'imported' when the reference is the user's own image (no spot/anime behind it). */
   referenceKind?: string;
 };
@@ -230,11 +225,7 @@ export default function CompareCaptureScreen() {
   const name = nameParam ?? t('pilgrimageUi.preview.sceneFallback');
   const importedReference = referenceKind === 'imported';
   const themeColor = params.themeColor || theme.accent;
-  const sceneOrigin = (params.sceneOrigin ?? '').trim();
-  const sceneOriginURL = (params.sceneOriginURL ?? '').trim();
-  // Anitabi `?plan=h160` is a 284×160 thumb; upgrade to full 1920×1080 for the
-  // overlay + Skia edge/sketch source.
-  const hiResImageUrl = useMemo(() => toFullResImageUrl(imageUrl), [imageUrl]);
+  const hiResImageUrl = importedReference ? imageUrl : '';
   // An imported reference this camera was opened with is deleted when the
   // camera closes, unless a shot was filed against it.
   useEffect(() => {
@@ -616,26 +607,33 @@ export default function CompareCaptureScreen() {
     setHud((h) => ({ editMode: !h.editMode }));
   }, [setHud]);
 
-  // Swap what this camera compares against — another scene (of this or any
-  // anime) or an imported image. Replaces the route so back still returns to
+  // Swap the comparison reference for an image imported by the user. Replaces
+  // the route so back still returns to
   // wherever the camera was opened from.
   const handlePickReference = useCallback(
     (reference: PickedReference) => {
       setHud({ sceneSwitcherOpen: false });
-      if (reference.kind === 'scene' && reference.spot.id === spotId) return;
-      const next =
-        reference.kind === 'scene'
-          ? buildSceneCompareParams(reference.spot, {
-              animeId: reference.animeId,
-              animeTitle: reference.animeTitle,
-              themeColor,
-            })
-          : buildImportedCompareParams(reference.uri, {
-              label: t('pilgrimageUi.referencePicker.importedLabel'),
-              themeColor,
-              now: Date.now(),
-              nonce: Math.round(Math.random() * 1e6),
-            });
+      const next = buildImportedCompareParams(reference.uri, {
+        label: t('pilgrimageUi.referencePicker.importedLabel'),
+        themeColor,
+        now: Date.now(),
+        nonce: Math.round(Math.random() * 1e6),
+        ...(params.targetSpotId
+          ? {
+              target: {
+                spotId: params.targetSpotId,
+                targetSpotId: params.targetSpotId,
+                name: nameParam ?? '',
+                ep: ep ?? '',
+                animeId: animeId ?? '',
+                animeTitle,
+                spotLat: params.spotLat,
+                spotLng: params.spotLng,
+                time: params.time,
+              },
+            }
+          : {}),
+      });
       router.replace({ pathname: '/compare/[spotId]', params: next });
     },
     [router, spotId, themeColor, setHud, t]
@@ -658,8 +656,8 @@ export default function CompareCaptureScreen() {
           themeColor,
           spotLat: params.spotLat ?? '',
           spotLng: params.spotLng ?? '',
-          ...(sceneOrigin ? { sceneOrigin } : {}),
-          ...(sceneOriginURL ? { sceneOriginURL } : {}),
+          ...(params.targetSpotId ? { targetSpotId: params.targetSpotId } : {}),
+          ...(params.time ? { time: params.time } : {}),
           ...(importedReference ? { referenceKind: 'imported' as const } : {}),
         }),
       });
@@ -675,8 +673,7 @@ export default function CompareCaptureScreen() {
       themeColor,
       params.spotLat,
       params.spotLng,
-      sceneOrigin,
-      sceneOriginURL,
+      params.time,
       importedReference,
     ]
   );
@@ -735,8 +732,8 @@ export default function CompareCaptureScreen() {
   const buildExifNow = useCallback(() => {
     return buildAdditionalExif({
       // An imported reference's id is synthetic — it names no real place.
-      spotId: importedReference ? '' : spotId,
-      spotName: importedReference ? '' : (nameParam ?? ''),
+      spotId: params.targetSpotId ?? (importedReference ? '' : spotId),
+      spotName: params.targetSpotId ? (nameParam ?? '') : importedReference ? '' : (nameParam ?? ''),
       animeId: animeId ?? undefined,
       animeTitle: animeTitle || undefined,
       episode: ep ?? undefined,
@@ -1464,21 +1461,11 @@ export default function CompareCaptureScreen() {
             { top: topBarBottom + 8, left: Math.max(14, insets.left + 12) },
           ]}>
           <ReferenceThumbnail
-            imageUrl={imageUrl}
+            imageUrl={hiResImageUrl}
             themeColor={themeColor}
             isLandscape={isLandscape}
             onPress={() => setHud({ sceneSwitcherOpen: true })}
           />
-          {sceneOrigin ? (
-            <View style={styles.refThumbCredit} pointerEvents="box-none">
-              <AnitabiOriginCredit
-                source={{ origin: sceneOrigin, originURL: sceneOriginURL || null }}
-                variant="inline"
-                textVariant="captionSmall"
-                color="rgba(255,255,255,0.85)"
-              />
-            </View>
-          ) : null}
         </View>
 
         {/* Persistent AUTO chip when the user picked auto mode — flips to
@@ -1721,8 +1708,8 @@ export default function CompareCaptureScreen() {
           visible={sceneSwitcherOpen}
           onClose={() => setHud({ sceneSwitcherOpen: false })}
           onPick={handlePickReference}
-          initialAnimeId={Number(animeId) > 0 ? Number(animeId) : null}
-          currentSpotId={spotId}
+          episode={ep}
+          time={params.time}
         />
       </View>
     </GestureHandlerRootView>

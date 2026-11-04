@@ -1,5 +1,4 @@
 /* eslint-disable no-restricted-syntax -- Existing detail screen styles predate token lint; Phase 3 only swaps loaders and adds resolved-content fade. */
-/* eslint-disable react-hooks/set-state-in-effect -- Existing detail fetch effects populate local state; Phase 3 keeps first-paint data flow unchanged. */
 import { useLocalSearchParams, useNavigation, useRouter, Stack } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Linking, Share, StyleSheet } from 'react-native';
@@ -25,9 +24,10 @@ import type {
   PlatformRatingData,
 } from '../../libs/services/data-sources/anime-data-source';
 import type { PlatformType } from '../../libs/services/auth/types';
-import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
-import { lookupBangumiByPlatformId } from '../../libs/services/pilgrimage/anitabi-cross-index';
-import { dataSourceConfig } from '../../libs/services/data-source-config';
+import {
+  animeDetailAtlasContext,
+  pilgrimageRepository,
+} from '../../libs/services/pilgrimage/pilgrimage-repository';
 import {
   Skeleton,
   ThemedButton,
@@ -39,7 +39,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { PlatformLogo } from '../../components/streaming/PlatformLogo';
 import { AnimePilgrimageCard } from '../../components/pilgrimage/AnimePilgrimageCard';
-import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
+import type { PilgrimageWork } from '../../libs/services/pilgrimage/types';
 import { AddToCollectionSheet } from '../../components/collection/AddToCollectionSheet';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { collectionService } from '../../libs/services/collection/collection-service';
@@ -174,7 +174,45 @@ export default function AnimeDetailScreen() {
     (initialAnime.description !== undefined || initialAnime.episodes !== undefined)
   );
   const [loading, setLoading] = useState(!hasFullRecord);
-  const [pilgrimage, setPilgrimage] = useState<AnitabiBangumi | null>(null);
+  const [pilgrimage, setPilgrimage] = useState<PilgrimageWork | null>(null);
+  const detailId = anime?.id ?? null;
+  const detailLoaded = anime?.idMal !== undefined;
+  const detailTitle = anime?.title ?? null;
+  const detailAniListId = anime?.platformData?.anilist?.id ?? anime?.id ?? null;
+  const detailMalId = anime?.platformData?.myanimelist?.id ?? anime?.idMal ?? null;
+  const detailBangumiId = anime?.platformData?.bangumi?.id ?? null;
+  const detailTitleJa = anime?.titleJapanese ?? null;
+  const detailTitleEn = anime?.titleEnglish ?? null;
+  const detailTitleRomaji = anime?.titleRomaji ?? anime?.title ?? null;
+  const atlasContext = useMemo(
+    () =>
+      detailId && detailLoaded
+        ? animeDetailAtlasContext({
+            id: detailAniListId ?? detailId,
+            idMal: detailMalId == null ? null : Number(detailMalId),
+            title: detailTitle,
+            titleJapanese: detailTitleJa,
+            titleEnglish: detailTitleEn,
+            titleRomaji: detailTitleRomaji,
+            platformData: {
+              anilist: detailAniListId == null ? null : { id: detailAniListId },
+              myanimelist: detailMalId == null ? null : { id: detailMalId },
+              bangumi: detailBangumiId == null ? null : { id: detailBangumiId },
+            },
+          })
+        : null,
+    [
+      detailId,
+      detailLoaded,
+      detailAniListId,
+      detailBangumiId,
+      detailMalId,
+      detailTitle,
+      detailTitleEn,
+      detailTitleJa,
+      detailTitleRomaji,
+    ]
+  );
 
   const [media, dispatchMedia] = useReducer(mediaReducer, INITIAL_MEDIA);
   const {
@@ -259,23 +297,12 @@ export default function AnimeDetailScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!id) return;
+    if (!atlasContext) return;
     setPilgrimage(null);
-
-    // Use the active browse source so the repository's L2 cross-index lookup
-    // can short-circuit (anilist/myanimelist hit L2, others fall through to
-    // the L1 SQLite mapping table). Pre-resolving the bangumiId via L2 also
-    // gives the AnimePilgrimageCard a stable key when we hand it off later.
-    const sourcePlatform = dataSourceConfig.browseSource;
-    const directBangumiId = lookupBangumiByPlatformId(sourcePlatform, id);
 
     const task = runAfterInteractions(() => {
       pilgrimageRepository
-        .getSpotsForAnime({
-          sourcePlatform,
-          id,
-          bangumiId: directBangumiId,
-        })
+        .getSpotsForAnime(atlasContext)
         .then((result) => {
           if (cancelled) return;
           setPilgrimage(result);
@@ -288,7 +315,7 @@ export default function AnimeDetailScreen() {
       cancelled = true;
       task.cancel();
     };
-  }, [id]);
+  }, [atlasContext]);
 
   // Cross-platform media: streaming, themes, relations, staff, ratings.
   // Fired in parallel after the navigation interaction has settled. The
@@ -713,7 +740,7 @@ export default function AnimeDetailScreen() {
                   </Text>
                   <AnimePilgrimageCard
                     anime={pilgrimage}
-                    onPress={(target) => router.push(`/pilgrimage/${target.id}`)}
+                    onPress={(target) => router.push(`/pilgrimage/${target.key}`)}
                   />
                 </View>
               ) : null}

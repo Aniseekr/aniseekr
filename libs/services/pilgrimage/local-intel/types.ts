@@ -27,15 +27,6 @@ export interface IntelProvenance {
   verifiedAt: string;
 }
 
-/**
- * Link to an Anitabi point. Point ids are only stable within one anime, so
- * references are always qualified by the Bangumi subject id.
- */
-export interface SpotRef {
-  bangumiId: number;
-  pointId: string;
-}
-
 export interface StampSpot {
   name: LocalizedText;
   /** Official street address when the source lists one. Omitted for spots
@@ -54,8 +45,6 @@ interface LocalIntelEntryBase extends IntelProvenance {
   description: LocalizedText;
   /** [lat, lng]; null only for area-wide events with no single venue. */
   geo: [number, number] | null;
-  /** Exact Anitabi point anchors. Beats geo proximity when present. */
-  spotRefs?: SpotRef[];
   /** IANA timezone. Defaults to Asia/Tokyo when absent. */
   timezone?: string;
 }

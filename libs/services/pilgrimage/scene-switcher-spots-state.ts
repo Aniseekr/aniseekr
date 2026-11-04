@@ -1,8 +1,8 @@
-import type { AnitabiPoint } from './types';
+import type { PilgrimageSpot } from './types';
 
 export interface SceneSwitcherSpotsState {
   /** `null` until the first fetch resolves; `[]` once a fetch returned nothing. */
-  spots: readonly AnitabiPoint[] | null;
+  spots: readonly PilgrimageSpot[] | null;
   loading: boolean;
 }
 
@@ -11,7 +11,7 @@ export type SceneSwitcherSpotsAction =
   | { type: 'closed' }
   | { type: 'invalid' }
   | { type: 'loading' }
-  | { type: 'loaded'; spots: readonly AnitabiPoint[] }
+  | { type: 'loaded'; spots: readonly PilgrimageSpot[] }
   | { type: 'failed' };
 
 export const INITIAL_SCENE_SWITCHER_SPOTS: SceneSwitcherSpotsState = {

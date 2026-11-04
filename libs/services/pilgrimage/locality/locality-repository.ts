@@ -1,7 +1,5 @@
 import { bundledLocalityDataLoader } from '@/libs/services/pilgrimage/locality/bundled-loader';
-import { anitabiSceneProjector } from '@/libs/services/pilgrimage/locality/anitabi-scene-projector';
 import type {
-  AnitabiSceneProjector,
   AreaDestinationQuery,
   EventQuery,
   LocalityDataLoader,
@@ -26,15 +24,12 @@ import type {
 } from '@/libs/services/pilgrimage/locality/types';
 import { validateLocalityDataEnvelope } from '@/libs/services/pilgrimage/locality/validator';
 
-/** Validated synchronous snapshot queries plus the async Anitabi scene overlay. */
+/** Validated synchronous queries over the current locality snapshot. */
 export class LocalityRepositoryImpl implements LocalityRepository {
   private snapshot: LocalityDataEnvelope | null = null;
   private readonly listeners = new Set<() => void>();
 
-  constructor(
-    private readonly loader: LocalityDataLoader,
-    private readonly sceneProjector: AnitabiSceneProjector = anitabiSceneProjector
-  ) {}
+  constructor(private readonly loader: LocalityDataLoader) {}
 
   getSnapshot(): LocalityDataEnvelope {
     this.snapshot ??= validateLocalityDataEnvelope(this.loader.loadInitial());
@@ -91,37 +86,6 @@ export class LocalityRepositoryImpl implements LocalityRepository {
         (role) => !query.roleKinds || query.roleKinds.includes(role.kind)
       );
       rows.set(place.id, { place, roles: [...roles] });
-    }
-
-    if (query.eventId === undefined && (!query.roleKinds || query.roleKinds.includes('scene'))) {
-      const projection = await this.sceneProjector.getScenePlacesForAnime(animeId);
-      const projectedPlaces = new Map(projection.places.map((place) => [place.id, place]));
-      for (const role of projection.roles) {
-        const place = projectedPlaces.get(role.placeId);
-        if (!place) {
-          throw new Error(
-            `projected scene role ${role.id} references missing place ${role.placeId}`
-          );
-        }
-        if (!role.animeIds.every((id) => place.animeIds.includes(id))) {
-          throw new Error(`projected scene role ${role.id} has inconsistent anime links`);
-        }
-      }
-      for (const place of projection.places) {
-        if (!place.animeIds.includes(animeId)) continue;
-        if (query.hasGeo !== undefined && (place.geo !== null) !== query.hasGeo) continue;
-        const roles = projection.roles.filter(
-          (role) => role.placeId === place.id && role.animeIds.includes(animeId)
-        );
-        const existing = rows.get(place.id);
-        if (existing) {
-          existing.roles.push(
-            ...roles.filter((role) => !existing.roles.some((current) => current.id === role.id))
-          );
-        } else {
-          rows.set(place.id, { place, roles: [...roles] });
-        }
-      }
     }
 
     return [...rows.values()];

@@ -131,8 +131,8 @@ function validateRoleShape(role: PlaceRole): void {
     throw new Error(`role ${role.id} has invalid kind ${String(role.kind)}`);
   }
   if (role.kind === 'scene') {
-    assertPositiveInteger(role.anitabiRef.bangumiId, `role ${role.id} anitabi bangumiId`);
-    assertNonEmptyString(role.anitabiRef.pointId, `role ${role.id} anitabi pointId`);
+    assertNonEmptyString(role.atlasRef.workKey, `role ${role.id} Atlas workKey`);
+    assertNonEmptyString(role.atlasRef.spotId, `role ${role.id} Atlas spotId`);
   } else if (role.kind === 'stamp_stop') {
     assertNonEmptyString(role.campaignId, `role ${role.id} campaignId`);
     assertLocalizedText(role.sourceLabel, `role ${role.id} sourceLabel`);

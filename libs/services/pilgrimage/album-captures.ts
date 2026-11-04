@@ -1,45 +1,29 @@
 import type { PilgrimageCapture } from './captures';
 import { FRAME_MATCH_VERSION } from './frame-match-score';
-import type { AnitabiBangumi, AnitabiPoint } from './types';
+import type { PilgrimageSpot, PilgrimageWork } from './types';
 
-/**
- * Display-only title for a capture whose anime title was never stored. It is
- * a label, not data — never persist it back into a record.
- */
-export function albumFallbackAnimeTitle(animeId: number): string {
-  return `Bangumi #${animeId}`;
-}
-
-/** Reserved synthetic anime id for the "自由拍攝" (free capture) folder. */
 export const FREE_FOLDER_ANIME_ID = -1;
 
 export interface PilgrimageAlbumEntry {
   capture: PilgrimageCapture;
-  spot: AnitabiPoint;
-  anime: AnitabiBangumi;
+  spot: PilgrimageSpot | null;
+  anime: PilgrimageWork | null;
   matchPercent: number | null;
-  /**
-   * True for standalone free captures. They render as a single photo, or as a
-   * comparison against the user's imported reference (`capture.referenceUri`).
-   */
   isFree?: boolean;
 }
 
 interface BuildAlbumEntriesInput {
   captures: readonly PilgrimageCapture[];
   free?: readonly PilgrimageCapture[];
-  animes: readonly AnitabiBangumi[];
+  animes: readonly PilgrimageWork[];
 }
 
 export function getCaptureFrameMatchPercent(capture: PilgrimageCapture): number | null {
   const snapshot = capture.sensorSnapshot;
-  // v1 scores compared whole-frame statistics and rated unrelated scenes ~85%;
-  // they claim a match nobody measured, so only current-metric scores count.
   if (snapshot?.frameMatchVersion !== FRAME_MATCH_VERSION) return null;
   const value = snapshot.frameMatch;
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-  const clamped = Math.max(0, Math.min(1, value));
-  return Math.round(clamped * 100);
+  return Math.round(Math.max(0, Math.min(1, value)) * 100);
 }
 
 export function buildPilgrimageAlbumEntries({
@@ -49,109 +33,42 @@ export function buildPilgrimageAlbumEntries({
 }: BuildAlbumEntriesInput): PilgrimageAlbumEntry[] {
   const entries: PilgrimageAlbumEntry[] = [];
   for (const capture of captures) {
-    const known = findKnownSpot(capture, animes);
-    if (known) {
+    const match = findKnownSpot(capture, animes);
+    if (!match) {
       entries.push({
         capture,
-        anime: known.anime,
-        spot: known.spot,
+        anime: null,
+        spot: null,
         matchPercent: getCaptureFrameMatchPercent(capture),
       });
       continue;
     }
-
-    const fromCapture = buildEntryFromCaptureMetadata(capture);
-    if (fromCapture) entries.push(fromCapture);
+    entries.push({
+      capture,
+      anime: match.anime,
+      spot: match.spot,
+      matchPercent: getCaptureFrameMatchPercent(capture),
+    });
   }
-
   for (const capture of free) {
-    entries.push(buildFreeEntry(capture));
+    entries.push({
+      capture,
+      anime: null,
+      spot: null,
+      matchPercent: null,
+      isFree: true,
+    });
   }
-
   return entries.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt);
-}
-
-function buildFreeEntry(capture: PilgrimageCapture): PilgrimageAlbumEntry {
-  const geo: [number, number] = capture.userLocation
-    ? [capture.userLocation.latitude, capture.userLocation.longitude]
-    : [0, 0];
-  const spot: AnitabiPoint = {
-    id: capture.spotId,
-    name: '', // no reference scene name — folder label comes from i18n, not this
-    // An imported reference becomes the comparison's reference half; without
-    // one this stays empty and the album renders the single captured photo.
-    image: capture.referenceUri ?? '',
-    ep: 0,
-    s: 0,
-    geo,
-  };
-  const anime: AnitabiBangumi = {
-    id: FREE_FOLDER_ANIME_ID,
-    title: '', // free folder title is an i18n string in album.tsx, never this
-    cn: '',
-    city: '',
-    cover: '',
-    color: '',
-    geo,
-    zoom: 12,
-    modified: capture.capturedAt,
-    litePoints: [spot],
-    pointsLength: 0,
-    imagesLength: 0,
-  };
-  return { capture, spot, anime, matchPercent: null, isFree: true };
 }
 
 function findKnownSpot(
   capture: PilgrimageCapture,
-  animes: readonly AnitabiBangumi[]
-): { anime: AnitabiBangumi; spot: AnitabiPoint } | null {
+  animes: readonly PilgrimageWork[]
+): { anime: PilgrimageWork; spot: PilgrimageSpot } | null {
   for (const anime of animes) {
-    const spot = anime.litePoints?.find((point) => point.id === capture.spotId);
+    const spot = anime.spots.find((candidate) => candidate.id === capture.spotId);
     if (spot) return { anime, spot };
   }
   return null;
-}
-
-function buildEntryFromCaptureMetadata(capture: PilgrimageCapture): PilgrimageAlbumEntry | null {
-  if (
-    typeof capture.animeId !== 'number' ||
-    !Number.isFinite(capture.animeId) ||
-    capture.animeId <= 0 ||
-    !capture.spotImage ||
-    !capture.spotName
-  ) {
-    return null;
-  }
-
-  const spot: AnitabiPoint = {
-    id: capture.spotId,
-    name: capture.spotName,
-    cn: capture.spotNameCn,
-    image: capture.spotImage,
-    ep: capture.spotEp ?? 0,
-    s: capture.spotSecond ?? 0,
-    geo: capture.spotGeo ?? [0, 0],
-  };
-  const anime: AnitabiBangumi = {
-    id: capture.animeId,
-    title: capture.animeTitle || albumFallbackAnimeTitle(capture.animeId),
-    cn: capture.animeTitleCn ?? '',
-    city: capture.animeCity ?? '',
-    cover: capture.animeCover ?? '',
-    color: capture.animeColor ?? '',
-    geo: capture.spotGeo ?? [0, 0],
-    zoom: 12,
-    modified: capture.capturedAt,
-    litePoints: [spot],
-    pointsLength: 0,
-    imagesLength: 0,
-  };
-
-  return {
-    capture,
-    spot,
-    anime,
-    matchPercent: getCaptureFrameMatchPercent(capture),
-  };
 }

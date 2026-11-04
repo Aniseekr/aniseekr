@@ -68,7 +68,6 @@ import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-
 import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../../libs/navigation/floating-tab-bar-layout';
 import {
   buildImportedCompareParams,
-  buildSceneCompareParams,
 } from '../../../libs/services/pilgrimage/reference-route';
 import { importLibraryPhoto } from '../../../libs/services/pilgrimage/reference-image';
 import {
@@ -216,11 +215,8 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
         uri: last.uri,
         capturedAt: last.capturedAt,
         source: 'camera',
-        animeId: s.animeId,
         spotName: s.spot.name,
-        spotImage: s.spot.image,
-        spotEp: s.spot.ep,
-        spotGeo: s.spot.geo,
+        spotGeo: s.spot.lat !== null && s.spot.lon !== null ? [s.spot.lat, s.spot.lon] : undefined,
       });
     } catch (error) {
       console.warn('[capture] mount to spot failed', error);
@@ -233,19 +229,12 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   const openWithReference = useCallback(
     (reference: PickedReference) => {
       setPickedReference(reference);
-      const params =
-        reference.kind === 'scene'
-          ? buildSceneCompareParams(reference.spot, {
-              animeId: reference.animeId,
-              animeTitle: reference.animeTitle,
-              themeColor: theme.accent,
-            })
-          : buildImportedCompareParams(reference.uri, {
-              label: t('pilgrimageUi.referencePicker.importedLabel'),
-              themeColor: theme.accent,
-              now: Date.now(),
-              nonce: Math.round(Math.random() * 1e6),
-            });
+      const params = buildImportedCompareParams(reference.uri, {
+        label: t('pilgrimageUi.referencePicker.importedLabel'),
+        themeColor: theme.accent,
+        now: Date.now(),
+        nonce: Math.round(Math.random() * 1e6),
+      });
       router.push({ pathname: '/compare/[spotId]', params });
     },
     [router, t, theme.accent]
@@ -379,11 +368,7 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
             style={({ pressed }) => [styles.referencePill, pressed && { opacity: 0.7 }]}>
             {pickedReference ? (
               <SpotImage
-                uri={
-                  pickedReference.kind === 'scene'
-                    ? pickedReference.spot.image
-                    : pickedReference.uri
-                }
+                uri={pickedReference.uri}
                 style={styles.referenceThumb}
                 contentFit="cover"
               />
@@ -395,11 +380,9 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
               weight="700"
               numberOfLines={1}
               style={styles.referenceText}>
-              {pickedReference?.kind === 'scene'
-                ? getPilgrimageSpotTitles(pickedReference.spot).primary
-                : pickedReference?.kind === 'imported'
-                  ? t('pilgrimageUi.referencePicker.importedLabel')
-                  : t('pilgrimageUi.referencePicker.open')}
+              {pickedReference
+                ? t('pilgrimageUi.referencePicker.importedLabel')
+                : t('pilgrimageUi.referencePicker.open')}
             </ThemedText>
           </Pressable>
         }

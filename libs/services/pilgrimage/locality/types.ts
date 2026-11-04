@@ -139,19 +139,16 @@ interface PlaceRoleBase {
   provenance: EntityProvenance;
 }
 
-/** Qualified Anitabi identity; point ids are only stable within one anime. */
-export interface AnitabiSceneRef {
-  bangumiId: BangumiId;
-  pointId: string;
+/** Atlas work and spot identity for a scene-related Place. */
+export interface AtlasSceneRef {
+  workKey: string;
+  spotId: string;
 }
 
-/**
- * Projection of an existing grouped Anitabi spot into the canonical model.
- * Scene images and point detail remain owned by the Anitabi pipeline.
- */
+/** Scene-related Place relationship. Scene details remain in Atlas. */
 export interface SceneRole extends PlaceRoleBase {
   kind: 'scene';
-  anitabiRef: AnitabiSceneRef;
+  atlasRef: AtlasSceneRef;
 }
 
 /**

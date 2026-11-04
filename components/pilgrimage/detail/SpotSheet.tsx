@@ -6,8 +6,7 @@
 // drag-to-dismiss + early-close UX.
 
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Image } from 'expo-image';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet, {
@@ -17,25 +16,22 @@ import BottomSheet, {
 } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ON_DARK, ThemedIconButton, ThemedText, readableTextOn } from '../../themed';
+import { ON_DARK, ThemedIconButton, ThemedText } from '../../themed';
 import { useT } from '../../../libs/i18n';
 import type { TranslationKey } from '../../../libs/i18n';
 import type { ThemePalette } from '../../../context/ThemeContext';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { AtlasScene } from '../../../libs/services/pilgrimage/atlas/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { useStreetView } from '../../../hooks/useStreetView';
 import {
   bearingDegrees,
-  buildAnitabiMapUrl,
   cardinalFromBearing,
   formatDistanceKm,
-  getPointSourceBangumiId,
-  getPointSourceLabel,
-  hasValidGeo,
+  getSpotConfidenceLabel,
+  getSpotGeo,
   type CardinalKey,
 } from './_helpers';
-import { AnitabiOriginCredit } from '../common/AnitabiOriginCredit';
 import { StreetViewCard } from '../street-view/StreetViewCard';
 import { BestTimeCard } from './BestTimeCard';
 import { IntelEventBanner } from './IntelEventBanner';
@@ -61,26 +57,19 @@ const BEARING_LABEL_KEY: Record<CardinalKey, TranslationKey> = {
 
 export interface SpotSheetProps {
   /** When null the sheet is closed. Setting it open animates the sheet up. */
-  spot: AnitabiPoint | null;
-  scenes: readonly AnitabiPoint[];
+  spot: PilgrimageSpot | null;
+  scenes: readonly AtlasScene[];
   sceneCount: number;
   themeColor: string;
   themeColorFg: string;
   distanceKm: number | null;
   /** User's current coordinates, used to draw a bearing arrow to the spot. */
   userLocation?: { latitude: number; longitude: number } | null;
-  visitedTarget: AnitabiPoint | null;
+  visitedTarget: PilgrimageSpot | null;
   visited: boolean;
   saved: boolean;
   planned: boolean;
   hasCapture: boolean;
-  /**
-   * Bangumi subject id used to build the Anitabi "view on Anitabi" link at
-   * the bottom of the sheet (CC BY-NC-SA 4.0 attribution for the spot data).
-   * Pass the parent anime's id; the sheet falls back to the spot's own
-   * `sourceBangumiId` (series cross-link) when this is null.
-   */
-  anitabiBangumiId?: number | null;
   /**
    * Curated local-intel for this spot (best time / shops / event). All values
    * are web-verified data or real solar math — never placeholders (Rule 8).
@@ -88,14 +77,13 @@ export interface SpotSheetProps {
   intel?: SpotSheetIntel | null;
   theme: ThemePalette;
   onClose: () => void;
-  onToggleVisited: (spot: AnitabiPoint) => void;
-  onToggleSaved: (spot: AnitabiPoint) => void;
-  onTogglePlanned: (spot: AnitabiPoint) => void;
-  onOpenMaps: (spot: AnitabiPoint) => void;
-  onStartCamera: (spot: AnitabiPoint) => void;
-  onFrameShot: (spot: AnitabiPoint) => void;
-  onIdentifyScene: (spot: AnitabiPoint) => void;
-  onSelectScene: (spot: AnitabiPoint) => void;
+  onToggleVisited: (spot: PilgrimageSpot) => void;
+  onToggleSaved: (spot: PilgrimageSpot) => void;
+  onTogglePlanned: (spot: PilgrimageSpot) => void;
+  onOpenMaps: (spot: PilgrimageSpot) => void;
+  onStartCamera: (spot: PilgrimageSpot) => void;
+  onFrameShot: (spot: PilgrimageSpot) => void;
+  onIdentifyScene: (spot: PilgrimageSpot) => void;
 }
 
 function SpotSheetImpl({
@@ -111,7 +99,6 @@ function SpotSheetImpl({
   saved,
   planned,
   hasCapture,
-  anitabiBangumiId = null,
   intel = null,
   theme,
   onClose,
@@ -122,7 +109,6 @@ function SpotSheetImpl({
   onStartCamera,
   onFrameShot,
   onIdentifyScene,
-  onSelectScene,
 }: SpotSheetProps) {
   const router = useRouter();
   const t = useT();
@@ -130,7 +116,7 @@ function SpotSheetImpl({
   const sheetRef = useRef<BottomSheet>(null);
   const sheetIndexRef = useRef(-1);
   const streetViewGateKey =
-    spot && hasValidGeo(spot.geo) ? `${spot.id}:${spot.geo[0]}:${spot.geo[1]}` : null;
+    spot ? `${spot.id}:${spot.lat}:${spot.lon}` : null;
   const [streetViewEnabledKey, setStreetViewEnabledKey] = useState<string | null>(null);
   const streetViewEnabled = streetViewEnabledKey === streetViewGateKey;
   const streetView = useStreetView(spot, { enabled: streetViewEnabled });
@@ -205,24 +191,6 @@ function SpotSheetImpl({
     if (spot) onIdentifyScene(spot);
   }, [onIdentifyScene, spot]);
 
-  // Build the Anitabi map URL for the spot. Prefer the parent-supplied
-  // bangumiId (the anime detail), fall back to the spot's own series source
-  // id (set when this spot was pulled in from a related anime). Returns null
-  // when neither is available, in which case we link to the Anitabi homepage
-  // rather than a broken `?bangumiId=` query.
-  const anitabiUrl = useMemo(() => {
-    if (anitabiBangumiId && Number.isFinite(anitabiBangumiId) && anitabiBangumiId > 0) {
-      return buildAnitabiMapUrl(anitabiBangumiId);
-    }
-    if (spot) {
-      const sourceId = getPointSourceBangumiId(spot);
-      if (sourceId && sourceId > 0) return buildAnitabiMapUrl(sourceId);
-    }
-    return 'https://www.anitabi.cn/';
-  }, [anitabiBangumiId, spot]);
-  const handleOpenAnitabi = useCallback(() => {
-    Linking.openURL(anitabiUrl).catch(() => undefined);
-  }, [anitabiUrl]);
   const handleOpenShop = useCallback((shop: LocalIntelShop) => {
     Linking.openURL(intelLinkUrl(shop)).catch(() => undefined);
   }, []);
@@ -240,18 +208,12 @@ function SpotSheetImpl({
   // failed to snap. We always render the full sheet element and gate the
   // inner content with a null check; visibility is controlled imperatively
   // via the ref + snap index in the effect above.
-  const hasGeo = spot ? hasValidGeo(spot.geo) : false;
+  const spotGeo = spot ? getSpotGeo(spot) : null;
+  const hasGeo = spotGeo !== null;
   const titles = spot ? getPilgrimageSpotTitles(spot) : { primary: '', secondary: '' };
-  const sceneStack = spot && scenes.length > 0 ? scenes : spot ? [spot] : [];
-  const activeSceneIndex =
-    spot && sceneStack.length > 0
-      ? Math.max(
-          0,
-          sceneStack.findIndex((scene) => scene.id === spot.id)
-        )
-      : 0;
-  const visitSpot = visitedTarget ?? spot;
-  const bearing = spot && userLocation && hasGeo ? bearingDegrees(userLocation, spot.geo) : null;
+  const sceneStack = spot ? scenes : [];
+  const activeSceneIndex = 0;
+  const bearing = spot && userLocation && spotGeo ? bearingDegrees(userLocation, spotGeo) : null;
 
   return (
     <BottomSheet
@@ -269,11 +231,7 @@ function SpotSheetImpl({
         ) : (
           <>
             <View style={styles.hero}>
-              <Image
-                source={anitabiImageSource(spot.image)}
-                style={styles.cover}
-                contentFit="cover"
-              />
+              <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]} />
               <LinearGradient
                 colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.76)']}
                 style={styles.sheetHeroGradient}
@@ -308,59 +266,27 @@ function SpotSheetImpl({
               </Pressable>
             </View>
 
-            {sceneStack.length > 1 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.sceneRail}>
-                {sceneStack.map((scene, index) => {
-                  const active = scene.id === spot.id;
-                  const sourceLabel = getPointSourceLabel(scene);
-                  const epLabel = scene.ep > 0 ? `EP ${scene.ep}` : `#${index + 1}`;
-                  return (
-                    <Pressable
-                      key={scene.id}
-                      onPress={() => onSelectScene(scene)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={`Show scene ${index + 1}`}
-                      style={({ pressed }) => [
-                        styles.sceneThumbBtn,
-                        active ? { borderColor: themeColor } : { borderColor: theme.glassBorder },
-                        pressed && { opacity: 0.78 },
-                      ]}>
-                      <Image
-                        source={anitabiImageSource(scene.image)}
-                        style={styles.sceneThumb}
-                        contentFit="cover"
-                      />
-                      <View style={styles.sceneThumbScrim} />
-                      <View
-                        style={[
-                          styles.sceneIndexPill,
-                          { backgroundColor: active ? themeColor : 'rgba(0,0,0,0.62)' },
-                        ]}>
-                        <ThemedText
-                          variant="captionSmall"
-                          weight="800"
-                          numberOfLines={1}
-                          style={{ color: active ? themeColorFg : ON_DARK }}>
-                          {sourceLabel ? `${sourceLabel} ${epLabel}` : epLabel}
-                        </ThemedText>
-                      </View>
-                      {visited && visitSpot && visitSpot.id === scene.id ? (
-                        <View style={styles.sceneVisitedDot}>
-                          <Ionicons
-                            name="checkmark"
-                            size={10}
-                            color={readableTextOn(theme.status.success)}
-                          />
-                        </View>
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+            <View style={styles.sceneRail}>
+              {sceneStack.map((scene, index) => (
+                <View key={`${spot.id}-${index}`}>
+                  <ThemedText variant="captionSmall" tone="secondary">
+                    {[scene.episode, scene.time].filter(Boolean).join(' · ')}
+                  </ThemedText>
+                  {scene.episodeBasis === 'reference' || scene.timeBasis === 'reference' ? (
+                    <ThemedText variant="captionSmall" tone="tertiary">
+                      {t('pilgrimage.identify.referenceBasis')}
+                    </ThemedText>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+            <ThemedText variant="bodySmall" tone="secondary">
+              {spot.address || t('common.unknown')} · {getSpotConfidenceLabel(t, spot.confidence)}
+            </ThemedText>
+            {spot.lat === null || spot.lon === null ? (
+              <ThemedText variant="captionSmall" tone="tertiary">
+                {t('pilgrimage.detail.unverified')}
+              </ThemedText>
             ) : null}
 
             <View style={styles.distanceRow}>
@@ -418,13 +344,6 @@ function SpotSheetImpl({
               <IntelShopsSection rows={intel.shopRows} theme={theme} onOpenShop={handleOpenShop} />
             ) : null}
 
-            <AnitabiOriginCredit
-              source={spot}
-              variant="compact"
-              tone="tertiary"
-              textVariant="captionSmall"
-              style={styles.originRow}
-            />
 
             <View style={styles.intentActions}>
               <Pressable
@@ -547,17 +466,6 @@ function SpotSheetImpl({
                   {t('pilgrimageUi.openInMaps')}
                 </ThemedText>
               </Pressable>
-              <View style={[styles.linkDivider, { backgroundColor: theme.glassBorder }]} />
-              <Pressable
-                onPress={handleOpenAnitabi}
-                accessibilityRole="link"
-                accessibilityLabel={t('pilgrimageUi.attributeAndViewOnAnitabi')}
-                style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.72 }]}>
-                <Ionicons name="open-outline" size={15} color={theme.text.tertiary} />
-                <ThemedText variant="bodySmall" weight="700" tone="secondary">
-                  {t('pilgrimageUi.attributeToAnitabi')}
-                </ThemedText>
-              </Pressable>
             </View>
           </>
         )}
@@ -599,7 +507,6 @@ function areEqual(prev: SpotSheetProps, next: SpotSheetProps): boolean {
     prev.saved === next.saved &&
     prev.planned === next.planned &&
     prev.hasCapture === next.hasCapture &&
-    prev.anitabiBangumiId === next.anitabiBangumiId &&
     prev.theme === next.theme &&
     prev.onClose === next.onClose &&
     prev.onToggleVisited === next.onToggleVisited &&
@@ -609,7 +516,7 @@ function areEqual(prev: SpotSheetProps, next: SpotSheetProps): boolean {
     prev.onStartCamera === next.onStartCamera &&
     prev.onFrameShot === next.onFrameShot &&
     prev.onIdentifyScene === next.onIdentifyScene &&
-    prev.onSelectScene === next.onSelectScene
+    prev.scenes === next.scenes
   );
 }
 

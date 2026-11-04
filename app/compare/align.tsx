@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Magnetometer } from 'expo-sensors';
@@ -18,7 +17,6 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { readableTextOn, ThemedIconButton, ThemedText } from '../../components/themed';
 import { locationService, type LatLng } from '../../libs/services/pilgrimage/location-service';
 import { getNumberParam, getStringParam } from '../../libs/utils/route-params';
-import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import { listItemEnter } from '../../libs/animations/presets';
 
 function bearingBetween(from: LatLng, to: LatLng): number {
@@ -44,13 +42,14 @@ export default function GpsAlignScreen() {
   const { theme } = useTheme();
   const t = useT();
   const params = useLocalSearchParams();
+  const paramsSignature = JSON.stringify(params);
+  const stableParams = useMemo(() => JSON.parse(paramsSignature) as typeof params, [paramsSignature]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const accent = getStringParam(params, 'themeColor') || theme.accent;
   const accentFg = readableTextOn(accent);
-  const sceneName = getStringParam(params, 'name') || 'Scene';
+  const sceneName = getStringParam(params, 'name') || t('pilgrimageUi.preview.sceneFallback');
   const ep = getStringParam(params, 'ep');
-  const imageUrl = getStringParam(params, 'imageUrl');
   const targetLat = getNumberParam(params, 'spotLat');
   const targetLng = getNumberParam(params, 'spotLng');
 
@@ -125,9 +124,9 @@ export default function GpsAlignScreen() {
     hapticsBridge.success();
     router.replace({
       pathname: '/compare/[spotId]',
-      params: { ...params },
+      params: { ...stableParams },
     });
-  }, [router, params]);
+  }, [router, stableParams]);
 
   return (
     <View style={styles.root}>
@@ -154,20 +153,10 @@ export default function GpsAlignScreen() {
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}>
           <View style={styles.targetCard}>
-            {imageUrl ? (
-              <Image
-                source={anitabiImageSource(imageUrl)}
-                style={styles.targetThumb}
-                contentFit="cover"
-                transition={140}
-              />
-            ) : (
-              <View style={styles.targetThumb} />
-            )}
             <View style={styles.targetBody}>
               <View style={[styles.targetPill, { backgroundColor: `${accent}33` }]}>
                 <ThemedText variant="captionSmall" weight="700" style={{ color: accent }}>
-                  {ep ? `EP ${ep}` : 'TARGET'}
+                  {ep ? t('pilgrimage.album.epLabel', { ep }) : t('pilgrimageUi.target')}
                 </ThemedText>
               </View>
               <ThemedText variant="titleMedium" weight="700" numberOfLines={2}>

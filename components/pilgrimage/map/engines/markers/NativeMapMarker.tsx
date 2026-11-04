@@ -14,7 +14,6 @@ import {
   resolveMarkerVisual,
   type MarkerVisual,
 } from '../../../../../libs/services/pilgrimage/map-engine/marker-style';
-import { anitabiImageSource } from '../../../../../libs/services/pilgrimage/anitabi-image';
 import { readableTextOn } from '../../../../themed/contrast';
 import { sanitizeImageUri } from '../../../spot-image-uri';
 
@@ -98,7 +97,7 @@ function BalloonMarker({
         </View>
         {imageUri ? (
           <Image
-            source={anitabiImageSource(imageUri)}
+            source={{ uri: imageUri }}
             style={StyleSheet.absoluteFill}
             onError={() => undefined}
           />

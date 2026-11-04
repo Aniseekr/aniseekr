@@ -1237,6 +1237,11 @@ function mapAniListDetailToAnime(item: AniListAnime): Anime {
     item.title.english && item.title.english !== primary ? item.title.english : undefined;
   return {
     id: String(item.id),
+    idMal: item.idMal,
+    platformData: {
+      anilist: { id: String(item.id) },
+      ...(item.idMal != null ? { myanimelist: { id: String(item.idMal) } } : {}),
+    },
     title: primary,
     titleEnglish: english,
     titleRomaji: item.title.romaji || undefined,

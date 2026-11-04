@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
+import { useT } from '../../../libs/i18n';
 
 export default function PilgrimageLayout() {
+  const t = useT();
   // The hub map renders its own native <MapSurface> inline (see map.tsx). A
   // native map inside the screen is hidden correctly by the navigator when
   // covered and stays warm while the hub sits under a pushed detail screen, so
@@ -11,5 +13,15 @@ export default function PilgrimageLayout() {
   // The hub-snapshot cache warm lives in app/_layout.tsx (root) — an effect
   // here would run in the same commit as the hub's useState initializer and
   // always lose that race.
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen
+        name="index"
+        options={{
+          title: t('tabs.pilgrimage'),
+          headerBackTitle: t('tabs.pilgrimage'),
+        }}
+      />
+    </Stack>
+  );
 }

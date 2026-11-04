@@ -16,20 +16,24 @@ import { collectionPilgrimageService } from '../libs/services/pilgrimage/collect
 import { FEATURED_PILGRIMAGE_ANIME } from '../libs/services/pilgrimage/featured-anime';
 import {
   buildPilgrimageAlbumEntries,
-  FREE_FOLDER_ANIME_ID,
   type PilgrimageAlbumEntry,
 } from '../libs/services/pilgrimage/album-captures';
-import { getPilgrimageSpotTitles } from '../libs/services/pilgrimage/pilgrimage-localization';
+import {
+  getPilgrimageAnimeTitles,
+  getPilgrimageSpotTitles,
+} from '../libs/services/pilgrimage/pilgrimage-localization';
 import {
   releaseImportedPhoto,
   releaseImportedReference,
 } from '../libs/services/pilgrimage/reference-image';
-import type { AnitabiBangumi } from '../libs/services/pilgrimage/types';
+import type { PilgrimageWork } from '../libs/services/pilgrimage/types';
 import { buildStampBooks } from '../libs/services/pilgrimage/locality/stamp-rally';
 import { useStampRallyRows } from '../components/pilgrimage/rally/useStampRallyRows';
 
 export interface JournalFolder {
-  anime: AnitabiBangumi;
+  key: string;
+  anime: PilgrimageWork | null;
+  title: string;
   entries: PilgrimageAlbumEntry[];
   lastCapturedAt: number;
   visitedSpots: number;
@@ -39,7 +43,7 @@ export function usePilgrimageJournalData() {
   const t = useT();
   // MMKV seed keeps the first frame populated for a warm Journal tab.
   const [capturesV2, setCapturesV2] = useState<CapturesIndexV2>(loadCapturesV2Sync);
-  const [animes, setAnimes] = useState<AnitabiBangumi[]>([]);
+  const [animes, setAnimes] = useState<PilgrimageWork[]>([]);
   const { rows, collectedAt } = useStampRallyRows();
 
   useFocusEffect(useCallback(() => setCapturesV2(loadCapturesV2Sync()), []));
@@ -47,10 +51,10 @@ export function usePilgrimageJournalData() {
   useEffect(() => {
     let cancelled = false;
     async function loadAnimeIndex() {
-      const byId = new Map<number, AnitabiBangumi>();
+      const byKey = new Map<string, PilgrimageWork>();
       try {
         for (const entry of await collectionPilgrimageService.getEntries()) {
-          byId.set(entry.anime.id, entry.anime);
+          byKey.set(entry.anime.key, entry.anime);
         }
       } catch (error) {
         console.warn('[PilgrimageAlbum] collection anime load failed:', error);
@@ -61,9 +65,9 @@ export function usePilgrimageJournalData() {
         )
       );
       for (const result of featured) {
-        if (result.status === 'fulfilled' && result.value) byId.set(result.value.id, result.value);
+        if (result.status === 'fulfilled' && result.value) byKey.set(result.value.key, result.value);
       }
-      if (!cancelled) setAnimes([...byId.values()]);
+      if (!cancelled) setAnimes([...byKey.values()]);
     }
     void loadAnimeIndex();
     return () => {
@@ -78,15 +82,22 @@ export function usePilgrimageJournalData() {
   }, [capturesV2, animes]);
 
   const folders = useMemo(() => {
-    const byId = new Map<number, JournalFolder>();
+    const byId = new Map<string, JournalFolder>();
     for (const entry of entries) {
-      const existing = byId.get(entry.anime.id);
+      const key = entry.anime?.key ?? (entry.isFree ? 'free' : `legacy:${entry.capture.animeId ?? 'unknown'}`);
+      const existing = byId.get(key);
       if (existing) {
         existing.entries.push(entry);
         existing.lastCapturedAt = Math.max(existing.lastCapturedAt, entry.capture.capturedAt);
       } else {
-        byId.set(entry.anime.id, {
+        byId.set(key, {
+          key,
           anime: entry.anime,
+          title: entry.anime
+            ? getPilgrimageAnimeTitles(entry.anime).primary
+            : entry.isFree
+              ? t('pilgrimage.album.freeCapturesFolder')
+              : t('pilgrimage.album.oldSpot'),
           entries: [entry],
           lastCapturedAt: entry.capture.capturedAt,
           visitedSpots: 0,
@@ -96,12 +107,12 @@ export function usePilgrimageJournalData() {
     for (const folder of byId.values()) {
       folder.entries.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt);
       folder.visitedSpots =
-        folder.anime.id === FREE_FOLDER_ANIME_ID
+        folder.key === 'free' || folder.anime === null
           ? 0
-          : new Set(folder.entries.map((entry) => entry.spot.id)).size;
+          : new Set(folder.entries.flatMap((entry) => entry.spot ? [entry.spot.id] : [])).size;
     }
     return [...byId.values()].sort((a, b) => b.lastCapturedAt - a.lastCapturedAt);
-  }, [entries]);
+  }, [entries, t]);
 
   const stats = useMemo(
     () => ({
@@ -122,7 +133,9 @@ export function usePilgrimageJournalData() {
         t('pilgrimage.album.deleteBody', {
           title: entry.isFree
             ? t('pilgrimage.album.freeCapturesFolder')
-            : getPilgrimageSpotTitles(entry.spot).primary,
+            : entry.spot
+              ? getPilgrimageSpotTitles(entry.spot).primary
+              : t('pilgrimage.album.oldSpot'),
         }),
         [
           { text: t('common.cancel'), style: 'cancel' },

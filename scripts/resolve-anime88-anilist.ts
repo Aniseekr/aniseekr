@@ -24,14 +24,14 @@ const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const DELAY_MS = Number(process.env.ANILIST_DELAY_MS ?? '1100');
 const FORCE = process.argv.includes('--force');
 
-// Bangumi ids manually pointed at Anitabi-rich canonical subjects in
+// Bangumi ids manually pointed at Atlas-rich canonical subjects in
 // build-anime-tourism-88.ts. Resolve AniList by ID for those rows so --force
 // does not drift them back to the exact sequel/movie title.
 const ANILIST_OVERRIDES: Record<number, { anilistId: number; reason: string }> = {
-  265: { anilistId: 30, reason: 'manual_anitabi_prefer_main_series' },
-  289: { anilistId: 934, reason: 'manual_anitabi_prefer_main_series' },
-  40310: { anilistId: 14131, reason: 'manual_anitabi_prefer_main_series' },
-  110467: { anilistId: 20812, reason: 'manual_anitabi_prefer_main_series' },
+  265: { anilistId: 30, reason: 'manual_prefer_main_series' },
+  289: { anilistId: 934, reason: 'manual_prefer_main_series' },
+  40310: { anilistId: 14131, reason: 'manual_prefer_main_series' },
+  110467: { anilistId: 20812, reason: 'manual_prefer_main_series' },
   148099: { anilistId: 21403, reason: 'manual_exact_subject' },
 };
 

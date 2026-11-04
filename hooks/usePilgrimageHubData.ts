@@ -1,367 +1,131 @@
-// Data cluster for the pilgrimage hub map
-// (components/pilgrimage/home/ExplorerMapView.tsx).
-//
-// Owns the "known anime" set and everything that feeds it: the synchronous
-// snapshot/index seed (so the map + sheet render on frame 1, CLAUDE.md Rule
-// 10), the collection + featured backfill, MMKV-seeded visited/capture state,
-// and the bounds-/location-driven lazy loading from the offline anitabi index.
-//
-// Lifted out of the screen so the route file stays a view orchestrator rather
-// than a state dumping ground (CLAUDE.md Rule 9). The screen passes in the
-// route's `focus` bangumi id and the live `userLocation`; everything else is
-// internal. View state (search/filter/layout/region/focused card and all the
-// derived view memos + handlers) stays in the screen and consumes these
-// outputs exactly where the old local state used to live.
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import worksSnapshot from '../libs/services/pilgrimage/atlas/works.snapshot.json';
+import { atlasClient } from '../libs/services/pilgrimage/atlas/atlas-client';
+import type { AtlasWorkIndex } from '../libs/services/pilgrimage/atlas/types';
+import type { BBox } from '../libs/services/pilgrimage/map-engine/types';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
 import { FEATURED_PILGRIMAGE_ANIME } from '../libs/services/pilgrimage/featured-anime';
-import { collectionPilgrimageService } from '../libs/services/pilgrimage/collection-pilgrimage-service';
+import { LocalDB } from '../libs/db';
+import { dataSourceConfig } from '../libs/services/data-source-config';
 import type { LatLng } from '../libs/services/pilgrimage/location-service';
-import type { AnitabiBangumi } from '../libs/services/pilgrimage/types';
-import {
-  getAnimeInBounds,
-  type AnitabiIndexEntry,
-  type BoundingBox,
-} from '../libs/services/pilgrimage/anitabi-index';
-import { getNearbyMapEntries } from '../libs/services/pilgrimage/map-nearby';
-import {
-  getPilgrimageHubSnapshot,
-  updatePilgrimageHubSnapshot,
-  PERSIST_TTL_MS as HUB_SNAPSHOT_PERSIST_TTL_MS,
-} from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { loadVisitedSpotsSync, type VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
 import { loadCapturesSync } from '../libs/services/pilgrimage/captures';
-import {
-  appendIndexedEntriesExcludingKnownAnimes,
-  buildKnownAnimeIdSet,
-  buildSeededPilgrimageAnimes,
-  seedPilgrimageAnimeFromIndex,
-} from '../libs/services/pilgrimage/pilgrimage-screen-state';
-import { shouldLoadPilgrimageMapBounds } from '../libs/services/pilgrimage/pilgrimage-design-flow';
-import {
-  buildPilgrimageCollectionState,
-  mergePilgrimageAnimeList,
-  shouldRefreshPilgrimageCollectionOnFocus,
-} from '../libs/services/pilgrimage/pilgrimage-hub-collection-state';
+import type { PilgrimageWork } from '../libs/services/pilgrimage/types';
 
-const COLLECTION_BACKFILL_TARGET = 16;
-const FEATURED_PILGRIMAGE_IDS = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId);
-
-// Max featured `/lite` fetches in flight at once. The hub fires one request per
-// FEATURED_PILGRIMAGE_IDS entry on cold start; firing all ~29 at once is a
-// request storm against api.anitabi.cn during the most contended moment of
-// app launch. A small pool keeps the same batching/flush + cancellation
-// behavior while bounding concurrency.
-const FEATURED_FETCH_CONCURRENCY = 6;
-
-function buildInitialMapSeedIds(focusBangumiId: number | null): number[] {
-  if (focusBangumiId === null) return FEATURED_PILGRIMAGE_IDS;
-  return [focusBangumiId, ...FEATURED_PILGRIMAGE_IDS];
-}
+const index = worksSnapshot as AtlasWorkIndex;
+const featuredIds = FEATURED_PILGRIMAGE_ANIME.map(({ bangumiId }) => bangumiId);
 
 export interface UsePilgrimageHubDataParams {
-  /** Bangumi id from the route's `focus` param (null when none). Seeds the
-   *  initial known-anime list so the focused marker renders on frame 1. */
   focusBangumiId: number | null;
-  /** Live user location from the tracking hook (null until a fix lands). Drives
-   *  the nearby-index merge effect. */
   userLocation: LatLng | null;
 }
 
 export interface UsePilgrimageHubData {
-  /** Collection + featured-backfilled animes (the canonical loaded set). */
-  animes: AnitabiBangumi[];
-  /** `animes` unioned with lazy index-derived entries — the full known set. */
-  knownAnimes: AnitabiBangumi[];
-  /** Bangumi ids present in the user's collection. */
+  animes: PilgrimageWork[];
+  knownAnimes: PilgrimageWork[];
   collectionIds: Set<number>;
-  /** Lazy-loaded offline-index entries keyed by bangumi id (additive only). */
-  extraIndexed: Map<number, AnitabiIndexEntry>;
-  /** True only on a cold start with no seeded animes. */
+  extraIndexed: Map<string, PilgrimageWork>;
   loading: boolean;
-  /** Visited spot ids (MMKV-seeded on the first frame). */
   visited: VisitedMap;
-  /** Count of photographed spots (MMKV-seeded on the first frame). */
   captureCount: number;
-  /** Map-bounds callback: lazy-load index entries that fall into the viewport. */
-  handleBoundsChange: (bounds: BoundingBox) => void;
+  handleBoundsChange: (bounds: BBox) => void;
 }
 
-export function usePilgrimageHubData({
-  focusBangumiId,
-  userLocation,
-}: UsePilgrimageHubDataParams): UsePilgrimageHubData {
-  const initialSeedAnimes = useMemo(
-    () => buildSeededPilgrimageAnimes(buildInitialMapSeedIds(focusBangumiId)),
+export function usePilgrimageHubData({ focusBangumiId, userLocation }: UsePilgrimageHubDataParams): UsePilgrimageHubData {
+  const initial = useMemo(
+    () => seedWorks(focusBangumiId === null ? featuredIds : [focusBangumiId, ...featuredIds]),
     [focusBangumiId]
   );
-  // Stale-while-revalidate: accept a persisted snapshot up to the 24h budget
-  // it's written with, not the tighter 5-min default — a cold start after an
-  // overnight-closed app should still paint the map's collection/featured
-  // markers from disk instead of dropping back to the bundled offline seed.
-  const [initialSnapshot] = useState(() => getPilgrimageHubSnapshot(HUB_SNAPSHOT_PERSIST_TTL_MS));
-  const hasInitialCollection = Object.prototype.hasOwnProperty.call(
-    initialSnapshot ?? {},
-    'collectionAnimes'
-  );
-  const hasInitialFeatured = Object.prototype.hasOwnProperty.call(
-    initialSnapshot ?? {},
-    'featuredAnimes'
-  );
-  const initialAnimes = useMemo(
-    () =>
-      mergePilgrimageAnimeList(initialSeedAnimes, [
-        ...(initialSnapshot?.collectionAnimes ?? []),
-        ...(initialSnapshot?.featuredAnimes ?? []),
-      ]),
-    [initialSeedAnimes, initialSnapshot]
-  );
-
-  // ─── Data state ─────────────────────────────────────────────────────────
-  // Collection + featured-backfilled animes are the canonical "known" set.
-  // Bounds-driven lazy loading appends entries from the offline anitabi index
-  // as the user pans, so the on-map markers + sheet list grow with the view.
-  const [animes, setAnimes] = useState<AnitabiBangumi[]>(() => initialAnimes);
-  const animesRef = useRef<AnitabiBangumi[]>(initialAnimes);
-  const [collectionIds, setCollectionIds] = useState<Set<number>>(
-    () => new Set((initialSnapshot?.collectionAnimes ?? []).map((anime) => anime.id))
-  );
-  const [loading, setLoading] = useState(initialAnimes.length === 0);
-  // Seed synchronously from MMKV so visited markers + the capture count are
-  // correct on the first frame. Re-seeded on focus below so a check-in made
-  // on the spot detail screen (or the trip map) shows up on the markers
-  // without leaving this hub screen frozen at its mount-time snapshot.
+  const [animes, setAnimes] = useState<PilgrimageWork[]>(initial);
+  const [extraIndexed, setExtraIndexed] = useState<Map<string, PilgrimageWork>>(() => new Map());
+  const extraRef = useRef(extraIndexed);
+  const loadedKeys = useRef(new Set<string>());
+  const [collectionIds, setCollectionIds] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(initial.length === 0);
   const [visited, setVisited] = useState<VisitedMap>(loadVisitedSpotsSync);
   const [captureCount] = useState(() => Object.keys(loadCapturesSync()).length);
+  extraRef.current = extraIndexed;
 
-  // Lazy-loaded entries from the offline index, keyed by bangumi id and
-  // additive only (we never remove — marker IDs dedupe downstream, and
-  // pan-back-and-forth wants the markers to stay put).
-  const [extraIndexed, setExtraIndexed] = useState<Map<number, AnitabiIndexEntry>>(() => new Map());
-  const extraIndexedRef = useRef(extraIndexed);
-
-  const userLocationRef = useRef<LatLng | null>(userLocation);
-
-  animesRef.current = animes;
-
-  const refreshCollectionAnimes = useCallback(
-    async (isActive: () => boolean = () => true): Promise<number | null> => {
-      const entries = await collectionPilgrimageService.getEntries();
-      if (!isActive()) return null;
-      const { collectionAnimes, collectionIds: nextCollectionIds } =
-        buildPilgrimageCollectionState(entries);
-      setCollectionIds(nextCollectionIds);
-      setAnimes((current) => mergePilgrimageAnimeList(current, collectionAnimes));
-      updatePilgrimageHubSnapshot({ collectionAnimes });
-      return collectionAnimes.length;
-    },
-    []
-  );
-
-  // ─── Data loading ───────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    let flushTimer: ReturnType<typeof setTimeout> | null = null;
-    const pendingFeatured: AnitabiBangumi[] = [];
-
-    const mergeAnimes = (incoming: readonly AnitabiBangumi[]) => {
-      if (incoming.length === 0) return;
-      setAnimes((current) => mergePilgrimageAnimeList(current, incoming));
-    };
-
-    const commitFeatured = () => {
-      flushTimer = null;
-      if (cancelled || pendingFeatured.length === 0) return;
-      const batch = pendingFeatured.splice(0);
-      mergeAnimes(batch);
-    };
-
-    const scheduleFeaturedCommit = () => {
-      if (flushTimer !== null) return;
-      flushTimer = setTimeout(commitFeatured, 200);
-    };
-
-    const hydrateFeatured = () => {
-      // Bounded-concurrency pool over FEATURED_PILGRIMAGE_IDS: at most
-      // FEATURED_FETCH_CONCURRENCY `/lite` fetches run at once. Each settled
-      // request pulls the next id off the queue, so the end result (every id
-      // fetched, batched via scheduleFeaturedCommit, flushed once the last
-      // one settles) and the cancellation semantics are unchanged — only the
-      // cold-start request storm is bounded.
-      const queue = FEATURED_PILGRIMAGE_IDS.slice();
-      let remaining = queue.length;
-      if (remaining === 0) return;
-
-      const settleOne = () => {
-        if (cancelled) return;
-        remaining -= 1;
-        if (remaining === 0) {
-          if (flushTimer !== null) {
-            clearTimeout(flushTimer);
-            flushTimer = null;
-          }
-          commitFeatured();
-          return;
-        }
-        pump();
-      };
-
-      const fetchOne = (bangumiId: number) => {
-        pilgrimageRepository
-          .getSpotsByBangumiId(bangumiId)
-          .then((anime) => {
-            if (cancelled || !anime) return;
-            pendingFeatured.push(anime);
-            scheduleFeaturedCommit();
-          })
-          .catch((err) => {
-            if (!cancelled) {
-              console.warn('[PilgrimageMap] featured fetch failed:', bangumiId, err);
-            }
-          })
-          .finally(settleOne);
-      };
-
-      // Pull the next id off the queue when a slot frees up.
-      const pump = () => {
-        if (cancelled) return;
-        const next = queue.shift();
-        if (next === undefined) return;
-        fetchOne(next);
-      };
-
-      const initial = Math.min(FEATURED_FETCH_CONCURRENCY, queue.length);
-      for (let i = 0; i < initial; i += 1) pump();
-    };
-
-    (async () => {
-      let collectionCount = initialSnapshot?.collectionAnimes?.length ?? 0;
-      if (!hasInitialCollection) {
-        try {
-          const nextCollectionCount = await refreshCollectionAnimes(() => !cancelled);
-          if (nextCollectionCount !== null) collectionCount = nextCollectionCount;
-        } catch (err) {
-          console.warn('[PilgrimageMap] collection load failed:', err);
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      } else {
-        if (!cancelled) setLoading(false);
-      }
-
-      if (!cancelled && !hasInitialFeatured && collectionCount < COLLECTION_BACKFILL_TARGET) {
-        hydrateFeatured();
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (flushTimer !== null) clearTimeout(flushTimer);
-    };
-  }, [hasInitialCollection, hasInitialFeatured, initialSnapshot, refreshCollectionAnimes]);
-
-  const focusRefreshSeenRef = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      const hasSeenFocus = focusRefreshSeenRef.current;
-      focusRefreshSeenRef.current = true;
-
-      // Screens pushed on top (spot detail check-in, the trip map) can
-      // change visited spots in MMKV while the map hub stays mounted
-      // underneath — re-seed on every focus after the first so returning
-      // here shows current markers instead of the value frozen at mount
-      // (mirrors plan.tsx / usePilgrimageHubScreenData).
-      if (hasSeenFocus) setVisited(loadVisitedSpotsSync());
-
-      if (
-        !shouldRefreshPilgrimageCollectionOnFocus({
-          hasInitialCollection,
-          hasSeenFocus,
-        })
-      ) {
-        return;
-      }
-
-      let active = true;
-      refreshCollectionAnimes(() => active).catch((err) => {
-        if (active) console.warn('[PilgrimageMap] collection focus refresh failed:', err);
-      });
-      return () => {
-        active = false;
-      };
-    }, [hasInitialCollection, refreshCollectionAnimes])
-  );
-
-  // `captureCount` is seeded synchronously from MMKV in the useState
-  // initializer above and never reconciled — the map hub only ever displays
-  // the count, it doesn't drive marker state, so a one-tick-stale count on
-  // return from another screen is an acceptable trade against an extra
-  // re-render of the marker layer.
-
-  // Keep the imperative ref aligned with the hook's location so callers that
-  // depend on it (mergeNearbyIndexed below) see the latest fix without
-  // reading React state at sync time.
-  userLocationRef.current = userLocation;
-
-  const appendExtraIndexed = useCallback((entries: readonly AnitabiIndexEntry[]) => {
-    if (entries.length === 0) return;
-    const next = appendIndexedEntriesExcludingKnownAnimes(
-      extraIndexedRef.current,
-      entries,
-      animesRef.current
+  const refreshCollection = useCallback(async () => {
+    const db = await LocalDB.getDatabase();
+    const entries = await db.getAllAsync<{ anime_id: string }>(
+      `SELECT anime_id FROM user_anime
+       UNION
+       SELECT id AS anime_id FROM favorites`
     );
-    if (next === extraIndexedRef.current) return;
-    extraIndexedRef.current = next;
-    setExtraIndexed(next);
+    const ids = [...new Set(entries.map((entry) => entry.anime_id))];
+    const resolved = (await Promise.all(ids.map((id) => pilgrimageRepository.getSpotsForAnime({
+      sourcePlatform: dataSourceConfig.browseSource,
+      id,
+    }).catch(() => null))))
+      .filter((work): work is PilgrimageWork => work !== null);
+    setCollectionIds(new Set(resolved.flatMap((work) => work.bgm ?? [])));
+    setAnimes((current) => mergeWorks(current, resolved));
   }, []);
 
-  const mergeNearbyIndexed = useCallback(
-    (loc: LatLng) => {
-      const seen = buildKnownAnimeIdSet(animesRef.current, extraIndexedRef.current);
-      appendExtraIndexed(getNearbyMapEntries(loc, { exclude: seen }));
-    },
-    [appendExtraIndexed]
-  );
-
-  // Whenever the tracking hook surfaces a new location, refresh the
-  // nearby-anime overlay so the lazy-loaded index keeps pace with the user.
   useEffect(() => {
-    if (!userLocation) return;
-    mergeNearbyIndexed(userLocation);
-  }, [userLocation, mergeNearbyIndexed]);
+    let cancelled = false;
+    void refreshCollection().catch((error: unknown) => console.warn('[PilgrimageMap] collection load failed:', error))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [refreshCollection]);
 
-  const handleBoundsChange = useCallback(
-    (bounds: BoundingBox) => {
-      if (!shouldLoadPilgrimageMapBounds(bounds)) return;
-      const seen = buildKnownAnimeIdSet(animesRef.current, extraIndexedRef.current);
-      appendExtraIndexed(getAnimeInBounds(bounds, { exclude: seen, limit: 40 }));
-    },
-    [appendExtraIndexed]
-  );
-
-  // ─── Derived: full list of known anime (collection + featured + lazy) ──
-  const knownAnimes = useMemo<AnitabiBangumi[]>(() => {
-    const merged = new Map<number, AnitabiBangumi>();
-    for (const a of animes) merged.set(a.id, a);
-    // Index-derived entries lack litePoints, but carry enough to render on
-    // the map + a placeholder row. We synthesise a minimal AnitabiBangumi.
-    for (const entry of extraIndexed.values()) {
-      if (merged.has(entry.id)) continue;
-      merged.set(entry.id, seedPilgrimageAnimeFromIndex(entry));
+  useEffect(() => {
+    let cancelled = false;
+    const requestedIds = focusBangumiId === null ? featuredIds : [focusBangumiId, ...featuredIds];
+    for (const id of requestedIds) {
+      void pilgrimageRepository.getSpotsByBangumiId(id).then((work) => {
+        if (!cancelled && work) setAnimes((current) => mergeWorks(current, [work]));
+      }).catch(() => undefined);
     }
-    return [...merged.values()];
-  }, [animes, extraIndexed]);
+    return () => { cancelled = true; };
+  }, [focusBangumiId]);
 
-  return {
-    animes,
-    knownAnimes,
-    collectionIds,
-    extraIndexed,
-    loading,
-    visited,
-    captureCount,
-    handleBoundsChange,
-  };
+  useFocusEffect(useCallback(() => {
+    setVisited(loadVisitedSpotsSync());
+    void refreshCollection().catch(() => undefined);
+  }, [refreshCollection]));
+
+  const handleBoundsChange = useCallback((bounds: BBox) => {
+    void atlasClient.spotsLite().then(async ({ rows }) => {
+      const visibleKeys = new Set(rows
+        .filter((row) => row[3] >= bounds.south && row[3] <= bounds.north && row[4] >= bounds.west && row[4] <= bounds.east)
+        .map((row) => row[1]));
+      const rowsByKey = new Map(index.works.map((row) => [row.key, row] as const));
+      const newKeys = [...visibleKeys].filter((key) => !loadedKeys.current.has(key));
+      newKeys.forEach((key) => loadedKeys.current.add(key));
+      const works = await Promise.all(newKeys.map(async (key) => {
+        const row = rowsByKey.get(key);
+        const bgmId = row?.bgm?.[0];
+        return bgmId ? pilgrimageRepository.getSpotsByBangumiId(bgmId).catch(() => null) : null;
+      }));
+      const resolved = works.filter((work): work is PilgrimageWork => work !== null);
+      if (!resolved.length) return;
+      const next = new Map(extraRef.current);
+      for (const work of resolved) next.set(work.key, work);
+      extraRef.current = next;
+      setExtraIndexed(next);
+    }).catch((error: unknown) => console.warn('[PilgrimageMap] Atlas bounds load failed:', error));
+  }, []);
+
+  const knownAnimes = useMemo(() => mergeWorks(animes, [...extraIndexed.values()]), [animes, extraIndexed]);
+  return { animes, knownAnimes, collectionIds, extraIndexed, loading, visited, captureCount, handleBoundsChange };
+}
+
+function seedWorks(bgmIds: readonly number[]): PilgrimageWork[] {
+  return index.works.filter((row) => (row.bgm ?? []).some((id) => bgmIds.includes(id))).map((row) => ({
+    ...row,
+    dataVersion: index.dataVersion ?? '20261104-6584d5e',
+    titleJa: row.ja,
+    titleEn: row.en ?? '',
+    titleZh: row.zh ?? undefined,
+    spots: [],
+  }));
+}
+
+function mergeWorks(current: readonly PilgrimageWork[], incoming: readonly PilgrimageWork[]): PilgrimageWork[] {
+  const byKey = new Map(current.map((work) => [work.key, work] as const));
+  for (const work of incoming) byKey.set(work.key, work);
+  return [...byKey.values()].sort((a, b) => b.n - a.n);
 }

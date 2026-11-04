@@ -46,10 +46,7 @@ import { bannerEnter, listItemEnter } from '../../../../libs/animations/presets'
 import { formatNewsRelativeTime } from '../../../../libs/services/news/news-relative-time';
 import { isSafeArticleUrl } from '../../../../libs/services/news/news-url';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import {
-  getIndexedById,
-  type AnitabiIndexEntry,
-} from '../../../../libs/services/pilgrimage/anitabi-index';
+import { getAtlasWorkByBangumiId } from '../../../../components/pilgrimage/common/atlas-work-index';
 import { resolveLocalIntelText } from '../../../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import { getLocalityEventListRows } from '../../../../libs/services/pilgrimage/locality/event-detail';
 import {
@@ -62,7 +59,6 @@ import type {
   IsoDate,
   LocalityEvent,
 } from '../../../../libs/services/pilgrimage/locality/types';
-import { getPilgrimageAnimeTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageEventDetailRoute } from '../../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 type HubTab = 'event' | 'tag' | 'calendar' | 'news';
@@ -132,31 +128,31 @@ export default function LocalityHubScreen() {
   const eventRows = useMemo<EventRow[]>(() => {
     void localitySnapshot;
     return getLocalityEventListRows(now, localityRepository).map((item) => {
-      const bangumiId = item.event.animeIds.find((id) => getIndexedById(id) !== null) ?? null;
-      const indexed = bangumiId !== null ? getIndexedById(bangumiId) : null;
+      const bangumiId = item.event.animeIds.find((id) => getAtlasWorkByBangumiId(id) !== null) ?? null;
+      const indexed = bangumiId !== null ? getAtlasWorkByBangumiId(bangumiId) : null;
       return {
         ...item,
         bangumiId,
-        cover: indexed?.cover ?? null,
-        animeTitle: indexed ? getPilgrimageAnimeTitles(indexed).primary : null,
+        cover: null,
+        animeTitle: indexed?.ja ?? null,
         accent: localityEventAccent(item.state, item.event.category, theme),
       };
     });
   }, [now, localitySnapshot, theme]);
 
   const workFilters = useMemo<WorkFilter[]>(() => {
-    const byId = new Map<number, AnitabiIndexEntry>();
+    const byId = new Map<number, NonNullable<ReturnType<typeof getAtlasWorkByBangumiId>>>();
     for (const row of eventRows) {
       for (const bangumiId of row.event.animeIds) {
-        const indexed = getIndexedById(bangumiId);
+        const indexed = getAtlasWorkByBangumiId(bangumiId);
         if (indexed) byId.set(bangumiId, indexed);
       }
     }
     return [...byId.values()]
       .map((anime) => ({
-        bangumiId: anime.id,
-        title: getPilgrimageAnimeTitles(anime).primary,
-        cover: anime.cover || null,
+        bangumiId: anime.bgm?.[0] ?? 0,
+        title: anime.ja,
+        cover: null,
       }))
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [eventRows]);

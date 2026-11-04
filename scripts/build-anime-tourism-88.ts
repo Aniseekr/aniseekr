@@ -20,8 +20,8 @@
 //   bun run scripts/build-anime-tourism-88.ts --year 2026
 //
 // Follow with `bun run scripts/resolve-anime88-anilist.ts` to add AniList ids
-// + popularity. Follow that with `bun run scripts/build-anitabi-index.ts
-// --extra <ids>` to expand Anitabi spot coverage.
+// + popularity. Follow that with `bun run scripts/build-atlas-index.ts
+// --extra <ids>` to expand Atlas spot coverage.
 
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
@@ -120,7 +120,7 @@ const BANGUMI_OVERRIDES: Record<
     name: 'ガールズ＆パンツァー',
     nameCn: '少女与战车',
     date: '2012-10-08',
-    note: 'Prefer the Anitabi-rich main series over Saishuushou episode subjects.',
+    note: 'Prefer the Atlas-rich main series over Saishuushou episode subjects.',
   },
   '『エヴァンゲリオン』シリーズ': {
     bangumiId: 265,
@@ -141,14 +141,14 @@ const BANGUMI_OVERRIDES: Record<
     name: 'SHIROBAKO',
     nameCn: '白箱',
     date: '2014-10-09',
-    note: 'Prefer the Anitabi-rich TV series over the movie subject.',
+    note: 'Prefer the Atlas-rich TV series over the movie subject.',
   },
   'ひぐらしのなく頃に業・卒': {
     bangumiId: 289,
     name: 'ひぐらしのなく頃に',
     nameCn: '寒蝉鸣泣之时',
     date: '2006-04-04',
-    note: 'Prefer the Anitabi-rich original series over Gou/Sotsu subjects.',
+    note: 'Prefer the Atlas-rich original series over Gou/Sotsu subjects.',
   },
   'ウルトラマンシリーズ（円谷英二氏生誕の地）': {
     bangumiId: 38650,
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
       `  bangumi top1-fallbacks (worth reviewing): ${needsReviewCount}\n\n` +
       `Next steps:\n` +
       `  bun run scripts/resolve-anime88-anilist.ts        # add AniList ids + popularity\n` +
-      `  bun run scripts/build-anitabi-index.ts --extra $(node -e "...")  # expand Anitabi coverage`
+      `  bun run scripts/build-atlas-index.ts --extra $(node -e "...")  # expand Atlas coverage`
   );
 }
 

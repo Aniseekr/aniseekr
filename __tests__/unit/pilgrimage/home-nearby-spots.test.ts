@@ -1,59 +1,70 @@
 import { describe, expect, it } from 'bun:test';
 import { resolveHomeNearbySpots } from '../../../libs/services/pilgrimage/home-nearby-spots';
-import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageWork } from '../../../libs/services/pilgrimage/types';
 import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
 
 const userLocation = { latitude: 35.6613, longitude: 139.668 };
-const anime: AnitabiBangumi = {
-  id: 1,
-  title: '下北沢の作品',
-  cn: '',
-  city: '東京都',
-  cover: '',
-  color: '',
-  geo: [35.662, 139.668],
-  zoom: 13,
-  modified: 0,
-  pointsLength: 1,
-  imagesLength: 1,
-  litePoints: [
-    { id: 'near', name: '下北沢', cn: '', image: '/near.jpg', geo: [35.662, 139.668], ep: 1, s: 0 },
-  ],
+const work: PilgrimageWork = {
+  key: '下北沢の作品',
+  ja: '下北沢の作品',
+  en: '',
+  zh: { hans: '', hant: '' },
+  mal: [],
+  bgm: [],
+  n: 1,
+  conf: { c: 1, s: 0, u: 0 },
+  cities: ['東京都'],
+  dataVersion: 'test',
+  titleJa: '下北沢の作品',
+  titleEn: '',
+  titleZh: { hans: '', hant: '' },
+  spots: [{
+    id: 'near',
+    workKey: '下北沢の作品',
+    name: '下北沢',
+    address: '',
+    note: '',
+    lat: 35.662,
+    lon: 139.668,
+    confidence: 'confirmed',
+    scenes: [{ episode: '第1話' }],
+    sources: [],
+  }],
 };
 const indexed: NearbySpotHit = {
-  pointId: 'farther',
-  bangumiId: 2,
+  spotId: 'farther',
+  workKey: 'other',
   name: '遠い場景',
-  cn: '',
-  image: '/far.jpg',
   lat: 35.69,
-  lng: 139.7,
+  lon: 139.7,
+  confidence: 'confirmed',
+  episodes: [1],
   distanceKm: 4,
 };
 
 describe('PILG-077 home nearby fallback', () => {
-  it('uses real litePoints while the SQLite spot index is empty', () => {
+  it('uses Atlas work spots while the nearby index is empty', () => {
     const result = resolveHomeNearbySpots({
       userLocation,
-      animes: [anime],
+      animes: [work],
       indexNearest: null,
       indexWithin3Km: [],
       indexCount: 0,
     });
-    expect(result.nearestSpot?.pointId).toBe('near');
+    expect(result.nearestSpot?.spotId).toBe('near');
     expect(result.nearbyCount).toBe(1);
     expect(result.coverage).toBe('unknown');
   });
 
-  it('chooses the closer of index and litePoint hits', () => {
+  it('chooses the closer of index and Atlas work hits', () => {
     const result = resolveHomeNearbySpots({
       userLocation,
-      animes: [anime],
+      animes: [work],
       indexNearest: indexed,
       indexWithin3Km: [],
       indexCount: 100,
     });
-    expect(result.nearestSpot?.pointId).toBe('near');
+    expect(result.nearestSpot?.spotId).toBe('near');
     expect(result.nearbyCount).toBe(1);
     expect(result.coverage).toBe('known');
   });

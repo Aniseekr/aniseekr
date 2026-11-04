@@ -13,23 +13,24 @@
 import { kvGet, kvSet } from '../storage/app-storage';
 import { SPOT_INTENTS_STORAGE_KEY, SPOT_INTENTS_STORAGE_KEY_V2 } from '../storage/keys';
 import { Logger } from '../../utils/logger';
-import type { AnitabiPoint } from './types';
-import type { PilgrimageSeriesPoint } from './pilgrimage-series';
+import type { PilgrimageSpot, PilgrimageWork } from './types';
 
 export type SpotIntentKind = 'saved' | 'planned';
 
 /**
- * Snapshot captured the moment a user toggles an intent. `animeId`/`name`/`cn`
- * describe the ANIME the point belongs to (so the plan page can label a group
- * offline); `geo`/`image` describe THIS point (so the trip map can draw markers
- * + a route line and show a scene thumbnail without any network).
+ * Snapshot captured when a user toggles an intent. Legacy fields remain
+ * readable for Phase 3 migration; newly created metadata uses Atlas fields.
  */
 export interface SpotIntentMeta {
-  animeId: number;
-  name: string;
+  workKey: string;
+  workTitle: string;
+  spotName: string;
+  address: string;
+  geo?: [number, number];
+  animeId?: number;
+  name?: string;
   cn?: string;
-  geo: [number, number];
-  image: string;
+  image?: string;
 }
 
 export interface SpotIntent {
@@ -148,85 +149,46 @@ export function applySpotIntentAtomic(
 }
 
 /** Screen-level anime metadata, used only when a point carries no source of its own. */
-export interface SpotIntentMetaFallback {
-  animeId: number;
-  name: string;
-  cn?: string;
-}
-
-/**
- * Build the meta snapshot for ONE point at toggle time.
- *
- * In the "All" series view, `pilgrimage-series.ts` merges points from every
- * season into one list, and each merged point carries its OWN
- * `sourceBangumiId`/`sourceAnimeTitle` (see `PilgrimageSeriesPoint`). A point
- * pulled in from S2 must snapshot S2's anime — stamping every point with the
- * screen-level anime would mislabel S2 scenes as S1 (or vice versa) the
- * moment the user saves/plans from the merged view (Rule 8).
- *
- * `geo`/`image` always come from the point itself (real per-point data).
- * `animeId`/`name` prefer the point's own source annotation and fall back to
- * the screen-level `fallback` when the point carries none (single-season
- * view, where every point already belongs to the anime being shown).
- * `cn` is only ever taken from `fallback`, and only when `fallback` actually
- * describes this point's anime (no source override) — `PilgrimageSeriesPoint`
- * doesn't carry a Chinese title per source anime, so fabricating one from an
- * unrelated fallback would misattribute it (Rule 8: omit rather than guess).
- */
 export function buildSpotIntentMeta(
-  point: AnitabiPoint,
-  fallback: SpotIntentMetaFallback
+  spot: PilgrimageSpot,
+  work: PilgrimageWork
 ): SpotIntentMeta {
-  const sourceBangumiId = getPointSourceBangumiId(point);
-  const sourceAnimeTitle = getPointSourceAnimeTitle(point);
-  const hasSource = sourceBangumiId !== null && sourceAnimeTitle !== null;
   const meta: SpotIntentMeta = {
-    animeId: hasSource ? sourceBangumiId : fallback.animeId,
-    name: hasSource ? sourceAnimeTitle : fallback.name,
-    geo: point.geo,
-    image: point.image,
+    workKey: work.key,
+    workTitle: work.titleJa,
+    spotName: spot.name,
+    address: spot.address,
   };
-  if (!hasSource && fallback.cn) meta.cn = fallback.cn;
+  if (spot.lat !== null && spot.lon !== null) meta.geo = [spot.lat, spot.lon];
   return meta;
-}
-
-// Typed field access for the optional series-merge annotation. Mirrors
-// `getPointSourceBangumiId`/`getPointSourceLabel` in
-// `components/pilgrimage/detail/_helpers.ts` — duplicated here (rather than
-// imported) because a service must not import from `components/`.
-function getPointSourceBangumiId(point: AnitabiPoint): number | null {
-  const source = (point as Partial<PilgrimageSeriesPoint>).sourceBangumiId;
-  return typeof source === 'number' && Number.isFinite(source) && source > 0 ? source : null;
-}
-
-function getPointSourceAnimeTitle(point: AnitabiPoint): string | null {
-  const title = (point as Partial<PilgrimageSeriesPoint>).sourceAnimeTitle;
-  return typeof title === 'string' && title.length > 0 ? title : null;
 }
 
 function sanitizeMeta(value: unknown): SpotIntentMeta | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const m = value as Record<string, unknown>;
   const geo = m.geo;
-  if (
-    typeof m.animeId !== 'number' ||
-    !Number.isFinite(m.animeId) ||
-    typeof m.name !== 'string' ||
-    typeof m.image !== 'string' ||
-    m.image.length === 0 ||
-    !Array.isArray(geo) ||
-    geo.length < 2 ||
-    typeof geo[0] !== 'number' ||
-    typeof geo[1] !== 'number'
-  ) {
-    return undefined;
+  const isAtlas = typeof m.workKey === 'string' && typeof m.workTitle === 'string';
+  const isLegacy = typeof m.animeId === 'number' && typeof m.name === 'string';
+  if (!isAtlas && !isLegacy) return undefined;
+  const out: SpotIntentMeta = isAtlas
+    ? {
+        workKey: m.workKey as string,
+        workTitle: m.workTitle as string,
+        spotName: typeof m.spotName === 'string' ? m.spotName : '',
+        address: typeof m.address === 'string' ? m.address : '',
+      }
+    : {
+        workKey: '',
+        workTitle: '',
+        spotName: typeof m.spotName === 'string' ? m.spotName : m.name as string,
+        address: typeof m.address === 'string' ? m.address : '',
+        animeId: m.animeId as number,
+        name: m.name as string,
+      };
+  if (Array.isArray(geo) && typeof geo[0] === 'number' && typeof geo[1] === 'number') {
+    out.geo = [geo[0], geo[1]];
   }
-  const out: SpotIntentMeta = {
-    animeId: m.animeId,
-    name: m.name,
-    geo: [geo[0], geo[1]],
-    image: m.image,
-  };
+  if (typeof m.image === 'string') out.image = m.image;
   if (typeof m.cn === 'string' && m.cn.length > 0) out.cn = m.cn;
   return out;
 }

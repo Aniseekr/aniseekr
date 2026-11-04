@@ -14,8 +14,8 @@ import { useMapThemePref } from '../../../hooks/useMapThemePref';
 import { useTheme } from '../../../context/ThemeContext';
 import { bottomPad, Radius, Shadow, Size, Spacing, TabBar } from '../../../constants/DesignSystem';
 import { useT } from '../../../libs/i18n';
+import { bangumiSubjectImageUrl } from '../../../libs/clients/bangumi-client';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
-import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import {
   buildHomeMapAnimes,
   buildHomeMapMarkers,
@@ -35,6 +35,7 @@ import {
   resolveMapStyleUrl,
 } from '../../../libs/services/pilgrimage/map-source-prefs';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 
 export function ExplorerMapView({ onShowList }: { onShowList: () => void }) {
   const router = useRouter();
@@ -46,7 +47,7 @@ export function ExplorerMapView({ onShowList }: { onShowList: () => void }) {
   const mapPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { pref } = useMapThemePref();
   const [styleOverride] = useState(loadMapStyleOverrideSync);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const tracking = useUserLocationTracking({
@@ -72,7 +73,8 @@ export function ExplorerMapView({ onShowList }: { onShowList: () => void }) {
     () => buildHomeMapMarkers(entries, theme.accent),
     [entries, theme.accent]
   );
-  const selected = entries.find((entry) => entry.anime.id === selectedId) ?? null;
+  const selected =
+    entries.find((entry) => `atlas:${entry.anime.key}:${entry.spot.id}` === selectedId) ?? null;
   const styleUrl = resolveMapStyleUrl(
     resolveMapModeWithClock(pref, effectiveMode, new Date().getHours()),
     styleOverride
@@ -107,12 +109,13 @@ export function ExplorerMapView({ onShowList }: { onShowList: () => void }) {
   const openSelected = () => {
     if (!selected) return;
     hapticsBridge.tap();
-    const anime = selected.anime;
+    const { anime, spot } = selected;
     router.push(
-      buildPilgrimageDetailRoute(anime.id, {
+      buildPilgrimageDetailRoute(anime.key, {
         returnTo: 'map',
+        focusSpotId: spot.id,
         title: getPilgrimageAnimeTitles(anime).primary,
-        poster: anime.cover,
+        poster: anime.bgm?.[0] ? bangumiSubjectImageUrl(anime.bgm[0], 'common') : undefined,
       })
     );
   };
@@ -139,13 +142,13 @@ export function ExplorerMapView({ onShowList }: { onShowList: () => void }) {
         onMarkerPress={(marker: MapMarker) => {
           noteMarkerPress();
           hapticsBridge.selection();
-          setSelectedId(marker.bangumiId ?? null);
+          setSelectedId(marker.id);
         }}
         onClusterPress={(cluster) => {
           noteMarkerPress();
           if (!cluster.length) return;
           if (cluster.length === 1) {
-            setSelectedId(cluster[0].bangumiId ?? null);
+            setSelectedId(cluster[0].id);
             return;
           }
           mapRef.current?.fitBounds?.(
@@ -185,18 +188,26 @@ export function ExplorerMapView({ onShowList }: { onShowList: () => void }) {
       {selected ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={getPilgrimageAnimeTitles(selected.anime).primary}
+          accessibilityLabel={`${selected.spot.name}, ${getPilgrimageAnimeTitles(selected.anime).primary}`}
           onPress={openSelected}
           style={[styles.cardPress, { bottom }]}>
           <ThemedSurface variant="card" style={styles.card}>
-            <SpotImage uri={selected.anime.cover} style={styles.poster} />
+            {selected.anime.bgm?.[0] ? (
+              <SpotImage
+                uri={bangumiSubjectImageUrl(selected.anime.bgm[0], 'common')}
+                style={styles.poster}
+              />
+            ) : null}
             <View style={styles.cardCopy}>
               <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
-                {getPilgrimageAnimeTitles(selected.anime).primary}
+                {selected.spot.name}
               </ThemedText>
               <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>
-                {t('tabs.pilgrimageHome.spotCount', { count: selected.anime.pointsLength })}
+                {selected.spot.address}
                 {selected.distanceKm === undefined ? '' : ` · ${selected.distanceKm.toFixed(1)} km`}
+              </ThemedText>
+              <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
+                {getPilgrimageAnimeTitles(selected.anime).primary}
               </ThemedText>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />

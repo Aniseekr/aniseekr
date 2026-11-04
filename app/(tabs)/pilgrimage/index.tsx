@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,8 +10,6 @@ import {
   ThemedText,
   Skeleton,
 } from '../../../components/themed';
-import { SpotImage } from '../../../components/pilgrimage/SpotImage';
-import { AnitabiAttributionFooter } from '../../../components/pilgrimage/common/AnitabiAttributionFooter';
 import { ExplorerMapView } from '../../../components/pilgrimage/home/ExplorerMapView';
 import {
   usePilgrimageHubScreenData,
@@ -21,15 +19,20 @@ import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { useTheme } from '../../../context/ThemeContext';
 import { bottomPad, Radius, Spacing, TabBar } from '../../../constants/DesignSystem';
 import { useT } from '../../../libs/i18n';
-import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { normalizeAnitabiImageUrl } from '../../../libs/services/pilgrimage/anitabi-image';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import { buildMapsURL } from '../../../components/pilgrimage/detail';
-import type { AnitabiBangumi } from '../../../libs/services/pilgrimage/types';
-import { CollectionPoster } from '../../../components/pilgrimage/home/ExplorerHomeRows';
+import type { PilgrimageWork } from '../../../libs/services/pilgrimage/types';
+import { bangumiSubjectImageUrl } from '../../../libs/clients/bangumi-client';
+import {
+  CollectionPoster,
+  NearbySpotRow,
+} from '../../../components/pilgrimage/home/ExplorerHomeRows';
 import { ExplorerDiscoverSection } from '../../../components/pilgrimage/home/ExplorerDiscoverSection';
 import { HomeSearchField } from '../../../components/common/HomeSearchField';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
+import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
+import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
+import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 
 const RAIL_LIMIT = 8;
 
@@ -54,28 +57,20 @@ function ExplorerHomeList({
   const { theme } = useTheme();
   const t = useT();
   const { visibleTabs } = useExperienceMode();
-  const nearest = data.nearestSpot;
-  const nearestAnime = nearest
-    ? (data.collectionAnimes.find((anime) => anime.id === nearest.bangumiId) ??
-      data.featuredAnimes.find((anime) => anime.id === nearest.bangumiId))
-    : null;
-  const nearestTitle =
-    nearestAnime?.title || nearestAnime?.cn ? getPilgrimageAnimeTitles(nearestAnime).primary : null;
-  const nearestPoster = nearestAnime?.cover ?? null;
   const nearEmpty =
     data.locationStatus === 'granted' &&
     !data.nearbyPending &&
     !data.nearbyError &&
     data.nearbyCoverage === 'known' &&
-    !nearest;
+    data.nearbyCount === 0;
   const bottom = bottomPad(insets) + TabBar.height;
 
-  const openAnime = (anime: AnitabiBangumi) => {
+  const openAnime = (anime: PilgrimageWork) => {
     router.push(
-      buildPilgrimageDetailRoute(anime.id, {
+      buildPilgrimageDetailRoute(anime.key, {
         returnTo: 'hub',
         title: getPilgrimageAnimeTitles(anime).primary,
-        poster: anime.cover,
+        poster: anime.bgm?.[0] ? bangumiSubjectImageUrl(anime.bgm[0], 'common') : undefined,
       })
     );
   };
@@ -127,12 +122,15 @@ function ExplorerHomeList({
               {t('tabs.pilgrimageHome.nearby')}
             </ThemedText>
             {data.nearbyCoverage === 'known' && data.nearbyCount > 0 ? (
-              <ThemedText variant="caption" tone="secondary">
-                {t('tabs.pilgrimageHome.within3km', { count: data.nearbyCount })}
-              </ThemedText>
+              <ThemedButton
+                label={t('tabs.pilgrimageHome.all')}
+                variant="ghost"
+                size="sm"
+                onPress={() => router.push('/pilgrimage/list/nearby')}
+              />
             ) : null}
           </View>
-          {data.locationStatus === 'pending' || (data.nearbyPending && !nearest) ? (
+          {data.locationStatus === 'pending' || data.nearbyPending ? (
             <Skeleton.Block width="100%" height={170} borderRadius={Radius.card} />
           ) : null}
           {data.locationStatus === 'denied' || data.locationStatus === 'unavailable' ? (
@@ -154,65 +152,46 @@ function ExplorerHomeList({
               />
             </ThemedSurface>
           ) : null}
-          {data.locationStatus === 'granted' && nearest ? (
-            <ThemedSurface variant="card" style={styles.hero}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={nearest.cn || nearest.name}
-                onPress={() => {
-                  hapticsBridge.tap();
-                  router.push(
-                    buildPilgrimageDetailRoute(nearest.bangumiId, {
-                      returnTo: 'hub',
-                      focusSpotId: nearest.pointId,
-                      title: nearestTitle,
-                      poster: nearestPoster,
-                    })
-                  );
-                }}
-                style={styles.heroMain}>
-                <SpotImage
-                  uri={normalizeAnitabiImageUrl(nearest.image, nearest.bangumiId)}
-                  style={styles.heroImage}
+          {data.locationStatus === 'granted' && data.nearbySpots.length ? (
+            <View style={styles.nearbyRows}>
+              {data.nearbySpots.slice(0, 3).map((hit) => (
+                <NearbyRow
+                  key={`${hit.workKey}:${hit.spotId}`}
+                  hit={hit}
+                  works={data.allWorks}
+                  onPress={() => {
+                    hapticsBridge.tap();
+                    const work = data.allWorks.find((item) => item.key === hit.workKey);
+                    router.push(
+                      buildPilgrimageDetailRoute(hit.workKey, {
+                        returnTo: 'hub',
+                        focusSpotId: hit.spotId,
+                        title: work ? getPilgrimageAnimeTitles(work).primary : undefined,
+                        poster: work?.bgm?.[0]
+                          ? bangumiSubjectImageUrl(work.bgm[0], 'common')
+                          : undefined,
+                      })
+                    );
+                  }}
+                  onPrefetch={() =>
+                    void pilgrimageRepository.getSpotsByKey(hit.workKey).catch(() => undefined)
+                  }
                 />
-                <View style={styles.heroBody}>
-                  {nearestTitle ? (
-                    <ThemedText variant="caption" tone="secondary" numberOfLines={1}>
-                      {nearestTitle}
-                    </ThemedText>
-                  ) : null}
-                  <ThemedText variant="titleMedium" weight="700" numberOfLines={2}>
-                    {nearest.cn || nearest.name}
-                  </ThemedText>
-                  <ThemedText variant="bodySmall" tone="secondary">
-                    {nearest.distanceKm.toFixed(1)} km
-                  </ThemedText>
-                </View>
-              </Pressable>
-              <ThemedButton
-                label={t('tabs.pilgrimageHome.depart')}
-                size="sm"
-                onPress={() =>
-                  void Linking.openURL(
-                    buildMapsURL(nearest.lat, nearest.lng, nearest.cn || nearest.name)
-                  )
-                }
-                style={styles.heroAction}
-              />
-            </ThemedSurface>
+              ))}
+            </View>
           ) : null}
           {nearEmpty ? (
             <ThemedText variant="bodyMedium" tone="secondary">
-              {t('tabs.pilgrimageHome.noNearby')}
+              {t('tabs.pilgrimageHome.noNearbyWithin3km')}
             </ThemedText>
           ) : null}
-          {data.nearbyError && !nearest ? (
+          {data.nearbyError ? (
             <ThemedText variant="bodyMedium" tone="secondary">
               {t('tabs.pilgrimageHome.nearbyUnavailable')}
             </ThemedText>
           ) : null}
         </View>
-        {nearEmpty ? <ExplorerDiscoverSection data={data} onOpenAnime={openAnime} /> : null}
+        {nearEmpty ? <ExplorerDiscoverSection data={data} /> : null}
         {data.collectionWithSpots.length ? (
           <View style={styles.section}>
             <ThemedText variant="titleLarge" weight="700">
@@ -224,7 +203,7 @@ function ExplorerHomeList({
               contentContainerStyle={styles.rail}>
               {data.collectionWithSpots.slice(0, RAIL_LIMIT).map((anime) => (
                 <CollectionPoster
-                  key={anime.id}
+                  key={anime.key}
                   anime={anime}
                   visited={data.visited}
                   onPress={() => openAnime(anime)}
@@ -233,15 +212,41 @@ function ExplorerHomeList({
             </ScrollView>
           </View>
         ) : null}
-        {!nearEmpty ? <ExplorerDiscoverSection data={data} onOpenAnime={openAnime} /> : null}
+        {!nearEmpty ? <ExplorerDiscoverSection data={data} /> : null}
         {data.error ? (
           <ThemedText variant="bodyMedium" tone="secondary">
             {data.error}
           </ThemedText>
         ) : null}
-        <AnitabiAttributionFooter bangumiId={null} variant="footer" />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function NearbyRow({
+  hit,
+  works,
+  onPress,
+  onPrefetch,
+}: {
+  hit: NearbySpotHit;
+  works: PilgrimageWork[];
+  onPress: () => void;
+  onPrefetch: () => void;
+}) {
+  const t = useT();
+  const work = works.find((item) => item.key === hit.workKey);
+  const poster = work?.bgm?.[0] ? bangumiSubjectImageUrl(work.bgm[0], 'common') : undefined;
+  return (
+    <NearbySpotRow
+      hit={hit}
+      title={work ? getPilgrimageAnimeTitles(work).primary : ''}
+      posterUri={poster}
+      departLabel={t('tabs.pilgrimageHome.depart')}
+      onPress={onPress}
+      onPressIn={onPrefetch}
+      onDepart={() => void Linking.openURL(buildMapsURL(hit.lat, hit.lon, hit.name))}
+    />
   );
 }
 
@@ -254,10 +259,6 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.sm },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   permission: { gap: Spacing.md },
-  hero: { overflow: 'hidden', borderRadius: Radius.card, paddingBottom: Spacing.sm },
-  heroMain: { flexDirection: 'row' },
-  heroImage: { width: 112, minHeight: 158 },
-  heroBody: { flex: 1, padding: Spacing.md, gap: Spacing.xs, alignItems: 'flex-start' },
-  heroAction: { alignSelf: 'flex-end', marginHorizontal: Spacing.sm },
+  nearbyRows: { gap: Spacing.xs },
   rail: { gap: Spacing.sm, paddingRight: Spacing.screenPadding },
 });

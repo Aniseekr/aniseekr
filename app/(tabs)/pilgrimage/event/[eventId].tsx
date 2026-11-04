@@ -38,7 +38,7 @@ import { Radius, Shadow, Size, Spacing } from '../../../../constants/DesignSyste
 import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
 import { useMapThemePref } from '../../../../hooks/useMapThemePref';
 import { useI18n, useT, type TranslationKey } from '../../../../libs/i18n';
-import { getIndexedById } from '../../../../libs/services/pilgrimage/anitabi-index';
+import { getAtlasWorkByBangumiId } from '../../../../components/pilgrimage/common/atlas-work-index';
 import { bannerEnter, listItemEnter } from '../../../../libs/animations/presets';
 import { resolveLocalIntelText } from '../../../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import { resolveEventDateState } from '../../../../libs/services/pilgrimage/local-intel/event-schedule';
@@ -61,7 +61,6 @@ import {
   loadMapStyleOverrideSync,
   resolveMapStyleUrl,
 } from '../../../../libs/services/pilgrimage/map-source-prefs';
-import { getPilgrimageAnimeTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import {
   buildPilgrimageDetailRoute,
   getPilgrimageEventDetailId,
@@ -191,9 +190,9 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
     loadMapStyleOverrideSync()
   );
   const primaryAnime = event.animeIds
-    .map((animeId) => getIndexedById(animeId))
+    .map((animeId) => getAtlasWorkByBangumiId(animeId))
     .find((anime) => anime !== null);
-  const animeTitle = primaryAnime ? getPilgrimageAnimeTitles(primaryAnime).primary : null;
+  const animeTitle = primaryAnime?.ja ?? null;
   const scheduleLabel = formatEventSchedule(event, eventState, language, t);
   const areaFallback = detail.areas[0]
     ? resolveLocalIntelText(detail.areas[0].name, language).value
@@ -309,7 +308,7 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
               <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.hero}>
                 <View style={styles.heroTop}>
                   <RallyPoster
-                    bangumiId={primaryAnime?.id ?? event.animeIds[0]}
+                    bangumiId={primaryAnime?.bgm?.[0] ?? event.animeIds[0]}
                     style={styles.heroPoster}
                   />
                   <View style={styles.heroTitleCol}>
@@ -390,9 +389,9 @@ function EventDetailContent({ detail }: { detail: LocalityEventDetail }) {
                     accessibilityLabel={animeTitle}
                     onPress={() =>
                       router.push(
-                        buildPilgrimageDetailRoute(primaryAnime.id, {
+                        buildPilgrimageDetailRoute(primaryAnime.key, {
                           title: animeTitle,
-                          poster: primaryAnime.cover,
+                          poster: primaryAnime.bgm?.[0] ? `https://api.bgm.tv/v0/subjects/${primaryAnime.bgm[0]}/image?type=common` : undefined,
                         })
                       )
                     }

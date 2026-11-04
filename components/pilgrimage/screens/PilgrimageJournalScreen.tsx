@@ -16,10 +16,7 @@ import {
   type JournalFolder,
 } from '../../../hooks/usePilgrimageJournalData';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
-import {
-  FREE_FOLDER_ANIME_ID,
-  type PilgrimageAlbumEntry,
-} from '../../../libs/services/pilgrimage/album-captures';
+import type { PilgrimageAlbumEntry } from '../../../libs/services/pilgrimage/album-captures';
 import {
   getPilgrimageAnimeTitles,
   getPilgrimageSpotTitles,
@@ -32,9 +29,7 @@ type AlbumEntry = PilgrimageAlbumEntry;
 type JournalSegment = 'photos' | 'stamps';
 
 function folderTitle(folder: JournalFolder, t: ReturnType<typeof useT>): string {
-  return folder.anime.id === FREE_FOLDER_ANIME_ID
-    ? t('pilgrimage.album.freeCapturesFolder')
-    : getPilgrimageAnimeTitles(folder.anime).primary;
+  return folder.key === 'free' ? t('pilgrimage.album.freeCapturesFolder') : folder.title;
 }
 
 export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?: boolean }) {
@@ -55,7 +50,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
   const [segment, setSegment] = useState<JournalSegment>('photos');
   const { folders, stats, deleteEntry } = usePilgrimageJournalData();
   const selectedFolder = useMemo(
-    () => folders.find((folder) => String(folder.anime.id) === selectedAnimeId) ?? null,
+    () => folders.find((folder) => folder.key === selectedAnimeId || folder.anime?.bgm?.some((id) => String(id) === selectedAnimeId)) ?? null,
     [folders, selectedAnimeId]
   );
   useEffect(() => {
@@ -171,13 +166,13 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
                 <View style={styles.folderGrid}>
                   {folders.map((folder) => (
                     <FolderCard
-                      key={folder.anime.id}
+                      key={folder.key}
                       folder={folder}
                       theme={theme}
                       onPress={() => {
                         hapticsBridge.tap();
                         cameFromUrlRef.current = false;
-                        setSelectedAnimeId(String(folder.anime.id));
+                        setSelectedAnimeId(folder.key);
                       }}
                     />
                   ))}
@@ -222,7 +217,6 @@ function FolderCard({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const title = folderTitle(folder, t);
   const shots = folder.entries.slice(0, 4).map((entry) => entry.capture.uri);
-  if (shots.length < 4 && folder.anime.cover) shots.push(folder.anime.cover);
   return (
     <Pressable
       onPress={onPress}
@@ -252,7 +246,7 @@ function FolderCard({
           {title}
         </ThemedText>
         <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-          {folder.anime.id === FREE_FOLDER_ANIME_ID
+          {folder.key === 'free' || folder.anime === null
             ? t('pilgrimage.album.folderPhotosCount', { count: folder.entries.length })
             : t('pilgrimage.album.folderSummary', {
                 spots: folder.visitedSpots,
@@ -283,12 +277,14 @@ function CompareCard({
   // panels so the divider sits at a predictable point.
   const animeH = [120, 138, 108][heightVariant] ?? 120;
   const realH = [120, 138, 108][heightVariant] ?? 120;
-  const spotTitles = getPilgrimageSpotTitles(entry.spot);
-  const animeTitles = getPilgrimageAnimeTitles(entry.anime);
+  const spotTitles = entry.spot ? getPilgrimageSpotTitles(entry.spot) : null;
+  const animeTitles = entry.anime ? getPilgrimageAnimeTitles(entry.anime) : null;
   // Free captures have no reference spot/anime/episode — spotTitles/animeTitles
   // fall back to placeholder-looking strings ("EP 0", "Unknown Title") that
   // would misrepresent real data (Rule 8). Use the honest folder label instead.
-  const cardTitle = entry.isFree ? t('pilgrimage.album.freeCapturesFolder') : spotTitles.primary;
+  const cardTitle = entry.isFree
+    ? t('pilgrimage.album.freeCapturesFolder')
+    : spotTitles?.primary ?? t('pilgrimage.album.oldSpot');
   return (
     <Pressable
       onPress={onPress}
@@ -306,15 +302,13 @@ function CompareCard({
         },
       ]}>
       <View style={styles.compareImgsWrap}>
-        {entry.spot.image ? (
+        {entry.isFree && entry.capture.referenceUri ? (
           <>
             <View style={[styles.compareHalf, { height: animeH }]}>
-              <SpotImage uri={entry.spot.image} style={styles.compareImgFill} contentFit="cover" />
+              <SpotImage uri={entry.capture.referenceUri} style={styles.compareImgFill} contentFit="cover" />
               <View style={styles.cornerTag}>
                 <ThemedText variant="badge" style={{ color: ON_DARK }}>
-                  {entry.isFree
-                    ? t('pilgrimageUi.referencePicker.tagReference')
-                    : t('pilgrimage.album.tagScene')}
+                  {t('pilgrimageUi.referencePicker.tagReference')}
                 </ThemedText>
               </View>
             </View>
@@ -356,11 +350,13 @@ function CompareCard({
               tone="tertiary"
               numberOfLines={1}
               style={{ flex: 1 }}>
-              {animeTitles.primary}
+              {animeTitles?.primary ?? t('pilgrimage.album.oldSpot')}
             </ThemedText>
-            <ThemedText variant="captionSmall" weight="600" style={{ color: theme.accent }}>
-              {t('pilgrimage.album.epLabel', { ep: entry.spot.ep })}
-            </ThemedText>
+            {entry.spot?.scenes[0]?.episode ? (
+              <ThemedText variant="captionSmall" weight="600" style={{ color: theme.accent }}>
+                {entry.spot.scenes[0].episode}
+              </ThemedText>
+            ) : null}
           </View>
         )}
         {entry.capture.userLocation ? (

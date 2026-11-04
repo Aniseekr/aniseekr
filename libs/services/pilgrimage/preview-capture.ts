@@ -6,7 +6,7 @@
 // same params, and turn "this shot against this reference" into exactly one
 // capture record (see `recordCapture` / `recordFreeCapture` for the merge).
 
-import { albumFallbackAnimeTitle, type PilgrimageAlbumEntry } from './album-captures';
+import type { PilgrimageAlbumEntry } from './album-captures';
 import { capturedOnWideAngle } from './capture-lens-gate';
 import { sanitizeCaptureNote, type CaptureSessionShot } from './capture-session';
 import type { PilgrimageCapture, SensorSnapshot } from './captures';
@@ -25,12 +25,6 @@ function numberParam(value: number | null | undefined): string {
   return value != null && Number.isFinite(value) ? String(value) : '';
 }
 
-function hasRealGeo(geo: readonly number[] | undefined): geo is [number, number] {
-  if (!geo || geo.length < 2) return false;
-  const [lat, lng] = geo;
-  return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
-}
-
 function referenceParams(reference: CompareRouteParams): PreviewParams {
   return {
     spotId: reference.spotId,
@@ -42,9 +36,8 @@ function referenceParams(reference: CompareRouteParams): PreviewParams {
     themeColor: reference.themeColor,
     spotLat: reference.spotLat ?? '',
     spotLng: reference.spotLng ?? '',
-    ...(reference.sceneOrigin ? { sceneOrigin: reference.sceneOrigin } : {}),
-    ...(reference.sceneOriginURL ? { sceneOriginURL: reference.sceneOriginURL } : {}),
     ...(reference.referenceKind ? { referenceKind: reference.referenceKind } : {}),
+    ...(reference.targetSpotId ? { targetSpotId: reference.targetSpotId } : {}),
   };
 }
 
@@ -126,22 +119,35 @@ export function buildJournalPreviewParams(
   }
 
   const { spot, anime } = entry;
+  if (!spot || !anime) {
+    return {
+      ...shot,
+      spotId: capture.spotId,
+      imageUrl: capture.referenceUri ?? '',
+      name: capture.referenceUri ? ctx.importedLabel : '',
+      ep: capture.spotEp == null ? '' : String(capture.spotEp),
+      animeId: '',
+      animeTitle: '',
+      themeColor: ctx.fallbackColor,
+      ...(capture.referenceUri ? { referenceKind: 'imported' } : {}),
+    };
+  }
   // Display fallbacks (`Bangumi #id`, episode 0 for "unknown") must not travel:
   // the preview persists what it is given.
   const animeTitle = getPilgrimageAnimeTitles(anime).primary;
-  const ep = capture.spotEp ?? (spot.ep > 0 ? spot.ep : null);
+  const episode = spot.scenes[0]?.episode.match(/\d+/)?.[0];
+  const ep = capture.spotEp ?? (episode ? Number(episode) : null);
+  const bgmId = anime.bgm?.[0];
   return {
     ...shot,
     spotId: spot.id,
-    imageUrl: spot.image,
+    imageUrl: '',
     name: getPilgrimageSpotTitles(spot).primary,
     ep: ep != null ? String(ep) : '',
-    animeId: String(anime.id),
-    animeTitle: animeTitle === albumFallbackAnimeTitle(anime.id) ? '' : animeTitle,
-    themeColor: anime.color || ctx.fallbackColor,
-    ...(hasRealGeo(spot.geo) ? { spotLat: String(spot.geo[0]), spotLng: String(spot.geo[1]) } : {}),
-    ...(spot.origin ? { sceneOrigin: spot.origin } : {}),
-    ...(spot.originURL ? { sceneOriginURL: spot.originURL } : {}),
+    animeId: bgmId == null ? '' : String(bgmId),
+    animeTitle,
+    themeColor: ctx.fallbackColor,
+    ...(spot.lat !== null && spot.lon !== null ? { spotLat: String(spot.lat), spotLng: String(spot.lon) } : {}),
   };
 }
 
@@ -310,7 +316,6 @@ export function buildPreviewCaptureRecord(input: {
       ...(reference.animeTitle ? { animeTitle: reference.animeTitle } : {}),
       animeColor: reference.themeColor,
       ...(reference.sceneName ? { spotName: reference.sceneName } : {}),
-      spotImage: reference.imageUrl,
       ...(reference.ep != null ? { spotEp: reference.ep } : {}),
       ...(reference.spotGeo ? { spotGeo: reference.spotGeo } : {}),
     },

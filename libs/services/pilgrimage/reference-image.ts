@@ -47,7 +47,7 @@ async function measure(uri: string): Promise<{ width: number; height: number }> 
  * Let the user pick a reference image from their library and keep a normalised
  * copy (JPEG, ≤1920px) in the documents directory — the Journal shows it next to
  * the shot long after this session, so it can't live in the cache. The result
- * is a `file://` URI: bare paths would be mistaken for Anitabi image paths.
+ * is a `file://` URI: bare paths would be mistaken for remote image paths.
  */
 export async function importReferenceImage(): Promise<ImportReferenceResult> {
   const asset = await pickOneImage();

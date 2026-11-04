@@ -41,17 +41,14 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import {
   buildPilgrimageEventDetailRoute,
-  buildPilgrimageSceneIdRoute,
   getPilgrimageDetailBackRoute,
-  getPilgrimageDetailChromeSeed,
-  getPilgrimageDetailFocusSpotId,
   resolvePilgrimageSpotFocus,
 } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   mergePilgrimageSeriesEntries,
   type PilgrimageSeriesSelection,
 } from '../../../libs/services/pilgrimage/pilgrimage-series';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
@@ -79,8 +76,7 @@ import {
   SpotSheet,
   buildBrowseUrl,
   buildMapsURL,
-  getPointSourceBangumiId,
-  hasValidGeo,
+  getSpotGeo,
   makePilgrimageDetailStyles,
   type SpotMapViewHandle,
 } from '../../../components/pilgrimage/detail';
@@ -96,7 +92,8 @@ import {
 import { localityRepository } from '../../../libs/services/pilgrimage/locality/locality-repository';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
-import { buildSceneCompareParams } from '../../../libs/services/pilgrimage/reference-route';
+import { buildSpotCompareParams } from '../../../libs/services/pilgrimage/reference-route';
+import type { AnimeAtlasContext } from '../../../libs/services/pilgrimage/atlas/atlas-resolver';
 
 // Sheet snap height as a fraction of the screen — kept in lockstep with the
 // first snap point in PilgrimageDetailSheet. Map controls use it as a safe
@@ -108,18 +105,6 @@ const LOCATE_FAB_EDGE_GAP = 10;
 // Foreground proximity check-in radius (spec 3.5) — distinct from the 150m
 // standalone-capture mount radius in nearest-cached-spot.ts (spec 3.2).
 const PROXIMITY_RADIUS_METERS = 100;
-
-// First-non-EMPTY fallback (mirrors `firstNonEmpty` in
-// pilgrimage-localization.ts, which isn't exported): `??` alone treats a
-// present-but-blank `anime.title` as the final value instead of falling
-// through to `anime.cn`, which would snapshot an empty intent-meta name.
-function firstNonEmptyTitle(...values: (string | null | undefined)[]): string {
-  for (const value of values) {
-    const trimmed = value?.trim();
-    if (trimmed) return trimmed;
-  }
-  return '';
-}
 
 const ANIME_88_AREA_ENTRIES = get88EntriesWithCoords();
 
@@ -133,7 +118,25 @@ function getLocalitySnapshot() {
 
 export default function PilgrimageDetailScreen() {
   const params = useLocalSearchParams();
+  const routeAnimeId = getStringParam(params, 'animeId');
   const bangumiId = getNumberParam(params, 'animeId');
+  const titleJa = getStringParam(params, 'titleJa');
+  const titleEn = getStringParam(params, 'titleEn');
+  const routeTitle = getStringParam(params, 'title');
+  const titleSecondary = getStringParam(params, 'titleSecondary');
+  const poster = getStringParam(params, 'poster');
+  const themeColorParam = getStringParam(params, 'themeColor');
+  const malId = getNumberParam(params, 'malId');
+  const anilistId = getNumberParam(params, 'anilistId');
+  const returnTo = getStringParam(params, 'returnTo');
+  const returnQuery = getStringParam(params, 'returnQuery');
+  const albumAnimeId = getStringParam(params, 'albumAnimeId');
+  const routeFocusSpotId = getStringParam(params, 'focusSpotId');
+  const atlasContext = useMemo<AnimeAtlasContext | undefined>(() => {
+    if (!titleJa && !titleEn && !routeTitle && malId === null && anilistId === null) return undefined;
+    return { bgmId: bangumiId, malId, anilistId, titleJa, titleEn, title: routeTitle };
+  }, [anilistId, bangumiId, malId, routeTitle, titleEn, titleJa]);
+  const workKey = routeAnimeId && !/^\d+$/.test(routeAnimeId) ? routeAnimeId : null;
   const isExplorerFlow = getStringParam(params, 'returnTo')?.startsWith('explorer-') ?? false;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -154,8 +157,13 @@ export default function PilgrimageDetailScreen() {
   // Frame-1 chrome seed (title / poster / themeColor) carried in by the
   // lister so we can paint hero + accent before any I/O resolves
   // (CLAUDE.md Rule 10). When the real data arrives it replaces the seed.
-  const chromeSeed = useMemo(() => getPilgrimageDetailChromeSeed(params), [params]);
-  const focusSpotId = useMemo(() => getPilgrimageDetailFocusSpotId(params), [params]);
+  const chromeSeed = {
+    title: routeTitle,
+    titleSecondary,
+    poster,
+    themeColor: themeColorParam,
+  };
+  const focusSpotId = routeFocusSpotId;
   const consumedSpotFocusRef = useRef<string | null>(null);
 
   const { view, setView } = usePilgrimageDetailView();
@@ -175,7 +183,7 @@ export default function PilgrimageDetailScreen() {
     setView({ seriesSelection: 'all' });
   }, [setView]);
   const { seriesEntries, loading, error, seriesDegraded, browseSource, reload } =
-    usePilgrimageDetailData(bangumiId, resetSeriesSelection);
+    usePilgrimageDetailData(bangumiId, resetSeriesSelection, atlasContext, workKey);
 
   const availableSeriesEntries = useMemo(
     () => seriesEntries.filter((entry) => entry.anime !== null),
@@ -195,11 +203,17 @@ export default function PilgrimageDetailScreen() {
   const points = mergedSeries.points;
   const hasSeriesSwitcher = seriesEntries.length > 1;
 
-  const themeColor = anime?.color || chromeSeed.themeColor || theme.accent;
+  const themeColor = chromeSeed.themeColor || theme.accent;
   const themeColorFg = readableTextOn(themeColor);
   const styles = useMemo(() => makePilgrimageDetailStyles(theme, insets.top), [theme, insets.top]);
   const animeTitles = useMemo(() => (anime ? getPilgrimageAnimeTitles(anime) : null), [anime]);
-  const localityAnimeId = anime?.id ?? bangumiId;
+  const fallbackTitle =
+    chromeSeed.title ||
+    getStringParam(params, 'titleJa') ||
+    getStringParam(params, 'titleEn') ||
+    getStringParam(params, 'title') ||
+    '—';
+  const localityAnimeId = anime?.bgm?.[0] ?? bangumiId;
   const localityMarkers = useMemo<MapMarker[]>(() => {
     void localitySnapshot;
     if (localityAnimeId === null) return [];
@@ -274,7 +288,7 @@ export default function PilgrimageDetailScreen() {
   // GPS tick.
   const promptedSpotIdsRef = useRef<Set<string>>(new Set());
   const [proximityTarget, setProximityTarget] = useState<{
-    spot: AnitabiPoint;
+    spot: PilgrimageSpot;
     distanceMeters: number;
   } | null>(null);
   useEffect(() => {
@@ -318,7 +332,6 @@ export default function PilgrimageDetailScreen() {
     menuSpotId,
     setMenuSpotId,
     openGroup,
-    openSpot,
     selectSpot,
     openDetails,
     openCluster,
@@ -337,11 +350,11 @@ export default function PilgrimageDetailScreen() {
 
   // Curated local-intel (best time / shops / events) for the open spot. Sync
   // bundled reads — no effect on first paint (Rule 10).
-  const spotIntel = usePilgrimageDetailIntel(anime?.id ?? bangumiId ?? null, activeSpot);
+  const spotIntel = usePilgrimageDetailIntel(anime?.bgm?.[0] ?? bangumiId ?? null, activeSpot);
 
   useEffect(() => {
     const focusedGroup = focusSpotId ? groupedSpotByPointId.get(focusSpotId) : null;
-    const focusedSpot = focusedGroup?.scenes.find((scene) => scene.id === focusSpotId) ?? null;
+    const focusedSpot = focusedGroup;
     const resolved = resolvePilgrimageSpotFocus({
       bangumiId,
       focusSpotId,
@@ -359,26 +372,19 @@ export default function PilgrimageDetailScreen() {
   }, [bangumiId, focusSpotId, groupedSpotByPointId, filteredGroupedSpots, selectSpot, setView]);
 
   const posterUri = useMemo(() => {
-    // Prefer covers we already hold (anitabi CDN / the route-param seed) —
-    // they load under every UA. api.bgm.tv's image redirect 403s requests
-    // with an `okhttp/*` User-Agent, which is exactly what Android's image
-    // pipeline sends, so it blanked the poster on Android whenever it won.
-    // Keep it only as the last resort for a bare deep-link id where we have
-    // no cover at all (and the poster renders at 84×84, so the h160 anitabi
-    // thumbnail is plenty).
-    if (anime?.cover) return anime.cover;
     if (chromeSeed.poster) return chromeSeed.poster;
-    const posterSubjectId = anime?.id ?? bangumiId;
+    const posterSubjectId = anime?.bgm?.[0] ?? bangumiId;
     if (typeof posterSubjectId === 'number' && posterSubjectId > 0) {
-      return `https://api.bgm.tv/v0/subjects/${posterSubjectId}/image?type=large`;
+      return `https://api.bgm.tv/v0/subjects/${posterSubjectId}/image?type=common`;
     }
     return '';
-  }, [bangumiId, anime?.id, anime?.cover, chromeSeed.poster]);
+  }, [bangumiId, anime?.bgm, chromeSeed.poster]);
 
-  const handleOpenMaps = useCallback((spot: AnitabiPoint) => {
-    if (!hasValidGeo(spot.geo)) return;
+  const handleOpenMaps = useCallback((spot: PilgrimageSpot) => {
+    const geo = getSpotGeo(spot);
+    if (!geo) return;
     Haptics.selectionAsync().catch(() => undefined);
-    Linking.openURL(buildMapsURL(spot.geo[0], spot.geo[1], spot.name)).catch(() => undefined);
+    Linking.openURL(buildMapsURL(geo[0], geo[1], spot.name)).catch(() => undefined);
   }, []);
 
   const handleLocalityMarkerPress = useCallback(
@@ -395,36 +401,39 @@ export default function PilgrimageDetailScreen() {
   );
 
   const handleToggleSaved = useCallback(
-    (spot: AnitabiPoint) =>
-      toggleSpotIntent(spot, 'saved', groupedSpotByPointId, {
-        animeId: anime?.id ?? bangumiId ?? 0,
-        name: firstNonEmptyTitle(anime?.title, anime?.cn),
-        cn: anime?.cn || undefined,
-      }),
-    [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
+    (spot: PilgrimageSpot) => {
+      if (anime) toggleSpotIntent(spot, 'saved', groupedSpotByPointId, anime);
+    },
+    [toggleSpotIntent, groupedSpotByPointId, anime]
   );
   const handleTogglePlanned = useCallback(
-    (spot: AnitabiPoint) =>
-      toggleSpotIntent(spot, 'planned', groupedSpotByPointId, {
-        animeId: anime?.id ?? bangumiId ?? 0,
-        name: firstNonEmptyTitle(anime?.title, anime?.cn),
-        cn: anime?.cn || undefined,
-      }),
-    [toggleSpotIntent, groupedSpotByPointId, anime?.id, anime?.title, anime?.cn, bangumiId]
+    (spot: PilgrimageSpot) => {
+      if (anime) toggleSpotIntent(spot, 'planned', groupedSpotByPointId, anime);
+    },
+    [toggleSpotIntent, groupedSpotByPointId, anime]
   );
 
   const handleOpenBrowse = useCallback(() => {
     if (!anime) return;
-    const url = buildBrowseUrl(browseSource, anime.id);
+    const url = buildBrowseUrl(browseSource, anime.bgm?.[0] ?? bangumiId ?? 0);
     if (!url) return;
     Linking.openURL(url).catch(() => undefined);
-  }, [anime, browseSource]);
+  }, [anime, bangumiId, browseSource]);
 
+  const backRoute = useMemo(
+    () =>
+      getPilgrimageDetailBackRoute({
+        returnTo: returnTo ?? undefined,
+        returnQuery: returnQuery ?? undefined,
+        albumAnimeId: albumAnimeId ?? undefined,
+        animeId: routeAnimeId ?? undefined,
+      }),
+    [albumAnimeId, returnQuery, returnTo, routeAnimeId]
+  );
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
-    const explicitBackRoute = getPilgrimageDetailBackRoute(params);
-    if (explicitBackRoute) {
-      router.replace(explicitBackRoute);
+    if (backRoute) {
+      router.replace(backRoute);
       return;
     }
     if (router.canGoBack()) {
@@ -432,7 +441,7 @@ export default function PilgrimageDetailScreen() {
     } else {
       router.replace('/pilgrimage');
     }
-  }, [params, router]);
+  }, [backRoute, router]);
 
   const handleOpenAlbum = useCallback(() => {
     if (bangumiId === null) return;
@@ -447,7 +456,7 @@ export default function PilgrimageDetailScreen() {
   const handleShare = useCallback(() => {
     if (!anime) return;
     Haptics.selectionAsync().catch(() => undefined);
-    const url = buildBrowseUrl(browseSource, anime.id) ?? '';
+    const url = buildBrowseUrl(browseSource, anime.bgm?.[0] ?? bangumiId ?? 0) ?? '';
     Share.share({
       message: t('pilgrimage.detail.shareMessage', {
         title: animeTitles?.primary ?? t('pilgrimage.detail.title'),
@@ -455,7 +464,7 @@ export default function PilgrimageDetailScreen() {
         urlLine: url ? `\n${url}` : '',
       }),
     }).catch(() => undefined);
-  }, [anime, animeTitles?.primary, browseSource, spotStats.spotCount, t]);
+  }, [anime, animeTitles?.primary, bangumiId, browseSource, spotStats.spotCount, t]);
 
   const browseLabel = useMemo(() => {
     const platform = isSupportedBrowseSource(browseSource) ? browseSource : 'bangumi';
@@ -466,22 +475,18 @@ export default function PilgrimageDetailScreen() {
   }, [browseSource, t]);
 
   const buildCompareParams = useCallback(
-    (spot: AnitabiPoint) =>
-      buildSceneCompareParams(spot, {
-        animeId: bangumiId,
-        animeTitle: animeTitles?.primary ?? '',
-        themeColor,
-      }),
-    [bangumiId, animeTitles?.primary, themeColor]
+    (spot: PilgrimageSpot) => (anime ? buildSpotCompareParams(spot, anime, themeColor) : null),
+    [anime, themeColor]
   );
 
   // Phase 3: close the sheet first, then push the route after the dismiss
   // animation lands. `runAfterInteractions` defers the navigation until the
   // sheet's spring settles, so the screen never crossfades two animations.
   const handleFrameShot = useCallback(
-    (spot: AnitabiPoint) => {
+    (spot: PilgrimageSpot) => {
       Haptics.selectionAsync().catch(() => undefined);
       const params = buildCompareParams(spot);
+      if (!params) return;
       closeSheet();
       runAfterInteractions(() => {
         router.push({ pathname: '/compare/tips', params });
@@ -491,9 +496,10 @@ export default function PilgrimageDetailScreen() {
   );
 
   const handleStartCamera = useCallback(
-    (spot: AnitabiPoint) => {
+    (spot: PilgrimageSpot) => {
       Haptics.selectionAsync().catch(() => undefined);
       const params = buildCompareParams(spot);
+      if (!params) return;
       closeSheet();
       runAfterInteractions(() => {
         router.push({ pathname: '/compare/[spotId]', params });
@@ -503,24 +509,11 @@ export default function PilgrimageDetailScreen() {
   );
 
   const handleIdentifyScene = useCallback(
-    (spot: AnitabiPoint) => {
-      const sourceBangumiId = getPointSourceBangumiId(spot) ?? anime?.id ?? bangumiId;
-      if (sourceBangumiId === null) return;
-      const sourceAnime =
-        seriesEntries.find((entry) => entry.anime?.id === sourceBangumiId)?.anime ??
-        (anime?.id === sourceBangumiId ? anime : null);
-      const sourceTitles = sourceAnime ? getPilgrimageAnimeTitles(sourceAnime) : animeTitles;
-      const route = buildPilgrimageSceneIdRoute(spot, {
-        bangumiId: sourceBangumiId,
-        title: sourceTitles?.primary,
-        titleSecondary: sourceTitles?.secondary,
-        poster: sourceAnime?.cover ?? posterUri,
-        themeColor: sourceAnime?.color ?? themeColor,
-      });
+    (_spot: PilgrimageSpot) => {
       closeSheet();
-      runAfterInteractions(() => router.push(route));
+      runAfterInteractions(() => router.push('/pilgrimage/identify'));
     },
-    [anime, animeTitles, bangumiId, closeSheet, posterUri, router, seriesEntries, themeColor]
+    [closeSheet, router]
   );
 
   const handleSeriesSelect = useCallback(
@@ -580,8 +573,11 @@ export default function PilgrimageDetailScreen() {
 
   const isEmpty =
     !loading && !error && (!anime || (points.length === 0 && localityMarkers.length === 0));
-  const hasMap =
-    localityMarkers.length > 0 || (!!anime && hasValidGeo(anime.geo) && points.length > 0);
+  const firstLocatedSpot = points.find((spot) => spot.lat !== null && spot.lon !== null);
+  const centerGeo: [number, number] | null = firstLocatedSpot
+    ? [firstLocatedSpot.lat as number, firstLocatedSpot.lon as number]
+    : null;
+  const hasMap = localityMarkers.length > 0 || centerGeo !== null;
 
   return (
     <>
@@ -628,8 +624,8 @@ export default function PilgrimageDetailScreen() {
                   visited={visited}
                   ringColor={themeColor}
                   userLocation={userLocation}
-                  centerGeo={anime?.geo ?? null}
-                  centerZoom={anime?.zoom ?? 12}
+                  centerGeo={centerGeo}
+                  centerZoom={12}
                   markerMode={mapMarkerMode}
                   offlineOnly={mapOfflineOnly}
                   focusSpotId={selectedSpotId}
@@ -740,6 +736,7 @@ export default function PilgrimageDetailScreen() {
             <PilgrimageDetailSheet
               anime={anime}
               animeTitles={animeTitles}
+              fallbackTitle={fallbackTitle}
               browseLabel={browseLabel}
               posterUri={posterUri}
               filteredGroupedSpots={filteredGroupedSpots}
@@ -819,7 +816,6 @@ export default function PilgrimageDetailScreen() {
           saved={activeSpotSaved}
           planned={activeSpotPlanned}
           hasCapture={activeSpotHasCapture}
-          anitabiBangumiId={anime?.id ?? bangumiId ?? null}
           intel={spotIntel}
           theme={theme}
           onClose={closeSheet}
@@ -830,7 +826,6 @@ export default function PilgrimageDetailScreen() {
           onStartCamera={handleStartCamera}
           onFrameShot={handleFrameShot}
           onIdentifyScene={handleIdentifyScene}
-          onSelectScene={openSpot}
         />
 
         <SpotClusterPicker

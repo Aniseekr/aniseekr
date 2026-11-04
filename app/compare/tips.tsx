@@ -9,7 +9,6 @@ import { Fragment, useCallback, useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import Animated from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraPermission } from 'react-native-vision-camera';
@@ -18,7 +17,6 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT, type TranslationKey } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { readableTextOn, ThemedIconButton, ThemedText } from '../../components/themed';
-import { useSceneAnalysis } from '../../components/pilgrimage/SceneAnalyzer';
 import {
   inferAspectRatio,
   inferBestTime,
@@ -30,9 +28,9 @@ import {
   inferMood,
   inferWarnings,
   inferWeather,
+  type SceneAnalysis,
   type WarningItem,
 } from '../../libs/services/pilgrimage/scene-analysis';
-import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
 import { getStringParam } from '../../libs/utils/route-params';
 import { listItemEnter } from '../../libs/animations/presets';
 
@@ -73,18 +71,18 @@ export default function PhotoTipsScreen() {
   const { theme } = useTheme();
   const t = useT();
   const params = useLocalSearchParams();
+  const paramsSignature = JSON.stringify(params);
+  const stableParams = useMemo(() => JSON.parse(paramsSignature) as typeof params, [paramsSignature]);
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const accent = getStringParam(params, 'themeColor') || theme.accent;
   const accentFg = readableTextOn(accent);
-  const sceneName = getStringParam(params, 'name') || 'Scene';
+  const sceneName = getStringParam(params, 'name') || t('pilgrimageUi.preview.sceneFallback');
   const ep = getStringParam(params, 'ep');
-  const epLabel = ep ? `EP ${ep}` : null;
-  const imageUrl = getStringParam(params, 'imageUrl');
-
-  const { status, analysis } = useSceneAnalysis(imageUrl ?? undefined);
-  const loading = status === 'loading' || status === 'idle';
-  const errored = status === 'error';
+  const epLabel = ep ? t('pilgrimage.album.epLabel', { ep }) : null;
+  const analysis: SceneAnalysis | null = null;
+  const loading = false;
+  const errored = true;
 
   const bestTime = analysis ? inferBestTime(analysis) : null;
   const weather = analysis ? inferWeather(analysis) : null;
@@ -96,7 +94,7 @@ export default function PhotoTipsScreen() {
   const mood = analysis ? inferMood(analysis) : null;
   const exposure = analysis ? inferExposureCompensation(analysis) : null;
   const warnings = analysis ? inferWarnings(analysis) : null;
-  const palette = analysis?.palette ?? [];
+  const palette: string[] = [];
 
   const { hasPermission, requestPermission, canRequestPermission } = useCameraPermission();
   const [requesting, setRequesting] = useState(false);
@@ -139,18 +137,18 @@ export default function PhotoTipsScreen() {
     hapticsBridge.success();
     router.replace({
       pathname: '/compare/[spotId]',
-      params: { ...params },
+      params: { ...stableParams },
     });
-  }, [router, params, hasPermission, canRequestPermission, requestPermission, requesting, t]);
+  }, [router, stableParams, hasPermission, canRequestPermission, requestPermission, requesting, t]);
 
   const handleHelp = useCallback(() => {
     hapticsBridge.tap();
     // Routes to GPS alignment helper from header — same pre-camera utility.
     router.push({
       pathname: '/compare/align',
-      params: { ...params },
+      params: { ...stableParams },
     });
-  }, [router, params]);
+  }, [router, stableParams]);
 
   return (
     <View style={styles.root}>
@@ -195,14 +193,6 @@ export default function PhotoTipsScreen() {
           {/* Hero card */}
           <View style={styles.heroCard}>
             <View style={styles.heroImageWrap}>
-              {imageUrl ? (
-                <Image
-                  source={anitabiImageSource(imageUrl)}
-                  style={styles.heroImage}
-                  contentFit="cover"
-                  transition={180}
-                />
-              ) : null}
               <View style={styles.referenceChip}>
                 <Ionicons name="film" size={12} color={theme.status.warning} />
                 <ThemedText
@@ -220,7 +210,9 @@ export default function PhotoTipsScreen() {
               <View style={styles.captionRow}>
                 <Ionicons name="film" size={14} color={accent} />
                 <ThemedText variant="bodySmall" weight="600">
-                  {epLabel ? `Anime scene · ${epLabel}` : 'Anime scene'}
+                  {epLabel
+                    ? t('pilgrimage.album.sceneEpisodeLabel', { episode: epLabel })
+                    : t('pilgrimage.album.sceneLabel')}
                 </ThemedText>
               </View>
               <ThemedText

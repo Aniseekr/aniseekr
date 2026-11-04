@@ -1,12 +1,10 @@
 import type { ComponentProps } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 
 import { IconSize, Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import type { EventCategory } from '../../../libs/services/pilgrimage/locality/types';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 export {
   localityEventAccent,
   localityMarkerPalette,
@@ -28,7 +26,6 @@ export function localityCategoryIcon(
 
 export function LocalityMiniStamp({
   accent,
-  imageUri,
   icon = 'tv-outline',
   size = 'md',
   style,
@@ -55,15 +52,7 @@ export function LocalityMiniStamp({
         },
         style,
       ]}>
-      {imageUri ? (
-        <Image
-          source={anitabiImageSource(imageUri)}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-        />
-      ) : (
-        <Ionicons name={icon} size={iconSize} color={accent} />
-      )}
+      <Ionicons name={icon} size={iconSize} color={accent} />
     </View>
   );
 }

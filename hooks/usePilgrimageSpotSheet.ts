@@ -1,50 +1,38 @@
-// usePilgrimageSpotSheet — owns the spot-sheet & cluster-picker state plus
-// the nine derived `activeSpot*` values that used to be recomputed each
-// route render. These flowed through `<SpotSheet>` props every time the
-// route's root re-rendered (visited tap, search, etc.); centralising them
-// here lets the route only re-render when the sheet's *visible* state
-// actually changed.
-
 import { useCallback, useMemo, useState } from 'react';
 import * as Haptics from 'expo-haptics';
-import {
-  getInitialSpotSheetScene,
-  getSpotSheetVisitedTarget,
-  resolveSpotSheetSceneStack,
-} from '../libs/services/pilgrimage/pilgrimage-detail-flow';
+import type { AtlasScene } from '../libs/services/pilgrimage/atlas/types';
+import type { PilgrimageSpot } from '../libs/services/pilgrimage/types';
 import type { SpotIntentKind, SpotIntentMap } from '../libs/services/pilgrimage/spot-intents';
-import type { AnitabiPoint, AnitabiSpot } from '../libs/services/pilgrimage/types';
 import type { PilgrimageCapture } from '../libs/services/pilgrimage/captures';
 import type { VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
 
 export interface UsePilgrimageSpotSheetArgs {
-  groupedSpotByPointId: Map<string, AnitabiSpot>;
+  groupedSpotByPointId: Map<string, PilgrimageSpot>;
   visited: VisitedMap;
   captures: Record<string, PilgrimageCapture>;
   spotIntents: SpotIntentMap;
-  distanceFor: (spot: AnitabiPoint) => number | null;
+  distanceFor: (spot: PilgrimageSpot) => number | null;
 }
 
 export interface UsePilgrimageSpotSheetResult {
-  activeSpot: AnitabiPoint | null;
-  clusterSpots: readonly AnitabiPoint[] | null;
+  activeSpot: PilgrimageSpot | null;
+  clusterSpots: readonly PilgrimageSpot[] | null;
   selectedSpotId: string | null;
   setSelectedSpotId: React.Dispatch<React.SetStateAction<string | null>>;
   focusRequest: number;
   menuSpotId: string | null;
   setMenuSpotId: React.Dispatch<React.SetStateAction<string | null>>;
-  openGroup: (group: AnitabiSpot) => void;
-  openSpot: (spot: AnitabiPoint) => void;
-  selectSpot: (spot: AnitabiPoint) => void;
-  openDetails: (spot: AnitabiPoint) => void;
-  openCluster: (spots: readonly AnitabiPoint[]) => void;
+  openGroup: (spot: PilgrimageSpot) => void;
+  openSpot: (spot: PilgrimageSpot) => void;
+  selectSpot: (spot: PilgrimageSpot) => void;
+  openDetails: (spot: PilgrimageSpot) => void;
+  openCluster: (spots: readonly PilgrimageSpot[]) => void;
   closeSheet: () => void;
   closeCluster: () => void;
-  pickFromCluster: (spot: AnitabiPoint) => void;
-  // Memoized derived values consumed by <SpotSheet />.
-  activeSpotGroup: AnitabiSpot | null;
-  activeSpotScenes: readonly AnitabiPoint[];
-  activeSpotVisitedTarget: AnitabiPoint | null;
+  pickFromCluster: (spot: PilgrimageSpot) => void;
+  activeSpotGroup: PilgrimageSpot | null;
+  activeSpotScenes: readonly AtlasScene[];
+  activeSpotVisitedTarget: PilgrimageSpot | null;
   activeSpotVisited: boolean;
   activeSpotSaved: boolean;
   activeSpotPlanned: boolean;
@@ -60,44 +48,32 @@ export function usePilgrimageSpotSheet({
   spotIntents,
   distanceFor,
 }: UsePilgrimageSpotSheetArgs): UsePilgrimageSpotSheetResult {
-  const [activeSpot, setActiveSpot] = useState<AnitabiPoint | null>(null);
-  const [clusterSpots, setClusterSpots] = useState<readonly AnitabiPoint[] | null>(null);
+  const [activeSpot, setActiveSpot] = useState<PilgrimageSpot | null>(null);
+  const [clusterSpots, setClusterSpots] = useState<readonly PilgrimageSpot[] | null>(null);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
   const [focusRequest, setFocusRequest] = useState(0);
   const [menuSpotId, setMenuSpotId] = useState<string | null>(null);
 
-  const openGroup = useCallback((group: AnitabiSpot) => {
+  const openGroup = useCallback((spot: PilgrimageSpot) => {
     Haptics.selectionAsync().catch(() => undefined);
-    const initialScene = getInitialSpotSheetScene(group);
-    if (initialScene) {
-      setSelectedSpotId((current) =>
-        group.scenes.some((scene) => scene.id === current) ? null : initialScene.id
-      );
-    }
+    setSelectedSpotId(spot.id);
   }, []);
-
-  const openSpot = useCallback((spot: AnitabiPoint) => {
+  const openSpot = useCallback((spot: PilgrimageSpot) => {
     Haptics.selectionAsync().catch(() => undefined);
     setActiveSpot(spot);
   }, []);
-
-  const selectSpot = useCallback((spot: AnitabiPoint) => {
+  const selectSpot = useCallback((spot: PilgrimageSpot) => {
     Haptics.selectionAsync().catch(() => undefined);
     setSelectedSpotId(spot.id);
     setFocusRequest((request) => request + 1);
   }, []);
-
-  const openDetails = openSpot;
-
-  const openCluster = useCallback((spots: readonly AnitabiPoint[]) => {
+  const openCluster = useCallback((spots: readonly PilgrimageSpot[]) => {
     Haptics.selectionAsync().catch(() => undefined);
     setClusterSpots(spots);
   }, []);
-
   const closeSheet = useCallback(() => setActiveSpot(null), []);
   const closeCluster = useCallback(() => setClusterSpots(null), []);
-
-  const pickFromCluster = useCallback((spot: AnitabiPoint) => {
+  const pickFromCluster = useCallback((spot: PilgrimageSpot) => {
     Haptics.selectionAsync().catch(() => undefined);
     setClusterSpots(null);
     setActiveSpot(spot);
@@ -107,37 +83,13 @@ export function usePilgrimageSpotSheet({
     () => (activeSpot ? (groupedSpotByPointId.get(activeSpot.id) ?? null) : null),
     [activeSpot, groupedSpotByPointId]
   );
-  const activeSpotScenes = useMemo(
-    () => resolveSpotSheetSceneStack(activeSpot, activeSpotGroup),
-    [activeSpot, activeSpotGroup]
-  );
-  const activeSpotVisitedTarget = useMemo(
-    () => getSpotSheetVisitedTarget(activeSpot, activeSpotScenes),
-    [activeSpot, activeSpotScenes]
-  );
-  const activeSpotVisited = useMemo(
-    () => (activeSpotVisitedTarget ? visited[activeSpotVisitedTarget.id] === true : false),
-    [activeSpotVisitedTarget, visited]
-  );
-  const activeSpotSaved = useMemo<boolean>(() => {
-    if (!activeSpot) return false;
-    const group = groupedSpotByPointId.get(activeSpot.id);
-    return _hasIntent(activeSpot, 'saved', group, spotIntents);
-  }, [activeSpot, groupedSpotByPointId, spotIntents]);
-  const activeSpotPlanned = useMemo<boolean>(() => {
-    if (!activeSpot) return false;
-    const group = groupedSpotByPointId.get(activeSpot.id);
-    return _hasIntent(activeSpot, 'planned', group, spotIntents);
-  }, [activeSpot, groupedSpotByPointId, spotIntents]);
-  const activeSpotDistance = useMemo<number | null>(
-    () => (activeSpot ? distanceFor(activeSpot) : null),
-    [activeSpot, distanceFor]
-  );
-  const activeSpotHasCapture = useMemo<boolean>(
-    () => (activeSpot ? !!captures[activeSpot.id] : false),
-    [activeSpot, captures]
-  );
-  const activeSpotSceneCount = activeSpotScenes.length;
+  const activeSpotScenes = activeSpot?.scenes ?? [];
+  const activeSpotVisitedTarget = activeSpot;
+  const activeSpotVisited = activeSpot ? visited[activeSpot.id] === true : false;
+  const activeSpotSaved = activeSpot ? spotIntents[activeSpot.id]?.saved === true : false;
+  const activeSpotPlanned = activeSpot ? spotIntents[activeSpot.id]?.planned === true : false;
+  const activeSpotDistance = activeSpot ? distanceFor(activeSpot) : null;
+  const activeSpotHasCapture = activeSpot ? !!captures[activeSpot.id] : false;
 
   return {
     activeSpot,
@@ -150,7 +102,7 @@ export function usePilgrimageSpotSheet({
     openGroup,
     openSpot,
     selectSpot,
-    openDetails,
+    openDetails: openSpot,
     openCluster,
     closeSheet,
     closeCluster,
@@ -163,16 +115,14 @@ export function usePilgrimageSpotSheet({
     activeSpotPlanned,
     activeSpotDistance,
     activeSpotHasCapture,
-    activeSpotSceneCount,
+    activeSpotSceneCount: activeSpotScenes.length,
   };
 }
 
-function _hasIntent(
-  spot: AnitabiPoint,
+export function hasSpotIntent(
+  spot: PilgrimageSpot,
   intent: SpotIntentKind,
-  group: AnitabiSpot | undefined,
   spotIntents: SpotIntentMap
 ): boolean {
-  if (group) return group.scenes.some((p) => spotIntents[p.id]?.[intent] === true);
   return spotIntents[spot.id]?.[intent] === true;
 }

@@ -21,7 +21,7 @@ import { isOnboardingCompleteSync } from '../libs/services/onboarding-service';
 import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
-import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
+import { atlasClient } from '../libs/services/pilgrimage/atlas/atlas-client';
 import { hydratePilgrimageHubSnapshotFromCache } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
@@ -103,13 +103,7 @@ export default function RootLayout() {
           if (imported) void titleLocalizationService.onMappingDataRefreshed();
         })
         .catch((e) => console.warn('[updateMappings]', e));
-      void hydrateAllPilgrimageData().catch((e) => console.warn('[hydratePilgrimage]', e));
-      // No spot-index/points-top hydrators: api.anitabi.cn is WAF-403 and those
-      // release assets were discontinued (see the pilgrimage WAF risk note).
-      // Bundled indexes are permanent; boot must not issue guaranteed 404s.
-      // Root layout so the warm finishes long before the user reaches the
-      // pilgrimage tab — a pilgrimage/_layout effect would run in the SAME
-      // commit as the hub's useState initializer and always lose that race.
+      void atlasClient.works().catch((e) => console.warn('[hydrateAtlas]', e));
       void hydratePilgrimageHubSnapshotFromCache().catch((e) =>
         console.warn('[hydrateHubSnapshot]', e)
       );
@@ -212,6 +206,7 @@ export default function RootLayout() {
                   <Stack.Screen name="anime/[id]" />
                   <Stack.Screen name="search" />
                   <Stack.Screen name="trending" />
+                  <Stack.Screen name="stats" />
                   <Stack.Screen name="onboarding" />
                   <Stack.Screen name="companion/index" />
                   <Stack.Screen name="companion/library" />

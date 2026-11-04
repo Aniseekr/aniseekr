@@ -7,8 +7,9 @@ import { useCallback, useEffect, useReducer, useState } from 'react';
 import { dataSourceConfig } from '../libs/services/data-source-config';
 import type { PlatformType } from '../libs/services/auth/types';
 import { pilgrimageRepository } from '../libs/services/pilgrimage/pilgrimage-repository';
+import type { AnimeAtlasContext } from '../libs/services/pilgrimage/atlas/atlas-resolver';
+import { getPilgrimageAnimeTitles } from '../libs/services/pilgrimage/pilgrimage-localization';
 import {
-  annotatePilgrimageSeriesPoints,
   resolvePilgrimageSeries,
   type PilgrimageSeriesEntry,
   type PilgrimageSeriesPoint,
@@ -120,7 +121,9 @@ export interface UsePilgrimageDetailDataResult {
  */
 export function usePilgrimageDetailData(
   bangumiId: number | null,
-  onSeriesLoaded?: () => void
+  onSeriesLoaded?: () => void,
+  atlasContext?: AnimeAtlasContext,
+  workKey?: string | null
 ): UsePilgrimageDetailDataResult {
   const [state, dispatch] = useReducer(detailLoadReducer, INITIAL_DETAIL_LOAD_STATE);
   const [browseSource, setBrowseSource] = useState<PlatformType>(dataSourceConfig.browseSource);
@@ -131,15 +134,70 @@ export function usePilgrimageDetailData(
 
   useEffect(() => {
     let cancelled = false;
-    if (bangumiId === null || bangumiId <= 0) {
+    if ((bangumiId === null || bangumiId <= 0) && !atlasContext && !workKey) {
       dispatch({ type: 'invalid_id' });
       return;
     }
-    const validBangumiId = bangumiId;
     onSeriesLoaded?.();
     dispatch({ type: 'loading' });
 
-    resolvePilgrimageSeries(validBangumiId)
+    const load = async () => {
+      if (workKey) {
+        const work = await pilgrimageRepository.getSpotsByKey(workKey);
+        if (work) {
+          const titles = getPilgrimageAnimeTitles(work);
+          dispatch({
+            type: 'series_full_loaded',
+            degraded: false,
+            entries: [{
+              subject: {
+                id: bangumiId ?? 0,
+                title: titles.primary,
+                titleCn: titles.chinese ?? titles.original ?? titles.english ?? '',
+                relation: '作品',
+                date: null,
+                platform: null,
+                label: titles.primary,
+              },
+              anime: work,
+              points: work.spots,
+            }],
+          });
+          return;
+        }
+      }
+
+      if (atlasContext) {
+        const resolvedWork = await pilgrimageRepository.getSpotsForAnime(atlasContext);
+        if (resolvedWork) {
+          const titles = getPilgrimageAnimeTitles(resolvedWork);
+          dispatch({
+            type: 'series_full_loaded',
+            degraded: false,
+            entries: [{
+              subject: {
+                id: bangumiId ?? 0,
+                title: titles.primary,
+                titleCn: titles.chinese ?? titles.original ?? titles.english ?? '',
+                relation: '作品',
+                date: null,
+                platform: null,
+                label: titles.primary,
+              },
+              anime: resolvedWork,
+              points: resolvedWork.spots,
+            }],
+          });
+          return;
+        }
+      }
+
+      if (bangumiId === null || bangumiId <= 0) {
+        dispatch({ type: 'empty' });
+        return;
+      }
+
+      return resolvePilgrimageSeries(bangumiId)
       .then(async (series) => {
         if (cancelled) return;
         if (series.availableEntries.length === 0) {
@@ -148,52 +206,25 @@ export function usePilgrimageDetailData(
           dispatch({ type: 'empty' });
           return;
         }
-        // Lite payloads render immediately, then we fetch full point lists in
-        // parallel and dispatch ONE merged update when they all arrive. The
-        // old design dispatched once per subject which thrashed the screen
-        // root during first paint.
-        dispatch({ type: 'series_loaded', entries: series.entries, degraded: series.degraded });
-        const detailedByEntry = await Promise.all(
-          series.availableEntries.map(async (entry) => {
-            if (!entry.anime)
-              return {
-                subjectId: entry.subject.id,
-                points: null as readonly PilgrimageSeriesPoint[] | null,
-              };
-            try {
-              const detailed = await pilgrimageRepository.getDetailedPointsByBangumiId(
-                entry.subject.id
-              );
-              if (detailed.length === 0) {
-                return { subjectId: entry.subject.id, points: null };
-              }
-              return {
-                subjectId: entry.subject.id,
-                points: annotatePilgrimageSeriesPoints(detailed, entry.anime, entry.subject.label),
-              };
-            } catch {
-              return { subjectId: entry.subject.id, points: null };
-            }
-          })
-        );
-        if (cancelled) return;
-        const mergedEntries: PilgrimageSeriesEntry[] = series.entries.map((entry) => {
-          const match = detailedByEntry.find((d) => d.subjectId === entry.subject.id);
-          if (match && match.points) return { ...entry, points: match.points };
-          return entry;
-        });
-        dispatch({ type: 'series_full_loaded', entries: mergedEntries, degraded: series.degraded });
+        dispatch({ type: 'series_full_loaded', entries: series.entries, degraded: series.degraded });
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : 'Failed to load pilgrimage';
         dispatch({ type: 'error', message });
       });
+    };
+
+    void load().catch((err: unknown) => {
+      if (cancelled) return;
+      const message = err instanceof Error ? err.message : 'Failed to load pilgrimage';
+      dispatch({ type: 'error', message });
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [bangumiId, onSeriesLoaded, reloadNonce]);
+  }, [atlasContext, bangumiId, onSeriesLoaded, reloadNonce, workKey]);
 
   useEffect(() => {
     let cancelled = false;

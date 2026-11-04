@@ -1,5 +1,4 @@
-import { getNumberParam, getStringParam, type RouterParams } from '../../utils/route-params';
-import type { AnitabiPoint } from './types';
+import { getStringParam, type RouterParams } from '../../utils/route-params';
 
 export type PilgrimageDetailReturnTo = 'hub' | 'search' | 'map' | 'album' | 'explorer-journal';
 
@@ -51,14 +50,18 @@ interface DetailRouteOptions extends PilgrimageDetailChromeSeed {
   returnQuery?: string | null;
   albumAnimeId?: string | number | null;
   focusSpotId?: string | null;
+  titleJa?: string | null;
+  titleEn?: string | null;
+  malId?: number | null;
+  anilistId?: number | null;
 }
 
 export function buildPilgrimageDetailRoute(
-  bangumiId: string | number,
+  workKey: string,
   options: DetailRouteOptions = {}
 ): PilgrimageRoute {
   const params: Record<string, string> = {
-    animeId: String(bangumiId),
+    animeId: workKey,
   };
   if (options.returnTo) params.returnTo = options.returnTo;
   if (options.returnQuery) params.returnQuery = options.returnQuery;
@@ -68,6 +71,10 @@ export function buildPilgrimageDetailRoute(
   if (options.titleSecondary) params.titleSecondary = options.titleSecondary;
   if (options.poster) params.poster = options.poster;
   if (options.themeColor) params.themeColor = options.themeColor;
+  if (options.titleJa) params.titleJa = options.titleJa;
+  if (options.titleEn) params.titleEn = options.titleEn;
+  if (options.malId != null) params.malId = String(options.malId);
+  if (options.anilistId != null) params.anilistId = String(options.anilistId);
 
   return {
     pathname: '/pilgrimage/[animeId]',
@@ -77,85 +84,6 @@ export function buildPilgrimageDetailRoute(
 
 export function getPilgrimageDetailFocusSpotId(params: RouterParams): string | null {
   return getStringParam(params, 'focusSpotId');
-}
-
-interface PilgrimageSceneIdRouteOptions extends PilgrimageDetailChromeSeed {
-  bangumiId: number;
-}
-
-export interface PilgrimageSceneIdSeed {
-  bangumiId: number;
-  point: AnitabiPoint;
-  chrome: PilgrimageDetailChromeSeed;
-}
-
-export function buildPilgrimageSceneIdRoute(
-  point: AnitabiPoint,
-  options: PilgrimageSceneIdRouteOptions
-): PilgrimageRoute {
-  return {
-    pathname: '/pilgrimage/identify',
-    params: {
-      source: 'anitabi',
-      bangumiId: String(options.bangumiId),
-      pointId: point.id,
-      pointName: point.name,
-      ...(point.cn ? { pointNameCn: point.cn } : {}),
-      imageUrl: point.image,
-      episode: String(point.ep),
-      second: String(point.s),
-      latitude: String(point.geo[0]),
-      longitude: String(point.geo[1]),
-      ...(point.origin ? { origin: point.origin } : {}),
-      ...(point.originURL ? { originURL: point.originURL } : {}),
-      ...(options.title ? { title: options.title } : {}),
-      ...(options.titleSecondary ? { titleSecondary: options.titleSecondary } : {}),
-      ...(options.poster ? { poster: options.poster } : {}),
-      ...(options.themeColor ? { themeColor: options.themeColor } : {}),
-    },
-  };
-}
-
-export function getPilgrimageSceneIdSeed(params: RouterParams): PilgrimageSceneIdSeed | null {
-  if (getStringParam(params, 'source') !== 'anitabi') return null;
-  const bangumiId = getNumberParam(params, 'bangumiId');
-  const id = getStringParam(params, 'pointId');
-  const name = getStringParam(params, 'pointName');
-  const image = getStringParam(params, 'imageUrl');
-  const ep = getNumberParam(params, 'episode');
-  const s = getNumberParam(params, 'second');
-  const latitude = getNumberParam(params, 'latitude');
-  const longitude = getNumberParam(params, 'longitude');
-  const cn = getStringParam(params, 'pointNameCn');
-  const origin = getStringParam(params, 'origin');
-  const originURL = getStringParam(params, 'originURL');
-  if (
-    bangumiId === null ||
-    id === null ||
-    name === null ||
-    image === null ||
-    ep === null ||
-    s === null ||
-    latitude === null ||
-    longitude === null
-  ) {
-    return null;
-  }
-  return {
-    bangumiId,
-    point: {
-      id,
-      name,
-      ...(cn ? { cn } : {}),
-      image,
-      ep,
-      s,
-      geo: [latitude, longitude],
-      ...(origin ? { origin } : {}),
-      ...(originURL ? { originURL } : {}),
-    },
-    chrome: getPilgrimageDetailChromeSeed(params),
-  };
 }
 
 interface ResolvePilgrimageSpotFocusInput {
