@@ -16,17 +16,14 @@ describe('clusterMaxZoom (supercluster maxZoom = disableClusteringAtZoom - 1)', 
   });
 });
 
-describe('isDotCluster (zoom <= 8 || n < 10)', () => {
+describe('isDotCluster (zoom <= 8)', () => {
   it('is a dot when zoomed out far', () => {
     expect(isDotCluster(8, 500)).toBe(true);
     expect(isDotCluster(5, 1000)).toBe(true);
   });
-  it('is a dot when the count is small', () => {
-    expect(isDotCluster(12, 9)).toBe(true);
-  });
-  it('is a numbered bubble when zoomed in with enough members', () => {
+  it('is a numbered bubble once zoomed in, however small the cluster', () => {
     expect(isDotCluster(9, 10)).toBe(false);
-    expect(isDotCluster(12, 10)).toBe(false);
+    expect(isDotCluster(12, 2)).toBe(false);
   });
 });
 

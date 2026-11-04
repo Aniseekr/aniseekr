@@ -4,6 +4,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Size } from '../../../../../constants/DesignSystem';
 import {
   clusterBubbleSize,
   clusterDotSize,
@@ -24,7 +25,11 @@ function ClusterBubbleImpl({ count, color, zoom, onPress }: ClusterBubbleProps) 
   const dot = isDotCluster(zoom, count);
   const size = dot ? clusterDotSize(count) : clusterBubbleSize(count);
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={formatClusterCount(count)}
+      onPress={onPress}
+      hitSlop={Math.max(0, (Size.minTouchTarget - size) / 2)}>
       <View
         style={[
           styles.bubble,
