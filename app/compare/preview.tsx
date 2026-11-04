@@ -825,7 +825,7 @@ export default function ComparePreviewScreen() {
           </Pressable>
           <View style={styles.headerMid}>
             <ThemedText variant="titleLarge" weight="700" align="center" numberOfLines={1}>
-              {t('pilgrimageUi.comparisonResult')}
+              {t(imageUrl ? 'pilgrimageUi.comparisonResult' : 'pilgrimageUi.yourShot')}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="secondary" align="center" numberOfLines={1}>
               {ep ? `${t('pilgrimage.album.epLabel', { ep })} · ` : ''}
