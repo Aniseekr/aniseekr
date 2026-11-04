@@ -554,7 +554,9 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingHorizontal: Spacing.xl,
   },
-  overlay: { flex: 1, justifyContent: 'flex-end' },
+  // Absolute: as a flex sibling it took half the screen and pushed the live
+  // preview into the top half over a black band.
+  overlay: { ...StyleSheet.absoluteFill, justifyContent: 'flex-end' },
   levelHorizonWrap: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
