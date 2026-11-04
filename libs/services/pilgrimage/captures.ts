@@ -80,6 +80,8 @@ export interface PilgrimageCapture {
   spotEp?: number;
   spotSecond?: number;
   spotGeo?: [number, number];
+  /** Atlas work the spot belongs to, when it was matched by place (not opened from a work). */
+  workKey?: string;
   /**
    * Free captures only: local file of a reference image the user imported to
    * compare against (not an anime scene we know of). The album shows it as the

@@ -39,6 +39,11 @@ export interface JournalFolder {
   visitedSpots: number;
 }
 
+function mergeWorks(prev: PilgrimageWork[], next: PilgrimageWork[]): PilgrimageWork[] {
+  const missing = next.filter((work) => !prev.some((known) => known.key === work.key));
+  return missing.length ? [...prev, ...missing] : prev;
+}
+
 export function usePilgrimageJournalData() {
   const t = useT();
   // MMKV seed keeps the first frame populated for a warm Journal tab.
@@ -67,13 +72,36 @@ export function usePilgrimageJournalData() {
       for (const result of featured) {
         if (result.status === 'fulfilled' && result.value) byKey.set(result.value.key, result.value);
       }
-      if (!cancelled) setAnimes([...byKey.values()]);
+      if (!cancelled) setAnimes((prev) => mergeWorks(prev, [...byKey.values()]));
     }
     void loadAnimeIndex();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Shots matched to a spot by place (photo import, 紀錄 near a spot) can belong
+  // to a work outside the collection; load those works so they get a folder.
+  const placeMatchedWorks = useMemo(() => {
+    const keys = new Set<string>();
+    for (const shots of Object.values(capturesV2.spots)) {
+      for (const shot of shots) if (shot.workKey) keys.add(shot.workKey);
+    }
+    return [...keys].sort().join('|');
+  }, [capturesV2]);
+  useEffect(() => {
+    if (!placeMatchedWorks) return;
+    let cancelled = false;
+    void Promise.allSettled(
+      placeMatchedWorks.split('|').map((key) => pilgrimageRepository.getSpotsByKey(key))
+    ).then((results) => {
+      const works = results.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []));
+      if (!cancelled && works.length) setAnimes((prev) => mergeWorks(prev, works));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [placeMatchedWorks]);
 
   const entries = useMemo(() => {
     const captures: PilgrimageCapture[] = [];
@@ -170,5 +198,7 @@ export function usePilgrimageJournalData() {
     [t]
   );
 
-  return { entries, folders, stats, deleteEntry };
+  const reload = useCallback(() => setCapturesV2(loadCapturesV2Sync()), []);
+
+  return { entries, folders, stats, deleteEntry, reload };
 }

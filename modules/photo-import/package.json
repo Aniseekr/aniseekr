@@ -1,0 +1,9 @@
+{
+  "name": "aniseekr-photo-import",
+  "version": "0.1.0",
+  "description": "AniSeekr Android photo import that keeps the photo's own place and time",
+  "license": "Apache-2.0",
+  "private": true,
+  "main": "src/index.ts",
+  "react-native": "src/index.ts"
+}

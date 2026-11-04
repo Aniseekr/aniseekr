@@ -31,6 +31,8 @@ export interface FiledResult {
   /** Display name of the spot it was filed under; null for a free shot. */
   spotName: string | null;
   spotId: string | null;
+  /** Atlas work of a spot matched by place; null when filed to the target or free. */
+  workKey: string | null;
 }
 
 export async function fileRecordedPhoto(
@@ -58,7 +60,7 @@ export async function fileRecordedPhoto(
       animeColor: target.animeColor,
       ...(target.spotGeo ? { spotGeo: target.spotGeo } : {}),
     });
-    return { spotName: target.spotName, spotId: target.spotId };
+    return { spotName: target.spotName, spotId: target.spotId, workKey: null };
   }
 
   const near = photo.location ? await findNearestCachedSpot(photo.location) : null;
@@ -67,18 +69,23 @@ export async function fileRecordedPhoto(
       ...base,
       spotId: near.spot.id,
       spotName: near.spot.name,
+      workKey: near.workKey,
       ...(near.spot.lat !== null && near.spot.lon !== null
         ? { spotGeo: [near.spot.lat, near.spot.lon] as [number, number] }
         : {}),
     });
-    return { spotName: getPilgrimageSpotTitles(near.spot).primary, spotId: near.spot.id };
+    return {
+      spotName: getPilgrimageSpotTitles(near.spot).primary,
+      spotId: near.spot.id,
+      workKey: near.workKey,
+    };
   }
 
   await recordFreeCapture({
     ...base,
     spotId: `free-${photo.capturedAt}-${Math.round(Math.random() * 1e6)}`,
   });
-  return { spotName: null, spotId: null };
+  return { spotName: null, spotId: null, workKey: null };
 }
 
 // EXIF embedding rewrites the JPEG (~1 s for a 4K shot in JS). 紀錄 mode files
