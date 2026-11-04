@@ -1,14 +1,12 @@
-// Legacy import — see note on the same import in anitabi-data-service.ts.
+// Legacy filesystem API is used for compatibility with the Expo runtime.
 import * as FileSystem from 'expo-file-system/legacy';
 import { LocalDB } from '../../db';
 import type { PlatformType } from '../auth/types';
 
-// Hosted in the public Aniseekr-source companion repo. This expo repo is
-// private; private-repo release assets reject unauthenticated downloads, so
-// the build pipeline lives there. Stable alias tag — weekly snapshots are
-// at mapping-data-YYYY-WW in the same repo for rollback.
-const MAPPING_URL =
-  'https://github.com/Aniseekr/Aniseekr-source/releases/download/mapping-data/anime-id-mappings-merged.json';
+// Built daily by aniseekr-atlas-api's build-id-mappings workflow and served
+// from R2 by that Worker. Builds before this one read the frozen
+// Aniseekr-source GitHub Release instead.
+const MAPPING_URL = 'https://atlas.aniseekr.moe/api/v1/id-mappings';
 
 /**
  * How long an on-device mapping is considered fresh. Mappings are rebuilt by
