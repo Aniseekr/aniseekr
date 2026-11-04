@@ -23,6 +23,7 @@ import React, {
   useSyncExternalStore,
 } from 'react';
 import { Dimensions, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { runAfterInteractions } from '../../../libs/utils/after-interactions';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -94,6 +95,7 @@ import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
 import { buildSpotCompareParams } from '../../../libs/services/pilgrimage/reference-route';
 import type { AnimeAtlasContext } from '../../../libs/services/pilgrimage/atlas/atlas-resolver';
+import { buildPilgrimageWebUrl } from '../../../libs/services/pilgrimage/pilgrimage-web-link';
 
 // Sheet snap height as a fraction of the screen — kept in lockstep with the
 // first snap point in PilgrimageDetailSheet. Map controls use it as a safe
@@ -478,6 +480,13 @@ export default function PilgrimageDetailScreen() {
     (spot: PilgrimageSpot) => (anime ? buildSpotCompareParams(spot, anime, themeColor) : null),
     [anime, themeColor]
   );
+  const webUrl = anime?.key
+    ? buildPilgrimageWebUrl(anime.key, language, 'work')
+    : null;
+  const handleOpenWeb = useCallback(() => {
+    if (!webUrl) return;
+    void WebBrowser.openBrowserAsync(webUrl).catch(() => undefined);
+  }, [webUrl]);
 
   // Phase 3: close the sheet first, then push the route after the dismiss
   // animation lands. `runAfterInteractions` defers the navigation until the
@@ -771,6 +780,8 @@ export default function PilgrimageDetailScreen() {
               representativeForGroup={representativeForGroup}
               distanceForGroup={distanceForGroup}
               hasIntentForGroup={hasIntentForGroup}
+              webUrl={webUrl}
+              onOpenWeb={handleOpenWeb}
             />
 
             {/* Locate FAB — only meaningful when a real map is mounted. The

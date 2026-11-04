@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText, readableTextOn } from '../../themed';
 import { useT } from '../../../libs/i18n';
@@ -52,9 +53,7 @@ export default function ReferenceThumbnail({
         pressed && { opacity: 0.82 },
       ]}>
       {imageUrl ? (
-        <View style={[StyleSheet.absoluteFill, styles.placeholder]}>
-          <Ionicons name="image-outline" size={18} color="rgba(255,255,255,0.5)" />
-        </View>
+        <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.placeholder]}>
           <Ionicons name="image-outline" size={18} color="rgba(255,255,255,0.5)" />

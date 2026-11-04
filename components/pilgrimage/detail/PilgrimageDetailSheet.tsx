@@ -60,6 +60,8 @@ export interface PilgrimageDetailSheetProps {
   representativeForGroup: (group: PilgrimageSpot) => PilgrimageSpot;
   distanceForGroup: (group: PilgrimageSpot) => number | null;
   hasIntentForGroup: (group: PilgrimageSpot, intent: SpotIntentKind) => boolean;
+  webUrl: string | null;
+  onOpenWeb: () => void;
 }
 
 const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
@@ -104,6 +106,8 @@ function PilgrimageDetailSheetImpl({
   representativeForGroup,
   distanceForGroup,
   hasIntentForGroup,
+  webUrl,
+  onOpenWeb,
 }: PilgrimageDetailSheetProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -288,6 +292,14 @@ function PilgrimageDetailSheetImpl({
 
   const footerNode = (
     <View style={styles.footer}>
+      {webUrl ? (
+        <ThemedButton
+          variant="secondary"
+          label={t('pilgrimage.openMapTripPlannerOnWeb')}
+          onPress={onOpenWeb}
+          fullWidth
+        />
+      ) : null}
       <IntelEventsList
         bangumiId={anime?.bgm?.[0] ?? null}
         theme={theme}

@@ -8,6 +8,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -33,7 +34,8 @@ import { buildMultiStopDirectionsUrl } from '../../../../libs/services/pilgrimag
 import { useUserLocationTracking } from '../../../../libs/services/pilgrimage/use-user-location-tracking';
 import { getStringParam } from '../../../../libs/utils/route-params';
 import { formatDistanceKm, hasValidGeo } from '../../../../components/pilgrimage/detail/_helpers';
-import { useT } from '../../../../libs/i18n';
+import { useI18n, useT } from '../../../../libs/i18n';
+import { buildPilgrimageWebUrl } from '../../../../libs/services/pilgrimage/pilgrimage-web-link';
 
 export default function PilgrimageTripScreen() {
   const params = useLocalSearchParams();
@@ -42,6 +44,7 @@ export default function PilgrimageTripScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
+  const { language } = useI18n();
 
   const mapRef = useRef<MapSurfaceHandle>(null);
   const tracking = useUserLocationTracking({
@@ -160,6 +163,14 @@ export default function PilgrimageTripScreen() {
   }, [ordered, t]);
 
   const hasStops = ordered.length > 0;
+  const webUrl = group?.animeId
+    ? buildPilgrimageWebUrl(group.animeId, language, 'trip')
+    : null;
+
+  const handleOpenWeb = useCallback(() => {
+    if (!webUrl) return;
+    void WebBrowser.openBrowserAsync(webUrl).catch(() => undefined);
+  }, [webUrl]);
 
   return (
     <View style={styles.container}>
@@ -259,6 +270,15 @@ export default function PilgrimageTripScreen() {
               label={t('pilgrimage.trip.openInMaps')}
               accessibilityLabel={t('pilgrimage.trip.openInMapsA11y')}
               onPress={handleOpenMaps}
+              size="md"
+              fullWidth
+            />
+          ) : null}
+          {webUrl ? (
+            <ThemedButton
+              variant="secondary"
+              label={t('pilgrimage.openMapTripPlannerOnWeb')}
+              onPress={handleOpenWeb}
               size="md"
               fullWidth
             />

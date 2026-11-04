@@ -16,10 +16,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { bottomPad, Radius } from '../../constants/DesignSystem';
+import { bottomPad, Colors, Radius } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedText, readableTextOn } from '../../components/themed';
+import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 import { compositeSubjectIntoPhoto } from '../../libs/services/pilgrimage/subject-composite';
 import { shouldCompositeSubjectOverlay } from '../../libs/services/pilgrimage/subject-composite-plan';
 import { buildAdditionalExif } from '../../libs/services/pilgrimage/build-exif-metadata';
@@ -1468,6 +1468,31 @@ export default function CompareCaptureScreen() {
           />
         </View>
 
+        {!hiResImageUrl ? (
+          <View
+            style={[
+              styles.refActionWrap,
+              {
+                top: topBarBottom + 76,
+                left: Math.max(14, insets.left + 12),
+              },
+            ]}>
+            <ThemedButton
+              label={t('pilgrimage.camera.importSceneScreenshot')}
+              onPress={() => setHud({ sceneSwitcherOpen: true })}
+              size="md"
+              fullWidth
+            />
+            {ep ? (
+              <ThemedText variant="captionSmall" style={styles.refActionHint}>
+                {params.time
+                  ? t('pilgrimage.camera.referenceHint', { episode: ep, time: params.time })
+                  : t('pilgrimage.identify.episodeLabel', { episode: ep })}
+              </ThemedText>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Persistent AUTO chip when the user picked auto mode — flips to
             "AUTO · HDR" once the scene analyzer agrees and the camera is
             preparing an HDR shot. Rule 8: this only renders the real live
@@ -1728,6 +1753,20 @@ const styles = StyleSheet.create({
   },
   permBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: Radius.sm, marginTop: 12 },
   refThumbWrap: { position: 'absolute', zIndex: 66 },
+  refActionWrap: {
+    position: 'absolute',
+    zIndex: 67,
+    width: 272,
+    gap: 6,
+  },
+  refActionHint: {
+    alignSelf: 'flex-start',
+    color: Colors.text.primary,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.card,
+  },
   refThumbCredit: {
     marginTop: 6,
     alignSelf: 'flex-start',
