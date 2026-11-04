@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
-// The root export throws for these since SDK 56; the legacy entry keeps them.
-import * as MediaLibrary from 'expo-media-library/legacy';
 import { useSharedValue } from 'react-native-reanimated';
 import { useCameraPermission } from 'react-native-vision-camera';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -100,18 +98,9 @@ import { locationService } from '../../libs/services/pilgrimage/location-service
 import AutoCaptureStatusBadge from '../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../components/pilgrimage/camera/CaptureHistoryStrip';
 import { captureModeToastCopy } from '../../libs/services/pilgrimage/capture-mode-copy';
-import {
-  buildCameraPreviewParams,
-  buildJournalPreviewParams,
-} from '../../libs/services/pilgrimage/preview-capture';
-import {
-  findCaptureByUri,
-  loadCapturesV2Sync,
-  recordCapture,
-  recordFreeCapture,
-} from '../../libs/services/pilgrimage/captures';
-import { findNearestCachedSpot } from '../../libs/services/pilgrimage/nearest-cached-spot';
-import { getPilgrimageSpotTitles } from '../../libs/services/pilgrimage/pilgrimage-localization';
+import { buildCameraPreviewParams } from '../../libs/services/pilgrimage/preview-capture';
+import { trackMetadataJob, type RecordTarget } from '../../libs/services/pilgrimage/record-capture';
+import { useRecordCapture } from '../../hooks/useRecordCapture';
 import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../libs/navigation/floating-tab-bar-layout';
 import {
   importReferenceImage,
@@ -751,132 +740,53 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
     ]
   );
 
-  // 紀錄 mode keeps a copy in the system camera roll too. Save-only access:
-  // READ_MEDIA_IMAGES is blocked in app.json, so asking to read would throw.
-  const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
-    writeOnly: true,
-    granularPermissions: ['photo'],
-  });
-
-  // 紀錄: file the shot in the journal right away — under the spot the camera
-  // was opened for, else the nearest Atlas spot within range, else as a free
-  // shot — and stay on the camera. Rule 8: only a real spot match is attached.
-  const recordToJournal = useCallback(
-    async (shot: CaptureSessionShot) => {
-      const userLocation =
-        shot.userLocation ?? (await locationService.getCurrentLocation().catch(() => null));
-      const base = {
-        uri: shot.uri,
-        capturedAt: shot.createdAt,
-        source: shot.source === 'auto' ? ('auto' as const) : ('camera' as const),
-        ...(shot.heading != null ? { heading: shot.heading } : {}),
-        ...(userLocation
-          ? { userLocation: { latitude: userLocation.latitude, longitude: userLocation.longitude } }
-          : {}),
-      };
-      let filedUnder: string | null = null;
-      try {
-        if (targetSpotId) {
-          const spotLat = Number(params.spotLat);
-          const spotLng = Number(params.spotLng);
-          await recordCapture({
-            ...base,
-            spotId: targetSpotId,
-            ...(nameParam ? { spotName: nameParam } : {}),
-            ...(ep && Number.isFinite(Number(ep)) ? { spotEp: Number(ep) } : {}),
-            ...(animeTitle ? { animeTitle } : {}),
-            ...(animeId && Number.isFinite(Number(animeId)) ? { animeId: Number(animeId) } : {}),
-            animeColor: themeColor,
-            ...(params.spotLat &&
-            params.spotLng &&
-            Number.isFinite(spotLat) &&
-            Number.isFinite(spotLng)
-              ? { spotGeo: [spotLat, spotLng] as [number, number] }
-              : {}),
-          });
-          filedUnder = nameParam ?? null;
-        } else {
-          const near = userLocation ? await findNearestCachedSpot(userLocation) : null;
-          if (near) {
-            const spotName = getPilgrimageSpotTitles(near.spot).primary;
-            await recordCapture({
-              ...base,
-              spotId: near.spot.id,
-              spotName: near.spot.name,
-              ...(near.spot.lat !== null && near.spot.lon !== null
-                ? { spotGeo: [near.spot.lat, near.spot.lon] as [number, number] }
-                : {}),
-            });
-            filedUnder = spotName;
-          } else {
-            await recordFreeCapture({
-              ...base,
-              spotId: `free-${shot.createdAt}-${Math.round(Math.random() * 1e6)}`,
-            });
-          }
-        }
-      } catch (error) {
-        console.warn('[camera] record to journal failed', error);
-        hapticsBridge.error();
-        return;
-      }
-      hapticsBridge.success();
-      setHud({
-        switchToast: {
-          icon: 'checkmark-circle',
-          label: t('pilgrimageUi.camera.recorded'),
-          ...(filedUnder ? { hint: filedUnder } : {}),
-        },
-      });
-      // The camera-roll copy is a convenience; it never holds up the confirmation.
-      const granted = mediaPerm?.granted || (await requestMediaPerm().catch(() => null))?.granted;
-      if (granted) await MediaLibrary.saveToLibraryAsync(shot.uri).catch(() => undefined);
-    },
-    [
-      targetSpotId,
-      params.spotLat,
-      params.spotLng,
-      nameParam,
-      ep,
-      animeTitle,
-      animeId,
-      themeColor,
-      mediaPerm,
-      requestMediaPerm,
-      setHud,
-      t,
-    ]
+  // 紀錄 mode: filing, confirmation, camera-roll copy and the thumb all live in
+  // the hook; the screen only decides when (the shutter in 紀錄 mode).
+  const recordTarget = useMemo<RecordTarget | null>(() => {
+    if (!targetSpotId) return null;
+    const lat = Number(params.spotLat);
+    const lng = Number(params.spotLng);
+    return {
+      spotId: targetSpotId,
+      spotName: nameParam ?? null,
+      ep: ep && Number.isFinite(Number(ep)) ? Number(ep) : null,
+      animeTitle: animeTitle || null,
+      animeId: animeId && Number.isFinite(Number(animeId)) ? Number(animeId) : null,
+      animeColor: themeColor,
+      spotGeo:
+        params.spotLat && params.spotLng && Number.isFinite(lat) && Number.isFinite(lng)
+          ? [lat, lng]
+          : null,
+    };
+  }, [
+    targetSpotId,
+    params.spotLat,
+    params.spotLng,
+    nameParam,
+    ep,
+    animeTitle,
+    animeId,
+    themeColor,
+  ]);
+  const showToast = useCallback(
+    (toast: CamSwitchToastValue) => setHud({ switchToast: toast }),
+    [setHud]
   );
+  const recorder = useRecordCapture({ target: recordTarget, themeColor, showToast });
 
   // What the shutter leads to: 紀錄 stays on the camera, 動漫 opens the comparison.
   const afterCapture = useCallback(
     (shot: CaptureSessionShot) => {
-      if (cameraMode === 'record') void recordToJournal(shot);
+      if (cameraMode === 'record') void recorder.record(shot);
       else navigateToPreview(shot);
     },
-    [cameraMode, recordToJournal, navigateToPreview]
+    [cameraMode, recorder, navigateToPreview]
   );
 
-  // 紀錄: the gallery thumb opens the newest logged shot (view, save, share).
   const openLatestRecorded = useCallback(() => {
     const latest = captureSession.shots[0] ?? null;
-    const capture = latest ? findCaptureByUri(latest.uri) : null;
-    if (!capture) {
-      if (latest) navigateToPreview(latest);
-      return;
-    }
-    const isFree = loadCapturesV2Sync().free.some((c) => c.uri === capture.uri);
-    router.push({
-      pathname: '/compare/preview',
-      params: buildJournalPreviewParams(
-        { capture, spot: null, anime: null, matchPercent: null, isFree },
-        {
-          importedLabel: t('pilgrimageUi.referencePicker.importedLabel'),
-          fallbackColor: themeColor,
-        }
-      ),
-    });
-  }, [captureSession.shots, navigateToPreview, router, t, themeColor]);
+    if (!recorder.openLatest(latest) && latest) navigateToPreview(latest);
+  }, [captureSession.shots, recorder, navigateToPreview]);
 
   // Add a freshly captured shot to the capture session, snapshotting the
   // sensor readings AT CAPTURE TIME. Rule 8: every sensor field is the real
@@ -1072,7 +982,11 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
         );
         const output = await maybeCompositeCharacterShot(subjectOutput, additionalExif);
         if (output.uri === photo.uri) {
-          await embedCaptureMetadata(photo.uri, additionalExif);
+          const embed = embedCaptureMetadata(photo.uri, additionalExif);
+          // 紀錄: free the shutter now; the rewrite finishes in the background
+          // and the camera-roll copy waits for it (record-capture.ts).
+          if (cameraMode === 'record') trackMetadataJob(photo.uri, embed);
+          else await embed;
         }
         tapFocus.releaseLock();
         // Lens-gate banner: when the capture was taken on the standalone
@@ -1107,6 +1021,7 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
     [
       buildExifNow,
       captureFlash,
+      cameraMode,
       settings.mute,
       tapFocus,
       maybeCompositeSubjectShot,
