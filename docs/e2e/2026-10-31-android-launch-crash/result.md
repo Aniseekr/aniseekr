@@ -16,4 +16,4 @@ app.json → expo-build-properties.android.extraProguardRules:
 
 ## Verified
 prebuild + `:app:assembleRelease` (minified, arm64) → installed on AVD → app reaches onboarding,
-no FATAL in logcat. Screenshot: after-fix.png
+no FATAL in logcat. Screenshot: after-fix.jpg

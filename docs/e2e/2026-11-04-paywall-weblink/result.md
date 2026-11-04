@@ -4,14 +4,14 @@
 
 | 案例 | 預期 | 實際 | 判定 | 證據 |
 |---|---|---|---|---|
-| C1 設定 Premium | 有 Premium 區塊、中文文案 | 「解鎖 Premium／無廣告、全部主題、無限同步」+ 升級 | PASS | `C1-settings.png` |
-| C2 付費主題 | 有 Premium 標記；點了開付費牆、不套用 | Cyberpunk／Survey Corps 有鎖頭標記；點 Cyberpunk 開付費牆，主題仍是 Aniseekr | PASS | `C2-appearance.png`、`C2-premium-theme-tap.png` |
-| C3 付費牆方案 | RevenueCat 價格，或真實錯誤狀態 | 「目前無法載入訂閱方案。重試」，沒有假價格；Metro log：RevenueCat 回報 dashboard 的 offering 沒有登記 App Store 商品 | UI PASS／價格 BLOCKED | `C3-paywall.png` |
-| C4 個人頁 CTA | Premium CTA 出現 | 「解鎖 Premium」+ 升級 | PASS | `C4-profile.png` |
-| C5 作品頁網頁按鈕 | sheet footer 有按鈕 | 「在網頁開啟地圖與行程規劃」 | PASS | `C5-web-button.png` |
-| C6 開網頁 | `aniseekr.moe/zh-tw/works/hyouka?utm_source=app&utm_medium=work` | SafariVC 開 aniseekr.moe 冰菓頁（繁中介面、44 個景點）；URL 函式輸出與 curl 200 | PASS | `C6-web-open.png`、`C6-urls.txt` |
-| C7 相機無參考圖 | 主按鈕 + 集數提示 | 「匯入這一幕的截圖」+「第 21 集」（此景點無時間） | PASS | `C7-compare-empty.png` |
-| C8 匯入後 | 主按鈕消失、REF 顯示圖片 | 按鈕 → 選擇參考圖 sheet → 匯入截圖 → 相簿；匯入後 REF 縮圖是該圖，疊圖套上 | PASS | `C8-picker-sheet.png`、`C8-library.png`、`C8-after-import.png` |
+| C1 設定 Premium | 有 Premium 區塊、中文文案 | 「解鎖 Premium／無廣告、全部主題、無限同步」+ 升級 | PASS | `C1-settings.jpg` |
+| C2 付費主題 | 有 Premium 標記；點了開付費牆、不套用 | Cyberpunk／Survey Corps 有鎖頭標記；點 Cyberpunk 開付費牆，主題仍是 Aniseekr | PASS | `C2-appearance.jpg`、`C2-premium-theme-tap.jpg` |
+| C3 付費牆方案 | RevenueCat 價格，或真實錯誤狀態 | 「目前無法載入訂閱方案。重試」，沒有假價格；Metro log：RevenueCat 回報 dashboard 的 offering 沒有登記 App Store 商品 | UI PASS／價格 BLOCKED | `C3-paywall.jpg` |
+| C4 個人頁 CTA | Premium CTA 出現 | 「解鎖 Premium」+ 升級 | PASS | `C4-profile.jpg` |
+| C5 作品頁網頁按鈕 | sheet footer 有按鈕 | 「在網頁開啟地圖與行程規劃」 | PASS | `C5-web-button.jpg` |
+| C6 開網頁 | `aniseekr.moe/zh-tw/works/hyouka?utm_source=app&utm_medium=work` | SafariVC 開 aniseekr.moe 冰菓頁（繁中介面、44 個景點）；URL 函式輸出與 curl 200 | PASS | `C6-web-open.jpg`、`C6-urls.txt` |
+| C7 相機無參考圖 | 主按鈕 + 集數提示 | 「匯入這一幕的截圖」+「第 21 集」（此景點無時間） | PASS | `C7-compare-empty.jpg` |
+| C8 匯入後 | 主按鈕消失、REF 顯示圖片 | 按鈕 → 選擇參考圖 sheet → 匯入截圖 → 相簿；匯入後 REF 縮圖是該圖，疊圖套上 | PASS | `C8-picker-sheet.jpg`、`C8-library.jpg`、`C8-after-import.jpg` |
 
 整體：範圍內 BLOCKED（C3 價格）。
 

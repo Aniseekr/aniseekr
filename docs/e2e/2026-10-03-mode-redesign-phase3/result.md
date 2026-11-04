@@ -5,19 +5,19 @@ Implementation: Codex (gpt-6.1-sol); review + E2E: Claude.
 
 | Flow | Result | Evidence |
 |---|---|---|
-| 作品頁 deep link `focusSpotId` to row 63 (cold + warm) | sheet goes to top detent, row scrolled + expanded | detail-focus-deep-row.png |
-| Then focus row 2 while list is scrolled | sheet re-scrolls to the row | detail-focus-near-row-after-scroll.png |
-| 探索 home: season rail (air slot), weekly top 5 (no invented score), genre chips | OK | discover-home.png, discover-genres.png |
-| Genre chip → swipe-rating deck | OK | discover-genre-deck.png |
+| 作品頁 deep link `focusSpotId` to row 63 (cold + warm) | sheet goes to top detent, row scrolled + expanded | detail-focus-deep-row.jpg |
+| Then focus row 2 while list is scrolled | sheet re-scrolls to the row | detail-focus-near-row-after-scroll.jpg |
+| 探索 home: season rail (air slot), weekly top 5 (no invented score), genre chips | OK | discover-home.jpg, discover-genres.jpg |
+| Genre chip → swipe-rating deck | OK | discover-genre-deck.jpg |
 | Pull to refresh keeps data visible | OK | — |
 | 追番: week strip, Following/All segments, rows, season picker (full labels) | OK | schedule-*.png |
-| Bell on untracked show → tracked as planned + reminder row in `scheduled_notifications` | OK (SQLite checked) | schedule-bell-follow.png |
-| ⋯ → card deck (tab bar hidden, close button, 1/83) | OK | schedule-card-deck.png |
+| Bell on untracked show → tracked as planned + reminder row in `scheduled_notifications` | OK (SQLite checked) | schedule-bell-follow.jpg |
+| ⋯ → card deck (tab bar hidden, close button, 1/83) | OK | schedule-card-deck.jpg |
 | Summer 2026 switch → 86 shows, Following 0 empty state | OK | — |
 | Cold launch opens on Following without a season→tracking swap | OK | — |
 | 收藏: status chips, default = first non-empty status, 3-col grid, empty states, My lists | OK | library-*.png |
-| Library titles for English UI (saved title, not Russian/Chinese enrichment) | OK after resolver fix | library-want-titles-fixed.png |
-| Status chip row scrolls horizontally | OK — see note | library-chips-scrolled.png |
+| Library titles for English UI (saved title, not Russian/Chinese enrichment) | OK after resolver fix | library-want-titles-fixed.jpg |
+| Status chip row scrolls horizontally | OK — see note | library-chips-scrolled.jpg |
 
 Not verified: real-device camera, OS notification permission prompt on a fresh install (simulator had it granted), share-schedule / share-collection image export, undo snackbar action (tap landed after auto-dismiss).
 

@@ -14,8 +14,8 @@
 |---|---|---|---|---|
 | M-a 照片 a1 | 搬到 `hyouka-hida-takayama-tourist-information`，清掉舊圖 URL | 相同；`spotImage` 已移除；uri 不變 | PASS | `M1-stores-after.txt` |
 | M-b 收藏 a2 | 搬到 `hyouka-hanasato-overpass`（25 m） | 相同；`meta.image` 已移除 | PASS | `M1-stores-after.txt` |
-| M-c 去過 a1 + v3（v3 只有 id，無座標） | a1 → 觀光案內所；v3 從 `anitabi_points_v2_` 恢復座標 → `hyouka-at-19-66` | 兩個都搬過去，保留最早時間；legacy visited = [] | PASS | `M1-stores-after.txt`、`M1-hyouka-visited.png`（已去 2） |
-| M-d 照片 far（2.9 km 內無 Atlas 點） | 保留舊 id、標 legacy、相簿顯示「舊景點」 | 相同 | PASS | `M1-album.png` |
+| M-c 去過 a1 + v3（v3 只有 id，無座標） | a1 → 觀光案內所；v3 從 `anitabi_points_v2_` 恢復座標 → `hyouka-at-19-66` | 兩個都搬過去，保留最早時間；legacy visited = [] | PASS | `M1-stores-after.txt`、`M1-hyouka-visited.jpg`（已去 2） |
+| M-d 照片 far（2.9 km 內無 Atlas 點） | 保留舊 id、標 legacy、相簿顯示「舊景點」 | 相同 | PASS | `M1-album.jpg` |
 | 照片檔 | 不刪不動 | 兩個檔 SHA 前後相同 | PASS | `M0-files-before.txt` |
 | 舊快取清理 | `anitabi_points_v2_*` 刪除、`pilgrimage_spots` drop、完成旗標 | cache 0 筆、表已 drop、flag = done、journal 清掉 | PASS | 對話中 sqlite / strings 輸出 |
 | M-e 重開一次 | 不變 | MMKV 內容 hash 前後相同 | PASS | `M2-idempotent.txt` |

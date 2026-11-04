@@ -7,13 +7,13 @@
 
 | 案例 | 預期 | 實際 | 判定 | 證據 |
 |---|---|---|---|---|
-| A1 氷菓作品頁 | Atlas 44 點、集數、可信度、無場景圖 | 44 點；第21話等；已確認／單一來源比對；最近 46 m（= curl 0.05 km）；靠近打卡橫幅；地圖 EP 1 | PASS | `A1-r2-hyouka-work.png` |
-| A2 續作 ゆるキャン△ SEASON２ | 透過 AniList 前作找到 `yuru-camp` | 作品頁出現「搖曳露營△ 244 個場景」卡，區域 chip「山梨県 身延町」 | PASS | `A2-r3-yurucamp-s2-card.png`、`A2-r4-city-chip.png` |
-| A3 首頁附近 | 高山附近氷菓景點 | 3 km 內 32 處；最近 飛騨高山観光案内所 46 m | PASS | `H1-hub-top.png` |
-| A4 匯入參考圖 | 點擊後可匯入截圖並疊圖，有集數提示 | REF → 「選擇參考圖／第 21 集・22:00／匯入截圖」→ 相簿選圖 → 75% 疊圖 | PASS（見下方 UX 備註） | `A4-ref-tap.png`、`A4-ref-imported.png` |
-| A5 致謝頁 | Aniseekr Atlas，無 anitabi | 「Aniseekr Atlas／聖地巡禮資料」 | PASS | `A5-attribution.png` |
-| B88 88 選開作品 | STEINS;GATE 開出 Atlas 40 點 | 40 個地點、標題正確 | PASS | `B88-r4-steins-gate.png` |
-| H1–H3 首頁改版 | 附近緊湊列、各區「全部」、完整列表 | 附近 3 列 + 全部；熱門／88 選／集章活動 橫列；88 選全部頁按地區分組，返回鍵「巡禮」 | PASS | `H2-r2-hub-rails.png`、`H3-r2-list-88.png` |
+| A1 氷菓作品頁 | Atlas 44 點、集數、可信度、無場景圖 | 44 點；第21話等；已確認／單一來源比對；最近 46 m（= curl 0.05 km）；靠近打卡橫幅；地圖 EP 1 | PASS | `A1-r2-hyouka-work.jpg` |
+| A2 續作 ゆるキャン△ SEASON２ | 透過 AniList 前作找到 `yuru-camp` | 作品頁出現「搖曳露營△ 244 個場景」卡，區域 chip「山梨県 身延町」 | PASS | `A2-r3-yurucamp-s2-card.jpg`、`A2-r4-city-chip.jpg` |
+| A3 首頁附近 | 高山附近氷菓景點 | 3 km 內 32 處；最近 飛騨高山観光案内所 46 m | PASS | `H1-hub-top.jpg` |
+| A4 匯入參考圖 | 點擊後可匯入截圖並疊圖，有集數提示 | REF → 「選擇參考圖／第 21 集・22:00／匯入截圖」→ 相簿選圖 → 75% 疊圖 | PASS（見下方 UX 備註） | `A4-ref-tap.jpg`、`A4-ref-imported.jpg` |
+| A5 致謝頁 | Aniseekr Atlas，無 anitabi | 「Aniseekr Atlas／聖地巡禮資料」 | PASS | `A5-attribution.jpg` |
+| B88 88 選開作品 | STEINS;GATE 開出 Atlas 40 點 | 40 個地點、標題正確 | PASS | `B88-r4-steins-gate.jpg` |
+| H1–H3 首頁改版 | 附近緊湊列、各區「全部」、完整列表 | 附近 3 列 + 全部；熱門／88 選／集章活動 橫列；88 選全部頁按地區分組，返回鍵「巡禮」 | PASS | `H2-r2-hub-rails.jpg`、`H3-r2-list-88.jpg` |
 
 整體：PASS（範圍內案例）。
 

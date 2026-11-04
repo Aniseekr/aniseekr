@@ -4,14 +4,14 @@
 
 | ID | 預期 | 實際 | 判定 | 證據 |
 |---|---|---|---|---|
-| R1 | 本季「排行」：沒有星期列，有說明，每列有名次、加入清單人數、書籤 | Cyberpunk 2「116.3k on AniList lists · ONA」排第 1 | PASS | R1-ranking.png |
-| R2 | 點書籤 → 實心、snackbar、Following +1 | 書籤變實心、「Added … to Wishlist」可 Undo、Following 0→1 | PASS | R2-picked.png |
-| R3 | 2027 冬（未開播）：沒有星期列與模式切換、依期待排序、有開播日 | 58 部，第 1 名 41.7k、「Starts 1/1」 | PASS | R3-upcoming.png |
-| R4 | 2026 夏（已結束）：依分數排、meta 是 ★ x.x | BLEACH ★8.8 排第 1 | PASS | R4-past.png |
-| R5 | 卡堆沒有模式鍵，底部 ✕ ♥ 🔖 | 符合 | PASS | R5-deck-single-mode.png |
-| R6 | 按 ♥ 後收藏出現該作品（看完＋最愛） | 收藏 2 titles、Completed 1、Favorites 1（SAO） | PASS | R6-library-completed.png |
-| R7 | 個人頁頭像卡有網點；統計是真實數字 | 右上網點漸層；Rated 1、Liked 1 | PASS | R7-profile.png |
-| R8 | 點鈴鐺 → 先問通知權限 → 鈴鐺亮起 → 系統真的排程 | 權限只在點鈴鐺時才問；允許後鈴鐺亮、Following 2；設定 → 通知顯示「1 scheduled」，時間 21:15＝21:30 開播減 15 分鐘 | PASS | R8-bell.png、R8b-scheduled.png |
+| R1 | 本季「排行」：沒有星期列，有說明，每列有名次、加入清單人數、書籤 | Cyberpunk 2「116.3k on AniList lists · ONA」排第 1 | PASS | R1-ranking.jpg |
+| R2 | 點書籤 → 實心、snackbar、Following +1 | 書籤變實心、「Added … to Wishlist」可 Undo、Following 0→1 | PASS | R2-picked.jpg |
+| R3 | 2027 冬（未開播）：沒有星期列與模式切換、依期待排序、有開播日 | 58 部，第 1 名 41.7k、「Starts 1/1」 | PASS | R3-upcoming.jpg |
+| R4 | 2026 夏（已結束）：依分數排、meta 是 ★ x.x | BLEACH ★8.8 排第 1 | PASS | R4-past.jpg |
+| R5 | 卡堆沒有模式鍵，底部 ✕ ♥ 🔖 | 符合 | PASS | R5-deck-single-mode.jpg |
+| R6 | 按 ♥ 後收藏出現該作品（看完＋最愛） | 收藏 2 titles、Completed 1、Favorites 1（SAO） | PASS | R6-library-completed.jpg |
+| R7 | 個人頁頭像卡有網點；統計是真實數字 | 右上網點漸層；Rated 1、Liked 1 | PASS | R7-profile.jpg |
+| R8 | 點鈴鐺 → 先問通知權限 → 鈴鐺亮起 → 系統真的排程 | 權限只在點鈴鐺時才問；允許後鈴鐺亮、Following 2；設定 → 通知顯示「1 scheduled」，時間 21:15＝21:30 開播減 15 分鐘 | PASS | R8-bell.jpg、R8b-scheduled.jpg |
 
 總判定：PASS（8/8）。
 

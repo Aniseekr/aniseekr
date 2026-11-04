@@ -51,3 +51,8 @@ infra/terraform/*.tfplan
 .claude/
 
 .alma-snapshots
+
+# E2E evidence (screenshots, dumps, logs) stays local; only plan/result reports are tracked.
+docs/e2e/**
+!docs/e2e/**/
+!docs/e2e/**/*.md
