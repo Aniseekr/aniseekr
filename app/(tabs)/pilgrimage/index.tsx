@@ -2,22 +2,16 @@ import { useEffect, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  ThemedButton,
-  ThemedIconButton,
-  ThemedSurface,
-  ThemedText,
-  Skeleton,
-} from '../../../components/themed';
+import { ThemedButton, ThemedText } from '../../../components/themed';
 import { ExplorerMapView } from '../../../components/pilgrimage/home/ExplorerMapView';
+import { HubMapHero } from '../../../components/pilgrimage/home/HubMapHero';
 import {
   usePilgrimageHubScreenData,
   type UsePilgrimageHubScreenData,
 } from '../../../hooks/usePilgrimageHubScreenData';
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { useTheme } from '../../../context/ThemeContext';
-import { bottomPad, Radius, Spacing, TabBar } from '../../../constants/DesignSystem';
+import { bottomPad, Spacing, TabBar } from '../../../constants/DesignSystem';
 import { useT } from '../../../libs/i18n';
 import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import { buildMapsURL } from '../../../components/pilgrimage/detail';
@@ -82,16 +76,9 @@ function ExplorerHomeList({
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: bottom }]}>
-        <View style={styles.titleRow}>
-          <ThemedText variant="headlineLarge" weight="700" style={styles.flex}>
-            {t('tabs.pilgrimage')}
-          </ThemedText>
-          <ThemedIconButton
-            accessibilityLabel={t('tabs.pilgrimageHome.showMap')}
-            icon={(color) => <Ionicons name="map" size={22} color={color} />}
-            onPress={onShowMap}
-          />
-        </View>
+        <ThemedText variant="headlineLarge" weight="700">
+          {t('tabs.pilgrimage')}
+        </ThemedText>
         <HomeSearchField
           label={t('tabs.pilgrimageHome.search')}
           onPress={() => router.push({ pathname: '/search', params: { context: 'pilgrimage' } })}
@@ -117,43 +104,23 @@ function ExplorerHomeList({
           </View>
         ) : null}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText variant="titleLarge" weight="700">
-              {t('tabs.pilgrimageHome.nearby')}
-            </ThemedText>
-            {data.nearbyCoverage === 'known' && data.nearbyCount > 0 ? (
-              <ThemedButton
-                label={t('tabs.pilgrimageHome.all')}
-                variant="ghost"
-                size="sm"
-                onPress={() => router.push('/pilgrimage/list/nearby')}
-              />
-            ) : null}
-          </View>
-          {data.locationStatus === 'pending' || data.nearbyPending ? (
-            <Skeleton.Block width="100%" height={170} borderRadius={Radius.card} />
-          ) : null}
-          {data.locationStatus === 'denied' || data.locationStatus === 'unavailable' ? (
-            <ThemedSurface variant="card" padded style={styles.permission}>
-              <ThemedText variant="bodyMedium" tone="secondary">
-                {t('tabs.pilgrimageHome.locationNeeded')}
-              </ThemedText>
-              <ThemedButton
-                label={t(
-                  data.locationCanAskAgain
-                    ? 'tabs.pilgrimageHome.enableLocation'
-                    : 'tabs.pilgrimageHome.openSettings'
-                )}
-                onPress={() =>
-                  data.locationCanAskAgain
-                    ? void data.requestLocation()
-                    : void Linking.openSettings()
-                }
-              />
-            </ThemedSurface>
-          ) : null}
+          {/* The map is the entry: real nearby pins, or Japan plus one
+              "enable location" action when we don't know where the user is. */}
+          <HubMapHero
+            locationStatus={data.locationStatus}
+            locationCanAskAgain={data.locationCanAskAgain}
+            userLocation={data.userLocation}
+            nearbySpots={data.nearbySpots}
+            nearbyCount={data.nearbyCount}
+            nearbyPending={data.nearbyPending}
+            nearbyKnown={data.nearbyCoverage === 'known' && !data.nearbyError}
+            onOpenMap={onShowMap}
+            onRequestLocation={() => void data.requestLocation()}
+            onOpenSettings={() => void Linking.openSettings()}
+          />
           {data.locationStatus === 'granted' && data.nearbySpots.length ? (
             <View style={styles.nearbyRows}>
+
               {data.nearbySpots.slice(0, 3).map((hit) => (
                 <NearbyRow
                   key={`${hit.workKey}:${hit.spotId}`}
@@ -178,12 +145,15 @@ function ExplorerHomeList({
                   }
                 />
               ))}
+              {data.nearbyCoverage === 'known' && data.nearbyCount > 3 ? (
+                <ThemedButton
+                  label={`${t('tabs.pilgrimageHome.all')} ${data.nearbyCount}`}
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => router.push('/pilgrimage/list/nearby')}
+                />
+              ) : null}
             </View>
-          ) : null}
-          {nearEmpty ? (
-            <ThemedText variant="bodyMedium" tone="secondary">
-              {t('tabs.pilgrimageHome.noNearbyWithin3km')}
-            </ThemedText>
           ) : null}
           {data.nearbyError ? (
             <ThemedText variant="bodyMedium" tone="secondary">
