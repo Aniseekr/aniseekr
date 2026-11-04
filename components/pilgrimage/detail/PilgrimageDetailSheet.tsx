@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import type { ThemePalette } from '../../../context/ThemeContext';
@@ -112,6 +113,8 @@ function PilgrimageDetailSheetImpl({
 }: PilgrimageDetailSheetProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  // Android's 3-button nav bar draws over the sheet's last rows otherwise.
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => [...SHEET_SNAPS], []);
   const progress =
@@ -274,7 +277,10 @@ function PilgrimageDetailSheetImpl({
           }
           ListFooterComponent={footerNode}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.sheetContent}
+          contentContainerStyle={[
+            styles.sheetContent,
+            { paddingBottom: Spacing.xxl + bottomInset },
+          ]}
         />
       </BottomSheet>
 
