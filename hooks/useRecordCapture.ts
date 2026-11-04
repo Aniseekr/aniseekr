@@ -11,6 +11,7 @@ import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { findCaptureByUri, loadCapturesV2Sync } from '../libs/services/pilgrimage/captures';
 import type { CaptureSessionShot } from '../libs/services/pilgrimage/capture-session';
 import { locationService } from '../libs/services/pilgrimage/location-service';
+import { importTripPhotos } from '../libs/services/pilgrimage/photo-import';
 import { buildJournalPreviewParams } from '../libs/services/pilgrimage/preview-capture';
 import {
   fileRecordedPhoto,
@@ -95,5 +96,34 @@ export function useRecordCapture({ target, themeColor, showToast }: UseRecordCap
     [router, t, themeColor]
   );
 
-  return { record, openLatest };
+  /**
+   * Import from the library the way the journal does: each photo keeps its own
+   * time and place (never the phone's current position). Confirms in a toast.
+   */
+  const importFromLibrary = useCallback(async () => {
+    try {
+      const summary = await importTripPhotos();
+      if (!summary) return;
+      hapticsBridge.success();
+      const works = summary.works.map((work) => work.title).join('、');
+      showToast({
+        icon: 'images-outline',
+        label:
+          summary.imported > 0
+            ? t('pilgrimage.album.importResultTitle', { count: summary.imported })
+            : t('pilgrimage.album.importDuplicates', { count: summary.duplicates }),
+        ...(works
+          ? { hint: works }
+          : summary.noPlace > 0
+            ? { hint: t('pilgrimage.album.importNoPlace', { count: summary.noPlace }) }
+            : {}),
+      });
+    } catch (error) {
+      console.warn('[camera] library import failed', error);
+      hapticsBridge.error();
+      showToast({ icon: 'alert-circle', label: t('pilgrimage.album.importFailed') });
+    }
+  }, [showToast, t]);
+
+  return { record, openLatest, importFromLibrary };
 }

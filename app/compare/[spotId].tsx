@@ -1837,7 +1837,7 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
               <GalleryThumb
                 uris={captureSession.shots.map((s) => s.uri)}
                 themeColor={themeColor}
-                onPickLibrary={handlePickLibraryImage}
+                onPickLibrary={recordMode ? recorder.importFromLibrary : handlePickLibraryImage}
                 onExpand={recordMode ? openLatestRecorded : () => setHistoryOpen((v) => !v)}
               />
             }
