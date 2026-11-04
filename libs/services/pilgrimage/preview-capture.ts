@@ -168,6 +168,8 @@ export interface PreviewReference {
   themeColor: string;
   ep: number | null;
   spotGeo?: [number, number];
+  /** The spot the camera was opened for. Files the shot there even without a scene image. */
+  targetSpotId?: string;
 }
 
 export function previewReferenceFromParams(
@@ -189,6 +191,9 @@ export function previewReferenceFromParams(
     themeColor: getStringParam(params, 'themeColor') || ctx.fallbackColor,
     ep: getNumberParam(params, 'ep'),
     ...(target ? { spotGeo: [target.latitude, target.longitude] as [number, number] } : {}),
+    ...(getStringParam(params, 'targetSpotId')
+      ? { targetSpotId: getStringParam(params, 'targetSpotId') as string }
+      : {}),
   };
 }
 
