@@ -12,6 +12,8 @@ export interface CameraHeaderText {
 }
 
 export type CameraOrientationMode = 'auto' | 'landscape';
+/** 紀錄: shoot and log, no questions. 動漫: line up against a scene screenshot. */
+export type CameraMode = 'record' | 'anime';
 export type CameraOrientationLockIntent = 'portrait' | 'landscape';
 
 export interface CameraActiveInput {
@@ -170,6 +172,8 @@ export const CAMERA_CAROUSEL_BAND_HEIGHT = 48;
 export const CAMERA_BOTTOM_ROW_HEIGHT = 88;
 /** Vertical breathing room between stacked bands. */
 export const CAMERA_BAND_GAP = 8;
+/** 紀錄｜動漫 switch, directly above the shutter row. */
+export const CAMERA_MODE_SWITCH_HEIGHT = 40;
 
 export interface CameraBandLayoutInput {
   /** Safe-area bottom already resolved via {@link resolveCameraBottomInset}. */
@@ -182,11 +186,15 @@ export interface CameraBandLayoutInput {
    * the shutter row. Defaults to true.
    */
   showCarousel?: boolean;
+  /** Whether the 紀錄｜動漫 switch sits between the shutter row and the bands above. */
+  showModeSwitch?: boolean;
 }
 
 export interface CameraBandLayout {
   shutterRowBottom: number;
   shutterRowHeight: number;
+  modeSwitchBottom: number;
+  modeSwitchHeight: number;
   carouselBottom: number;
   carouselHeight: number;
   zoomBandBottom: number;
@@ -205,17 +213,23 @@ export interface CameraBandLayout {
  */
 export function resolveCameraBandLayout(input: CameraBandLayoutInput): CameraBandLayout {
   const showCarousel = input.showCarousel ?? true;
+  const showModeSwitch = input.showModeSwitch ?? false;
   const shutterRowBottom = input.bottomInset;
-  const carouselBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP;
+  const modeSwitchBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT;
+  const modeSwitchSpan = showModeSwitch ? CAMERA_MODE_SWITCH_HEIGHT : 0;
+  const carouselBottom = modeSwitchBottom + modeSwitchSpan + CAMERA_BAND_GAP;
   const carouselSpan = showCarousel ? CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP : 0;
   const zoomBandBottom = carouselBottom + carouselSpan;
   const totalBottomChromeHeight =
     CAMERA_BOTTOM_ROW_HEIGHT +
+    modeSwitchSpan +
     (showCarousel ? CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT : 0) +
     (input.showZoomBand ? CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT : 0);
   return {
     shutterRowBottom,
     shutterRowHeight: CAMERA_BOTTOM_ROW_HEIGHT,
+    modeSwitchBottom,
+    modeSwitchHeight: CAMERA_MODE_SWITCH_HEIGHT,
     carouselBottom,
     carouselHeight: CAMERA_CAROUSEL_BAND_HEIGHT,
     zoomBandBottom,
@@ -233,6 +247,8 @@ export interface CameraChromeVisibilityInput {
   overlayActive: boolean;
   /** A reference image exists. Without one every overlay control is meaningless. */
   hasReference: boolean;
+  /** 紀錄 mode: a plain logging camera, so no reference or overlay chrome at all. */
+  recordMode?: boolean;
 }
 
 export interface CameraChromeVisibility {
@@ -259,11 +275,12 @@ export function resolveCameraChromeVisibility(
   input: CameraChromeVisibilityInput
 ): CameraChromeVisibility {
   const secondaryHidden = input.isLandscape && input.immersive;
-  const overlay = input.hasReference && input.overlayActive;
+  const anime = !input.recordMode;
+  const overlay = anime && input.hasReference && input.overlayActive;
   return {
     showZoomBand: !secondaryHidden,
-    showReferenceControls: input.hasReference,
-    showImportReference: !input.hasReference,
+    showReferenceControls: anime && input.hasReference,
+    showImportReference: anime && !input.hasReference,
     showOpacityPill: !secondaryHidden && overlay,
     showCaptureHistory: !secondaryHidden,
     showAutoCaptureBadge: true,

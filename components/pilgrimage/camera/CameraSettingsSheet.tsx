@@ -48,6 +48,8 @@ export interface CameraSettingsSheetProps {
   onOrientationModeChange: (m: CameraOrientationMode) => void;
   /** Opens the GPS alignment helper; omitted when the spot has no coordinates. */
   onOpenGuide?: () => void;
+  /** Opens trace.moe screenshot identification. */
+  onOpenIdentify?: () => void;
 }
 
 const ORIENTATION_MODES: CameraOrientationMode[] = ['auto', 'landscape'];
@@ -76,6 +78,7 @@ export default function CameraSettingsSheet({
   orientationMode,
   onOrientationModeChange,
   onOpenGuide,
+  onOpenIdentify,
 }: CameraSettingsSheetProps) {
   const { theme } = useTheme();
   const t = useT();
@@ -206,6 +209,15 @@ export default function CameraSettingsSheet({
               onClose();
               onOpenGuide();
             }}
+          />
+        ) : null}
+        {onOpenIdentify ? (
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimageUi.camera.identifyScreenshot')}
+            icon={<Ionicons name="scan-outline" size={18} color={theme.text.primary} />}
+            onPress={onOpenIdentify}
           />
         ) : null}
       </ScrollView>

@@ -2049,6 +2049,12 @@
       },
       "lensSwitchFailed": "切換失敗，已退回主鏡頭",
       "landscapeSwitched": "橫向場景，已切成橫拍",
+      "mode": {
+        "record": "紀錄",
+        "anime": "動漫"
+      },
+      "recorded": "已記錄",
+      "identifyScreenshot": "辨識截圖",
       "overlayHint": {
         "anime": "原圖疊圖",
         "edge": "描邊疊圖",

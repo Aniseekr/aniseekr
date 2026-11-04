@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
+// The root export throws for these since SDK 56; the legacy entry keeps them.
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { useSharedValue } from 'react-native-reanimated';
 import { useCameraPermission } from 'react-native-vision-camera';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -17,6 +19,7 @@ import { shouldCompositeSubjectOverlay } from '../../libs/services/pilgrimage/su
 import { buildAdditionalExif } from '../../libs/services/pilgrimage/build-exif-metadata';
 import {
   CAMERA_BAND_GAP,
+  type CameraMode,
   resolveCameraBandLayout,
   resolveCameraBottomInset,
   resolveCameraChromeVisibility,
@@ -57,6 +60,7 @@ import GalleryThumb from '../../components/pilgrimage/camera/GalleryThumb';
 import CameraScrim from '../../components/pilgrimage/camera/CameraScrim';
 import ImportReferencePill from '../../components/pilgrimage/camera/ImportReferencePill';
 import CameraSettingsSheet from '../../components/pilgrimage/camera/CameraSettingsSheet';
+import { CameraModeSwitch } from '../../components/pilgrimage/camera/CameraModeSwitch';
 import { CountdownOverlay } from '../../components/pilgrimage/camera/CountdownOverlay';
 import CamSwitchToast, {
   type CamSwitchToastValue,
@@ -95,7 +99,19 @@ import { locationService } from '../../libs/services/pilgrimage/location-service
 import AutoCaptureStatusBadge from '../../components/pilgrimage/camera/AutoCaptureBadge';
 import CaptureHistoryStrip from '../../components/pilgrimage/camera/CaptureHistoryStrip';
 import { captureModeToastCopy } from '../../libs/services/pilgrimage/capture-mode-copy';
-import { buildCameraPreviewParams } from '../../libs/services/pilgrimage/preview-capture';
+import {
+  buildCameraPreviewParams,
+  buildJournalPreviewParams,
+} from '../../libs/services/pilgrimage/preview-capture';
+import {
+  findCaptureByUri,
+  loadCapturesV2Sync,
+  recordCapture,
+  recordFreeCapture,
+} from '../../libs/services/pilgrimage/captures';
+import { findNearestCachedSpot } from '../../libs/services/pilgrimage/nearest-cached-spot';
+import { getPilgrimageSpotTitles } from '../../libs/services/pilgrimage/pilgrimage-localization';
+import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../libs/navigation/floating-tab-bar-layout';
 import {
   importReferenceImage,
   referenceFileExists,
@@ -125,6 +141,8 @@ type CameraRouteParams = {
   targetSpotId?: string;
   /** 'imported' when the reference is the user's own image (no spot/anime behind it). */
   referenceKind?: string;
+  /** 'anime' opens straight into the comparison mode; otherwise the camera logs. */
+  mode?: string;
 };
 
 // Flash lives as a top-bar icon button. The icon mirrors the live mode; the
@@ -217,7 +235,12 @@ async function copyImportedCapture(asset: ImagePicker.ImagePickerAsset): Promise
   return dest;
 }
 
-export default function CompareCaptureScreen() {
+/**
+ * The one camera. 紀錄 (default) shoots and logs to the journal without leaving
+ * the screen; 動漫 adds the scene reference, overlays and the comparison preview.
+ * `tabRoot` is the Explorer camera tab: no close button, clears the tab bar.
+ */
+export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -233,9 +256,13 @@ export default function CompareCaptureScreen() {
     referenceKind,
   } = params;
   // Display-only fallback; EXIF and records only ever get a real scene name.
-  const name = nameParam ?? t('pilgrimageUi.preview.sceneFallback');
-  const themeColor = params.themeColor || theme.accent;
   const targetSpotId = params.targetSpotId ?? '';
+  // A camera opened for a scene says which; the plain camera is just 自由拍攝.
+  const forScene = Boolean(targetSpotId || referenceKind === 'imported' || nameParam);
+  const name = forScene
+    ? (nameParam ?? t('pilgrimageUi.preview.sceneFallback'))
+    : t('pilgrimage.capture.title');
+  const themeColor = params.themeColor || theme.accent;
   // The comparison reference is always the user's own screenshot (Atlas has no
   // scene images). It lives in local state so importing one swaps it in place:
   // the camera session, zoom and HUD survive instead of the whole route being
@@ -275,10 +302,10 @@ export default function CompareCaptureScreen() {
   // overlay knobs seed the reducer's lazy initializer from `settings`.
   // A landscape scene (nearly every anime frame) only lines up when the camera
   // UI is landscape too, so a remembered landscape reference opens that way.
-  const { hud, setHud } = useCameraHud(
-    settings,
-    isLandscapeReference(reference) ? { orientationMode: 'landscape' } : undefined
-  );
+  const { hud, setHud } = useCameraHud(settings, {
+    cameraMode: forScene || params.mode === 'anime' ? 'anime' : 'record',
+    ...(isLandscapeReference(reference) ? { orientationMode: 'landscape' as const } : {}),
+  });
   const {
     facing,
     flashMode,
@@ -290,6 +317,7 @@ export default function CompareCaptureScreen() {
     editMode,
     evValue,
     orientationMode,
+    cameraMode,
     settingsOpen,
     overlayVisible,
     captureModeToast,
@@ -335,6 +363,8 @@ export default function CompareCaptureScreen() {
     [setHud, setSettings]
   );
   const lifecycle = useCameraLifecycle({ settingsOpen, initialActive: true });
+  // As a tab the screen stays mounted; the session only runs while it is on screen.
+  const isFocused = useIsFocused();
   const { active: cameraActive, isReady: cameraIsReady, onCameraReady, onMountError } = lifecycle;
   // AUTO is device-mode by design: the capture follows the physical phone
   // while the HUD stays portrait. The hook also owns the ScreenOrientation
@@ -713,6 +743,133 @@ export default function CompareCaptureScreen() {
       importedReference,
     ]
   );
+
+  // 紀錄 mode keeps a copy in the system camera roll too. Save-only access:
+  // READ_MEDIA_IMAGES is blocked in app.json, so asking to read would throw.
+  const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
+    writeOnly: true,
+    granularPermissions: ['photo'],
+  });
+
+  // 紀錄: file the shot in the journal right away — under the spot the camera
+  // was opened for, else the nearest Atlas spot within range, else as a free
+  // shot — and stay on the camera. Rule 8: only a real spot match is attached.
+  const recordToJournal = useCallback(
+    async (shot: CaptureSessionShot) => {
+      const userLocation =
+        shot.userLocation ?? (await locationService.getCurrentLocation().catch(() => null));
+      const base = {
+        uri: shot.uri,
+        capturedAt: shot.createdAt,
+        source: shot.source === 'auto' ? ('auto' as const) : ('camera' as const),
+        ...(shot.heading != null ? { heading: shot.heading } : {}),
+        ...(userLocation
+          ? { userLocation: { latitude: userLocation.latitude, longitude: userLocation.longitude } }
+          : {}),
+      };
+      let filedUnder: string | null = null;
+      try {
+        if (targetSpotId) {
+          const spotLat = Number(params.spotLat);
+          const spotLng = Number(params.spotLng);
+          await recordCapture({
+            ...base,
+            spotId: targetSpotId,
+            ...(nameParam ? { spotName: nameParam } : {}),
+            ...(ep && Number.isFinite(Number(ep)) ? { spotEp: Number(ep) } : {}),
+            ...(animeTitle ? { animeTitle } : {}),
+            ...(animeId && Number.isFinite(Number(animeId)) ? { animeId: Number(animeId) } : {}),
+            animeColor: themeColor,
+            ...(params.spotLat &&
+            params.spotLng &&
+            Number.isFinite(spotLat) &&
+            Number.isFinite(spotLng)
+              ? { spotGeo: [spotLat, spotLng] as [number, number] }
+              : {}),
+          });
+          filedUnder = nameParam ?? null;
+        } else {
+          const near = userLocation ? await findNearestCachedSpot(userLocation) : null;
+          if (near) {
+            const spotName = getPilgrimageSpotTitles(near.spot).primary;
+            await recordCapture({
+              ...base,
+              spotId: near.spot.id,
+              spotName: near.spot.name,
+              ...(near.spot.lat !== null && near.spot.lon !== null
+                ? { spotGeo: [near.spot.lat, near.spot.lon] as [number, number] }
+                : {}),
+            });
+            filedUnder = spotName;
+          } else {
+            await recordFreeCapture({
+              ...base,
+              spotId: `free-${shot.createdAt}-${Math.round(Math.random() * 1e6)}`,
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('[camera] record to journal failed', error);
+        hapticsBridge.error();
+        return;
+      }
+      hapticsBridge.success();
+      setHud({
+        switchToast: {
+          icon: 'checkmark-circle',
+          label: t('pilgrimageUi.camera.recorded'),
+          ...(filedUnder ? { hint: filedUnder } : {}),
+        },
+      });
+      // The camera-roll copy is a convenience; it never holds up the confirmation.
+      const granted = mediaPerm?.granted || (await requestMediaPerm().catch(() => null))?.granted;
+      if (granted) await MediaLibrary.saveToLibraryAsync(shot.uri).catch(() => undefined);
+    },
+    [
+      targetSpotId,
+      params.spotLat,
+      params.spotLng,
+      nameParam,
+      ep,
+      animeTitle,
+      animeId,
+      themeColor,
+      mediaPerm,
+      requestMediaPerm,
+      setHud,
+      t,
+    ]
+  );
+
+  // What the shutter leads to: 紀錄 stays on the camera, 動漫 opens the comparison.
+  const afterCapture = useCallback(
+    (shot: CaptureSessionShot) => {
+      if (cameraMode === 'record') void recordToJournal(shot);
+      else navigateToPreview(shot);
+    },
+    [cameraMode, recordToJournal, navigateToPreview]
+  );
+
+  // 紀錄: the gallery thumb opens the newest logged shot (view, save, share).
+  const openLatestRecorded = useCallback(() => {
+    const latest = captureSession.shots[0] ?? null;
+    const capture = latest ? findCaptureByUri(latest.uri) : null;
+    if (!capture) {
+      if (latest) navigateToPreview(latest);
+      return;
+    }
+    const isFree = loadCapturesV2Sync().free.some((c) => c.uri === capture.uri);
+    router.push({
+      pathname: '/compare/preview',
+      params: buildJournalPreviewParams(
+        { capture, spot: null, anime: null, matchPercent: null, isFree },
+        {
+          importedLabel: t('pilgrimageUi.referencePicker.importedLabel'),
+          fallbackColor: themeColor,
+        }
+      ),
+    });
+  }, [captureSession.shots, navigateToPreview, router, t, themeColor]);
 
   // Add a freshly captured shot to the capture session, snapshotting the
   // sensor readings AT CAPTURE TIME. Rule 8: every sensor field is the real
@@ -1124,7 +1281,7 @@ export default function CompareCaptureScreen() {
     }
     const shot = await captureForMode('manual');
     if (!shot) return;
-    navigateToPreview(shot);
+    afterCapture(shot);
   }, [
     autoCapture,
     anyCapturing,
@@ -1132,7 +1289,7 @@ export default function CompareCaptureScreen() {
     settings.countdownSeconds,
     countdown,
     captureForMode,
-    navigateToPreview,
+    afterCapture,
   ]);
 
   const onAutoCapture = useCallback(async () => {
@@ -1158,8 +1315,8 @@ export default function CompareCaptureScreen() {
     if (anyCapturing || !cameraRef.current || !cameraIsReady) return;
     const shot = await runBurst('manual');
     if (!shot) return;
-    navigateToPreview(shot);
-  }, [autoCapture, anyCapturing, cameraIsReady, runBurst, navigateToPreview]);
+    afterCapture(shot);
+  }, [autoCapture, anyCapturing, cameraIsReady, runBurst, afterCapture]);
 
   const ensurePhotoLibraryPermission = useCallback(async (): Promise<boolean> => {
     const current = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -1279,11 +1436,13 @@ export default function CompareCaptureScreen() {
                 else Linking.openSettings().catch(() => undefined);
               }}
             />
-            <ThemedButton
-              variant="ghost"
-              label={t('common.notNow')}
-              onPress={() => router.back()}
-            />
+            {tabRoot ? null : (
+              <ThemedButton
+                variant="ghost"
+                label={t('common.notNow')}
+                onPress={() => router.back()}
+              />
+            )}
           </View>
         </SafeAreaView>
       </View>
@@ -1294,7 +1453,10 @@ export default function CompareCaptureScreen() {
   // navigation bar (海帶條) is drawn over the window — floor it so the shutter
   // row + HUD layers always clear the system bar. iOS insets are used as-is.
   const cameraBottomInset = resolveCameraBottomInset(insets.bottom, Platform.OS);
-  const safeAreaBottomPad = bottomPad({ bottom: cameraBottomInset });
+  // As the Explorer tab the floating tab bar sits over the bottom edge.
+  const safeAreaBottomPad =
+    bottomPad({ bottom: cameraBottomInset }) + (tabRoot ? FLOATING_TAB_BAR_CONTENT_INSET : 0);
+  const recordMode = cameraMode === 'record';
   // Re-arm immersive whenever orientation flips (adjust-state-during-render, not an effect):
   // entering landscape starts immersive; a preview tap then clears `revealed` to show everything.
   if (prevLandscape !== isLandscape) {
@@ -1312,6 +1474,7 @@ export default function CompareCaptureScreen() {
     afLocked: tapFocus.afLocked,
     overlayActive,
     hasReference: importedReference,
+    recordMode,
   });
   // Timer, aspect, orientation and the GPS guide live in the settings sheet; the
   // top chrome is a single row so the viewfinder starts right under it.
@@ -1320,6 +1483,7 @@ export default function CompareCaptureScreen() {
     bottomInset: safeAreaBottomPad,
     showZoomBand: chrome.showZoomBand,
     showCarousel: chrome.showReferenceControls,
+    showModeSwitch: true,
   });
   const importPillBottom =
     bands.zoomBandBottom + (chrome.showZoomBand ? bands.zoomBandHeight + CAMERA_BAND_GAP : 0);
@@ -1373,7 +1537,7 @@ export default function CompareCaptureScreen() {
             preferHdr={autoHdrSessionArmed}
             enableTorch={enableTorch}
             mirrorSelfie={settings.mirror}
-            active={cameraActive}
+            active={cameraActive && isFocused}
             resolutionTier={settings.resolutionTier}
             aspect={aspect}
             orientationSource={orientationSource}
@@ -1396,7 +1560,7 @@ export default function CompareCaptureScreen() {
           hiResImageUrl={hiResImageUrl}
           winW={winW}
           winH={winH}
-          opacity={overlayVisible ? overlayOpacity : 0}
+          opacity={overlayVisible && !recordMode ? overlayOpacity : 0}
           editMode={editMode}
           themeColor={themeColor}
           composedGesture={overlayTransform.composedGesture}
@@ -1421,16 +1585,18 @@ export default function CompareCaptureScreen() {
           />
         </View>
 
-        <CompanionOverlay
-          parentSize={{ width: winW, height: winH }}
-          editMode={editMode}
-          characterLayerRef={characterLayerRef}
-          character={character}
-          pickerOpen={characterPickerOpen}
-          onOpenPicker={() => setCharacterPickerOpen(true)}
-          onClosePicker={() => setCharacterPickerOpen(false)}
-          onSelectCharacter={setCharacter}
-        />
+        {recordMode ? null : (
+          <CompanionOverlay
+            parentSize={{ width: winW, height: winH }}
+            editMode={editMode}
+            characterLayerRef={characterLayerRef}
+            character={character}
+            pickerOpen={characterPickerOpen}
+            onOpenPicker={() => setCharacterPickerOpen(true)}
+            onClosePicker={() => setCharacterPickerOpen(false)}
+            onSelectCharacter={setCharacter}
+          />
+        )}
 
         <CameraTopBar
           placeName={name}
@@ -1438,7 +1604,7 @@ export default function CompareCaptureScreen() {
           topInset={insets.top}
           leftInset={insets.left}
           rightInset={insets.right}
-          onClose={() => router.back()}
+          onClose={tabRoot ? undefined : () => router.back()}
           actions={
             <>
               <CameraHeaderButton
@@ -1536,19 +1702,22 @@ export default function CompareCaptureScreen() {
           </View>
         ) : null}
 
-        <AlignmentHUD
-          score={sensors.score}
-          themeColor={themeColor}
-          topInset={insets.top}
-          bottomInset={cameraBottomInset}
-          bottomBarHeight={bands.totalBottomChromeHeight}
-          rightReserve={0}
-          isLandscape={isLandscape}
-          transformed={overlayTransform.transformed}
-          rotationDisplayDeg={overlayTransform.rotationDisplayDeg}
-          showPerfectBanner={sensors.showPerfectBanner}
-          onReset={overlayTransform.resetTransforms}
-        />
+        {/* Distance / heading to the scene only mean something while lining one up. */}
+        {recordMode ? null : (
+          <AlignmentHUD
+            score={sensors.score}
+            themeColor={themeColor}
+            topInset={insets.top}
+            bottomInset={cameraBottomInset}
+            bottomBarHeight={bands.totalBottomChromeHeight}
+            rightReserve={0}
+            isLandscape={isLandscape}
+            transformed={overlayTransform.transformed}
+            rotationDisplayDeg={overlayTransform.rotationDisplayDeg}
+            showPerfectBanner={sensors.showPerfectBanner}
+            onReset={overlayTransform.resetTransforms}
+          />
+        )}
 
         {/* Transient focus / EV bar — only while AF is locked (tap-to-focus). */}
         {chrome.showFocusExposureBar ? (
@@ -1574,7 +1743,7 @@ export default function CompareCaptureScreen() {
         ) : null}
 
         {/* Expanded capture-history strip — toggled from the gallery thumb. */}
-        {historyOpen && chrome.showCaptureHistory ? (
+        {historyOpen && chrome.showCaptureHistory && !recordMode ? (
           <View
             pointerEvents="box-none"
             style={[styles.floatCenter, { bottom: chromeTop + 8, height: 60 }]}>
@@ -1686,6 +1855,20 @@ export default function CompareCaptureScreen() {
           </View>
         ) : null}
 
+        {/* 紀錄｜動漫 — right above the shutter, in both orientations. */}
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.bandRow,
+            { bottom: bands.modeSwitchBottom, height: bands.modeSwitchHeight },
+          ]}>
+          <CameraModeSwitch
+            mode={cameraMode}
+            themeColor={themeColor}
+            onChange={(mode: CameraMode) => setHud({ cameraMode: mode })}
+          />
+        </View>
+
         {/* Bottom row: gallery | shutter | flip — fixed bottom, glyphs rotate in landscape. */}
         <View
           pointerEvents="box-none"
@@ -1712,7 +1895,7 @@ export default function CompareCaptureScreen() {
                 uris={captureSession.shots.map((s) => s.uri)}
                 themeColor={themeColor}
                 onPickLibrary={handlePickLibraryImage}
-                onExpand={() => setHistoryOpen((v) => !v)}
+                onExpand={recordMode ? openLatestRecorded : () => setHistoryOpen((v) => !v)}
               />
             }
             burst={
@@ -1741,6 +1924,10 @@ export default function CompareCaptureScreen() {
           orientationMode={orientationMode}
           onOrientationModeChange={(m) => setHud({ orientationMode: m })}
           onOpenGuide={hasSpotGeo ? handleOpenInfo : undefined}
+          onOpenIdentify={() => {
+            setHud({ settingsOpen: false });
+            router.push('/pilgrimage/identify');
+          }}
         />
       </View>
     </GestureHandlerRootView>

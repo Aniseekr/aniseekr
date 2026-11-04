@@ -2049,6 +2049,12 @@
       },
       "lensSwitchFailed": "Couldn't switch lens — back on the main camera",
       "landscapeSwitched": "Landscape scene — camera switched to landscape",
+      "mode": {
+        "record": "Log",
+        "anime": "Anime"
+      },
+      "recorded": "Logged",
+      "identifyScreenshot": "Identify a screenshot",
       "overlayHint": {
         "anime": "Original scene overlay",
         "edge": "Edge detection overlay",

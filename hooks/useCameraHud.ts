@@ -1,5 +1,5 @@
 import { useReducer } from 'react';
-import type { CameraOrientationMode } from '../libs/services/pilgrimage/camera-ui';
+import type { CameraMode, CameraOrientationMode } from '../libs/services/pilgrimage/camera-ui';
 import type { EdgeIntensity } from '../libs/services/pilgrimage/edge-overlay';
 import type { SubjectFocus } from '../libs/services/pilgrimage/subject-overlay';
 import {
@@ -37,6 +37,7 @@ export interface CameraHudState {
   /** Exposure-compensation value the focus/EV bar drives. */
   evValue: number;
   orientationMode: CameraOrientationMode;
+  cameraMode: CameraMode;
 
   // --- Overlay configuration ---
   overlayMode: OverlayMode;
@@ -72,6 +73,7 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
   aspect: '16:9',
   evValue: 0,
   orientationMode: 'auto',
+  cameraMode: 'record',
 
   // Default to 'edge': the anime bitmap overlay covers the live preview
   // too aggressively for first-time framing, while edge sketch lets the
