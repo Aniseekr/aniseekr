@@ -1262,7 +1262,9 @@
       "tagYours": "你的"
     },
     "camera": {
-      "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）"
+      "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）",
+      "importSceneScreenshot": "匯入這一幕的截圖",
+      "referenceHint": "第 {episode} 集 · {time}"
     },
     "capture": {
       "title": "自由拍攝",
@@ -1417,6 +1419,7 @@
       "moreCities": "+{count} 個城市",
       "official": "官方"
     },
+    "openMapTripPlannerOnWeb": "在網頁開啟地圖與行程規劃",
     "trip": {
       "nextStop": "下一站",
       "away": "距離 {distance}",
@@ -2172,6 +2175,7 @@
     "appVersion": "應用程式版本",
     "appVersionTapToOpen": "應用程式版本。點一下開啟進階設定。",
     "appearance": "外觀",
+    "aniseekrPremium": "Aniseekr Premium",
     "backToSettings": "返回設定",
     "backupFailed": "備份失敗",
     "backupUploaded": "備份已上傳",
@@ -2202,6 +2206,12 @@
     "disconnectEverythingFromThisDeviceMessage": "這會登出所有已連結平台,並清除這台裝置上儲存的所有 OAuth 權杖。若要刪除各平台保存的資料,請到各平台的帳號設定撤銷授權。若也要清除本機快取,請刪除應用程式。",
     "disconnectEverythingFromThisDeviceTitle": "解除這台裝置的所有連結?",
     "editProfileName": "編輯個人名稱",
+    "manageSubscription": "管理訂閱",
+    "manageSubscriptionA11y": "管理訂閱",
+    "premium": "Premium",
+    "premiumOnly": "僅限 Premium",
+    "premiumPitch": "解鎖所有主題、同步與無廣告體驗",
+    "upgradeToPremiumA11y": "升級至 Premium",
     "enableAdultContentAreYouMessage": "確定要啟用成人內容嗎?",
     "enableAdultContentAreYouTitle": "啟用成人內容?",
     "encryptionToggleFailed": "加密切換失敗",
@@ -2285,7 +2295,17 @@
     "monthly": "月繳",
     "lifetime": "買斷",
     "weekly": "週繳",
-    "loadingOfferings": "載入方案中…"
+    "loadingOfferings": "載入方案中…",
+    "billingUnavailableAndroid": "這台裝置無法使用 Google Play Billing。請登入 Play 商店，使用含 Google Play 的模擬器映像，並確認 App 已發布至至少「內部測試」軌道且測試帳號已獲准。",
+    "billingUnavailableIos": "這台裝置無法使用 App 內購買。請登入 App Store 後再試一次。",
+    "networkUnavailable": "無法連線至商店，請檢查網路後再試。",
+    "noRevenueCatKey": "此版本尚未設定 App 內購買。請提供此平台的 RevenueCat API 金鑰。",
+    "noPurchasesModule": "此版本尚未設定 App 內購買。請使用包含 react-native-purchases 的開發用戶端，並提供此平台的 RevenueCat API 金鑰。",
+    "purchaseIncomplete": "購買未完成，請再試一次。",
+    "noActiveSubscription": "此帳號沒有有效訂閱。",
+    "renewalDisclosure": "訂閱會以畫面顯示的價格自動續訂，除非在目前期間結束至少 24 小時前取消。確認購買時會向你的 Apple ID 收款。你可以隨時在 Apple ID 帳號設定中管理或取消訂閱。終身方案為一次性購買，不會續訂。",
+    "offeringsUnavailable": "目前無法載入訂閱方案。",
+    "retry": "重試"
   },
   "explorer": {
     "rally": {

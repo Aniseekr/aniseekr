@@ -183,21 +183,22 @@ export default function SettingsScreen() {
 
   const themeActions: QuickAction[] = useMemo(
     () =>
-      themes.map((t) => ({
-        key: t.id,
-        label: t.name,
-        description: t.isPremium && !isPro ? 'Premium only' : undefined,
+      themes.map((themeOption) => ({
+        key: themeOption.id,
+        label: themeOption.name,
+        description:
+          themeOption.isPremium && !isPro ? t('settingsUi.premiumOnly') : undefined,
         icon: 'color-palette-outline',
-        selected: t.id === themeId,
+        selected: themeOption.id === themeId,
         onPress: () => {
-          if (t.isPremium && !isPro) {
+          if (themeOption.isPremium && !isPro) {
             setPaywallVisible(true);
             return;
           }
-          void setTheme(t.id as ThemeId);
+          void setTheme(themeOption.id as ThemeId);
         },
       })),
-    [themes, themeId, isPro, setTheme]
+    [themes, themeId, isPro, setTheme, t]
   );
 
   const themeModeActions: QuickAction[] = useMemo(
@@ -420,8 +421,10 @@ export default function SettingsScreen() {
         };
       case 'premium':
         return {
-          title: isPro ? 'Premium' : 'Aniseekr Premium',
-          subtitle: isPro ? 'Manage your subscription' : 'Unlock all themes, sync, no ads',
+          title: isPro ? t('settingsUi.premium') : t('settingsUi.aniseekrPremium'),
+          subtitle: isPro
+            ? t('settingsUi.manageSubscription')
+            : t('settingsUi.premiumPitch'),
           actions: premiumActions,
         };
       default:
@@ -544,7 +547,11 @@ export default function SettingsScreen() {
               }}
               style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}
               accessibilityRole="button"
-              accessibilityLabel={isPro ? 'Manage subscription' : 'Upgrade to Premium'}>
+              accessibilityLabel={
+                isPro
+                  ? t('settingsUi.manageSubscriptionA11y')
+                  : t('settingsUi.upgradeToPremiumA11y')
+              }>
               <LinearGradient
                 colors={[theme.accent, theme.accentDark]}
                 start={{ x: 0, y: 0 }}

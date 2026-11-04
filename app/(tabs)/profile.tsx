@@ -396,6 +396,12 @@ export default function ProfileScreen() {
             <Animated.View entering={listItemEnter(3)}>
               <Pressable
                 onPress={handleOpenPremium}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isPro
+                    ? t('settingsUi.manageSubscriptionA11y')
+                    : t('settingsUi.upgradeToPremiumA11y')
+                }
                 style={({ pressed }) => [styles.premiumCta, pressed && { opacity: 0.92 }]}>
                 <LinearGradient
                   colors={[theme.accent, theme.accentDark]}

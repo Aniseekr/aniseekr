@@ -19,20 +19,22 @@ import type { SubscriptionOfferingPackage } from '../../libs/services/subscripti
 import { useT, type TranslationKey } from '../../libs/i18n';
 
 function unsupportedMessage(
-  reason: ReturnType<typeof useSubscription>['unsupportedReason']
+  reason: ReturnType<typeof useSubscription>['unsupportedReason'],
+  platform: Platform['OS'],
+  t: (key: TranslationKey) => string
 ): string {
   switch (reason) {
     case 'billing-unavailable':
-      return Platform.OS === 'android'
-        ? 'Google Play Billing is unavailable on this device. Sign in to the Play Store, use a Google Play emulator image, and make sure the app is published to at least the Internal Testing track with your tester account allowlisted.'
-        : 'In-app purchases are unavailable on this device. Sign in to the App Store and try again.';
+      return t(platform === 'android'
+        ? 'subscription.billingUnavailableAndroid'
+        : 'subscription.billingUnavailableIos');
     case 'network':
-      return 'Could not reach the store. Check your connection and try again.';
+      return t('subscription.networkUnavailable');
     case 'no-key':
-      return 'In-app purchases are not configured for this build. Provide EXPO_PUBLIC_REVENUECAT_*_KEY env vars.';
+      return t('subscription.noRevenueCatKey');
     case 'no-module':
     default:
-      return 'In-app purchases are not configured for this build. Run with a development client that bundles react-native-purchases and provide EXPO_PUBLIC_REVENUECAT_*_KEY env vars to test purchases.';
+      return t('subscription.noPurchasesModule');
   }
 }
 
@@ -81,7 +83,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
         hapticsBridge.success();
         onClose();
       } else {
-        setError('Purchase did not complete. Please try again.');
+        setError(t('subscription.purchaseIncomplete'));
       }
     } catch (e) {
       hapticsBridge.error();
@@ -103,7 +105,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
         hapticsBridge.success();
         onClose();
       } else {
-        setError('No active subscription found on this account.');
+        setError(t('subscription.noActiveSubscription'));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('commonUi.restoreFailed'));
@@ -165,17 +167,30 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
             {subscription.unsupported ? (
               <View style={[styles.warning, { borderColor: theme.glassBorder }]}>
                 <Text style={[styles.warningText, { color: theme.text.secondary }]}>
-                  {unsupportedMessage(subscription.unsupportedReason)}
+                  {unsupportedMessage(subscription.unsupportedReason, Platform.OS, t)}
                 </Text>
               </View>
             ) : null}
 
-            {candidates.length === 0 && !subscription.unsupported ? (
+            {candidates.length === 0 && subscription.loading && !subscription.unsupported ? (
               <View style={styles.loading}>
                 <ActivityIndicator color={theme.accent} />
                 <Text style={[styles.loadingLabel, { color: theme.text.secondary }]}>
                   {t('subscription.loadingOfferings')}
                 </Text>
+              </View>
+            ) : null}
+
+            {candidates.length === 0 && !subscription.loading && !subscription.unsupported ? (
+              <View style={styles.warning}>
+                <Text style={[styles.warningText, { color: theme.text.secondary }]}>
+                  {t('subscription.offeringsUnavailable')}
+                </Text>
+                <Pressable onPress={() => void subscription.refresh()}>
+                  <Text style={[styles.restoreLabel, { color: theme.accent }]}>
+                    {t('subscription.retry')}
+                  </Text>
+                </Pressable>
               </View>
             ) : null}
 
@@ -202,9 +217,11 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
                     </Text>
                   ) : null}
                 </View>
-                <Text style={[styles.packagePrice, { color: theme.accent }]}>
-                  {pkg.priceString || '—'}
-                </Text>
+                {pkg.priceString ? (
+                  <Text style={[styles.packagePrice, { color: theme.accent }]}>
+                    {pkg.priceString}
+                  </Text>
+                ) : null}
               </Pressable>
             ))}
 
@@ -212,10 +229,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
 
             {!subscription.unsupported ? (
               <Text style={[styles.disclosure, { color: theme.text.tertiary }]}>
-                Subscriptions auto-renew at the displayed price until cancelled at least 24 hours
-                before the end of the current period. Payment is charged to your Apple ID at
-                confirmation of purchase. Manage or cancel anytime in your Apple ID account
-                settings. Lifetime is a one-time purchase and does not renew.
+                {t('subscription.renewalDisclosure')}
               </Text>
             ) : null}
 

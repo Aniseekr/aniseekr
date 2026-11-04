@@ -1262,7 +1262,9 @@
       "tagYours": "YOURS"
     },
     "camera": {
-      "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)"
+      "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)",
+      "importSceneScreenshot": "Import a screenshot of this scene",
+      "referenceHint": "Episode {episode} · {time}"
     },
     "capture": {
       "title": "Free capture",
@@ -1417,6 +1419,7 @@
       "moreCities": "+{count} cities",
       "official": "Official"
     },
+    "openMapTripPlannerOnWeb": "Open map & trip planner on the web",
     "trip": {
       "nextStop": "Next stop",
       "away": "{distance} away",
@@ -2172,6 +2175,7 @@
     "appVersion": "App version",
     "appVersionTapToOpen": "App version. Tap to open advanced settings.",
     "appearance": "Appearance",
+    "aniseekrPremium": "Aniseekr Premium",
     "backToSettings": "Back to settings",
     "backupFailed": "Backup failed",
     "backupUploaded": "Backup uploaded",
@@ -2202,6 +2206,12 @@
     "disconnectEverythingFromThisDeviceMessage": "This signs you out of every connected platform and erases every stored OAuth token from this device. To also delete data held by each platform, revoke access in their own account settings. To wipe local caches as well, delete the app.",
     "disconnectEverythingFromThisDeviceTitle": "Disconnect everything from this device?",
     "editProfileName": "Edit profile name",
+    "manageSubscription": "Manage your subscription",
+    "manageSubscriptionA11y": "Manage subscription",
+    "premium": "Premium",
+    "premiumOnly": "Premium only",
+    "premiumPitch": "Unlock all themes, sync, no ads",
+    "upgradeToPremiumA11y": "Upgrade to Premium",
     "enableAdultContentAreYouMessage": "Are you sure you want to enable adult content?",
     "enableAdultContentAreYouTitle": "Enable adult content?",
     "encryptionToggleFailed": "Encryption toggle failed",
@@ -2285,7 +2295,17 @@
     "monthly": "Monthly",
     "lifetime": "Lifetime",
     "weekly": "Weekly",
-    "loadingOfferings": "Loading offerings…"
+    "loadingOfferings": "Loading offerings…",
+    "billingUnavailableAndroid": "Google Play Billing is unavailable on this device. Sign in to the Play Store, use a Google Play emulator image, and make sure the app is published to at least the Internal Testing track with your tester account allowlisted.",
+    "billingUnavailableIos": "In-app purchases are unavailable on this device. Sign in to the App Store and try again.",
+    "networkUnavailable": "Could not reach the store. Check your connection and try again.",
+    "noRevenueCatKey": "In-app purchases are not configured for this build. Provide the RevenueCat API key for this platform.",
+    "noPurchasesModule": "In-app purchases are not configured for this build. Use a development client that bundles react-native-purchases and provide the RevenueCat API key for this platform.",
+    "purchaseIncomplete": "Purchase did not complete. Please try again.",
+    "noActiveSubscription": "No active subscription found on this account.",
+    "renewalDisclosure": "Subscriptions auto-renew at the displayed price until cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple ID at confirmation of purchase. Manage or cancel anytime in your Apple ID account settings. Lifetime is a one-time purchase and does not renew.",
+    "offeringsUnavailable": "Subscription plans are currently unavailable.",
+    "retry": "Try again"
   },
   "explorer": {
     "rally": {
