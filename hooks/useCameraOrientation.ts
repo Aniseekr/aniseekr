@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import type { OrientationSource } from 'react-native-vision-camera';
 import {
@@ -20,14 +21,11 @@ export interface UseCameraOrientationResult {
  * Owns the camera screen's OS-orientation lifecycle and derives the
  * VisionCamera `orientationSource` from the AUTO/LAND chip.
  *
- * Two effects, moved here out of `compare/[spotId].tsx` (CLAUDE.md Rule 9 —
- * the route file should not own every lifecycle effect directly):
- *   (a) On `orientationMode` change: lock the interface per
- *       `cameraOrientationLockIntent` — LAND forces landscape, AUTO locks the
- *       interface to PORTRAIT_UP so the HUD never rotates (stock-camera feel),
- *       while `orientationSource = 'device'` lets the *capture* rotate.
- *   (b) On unmount: restore PORTRAIT_UP so leaving the camera never strands
- *       the rest of the app in landscape.
+ * While the camera is focused, lock the interface per
+ * `cameraOrientationLockIntent` — LAND forces landscape, AUTO locks the
+ * interface to PORTRAIT_UP so the HUD never rotates (stock-camera feel), while
+ * `orientationSource = 'device'` lets the *capture* rotate. On blur or unmount
+ * restore PORTRAIT_UP so leaving the camera never strands the app in landscape.
  */
 export function useCameraOrientation(
   orientationMode: CameraOrientationMode
@@ -38,24 +36,24 @@ export function useCameraOrientation(
   );
 
   // (a) Apply the lock-intent whenever the chip flips.
-  useEffect(() => {
-    const lockIntent = cameraOrientationLockIntent(orientationMode);
-    const op =
-      lockIntent === 'landscape'
-        ? ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-        : ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-    op.catch(() => undefined);
-  }, [orientationMode]);
-
-  // (b) Restore portrait on unmount so the rest of the app isn't left
-  //     locked to whatever the camera last set.
-  useEffect(() => {
-    return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
-        () => undefined
-      );
-    };
-  }, []);
+  // The lock applies only while the camera is the focused screen. Anything
+  // pushed on top of it (the preview, a deep link to another tab) gets the
+  // app's normal portrait back, and returning re-applies the camera's lock.
+  useFocusEffect(
+    useCallback(() => {
+      const lockIntent = cameraOrientationLockIntent(orientationMode);
+      ScreenOrientation.lockAsync(
+        lockIntent === 'landscape'
+          ? ScreenOrientation.OrientationLock.LANDSCAPE
+          : ScreenOrientation.OrientationLock.PORTRAIT_UP
+      ).catch(() => undefined);
+      return () => {
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
+          () => undefined
+        );
+      };
+    }, [orientationMode])
+  );
 
   return { orientationSource };
 }
