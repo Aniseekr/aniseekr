@@ -114,8 +114,32 @@ function getSketchEffect(): SkRuntimeEffect {
   return effect;
 }
 
+// Full-resolution SkImages hold native memory Hermes' GC can't see, so these
+// were an unbounded per-spot × intensity × colour leak. Small LRU instead.
+// Evicted images are only dropped, never disposed: a mounted (or back-stack)
+// compare screen may still be drawing one; GC frees it once unreferenced.
+const MAX_CACHED_OVERLAYS = 4;
 const renderCache = new Map<string, SkImage>();
 const sketchCache = new Map<string, SkImage>();
+
+function readOverlayCache(cache: Map<string, SkImage>, key: string): SkImage | undefined {
+  const hit = cache.get(key);
+  if (hit) {
+    cache.delete(key);
+    cache.set(key, hit);
+  }
+  return hit;
+}
+
+function writeOverlayCache(cache: Map<string, SkImage>, key: string, image: SkImage): void {
+  cache.delete(key);
+  cache.set(key, image);
+  while (cache.size > MAX_CACHED_OVERLAYS) {
+    const oldest = cache.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
 
 // Memoised remote→local resolutions that have already been decoded by Skia, so
 // repeated edge/sketch builds for the same scene don't re-download or re-probe
@@ -329,6 +353,7 @@ async function buildEdgeImage(
   canvas.drawRect({ x: 0, y: 0, width: w, height: h }, paint);
 
   const snapshot = surface.makeImageSnapshot();
+  disposeBuildIntermediates(image, surface, imageShader, shader, paint);
   return snapshot;
 }
 
@@ -353,7 +378,7 @@ export function useEdgeImage(
     }
 
     const key = `${PROCESSED_OVERLAY_CACHE_VERSION}|edge|${uri}|${threshold}|${inkColor}|${inkOpacity}`;
-    const cached = renderCache.get(key);
+    const cached = readOverlayCache(renderCache, key);
     if (cached) {
       setEdgeImage(cached);
       setLoading(false);
@@ -368,8 +393,12 @@ export function useEdgeImage(
 
     buildEdgeImage(uri, threshold, inkColor, inkOpacity)
       .then((img) => {
-        if (cancelled) return;
-        renderCache.set(key, img);
+        if (cancelled) {
+          // Never cached or rendered — nothing else holds it.
+          img.dispose();
+          return;
+        }
+        writeOverlayCache(renderCache, key, img);
         setEdgeImage(img);
         setLoading(false);
       })
@@ -425,7 +454,18 @@ async function buildSketchImage(
   const canvas = surface.getCanvas();
   canvas.drawRect({ x: 0, y: 0, width: w, height: h }, paint);
 
-  return surface.makeImageSnapshot();
+  const snapshot = surface.makeImageSnapshot();
+  disposeBuildIntermediates(image, surface, imageShader, shader, paint);
+  return snapshot;
+}
+
+/**
+ * The decoded source and the offscreen surface are full-resolution native
+ * buffers used once per build. The snapshot keeps its own pixel ref, so these
+ * can go immediately (same pattern as composite-hdr.ts).
+ */
+function disposeBuildIntermediates(...objects: { dispose(): void }[]): void {
+  for (const object of objects) object.dispose();
 }
 
 export function useSketchImage(
@@ -448,7 +488,7 @@ export function useSketchImage(
     }
 
     const key = `${PROCESSED_OVERLAY_CACHE_VERSION}|sketch|${uri}|${inkColor}|${inkOpacity}`;
-    const cached = sketchCache.get(key);
+    const cached = readOverlayCache(sketchCache, key);
     if (cached) {
       setSketchImage(cached);
       setLoading(false);
@@ -463,8 +503,12 @@ export function useSketchImage(
 
     buildSketchImage(uri, inkColor, inkOpacity)
       .then((img) => {
-        if (cancelled) return;
-        sketchCache.set(key, img);
+        if (cancelled) {
+          // Never cached or rendered — nothing else holds it.
+          img.dispose();
+          return;
+        }
+        writeOverlayCache(sketchCache, key, img);
         setSketchImage(img);
         setLoading(false);
       })
