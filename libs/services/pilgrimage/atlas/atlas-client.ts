@@ -3,6 +3,7 @@ import type {
   AtlasCitiesIndex,
   AtlasMeta,
   AtlasSpotsLite,
+  AtlasSpotShard,
   AtlasWorkDetail,
   AtlasWorkIndex,
 } from './types';
@@ -57,6 +58,12 @@ export class AtlasClient {
   }
   async spotsLite(): Promise<AtlasSpotsLite> {
     return this.asset<AtlasSpotsLite>('spots-lite', null, (meta) => meta.paths.spotsLite);
+  }
+  async spotShard(shard: string): Promise<AtlasSpotShard> {
+    return this.asset<AtlasSpotShard>(`spot-shard:${shard}`, null, (meta) =>
+      meta.paths.spotShard?.replace('{shard}', shard) ??
+      `/v/${meta.dataVersion}/spots/${shard}.json`
+    );
   }
   async cities(): Promise<AtlasCitiesIndex> {
     return this.asset<AtlasCitiesIndex>(
@@ -177,3 +184,13 @@ function atlasCityLookup(
 }
 
 export const atlasClient = new AtlasClient();
+
+/** Must match the Atlas API's FNV-1a UTF-8 shard assignment. */
+export function atlasSpotShardOf(id: string): string {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(id)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return (hash & 0xff).toString(16).padStart(2, '0');
+}

@@ -49,6 +49,8 @@ export interface CaptureGeoLocation {
 
 export interface PilgrimageCapture {
   spotId: string;
+  /** The original spot could not be safely mapped to an Atlas spot. */
+  legacy?: true;
   /** local file URI saved by the camera engine or via FileSystem cache. */
   uri: string;
   /** comparison composite URI (left+right or top+bottom). Optional. */
@@ -338,5 +340,10 @@ export async function clearFreeCapture(uri: string): Promise<void> {
 
 /** Test-only — drop the memoised index. */
 export function __resetCapturesCacheForTests(): void {
+  cache = null;
+}
+
+/** Invalidate the memoized index after a raw, atomic migration write. */
+export function invalidateCapturesCache(): void {
   cache = null;
 }

@@ -221,3 +221,24 @@ PILG-081,Pilgrimage,deterministic,P0,Atlas version retry,A 404 under a versioned
 PILG-082,Pilgrimage,deterministic,P0,Atlas moved spot resolution,Replacement ids resolve and null destinations are treated as removed,mapping,active
 PILG-083,Pilgrimage,deterministic,P0,Atlas municipality labels,City index maps municipality codes to prefecture and place names,mapping,active
 PILG-084,Pilgrimage,deterministic,P0,Pilgrimage search municipality labels,Search results display municipality names rather than raw codes,mapping,active
+PILG-085,Pilgrimage,deterministic,P0,Legacy spot matching radius,Rehomes only to the nearest located spot in the resolved work at an inclusive 50 metre haversine distance,mapping,active
+PILG-086,Pilgrimage,deterministic,P0,Offline legacy migration retry,Unavailable uncached work data postpones migration and leaves its versioned completion flag unset,error-handling,active
+PILG-087,Pilgrimage,deterministic,P0,Unmatched legacy record preservation,Missing work or nearby located spot preserves records under their old ids marks them legacy and clears retired remote images,nullability,active
+PILG-088,Pilgrimage,deterministic,P0,Legacy record collision merge,Records mapped by distance after a moved null merge captures visited timestamps and saved planned flags without loss,mapping,active
+PILG-089,Pilgrimage,deterministic,P0,Restartable migration and photo retention,A store write interruption leaves completion unset and retry safely rehomes index entries without requiring the local photo file,error-handling,active
+PILG-090,Pilgrimage,deterministic,P0,Visited legacy cache recovery,Visited migration recovers coordinates and Bangumi id from an on-device detail cache and preserves entries when that cache is absent,fallback,active
+PILG-091,Pilgrimage,deterministic,P0,Missing Atlas work detail,An unresolved Atlas work document leaves the original user record flagged legacy,nullability,active
+PILG-092,Pilgrimage,deterministic,P0,Album missing spot fallback,Album hydration applies the shared 50 metre rehome matcher to an unflagged missing spot id but never pairs an explicitly legacy record,fallback,active
+PILG-093,Pilgrimage,deterministic,P0,Visited-only crash recovery,A journal prevents a rehomed visited-only Atlas id from being reclassified as legacy after interruption,error-handling,active
+PILG-094,Pilgrimage,deterministic,P0,Live capture during migration,A capture created while Atlas work data is pending survives the migration's fresh-store rehome,mapping,active
+PILG-095,Pilgrimage,deterministic,P0,Exact Atlas spot recognition,An id found in its FNV-1a UTF-8 spot shard is retained as Atlas even when its work detail is absent,mapping,active
+PILG-096,Pilgrimage,deterministic,P0,Legacy work title resolution,A capture with an unmatched Bangumi id can resolve by an exact Atlas Japanese title match,mapping,active
+PILG-097,Pilgrimage,deterministic,P0,Atlas spot shard retrieval,Spot shard assets use the path template declared by Atlas metadata,mapping,active
+PILG-098,Pilgrimage,deterministic,P0,Visited recovery from Anitabi point cache,Visited ids recover Bangumi id and coordinates from anitabi_points_v2 rows,mapping,active
+PILG-099,Pilgrimage,deterministic,P0,Visited recovery from orphaned SQLite,Visited ids recover Bangumi id and coordinates from pilgrimage_spots lite point rows,mapping,active
+PILG-100,Pilgrimage,deterministic,P0,Missing legacy SQLite table,Migration tolerates an absent pilgrimage_spots table and preserves unmatched visited ids,nullability,active
+PILG-101,Pilgrimage,deterministic,P0,Anitabi data cleanup after migration,Point caches detail caches and the orphaned pilgrimage table are removed only after store writes succeed,error-handling,active
+PILG-102,Pilgrimage,deterministic,P0,Missing record context recovery,Captures and intents missing anime id or coordinates use the shared legacy point lookup,mapping,active
+PILG-103,Pilgrimage,deterministic,P0,Visited recovery from legacy spot index,Visited ids recover Bangumi id and coordinates from anitabi_spots,mapping,active
+PILG-104,Pilgrimage,deterministic,P0,Legacy spot index cleanup ordering,anitabi_spots is dropped only after all user store writes succeed,error-handling,active
+PILG-105,Pilgrimage,deterministic,P0,Missing legacy spot index,Migration tolerates an absent anitabi_spots table and issues defensive cleanup,nullability,active

@@ -22,6 +22,7 @@ import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
 import { atlasClient } from '../libs/services/pilgrimage/atlas/atlas-client';
+import { migrateLegacyPilgrimageRecords } from '../libs/services/pilgrimage/atlas/legacy-migration';
 import { hydratePilgrimageHubSnapshotFromCache } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { CacheManager } from '../libs/services/cache/cache-manager';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
@@ -104,6 +105,7 @@ export default function RootLayout() {
         })
         .catch((e) => console.warn('[updateMappings]', e));
       void atlasClient.works().catch((e) => console.warn('[hydrateAtlas]', e));
+      void migrateLegacyPilgrimageRecords();
       void hydratePilgrimageHubSnapshotFromCache().catch((e) =>
         console.warn('[hydrateHubSnapshot]', e)
       );

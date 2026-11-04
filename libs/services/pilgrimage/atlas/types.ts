@@ -51,6 +51,11 @@ export interface AtlasSpotsLite {
   columns: string[];
   rows: [string, string, string, number, number, 'c' | 's' | 'u', number[]][];
 }
+export type AtlasSpotLiteRow = [string, string, string, number, number, 'c' | 's' | 'u', number[]];
+export interface AtlasSpotShard {
+  dataVersion?: string;
+  rows: Record<string, AtlasSpotLiteRow>;
+}
 export interface AtlasCity {
   muniCd: string;
   pref: string;
@@ -66,7 +71,14 @@ export interface AtlasCitiesIndex {
 }
 export interface AtlasMeta {
   dataVersion: string;
-  paths: { works: string; spotsLite: string; work: string; moved?: string; cities?: string };
+  paths: {
+    works: string;
+    spotsLite: string;
+    work: string;
+    spotShard?: string;
+    moved?: string;
+    cities?: string;
+  };
 }
 export type PilgrimageWork = AtlasWorkDetail;
 export interface PilgrimageSpot {

@@ -11,6 +11,7 @@ export interface PlannedSpot {
   id: string;
   geo: [number, number];
   image: string;
+  legacy?: true;
 }
 
 export interface PlannedTripGroup {
@@ -45,7 +46,14 @@ export function groupPlannedIntents(map: SpotIntentMap): PlannedTrips {
       };
       byAnime.set(meta.workKey, group);
     }
-    if (meta.geo) group.spots.push({ id, geo: meta.geo, image: meta.image ?? '' });
+    if (meta.geo) {
+      group.spots.push({
+        id,
+        geo: meta.geo,
+        image: meta.image ?? '',
+        ...(intent.legacy ? { legacy: true } : {}),
+      });
+    }
   }
 
   const groups = Array.from(byAnime.values());

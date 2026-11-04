@@ -223,3 +223,24 @@ PILG-081,__tests__/unit/pilgrimage/atlas-client.test.ts,404 rereads meta once an
 PILG-082,__tests__/unit/pilgrimage/atlas-client.test.ts,moved ids resolve or return null,covered
 PILG-083,__tests__/unit/pilgrimage/atlas-client.test.ts,city index resolves municipality labels,covered
 PILG-084,__tests__/unit/pilgrimage/pilgrimage-search-city.test.ts,search results use municipality labels,covered
+PILG-085,__tests__/unit/pilgrimage/atlas-rehome.test.ts,legacy spots obey inclusive nearest 50 metre boundary,covered
+PILG-086,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,offline work data postpones migration without completion flag,covered
+PILG-087,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,unmatched records remain legacy and old image URLs are cleared,covered
+PILG-088,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,colliding records merge captures visits and intent flags after moved null,covered
+PILG-089,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,interrupted store write retries and keeps missing photo URI,covered
+PILG-090,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,visited records recover old geo from cache or remain legacy,covered
+PILG-091,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,missing Atlas detail preserves record as legacy,covered
+PILG-092,__tests__/unit/pilgrimage/album-captures.test.ts,album uses shared fallback for missing ids and skips legacy records,covered
+PILG-093,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,visited-only retry keeps the migrated Atlas id and timestamp,covered
+PILG-094,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,capture created during pending Atlas work survives migration,covered
+PILG-095,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,exact spot shard recognition preserves Atlas ids without work details,covered
+PILG-096,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,exact anime title context resolves the Atlas work,covered
+PILG-097,__tests__/unit/pilgrimage/atlas-client.test.ts,spot shard path resolves from Atlas metadata,covered
+PILG-098,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,visited migration reads Bangumi id and geo from v2 point cache rows,covered
+PILG-099,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,visited migration reads Bangumi id and geo from orphaned SQLite lite points,covered
+PILG-100,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,missing orphan table is tolerated and visited id remains intact,covered
+PILG-101,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,retired caches and SQLite table are cleaned only after writes succeed,covered
+PILG-102,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,capture and intent context is enriched from the shared legacy lookup,covered
+PILG-103,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,visited migration recovers coordinates from anitabi_spots,covered
+PILG-104,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,anitabi_spots drop waits until every store write succeeds,covered
+PILG-105,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,missing anitabi_spots query is guarded and cleanup remains safe,covered

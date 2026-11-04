@@ -94,4 +94,32 @@ describe('Atlas client version handling', () => {
     expect(requested).toContain('https://atlas.aniseekr.moe/v/v1/cities.json');
     expect(lookup.get('19365')).toEqual({ pref: '山梨県', name: '身延町' });
   });
+
+  it('PILG-097 loads the exact spot shard path from Atlas metadata', async () => {
+    const requested: string[] = [];
+    const client = new AtlasClient({
+      fetcher: (async (url: string) => {
+        requested.push(url);
+        return url.endsWith('/meta.json')
+          ? Response.json({
+              dataVersion: 'v1',
+              paths: {
+                works: '/v/v1/works.json',
+                spotsLite: '/v/v1/spots-lite.json',
+                work: '/v/v1/works/{key}.json',
+                spotShard: '/v/v1/spots/{shard}.json',
+              },
+            })
+          : Response.json({
+              rows: { '01af-c9.8': ['01af-c9.8', 'work', 'Spot', 35, 139, 'c', [1]] },
+            });
+      }) as unknown as typeof fetch,
+      cache: null,
+    });
+
+    await expect(client.spotShard('ab')).resolves.toEqual({
+      rows: { '01af-c9.8': ['01af-c9.8', 'work', 'Spot', 35, 139, 'c', [1]] },
+    });
+    expect(requested).toContain('https://atlas.aniseekr.moe/v/v1/spots/ab.json');
+  });
 });

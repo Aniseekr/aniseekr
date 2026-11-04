@@ -1,6 +1,7 @@
 import type { PilgrimageCapture } from './captures';
 import { FRAME_MATCH_VERSION } from './frame-match-score';
 import type { PilgrimageSpot, PilgrimageWork } from './types';
+import { rehomeNearestSpot } from './atlas/rehome';
 
 export const FREE_FOLDER_ANIME_ID = -1;
 
@@ -66,9 +67,17 @@ function findKnownSpot(
   capture: PilgrimageCapture,
   animes: readonly PilgrimageWork[]
 ): { anime: PilgrimageWork; spot: PilgrimageSpot } | null {
+  if (capture.legacy) return null;
   for (const anime of animes) {
     const spot = anime.spots.find((candidate) => candidate.id === capture.spotId);
     if (spot) return { anime, spot };
   }
-  return null;
+  const animeId = capture.animeId;
+  if (animeId == null || !capture.spotGeo) return null;
+  const anime = animes.find((candidate) => candidate.bgm?.includes(animeId));
+  if (!anime) return null;
+  const nearest = rehomeNearestSpot(capture.spotGeo, anime.spots);
+  if (!nearest) return null;
+  const spot = anime.spots.find((candidate) => candidate.id === nearest.id);
+  return spot ? { anime, spot } : null;
 }

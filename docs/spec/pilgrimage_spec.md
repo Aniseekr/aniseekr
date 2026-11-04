@@ -50,3 +50,26 @@ must be labelled honestly. User-facing fixed strings use `useT()`.
 
 Anime Tourism 88 and canonical locality/event data remain separate products;
 they do not provide anime pilgrimage spots or scene imagery.
+
+## 7. Legacy record migration
+
+On the first launch after the Atlas migration, the app migrates capture-index,
+visited, and saved/planned intent records off retired spot ids. It resolves the
+record's Bangumi id through the Atlas work resolver, then selects the nearest
+located spot in that work at a haversine distance of at most 50 metres. Captures
+receive Atlas name, coordinates, and scene timing; old remote image URLs are
+cleared. Colliding captures remain newest-first, visited timestamps keep the
+earliest value, and intent flags are combined.
+
+If an Atlas match is unavailable, the original id and user record are retained
+and marked legacy. Visited records recover coordinates and Bangumi id only from
+the old on-device detail cache. Missing network-backed work files postpone the
+migration without setting its versioned done flag. Each store is replaced
+atomically, so a later launch can safely resume after interruption. Local photo
+files are never inspected, moved, or deleted.
+An in-progress journal distinguishes already rehomed ids if a later store write
+fails and the migration retries.
+
+When a stored capture id is absent from the loaded Atlas work, album hydration
+uses the same 50 metre matcher as a display-only safety net. Explicitly legacy
+records stay unpaired and are labelled "Old spot".

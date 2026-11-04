@@ -13,7 +13,11 @@
 // state on the first frame instead of popping it in after an async resolve.
 
 import { kvGet, kvSet } from '../storage/app-storage';
-import { VISITED_SPOTS_STORAGE_KEY, VISITED_SPOTS_STORAGE_KEY_V2 } from '../storage/keys';
+import {
+  VISITED_SPOTS_LEGACY_KEY,
+  VISITED_SPOTS_STORAGE_KEY,
+  VISITED_SPOTS_STORAGE_KEY_V2,
+} from '../storage/keys';
 import { Logger } from '../../utils/logger';
 import type { RoleId } from './locality/types';
 
@@ -21,9 +25,20 @@ import type { RoleId } from './locality/types';
 export type VisitedMap = Record<string, true>;
 /** spotId -> epoch ms of check-in. `0` marks a spot migrated from v1 (time unknown). */
 export type VisitedAtMap = Record<string, number>;
+export type LegacyVisitedSpotIds = string[];
 export type StampStopVisitedMap = Record<string, true>;
 
 const STAMP_STOP_VISITED_PREFIX = 'locality:stamp-stop-role:';
+
+/** Old visited ids kept outside the timestamp map so legacy metadata is not misread as a spot. */
+export function loadLegacyVisitedSpotIdsSync(): LegacyVisitedSpotIds {
+  try {
+    const parsed = JSON.parse(kvGet(VISITED_SPOTS_LEGACY_KEY) ?? '[]') as unknown;
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 function sanitizeAt(parsed: unknown): VisitedAtMap {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};

@@ -78,14 +78,15 @@ export default function PilgrimageTripScreen() {
     [intents, animeId]
   );
 
-  const title = group?.name ?? '';
+  const hasLegacySpots = group?.spots.some((spot) => spot.legacy) ?? false;
+  const title = group?.name || (hasLegacySpots ? t('pilgrimage.album.oldSpot') : '');
   const accent = theme.accent;
 
   // Drop points with no usable geo before route-ordering them (a spot with
   // (0,0) or non-finite coords would otherwise anchor the nearest-neighbor
   // chain and the route line at a bogus location).
   const validSpots = useMemo(
-    () => (group ? group.spots.filter((s) => hasValidGeo(s.geo)) : []),
+    () => (group ? group.spots.filter((s) => !s.legacy && hasValidGeo(s.geo)) : []),
     [group]
   );
 
@@ -219,7 +220,7 @@ export default function PilgrimageTripScreen() {
           ]}>
           {!hasStops ? (
             <ThemedText variant="bodySmall" tone="secondary" align="center">
-              {t('pilgrimage.trip.empty')}
+              {hasLegacySpots ? t('pilgrimage.album.oldSpot') : t('pilgrimage.trip.empty')}
             </ThemedText>
           ) : nextStop ? (
             <View style={styles.nextRow}>
@@ -246,6 +247,12 @@ export default function PilgrimageTripScreen() {
               {t('pilgrimage.trip.allVisited')}
             </ThemedText>
           )}
+
+          {hasStops && hasLegacySpots ? (
+            <ThemedText variant="captionSmall" tone="tertiary" align="center">
+              {t('pilgrimage.album.oldSpot')}
+            </ThemedText>
+          ) : null}
 
           {hasStops ? (
             <ThemedButton

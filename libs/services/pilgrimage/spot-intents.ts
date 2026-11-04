@@ -36,6 +36,8 @@ export interface SpotIntentMeta {
 export interface SpotIntent {
   saved?: true;
   planned?: true;
+  /** The old spot is retained because Atlas could not safely replace it. */
+  legacy?: true;
   meta?: SpotIntentMeta;
 }
 
@@ -204,6 +206,7 @@ function sanitizeSpotIntents(value: unknown): SpotIntentMap {
     const intent: SpotIntent = {};
     if (source.saved === true) intent.saved = true;
     if (source.planned === true) intent.planned = true;
+    if (source.legacy === true) intent.legacy = true;
     if (!intent.saved && !intent.planned) continue;
     const meta = sanitizeMeta(source.meta);
     if (meta) intent.meta = meta;

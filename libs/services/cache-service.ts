@@ -179,6 +179,28 @@ export class CacheService {
     }
   }
 
+  /** List persisted and in-memory entries for a literal key prefix. */
+  static async getEntriesByPrefix<T>(prefix: string): Promise<{ key: string; value: T }[]> {
+    const db = await openDb();
+    const rows = await db.getAllAsync<{ key: string; value: string }>(
+      'SELECT key, value FROM cache WHERE substr(key, 1, ?) = ?',
+      prefix.length,
+      prefix
+    );
+    const entries = new Map<string, T>();
+    for (const row of rows) {
+      try {
+        entries.set(row.key, JSON.parse(row.value) as T);
+      } catch {
+        // A corrupt cache value should not hide other recoverable rows.
+      }
+    }
+    for (const [key, entry] of mem) {
+      if (key.startsWith(prefix)) entries.set(key, entry.value as T);
+    }
+    return [...entries].map(([key, value]) => ({ key, value }));
+  }
+
   static async set(key: string, value: any, ttlMs: number = 3600000) {
     const timestamp = Date.now();
     memTouch(key, { value, timestamp, ttl: ttlMs });
@@ -205,6 +227,15 @@ export class CacheService {
     } catch (error) {
       console.warn('CacheService.delete error:', error);
     }
+  }
+
+  /** Delete every cache entry whose key begins with `prefix`. */
+  static async deleteByPrefix(prefix: string): Promise<void> {
+    for (const key of mem.keys()) {
+      if (key.startsWith(prefix)) mem.delete(key);
+    }
+    const db = await openDb();
+    await db.runAsync('DELETE FROM cache WHERE substr(key, 1, ?) = ?', prefix.length, prefix);
   }
 
   static async clear() {

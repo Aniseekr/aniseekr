@@ -282,16 +282,22 @@ function CompareCard({
   // Free captures have no reference spot/anime/episode — spotTitles/animeTitles
   // fall back to placeholder-looking strings ("EP 0", "Unknown Title") that
   // would misrepresent real data (Rule 8). Use the honest folder label instead.
-  const cardTitle = entry.isFree
-    ? t('pilgrimage.album.freeCapturesFolder')
-    : spotTitles?.primary ?? t('pilgrimage.album.oldSpot');
+  const cardTitle = entry.capture.legacy
+    ? t('pilgrimage.album.oldSpot')
+    : entry.isFree
+      ? t('pilgrimage.album.freeCapturesFolder')
+      : (spotTitles?.primary ?? t('pilgrimage.album.oldSpot'));
   return (
     <Pressable
-      onPress={onPress}
+      onPress={entry.capture.legacy ? undefined : onPress}
       onLongPress={onDelete}
       delayLongPress={350}
-      accessibilityRole="button"
-      accessibilityLabel={t('pilgrimage.album.compareA11y', { title: cardTitle })}
+      accessibilityRole={entry.capture.legacy ? undefined : 'button'}
+      accessibilityLabel={
+        entry.capture.legacy
+          ? t('pilgrimage.album.oldSpot')
+          : t('pilgrimage.album.compareA11y', { title: cardTitle })
+      }
       accessibilityHint={onDelete ? t('pilgrimage.album.deleteHint') : undefined}
       style={({ pressed }) => [
         styles.compareCard,
