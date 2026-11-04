@@ -95,6 +95,9 @@
     "@shopify/react-native-skia",
     "unrs-resolver",
   ],
+  "patchedDependencies": {
+    "piexif-ts@2.1.0": "patches/piexif-ts@2.1.0.patch",
+  },
   "overrides": {
     "lightningcss": "1.30.1",
   },
