@@ -1,16 +1,14 @@
-import { memo, useEffect } from 'react';
+import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { useT } from '../../../libs/i18n';
 import type { CameraMode } from '../../../libs/services/pilgrimage/camera-ui';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
-import { readableTextOn, ThemedText } from '../../themed';
+import { ThemedText } from '../../themed';
 import { CameraChrome } from './cameraChrome';
 
 const MODES: readonly CameraMode[] = ['record', 'anime'];
-const SEGMENT_WIDTH = 76;
-const INSET = 3;
 
 interface CameraModeSwitchProps {
   mode: CameraMode;
@@ -19,24 +17,14 @@ interface CameraModeSwitchProps {
 }
 
 /**
- * 紀錄｜動漫 above the shutter. Recording is the default way to use the camera;
- * 動漫 adds the scene reference and overlays without leaving the screen.
- * Floats over the live preview, so it uses the camera chrome, not theme surfaces.
+ * 紀錄　動漫 as plain words right above the shutter, like a camera's mode
+ * labels — light enough that the bottom of the screen stays calm. The active
+ * mode is the accent colour with a dot under it.
  */
 function CameraModeSwitchImpl({ mode, themeColor, onChange }: CameraModeSwitchProps) {
   const t = useT();
-  const index = MODES.indexOf(mode);
-  const knobX = useSharedValue(index * SEGMENT_WIDTH);
-  // Starts at the right segment; later changes slide the knob across.
-  useEffect(() => {
-    knobX.value = withTiming(index * SEGMENT_WIDTH, { duration: 200 });
-  }, [index, knobX]);
-
-  const knobStyle = useAnimatedStyle(() => ({ transform: [{ translateX: knobX.value }] }));
-
   return (
-    <View style={styles.track} accessibilityRole="tablist">
-      <Animated.View style={[styles.knob, { backgroundColor: themeColor }, knobStyle]} />
+    <View style={styles.row} accessibilityRole="tablist">
       {MODES.map((value) => {
         const selected = value === mode;
         return (
@@ -44,19 +32,28 @@ function CameraModeSwitchImpl({ mode, themeColor, onChange }: CameraModeSwitchPr
             key={value}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
-            hitSlop={4}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
             onPress={() => {
               if (selected) return;
               hapticsBridge.selection();
               onChange(value);
             }}
-            style={styles.segment}>
+            style={styles.tab}>
             <ThemedText
-              variant="captionSmall"
+              variant="bodySmall"
               weight="700"
-              style={{ color: selected ? readableTextOn(themeColor) : CameraChrome.fgMuted }}>
+              style={{ color: selected ? themeColor : CameraChrome.fgMuted }}>
               {t(`pilgrimageUi.camera.mode.${value}`)}
             </ThemedText>
+            {selected ? (
+              <Animated.View
+                entering={FadeIn.duration(150)}
+                exiting={FadeOut.duration(100)}
+                style={[styles.dot, { backgroundColor: themeColor }]}
+              />
+            ) : (
+              <View style={styles.dotSpace} />
+            )}
           </Pressable>
         );
       })}
@@ -67,26 +64,8 @@ function CameraModeSwitchImpl({ mode, themeColor, onChange }: CameraModeSwitchPr
 export const CameraModeSwitch = memo(CameraModeSwitchImpl);
 
 const styles = StyleSheet.create({
-  track: {
-    flexDirection: 'row',
-    height: 40,
-    padding: INSET,
-    borderRadius: 8,
-    backgroundColor: CameraChrome.groupFill,
-    borderWidth: 1,
-    borderColor: CameraChrome.border,
-  },
-  knob: {
-    position: 'absolute',
-    top: INSET,
-    left: INSET,
-    width: SEGMENT_WIDTH,
-    bottom: INSET,
-    borderRadius: 6,
-  },
-  segment: {
-    width: SEGMENT_WIDTH,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 28 },
+  tab: { alignItems: 'center', gap: 3, minWidth: 44 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
+  dotSpace: { width: 4, height: 4 },
 });

@@ -24,6 +24,7 @@ import {
   resolveCameraBottomInset,
   resolveCameraChromeVisibility,
   resolveCameraTopChromeHeight,
+  resolveViewfinderRect,
 } from '../../libs/services/pilgrimage/camera-ui';
 import {
   overlayCarouselIndex,
@@ -328,6 +329,12 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
   // mirrored value). Each mode keeps its own alpha — edge reads at ~0.75, the
   // anime bitmap at ~0.35 — so switching modes restores that mode's last pick.
   const overlayOpacity = hud.overlayOpacityByMode[overlayMode] ?? 0.35;
+  // The preview shows exactly what the photo keeps; overlays, the companion
+  // and the composites all work in this frame's coordinates.
+  const viewfinder = useMemo(
+    () => resolveViewfinderRect({ winW, winH, topInset: insets.top, aspect }),
+    [winW, winH, insets.top, aspect]
+  );
   // Capture-in-flight flag — rendered via `anyCapturing` → ShutterRow.
   const [capturing, setCapturing] = useState(false);
   // Immersive-by-subtraction: landscape auto-hides secondary chrome; a preview tap reveals it.
@@ -970,8 +977,8 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
         referenceUri: hiResImageUrl,
         photoWidth: shot.width,
         photoHeight: shot.height,
-        previewWidth: winW,
-        previewHeight: winH,
+        previewWidth: viewfinder.width,
+        previewHeight: viewfinder.height,
         opacity: overlayOpacity,
         transform: getOverlayTransformSnapshot(),
         quality: qualityToNumber(settings.quality),
@@ -989,8 +996,8 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
       subjectCombine,
       subjectReady,
       hiResImageUrl,
-      winW,
-      winH,
+      viewfinder.width,
+      viewfinder.height,
       overlayOpacity,
       getOverlayTransformSnapshot,
       settings.quality,
@@ -1014,8 +1021,8 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
         photoUri: shot.uri,
         photoWidth: shot.width,
         photoHeight: shot.height,
-        previewWidth: winW,
-        previewHeight: winH,
+        previewWidth: viewfinder.width,
+        previewHeight: viewfinder.height,
         cutoutUri: character.cutoutUri,
         intrinsicW: character.intrinsicW,
         intrinsicH: character.intrinsicH,
@@ -1030,7 +1037,7 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
         height: composite.height || shot.height,
       };
     },
-    [character, winW, winH, settings.quality]
+    [character, viewfinder.width, viewfinder.height, settings.quality]
   );
 
   const runSingle = useCallback(
@@ -1483,10 +1490,8 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
     bottomInset: safeAreaBottomPad,
     showZoomBand: chrome.showZoomBand,
     showCarousel: chrome.showReferenceControls,
-    showModeSwitch: true,
+    showModeSwitch: chrome.showModeSwitch,
   });
-  const importPillBottom =
-    bands.zoomBandBottom + (chrome.showZoomBand ? bands.zoomBandHeight + CAMERA_BAND_GAP : 0);
   const chromeTop = safeAreaBottomPad + bands.totalBottomChromeHeight;
   const overlayQuickControlsBottom =
     (chrome.showZoomBand
@@ -1527,76 +1532,90 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
     <GestureHandlerRootView style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.root}>
-        <CameraErrorBoundary>
-          <CameraStage
-            ref={cameraRef}
-            facing={facing}
-            device={strategic.activeDevice}
-            zoomShared={zoom.zoomShared}
-            exposureShared={exposureShared}
-            preferHdr={autoHdrSessionArmed}
-            enableTorch={enableTorch}
-            mirrorSelfie={settings.mirror}
-            active={cameraActive && isFocused}
-            resolutionTier={settings.resolutionTier}
-            aspect={aspect}
-            orientationSource={orientationSource}
-            qualityPrioritization={qualityToPrioritization(settings.quality)}
-            quality={qualityToNumber(settings.quality)}
-            enableShutterSound={!settings.mute}
-            pinchGesture={zoom.pinchGesture}
-            tapGesture={tapFocus.tapGesture}
-            onCameraReady={handleCameraReady}
-            onMountError={handleMountError}
-            onDeviceInfo={setDeviceInfo}
-            showWarmup={!cameraIsReady || strategic.isSwitching}
-            freezeFrameUri={freezeFrameUri}
-            frameOutput={sceneAnalyzer.frameOutput}
+        {/* The viewfinder: exactly the frame the photo keeps. Everything drawn
+            against the scene (overlay, level, focus ring, companion) lives in it,
+            so its coordinates are the photo's. Outside it is the dark band. */}
+        <View
+          style={[
+            styles.viewfinder,
+            {
+              left: viewfinder.left,
+              top: viewfinder.top,
+              width: viewfinder.width,
+              height: viewfinder.height,
+            },
+          ]}>
+          <CameraErrorBoundary>
+            <CameraStage
+              ref={cameraRef}
+              facing={facing}
+              device={strategic.activeDevice}
+              zoomShared={zoom.zoomShared}
+              exposureShared={exposureShared}
+              preferHdr={autoHdrSessionArmed}
+              enableTorch={enableTorch}
+              mirrorSelfie={settings.mirror}
+              active={cameraActive && isFocused}
+              resolutionTier={settings.resolutionTier}
+              aspect={aspect}
+              orientationSource={orientationSource}
+              qualityPrioritization={qualityToPrioritization(settings.quality)}
+              quality={qualityToNumber(settings.quality)}
+              enableShutterSound={!settings.mute}
+              pinchGesture={zoom.pinchGesture}
+              tapGesture={tapFocus.tapGesture}
+              onCameraReady={handleCameraReady}
+              onMountError={handleMountError}
+              onDeviceInfo={setDeviceInfo}
+              showWarmup={!cameraIsReady || strategic.isSwitching}
+              freezeFrameUri={freezeFrameUri}
+              frameOutput={sceneAnalyzer.frameOutput}
+            />
+          </CameraErrorBoundary>
+
+          <OverlayLayer
+            mode={overlayMode}
+            hiResImageUrl={hiResImageUrl}
+            winW={viewfinder.width}
+            winH={viewfinder.height}
+            opacity={overlayVisible && !recordMode ? overlayOpacity : 0}
+            editMode={editMode}
+            themeColor={themeColor}
+            composedGesture={overlayTransform.composedGesture}
+            animatedStyle={overlayTransform.animatedStyle}
+            edgeOrSketchImage={edgeOrSketch.image}
+            edgeOrSketchLoading={edgeOrSketch.loading}
+            edgeOrSketchError={edgeOrSketch.error}
+            edgeSourceOpacity={edgeOrSketch.sourceOpacity}
           />
-        </CameraErrorBoundary>
 
-        <OverlayLayer
-          mode={overlayMode}
-          hiResImageUrl={hiResImageUrl}
-          winW={winW}
-          winH={winH}
-          opacity={overlayVisible && !recordMode ? overlayOpacity : 0}
-          editMode={editMode}
-          themeColor={themeColor}
-          composedGesture={overlayTransform.composedGesture}
-          animatedStyle={overlayTransform.animatedStyle}
-          edgeOrSketchImage={edgeOrSketch.image}
-          edgeOrSketchLoading={edgeOrSketch.loading}
-          edgeOrSketchError={edgeOrSketch.error}
-          edgeSourceOpacity={edgeOrSketch.sourceOpacity}
-        />
-
-        {/* Always-glass legibility scrim — full-bleed preview shows through. */}
-        <CameraScrim />
-
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <View style={styles.levelHorizonWrap}>
-            <LevelHorizon tiltShared={sensors.tiltShared} color={themeColor} />
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <View style={styles.levelHorizonWrap}>
+              <LevelHorizon tiltShared={sensors.tiltShared} color={themeColor} />
+            </View>
+            <FocusReticle
+              focusPoint={tapFocus.focusPoint}
+              accent={themeColor}
+              afLocked={tapFocus.afLocked}
+            />
           </View>
-          <FocusReticle
-            focusPoint={tapFocus.focusPoint}
-            accent={themeColor}
-            afLocked={tapFocus.afLocked}
-          />
+
+          {recordMode ? null : (
+            <CompanionOverlay
+              parentSize={{ width: viewfinder.width, height: viewfinder.height }}
+              editMode={editMode}
+              characterLayerRef={characterLayerRef}
+              character={character}
+              pickerOpen={characterPickerOpen}
+              onOpenPicker={() => setCharacterPickerOpen(true)}
+              onClosePicker={() => setCharacterPickerOpen(false)}
+              onSelectCharacter={setCharacter}
+            />
+          )}
         </View>
 
-        {recordMode ? null : (
-          <CompanionOverlay
-            parentSize={{ width: winW, height: winH }}
-            editMode={editMode}
-            characterLayerRef={characterLayerRef}
-            character={character}
-            pickerOpen={characterPickerOpen}
-            onOpenPicker={() => setCharacterPickerOpen(true)}
-            onClosePicker={() => setCharacterPickerOpen(false)}
-            onSelectCharacter={setCharacter}
-          />
-        )}
+        {/* Legibility scrim for the chrome that sits over the frame's edges. */}
+        <CameraScrim />
 
         <CameraTopBar
           placeName={name}
@@ -1843,9 +1862,16 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
           </View>
         ) : null}
 
-        {/* No reference yet: one light affordance, not a slab of overlay controls. */}
+        {/* No reference yet: the reference slot (top-left, where the REF
+            thumbnail appears once there is one) offers the import. The bottom of
+            the screen stays shutter, mode and zoom only. */}
         {chrome.showImportReference ? (
-          <View pointerEvents="box-none" style={[styles.bandRow, { bottom: importPillBottom }]}>
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.refThumbWrap,
+              { top: topBarBottom + 8, left: Math.max(14, insets.left + 12) },
+            ]}>
             <ImportReferencePill
               episode={ep}
               time={params.time}
@@ -1856,18 +1882,20 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
         ) : null}
 
         {/* 紀錄｜動漫 — right above the shutter, in both orientations. */}
-        <View
-          pointerEvents="box-none"
-          style={[
-            styles.bandRow,
-            { bottom: bands.modeSwitchBottom, height: bands.modeSwitchHeight },
-          ]}>
-          <CameraModeSwitch
-            mode={cameraMode}
-            themeColor={themeColor}
-            onChange={(mode: CameraMode) => setHud({ cameraMode: mode })}
-          />
-        </View>
+        {chrome.showModeSwitch ? (
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.bandRow,
+              { bottom: bands.modeSwitchBottom, height: bands.modeSwitchHeight },
+            ]}>
+            <CameraModeSwitch
+              mode={cameraMode}
+              themeColor={themeColor}
+              onChange={(mode: CameraMode) => setHud({ cameraMode: mode })}
+            />
+          </View>
+        ) : null}
 
         {/* Bottom row: gallery | shutter | flip — fixed bottom, glyphs rotate in landscape. */}
         <View
@@ -1945,6 +1973,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   refThumbWrap: { position: 'absolute', zIndex: 66 },
+  viewfinder: { position: 'absolute', overflow: 'hidden' },
   refThumbCredit: {
     marginTop: 6,
     alignSelf: 'flex-start',

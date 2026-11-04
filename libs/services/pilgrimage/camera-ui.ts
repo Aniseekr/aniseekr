@@ -173,7 +173,7 @@ export const CAMERA_BOTTOM_ROW_HEIGHT = 88;
 /** Vertical breathing room between stacked bands. */
 export const CAMERA_BAND_GAP = 8;
 /** 紀錄｜動漫 switch, directly above the shutter row. */
-export const CAMERA_MODE_SWITCH_HEIGHT = 40;
+export const CAMERA_MODE_SWITCH_HEIGHT = 32;
 
 export interface CameraBandLayoutInput {
   /** Safe-area bottom already resolved via {@link resolveCameraBottomInset}. */
@@ -253,6 +253,8 @@ export interface CameraChromeVisibilityInput {
 
 export interface CameraChromeVisibility {
   showZoomBand: boolean;
+  /** 紀錄｜動漫 labels; landscape-immersive tucks them away with the zoom band. */
+  showModeSwitch: boolean;
   /** REF thumbnail + overlay-mode carousel. */
   showReferenceControls: boolean;
   /** The light "import this scene's screenshot" affordance. */
@@ -279,13 +281,56 @@ export function resolveCameraChromeVisibility(
   const overlay = anime && input.hasReference && input.overlayActive;
   return {
     showZoomBand: !secondaryHidden,
+    showModeSwitch: !secondaryHidden,
     showReferenceControls: anime && input.hasReference,
     showImportReference: anime && !input.hasReference,
     showOpacityPill: !secondaryHidden && overlay,
     showCaptureHistory: !secondaryHidden,
     showAutoCaptureBadge: true,
-    showFocusExposureBar: input.afLocked,
-    // Landscape immersive keeps the scene clear: the per-mode tools come back on a tap.
-    showOverlayQuickControls: overlay && !secondaryHidden,
+    // Landscape has ~400pt of height: the stacked bands already fill it, so the
+    // EV bar and the per-mode overlay tools stay portrait-only (the focus ring
+    // and AF lock still work).
+    showFocusExposureBar: input.afLocked && !input.isLandscape,
+    showOverlayQuickControls: overlay && !input.isLandscape,
   };
+}
+
+export interface ViewfinderRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Long side over short side of what the photo keeps; null = fill the screen. */
+const VIEWFINDER_RATIO: Record<'4:3' | '16:9' | '1:1' | 'full', number | null> = {
+  '4:3': 4 / 3,
+  '16:9': 16 / 9,
+  '1:1': 1,
+  full: null,
+};
+
+/**
+ * Where the live preview sits so it shows exactly what the photo keeps
+ * (WYSIWYG). Portrait: full width, starting under the status bar; whatever is
+ * left below is the dark band the shutter sits on. Landscape: full height,
+ * centred. 'full' fills the screen (the photo then keeps more than is seen).
+ */
+export function resolveViewfinderRect(input: {
+  winW: number;
+  winH: number;
+  topInset: number;
+  aspect: '4:3' | '16:9' | '1:1' | 'full';
+}): ViewfinderRect {
+  const { winW, winH, topInset } = input;
+  const ratio = VIEWFINDER_RATIO[input.aspect];
+  if (ratio === null) return { left: 0, top: 0, width: winW, height: winH };
+  if (winW > winH) {
+    const width = Math.min(winW, winH * ratio);
+    return { left: (winW - width) / 2, top: 0, width, height: winH };
+  }
+  const available = winH - topInset;
+  const height = Math.min(available, winW * ratio);
+  const width = height === available ? height / ratio : winW;
+  return { left: (winW - width) / 2, top: topInset, width, height };
 }
