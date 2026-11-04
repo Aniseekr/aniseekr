@@ -138,7 +138,8 @@ export default function PilgrimageDetailScreen() {
   const albumAnimeId = getStringParam(params, 'albumAnimeId');
   const routeFocusSpotId = getStringParam(params, 'focusSpotId');
   const atlasContext = useMemo<AnimeAtlasContext | undefined>(() => {
-    if (!titleJa && !titleEn && !routeTitle && malId === null && anilistId === null) return undefined;
+    if (!titleJa && !titleEn && !routeTitle && malId === null && anilistId === null)
+      return undefined;
     return { bgmId: bangumiId, malId, anilistId, titleJa, titleEn, title: routeTitle };
   }, [anilistId, bangumiId, malId, routeTitle, titleEn, titleJa]);
   const workKey = routeAnimeId && !/^\d+$/.test(routeAnimeId) ? routeAnimeId : null;
@@ -489,9 +490,7 @@ export default function PilgrimageDetailScreen() {
     (spot: PilgrimageSpot) => (anime ? buildSpotCompareParams(spot, anime, themeColor) : null),
     [anime, themeColor]
   );
-  const webUrl = anime?.key
-    ? buildPilgrimageWebUrl(anime.key, language, 'work')
-    : null;
+  const webUrl = anime?.key ? buildPilgrimageWebUrl(anime.key, language, 'work') : null;
   const handleOpenWeb = useCallback(() => {
     if (!webUrl) return;
     void WebBrowser.openBrowserAsync(webUrl).catch(() => undefined);
@@ -667,10 +666,7 @@ export default function PilgrimageDetailScreen() {
               )}
               <View style={styles.mapScrim} pointerEvents="none" />
               {legendKinds.length > 0 && !visibleProximityTarget ? (
-                <LocalityMapLegend
-                  kinds={legendKinds}
-                  style={styles.localityLegend}
-                />
+                <LocalityMapLegend kinds={legendKinds} style={styles.localityLegend} />
               ) : null}
             </View>
 
@@ -775,7 +771,9 @@ export default function PilgrimageDetailScreen() {
               groupedCounts={groupedCounts}
               spotFilter={mainSpotFilter}
               selectedSpotId={selectedSpotId}
-              selectedSpot={selectedSpotId ? (groupedSpotByPointId.get(selectedSpotId) ?? null) : null}
+              selectedSpot={
+                selectedSpotId ? (groupedSpotByPointId.get(selectedSpotId) ?? null) : null
+              }
               menuSpotId={menuSpotId}
               emptyMessage={isEmpty ? t('pilgrimage.detail.emptyNoData') : emptyMessage}
               animatedPosition={sheetPosition}

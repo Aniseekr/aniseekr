@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Linking,
-  Platform,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSharedValue } from 'react-native-reanimated';
@@ -776,7 +769,11 @@ export default function CompareCaptureScreen() {
     return buildAdditionalExif({
       // An imported reference's id is synthetic — it names no real place.
       spotId: params.targetSpotId ?? (importedReference ? '' : spotId),
-      spotName: params.targetSpotId ? (nameParam ?? '') : importedReference ? '' : (nameParam ?? ''),
+      spotName: params.targetSpotId
+        ? (nameParam ?? '')
+        : importedReference
+          ? ''
+          : (nameParam ?? ''),
       animeId: animeId ?? undefined,
       animeTitle: animeTitle || undefined,
       episode: ep ?? undefined,

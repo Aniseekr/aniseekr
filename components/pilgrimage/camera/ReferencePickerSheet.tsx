@@ -55,11 +55,12 @@ export function ReferencePickerSheet({
     }
   };
 
-  const hint = episode && time
-    ? t('pilgrimage.album.episodeTime', { episode, time })
-    : episode
-      ? t('pilgrimage.album.epLabel', { ep: episode })
-      : null;
+  const hint =
+    episode && time
+      ? t('pilgrimage.album.episodeTime', { episode, time })
+      : episode
+        ? t('pilgrimage.album.epLabel', { ep: episode })
+        : null;
 
   return (
     <ThemedBottomSheet visible={visible} onClose={onClose} maxHeightPct={0.55}>

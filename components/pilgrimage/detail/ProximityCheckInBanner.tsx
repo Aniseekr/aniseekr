@@ -50,10 +50,7 @@ export function ProximityCheckInBanner({
   // under the header buttons without hiding the map it is about.
   return (
     <Animated.View style={[styles.wrap, animatedStyle]} pointerEvents="box-none">
-      <ThemedSurface
-        variant="elevated"
-        radius={Radius.lg}
-        style={[styles.surface, Shadow.subtle]}>
+      <ThemedSurface variant="elevated" radius={Radius.lg} style={[styles.surface, Shadow.subtle]}>
         <Ionicons name="location" size={16} color={theme.accent} />
         <ThemedText
           variant="bodySmall"
