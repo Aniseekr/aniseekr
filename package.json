@@ -26,7 +26,6 @@
     "test:parity": "bun test --preload ./test-setup.ts __tests__/parity",
     "typecheck": "tsc --noEmit",
     "spec:check": "bun run scripts/check-spec-traceability.ts",
-    "build:anitabi-index": "bun run scripts/build-anitabi-index.ts",
     "web": "expo start --web",
     "build:android": "bunx eas build --platform android --profile production",
     "build:android:local": "bunx eas build --platform android --profile production --local",

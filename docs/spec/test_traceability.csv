@@ -143,31 +143,11 @@ LOC-001,__tests__/unit/anime-localization-service.test.ts,display title never em
 LOC-002,__tests__/unit/anime-localization-service.test.ts,zh-Hans uses titleChinese,covered
 LOC-003,__tests__/unit/anime-localization-service.test.ts,fallback to title,covered
 LOC-004,__tests__/unit/anime-localization-service.test.ts,search keywords includes synonyms,covered
-PILG-001,__tests__/unit/pilgrimage/anitabi-service.test.ts,404 returns null,covered
-PILG-002,__tests__/unit/pilgrimage/anitabi-service.test.ts,in-memory cache hit,covered
-PILG-003,__tests__/unit/pilgrimage/anitabi-service.test.ts,sqlite persistence,covered
-PILG-004,__tests__/unit/pilgrimage/anitabi-service.test.ts,cache expiry 7 days,covered
-PILG-005,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,renders required fields,covered
-PILG-006,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,distance badge optional,covered
-PILG-007,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,onPress callback fires,covered
-PILG-008,__tests__/unit/pilgrimage/anime-pilgrimage-card.test.tsx,haptic on press,covered
-PILG-009,__tests__/unit/pilgrimage/nearby-pilgrimage-badge.test.tsx,renders nothing until loaded,covered
-PILG-010,__tests__/unit/pilgrimage/nearby-pilgrimage-badge.test.tsx,swallows fetch errors,covered
-PILG-011,__tests__/unit/pilgrimage/pilgrimage-repository.test.ts,falls back to id mapping,covered
-PILG-012,__tests__/unit/pilgrimage/pilgrimage-repository.test.ts,sqlite migration idempotent,covered
-PILG-013,__tests__/integration/anitabi-live.test.ts,live API-first fetch subject 7157,covered
-PILG-014,__tests__/unit/pilgrimage/anitabi-static-data.test.ts,decodes and joins official static payloads,covered
-PILG-015,__tests__/unit/pilgrimage/anitabi-runtime-coverage.test.ts,rejects degraded runtime coverage,covered
-PILG-016,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,matches localized and official English titles,covered
-PILG-017,__tests__/unit/pilgrimage/anitabi-image.test.ts,keeps CDN URLs and heals invalid website image URLs,covered
-PILG-018,__tests__/unit/pilgrimage/anitabi-client.test.ts,requests only documented endpoints and backs off after HTTP 403,covered
-PILG-019,__tests__/unit/pilgrimage/pilgrimage-search-service.test.ts,unions Bangumi fallback with weak local hits instead of suppressing it,covered
 PILG-020,__tests__/unit/pilgrimage/street-view-service.test.ts,resolves Look Around first on iOS and falls back to Mapillary,covered
 PILG-021,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,missing token returns null without fetch,covered
 PILG-022,__tests__/unit/pilgrimage/street-view-service.test.ts,reuses cached Look Around availability without provider call,covered
 PILG-023,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,falls back from radius to bbox and sorts parsed images,covered
 PILG-024,__tests__/unit/pilgrimage/street-view-mapillary-client.test.ts,returns null for rate limit network and malformed payloads,covered
-PILG-025,__tests__/unit/pilgrimage/anitabi-points.test.ts,merges same shrine cuts with angle suffixes inside 60m,covered
 PILG-026,__tests__/unit/pilgrimage/street-view-service.test.ts,peeks cached verdicts synchronously for warm opens,covered
 PILG-027,__tests__/unit/pilgrimage/street-view-service.test.ts,caches successful empty Mapillary answers but never errors,covered
 PILG-028,__tests__/unit/pilgrimage/use-street-view.test.ts,scene unavailable corrects the verdict and re-resolves,covered
@@ -197,7 +177,6 @@ PILG-051,__tests__/unit/pilgrimage/local-intel-repository.test.ts,hub rail order
 PILG-052,__tests__/unit/pilgrimage/event-date-block.test.ts,derives date block per state and language,covered
 PILG-053,__tests__/unit/pilgrimage/locality-migration.test.ts,conserves bundled canonical locality records and memberships,covered
 PILG-054,__tests__/unit/pilgrimage/locality-migration.test.ts,dedupes Gamers and rejects invalid snapshots or refreshes,covered
-PILG-055,__tests__/unit/pilgrimage/locality-scene-projector.test.ts,projects scenes through the existing Anitabi pipeline,covered
 PILG-056,__tests__/unit/pilgrimage/locality-event-detail.test.ts,joins event stops places map targets and provenance,covered
 PILG-056,__tests__/unit/pilgrimage/pilgrimage-navigation.test.ts,routes event rows to first-class detail with chrome seed,covered
 PILG-057,__tests__/unit/pilgrimage/visited-prefs.test.ts,namespaces and persists canonical stamp-stop role progress,covered
@@ -237,6 +216,10 @@ PILG-073,__tests__/unit/pilgrimage/preview-capture.test.ts,camera preview params
 PILG-074,__tests__/unit/pilgrimage/preview-capture.test.ts,journal preview params and preview shots,covered
 PILG-075,__tests__/unit/pilgrimage/preview-capture.test.ts,preview capture record,covered
 PILG-076,__tests__/unit/pilgrimage/frame-match.test.ts,frame match discriminates scenes (v2 layout scoring),covered
-PILG-077,__tests__/unit/pilgrimage/home-nearby-spots.test.ts,PILG-077 home nearby fallback,covered
 REPO-031,__tests__/unit/bangumi-schedule.test.ts,broadcast season boundaries,covered
-PILG-078,__tests__/unit/pilgrimage/anitabi-service.test.ts,a transient 404 keeps the stale cached points,covered
+PILG-079,__tests__/unit/pilgrimage/atlas-resolver.test.ts,Atlas resolver precedence and prequel lookup,covered
+PILG-080,__tests__/unit/pilgrimage/atlas-resolver.test.ts,exact match miss returns null,covered
+PILG-081,__tests__/unit/pilgrimage/atlas-client.test.ts,404 rereads meta once and retries,covered
+PILG-082,__tests__/unit/pilgrimage/atlas-client.test.ts,moved ids resolve or return null,covered
+PILG-083,__tests__/unit/pilgrimage/atlas-client.test.ts,city index resolves municipality labels,covered
+PILG-084,__tests__/unit/pilgrimage/pilgrimage-search-city.test.ts,search results use municipality labels,covered

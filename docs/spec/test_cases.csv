@@ -143,31 +143,11 @@ LOC-001,Localization,deterministic,P0,Display title never empty,Display title fa
 LOC-002,Localization,deterministic,P0,Chinese language uses titleChinese,User pref zh-Hans returns titleChinese when present,localization,active
 LOC-003,Localization,deterministic,P0,Falls back to title when missing,No localized title returns canonical title,fallback,active
 LOC-004,Localization,deterministic,P1,Search includes synonyms,searchKeywords includes synonyms,localization,active
-PILG-001,Pilgrimage,deterministic,P0,getAnimePilgrimage 404 returns null,AnitabiService 404 maps to null not error,fallback,active
-PILG-002,Pilgrimage,deterministic,P0,In-memory cache hit,Second call within session does not call fetch,timing,active
-PILG-003,Pilgrimage,deterministic,P0,SQLite persistence,Result cached in pilgrimage_spots table,mapping,active
-PILG-004,Pilgrimage,deterministic,P0,Cache expiry 7 days,Stale entry beyond TTL refetches,timing,active
-PILG-005,Pilgrimage,deterministic,P0,Card renders required fields,AnimePilgrimageCard renders title city points count,mapping,active
-PILG-006,Pilgrimage,deterministic,P1,Card distance badge optional,Card hides distance when prop absent,nullability,active
-PILG-007,Pilgrimage,deterministic,P0,Card onPress callback fires,onPress invoked with full anime object,mapping,active
-PILG-008,Pilgrimage,deterministic,P1,Card haptic on press,Card calls Haptics.impact on press,boundary,active
-PILG-009,Pilgrimage,deterministic,P0,Badge renders nothing until loaded,NearbyPilgrimageBadge returns null while fetching,boundary,active
-PILG-010,Pilgrimage,deterministic,P0,Badge swallows fetch errors,Badge does not throw on fetch failure,error-handling,active
-PILG-011,Pilgrimage,deterministic,P0,Repository falls back to ID mapping,Anime without bangumi id translated via IDMappingService,fallback,active
-PILG-012,Pilgrimage,deterministic,P1,SQLite migration idempotent,init creates pilgrimage_spots table only once,boundary,active
-PILG-013,Pilgrimage,integration,P1,Live anitabi fetch,Live API-first fetch of subject 7157 returns Yosuga no Sora pilgrimage data,mapping,active
-PILG-014,Pilgrimage,deterministic,P0,Official static data decode,Compact catalog and page payloads join into complete anime point data,mapping,active
-PILG-015,Pilgrimage,deterministic,P0,Reject degraded runtime index,A 9-row generated payload cannot replace an 82-row or 781-row bundled index,fallback,active
-PILG-016,Pilgrimage,deterministic,P0,Localized pilgrimage search,Traditional and Simplified Chinese normalize together and official English titles remain searchable,localization,active
-PILG-017,Pilgrimage,deterministic,P0,Valid image CDN route,Relative image paths resolve to the image CDN and invalid website-image cache values self-heal,error-handling,active
-PILG-018,Pilgrimage,deterministic,P0,Documented API surface only,Anitabi requests touch only api.md endpoints with an honest UA and no Referer; HTTP 403 backs off without requesting other URLs,error-handling,active
-PILG-019,Pilgrimage,deterministic,P0,Fallback unions with local hits,Bangumi fallback always runs and unions with local index hits instead of being suppressed by any weak local match,fallback,active
 PILG-020,Pilgrimage,deterministic,P0,Street view provider chain,iOS uses Look Around first and falls back to Mapillary while Android starts with Mapillary,fallback,active
 PILG-021,Pilgrimage,deterministic,P0,Mapillary token missing disables quietly,Missing EXPO_PUBLIC_MAPILLARY_TOKEN returns null without network I/O,nullability,active
 PILG-022,Pilgrimage,deterministic,P0,Look Around availability cache hit,Resolver reuses cached Look Around availability by rounded coordinate without rechecking native provider,timing,active
 PILG-023,Pilgrimage,deterministic,P0,Mapillary radius then bbox parsing,Mapillary client tries 50m radius then bbox fallback and orders parsed images by distance quality and panorama preference,mapping,active
 PILG-024,Pilgrimage,deterministic,P0,Mapillary errors are null,HTTP 429 network failures and malformed Mapillary payloads return null,error-handling,active
-PILG-025,Pilgrimage,deterministic,P0,Angle suffix scene cuts merge,Loose same-location Anitabi cuts with angle suffixes merge into one spot inside 60m,mapping,active
 PILG-026,Pilgrimage,deterministic,P0,Warm street view peek is synchronous,peekStreetView returns cached verdicts from the sync mirror so warm opens never show a skeleton,timing,active
 PILG-027,Pilgrimage,deterministic,P0,Mapillary empty answers cached errors not,Successful empty Mapillary results are cached for the TTL while null errors are never cached,error-handling,active
 PILG-028,Pilgrimage,deterministic,P0,Scene unavailable corrects stale verdict,Look Around scene-unavailable overwrites the cached availability to false and the resolver re-resolves to Mapillary,fallback,active
@@ -197,7 +177,6 @@ PILG-051,Pilgrimage,deterministic,P0,Hub rail event ordering,Hub rail orders act
 PILG-052,Pilgrimage,deterministic,P0,Event date block derivation,deriveEventDateBlock returns the right top main and emphasis for active upcoming ongoing ended and unannounced states across languages,mapping,active
 PILG-053,Pilgrimage,deterministic,P0,Canonical locality conservation,Canonical migration preserves 11 original local-intel records 7 rallies 201 stop memberships 124 coordinate-free Anime Tourism 88 destinations and 17 news sources,mapping,active
 PILG-054,Pilgrimage,deterministic,P0,Canonical locality identity and validation,Gamers Numazu resolves to one reviewed Place with four roles and merged provenance while invalid role anime links or refresh snapshots never replace valid data,boundary,active
-PILG-055,Pilgrimage,deterministic,P0,Anitabi scene projection,Scene projection delegates to the existing detailed-point and grouping pipeline and remains an overlay outside the bundled snapshot,mapping,active
 PILG-056,Pilgrimage,deterministic,P0,Canonical event detail wiring,Event detail joins campaign stops and festival venues to canonical Places map targets provenance and the first-class event route,mapping,active
 PILG-057,Pilgrimage,deterministic,P0,Stamp-stop progress persistence,Stamp collection persists by namespaced canonical role id without colliding with scene point state,boundary,active
 PILG-058,Pilgrimage,deterministic,P0,Typed locality map markers,Stamp shop and festival roles render as distinct exact pins while Anime Tourism 88 rows remain labelled non-visitable areas,mapping,active
@@ -235,6 +214,10 @@ PILG-073,Pilgrimage,deterministic,P0,Camera preview params,The compare camera ha
 PILG-074,Pilgrimage,deterministic,P0,Journal preview params,A Journal shot opens the preview with its stored sensors and source and a leftover camera session never replaces it,mapping,active
 PILG-075,Pilgrimage,deterministic,P0,Preview capture record,The preview files a shot under its scene or the free bucket with lens-gated analysis and no composite without a reference,mapping,active
 PILG-076,Pilgrimage,deterministic,P0,Frame match discriminates scenes,Frame match compares where light and edges sit so unrelated scenes score low and the same framing scores high and scores from the retired whole-frame metric are neither shown nor kept,boundary,active
-PILG-077,Pilgrimage,deterministic,P0,Home nearby fallback,An empty fresh-install spot index uses real anime litePoints for nearest and nearby count and cannot claim radius coverage until the index has rows,fallback,active
 REPO-031,Repository,deterministic,P0,Broadcast season defaults,Seasonal defaults pair calendar year with Jan-Apr-Jul-Oct broadcast cours,mapping,active
-PILG-078,Pilgrimage,deterministic,P0,Transient 404 keeps cache,A 404 for a work we already cached serves the stale points instead of blanking it,fallback,active
+PILG-079,Pilgrimage,deterministic,P0,Atlas resolver precedence,Resolves in Bangumi then MAL then exact normalized title order and follows cached AniList prequel relations up to three hops,mapping,active
+PILG-080,Pilgrimage,deterministic,P0,Atlas resolver misses,Returns null for an unresolved anime without fuzzy matching or fallback,nullability,active
+PILG-081,Pilgrimage,deterministic,P0,Atlas version retry,A 404 under a versioned path rereads meta once and retries the asset,error-handling,active
+PILG-082,Pilgrimage,deterministic,P0,Atlas moved spot resolution,Replacement ids resolve and null destinations are treated as removed,mapping,active
+PILG-083,Pilgrimage,deterministic,P0,Atlas municipality labels,City index maps municipality codes to prefecture and place names,mapping,active
+PILG-084,Pilgrimage,deterministic,P0,Pilgrimage search municipality labels,Search results display municipality names rather than raw codes,mapping,active
