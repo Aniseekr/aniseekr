@@ -256,6 +256,9 @@ function ImagePair({
       />
     ),
   };
+  // No scene image (a free shot, or a spot without one): the card is just the
+  // photo — never an empty black "ANIME" frame.
+  if (!imageUrl) return <View style={{ flex: 1 }}>{cells.real}</View>;
   return (
     <View
       style={{
@@ -1203,14 +1206,20 @@ function MangaTemplate(props: TemplateProps) {
           flexDirection: ratio === '9:16' ? 'column' : 'row',
           gap: 0,
         }}>
-        {cells[order.first]}
-        <View
-          style={{
-            backgroundColor: '#000',
-            ...(ratio === '9:16' ? { height: 3 } : { width: 3 }),
-          }}
-        />
-        {cells[order.second]}
+        {imageUrl ? (
+          <>
+            {cells[order.first]}
+            <View
+              style={{
+                backgroundColor: '#000',
+                ...(ratio === '9:16' ? { height: 3 } : { width: 3 }),
+              }}
+            />
+            {cells[order.second]}
+          </>
+        ) : (
+          cells.real
+        )}
       </View>
 
       <View
