@@ -630,6 +630,11 @@ export function CameraStage({
               <Camera
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
+                // TextureView: a SurfaceView preview inside the tab navigator kept
+                // its raw 1440×1080 buffer unscaled, so only the top of the screen
+                // showed the scene (Android). It also follows the parent's
+                // opacity/transform during lens switches.
+                implementationMode="compatible"
                 device={device}
                 outputs={outputs}
                 isActive={active}
