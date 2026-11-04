@@ -69,7 +69,10 @@ export default function ShutterRow({
   const shutterDisabled = capturing || burstActive;
   const shutterSize = isLandscape ? SHUTTER_SIZE_LANDSCAPE : SHUTTER_SIZE;
   const coreSize = shutterSize - SHUTTER_GAP;
-  const glyphRotation = rotateGlyphs ? ([{ rotate: '90deg' }] as const) : undefined;
+  // Always an array: flipping `transform` to undefined (the camera re-renders in
+  // portrait under the preview once the landscape lock is released) reaches
+  // Android's processTransform as null and throws.
+  const glyphRotation = [{ rotate: rotateGlyphs ? '90deg' : '0deg' }];
 
   const handleShutterPress = () => {
     if (shutterDisabled) return;
