@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { AtlasClient } from '../../../libs/services/pilgrimage/atlas/atlas-client';
+import type { AtlasWorkDetail, AtlasWorkIndex } from '../../../libs/services/pilgrimage/atlas/types';
 
 describe('Atlas client version handling', () => {
   afterEach(() => mock.restore());
@@ -121,5 +122,90 @@ describe('Atlas client version handling', () => {
       rows: { '01af-c9.8': ['01af-c9.8', 'work', 'Spot', 35, 139, 'c', [1]] },
     });
     expect(requested).toContain('https://atlas.aniseekr.moe/v/v1/spots/ab.json');
+  });
+
+  it('PILG-081 serves a cached work after meta expires while offline', async () => {
+    const meta = {
+      dataVersion: 'v1',
+      paths: { works: '/v/v1/works.json', spotsLite: '/v/v1/spots-lite.json', work: '/v/v1/works/{key}.json' },
+    };
+    const cachedWork: AtlasWorkDetail = {
+      dataVersion: 'v1', franchiseKey: 'work', titleJa: '作品', bangumiIds: [], spots: [],
+    };
+    const values = new Map<string, { value: unknown; timestamp: number; ttl: number }>([
+      ['atlas:meta', { value: meta, timestamp: Date.now() - 120_000, ttl: 60_000 }],
+      ['atlas:v1:work:work', { value: cachedWork, timestamp: Date.now(), ttl: 7 * 24 * 60 * 60 * 1000 }],
+    ]);
+    const cache = {
+      getSync: <T>(key: string): T | null => {
+        const entry = values.get(key);
+        return entry && Date.now() - entry.timestamp <= entry.ttl ? entry.value as T : null;
+      },
+      getSyncWithMeta: <T>(key: string, graceMs = 0) => {
+        const entry = values.get(key);
+        if (!entry) return null;
+        const age = Date.now() - entry.timestamp;
+        return age <= entry.ttl + graceMs
+          ? { value: entry.value as T, age, isStale: age > entry.ttl }
+          : null;
+      },
+      getWithMeta: async <T>(key: string, graceMs = 0) => {
+        const entry = values.get(key);
+        if (!entry) return null;
+        const age = Date.now() - entry.timestamp;
+        return age <= entry.ttl + graceMs
+          ? { value: entry.value as T, age, isStale: age > entry.ttl }
+          : null;
+      },
+      set: async (key: string, value: unknown, ttl = 0) => {
+        values.set(key, { value, timestamp: Date.now(), ttl });
+      },
+    };
+    const client = new AtlasClient({ fetcher: (() => new Promise<Response>(() => {})) as unknown as typeof fetch, cache });
+
+    await expect(client.work('work')).resolves.toEqual(cachedWork);
+  });
+
+  it('PILG-081 returns the cached works index after meta TTL', async () => {
+    const meta = {
+      dataVersion: 'v1',
+      paths: { works: '/v/v1/works.json', spotsLite: '/v/v1/spots-lite.json', work: '/v/v1/works/{key}.json' },
+    };
+    const cachedWorks: AtlasWorkIndex = {
+      dataVersion: 'v1',
+      works: [{ key: 'new', ja: '新しい作品', en: null, mal: [], n: 1, conf: { c: 1, s: 0, u: 0 }, cities: [] }],
+    };
+    const values = new Map<string, { value: unknown; timestamp: number; ttl: number }>([
+      ['atlas:meta', { value: meta, timestamp: Date.now() - 120_000, ttl: 60_000 }],
+      ['atlas:v1:works', { value: cachedWorks, timestamp: Date.now() - 120_000, ttl: 60_000 }],
+    ]);
+    const cache = {
+      getSync: <T>(key: string): T | null => {
+        const entry = values.get(key);
+        return entry && Date.now() - entry.timestamp <= entry.ttl ? entry.value as T : null;
+      },
+      getSyncWithMeta: <T>(key: string, graceMs = 0) => {
+        const entry = values.get(key);
+        if (!entry) return null;
+        const age = Date.now() - entry.timestamp;
+        return age <= entry.ttl + graceMs
+          ? { value: entry.value as T, age, isStale: age > entry.ttl }
+          : null;
+      },
+      getWithMeta: async <T>(key: string, graceMs = 0) => {
+        const entry = values.get(key);
+        if (!entry) return null;
+        const age = Date.now() - entry.timestamp;
+        return age <= entry.ttl + graceMs
+          ? { value: entry.value as T, age, isStale: age > entry.ttl }
+          : null;
+      },
+      set: async (key: string, value: unknown, ttl = 0) => {
+        values.set(key, { value, timestamp: Date.now(), ttl });
+      },
+    };
+    const client = new AtlasClient({ fetcher: (async () => { throw new Error('offline'); }) as unknown as typeof fetch, cache });
+
+    await expect(client.works()).resolves.toEqual(cachedWorks);
   });
 });

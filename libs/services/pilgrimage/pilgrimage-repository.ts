@@ -29,6 +29,7 @@ export interface AnimeContext {
 
 export interface AnimeDetailAtlasSource {
   id: string;
+  sourcePlatform?: string | null;
   idMal?: number | null;
   title?: string | null;
   titleJapanese?: string | null;
@@ -42,7 +43,9 @@ export function animeDetailAtlasContext(anime: AnimeDetailAtlasSource): AnimeCon
   const malId = anime.platformData?.myanimelist?.id ?? anime.idMal;
   return {
     ...(malId != null ? { sourcePlatform: 'myanimelist', id: malId } : {}),
-    anilistId: anime.platformData?.anilist?.id ?? anime.id,
+    anilistId:
+      anime.platformData?.anilist?.id ??
+      (anime.sourcePlatform === 'anilist' ? anime.id : null),
     malId,
     bangumiId: anime.platformData?.bangumi?.id,
     titleJa: anime.titleJapanese,

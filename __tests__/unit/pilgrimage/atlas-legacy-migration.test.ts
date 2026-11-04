@@ -254,6 +254,40 @@ describe('Atlas legacy record migration', () => {
     expect(mergedIntent.legacy).toBeUndefined();
   });
 
+  it('PILG-088 keeps Atlas intent metadata when a colliding old id has no meta', async () => {
+    appStorage.set(
+      CAPTURES_STORAGE_KEY_V2,
+      JSON.stringify({
+        spots: {
+          'old-a': [{ spotId: 'old-a', uri: 'file:///a.jpg', capturedAt: 1, animeId: 123, spotGeo: geo }],
+          'old-b': [{ spotId: 'old-b', uri: 'file:///b.jpg', capturedAt: 2, animeId: 123, spotGeo: geo }],
+        },
+        free: [],
+      })
+    );
+    appStorage.set(
+      SPOT_INTENTS_STORAGE_KEY_V2,
+      JSON.stringify({
+        'old-a': { saved: true, meta: { workKey: 'old', workTitle: '舊作品', spotName: '舊景點', address: '舊地址' } },
+        'old-b': { planned: true },
+      })
+    );
+
+    expect(await migrateLegacyPilgrimageRecords(dependencies() as never)).toBe('migrated');
+    const intents = JSON.parse(appStorage.getString(SPOT_INTENTS_STORAGE_KEY_V2)!);
+    expect(intents[spotId]).toMatchObject({
+      saved: true,
+      planned: true,
+      meta: {
+        workKey: 'work',
+        workTitle: '作品',
+        spotName: 'Atlas名',
+        address: 'Atlas住所',
+        geo,
+      },
+    });
+  });
+
   it('PILG-089 can rerun after one store write failed without losing records or photos', async () => {
     appStorage.set(
       CAPTURES_STORAGE_KEY_V2,

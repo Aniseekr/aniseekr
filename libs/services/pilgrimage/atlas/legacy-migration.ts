@@ -340,7 +340,20 @@ function applyIntentDecisions(
     };
     if (decision?.kind === 'atlas' && decision.spot) {
       const title = works.find((work) => work.key === decision.workKey)?.ja;
-      const meta = atlasIntentMeta(intent.meta, decision.spot, decision.workKey, title);
+      const meta = atlasIntentMeta(
+        prior.meta ?? intent.meta,
+        decision.spot,
+        decision.workKey,
+        title
+      ) ?? {
+        workKey: decision.workKey ?? '',
+        workTitle: title ?? decision.workKey ?? '',
+        spotName: decision.spot.name_ja,
+        address: decision.spot.address_ja,
+        ...(decision.spot.location
+          ? { geo: [decision.spot.location.lat, decision.spot.location.lon] as [number, number] }
+          : {}),
+      };
       if (meta) merged.meta = meta;
     } else {
       const meta = decision?.kind === 'legacy' ||

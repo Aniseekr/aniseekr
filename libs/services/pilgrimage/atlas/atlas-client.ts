@@ -10,7 +10,7 @@ import type {
 
 const BASE_URL = 'https://atlas.aniseekr.moe';
 const GRACE_MS = 30 * 24 * 60 * 60 * 1000;
-type Cache = Pick<typeof CacheService, 'getSync' | 'getWithMeta' | 'set'>;
+type Cache = Pick<typeof CacheService, 'getSync' | 'getSyncWithMeta' | 'getWithMeta' | 'set'>;
 
 export class AtlasClient {
   private version: string | null = null;
@@ -27,21 +27,41 @@ export class AtlasClient {
 
   async meta(): Promise<AtlasMeta> {
     const key = 'atlas:meta';
-    const cached = this.cache?.getSync<AtlasMeta>(key);
-    const stale = cached ? null : await this.cache?.getWithMeta<AtlasMeta>(key, 60_000);
-    const meta =
-      cached ?? stale?.value ?? (await this.fetchJson<AtlasMeta>(`${BASE_URL}/meta.json`));
+    const cached = this.cache?.getSyncWithMeta<AtlasMeta>(key, Number.MAX_SAFE_INTEGER);
+    if (cached) {
+      this.version = cached.value.dataVersion;
+      if (cached.isStale) void this.refreshMeta(key).catch(() => undefined);
+      return cached.value;
+    }
+    const cachedWithMeta = await this.cache?.getWithMeta<AtlasMeta>(key, Number.MAX_SAFE_INTEGER);
+    if (cachedWithMeta) {
+      this.version = cachedWithMeta.value.dataVersion;
+      if (cachedWithMeta.isStale) void this.refreshMeta(key).catch(() => undefined);
+      return cachedWithMeta.value;
+    }
+    const meta = await this.refreshMeta(key);
     this.version = meta.dataVersion;
-    if (!cached && !stale) await this.cache?.set(key, meta, 60_000);
-    if (stale?.isStale) void this.refreshMeta(key).catch(() => undefined);
     return meta;
   }
   async works(): Promise<AtlasWorkIndex> {
     const snapshot = require('./works.snapshot.json') as AtlasWorkIndex;
-    const cachedMeta = this.cache?.getSync<AtlasMeta>('atlas:meta');
-    const cacheVersion = cachedMeta?.dataVersion ?? snapshot.dataVersion ?? 'snapshot';
-    const cached = this.cache?.getSync<AtlasWorkIndex>(`atlas:${cacheVersion}:works`);
-    if (cached) return cached;
+    let cacheVersion = this.version;
+    if (!cacheVersion) {
+      const cachedMeta = await this.cache?.getWithMeta<AtlasMeta>(
+        'atlas:meta', Number.MAX_SAFE_INTEGER
+      );
+      cacheVersion = cachedMeta?.value.dataVersion ?? null;
+      if (cacheVersion) this.version = cacheVersion;
+    }
+    if (cacheVersion) {
+      const cached = await this.cache?.getWithMeta<AtlasWorkIndex>(
+        `atlas:${cacheVersion}:works`, GRACE_MS
+      );
+      if (cached) {
+        if (cached.isStale) void this.revalidateWorks(snapshot).catch(() => undefined);
+        return cached.value;
+      }
+    }
 
     void this.revalidateWorks(snapshot).catch(() => undefined);
     return snapshot;
@@ -113,9 +133,7 @@ export class AtlasClient {
       return await this.refresh(key, path(meta));
     } catch (error) {
       if (!(error instanceof HttpError) || error.status !== 404) throw error;
-      meta = await this.fetchJson<AtlasMeta>(`${BASE_URL}/meta.json`);
-      this.version = meta.dataVersion;
-      await this.cache?.set('atlas:meta', meta, 60_000);
+      meta = await this.refreshMeta('atlas:meta');
       return this.refresh(`atlas:${meta.dataVersion}:${name}`, path(meta));
     }
   }
@@ -135,10 +153,27 @@ export class AtlasClient {
     }
   }
   private async refreshMeta(key: string): Promise<AtlasMeta> {
-    const value = await this.fetchJson<AtlasMeta>(`${BASE_URL}/meta.json`);
-    this.version = value.dataVersion;
-    await this.cache?.set(key, value, 60_000);
-    return value;
+    const pending = this.pending.get(key) as Promise<AtlasMeta> | undefined;
+    if (pending) return pending;
+    const request = (async () => {
+      let stale: AtlasMeta | undefined;
+      try {
+        stale = (await this.cache?.getWithMeta<AtlasMeta>(key, Number.MAX_SAFE_INTEGER))?.value;
+        const value = await this.fetchJson<AtlasMeta>(`${BASE_URL}/meta.json`);
+        this.version = value.dataVersion;
+        await this.cache?.set(key, value, 60_000);
+        return value;
+      } catch (error) {
+        if (stale) return stale;
+        throw error;
+      }
+    })();
+    this.pending.set(key, request);
+    try {
+      return await request;
+    } finally {
+      this.pending.delete(key);
+    }
   }
 
   private async revalidateWorks(snapshot: AtlasWorkIndex): Promise<void> {

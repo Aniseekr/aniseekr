@@ -178,7 +178,7 @@ export default function AnimeDetailScreen() {
   const detailId = anime?.id ?? null;
   const detailLoaded = anime?.idMal !== undefined;
   const detailTitle = anime?.title ?? null;
-  const detailAniListId = anime?.platformData?.anilist?.id ?? anime?.id ?? null;
+  const detailAniListId = anime?.platformData?.anilist?.id ?? null;
   const detailMalId = anime?.platformData?.myanimelist?.id ?? anime?.idMal ?? null;
   const detailBangumiId = anime?.platformData?.bangumi?.id ?? null;
   const detailTitleJa = anime?.titleJapanese ?? null;
