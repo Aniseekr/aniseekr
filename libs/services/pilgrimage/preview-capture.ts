@@ -124,10 +124,12 @@ export function buildJournalPreviewParams(
       ...shot,
       spotId: capture.spotId,
       imageUrl: capture.referenceUri ?? '',
-      name: capture.referenceUri ? ctx.importedLabel : '',
+      // A shot filed under a spot from the free camera carries the spot's name
+      // even when the work is not loaded here.
+      name: capture.referenceUri ? ctx.importedLabel : (capture.spotName ?? ''),
       ep: capture.spotEp == null ? '' : String(capture.spotEp),
       animeId: '',
-      animeTitle: '',
+      animeTitle: capture.animeTitle ?? '',
       themeColor: ctx.fallbackColor,
       ...(capture.referenceUri ? { referenceKind: 'imported' } : {}),
     };
@@ -147,7 +149,9 @@ export function buildJournalPreviewParams(
     animeId: bgmId == null ? '' : String(bgmId),
     animeTitle,
     themeColor: ctx.fallbackColor,
-    ...(spot.lat !== null && spot.lon !== null ? { spotLat: String(spot.lat), spotLng: String(spot.lon) } : {}),
+    ...(spot.lat !== null && spot.lon !== null
+      ? { spotLat: String(spot.lat), spotLng: String(spot.lon) }
+      : {}),
   };
 }
 

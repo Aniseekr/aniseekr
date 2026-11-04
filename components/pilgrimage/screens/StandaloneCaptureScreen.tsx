@@ -55,9 +55,11 @@ import { availableStopsFromDeviceInfo } from '../../../libs/services/pilgrimage/
 import { locationService } from '../../../libs/services/pilgrimage/location-service';
 import {
   findCaptureByUri,
+  loadCapturesV2Sync,
   recordFreeCapture,
   recordCapture,
 } from '../../../libs/services/pilgrimage/captures';
+import { buildJournalPreviewParams } from '../../../libs/services/pilgrimage/preview-capture';
 import {
   findNearestCachedSpot,
   type NearestSpotSuggestion,
@@ -66,9 +68,7 @@ import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgr
 import { useExperienceMode } from '../../../hooks/useExperienceMode';
 import { resolveExperienceTabTarget } from '../../../libs/navigation/experience-tabs';
 import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../../libs/navigation/floating-tab-bar-layout';
-import {
-  buildImportedCompareParams,
-} from '../../../libs/services/pilgrimage/reference-route';
+import { buildImportedCompareParams } from '../../../libs/services/pilgrimage/reference-route';
 import { importLibraryPhoto } from '../../../libs/services/pilgrimage/reference-image';
 import {
   ReferencePickerSheet,
@@ -279,6 +279,27 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
     router.push(journalTarget.href);
   }, [journalTarget.href, journalTarget.isVisibleTab, router]);
 
+  // The thumb opens the newest shot itself, where it can be saved or shared.
+  const openLatestShot = useCallback(() => {
+    const uri = shotUris[0];
+    const capture = uri ? findCaptureByUri(uri) : null;
+    if (!capture) {
+      openAlbum();
+      return;
+    }
+    const isFree = loadCapturesV2Sync().free.some((c) => c.uri === capture.uri);
+    router.push({
+      pathname: '/compare/preview',
+      params: buildJournalPreviewParams(
+        { capture, spot: null, anime: null, matchPercent: null, isFree },
+        {
+          importedLabel: t('pilgrimageUi.referencePicker.importedLabel'),
+          fallbackColor: theme.accent,
+        }
+      ),
+    });
+  }, [openAlbum, router, shotUris, t, theme.accent]);
+
   if (!hasPermission) {
     return (
       <View style={[styles.permRoot, { backgroundColor: theme.background.primary }]}>
@@ -447,7 +468,7 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
                   uris={shotUris}
                   themeColor={theme.accent}
                   onPickLibrary={() => void importFromLibrary()}
-                  onExpand={openAlbum}
+                  onExpand={openLatestShot}
                 />
               }
             />
