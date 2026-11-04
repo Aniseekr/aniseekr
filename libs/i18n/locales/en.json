@@ -727,7 +727,7 @@
       "active": "Premium active",
       "unlock": "Unlock Premium",
       "activeDesc": "Manage your subscription and benefits",
-      "pitch": "No ads, all themes, unlimited sync",
+      "pitch": "No ads, all themes",
       "manage": "Manage",
       "upgrade": "Upgrade"
     }
@@ -899,7 +899,7 @@
         "manage": "Manage",
         "manageSubtitle": "Manage your subscription and benefits",
         "unlock": "Unlock Premium",
-        "unlockSubtitle": "No ads, all themes, unlimited sync",
+        "unlockSubtitle": "No ads, all themes",
         "upgrade": "Upgrade"
       },
       "title": "Profile",
@@ -2210,7 +2210,7 @@
     "manageSubscriptionA11y": "Manage subscription",
     "premium": "Premium",
     "premiumOnly": "Premium only",
-    "premiumPitch": "Unlock all themes, sync, no ads",
+    "premiumPitch": "Unlock all themes and no ads",
     "upgradeToPremiumA11y": "Upgrade to Premium",
     "enableAdultContentAreYouMessage": "Are you sure you want to enable adult content?",
     "enableAdultContentAreYouTitle": "Enable adult content?",
@@ -2277,7 +2277,7 @@
     "unavailableProviderlabelNextIsNotMessage": "{provider} is not available on this device.",
     "unavailableProviderlabelNextIsNotTitle": "Unavailable",
     "unknownError": "Unknown error",
-    "unlockThemesSyncNoAds": "Unlock themes, sync, no ads",
+    "unlockThemesSyncNoAds": "Unlock themes and no ads",
     "upgradeNow": "Upgrade now",
     "cameraDiagnosticsSubtitle": "Hardware fingerprint + cohort classification"
   },
@@ -2285,11 +2285,9 @@
     "allPremiumThemes": "All premium themes",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "No ads",
-    "pilgrimageOfflineMaps": "Pilgrimage offline maps",
     "privacyPolicy": "Privacy Policy",
     "purchaseFailed": "Purchase failed",
     "termsOfService": "Terms of Service",
-    "unlimitedSyncPlatforms": "Unlimited sync platforms",
     "unlockTheFullToolkit": "Unlock the full toolkit",
     "annual": "Annual",
     "monthly": "Monthly",

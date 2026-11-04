@@ -39,13 +39,11 @@ function unsupportedMessage(
 }
 
 const FEATURES: {
-  icon: 'block' | 'palette' | 'cloud-sync' | 'offline-pin';
+  icon: 'block' | 'palette';
   labelKey: TranslationKey;
 }[] = [
   { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
-  { icon: 'cloud-sync', labelKey: 'subscription.unlimitedSyncPlatforms' },
-  { icon: 'offline-pin', labelKey: 'subscription.pilgrimageOfflineMaps' },
 ];
 
 export interface PaywallSheetProps {
