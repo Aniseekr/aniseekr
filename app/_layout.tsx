@@ -93,7 +93,7 @@ export default function RootLayout() {
     // We still call `loadUserPrefs()` here once for the `syncAdultFlag`
     // side effect — it mirrors the user's `allowAdultContent` pref onto
     // `dataSourceConfig.allowR18Content` when the two have drifted.
-    void loadUserPrefs();
+    void loadUserPrefs().catch((e) => console.warn('[loadUserPrefs]', e));
 
     // Rule 10: everything below is non-critical for the first frame. Defer it
     // past the initial interaction so analytics / auth / notification setup
@@ -102,8 +102,11 @@ export default function RootLayout() {
     // is still fresh, so deferral is cheap on warm launches.
     const handle = runAfterInteractions(() => {
       initClarity();
-      void authService.initialize();
-      void notificationService.initialize();
+      // A SecureStore failure here leaves auth uninitialised; surface it with a tag.
+      void authService.initialize().catch((e) => console.warn('[authService.initialize]', e));
+      void notificationService
+        .initialize()
+        .catch((e) => console.warn('[notificationService.initialize]', e));
       void idMappingService
         .updateMappings()
         .then((imported) => {
@@ -113,7 +116,9 @@ export default function RootLayout() {
         })
         .catch((e) => console.warn('[updateMappings]', e));
       void atlasClient.works().catch((e) => console.warn('[hydrateAtlas]', e));
-      void migrateLegacyPilgrimageRecords();
+      void migrateLegacyPilgrimageRecords().catch((e) =>
+        console.warn('[migrateLegacyPilgrimageRecords]', e)
+      );
       void hydratePilgrimageHubSnapshotFromCache().catch((e) =>
         console.warn('[hydrateHubSnapshot]', e)
       );
