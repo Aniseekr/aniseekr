@@ -95,6 +95,8 @@ export function CharacterPickerSheet({
       visible={visible}
       animationType="slide"
       transparent={false}
+      // Opened from the camera, which may be locked to landscape.
+      supportedOrientations={['portrait', 'landscape-left', 'landscape-right']}
       onRequestClose={onClose}
       statusBarTranslucent>
       <SafeAreaView
