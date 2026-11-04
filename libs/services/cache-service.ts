@@ -9,49 +9,82 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 // Synchronous in-memory mirror so cache hits don't block the first paint.
 // Set() writes both layers; get()/getSync() check memory first. Bounded LRU.
 // See CLAUDE.md Rule 10.
+//
+// Reads never delete. A row past its ttl is still the stale copy that a
+// stale-while-revalidate caller (getWithMeta / getSyncWithMeta with graceMs)
+// renders while it refreshes, so a plain get()/getSync() must not destroy it
+// for them. Expired rows are removed only by prune().
 type MemEntry = { value: unknown; timestamp: number; ttl: number };
-const MEM_MAX = 256;
-const mem = new Map<string, MemEntry>();
+type MemPool = { map: Map<string, MemEntry>; max: number };
+
+const mainPool: MemPool = { map: new Map(), max: 256 };
+// Localized titles are one tiny row per anime. Sharing the main pool let one
+// long list scroll flush every large hot entry (details, seasonal, Atlas) out.
+const prefixPools: readonly { prefix: string; pool: MemPool }[] = [
+  { prefix: 'title_loc_', pool: { map: new Map(), max: 2048 } },
+];
+
+/**
+ * Stale rows prune() keeps by default: the longest graceMs any SWR caller uses
+ * (Atlas, 30 days). Boot-time pruning with a strict ttl cut would wipe every
+ * grace window on each restart, so the offline copy never survived a relaunch.
+ */
+export const STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+function poolFor(key: string): MemPool {
+  for (const { prefix, pool } of prefixPools) if (key.startsWith(prefix)) return pool;
+  return mainPool;
+}
+
+function* memEntries(): Generator<[string, MemEntry]> {
+  yield* mainPool.map;
+  for (const { pool } of prefixPools) yield* pool.map;
+}
+
+function memDelete(key: string) {
+  poolFor(key).map.delete(key);
+}
+
+function memClear() {
+  mainPool.map.clear();
+  for (const { pool } of prefixPools) pool.map.clear();
+}
 
 function memTouch(key: string, entry: MemEntry) {
-  if (mem.has(key)) mem.delete(key);
-  mem.set(key, entry);
-  if (mem.size > MEM_MAX) {
-    const oldest = mem.keys().next().value as string | undefined;
-    if (oldest !== undefined) mem.delete(oldest);
+  const pool = poolFor(key);
+  pool.map.delete(key);
+  pool.map.set(key, entry);
+  if (pool.map.size > pool.max) {
+    const oldest = pool.map.keys().next().value as string | undefined;
+    if (oldest !== undefined) pool.map.delete(oldest);
   }
 }
 
-function memReadFresh(
-  key: string,
-  graceMs = 0
-): { entry: MemEntry; age: number; isStale: boolean } | null {
-  const entry = mem.get(key);
+/** Memory lookup with no freshness rule. Refreshes LRU recency on hit. */
+function memRead(key: string): { entry: MemEntry; age: number } | null {
+  const pool = poolFor(key);
+  const entry = pool.map.get(key);
   if (!entry) return null;
-  const age = Date.now() - entry.timestamp;
-  if (age > entry.ttl + graceMs) {
-    mem.delete(key);
-    return null;
-  }
-  // Move-to-end for LRU recency.
-  mem.delete(key);
-  mem.set(key, entry);
-  return { entry, age, isStale: age > entry.ttl };
+  pool.map.delete(key);
+  pool.map.set(key, entry);
+  return { entry, age: Date.now() - entry.timestamp };
 }
+
+const CREATE_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS cache (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    timestamp INTEGER,
+    ttl INTEGER
+  );
+`;
 
 function openDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = (async () => {
       try {
         const opened = await SQLite.openDatabaseAsync(DB_NAME);
-        await opened.execAsync(`
-          CREATE TABLE IF NOT EXISTS cache (
-            key TEXT PRIMARY KEY,
-            value TEXT,
-            timestamp INTEGER,
-            ttl INTEGER
-          );
-        `);
+        await opened.execAsync(CREATE_TABLE_SQL);
         return opened;
       } catch (err) {
         dbPromise = null;
@@ -95,27 +128,66 @@ export class CacheService {
   }
 
   /**
+   * Cold-launch seed of the memory mirror for a few first-paint keys, read
+   * synchronously so `useState(() => …Sync())` hits on frame 1 of a cold
+   * launch instead of only after the first async read. The opened handle
+   * becomes the shared connection. Keep the key list small: every row is
+   * parsed on the JS thread before the first render. Returns rows mirrored;
+   * no-op (0) when the DB is already open or the sync API is unavailable.
+   */
+  static warmSync(keys: readonly string[]): number {
+    if (dbPromise || keys.length === 0 || typeof SQLite.openDatabaseSync !== 'function') return 0;
+    try {
+      const db = SQLite.openDatabaseSync(DB_NAME);
+      db.execSync(CREATE_TABLE_SQL);
+      dbPromise = Promise.resolve(db);
+      const rows = db.getAllSync<{ key: string; value: string; timestamp: number; ttl: number }>(
+        `SELECT key, value, timestamp, ttl FROM cache WHERE key IN (${keys.map(() => '?').join(',')})`,
+        [...keys]
+      );
+      let warmed = 0;
+      for (const row of rows) {
+        try {
+          memTouch(row.key, {
+            value: JSON.parse(row.value),
+            timestamp: row.timestamp,
+            ttl: row.ttl,
+          });
+          warmed += 1;
+        } catch {
+          // A corrupt row stays a cold miss; the async path re-fetches it.
+        }
+      }
+      return warmed;
+    } catch (error) {
+      console.warn('CacheService.warmSync error:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Synchronous read against the in-memory mirror only. Returns `null` on miss
    * (memory cold, expired, or never written this session). Designed for the
    * first-paint path of detail screens — see CLAUDE.md Rule 10. Use inside a
    * lazy `useState` initializer to seed initial state without an `await`.
    */
   static getSync<T>(key: string): T | null {
-    const hit = memReadFresh(key);
-    return hit && !hit.isStale ? (hit.entry.value as T) : null;
+    const hit = memRead(key);
+    return hit && hit.age <= hit.entry.ttl ? (hit.entry.value as T) : null;
   }
 
   /** Sync variant of getWithMeta — memory mirror only. Returns null on miss. */
   static getSyncWithMeta<T>(key: string, graceMs = 0): CachedMeta<T> | null {
-    const hit = memReadFresh(key, graceMs);
-    if (!hit) return null;
-    return { value: hit.entry.value as T, age: hit.age, isStale: hit.isStale };
+    const hit = memRead(key);
+    if (!hit || hit.age > hit.entry.ttl + graceMs) return null;
+    return { value: hit.entry.value as T, age: hit.age, isStale: hit.age > hit.entry.ttl };
   }
 
   static async get<T>(key: string): Promise<T | null> {
-    // Fast path: memory hit, no SQLite round-trip needed.
-    const memHit = memReadFresh(key);
-    if (memHit && !memHit.isStale) return memHit.entry.value as T;
+    // Memory is never older than SQLite (set() writes both), so a memory hit
+    // answers fresh-or-stale without a SQLite round-trip or a re-parse.
+    const memHit = memRead(key);
+    if (memHit) return memHit.age <= memHit.entry.ttl ? (memHit.entry.value as T) : null;
 
     try {
       const db = await openDb();
@@ -127,15 +199,10 @@ export class CacheService {
 
       if (!result) return null;
 
-      const now = Date.now();
-      if (now - result.timestamp > result.ttl) {
-        await this.delete(key);
-        return null;
-      }
-
       const parsed = JSON.parse(result.value) as T;
+      // Mirror stale rows too: an SWR caller may still render them.
       memTouch(key, { value: parsed, timestamp: result.timestamp, ttl: result.ttl });
-      return parsed;
+      return Date.now() - result.timestamp > result.ttl ? null : parsed;
     } catch (error) {
       console.warn('CacheService.get error:', error);
       return null;
@@ -149,9 +216,11 @@ export class CacheService {
    * refresh. Past `ttl + graceMs` the row is deleted and `null` is returned.
    */
   static async getWithMeta<T>(key: string, graceMs: number = 0): Promise<CachedMeta<T> | null> {
-    const memHit = memReadFresh(key, graceMs);
+    const memHit = memRead(key);
     if (memHit) {
-      return { value: memHit.entry.value as T, age: memHit.age, isStale: memHit.isStale };
+      const { entry, age } = memHit;
+      if (age > entry.ttl + graceMs) return null;
+      return { value: entry.value as T, age, isStale: age > entry.ttl };
     }
 
     try {
@@ -165,10 +234,8 @@ export class CacheService {
       if (!result) return null;
 
       const age = Date.now() - result.timestamp;
-      if (age > result.ttl + graceMs) {
-        await this.delete(key);
-        return null;
-      }
+      // Past this caller's grace, but another caller may allow a longer one.
+      if (age > result.ttl + graceMs) return null;
 
       const parsed = JSON.parse(result.value) as T;
       memTouch(key, { value: parsed, timestamp: result.timestamp, ttl: result.ttl });
@@ -195,7 +262,7 @@ export class CacheService {
         // A corrupt cache value should not hide other recoverable rows.
       }
     }
-    for (const [key, entry] of mem) {
+    for (const [key, entry] of memEntries()) {
       if (key.startsWith(prefix)) entries.set(key, entry.value as T);
     }
     return [...entries].map(([key, value]) => ({ key, value }));
@@ -220,7 +287,7 @@ export class CacheService {
   }
 
   static async delete(key: string) {
-    mem.delete(key);
+    memDelete(key);
     try {
       const db = await openDb();
       await db.runAsync('DELETE FROM cache WHERE key = ?', key);
@@ -231,15 +298,15 @@ export class CacheService {
 
   /** Delete every cache entry whose key begins with `prefix`. */
   static async deleteByPrefix(prefix: string): Promise<void> {
-    for (const key of mem.keys()) {
-      if (key.startsWith(prefix)) mem.delete(key);
+    for (const [key] of Array.from(memEntries())) {
+      if (key.startsWith(prefix)) memDelete(key);
     }
     const db = await openDb();
     await db.runAsync('DELETE FROM cache WHERE substr(key, 1, ?) = ?', prefix.length, prefix);
   }
 
   static async clear() {
-    mem.clear();
+    memClear();
     try {
       const db = await openDb();
       await db.runAsync('DELETE FROM cache');
@@ -354,7 +421,7 @@ export class CacheService {
   /** Delete every row whose key begins with `prefix`. Returns the row count removed. */
   static async clearByPrefix(prefix: string): Promise<number> {
     if (!prefix) return 0;
-    for (const k of Array.from(mem.keys())) if (k.startsWith(prefix)) mem.delete(k);
+    for (const [k] of Array.from(memEntries())) if (k.startsWith(prefix)) memDelete(k);
     try {
       const db = await openDb();
       // SQLite LIKE wildcard: escape `_` / `%` so prefixes that contain them
@@ -380,8 +447,8 @@ export class CacheService {
    */
   static async clearByPrefixWhereValue(prefix: string, valueJson: string): Promise<number> {
     if (!prefix) return 0;
-    for (const [k, e] of Array.from(mem.entries())) {
-      if (k.startsWith(prefix) && JSON.stringify(e.value) === valueJson) mem.delete(k);
+    for (const [k, e] of Array.from(memEntries())) {
+      if (k.startsWith(prefix) && JSON.stringify(e.value) === valueJson) memDelete(k);
     }
     try {
       const db = await openDb();
@@ -398,13 +465,19 @@ export class CacheService {
     }
   }
 
-  /** Remove every row whose `timestamp + ttl < now`. Returns the row count removed. */
-  static async prune(): Promise<number> {
-    const now = Date.now();
-    for (const [k, e] of mem) if (e.timestamp + e.ttl < now) mem.delete(k);
+  /**
+   * Remove every row whose `timestamp + ttl + retainStaleMs < now`. Returns the
+   * row count removed. Pass `STALE_RETENTION_MS` for routine (boot) pruning so
+   * SWR grace windows survive a relaunch; `0` drops everything past its ttl.
+   */
+  static async prune(retainStaleMs = 0): Promise<number> {
+    const cutoff = Date.now() - retainStaleMs;
+    for (const [k, e] of Array.from(memEntries())) {
+      if (e.timestamp + e.ttl < cutoff) memDelete(k);
+    }
     try {
       const db = await openDb();
-      const result = await db.runAsync('DELETE FROM cache WHERE timestamp + ttl < ?', Date.now());
+      const result = await db.runAsync('DELETE FROM cache WHERE timestamp + ttl < ?', cutoff);
       return result?.changes ?? 0;
     } catch (error) {
       console.warn('CacheService.prune error:', error);

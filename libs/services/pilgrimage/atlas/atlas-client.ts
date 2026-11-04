@@ -10,7 +10,7 @@ import type {
 
 const BASE_URL = 'https://atlas.aniseekr.moe';
 const GRACE_MS = 30 * 24 * 60 * 60 * 1000;
-type Cache = Pick<typeof CacheService, 'getSync' | 'getSyncWithMeta' | 'getWithMeta' | 'set'>;
+type Cache = Pick<typeof CacheService, 'getSyncWithMeta' | 'getWithMeta' | 'set'>;
 
 export class AtlasClient {
   private version: string | null = null;
@@ -118,9 +118,9 @@ export class AtlasClient {
   ): Promise<T> {
     let meta = await this.meta();
     const key = `atlas:${meta.dataVersion}:${name}`;
-    const sync = this.cache?.getSync<T>(key);
-    if (sync) return sync;
-    const stale = await this.cache?.getWithMeta<T>(key, GRACE_MS);
+    const stale =
+      this.cache?.getSyncWithMeta<T>(key, GRACE_MS) ??
+      (await this.cache?.getWithMeta<T>(key, GRACE_MS));
     if (stale) {
       if (stale.isStale) void this.refresh(key, path(meta)).catch(() => undefined);
       return stale.value;

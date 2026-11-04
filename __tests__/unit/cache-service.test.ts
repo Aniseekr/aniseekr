@@ -139,6 +139,27 @@ describe('CacheService', () => {
     expect(await CacheService.get('dead_1')).toBeNull();
   });
 
+  // Regression: a plain getSync()/get() on a key past ttl used to delete it,
+  // so the SWR readers (seasonal page, Atlas, news) lost the stale copy they
+  // render while revalidating.
+  it('CACHE-018 plain reads past ttl keep the stale copy for SWR readers', async () => {
+    await CacheService.set('swr_key', { v: 1 }, -1);
+    expect(CacheService.getSync('swr_key')).toBeNull();
+    expect(await CacheService.get('swr_key')).toBeNull();
+    expect(CacheService.getSyncWithMeta('swr_key', 60_000)?.isStale).toBe(true);
+    expect((await CacheService.getWithMeta('swr_key', 60_000))?.value).toEqual({ v: 1 });
+  });
+
+  // Regression: boot prune cut at ttl, wiping every grace window on relaunch.
+  it('CACHE-019 prune(retainStaleMs) keeps rows still inside the retention window', async () => {
+    await CacheService.set('stale_in_grace', { v: 1 }, -1);
+    await CacheService.set('long_dead', { v: 2 }, -120_000);
+
+    expect(await CacheService.prune(60_000)).toBe(1);
+    expect(await CacheService.getWithMeta('stale_in_grace', 60_000)).not.toBeNull();
+    expect(await CacheService.getWithMeta('long_dead', Number.MAX_SAFE_INTEGER)).toBeNull();
+  });
+
   it('CACHE-016 allKeys returns every stored key', async () => {
     await CacheService.set('a_1', { v: 1 });
     await CacheService.set('b_2', { v: 2 });

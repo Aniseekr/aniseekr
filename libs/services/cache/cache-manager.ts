@@ -45,7 +45,12 @@ export interface CacheBucket {
   /** Clear everything this bucket owns. */
   clear(): Promise<void>;
   /** Best-effort eviction of *expired only* entries. Buckets without TTL omit this. */
-  prune?(): Promise<{ removed: number }>;
+  prune?(options?: PruneOptions): Promise<{ removed: number }>;
+}
+
+export interface PruneOptions {
+  /** Keep rows this long past their ttl (SWR grace). Default 0: strict ttl cut. */
+  retainStaleMs?: number;
 }
 
 export interface StorageOverview {
@@ -131,13 +136,13 @@ export class CacheManager {
    * the total number of entries removed across all buckets so callers can log
    * boot-time savings.
    */
-  async pruneAll(): Promise<{ totalRemoved: number }> {
+  async pruneAll(options?: PruneOptions): Promise<{ totalRemoved: number }> {
     let totalRemoved = 0;
     await Promise.all(
       this.buckets.map(async (b) => {
         if (!b.prune) return;
         try {
-          const result = await b.prune();
+          const result = await b.prune(options);
           totalRemoved += result.removed;
         } catch (error) {
           console.warn(`[CacheManager] ${b.id} prune failed:`, error);

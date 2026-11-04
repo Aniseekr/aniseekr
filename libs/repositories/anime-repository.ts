@@ -103,6 +103,16 @@ export interface SeasonalFetchOptions {
 // don't both go to the network.
 const inFlightSeasonalRevalidations = new Set<string>();
 
+function seasonalPageCacheKey(
+  season: string,
+  year: number,
+  page: number,
+  perPage: number,
+  r18Flag: string = r18CacheFlag()
+): string {
+  return `seasonal_${season}_${year}_p${page}_pp${perPage}_r${r18Flag}`;
+}
+
 /**
  * Thrown when an in-flight `fetchSeasonalAnime` discovers the user has
  * switched browseSource mid-flight. UI catches and re-fetches with the new
@@ -909,10 +919,27 @@ export class AnimeRepository {
 
   static getSeasonalAnimeSync(season?: string, year?: number): Anime[] | null {
     const current = getBroadcastSeason();
-    const cached = CacheService.getSync<SeasonalPageCacheEntry>(
-      `seasonal_${season ?? current.season}_${year ?? current.year}_p1_pp50_r${r18CacheFlag()}`
+    // Same grace as the async getSeasonalAnime path: a stale page still paints
+    // frame 1 while that path revalidates it.
+    const cached = CacheService.getSyncWithMeta<SeasonalPageCacheEntry>(
+      seasonalPageCacheKey(season ?? current.season, year ?? current.year, 1, 50),
+      SEASONAL_PAGE_GRACE_MS
     );
-    return cached ? filterAniListAnime(cached.media).map(mapAniListDetailToAnime) : null;
+    return cached ? filterAniListAnime(cached.value.media).map(mapAniListDetailToAnime) : null;
+  }
+
+  /**
+   * Keys the first launched tab reads synchronously on frame 1 (the rate tab's
+   * genres / seasonal / weekly rows). Seeded by CacheService.warmSync at boot.
+   */
+  static firstPaintCacheKeys(): string[] {
+    const r18 = r18CacheFlag();
+    const current = getBroadcastSeason();
+    return [
+      `genres_list_v3_r${r18}`,
+      seasonalPageCacheKey(current.season, current.year, 1, 50),
+      `trending_anime_1_pp20_r${r18}`,
+    ];
   }
 
   static getGenresSync(): Genre[] | null {
@@ -956,7 +983,7 @@ export class AnimeRepository {
       // One cache row per page, independent of perPage / maxItems chosen by
       // the caller so two callers asking for different cap can still share
       // the underlying page data.
-      const cacheKey = `seasonal_${targetSeason}_${targetYear}_p${currentPage}_pp${perPage}_r${r18Flag}`;
+      const cacheKey = seasonalPageCacheKey(targetSeason, targetYear, currentPage, perPage, r18Flag);
 
       let pageMedia: AniListAnime[] | null = null;
       let hasNextPage = true;

@@ -9,7 +9,7 @@
 // The bucket NEVER touches LocalDB user data or MMKV preferences.
 
 import { CacheService } from '../../cache-service';
-import type { CacheBucket, CacheSubBucket, BucketStats } from '../cache-manager';
+import type { CacheBucket, CacheSubBucket, BucketStats, PruneOptions } from '../cache-manager';
 
 interface MetadataGroup {
   id: string;
@@ -137,8 +137,8 @@ export class MetadataBucket implements CacheBucket {
     await CacheService.clear();
   }
 
-  async prune(): Promise<{ removed: number }> {
-    const removed = await CacheService.prune();
+  async prune(options?: PruneOptions): Promise<{ removed: number }> {
+    const removed = await CacheService.prune(options?.retainStaleMs);
     if (removed > 0) {
       // Reclaim the disk space the deleted rows were using. VACUUM is fine to
       // run inline here because prune is invoked at startup, not in hot paths.

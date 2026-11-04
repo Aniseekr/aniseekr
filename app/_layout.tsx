@@ -25,6 +25,8 @@ import { atlasClient } from '../libs/services/pilgrimage/atlas/atlas-client';
 import { migrateLegacyPilgrimageRecords } from '../libs/services/pilgrimage/atlas/legacy-migration';
 import { hydratePilgrimageHubSnapshotFromCache } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { CacheManager } from '../libs/services/cache/cache-manager';
+import { CacheService, STALE_RETENTION_MS } from '../libs/services/cache-service';
+import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
 import { resolveOnboardingGate } from '../libs/navigation/root-layout-navigation';
 import {
@@ -44,6 +46,12 @@ installPromiseRejectionFilter();
 // Stamp the cold-start timeline as soon as the root module finishes
 // evaluating — everything above this line is part of the bundle-eval cost.
 markRootModuleEvaluated();
+
+// Rule 10 on a cold launch: the memory mirror starts empty, so the first tab's
+// `…Sync()` reads would all miss and show skeletons even with rows on disk.
+// Seed just those few keys synchronously before the first render.
+const warmedFirstPaintRows = CacheService.warmSync(AnimeRepository.firstPaintCacheKeys());
+if (__DEV__) console.log(`[CacheService] warmSync mirrored ${warmedFirstPaintRows} rows`);
 
 export default function RootLayout() {
   const router = useRouter();
@@ -109,8 +117,9 @@ export default function RootLayout() {
       void hydratePilgrimageHubSnapshotFromCache().catch((e) =>
         console.warn('[hydrateHubSnapshot]', e)
       );
+      // Keep stale rows inside the longest SWR grace so offline copies survive.
       void CacheManager.getInstance()
-        .pruneAll()
+        .pruneAll({ retainStaleMs: STALE_RETENTION_MS })
         .then(({ totalRemoved }) => {
           if (totalRemoved > 0) {
             console.log(`[CacheManager] pruned ${totalRemoved} expired entries on boot`);
