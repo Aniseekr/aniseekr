@@ -96,6 +96,9 @@ export default function StandaloneCaptureScreen({ tabRoot = false }: StandaloneC
   );
   const { hasPermission, requestPermission } = useCameraPermission();
   const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
+    // Save-only: READ_MEDIA_IMAGES is blocked in app.json, so asking for read
+    // access throws on Android 13+ and every save silently fails.
+    writeOnly: true,
     granularPermissions: ['photo'],
   });
 

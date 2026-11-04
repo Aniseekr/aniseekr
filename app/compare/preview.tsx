@@ -340,6 +340,9 @@ export default function ComparePreviewScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [mediaPerm, requestMediaPerm] = MediaLibrary.usePermissions({
+    // Save-only: READ_MEDIA_IMAGES is blocked in app.json, so asking for read
+    // access throws on Android 13+ and every save silently fails.
+    writeOnly: true,
     granularPermissions: ['photo'],
   });
   const [stagePx, setStagePx] = useState({ width: 0, height: 0 });
