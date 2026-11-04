@@ -1380,8 +1380,8 @@
       "title": "Identify scene"
     },
     "confidence": {
-      "confirmed": "Confirmed",
-      "single": "Single-source match",
+      "confirmed": "Confirmed by several sources",
+      "single": "One source only",
       "unverified": "Unverified location"
     },
     "referenceBasis": "Episode or timestamp follows a referenced source.",

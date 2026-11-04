@@ -9,8 +9,8 @@ import { useT } from '../../../libs/i18n';
 import { spotRowLayout } from '../../../libs/animations/presets';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
-import { ThemedButton, ThemedIconButton, ThemedText } from '../../themed';
-import { formatDistanceKm, getSpotConfidenceLabel, getSpotGeo, getSpotEpisode } from './_helpers';
+import { ThemedIconButton, ThemedText } from '../../themed';
+import { formatDistanceKm, getSpotGeo, getSpotEpisode } from './_helpers';
 
 export interface SpotRowProps {
   group: PilgrimageSpot;
@@ -23,9 +23,6 @@ export interface SpotRowProps {
   theme: ThemePalette;
   onPress: (group: PilgrimageSpot) => void;
   onToggleVisited: (group: PilgrimageSpot) => void;
-  onOpenMaps: (spot: PilgrimageSpot) => void;
-  onStartCamera: (spot: PilgrimageSpot) => void;
-  onMenuOpen: (spotId: string) => void;
 }
 
 function SpotRowImpl({
@@ -39,17 +36,14 @@ function SpotRowImpl({
   theme,
   onPress,
   onToggleVisited,
-  onOpenMaps,
-  onStartCamera,
-  onMenuOpen,
 }: SpotRowProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const titles = getPilgrimageSpotTitles(spot);
+  // Episode and distance only — the address, source confidence and actions live
+  // on the selected-spot card, so a long list stays scannable.
   const subtitle = [
     getSpotEpisode(spot),
-    spot.address || null,
-    getSpotConfidenceLabel(t, spot.confidence),
     getSpotGeo(spot) ? null : t('pilgrimage.detail.unverified'),
     distanceKm === null ? null : formatDistanceKm(distanceKm),
   ]
@@ -57,24 +51,28 @@ function SpotRowImpl({
     .join(' · ');
 
   return (
-    <Animated.View layout={spotRowLayout()} style={styles.container}>
+    <Animated.View
+      layout={spotRowLayout()}
+      style={[styles.container, selected && { borderLeftColor: themeColor }]}>
       <View style={styles.row}>
         <Pressable
           onPress={() => onPress(group)}
           accessibilityRole="button"
-          accessibilityState={{ expanded: selected }}
+          accessibilityState={{ selected }}
           accessibilityLabel={t('pilgrimage.detail.openSpotA11y', { title: titles.primary })}
           style={styles.rowBody}>
-          <View style={styles.info}>
-            <ThemedText variant="bodyMedium" weight="700" numberOfLines={1}>
-              {titles.primary}
+          <ThemedText
+            variant="bodyMedium"
+            weight="700"
+            numberOfLines={1}
+            style={selected ? { color: themeColor } : undefined}>
+            {titles.primary}
+          </ThemedText>
+          {subtitle ? (
+            <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
+              {subtitle}
             </ThemedText>
-            {subtitle ? (
-              <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-                {subtitle}
-              </ThemedText>
-            ) : null}
-          </View>
+          ) : null}
         </Pressable>
         <ThemedIconButton
           variant="ghost"
@@ -92,49 +90,6 @@ function SpotRowImpl({
           onPress={() => onToggleVisited(group)}
         />
       </View>
-
-      {selected ? (
-        <View style={styles.expanded}>
-          {spot.scenes.map((scene, index) => (
-            <View key={`${spot.id}-${scene.episode}-${index}`}>
-              <ThemedText variant="captionSmall" tone="secondary">
-                {[scene.episode, scene.time].filter(Boolean).join(' · ')}
-              </ThemedText>
-              {scene.episodeBasis === 'reference' || scene.timeBasis === 'reference' ? (
-                <ThemedText variant="captionSmall" tone="tertiary">
-                  {t('pilgrimage.identify.referenceBasis')}
-                </ThemedText>
-              ) : null}
-            </View>
-          ))}
-          <View style={styles.actions}>
-            <View style={styles.actionFlex}>
-              <ThemedButton
-                label={t('pilgrimage.detail.directions')}
-                variant="secondary"
-                size="md"
-                fullWidth
-                disabled={!getSpotGeo(spot)}
-                onPress={() => onOpenMaps(spot)}
-              />
-            </View>
-            <View style={styles.actionFlex}>
-              <ThemedButton
-                label={t('pilgrimage.detail.cameraCompare')}
-                size="md"
-                fullWidth
-                accent={themeColor}
-                onPress={() => onStartCamera(spot)}
-              />
-            </View>
-            <ThemedIconButton
-              icon={(color) => <Ionicons name="ellipsis-horizontal" size={22} color={color} />}
-              accessibilityLabel={t('pilgrimage.detail.moreSpotActions')}
-              onPress={() => onMenuOpen(spot.id)}
-            />
-          </View>
-        </View>
-      ) : null}
     </Animated.View>
   );
 }
@@ -146,13 +101,11 @@ function makeStyles(theme: ThemePalette) {
     container: {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: theme.glassBorder,
-      paddingVertical: Spacing.xs,
+      borderLeftWidth: 3,
+      borderLeftColor: 'transparent',
+      paddingLeft: Spacing.sm,
     },
     row: { flexDirection: 'row', alignItems: 'center' },
-    rowBody: { flex: 1, minHeight: 64, justifyContent: 'center' },
-    info: { flex: 1, minWidth: 0, gap: 3 },
-    expanded: { gap: Spacing.sm, paddingTop: Spacing.xs, paddingBottom: Spacing.sm },
-    actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-    actionFlex: { flex: 1 },
+    rowBody: { flex: 1, minWidth: 0, minHeight: 56, justifyContent: 'center', gap: 2 },
   });
 }

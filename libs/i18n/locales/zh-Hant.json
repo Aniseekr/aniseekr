@@ -1380,8 +1380,8 @@
       "title": "辨識場景"
     },
     "confidence": {
-      "confirmed": "已確認",
-      "single": "單一來源比對",
+      "confirmed": "多個來源確認",
+      "single": "只有一個來源",
       "unverified": "地點未確認"
     },
     "referenceBasis": "集數或時間依據來自參考來源。",

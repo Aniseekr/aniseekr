@@ -28,6 +28,7 @@ export interface UsePilgrimageSpotSheetResult {
   openDetails: (spot: PilgrimageSpot) => void;
   openCluster: (spots: readonly PilgrimageSpot[]) => void;
   closeSheet: () => void;
+  clearSelection: () => void;
   closeCluster: () => void;
   pickFromCluster: (spot: PilgrimageSpot) => void;
   activeSpotGroup: PilgrimageSpot | null;
@@ -72,6 +73,7 @@ export function usePilgrimageSpotSheet({
     setClusterSpots(spots);
   }, []);
   const closeSheet = useCallback(() => setActiveSpot(null), []);
+  const clearSelection = useCallback(() => setSelectedSpotId(null), []);
   const closeCluster = useCallback(() => setClusterSpots(null), []);
   const pickFromCluster = useCallback((spot: PilgrimageSpot) => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -105,6 +107,7 @@ export function usePilgrimageSpotSheet({
     openDetails: openSpot,
     openCluster,
     closeSheet,
+    clearSelection,
     closeCluster,
     pickFromCluster,
     activeSpotGroup,

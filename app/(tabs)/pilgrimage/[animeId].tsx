@@ -82,7 +82,10 @@ import {
   type SpotMapViewHandle,
 } from '../../../components/pilgrimage/detail';
 import { useI18n, useT } from '../../../libs/i18n';
-import { LocalityMapLegend } from '../../../components/pilgrimage/map/LocalityMapLegend';
+import {
+  LocalityMapLegend,
+  type LegendKind,
+} from '../../../components/pilgrimage/map/LocalityMapLegend';
 import { localityMarkerPalette } from '../../../components/pilgrimage/common/LocalityAesthetic';
 import type { MapMarker } from '../../../components/pilgrimage/map';
 import { get88EntriesWithCoords } from '../../../libs/services/pilgrimage/anime88-repository';
@@ -100,7 +103,7 @@ import { buildPilgrimageWebUrl } from '../../../libs/services/pilgrimage/pilgrim
 // Sheet snap height as a fraction of the screen — kept in lockstep with the
 // first snap point in PilgrimageDetailSheet. Map controls use it as a safe
 // bottom inset so they never disappear behind the persistent sheet.
-const SHEET_PEEK_FRACTION = 0.16;
+const SHEET_PEEK_FRACTION = 0.34;
 
 const LOCATE_FAB_EDGE_GAP = 10;
 
@@ -231,6 +234,12 @@ export default function PilgrimageDetailScreen() {
     return [...roleMarkers, ...areaMarkers];
   }, [language, localityAnimeId, localitySnapshot, theme]);
 
+  // The legend names only what is actually on this map.
+  const legendKinds = useMemo<LegendKind[]>(() => {
+    const present = new Set(localityMarkers.map((marker) => marker.kind));
+    return (['stamp', 'shop', 'festival', 'area'] as const).filter((kind) => present.has(kind));
+  }, [localityMarkers]);
+
   // Tracking hook drives the locate FAB + the map's user dot + cone. The ref
   // points at SpotMapView so location ticks and heading deltas push straight to
   // the map without going through React state (Rule 9).
@@ -330,7 +339,6 @@ export default function PilgrimageDetailScreen() {
     activeSpot,
     clusterSpots,
     selectedSpotId,
-    focusRequest,
     menuSpotId,
     setMenuSpotId,
     openGroup,
@@ -338,6 +346,7 @@ export default function PilgrimageDetailScreen() {
     openDetails,
     openCluster,
     closeSheet,
+    clearSelection,
     closeCluster,
     pickFromCluster,
     activeSpotScenes,
@@ -573,6 +582,12 @@ export default function PilgrimageDetailScreen() {
   // controls use it directly, avoiding JS state on every drag frame.
   const screenHeight = Dimensions.get('window').height;
   const sheetPosition = useSharedValue(screenHeight);
+  // How much of the map the sheet covers right now, so a focused pin lands in
+  // the visible part of the map instead of behind the sheet.
+  const getSheetCover = useCallback(
+    () => Math.max(0, screenHeight - sheetPosition.value),
+    [screenHeight, sheetPosition]
+  );
 
   // Static fallback used by map-native controls before the sheet reports its
   // animated top edge on first layout.
@@ -638,6 +653,7 @@ export default function PilgrimageDetailScreen() {
                   markerMode={mapMarkerMode}
                   offlineOnly={mapOfflineOnly}
                   focusSpotId={selectedSpotId}
+                  getFocusBottomInset={getSheetCover}
                   controlsBottomOffset={sheetPeekOffset}
                   theme={theme}
                   onSpotPress={selectSpot}
@@ -650,9 +666,10 @@ export default function PilgrimageDetailScreen() {
                 <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
               )}
               <View style={styles.mapScrim} pointerEvents="none" />
-              {localityMarkers.length > 0 ? (
+              {legendKinds.length > 0 && !visibleProximityTarget ? (
                 <LocalityMapLegend
-                  style={[styles.localityLegend, { bottom: sheetPeekOffset + 108 }]}
+                  kinds={legendKinds}
+                  style={styles.localityLegend}
                 />
               ) : null}
             </View>
@@ -758,7 +775,7 @@ export default function PilgrimageDetailScreen() {
               groupedCounts={groupedCounts}
               spotFilter={mainSpotFilter}
               selectedSpotId={selectedSpotId}
-              focusRequest={focusRequest}
+              selectedSpot={selectedSpotId ? (groupedSpotByPointId.get(selectedSpotId) ?? null) : null}
               menuSpotId={menuSpotId}
               emptyMessage={isEmpty ? t('pilgrimage.detail.emptyNoData') : emptyMessage}
               animatedPosition={sheetPosition}
@@ -768,6 +785,7 @@ export default function PilgrimageDetailScreen() {
               onSearchOpen={handleSearchOpen}
               onSpotFilterChange={handleSpotFilterChange}
               onSpotPress={openGroup}
+              onClearSelection={clearSelection}
               onToggleVisited={toggleGroupedVisited}
               onOpenMaps={handleOpenMaps}
               onStartCamera={handleStartCamera}

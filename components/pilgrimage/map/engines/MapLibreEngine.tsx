@@ -180,7 +180,11 @@ export function MapLibreEngine({
         }),
       setHeading: (deg) => setHeadingState(deg),
       focus: (target) =>
-        cameraRef.current?.flyTo({ center: [target.lng, target.lat], zoom: target.zoom }),
+        cameraRef.current?.flyTo({
+          center: [target.lng, target.lat],
+          zoom: target.zoom,
+          ...(target.bottomInset ? { padding: { bottom: target.bottomInset } } : {}),
+        }),
       fitBounds: (box, opts) => fitBox(box, opts?.animate !== false),
       updateVisited: (ids) => setVisitedOverride(ids),
     }),

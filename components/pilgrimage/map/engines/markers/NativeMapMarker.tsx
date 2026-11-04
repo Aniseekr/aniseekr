@@ -240,8 +240,11 @@ function NativeMapMarkerImpl({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={marker.title}
+      accessibilityState={{ selected: marker.selected === true }}
       onPress={() => onPress?.(marker)}
-      onLongPress={onLongPress ? () => onLongPress(marker) : undefined}>
+      onLongPress={onLongPress ? () => onLongPress(marker) : undefined}
+      // The picked spot grows from its tip so it still points at the place.
+      style={marker.selected ? styles.selected : undefined}>
       {visual.shape === 'dot' ? (
         <DotMarker visual={visual} chrome={chrome} />
       ) : visual.shape === 'gold88' ? (
@@ -260,6 +263,7 @@ function NativeMapMarkerImpl({
 export const NativeMapMarker = memo(NativeMapMarkerImpl);
 
 const styles = StyleSheet.create({
+  selected: { transform: [{ scale: 1.3 }], transformOrigin: 'bottom', zIndex: 1 },
   balloonBox: { alignItems: 'center' },
   photo: {
     width: 48,

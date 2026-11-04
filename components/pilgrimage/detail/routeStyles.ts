@@ -40,10 +40,12 @@ export function makePilgrimageDetailStyles(theme: ThemePalette, topInset: number
       ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.18)',
     },
+    // Hugs its content under the header buttons, clear of the pins and the sheet.
     localityLegend: {
       position: 'absolute',
+      top: topInset + 64,
       left: Spacing.screenPadding,
-      right: Spacing.screenPadding,
+      maxWidth: '80%',
     },
 
     // Floating navigation stack (back/series/album/layer tools).

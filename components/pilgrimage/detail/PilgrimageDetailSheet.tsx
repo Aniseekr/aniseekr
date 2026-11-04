@@ -4,10 +4,7 @@ import type { SharedValue } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import BottomSheet, {
-  BottomSheetFlatList,
-  type BottomSheetFlatListMethods,
-} from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import type { ThemePalette } from '../../../context/ThemeContext';
@@ -21,6 +18,7 @@ import { ThemedBottomSheet, ThemedButton, ThemedIconButton, ThemedText } from '.
 import { IntelEventsList } from './IntelEventsList';
 import { PilgrimageDetailControls } from './PilgrimageDetailControls';
 import { SpotRow } from './SpotRow';
+import { SelectedSpotCard } from './SelectedSpotCard';
 
 export interface PilgrimageDetailSheetProps {
   anime: PilgrimageWork | null;
@@ -38,7 +36,8 @@ export interface PilgrimageDetailSheetProps {
   groupedCounts: { all: number; unvisited: number; visited: number };
   spotFilter: PilgrimageSpotFilter;
   selectedSpotId: string | null;
-  focusRequest: number;
+  /** The spot picked on the map or in the list; pinned to the top of the sheet. */
+  selectedSpot: PilgrimageSpot | null;
   menuSpotId: string | null;
   emptyMessage: string;
   animatedPosition?: SharedValue<number>;
@@ -48,6 +47,7 @@ export interface PilgrimageDetailSheetProps {
   onSearchClear: () => void;
   onSpotFilterChange: (filter: 'all' | 'unvisited' | 'visited') => void;
   onSpotPress: (group: PilgrimageSpot) => void;
+  onClearSelection: () => void;
   onToggleVisited: (group: PilgrimageSpot) => void;
   onOpenMaps: (spot: PilgrimageSpot) => void;
   onStartCamera: (spot: PilgrimageSpot) => void;
@@ -64,9 +64,9 @@ export interface PilgrimageDetailSheetProps {
   onOpenWeb: () => void;
 }
 
-const SHEET_SNAPS = ['16%', '58%', '92%'] as const;
-/** Rows (after the header) that fit the mid detent without scrolling. */
-const VISIBLE_AT_MID_DETENT = 3;
+// The map is the primary surface: the sheet opens low (title, filters, first
+// row) and the user pulls it up for the full list.
+export const SHEET_SNAPS = ['34%', '62%', '92%'] as const;
 
 function PilgrimageDetailSheetImpl({
   anime,
@@ -84,7 +84,7 @@ function PilgrimageDetailSheetImpl({
   groupedCounts,
   spotFilter,
   selectedSpotId,
-  focusRequest,
+  selectedSpot,
   menuSpotId,
   emptyMessage,
   animatedPosition,
@@ -94,6 +94,7 @@ function PilgrimageDetailSheetImpl({
   onSearchClear,
   onSpotFilterChange,
   onSpotPress,
+  onClearSelection,
   onToggleVisited,
   onOpenMaps,
   onStartCamera,
@@ -112,7 +113,6 @@ function PilgrimageDetailSheetImpl({
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const sheetRef = useRef<BottomSheet>(null);
-  const listRef = useRef<BottomSheetFlatListMethods>(null);
   const snapPoints = useMemo(() => [...SHEET_SNAPS], []);
   const progress =
     groupedCounts.all > 0 ? Math.min(1, groupedCounts.visited / groupedCounts.all) : 0;
@@ -121,67 +121,10 @@ function PilgrimageDetailSheetImpl({
     if (viewMode === 'map') sheetRef.current?.snapToIndex(0);
   }, [viewMode]);
 
-  const sheetIndexRef = useRef(viewMode === 'map' ? 0 : 1);
-  const listMayBeScrolledRef = useRef(false);
-  const pendingRevealRef = useRef<{ row: number; request: number } | null>(null);
-  const revealedFocusRef = useRef(0);
-  const scrollRetryRef = useRef(0);
-  const scrollFrameRef = useRef<number | null>(null);
-  const scrollRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelRevealScroll = useCallback(() => {
-    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
-    if (scrollRetryTimerRef.current !== null) clearTimeout(scrollRetryTimerRef.current);
-    scrollFrameRef.current = null;
-    scrollRetryTimerRef.current = null;
-  }, []);
-
-  const revealPending = useCallback(() => {
-    const pending = pendingRevealRef.current;
-    if (!pending || viewMode === 'map') return;
-    // Bottom-sheet locks list scrolling below the highest detent.
-    const needsScroll = pending.row >= VISIBLE_AT_MID_DETENT || listMayBeScrolledRef.current;
-    const target = needsScroll ? SHEET_SNAPS.length - 1 : 1;
-    if (sheetIndexRef.current !== target) {
-      sheetRef.current?.snapToIndex(target);
-      return;
-    }
-    pendingRevealRef.current = null;
-    revealedFocusRef.current = pending.request;
-    scrollRetryRef.current = 0;
-    if (needsScroll) {
-      scrollFrameRef.current = requestAnimationFrame(() => {
-        scrollFrameRef.current = null;
-        listRef.current?.scrollToIndex({ index: pending.row, animated: true, viewPosition: 0.2 });
-        listMayBeScrolledRef.current = pending.row >= VISIBLE_AT_MID_DETENT;
-      });
-    }
-  }, [viewMode]);
-
-  // A new request or map view must cancel an older queued scroll.
-  useEffect(() => cancelRevealScroll, [cancelRevealScroll, focusRequest, selectedSpotId, viewMode]);
-
-  useEffect(() => {
-    pendingRevealRef.current = null;
-    // Series resolution reloads the points; reveal again after an emptied list.
-    if (filteredGroupedSpots.length === 0) {
-      revealedFocusRef.current = 0;
-      cancelRevealScroll();
-    }
-    if (viewMode === 'map' || !selectedSpotId || focusRequest === revealedFocusRef.current) return;
-    const row = filteredGroupedSpots.findIndex((spot) => spot.id === selectedSpotId);
-    if (row < 0) return;
-    pendingRevealRef.current = { row, request: focusRequest };
-    revealPending();
-  }, [
-    cancelRevealScroll,
-    filteredGroupedSpots,
-    focusRequest,
-    revealPending,
-    selectedSpotId,
-    viewMode,
-  ]);
-
-  const menuGroup = menuSpotId ? filteredGroupedSpots.find((spot) => spot.id === menuSpotId) : null;
+  const menuGroup = menuSpotId
+    ? (filteredGroupedSpots.find((spot) => spot.id === menuSpotId) ??
+      (selectedSpot?.id === menuSpotId ? selectedSpot : null))
+    : null;
   const menuSpot = menuGroup;
   const menuSaved = menuGroup ? hasIntentForGroup(menuGroup, 'saved') : false;
 
@@ -204,17 +147,11 @@ function PilgrimageDetailSheetImpl({
         theme={theme}
         onPress={onSpotPress}
         onToggleVisited={onToggleVisited}
-        onOpenMaps={onOpenMaps}
-        onStartCamera={onStartCamera}
-        onMenuOpen={onMenuOpen}
       />
     ),
     [
       distanceForGroup,
-      onMenuOpen,
-      onOpenMaps,
       onSpotPress,
-      onStartCamera,
       onToggleVisited,
       representativeForGroup,
       selectedSpotId,
@@ -224,41 +161,20 @@ function PilgrimageDetailSheetImpl({
     ]
   );
 
+  // Compact work header: the counts live on the filter segments, so the header
+  // carries only the title, the progress bar and the source link.
   const headerNode = (
     <View style={styles.header}>
       <View style={styles.titleRow}>
         <View style={styles.posterWrap}>
           {posterUri ? (
-            <Image
-              source={{ uri: posterUri }}
-              style={styles.poster}
-              contentFit="cover"
-            />
+            <Image source={{ uri: posterUri }} style={styles.poster} contentFit="cover" />
           ) : null}
         </View>
         <View style={styles.titleColumn}>
-          <ThemedText variant="titleLarge" weight="800" numberOfLines={2}>
+          <ThemedText variant="titleMedium" weight="800" numberOfLines={1}>
             {animeTitles?.primary ?? fallbackTitle}
           </ThemedText>
-          <View style={styles.subtitleRow}>
-            <ThemedText variant="captionSmall" tone="secondary">
-              {t('pilgrimage.detail.progressSummary', {
-                count: groupedCounts.all,
-                visited: groupedCounts.visited,
-              })}
-            </ThemedText>
-            {anime ? (
-              <Pressable
-                onPress={onOpenBrowse}
-                hitSlop={16}
-                accessibilityRole="button"
-                accessibilityLabel={browseLabel}>
-                <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
-                  {browseLabel}
-                </ThemedText>
-              </Pressable>
-            ) : null}
-          </View>
           <View style={styles.progressTrack}>
             <View
               style={[
@@ -267,6 +183,17 @@ function PilgrimageDetailSheetImpl({
               ]}
             />
           </View>
+          {anime ? (
+            <Pressable
+              onPress={onOpenBrowse}
+              hitSlop={16}
+              accessibilityRole="button"
+              accessibilityLabel={browseLabel}>
+              <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
+                {browseLabel}
+              </ThemedText>
+            </Pressable>
+          ) : null}
         </View>
         <ThemedIconButton
           variant="ghost"
@@ -313,39 +240,29 @@ function PilgrimageDetailSheetImpl({
     <>
       <BottomSheet
         ref={sheetRef}
-        index={viewMode === 'map' ? 0 : 1}
-        onChange={(index) => {
-          sheetIndexRef.current = index;
-          // Mount-time snaps can be dropped before layout; initial onChange retries them.
-          revealPending();
-        }}
+        index={0}
         snapPoints={snapPoints}
         enableDynamicSizing={false}
         enableContentPanningGesture
         animatedPosition={animatedPosition}
         backgroundStyle={[styles.sheetBg, { backgroundColor: theme.background.primary }]}
         handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: theme.glassBorder }]}>
+        {selectedSpot ? (
+          <SelectedSpotCard
+            spot={representativeForGroup(selectedSpot)}
+            distanceKm={distanceForGroup(selectedSpot)}
+            themeColor={themeColor}
+            theme={theme}
+            onClose={onClearSelection}
+            onOpenMaps={onOpenMaps}
+            onStartCamera={onStartCamera}
+            onMenuOpen={onMenuOpen}
+          />
+        ) : null}
         <BottomSheetFlatList
-          ref={listRef}
           data={filteredGroupedSpots as PilgrimageSpot[]}
           keyExtractor={(item: PilgrimageSpot) => item.id}
           renderItem={renderRow}
-          onScrollBeginDrag={() => {
-            // Stay conservative through momentum; a near-row reveal resets this.
-            listMayBeScrolledRef.current = true;
-          }}
-          onScrollToIndexFailed={({ index, averageItemLength }) => {
-            if (viewMode === 'map') return;
-            // Rows past the rendered window aren't measured yet: jump near the
-            // estimate so they render, then retry the exact index.
-            listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
-            if (scrollRetryRef.current >= 2) return;
-            scrollRetryRef.current += 1;
-            scrollRetryTimerRef.current = setTimeout(() => {
-              scrollRetryTimerRef.current = null;
-              listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.2 });
-            }, 120);
-          }}
           ListHeaderComponent={headerNode}
           ListEmptyComponent={
             <View style={styles.emptyCard}>
@@ -413,14 +330,14 @@ function makeStyles(theme: ThemePalette) {
     header: { gap: Spacing.sm, paddingBottom: Spacing.md },
     titleRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
     posterWrap: {
-      width: 72,
-      height: 96,
+      width: 40,
+      height: 56,
       overflow: 'hidden',
       borderRadius: Radius.md,
       backgroundColor: theme.background.tertiary,
     },
     poster: { width: '100%', height: '100%' },
-    titleColumn: { flex: 1, gap: 3 },
+    titleColumn: { flex: 1, minWidth: 0, gap: 4 },
     progressTrack: {
       height: 3,
       borderRadius: Radius.sm,
@@ -429,7 +346,6 @@ function makeStyles(theme: ThemePalette) {
       marginTop: 3,
     },
     progressFill: { height: '100%', borderRadius: Radius.sm },
-    subtitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm },
     footer: { gap: Spacing.md, paddingTop: Spacing.lg },
     emptyCard: {
       marginTop: Spacing.lg,

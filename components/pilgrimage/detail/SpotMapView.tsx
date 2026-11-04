@@ -54,6 +54,8 @@ export interface SpotMapViewProps {
    * a quick spot picker without forcing the modal sheet open.
    */
   focusSpotId?: string | null;
+  /** Height of whatever covers the map's bottom edge at focus time (the sheet). */
+  getFocusBottomInset?: () => number;
   /**
    * Pixels to lift the in-map controls + attribution off the bottom edge so
    * they clear whatever floating UI sits on top of the map (bottom sheet peek,
@@ -81,6 +83,7 @@ function SpotMapViewImpl({
   markerMode,
   offlineOnly,
   focusSpotId,
+  getFocusBottomInset,
   controlsBottomOffset = 16,
   onSpotPress,
   onClusterPick,
@@ -123,11 +126,12 @@ function SpotMapViewImpl({
         visited: visited[spot.id] === true,
         episode: getEpisodeNumber(spot),
         markerMode: markerMode === 'dot' ? 'dot' : 'bubble',
+        selected: spot.id === focusSpotId,
       });
     }
     out.push(...localityMarkers);
     return out;
-  }, [localityMarkers, spots, ringColor, markerMode, visited]);
+  }, [localityMarkers, spots, ringColor, markerMode, visited, focusSpotId]);
 
   // Chip-strip selection pans to the focused spot (native flyTo, zoom 16).
   useEffect(() => {
@@ -135,8 +139,13 @@ function SpotMapViewImpl({
     const spot = spotsById.get(focusSpotId);
     const geo = spot ? getSpotGeo(spot) : null;
     if (!spot || !geo) return;
-    maplibreRef.current?.focus?.({ lat: geo[0], lng: geo[1], zoom: 16 });
-  }, [focusSpotId, spotsById]);
+    maplibreRef.current?.focus?.({
+      lat: geo[0],
+      lng: geo[1],
+      zoom: 16,
+      bottomInset: getFocusBottomInset?.(),
+    });
+  }, [focusSpotId, spotsById, getFocusBottomInset]);
 
   // Imperative recenter / heading — driven by the locate-FAB hook so location +
   // 60 Hz magnetometer ticks bypass React state entirely (CLAUDE.md Rule 9).
@@ -203,6 +212,7 @@ function areEqual(prev: SpotMapViewProps, next: SpotMapViewProps): boolean {
     prev.markerMode === next.markerMode &&
     prev.offlineOnly === next.offlineOnly &&
     prev.focusSpotId === next.focusSpotId &&
+    prev.getFocusBottomInset === next.getFocusBottomInset &&
     prev.controlsBottomOffset === next.controlsBottomOffset &&
     prev.onSpotPress === next.onSpotPress &&
     prev.onClusterPick === next.onClusterPick &&
