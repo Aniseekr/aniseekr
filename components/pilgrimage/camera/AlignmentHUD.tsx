@@ -9,6 +9,7 @@ import { CameraChrome, cameraControlShadow } from './cameraChrome';
 import { AlignmentRing } from './AlignmentRing';
 import type { AlignmentScoreView } from './types';
 import { Radius } from '../../../constants/DesignSystem';
+import { formatDistanceKm } from '../detail/_helpers';
 
 interface AlignmentHUDProps {
   score: AlignmentScoreView;
@@ -37,7 +38,9 @@ function formatPercent(total: number | null): string {
 function formatDistance(meters: number | null): string {
   if (meters === null) return '—';
   if (meters < 100) return `${meters.toFixed(1)}m`;
-  return `${Math.round(meters)}m`;
+  // Far from the spot the exact metre count is noise ("191088m").
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return formatDistanceKm(meters / 1000);
 }
 
 function formatHeadingDelta(deg: number | null): string {
