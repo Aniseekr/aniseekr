@@ -91,6 +91,13 @@ interface RawAniListRelationEdge {
   };
 }
 
+export interface AnimePrequelRelation {
+  anilistId: number;
+  malId: number | null;
+  title: string;
+  relationType: 'PREQUEL';
+}
+
 interface RawAniListMedia {
   id: number;
   idMal?: number | null;
@@ -392,11 +399,28 @@ export class AniListDataSource implements AnimeDataSource {
         return {
           id: String(entryId ?? ''),
           type: humanizeRelation(edge.relationType),
-          title: node.title?.userPreferred ?? 'Unknown',
+          title: node.title?.userPreferred ?? '',
           format: node.format ?? node.type ?? undefined,
         };
       })
       .filter((r): r is AnimeRelation => r !== null);
+  }
+
+  async fetchAnimePrequelRelations(id: string): Promise<AnimePrequelRelation[]> {
+    const data = await this.fetchDetailRaw(id, 'anilist');
+    if (!data) return [];
+    return (data.relations?.edges ?? []).flatMap((edge) => {
+      const node = edge.node;
+      if (edge.relationType?.toUpperCase() !== 'PREQUEL' || !node?.id) return [];
+      return [
+        {
+          anilistId: node.id,
+          malId: node.idMal ?? null,
+          title: node.title?.userPreferred ?? 'Unknown',
+          relationType: 'PREQUEL' as const,
+        },
+      ];
+    });
   }
 
   async fetchAnimeStreaming(id: string, sourcePlatform?: PlatformType): Promise<AnimeStreaming[]> {
