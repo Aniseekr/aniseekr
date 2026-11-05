@@ -5,6 +5,7 @@ import type { AppIconName } from '../libs/brand/app-icon';
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
 import {
   THEME_CUSTOM_ACCENT_KEY,
+  THEME_GRANDFATHERED_KEY,
   THEME_ID_KEY,
   THEME_INCREASE_CONTRAST_KEY,
   THEME_MODE_KEY,
@@ -552,6 +553,41 @@ export function chartRamp(theme: ThemePalette): ThemeSkin['chartRamp'] {
   return theme.skin?.chartRamp ?? DEFAULT_CHART_RAMP;
 }
 
+/**
+ * Grandfathering. Until 1.3.0 `PREMIUM_ENABLED` was off and everyone counted
+ * as Pro, so people may already sit on a premium theme they never paid for.
+ * The first launch that runs this records that theme once (or '' when the
+ * saved theme is free); after that the record never changes. Returns the
+ * value to store: `recorded` untouched when the migration already ran.
+ */
+export function resolveGrandfatheredTheme(
+  storedThemeId: string | null,
+  recorded: string | null
+): string {
+  if (recorded !== null) return recorded;
+  if (storedThemeId && storedThemeId in THEMES && THEMES[storedThemeId as ThemeId].isPremium) {
+    return storedThemeId;
+  }
+  return '';
+}
+
+/**
+ * Whether a theme can be picked: free themes, any theme for Pro, the theme in
+ * use right now (never lock someone out of what they are looking at), and the
+ * one grandfathered premium theme.
+ */
+export function isThemeUnlocked(
+  palette: ThemePalette,
+  opts: { isPro: boolean; activeThemeId: ThemeId; grandfatheredThemeId: string }
+): boolean {
+  return (
+    !palette.isPremium ||
+    opts.isPro ||
+    palette.id === opts.activeThemeId ||
+    palette.id === opts.grandfatheredThemeId
+  );
+}
+
 // Light-mode surfaces per theme — accent / accentLight / accentDark / secondary
 // / status stay shared with the dark palette, so the theme still has a single
 // identity. Only background / text / glassBorder / gradient swap.
@@ -703,6 +739,8 @@ interface ThemeContextValue {
   setTintIntensity: (t: TintIntensity) => Promise<void>;
   increaseContrast: boolean;
   setIncreaseContrast: (v: boolean) => Promise<void>;
+  /** Premium theme kept from the free era ('' = none). See {@link resolveGrandfatheredTheme}. */
+  grandfatheredThemeId: string;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -714,6 +752,7 @@ interface StoredTheme {
   themeMode: ThemeMode;
   tintIntensity: TintIntensity;
   increaseContrast: boolean;
+  grandfatheredThemeId: string;
 }
 
 /**
@@ -729,10 +768,15 @@ function readStoredTheme(): StoredTheme {
     themeMode: 'dark',
     tintIntensity: 'balanced',
     increaseContrast: false,
+    grandfatheredThemeId: '',
   };
   try {
     const storedTheme = kvGet(THEME_ID_KEY);
     if (storedTheme && storedTheme in THEMES) result.themeId = storedTheme as ThemeId;
+
+    const recorded = kvGet(THEME_GRANDFATHERED_KEY);
+    result.grandfatheredThemeId = resolveGrandfatheredTheme(storedTheme, recorded);
+    if (recorded === null) kvSet(THEME_GRANDFATHERED_KEY, result.grandfatheredThemeId);
 
     const storedAccent = kvGet(THEME_CUSTOM_ACCENT_KEY);
     if (storedAccent) {
@@ -921,8 +965,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTintIntensity,
       increaseContrast,
       setIncreaseContrast,
+      grandfatheredThemeId: bootstrap.grandfatheredThemeId,
     }),
     [
+      bootstrap.grandfatheredThemeId,
       resolvedTheme,
       themeId,
       setTheme,
@@ -962,6 +1008,7 @@ export function useTheme(): ThemeContextValue {
       setTintIntensity: async () => {},
       increaseContrast: false,
       setIncreaseContrast: async () => {},
+      grandfatheredThemeId: '',
     };
   }
   return ctx;

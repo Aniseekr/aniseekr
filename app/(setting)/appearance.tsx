@@ -17,6 +17,7 @@ import {
   type ThemeMode,
   type ThemePalette,
   type TintIntensity,
+  isThemeUnlocked,
   useTheme,
 } from '../../context/ThemeContext';
 import { useSubscription } from '../../context/SubscriptionContext';
@@ -67,6 +68,7 @@ export default function AppearanceScreen() {
     setTintIntensity,
     increaseContrast,
     setIncreaseContrast,
+    grandfatheredThemeId,
   } = useTheme();
 
   const [bootstrapPrefs] = useState(loadUserPrefsSync);
@@ -84,9 +86,12 @@ export default function AppearanceScreen() {
 
   // Prefs are seeded synchronously above; no async load required.
 
+  const isLocked = (palette: ThemePalette) =>
+    !isThemeUnlocked(palette, { isPro, activeThemeId: themeId, grandfatheredThemeId });
+
   const handleThemePress = (palette: ThemePalette) => {
     if (palette.id === themeId && !customAccent) return;
-    if (palette.isPremium && !isPro) {
+    if (isLocked(palette)) {
       hapticsBridge.warning();
       setPaywallVisible(true);
       return;
@@ -138,7 +143,7 @@ export default function AppearanceScreen() {
                 key={palette.id}
                 palette={palette}
                 isSelected={palette.id === themeId}
-                isLocked={!!palette.isPremium && !isPro}
+                isLocked={isLocked(palette)}
                 onPress={() => handleThemePress(palette)}
               />
             ))}

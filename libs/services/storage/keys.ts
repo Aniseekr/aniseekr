@@ -11,6 +11,8 @@ export const THEME_RECENT_ACCENTS_KEY = '@aniseekr/recentAccents';
 export const THEME_MODE_KEY = '@aniseekr/themeMode';
 export const THEME_TINT_INTENSITY_KEY = '@aniseekr/tintIntensity';
 export const THEME_INCREASE_CONTRAST_KEY = '@aniseekr/increaseContrast';
+/** Premium theme a user kept from the free era; '' once checked with none. */
+export const THEME_GRANDFATHERED_KEY = '@aniseekr/grandfatheredTheme';
 export const MAP_THEME_STORAGE_KEY = 'aniseekr.pilgrimage.mapTheme.v1';
 export const MAP_SOURCE_STYLE_OVERRIDE_KEY = 'aniseekr.pilgrimage.mapSource.styleOverride.v1';
 export const PILGRIMAGE_MAP_VIEW_MODE_STORAGE_KEY = 'aniseekr.pilgrimage.mapViewMode.v1';
