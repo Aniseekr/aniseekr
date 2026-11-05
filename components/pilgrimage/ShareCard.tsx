@@ -105,8 +105,9 @@ export type ShareCardProps = {
   shotWidth?: number;
   shotHeight?: number;
   /**
-   * Aniseekr mark drawn in the bottom-right corner of the user's photo.
-   * Pass the already-gated style (`effectiveBrandMark`); `none` draws nothing.
+   * Aniseekr mark drawn in the outer bottom-right corner of the image pair.
+   * Pass the already-gated style (`effectiveBrandMark`); `none` (Pro) draws
+   * nothing and also drops the classic template's `aniseekr` footer.
    */
   brandMark?: { style: BrandMarkStyle; dateline: string } | null;
   /**
@@ -285,14 +286,20 @@ function ImagePair({
         perspectiveTransform={shotPerspectiveTransform}
         manualWarpCorners={shotManualWarpCorners}
         contentFit={shotContentFit}
-        overlay={markNode}
         fullResolution={fullResolution}
       />
     ),
   };
   // No scene image (a free shot, or a spot without one): the card is just the
   // photo — never an empty black "ANIME" frame.
-  if (!imageUrl) return <View style={{ flex: 1 }}>{cells.real}</View>;
+  if (!imageUrl) {
+    return (
+      <View style={{ flex: 1 }}>
+        {cells.real}
+        <CornerMark node={markNode} />
+      </View>
+    );
+  }
   return (
     <View
       style={{
@@ -302,6 +309,21 @@ function ImagePair({
       }}>
       {cells[order.first]}
       {cells[order.second]}
+      <CornerMark node={markNode} />
+    </View>
+  );
+}
+
+/**
+ * The Aniseekr mark, pinned to the outer bottom-right corner of the image
+ * pair: always the far corner of the second cell, so it never sits on the
+ * seam between the anime frame and the real shot, whichever order they're in.
+ */
+function CornerMark({ node }: { node: ReactNode }) {
+  if (!node) return null;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', right: 8, bottom: 8 }}>
+      {node}
     </View>
   );
 }
@@ -424,7 +446,6 @@ function ImageCell({
   perspectiveTransform,
   manualWarpCorners,
   contentFit = 'cover',
-  overlay = null,
   fullResolution = false,
 }: {
   uri: string;
@@ -436,7 +457,6 @@ function ImageCell({
   perspectiveTransform?: RNPerspectiveTransform;
   manualWarpCorners?: readonly Pt[] | null;
   contentFit?: 'cover' | 'contain';
-  overlay?: ReactNode;
   fullResolution?: boolean;
 }) {
   return (
@@ -456,11 +476,6 @@ function ImageCell({
         contentFit={contentFit}
         fullResolution={fullResolution}
       />
-      {overlay ? (
-        <View pointerEvents="none" style={{ position: 'absolute', right: 8, bottom: 8 }}>
-          {overlay}
-        </View>
-      ) : null}
       {style === 'sticker' ? (
         <View
           style={{
@@ -801,6 +816,7 @@ function ClassicTemplate(props: TemplateProps) {
         ) : null}
       </View>
 
+      {props.brandMark?.style === 'none' ? null : (
       <View
         style={{
           flexDirection: 'row',
@@ -825,6 +841,7 @@ function ClassicTemplate(props: TemplateProps) {
           aniseekr · Pilgrimage
         </ThemedText>
       </View>
+      )}
     </View>
   );
 }
@@ -1180,11 +1197,6 @@ function MangaTemplate(props: TemplateProps) {
           fullResolution={props.fullResolution}
         />
         <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
-        {props.markNode ? (
-          <View pointerEvents="none" style={{ position: 'absolute', right: 8, bottom: 8 }}>
-            {props.markNode}
-          </View>
-        ) : null}
         <View
           style={{
             position: 'absolute',
@@ -1291,6 +1303,7 @@ function MangaTemplate(props: TemplateProps) {
         ) : (
           cells.real
         )}
+        <CornerMark node={props.markNode} />
       </View>
 
       <View

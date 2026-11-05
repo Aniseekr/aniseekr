@@ -83,7 +83,7 @@ import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import { ProOptionChips } from '../../components/pilgrimage/ProOptionChips';
 import {
   buildDateline,
-  COMPARE_BRAND_MARKS,
+  BRAND_MARKS,
   effectiveBrandMark,
   type BrandMarkStyle,
 } from '../../libs/services/pilgrimage/share-brand-mark';
@@ -133,9 +133,9 @@ export default function ShareComparisonScreen() {
   const [exportResolution, setExportResolution] = useState<ExportResolution>('1080p');
   const { isPro } = useSubscription();
   const [paywallVisible, setPaywallVisible] = useState(false);
-  const [brandMarkChoice, setBrandMarkChoice] = useState<BrandMarkStyle>(COMPARE_BRAND_MARKS[0].id);
+  const [brandMarkChoice, setBrandMarkChoice] = useState<BrandMarkStyle>(BRAND_MARKS[0].id);
   // What is rendered and exported: a Pro choice falls back once Pro is gone.
-  const brandMarkStyle = effectiveBrandMark(COMPARE_BRAND_MARKS, brandMarkChoice, isPro);
+  const brandMarkStyle = effectiveBrandMark(BRAND_MARKS, brandMarkChoice, isPro);
   const resolution: ExportResolution =
     exportResolution === 'full' && !isPro ? '1080p' : exportResolution;
 
@@ -241,7 +241,7 @@ export default function ShareComparisonScreen() {
   );
   const brandMarkOptions = useMemo(
     () =>
-      COMPARE_BRAND_MARKS.map((o) => ({
+      BRAND_MARKS.map((o) => ({
         ...o,
         label: t(`pilgrimage.brandMark.${o.id}`),
       })),

@@ -1,29 +1,19 @@
 // The Aniseekr mark on exported share images (compare card, trip album).
 //
 // Pure helpers: which mark styles exist per surface, which are Pro, and the
-// date + place line. The line between free and Pro follows what each surface
-// already gave free users before Pro existed — nothing free users had is
-// taken away:
-//   - compare cards never carried a forced mark, so free keeps "none"
-//     (still the default) and the small logo;
-//   - the trip album always ended in an "Aniseekr" mark, so free keeps it
-//     (now the small logo) and removing it is Pro.
-// The free mark is the small Seekr logo, corner-sized like Gemini's sparkle.
+// date + place line. Free exports carry the small Seekr logo (corner-sized,
+// like Gemini's sparkle) — it doubles as marketing. Pro can remove it or swap
+// in the seal / date + place styles. On the compare card this is a user
+// decision (2026-11-05): those cards had no forced mark before, and the user
+// chose to add one for free exports.
+// The free custom-text watermark on the compare card is separate and stays free.
 
 export type BrandMarkStyle = 'none' | 'logo' | 'seal' | 'dateline';
 
 export type BrandMarkOption = { id: BrandMarkStyle; pro: boolean };
 
 /** First entry is the free default. */
-export const COMPARE_BRAND_MARKS: readonly BrandMarkOption[] = [
-  { id: 'none', pro: false },
-  { id: 'logo', pro: false },
-  { id: 'seal', pro: true },
-  { id: 'dateline', pro: true },
-];
-
-/** First entry is the free default. */
-export const ALBUM_BRAND_MARKS: readonly BrandMarkOption[] = [
+export const BRAND_MARKS: readonly BrandMarkOption[] = [
   { id: 'logo', pro: false },
   { id: 'seal', pro: true },
   { id: 'dateline', pro: true },

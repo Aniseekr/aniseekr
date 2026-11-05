@@ -16,13 +16,19 @@ const PHOTO_SHADOW = {
   textShadowRadius: 2,
 } as const;
 
-function Logo() {
+/**
+ * Seekr's head is dark with an outline. On a photo the outline is always the
+ * light ink, so the mark reads on both bright and dark shots (dark body on
+ * light, light outline on dark). On the album page it follows the page ink.
+ */
+function Logo({ ink }: { ink: string }) {
   return (
     <AniseekrLogo
       variant="mark"
       height={LOGO_HEIGHT}
       interactive={false}
       still
+      inkColor={ink}
       style={{ opacity: 0.9 }}
     />
   );
@@ -45,7 +51,8 @@ export function BrandMark({
 }) {
   const t = useT();
   if (style === 'none') return null;
-  if (style === 'logo') return <Logo />;
+  const ink = surface === 'photo' ? ON_DARK : (pageInk ?? ON_DARK);
+  if (style === 'logo') return <Logo ink={ink} />;
 
   if (style === 'seal') {
     // A small stamp: the logo and 「巡禮」 inside an accent frame, tilted.
@@ -63,7 +70,7 @@ export function BrandMark({
           paddingVertical: 1,
           transform: [{ rotate: '-6deg' }],
         }}>
-        <Logo />
+        <Logo ink={ON_DARK} />
         <ThemedText
           variant="captionSmall"
           weight="700"
@@ -75,7 +82,6 @@ export function BrandMark({
   }
 
   // dateline: "date · place" then the logo.
-  const ink = surface === 'photo' ? ON_DARK : (pageInk ?? ON_DARK);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       {dateline ? (
@@ -87,7 +93,7 @@ export function BrandMark({
           {dateline}
         </ThemedText>
       ) : null}
-      <Logo />
+      <Logo ink={ink} />
     </View>
   );
 }

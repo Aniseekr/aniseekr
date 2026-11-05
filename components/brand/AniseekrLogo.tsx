@@ -65,6 +65,8 @@ interface AniseekrLogoProps {
   stampOnMount?: boolean;
   /** No idle blink: for marks captured into images (a capture mid-blink would ship shut eyes). */
   still?: boolean;
+  /** Outline / wordmark ink override (default: theme text). */
+  inkColor?: string;
   style?: ViewStyle;
 }
 
@@ -82,6 +84,7 @@ function AniseekrLogoComponent({
   interactive = true,
   stampOnMount = false,
   still = false,
+  inkColor,
   style,
 }: AniseekrLogoProps) {
   const { theme } = useTheme();
@@ -175,7 +178,7 @@ function AniseekrLogoComponent({
     ],
   }));
 
-  const ink = theme.text.primary;
+  const ink = inkColor ?? theme.text.primary;
   const spot = theme.accent;
 
   const svg = (

@@ -38,12 +38,13 @@ import { ProOptionChips } from '../../../components/pilgrimage/ProOptionChips';
 import { PaywallSheet } from '../../../components/subscription/PaywallSheet';
 import { useSubscription } from '../../../context/SubscriptionContext';
 import {
-  ALBUM_BRAND_MARKS,
+  BRAND_MARKS,
   buildDateline,
   effectiveBrandMark,
   type BrandMarkStyle,
 } from '../../../libs/services/pilgrimage/share-brand-mark';
 import { captureSizeForPixels } from '../../../libs/services/pilgrimage/export-capture';
+import { resolveWatermarkColor } from '../../../libs/services/pilgrimage/share-composer';
 
 type AlbumQuality = 'standard' | 'high';
 
@@ -91,10 +92,10 @@ export default function PilgrimageJourneyScreen() {
   const [sharing, setSharing] = useState(false);
   const { isPro } = useSubscription();
   const [paywallVisible, setPaywallVisible] = useState(false);
-  const [markChoice, setMarkChoice] = useState<BrandMarkStyle>(ALBUM_BRAND_MARKS[0].id);
+  const [markChoice, setMarkChoice] = useState<BrandMarkStyle>(BRAND_MARKS[0].id);
   const [qualityChoice, setQualityChoice] = useState<AlbumQuality>('standard');
   // Rendered / exported values: Pro choices fall back once Pro is gone.
-  const markStyle = effectiveBrandMark(ALBUM_BRAND_MARKS, markChoice, isPro);
+  const markStyle = effectiveBrandMark(BRAND_MARKS, markChoice, isPro);
   const quality: AlbumQuality = qualityChoice === 'high' && isPro ? 'high' : 'standard';
   const albumLayout = useRef<{ width: number; height: number } | null>(null);
   const onAlbumLayout = useCallback((e: LayoutChangeEvent) => {
@@ -119,7 +120,7 @@ export default function PilgrimageJourneyScreen() {
     return buildDateline([formatJournalRange(from, to, t), place]);
   }, [album, from, to, t]);
   const markOptions = useMemo(
-    () => ALBUM_BRAND_MARKS.map((o) => ({ ...o, label: t(`pilgrimage.brandMark.${o.id}`) })),
+    () => BRAND_MARKS.map((o) => ({ ...o, label: t(`pilgrimage.brandMark.${o.id}`) })),
     [t]
   );
   const qualityOptions = useMemo(
@@ -221,7 +222,7 @@ export default function PilgrimageJourneyScreen() {
                     dateline={dateline}
                     accent={theme.accent}
                     surface="page"
-                    pageInk={theme.text.tertiary}
+                    pageInk={resolveWatermarkColor(null, theme.background.primary)}
                   />
                 </View>
               ) : null}
