@@ -1232,7 +1232,8 @@
         "watermarkPosition": "浮水印位置 {label}",
         "watermarkFont": "浮水印字體 {label}",
         "watermarkColor": "浮水印顏色 {label}"
-      }
+      },
+      "fullRes": "原圖"
     },
     "album": {
       "compareA11y": "比對 {title}",
@@ -1299,7 +1300,11 @@
       "share": "分享",
       "empty": "這段期間沒有照片",
       "shareFailed": "無法分享相簿",
-      "spotPhotos": "{name} · {count} 張"
+      "spotPhotos": "{name} · {count} 張",
+      "imageSize": "圖片大小",
+      "standard": "標準",
+      "high": "高解析度",
+      "preparing": "準備高解析度…"
     },
     "camera": {
       "hdrBasicA11y": "自動 HDR（基本 — 此裝置以 CPU 合成）",
@@ -1469,6 +1474,15 @@
       "allVisited": "全部走完了",
       "empty": "這個行程還沒有可定位的地點。",
       "back": "返回"
+    },
+    "brandMark": {
+      "title": "Aniseekr 標記",
+      "none": "不加",
+      "logo": "Logo",
+      "seal": "印章",
+      "dateline": "日期＋地點",
+      "sealCaption": "巡禮",
+      "a11y": "Aniseekr 標記：{label}"
     }
   },
   "companion": {
@@ -2381,7 +2395,9 @@
     "noActiveSubscription": "此帳號沒有有效訂閱。",
     "renewalDisclosure": "訂閱會以畫面顯示的價格自動續訂，除非在目前期間結束至少 24 小時前取消。確認購買時會向你的 Apple ID 收款。你可以隨時在 Apple ID 帳號設定中管理或取消訂閱。終身方案為一次性購買，不會續訂。",
     "offeringsUnavailable": "目前無法載入訂閱方案。",
-    "retry": "重試"
+    "retry": "重試",
+    "proBadge": "Pro",
+    "proExport": "原圖畫質分享圖，可去浮水印"
   },
   "explorer": {
     "rally": {

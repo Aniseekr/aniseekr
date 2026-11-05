@@ -1232,7 +1232,8 @@
         "watermarkPosition": "Watermark position {label}",
         "watermarkFont": "Watermark font {label}",
         "watermarkColor": "Watermark color {label}"
-      }
+      },
+      "fullRes": "Full"
     },
     "album": {
       "compareA11y": "Compare {title}",
@@ -1299,7 +1300,11 @@
       "share": "Share",
       "empty": "No photos in this range",
       "shareFailed": "Couldn't share the album",
-      "spotPhotos": "{name} · {count}"
+      "spotPhotos": "{name} · {count}",
+      "imageSize": "Image size",
+      "standard": "Standard",
+      "high": "High-res",
+      "preparing": "Preparing high-res…"
     },
     "camera": {
       "hdrBasicA11y": "Auto HDR (basic — this device blends on the CPU)",
@@ -1469,6 +1474,15 @@
       "allVisited": "All stops visited",
       "empty": "This trip has no mappable spots yet.",
       "back": "Back"
+    },
+    "brandMark": {
+      "title": "Aniseekr mark",
+      "none": "Off",
+      "logo": "Logo",
+      "seal": "Seal",
+      "dateline": "Date + place",
+      "sealCaption": "SEEKR",
+      "a11y": "Aniseekr mark: {label}"
     }
   },
   "companion": {
@@ -2381,7 +2395,9 @@
     "noActiveSubscription": "No active subscription found on this account.",
     "renewalDisclosure": "Subscriptions auto-renew at the displayed price until cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple ID at confirmation of purchase. Manage or cancel anytime in your Apple ID account settings. Lifetime is a one-time purchase and does not renew.",
     "offeringsUnavailable": "Subscription plans are currently unavailable.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "proBadge": "Pro",
+    "proExport": "Full-res share images, no watermark"
   },
   "explorer": {
     "rally": {

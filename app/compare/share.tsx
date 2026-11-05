@@ -78,6 +78,16 @@ import {
 import { useT } from '../../libs/i18n';
 import { listItemEnterDown, toastEnter, toastExit } from '../../libs/animations/presets';
 import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
+import { useSubscription } from '../../context/SubscriptionContext';
+import { PaywallSheet } from '../../components/subscription/PaywallSheet';
+import { ProOptionChips } from '../../components/pilgrimage/ProOptionChips';
+import {
+  buildDateline,
+  BRAND_MARKS,
+  effectiveBrandMark,
+  type BrandMarkStyle,
+} from '../../libs/services/pilgrimage/share-brand-mark';
+import { captureSizeForPixels } from '../../libs/services/pilgrimage/export-capture';
 
 export default function ShareComparisonScreen() {
   const router = useRouter();
@@ -96,10 +106,9 @@ export default function ShareComparisonScreen() {
   const matchScore = getShareMatchScore(params);
   const frameValid = getShareFrameValid(params);
   const locationText = formatShareLocation(params);
-  const imageUrl =
-    getStringParam(params, 'referenceKind') === 'imported'
-      ? getStringParam(params, 'imageUrl') ?? ''
-      : '';
+  // preview.tsx only forwards an imported reference (it blanks `imageUrl`
+  // otherwise) and never sends `referenceKind`, so trust the param as is.
+  const imageUrl = getStringParam(params, 'imageUrl') ?? '';
   const shotUri = getStringParam(params, 'shotUri') ?? '';
   // Captured shot dimensions (orientation truth) forwarded by preview.tsx via
   // buildShareRouteParams. `0` / missing → unknown; the helpers fall back to
@@ -122,11 +131,23 @@ export default function ShareComparisonScreen() {
   const [watermarkColor, setWatermarkColor] = useState<string | null>(null);
   const [watermarkFont, setWatermarkFont] = useState<WatermarkFontId>('system');
   const [exportResolution, setExportResolution] = useState<ExportResolution>('1080p');
+  const { isPro } = useSubscription();
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [brandMarkChoice, setBrandMarkChoice] = useState<BrandMarkStyle>(BRAND_MARKS[0].id);
+  // What is rendered and exported: a Pro choice falls back once Pro is gone.
+  const brandMarkStyle = effectiveBrandMark(BRAND_MARKS, brandMarkChoice, isPro);
+  const resolution: ExportResolution =
+    exportResolution === 'full' && !isPro ? '1080p' : exportResolution;
 
   const watermarkText = useMemo(() => normalizeWatermarkText(watermarkInput), [watermarkInput]);
   const exportDims = useMemo(
-    () => getExportDimensions(ratio, exportResolution),
-    [ratio, exportResolution]
+    () =>
+      getExportDimensions(
+        ratio,
+        resolution,
+        shotWidth > 0 && shotHeight > 0 ? Math.min(shotWidth, shotHeight) : null
+      ),
+    [ratio, resolution, shotWidth, shotHeight]
   );
 
   // Filter + crop state (Track B). `croppedShotUri` overrides the route-param
@@ -209,6 +230,23 @@ export default function ShareComparisonScreen() {
     const d = new Date();
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   }, []);
+  // The date + place line follows the card's own date / location toggles, so
+  // turning location off never leaks it through the mark.
+  const brandMark = useMemo(
+    () => ({
+      style: brandMarkStyle,
+      dateline: buildDateline([showDate ? today : null, showLocation ? locationText : null]),
+    }),
+    [brandMarkStyle, showDate, today, showLocation, locationText]
+  );
+  const brandMarkOptions = useMemo(
+    () =>
+      BRAND_MARKS.map((o) => ({
+        ...o,
+        label: t(`pilgrimage.brandMark.${o.id}`),
+      })),
+    [t]
+  );
 
   const cardWidth = Math.min(winW - 32, 420);
   const cardAspect = ratioToAspect(ratio);
@@ -227,14 +265,13 @@ export default function ShareComparisonScreen() {
         format: 'png',
         quality: 0.95,
         result: 'tmpfile',
-        width: exportDims.width,
-        height: exportDims.height,
+        ...captureSizeForPixels(exportDims),
       });
     } catch (err) {
       console.warn('share snapshot failed', err);
       return null;
     }
-  }, [exportDims.width, exportDims.height]);
+  }, [exportDims]);
 
   const flashToast = useCallback((text: string) => {
     setToast(text);
@@ -405,6 +442,8 @@ export default function ShareComparisonScreen() {
                 shotFilterMatrix={filterMatrix}
                 shotPerspectiveTransform={perspectiveTransform}
                 shotManualWarpCorners={manualWarpCorners}
+                brandMark={brandMark}
+                fullResolution={resolution === '4k' || resolution === 'full'}
               />
             </View>
           </View>
@@ -506,8 +545,10 @@ export default function ShareComparisonScreen() {
               onWatermarkColorChange={setWatermarkColor}
               watermarkFont={watermarkFont}
               onWatermarkFontChange={setWatermarkFont}
-              exportResolution={exportResolution}
+              exportResolution={resolution}
               onExportResolutionChange={setExportResolution}
+              isPro={isPro}
+              onProLocked={() => setPaywallVisible(true)}
               filterPreset={filterPreset}
               onFilterPresetChange={setFilterPreset}
               filterIntensity={filterIntensity}
@@ -525,6 +566,21 @@ export default function ShareComparisonScreen() {
               onOpenManualWarp={() => setWarpOpen(true)}
               onResetManualWarp={() => setManualWarpCorners(null)}
             />
+
+            <View style={styles.markSection}>
+              <ThemedText variant="captionSmall" tone="secondary" weight="600">
+                {t('pilgrimage.brandMark.title')}
+              </ThemedText>
+              <ProOptionChips
+                options={brandMarkOptions}
+                value={brandMarkStyle}
+                isPro={isPro}
+                accent={accent}
+                onChange={setBrandMarkChoice}
+                onLocked={() => setPaywallVisible(true)}
+                accessibilityLabel={(o) => t('pilgrimage.brandMark.a11y', { label: o.label })}
+              />
+            </View>
 
             <View style={styles.toggleGroup}>
               <ToggleRow
@@ -634,6 +690,8 @@ export default function ShareComparisonScreen() {
           flashToast(uri === shotUri ? 'Crop reset' : 'Cropped');
         }}
       />
+
+      <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
 
       <CornerPinSheet
         visible={warpOpen}
@@ -811,6 +869,11 @@ function makeStyles(theme: ThemePalette) {
       paddingVertical: 9,
       borderRadius: Radius.sm,
       borderWidth: 1,
+    },
+    markSection: {
+      gap: 8,
+      marginTop: 18,
+      marginBottom: 18,
     },
     toggleGroup: {
       borderRadius: Radius.card,

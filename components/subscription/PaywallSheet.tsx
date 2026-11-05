@@ -51,6 +51,7 @@ const FEATURES: {
 }[] = [
   { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks', available: isCameraLookAvailable },
   { icon: 'photo-library', labelKey: 'subscription.batchImport' },
+  { icon: 'hd', labelKey: 'subscription.proExport' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
   { icon: 'block', labelKey: 'subscription.noAds' },
 ];
@@ -358,6 +359,7 @@ const styles = StyleSheet.create({
   },
   featureLabel: {
     ...Typography.titleMedium,
+    flexShrink: 1,
   },
   packageRow: {
     flexDirection: 'row',

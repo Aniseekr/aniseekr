@@ -32,6 +32,7 @@ import {
 } from '../../libs/services/pilgrimage/share-composer';
 import { FILTER_PRESETS, type FilterPresetId } from '../../libs/services/pilgrimage/share-filters';
 import { ThemedSwitch } from '../themed/ThemedSwitch';
+import { ProBadge } from '../subscription/ProBadge';
 
 // Watermark ink swatches. `null` means "auto" — derive from canvas contrast.
 // `label` holds a TranslationKey resolved via t() at render (ids/hex unchanged).
@@ -83,6 +84,10 @@ export type ShareComposerControlsProps = {
   onWatermarkFontChange: (next: WatermarkFontId) => void;
   exportResolution: ExportResolution;
   onExportResolutionChange: (next: ExportResolution) => void;
+  /** Gates the Pro-only resolutions (`full`). */
+  isPro: boolean;
+  /** A locked Pro option was tapped — the caller shows the paywall. */
+  onProLocked: () => void;
   filterPreset: FilterPresetId;
   onFilterPresetChange: (next: FilterPresetId) => void;
   filterIntensity: number;
@@ -130,6 +135,8 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
     onWatermarkFontChange,
     exportResolution,
     onExportResolutionChange,
+    isPro,
+    onProLocked,
     filterPreset,
     onFilterPresetChange,
     filterIntensity,
@@ -197,16 +204,19 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
         <View style={styles.resGroup}>
           {EXPORT_RESOLUTIONS.map((r) => {
             const active = r.id === exportResolution;
+            const locked = r.pro && !isPro;
+            const label = r.id === 'full' ? t('pilgrimage.share.fullRes') : r.label;
             return (
               <Pressable
                 key={r.id}
                 onPress={() => {
                   hapticsBridge.selection();
-                  onExportResolutionChange(r.id);
+                  if (locked) onProLocked();
+                  else onExportResolutionChange(r.id);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={t('pilgrimage.share.a11y.export', {
-                  label: r.label,
+                  label,
                   hint: r.hint,
                 })}
                 accessibilityState={{ selected: active }}
@@ -222,8 +232,9 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
                   variant="captionSmall"
                   weight="700"
                   style={{ color: active ? accentFg : theme.text.primary }}>
-                  {r.label}
+                  {label}
                 </ThemedText>
+                {r.pro ? <ProBadge locked={locked} color={active ? accentFg : undefined} /> : null}
               </Pressable>
             );
           })}
@@ -701,6 +712,7 @@ function makeStyles(theme: ThemePalette) {
     },
     row: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       gap: 8,
     },
@@ -719,6 +731,9 @@ function makeStyles(theme: ThemePalette) {
       marginLeft: 'auto',
     },
     resChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 7,
       borderRadius: Radius.sm,

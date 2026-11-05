@@ -63,6 +63,10 @@ interface AniseekrLogoProps {
   interactive?: boolean;
   /** Stamp in once on mount (launch screen). */
   stampOnMount?: boolean;
+  /** No idle blink: for marks captured into images (a capture mid-blink would ship shut eyes). */
+  still?: boolean;
+  /** Outline / wordmark ink override (default: theme text). */
+  inkColor?: string;
   style?: ViewStyle;
 }
 
@@ -79,10 +83,12 @@ function AniseekrLogoComponent({
   variant = 'lockup',
   interactive = true,
   stampOnMount = false,
+  still = false,
+  inkColor,
   style,
 }: AniseekrLogoProps) {
   const { theme } = useTheme();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotion() || still;
   const vb = viewBox(variant);
   const width = (height * vb[2]) / vb[3];
 
@@ -172,7 +178,7 @@ function AniseekrLogoComponent({
     ],
   }));
 
-  const ink = theme.text.primary;
+  const ink = inkColor ?? theme.text.primary;
   const spot = theme.accent;
 
   const svg = (
