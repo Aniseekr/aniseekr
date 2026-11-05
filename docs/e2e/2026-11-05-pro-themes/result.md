@@ -32,10 +32,29 @@ Phase B：patch 全部還原成分支程式碼，冷啟動 → 遷移第一次�
 ## 沒驗到 / 限制
 - **UNVERIFIED** 真的切換成新 alternate icon：要 Pro，模擬器不能購買（沒有 RevenueCat key）。只驗到 icon 有註冊進 `Info.plist`。
 - **UNVERIFIED** 購買流程本身（同上）。
-- **UNVERIFIED** Android：字型 `fontFamily`、adaptive icon 都沒在 Android 跑。
+- Android 見下方「Android（S20 FE）」段；購買與切換 icon 在 Android 同樣 UNVERIFIED。
 - zh-Hant 付費牆沒截圖（字串在 json，i18n parity 測試過）。
 - 限制（設計如此，不是 bug）：外觀字型只用在拉丁字；中文 UI 的標題仍是系統字（`A-*` 截圖）。紋理只畫在 `ThemedSurface` 裡；收藏、巡禮 hub 的整頁背景各自畫，所以紋理主要出現在卡片／個人頁，整頁背景要另外做共用容器。
 - 小觀察（非本次範圍）：「加入收藏」sheet 的狀態名稱在中文 UI 是英文寫死。
+
+## Android（S20 FE，Android 13）— 2026-11-05 17:04–17:10
+Build：合併後 `6e5b919` 的 debug dev client，獨立 package `com.kidneyweakx.aniseekr.themes`（未 commit 的 `app.config.js`），Metro :8085（獨立 TMPDIR + `--clear`）。為了能套用每個主題，暫時 `PREMIUM_ENABLED=false`（只做視覺檢查；鎖跟付費牆已在 iOS 驗過）。巡覽 harness 同 iOS：呼叫真實 `setTheme`/`setThemeMode`/router，host helper 透過 `adb reverse` + `adb exec-out screencap` 截圖。英文 UI。
+基準狀態：手機上原本只有 `com.kidneyweakx.aniseekr`、`.e2e`；飛航 ON、Wi-Fi ON。都沒動。
+
+| Case | 預期 | 實際 | 判定 | 證據 |
+|---|---|---|---|---|
+| D0 build 正確 | 跑的是本分支 | 「Seekr Themes」dev client 載入；6 個新主題都套得上 | PASS | `D-*` |
+| D1 OFL 字型在 Android 解析 | DM Serif／Bangers／Righteous，不是退回系統字 | Washi、Yozakura 標題是 DM Serif（有襯線）；Screentone 是 Bangers（斜體全大寫）；Cel 是 Righteous（圓幾何）。Twilight／Natsuzora 本來就沒設外觀字型 → 系統字，符合設計。下伸部（y）沒被裁切 | PASS | `D1-android-display-fonts.png`（由上到下：washi, screentone, cel, yozakura, twilight, natsuzora 的收藏頁標題） |
+| D2 紋理不造成捲動卡頓 | 有紋理主題的 jank% / p90 跟免費主題基準差不多 | 個人頁 8 次 swipe，`gfxinfo`：基準 aniseeker 1.35% / p90 13ms、重複基準 1.34% / 9ms；Washi 0.44% / 10ms、Natsuzora 1.78% / 10ms、Yozakura 0.00% / 9ms；各組約 225 幀，`Slow bitmap uploads` 全部 0 | PASS | `J0-aniseeker.txt`…`J4-aniseeker.txt` |
+| D3 新主題 adaptive icon | Seekr 在安全區內、背景色正確 | APK 的 xxxhdpi 前景疊上各自背景色，圓形與圓角遮罩都 OK；裝置上 `dumpsys package` 看得到 6 個新 activity-alias（Washi…Natsuzora），launcher 只啟用 Default | PASS（圖檔＋註冊）；launcher 上實際切換 UNVERIFIED | `D3-adaptive-icons.png` |
+| D4 ≥3 個新主題 light＋dark | 色盤、卡片邊、字型、紋理都套上 | 6 個主題 × dark/light × 收藏／巡禮／個人頁全部套上；個人頁看得到花瓣（Yozakura）、雲（Natsuzora）、網點（Screentone）；Washi 朱紅印框、Screentone／Cel 墨線 | PASS | `D-<id>-<mode>-{collection,pilgrimage,profile}.png` |
+
+Android 沒驗到：
+- **UNVERIFIED** 購買、實際切換成新 alternate icon（要真的 Pro entitlement，不偽造）。
+- 觀察（非本分支造成）：`app/_layout.tsx` 寫死 `<StatusBar style="light" />`，所有主題的 light 模式狀態列圖示都是白色、在淺色底幾乎看不到。
+- 截圖裡右側的齒輪是 Expo dev menu 浮動按鈕，不是 app UI。
+
+Android 清理：已解除安裝 `com.kidneyweakx.aniseekr.themes`、移除 `adb reverse`、停 Metro :8085 和 helper；刪 `android/`、`app.config.js`、`node_modules` symlink、`components/__e2e/`；`FeatureFlags.ts`、`app/_layout.tsx` 還原。手機的 prod／`.e2e` app 與飛航／Wi-Fi 狀態沒動。
 
 ## 清理
 - 已解除安裝 `kidneyweakx.aniseeker.themes`，刪 `ios/`、`app.config.js`、`node_modules` symlink、Metro :8082、helper。pro-export 的 `kidneyweakx.aniseeker` 沒碰。

@@ -29,3 +29,19 @@ device whose saved theme is premium — the real upgrade path.
 
 Cleanup: uninstall `kidneyweakx.aniseeker.themes`, delete `ios/`, `app.config.js`, Metro 8082; leave the
 shared simulator booted only if another session is using it (else `xcrun simctl shutdown all`).
+
+## Android pass (S20 FE, Android 13) — added 2026-11-05 after merge to feat/uiux-cleanup (6e5b919)
+Build: debug dev client, separate package `com.kidneyweakx.aniseekr.themes` (uncommitted
+`app.config.js`, own slug/scheme), arm64 only, Metro :8085 with its own TMPDIR. Uncommitted
+`PREMIUM_ENABLED=false` so every theme can be applied (visual checks only; gating was covered on iOS).
+Tour harness as on iOS; host helper uses `adb reverse tcp:8799` + `adb exec-out screencap`.
+
+| ID | Goal | Steps | Expected | Verified at |
+|---|---|---|---|---|
+| D0 | build under test | install, open bundle | app runs this branch (English UI, new themes present) | screenshot |
+| D1 | OFL fonts resolve on Android | English UI; Washi / Screentone / Cel headlines | DM Serif / Bangers / Righteous glyphs, not Roboto/Nunito | zoomed crops of `D-*` |
+| D2 | textures don't jank scrolling | profile screen, 8 `input swipe`s, `dumpsys gfxinfo` reset/read; free baseline vs Washi / Natsuzora / Yozakura, baseline repeated last | skinned janky-% and p90 within run-to-run noise of the two baselines | `J*.txt` |
+| D3 | adaptive icons for new themes | inspect built APK mipmaps for the 6 aliases, composite fg over bg with circle + squircle masks | Seekr inside the safe zone, right backdrop colour | composited PNGs |
+| D4 | light + dark, ≥3 new themes | tour: all 6 themes × dark/light × collection, pilgrimage, profile | palette, edges, fonts render | `D-*` |
+Out of scope / stays UNVERIFIED: purchase, actually switching to a new alternate icon (needs a real Pro entitlement).
+Cleanup: uninstall `.themes` (`.offline` was already removed by its owner), delete `android/`, `app.config.js`, symlink, Metro, helper; revert the flag + harness.
