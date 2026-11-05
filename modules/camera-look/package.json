@@ -1,0 +1,9 @@
+{
+  "name": "aniseekr-camera-look",
+  "version": "0.1.0",
+  "description": "AniSeekr camera film looks: a colour matrix on the live preview and on the saved photo",
+  "license": "Apache-2.0",
+  "private": true,
+  "main": "src/index.tsx",
+  "react-native": "src/index.tsx"
+}

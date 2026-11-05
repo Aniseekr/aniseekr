@@ -56,3 +56,6 @@ infra/terraform/*.tfplan
 docs/e2e/**
 !docs/e2e/**/
 !docs/e2e/**/*.md
+
+# Gradle output of local Expo modules
+modules/*/android/build/

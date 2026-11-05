@@ -39,11 +39,13 @@ function unsupportedMessage(
 }
 
 const FEATURES: {
-  icon: 'block' | 'palette';
+  icon: keyof typeof MaterialIcons.glyphMap;
   labelKey: TranslationKey;
 }[] = [
   { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks' },
+  { icon: 'photo-library', labelKey: 'subscription.batchImport' },
 ];
 
 export interface PaywallSheetProps {

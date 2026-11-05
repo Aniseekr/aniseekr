@@ -15,9 +15,16 @@ interface ImportResultCardProps {
   summary: PhotoImportSummary;
   onOpenWork: (workKey: string) => void;
   onDismiss: () => void;
+  /** Free users: a pointer to the Pro batch import. */
+  onUpgrade?: () => void;
 }
 
-function ImportResultCardImpl({ summary, onOpenWork, onDismiss }: ImportResultCardProps) {
+function ImportResultCardImpl({
+  summary,
+  onOpenWork,
+  onDismiss,
+  onUpgrade,
+}: ImportResultCardProps) {
   const t = useT();
   const { theme } = useTheme();
   const notes = [
@@ -80,6 +87,21 @@ function ImportResultCardImpl({ summary, onOpenWork, onDismiss }: ImportResultCa
           <ThemedText variant="captionSmall" tone="tertiary">
             {t('pilgrimage.album.importNoMatch')}
           </ThemedText>
+        ) : null}
+        {onUpgrade ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onUpgrade}
+            style={({ pressed }) => [
+              styles.workRow,
+              { borderTopColor: theme.glassBorder, opacity: pressed ? 0.8 : 1 },
+            ]}>
+            <Ionicons name="albums-outline" size={16} color={theme.accent} />
+            <ThemedText variant="captionSmall" weight="700" style={[styles.workText, { color: theme.accent }]}>
+              {t('pilgrimage.album.batchUpsell')}
+            </ThemedText>
+            <Ionicons name="chevron-forward" size={14} color={theme.text.tertiary} />
+          </Pressable>
         ) : null}
       </ThemedSurface>
     </Animated.View>

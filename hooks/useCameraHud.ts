@@ -60,6 +60,8 @@ export interface CameraHudState {
   settingsOpen: boolean;
   quickControlsOpen: boolean;
   sceneSwitcherOpen: boolean;
+  /** Film-look tray above the zoom band. */
+  lookTrayOpen: boolean;
 
   // --- Transient toasts (set-only; the toast components self-dismiss) ---
   captureModeToast: CaptureModeToastValue | null;
@@ -91,6 +93,7 @@ export const INITIAL_CAMERA_HUD: CameraHudState = {
   settingsOpen: false,
   quickControlsOpen: true,
   sceneSwitcherOpen: false,
+  lookTrayOpen: false,
 
   captureModeToast: null,
   autoCaptureToast: null,
