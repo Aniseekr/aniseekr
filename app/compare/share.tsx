@@ -106,10 +106,9 @@ export default function ShareComparisonScreen() {
   const matchScore = getShareMatchScore(params);
   const frameValid = getShareFrameValid(params);
   const locationText = formatShareLocation(params);
-  const imageUrl =
-    getStringParam(params, 'referenceKind') === 'imported'
-      ? getStringParam(params, 'imageUrl') ?? ''
-      : '';
+  // preview.tsx only forwards an imported reference (it blanks `imageUrl`
+  // otherwise) and never sends `referenceKind`, so trust the param as is.
+  const imageUrl = getStringParam(params, 'imageUrl') ?? '';
   const shotUri = getStringParam(params, 'shotUri') ?? '';
   // Captured shot dimensions (orientation truth) forwarded by preview.tsx via
   // buildShareRouteParams. `0` / missing → unknown; the helpers fall back to
