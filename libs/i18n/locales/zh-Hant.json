@@ -408,13 +408,17 @@
       "empty": "空白",
       "entries": "{count} 筆",
       "expired": "{count} 筆已過期",
+      "offlinePacksDesc": "清除快取時會保留。",
+      "offlinePacksEmpty": "還沒有離線行程包。可以在作品的巡禮頁下載。",
+      "offlinePacksTotal": "裝置上的離線行程包",
       "pruneExpired": "清理已過期項目",
       "pruneExpiredDesc": "只清除已超過 TTL 的快取項目",
       "recalculate": "重新計算用量",
       "section": {
         "actions": "操作",
         "buckets": "快取分區",
-        "overview": "儲存概覽"
+        "overview": "儲存概覽",
+        "offlinePacks": "離線行程包"
       },
       "subtitle": "管理離線資料與儲存用量"
     },
@@ -1307,6 +1311,28 @@
       "mountDismiss": "留在自由拍攝",
       "entryA11y": "自由拍攝相機"
     },
+    "offlinePack": {
+      "title": "離線行程包",
+      "pitch": "景點、地址與周邊地圖，約 {size}。沒有訊號也能用。",
+      "download": "下載離線使用",
+      "confirmTitle": "下載離線使用？",
+      "confirmMessage": "約 {size}：{spots} 個景點與周邊地圖。之後可在「設定 → 快取」隨時刪除。",
+      "preparing": "準備下載…",
+      "downloading": "正在下載地圖… {percent}%",
+      "ready": "離線副本 · {date}",
+      "readyDetail": "{size} · {spots} 個景點",
+      "partial": "地圖只存了一部分（50 MB 上限）",
+      "noMap": "沒有定位的景點，所以沒有存地圖",
+      "updateAvailable": "Atlas 有較新的資料",
+      "update": "更新",
+      "failed": "下載失敗",
+      "retry": "重試",
+      "servedOffline": "沒有網路，顯示離線副本 · {date}",
+      "proBadge": "Pro",
+      "delete": "刪除",
+      "deleteTitle": "刪除離線行程包？",
+      "deleteMessage": "之後看「{title}」需要網路。你匯入的截圖會保留。"
+    },
     "detail": {
       "bearing": {
         "n": "北",
@@ -1327,6 +1353,7 @@
       "emptyNoData": "這部動畫尚無巡禮資料。",
       "emptySearch": "沒有符合的搜尋結果。",
       "errorTitle": "無法載入巡禮",
+      "errorRetry": "再試一次",
       "filter": {
         "all": "全部",
         "unvisited": "還沒去",
@@ -2336,6 +2363,7 @@
     "allPremiumThemes": "所有進階主題",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "無廣告",
+    "offlineTripPack": "離線行程包，在日本沒訊號也能用",
     "privacyPolicy": "隱私權政策",
     "purchaseFailed": "購買失敗",
     "termsOfService": "服務條款",

@@ -39,11 +39,12 @@ function unsupportedMessage(
 }
 
 const FEATURES: {
-  icon: 'block' | 'palette';
+  icon: 'block' | 'palette' | 'cloud-download';
   labelKey: TranslationKey;
 }[] = [
   { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'cloud-download', labelKey: 'subscription.offlineTripPack' },
 ];
 
 export interface PaywallSheetProps {

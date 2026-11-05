@@ -408,13 +408,17 @@
       "empty": "Empty",
       "entries": "{count} entries",
       "expired": "{count} expired",
+      "offlinePacksDesc": "Kept when you clear the cache.",
+      "offlinePacksEmpty": "No offline packs yet. Download one from a work’s pilgrimage page.",
+      "offlinePacksTotal": "Offline packs on device",
       "pruneExpired": "Prune expired entries",
       "pruneExpiredDesc": "Only clears TTL-based cache entries that are already expired",
       "recalculate": "Recalculate usage",
       "section": {
         "actions": "Actions",
         "buckets": "Cache Buckets",
-        "overview": "Storage Overview"
+        "overview": "Storage Overview",
+        "offlinePacks": "Offline Trip Packs"
       },
       "subtitle": "Manage offline data and storage usage"
     },
@@ -1307,6 +1311,28 @@
       "mountDismiss": "Keep as free capture",
       "entryA11y": "Free capture camera"
     },
+    "offlinePack": {
+      "title": "Offline trip pack",
+      "pitch": "Spots, addresses and the map around them, about {size}. Works with no signal.",
+      "download": "Download for offline",
+      "confirmTitle": "Download for offline?",
+      "confirmMessage": "About {size}: {spots} spots and the map around them. Delete it any time in Settings → Cache.",
+      "preparing": "Preparing download…",
+      "downloading": "Downloading map… {percent}%",
+      "ready": "Offline copy · {date}",
+      "readyDetail": "{size} · {spots} spots",
+      "partial": "Map partly saved (50 MB limit)",
+      "noMap": "No located spots, so no map was saved",
+      "updateAvailable": "Atlas has newer data",
+      "update": "Update",
+      "failed": "Download failed",
+      "retry": "Retry",
+      "servedOffline": "No connection — showing offline copy · {date}",
+      "proBadge": "Pro",
+      "delete": "Delete",
+      "deleteTitle": "Delete offline pack?",
+      "deleteMessage": "{title} will need a connection again. Screenshots you imported are kept."
+    },
     "detail": {
       "bearing": {
         "n": "N",
@@ -1327,6 +1353,7 @@
       "emptyNoData": "No pilgrimage data yet for this anime.",
       "emptySearch": "No spots match this search.",
       "errorTitle": "Couldn't load pilgrimage",
+      "errorRetry": "Try again",
       "filter": {
         "all": "All",
         "unvisited": "Not yet",
@@ -2336,6 +2363,7 @@
     "allPremiumThemes": "All premium themes",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "No ads",
+    "offlineTripPack": "Offline trip packs for Japan with no signal",
     "privacyPolicy": "Privacy Policy",
     "purchaseFailed": "Purchase failed",
     "termsOfService": "Terms of Service",

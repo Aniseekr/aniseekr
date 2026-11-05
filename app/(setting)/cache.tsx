@@ -27,6 +27,7 @@ import {
   type StorageOverview,
 } from '../../libs/services/cache/cache-manager';
 import { useT } from '../../libs/i18n';
+import { OfflinePacksSection } from '../../components/settings/OfflinePacksSection';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -214,6 +215,8 @@ export default function CacheSettingsScreen() {
           }
         />
       </SettingsSection>
+
+      <OfflinePacksSection />
 
       <SettingsSection title={t('settings.cacheScreen.section.buckets')}>
         {snapshots.length === 0 && loading ? (
