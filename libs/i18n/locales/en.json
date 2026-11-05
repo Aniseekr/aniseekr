@@ -2397,14 +2397,22 @@
         "nightLines": "Night lines",
         "oneEye": "One eye",
         "mangaOrange": "Manga orange",
-        "mangaNight": "Manga night"
+        "mangaNight": "Manga night",
+        "washi": "Washi",
+        "screentone": "Screentone",
+        "twilight": "Twilight Platform",
+        "yozakura": "Yozakura",
+        "cel": "Cel",
+        "natsuzora": "Natsuzora"
       },
       "androidTitle": "Switch app icon?",
       "androidBody": "Android may close Aniseekr to apply the new icon. Just open it again from your home screen.",
       "confirm": "Switch",
       "cancel": "Cancel",
       "failed": "Couldn't change the icon. Try again.",
-      "unsupported": "This device can't change app icons."
+      "unsupported": "This device can't change app icons.",
+      "themeIcons": "Theme icons",
+      "matchesTheme": "Matches your theme"
     }
   }
 }

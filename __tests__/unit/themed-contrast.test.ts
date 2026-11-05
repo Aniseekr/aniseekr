@@ -28,6 +28,18 @@ const THEME_ACCENTS = [
   '#FDBA74', // sunset accentLight
   '#F472B6', // candy accent
   '#F9A8D4', // candy accentLight
+  '#D9452F', // washi accent
+  '#E8735F', // washi accentLight
+  '#0091C2', // screentone accent
+  '#3DB4DE', // screentone accentLight
+  '#FF8A3D', // twilight accent
+  '#FFAD73', // twilight accentLight
+  '#F28DB7', // yozakura accent
+  '#F8B5D1', // yozakura accentLight
+  '#FF6B57', // cel accent
+  '#FF9A8A', // cel accentLight
+  '#2F8FF5', // natsuzora accent
+  '#6DB1FF', // natsuzora accentLight
 ];
 const ACCENT_PRESET_HEXES = [
   '#FF9900',

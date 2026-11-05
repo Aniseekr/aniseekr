@@ -2397,14 +2397,22 @@
         "nightLines": "夜之集中線",
         "oneEye": "獨眼",
         "mangaOrange": "漫畫橘",
-        "mangaNight": "漫畫夜"
+        "mangaNight": "漫畫夜",
+        "washi": "和紙",
+        "screentone": "網點",
+        "twilight": "黃昏月台",
+        "yozakura": "夜櫻",
+        "cel": "賽璐珞",
+        "natsuzora": "夏空"
       },
       "androidTitle": "要換 App 圖示嗎？",
       "androidBody": "Android 可能會先關掉 Aniseekr 才能套用新圖示，從主畫面再打開就好。",
       "confirm": "換",
       "cancel": "取消",
       "failed": "圖示換不了，再試一次。",
-      "unsupported": "這台裝置不能換 App 圖示。"
+      "unsupported": "這台裝置不能換 App 圖示。",
+      "themeIcons": "主題圖示",
+      "matchesTheme": "配合目前主題"
     }
   }
 }

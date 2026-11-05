@@ -3,6 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle, type ViewInstance } f
 import { Ink, Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { withAlpha } from './contrast';
+import { SkinTexture } from './SkinTexture';
 
 export type SurfaceVariant = 'card' | 'elevated' | 'outlined' | 'sheet';
 
@@ -41,6 +42,18 @@ export function ThemedSurface({
     backgroundColor = theme.background.primary;
   }
 
+  // Premium skin edge. Same radius and no shadow (v6); only the frame changes.
+  const edge = theme.skin?.edge;
+  if (edge === 'ink' && variant !== 'sheet') {
+    borderColor = theme.text.primary;
+    borderWidth = Ink.line;
+  } else if (edge === 'seal' && variant !== 'sheet') {
+    borderColor = theme.accent;
+    borderWidth = variant === 'elevated' ? Ink.line : Ink.hairline;
+  } else if (edge === 'glass' && variant !== 'outlined') {
+    borderColor = withAlpha(theme.accentLight, 0.32);
+  }
+
   const padding = padded === true ? Spacing.md : typeof padded === 'number' ? padded : 0;
 
   return (
@@ -57,6 +70,7 @@ export function ThemedSurface({
         },
         style,
       ]}>
+      {variant !== 'outlined' ? <SkinTexture theme={theme} /> : null}
       {children}
     </View>
   );

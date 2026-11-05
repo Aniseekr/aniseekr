@@ -167,7 +167,10 @@
               "./assets/fonts/Nunito-Regular.ttf",
               "./assets/fonts/Nunito-SemiBold.ttf",
               "./assets/fonts/Nunito-Bold.ttf",
-              "./assets/fonts/Nunito-ExtraBold.ttf"
+              "./assets/fonts/Nunito-ExtraBold.ttf",
+              "./assets/fonts/DMSerifDisplay-Regular.ttf",
+              "./assets/fonts/Bangers-Regular.ttf",
+              "./assets/fonts/Righteous-Regular.ttf"
             ]
           },
           "android": {
@@ -190,6 +193,33 @@
                   {
                     "path": "./assets/fonts/Nunito-ExtraBold.ttf",
                     "weight": 800
+                  }
+                ]
+              },
+              {
+                "fontFamily": "DMSerifDisplay",
+                "fontDefinitions": [
+                  {
+                    "path": "./assets/fonts/DMSerifDisplay-Regular.ttf",
+                    "weight": 400
+                  }
+                ]
+              },
+              {
+                "fontFamily": "Bangers",
+                "fontDefinitions": [
+                  {
+                    "path": "./assets/fonts/Bangers-Regular.ttf",
+                    "weight": 400
+                  }
+                ]
+              },
+              {
+                "fontFamily": "Righteous",
+                "fontDefinitions": [
+                  {
+                    "path": "./assets/fonts/Righteous-Regular.ttf",
+                    "weight": 400
                   }
                 ]
               }
@@ -230,6 +260,54 @@
             "android": {
               "foregroundImage": "./assets/app-icons/manga-night-android.png",
               "backgroundColor": "#0B0B0B"
+            }
+          },
+          {
+            "name": "Washi",
+            "ios": "./assets/app-icons/washi.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/washi-android.png",
+              "backgroundColor": "#F5EFE1"
+            }
+          },
+          {
+            "name": "Screentone",
+            "ios": "./assets/app-icons/screentone.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/screentone-android.png",
+              "backgroundColor": "#FFFFFF"
+            }
+          },
+          {
+            "name": "Twilight",
+            "ios": "./assets/app-icons/twilight.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/twilight-android.png",
+              "backgroundColor": "#B65A5C"
+            }
+          },
+          {
+            "name": "Yozakura",
+            "ios": "./assets/app-icons/yozakura.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/yozakura-android.png",
+              "backgroundColor": "#0A0F26"
+            }
+          },
+          {
+            "name": "Cel",
+            "ios": "./assets/app-icons/cel.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/cel-android.png",
+              "backgroundColor": "#3BB8A6"
+            }
+          },
+          {
+            "name": "Natsuzora",
+            "ios": "./assets/app-icons/natsuzora.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/natsuzora-android.png",
+              "backgroundColor": "#7DB8FA"
             }
           }
         ]

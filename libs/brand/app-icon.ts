@@ -16,7 +16,18 @@ try {
 export const supportsAlternateIcons = mod?.supportsAlternateIcons === true;
 
 /** Alternate icon names; must match the plugin entry in app.json. */
-export type AppIconName = 'NightLines' | 'OneEye' | 'MangaOrange' | 'MangaNight';
+export type AppIconName =
+  | 'NightLines'
+  | 'OneEye'
+  | 'MangaOrange'
+  | 'MangaNight'
+  // Premium theme skins (Pro): see ThemeSkin.appIcon.
+  | 'Washi'
+  | 'Screentone'
+  | 'Twilight'
+  | 'Yozakura'
+  | 'Cel'
+  | 'Natsuzora';
 
 export function getAppIconName(): string | null {
   return supportsAlternateIcons && mod ? mod.getAppIconName() : null;
