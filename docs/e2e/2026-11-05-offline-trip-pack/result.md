@@ -20,18 +20,19 @@ Pro：正式設定為非 Pro（G1）。D1 起暫時把 `PREMIUM_ENABLED` 改 `fa
 | R1 恢復網路 | 不再顯示「沒有網路」 | 封面載入，列回到「離線副本 · 2026/11/05」 | PASS | `R1-online-again.png` |
 | F1 下載中斷線→重試 | 失敗＋重試，續傳 | ゆるキャン△（估「約 50 MB」）下載到 13% 時關 Wi-Fi →「下載失敗」＋「重試」。開回 Wi-Fi 重試：已有 213 tiles，續傳完成「30 MB · 244 個景點」，沒有標成部分地圖 | PASS | `F1-b-downloading.png`、`F1-c-failed.png`、`F1-e-done.png` |
 | X1 刪除 | 只刪自己的 tiles，最後整個資料夾移除 | 刪氷菓：841 → 776 tiles（共用的 16 張留給ゆるキャン△）；再刪ゆるキャン△：`files/offline-packs` 不存在，區塊顯示空狀態 | PASS | `X1-a.png`、`X1-c-after-hyouka.png`、`X1-d-empty.png` |
-| GF 字型修正後重下載 | 新 glyph 範圍存在、掛川離線不再報錯 | 手機在重跑前從 USB 消失（`adb devices` 與 USB 樹都沒有） | BLOCKED | — |
+| GF 字型修正後重下載 | 新 glyph 範圍存在、掛川離線不再報錯 | 第一次：手機在重跑前從 USB 消失 → BLOCKED。重跑（JS = `feat/uiux-cleanup` 6e5b919，含 63bee7a；同一個 dev client）：線上重下載氷菓 → 3 個字型各 8 個範圍都在（`1024-1279.pbf` 125 KB）、81 tiles。關 Wi-Fi（ping「Network is unreachable」）、刪 `mbgl-offline.db`、冷啟動 → 點千反田邸のモデル、收起 sheet、照上次的方式平移掛川一帶：沒有錯誤 toast；logcat 的 `glyph range` 0 筆、Metro 的 `Mbgl`/`ERROR` 0 筆（上次同一個畫面報 `Failed to load glyph range 1024-1279`）；`mbgl-offline.db` 0 tiles / 0 resources，底圖來自 pack | BLOCKED → 重跑 PASS | `GF-2-ready.png`、`GF-4-list.png`、`GF-7-kakegawa-panned.png` |
 | U1 dataVersion 變更→更新 | 提供「更新」 | 需要 Atlas 發新版，只在單元測試 PILG-109 | UNVERIFIED | — |
 
-整體：BLOCKED（GF）＋ UNVERIFIED（U1）。其餘 in-scope 案例都 PASS。
+整體：UNVERIFIED（只剩 U1，要等 Atlas 發新版）。其餘 in-scope 案例都 PASS，GF 已重跑通過。
 
 ## 過程中修掉的 bug
-- O2 時 dev 畫面報 `Failed to load glyph range 1024-1279 for font stack Noto-Sans-Regular`（掛川附近有西里爾字母的地名；只少那幾個字，地圖照常）。已補 Greek、Cyrillic、字母符號三個範圍。用 curl 確認這 9 個檔案在 OpenFreeMap 都是 200（每個 42–135 KB）。裝置重下載（GF）因斷線未跑。
+- O2 時 dev 畫面報 `Failed to load glyph range 1024-1279 for font stack Noto-Sans-Regular`（掛川附近有西里爾字母的地名；只少那幾個字，地圖照常）。已補 Greek、Cyrillic、字母符號三個範圍。用 curl 確認這 9 個檔案在 OpenFreeMap 都是 200（每個 42–135 KB），手機上重跑 GF 已通過。
 
 ## 偏差
 - 第一次 Metro 打包到 pro-themes worktree 的 `app/`（多個 worktree 共用 node_modules symlink，transform cache 裡 expo-router 的 app root 是別人的）。改用獨立 TMPDIR 啟動 Metro 後重跑，以上結果都是重跑的。
 - 中途 `adb reverse` 被別的 session 全部清掉，之後手機斷線。
-- 手機斷線時：Wi-Fi 已開回（回到基線）、沒有 pack 檔，但測試用 `com.kidneyweakx.aniseekr.offline` **還沒解除安裝**，要接回手機後執行 `adb uninstall com.kidneyweakx.aniseekr.offline`。
+- GF 重跑這次沒有先「清除所有快取」，所以離線時資料來自既有的 Atlas 快取，列顯示「離線副本 · 2026/11/05」，不是「沒有網路…」字樣（設計如此：先用線上／快取，拿不到才讀 pack）。pack 讀取路徑已在 O2 驗過。
+- 清理：測試 app `com.kidneyweakx.aniseekr.offline` 已解除安裝，`adb reverse tcp:8084` 已移除，手機回到基線（飛航＋Wi-Fi 開），`PREMIUM_ENABLED` 已改回。
 
 ## 觀察（未改）
 - O4、F1 的錯誤說明是原始例外字串（UnknownHostException、`FileSystem.downloadFileAsync …`），真實但不友善，可改成本地化文案。
