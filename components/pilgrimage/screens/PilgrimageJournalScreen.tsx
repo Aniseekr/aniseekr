@@ -38,10 +38,9 @@ import {
   buildTimeline,
   type TimelineTrip,
 } from '../../../libs/services/pilgrimage/journal-timeline';
-import {
-  importTripPhotos,
-  type PhotoImportSummary,
-} from '../../../libs/services/pilgrimage/photo-import';
+import type { PhotoImportSummary } from '../../../libs/services/pilgrimage/photo-import';
+import { usePhotoImport } from '../../../hooks/usePhotoImport';
+import { PaywallSheet } from '../../../components/subscription/PaywallSheet';
 
 type AlbumEntry = PilgrimageAlbumEntry;
 type JournalSegment = 'timeline' | 'works' | 'stamps';
@@ -69,7 +68,6 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
   const [segment, setSegment] = useState<JournalSegment>('timeline');
   const { entries, folders, stats, deleteEntry, reload } = usePilgrimageJournalData();
   const trips = useMemo(() => buildTimeline(entries), [entries]);
-  const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<PhotoImportSummary | null>(null);
   // A work matched by an import loads in the background; keep its folder open
   // while it does instead of bouncing back to the journal root.
@@ -85,27 +83,33 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
       setSelectedAnimeId(null);
   }, [selectedAnimeId, selectedFolder]);
 
-  const importPhotos = useCallback(async () => {
-    if (importing) return;
-    hapticsBridge.tap();
-    setImporting(true);
-    try {
-      const summary = await importTripPhotos();
-      if (summary) {
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const photoImport = usePhotoImport({
+    origin: 'journal',
+    onSummary: useCallback(
+      (summary: PhotoImportSummary) => {
         reload();
         setSegment('timeline');
         setImportSummary(summary);
         scrollRef.current?.scrollTo({ y: 0, animated: true });
         hapticsBridge.success();
-      }
-    } catch (error) {
-      console.warn('[PilgrimageAlbum] import failed:', error);
-      hapticsBridge.error();
-      Alert.alert(t('pilgrimage.album.importFailed'));
-    } finally {
-      setImporting(false);
-    }
-  }, [importing, reload, t]);
+      },
+      [reload]
+    ),
+    onError: useCallback(
+      (error: unknown) => {
+        console.warn('[PilgrimageAlbum] import failed:', error);
+        hapticsBridge.error();
+        Alert.alert(t('pilgrimage.album.importFailed'));
+      },
+      [t]
+    ),
+  });
+  const importing = photoImport.busy;
+  const importPhotos = useCallback(() => {
+    hapticsBridge.tap();
+    void photoImport.start();
+  }, [photoImport]);
   const openWorkFolder = useCallback((workKey: string) => {
     hapticsBridge.tap();
     cameFromUrlRef.current = false;
@@ -223,6 +227,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
                   summary={importSummary}
                   onOpenWork={openWorkFolder}
                   onDismiss={() => setImportSummary(null)}
+                  onUpgrade={photoImport.isPro ? undefined : () => setPaywallOpen(true)}
                 />
               ) : null}
               <View style={styles.statsRow}>
@@ -294,6 +299,7 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
           )}
         </ScrollView>
       </SafeAreaView>
+      <PaywallSheet visible={paywallOpen} onClose={() => setPaywallOpen(false)} />
     </View>
   );
 }

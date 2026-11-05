@@ -11,7 +11,8 @@ import { hapticsBridge } from '../modules/haptics/hapticsBridge';
 import { findCaptureByUri, loadCapturesV2Sync } from '../libs/services/pilgrimage/captures';
 import type { CaptureSessionShot } from '../libs/services/pilgrimage/capture-session';
 import { locationService } from '../libs/services/pilgrimage/location-service';
-import { importTripPhotos } from '../libs/services/pilgrimage/photo-import';
+import type { PhotoImportSummary } from '../libs/services/pilgrimage/photo-import';
+import { usePhotoImport } from './usePhotoImport';
 import { buildJournalPreviewParams } from '../libs/services/pilgrimage/preview-capture';
 import {
   fileRecordedPhoto,
@@ -100,10 +101,8 @@ export function useRecordCapture({ target, themeColor, showToast }: UseRecordCap
    * Import from the library the way the journal does: each photo keeps its own
    * time and place (never the phone's current position). Confirms in a toast.
    */
-  const importFromLibrary = useCallback(async () => {
-    try {
-      const summary = await importTripPhotos();
-      if (!summary) return;
+  const showImportSummary = useCallback(
+    (summary: PhotoImportSummary) => {
       hapticsBridge.success();
       const works = summary.works.map((work) => work.title).join('、');
       showToast({
@@ -118,12 +117,22 @@ export function useRecordCapture({ target, themeColor, showToast }: UseRecordCap
             ? { hint: t('pilgrimage.album.importNoPlace', { count: summary.noPlace }) }
             : {}),
       });
-    } catch (error) {
-      console.warn('[camera] library import failed', error);
-      hapticsBridge.error();
-      showToast({ icon: 'alert-circle', label: t('pilgrimage.album.importFailed') });
-    }
-  }, [showToast, t]);
+    },
+    [showToast, t]
+  );
+  const photoImport = usePhotoImport({
+    origin: 'camera',
+    onSummary: showImportSummary,
+    onError: useCallback(
+      (error: unknown) => {
+        console.warn('[camera] library import failed', error);
+        hapticsBridge.error();
+        showToast({ icon: 'alert-circle', label: t('pilgrimage.album.importFailed') });
+      },
+      [showToast, t]
+    ),
+  });
+  const importFromLibrary = photoImport.start;
 
   return { record, openLatest, importFromLibrary };
 }
