@@ -1,7 +1,7 @@
 import { IDMappingService } from '../sync/id-mapping-service';
 import { atlasClient, AtlasClient } from './atlas/atlas-client';
 import { resolveAtlasWork } from './atlas/atlas-resolver';
-import type { AtlasWork } from './atlas/types';
+import type { AtlasWork, AtlasWorkDetail } from './atlas/types';
 import { LocationService, locationService, type LatLng } from './location-service';
 import type { PilgrimageSpot, PilgrimageWork } from './types';
 
@@ -54,8 +54,25 @@ export function animeDetailAtlasContext(anime: AnimeDetailAtlasSource): AnimeCon
   };
 }
 
+/** Reads a downloaded offline trip pack (see offline-pack/offline-pack-store). */
+export interface OfflinePackReader {
+  readWork(key: string): Promise<{
+    manifest: { downloadedAt: number };
+    entry: AtlasWork;
+    detail: AtlasWorkDetail;
+  } | null>;
+}
+
+const defaultOfflinePacks: OfflinePackReader = {
+  readWork: async (key) => {
+    const { offlinePackStore } = await import('./offline-pack/offline-pack-store');
+    return offlinePackStore.readWork(key);
+  },
+};
+
 interface RepositoryOptions {
   client?: AtlasClient;
+  offlinePacks?: OfflinePackReader;
   mappingService?: IDMappingService;
   locationService?: LocationService;
 }
@@ -64,9 +81,11 @@ export class PilgrimageRepository {
   private readonly client: AtlasClient;
   private readonly mappingService: IDMappingService;
   private readonly locationService: LocationService;
+  private readonly offlinePacks: OfflinePackReader;
 
   constructor(options: RepositoryOptions = {}) {
     this.client = options.client ?? atlasClient;
+    this.offlinePacks = options.offlinePacks ?? defaultOfflinePacks;
     this.mappingService = options.mappingService ?? IDMappingService.getInstance();
     this.locationService = options.locationService ?? locationService;
   }
@@ -79,9 +98,7 @@ export class PilgrimageRepository {
     }
     const key = await resolveAtlasWork(resolutionContext, works);
     if (!key) return null;
-    const indexEntry = works.find((work) => work.key === key);
-    const detail = await this.client.work(key);
-    return detail && indexEntry ? this.toPilgrimageWork(indexEntry, detail) : null;
+    return this.loadWork(key, works.find((work) => work.key === key));
   }
 
   async getWorksIndex(): Promise<AtlasWork[]> {
@@ -93,15 +110,35 @@ export class PilgrimageRepository {
       (work.bgm ?? []).includes(bangumiId)
     );
     if (!indexEntry) return null;
-    const detail = await this.client.work(indexEntry.key);
-    return detail ? this.toPilgrimageWork(indexEntry, detail) : null;
+    return this.loadWork(indexEntry.key, indexEntry);
   }
 
   async getSpotsByKey(key: string): Promise<PilgrimageWork | null> {
     const indexEntry = (await this.client.works()).works.find((work) => work.key === key);
-    if (!indexEntry) return null;
-    const detail = await this.client.work(indexEntry.key);
-    return detail ? this.toPilgrimageWork(indexEntry, detail) : null;
+    return this.loadWork(key, indexEntry);
+  }
+
+  /**
+   * Live Atlas (network or CacheService) first. Only when that throws — no
+   * network and no cached copy — does a downloaded offline pack answer, and
+   * the result carries `offlineCopy` so it is never shown as fresh data.
+   */
+  private async loadWork(key: string, indexEntry: AtlasWork | undefined) {
+    try {
+      if (!indexEntry) throw new Error(`Atlas work not in index: ${key}`);
+      const detail = await this.client.work(indexEntry.key);
+      return detail ? this.toPilgrimageWork(indexEntry, detail) : null;
+    } catch (error) {
+      const pack = await this.offlinePacks.readWork(key).catch(() => null);
+      if (!pack) {
+        if (!indexEntry) return null;
+        throw error;
+      }
+      return {
+        ...this.toPilgrimageWork(pack.entry, pack.detail),
+        offlineCopy: { downloadedAt: pack.manifest.downloadedAt },
+      };
+    }
   }
 
   async getDetailedPointsByBangumiId(bangumiId: number): Promise<PilgrimageSpot[]> {

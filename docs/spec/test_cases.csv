@@ -242,3 +242,11 @@ PILG-102,Pilgrimage,deterministic,P0,Missing record context recovery,Captures an
 PILG-103,Pilgrimage,deterministic,P0,Visited recovery from legacy spot index,Visited ids recover Bangumi id and coordinates from anitabi_spots,mapping,active
 PILG-104,Pilgrimage,deterministic,P0,Legacy spot index cleanup ordering,anitabi_spots is dropped only after all user store writes succeed,error-handling,active
 PILG-105,Pilgrimage,deterministic,P0,Missing legacy spot index,Migration tolerates an absent anitabi_spots table and issues defensive cleanup,nullability,active
+PILG-106,Pilgrimage,deterministic,P0,Offline pack tile plan within provider limit,Pack tile plan is at most 3000 unique tiles low zoom first and always keeps the z14 tile under every located spot,boundary,active
+PILG-107,Pilgrimage,deterministic,P0,Offline pack ignores unlocated spots,Spots with null NaN out-of-range or 0/0 coordinates add no tiles and tile indexes stay in range,nullability,active
+PILG-108,Pilgrimage,deterministic,P0,Offline pack manifest parsing,Stored manifest round-trips and malformed or foreign-version manifests are rejected,parsing,active
+PILG-109,Pilgrimage,deterministic,P0,Offline pack update status,Update is offered only when the Atlas dataVersion differs; unknown latest version never claims current or outdated; download and failure states win,versioning,active
+PILG-110,Pilgrimage,deterministic,P0,Offline pack bounded download,Tile download runs at most 4 requests at once stops under the 50 MB cap as partial resumes from tiles on disk and fails on network errors,boundary,active
+PILG-111,Pilgrimage,deterministic,P0,Offline pack map style,Offline style references only on-device tiles glyphs and sprites and drops sources the pack does not store,mapping,active
+PILG-112,Pilgrimage,deterministic,P0,Offline pack read fallback,When Atlas network and cache fail a stored pack answers with an offline-copy date; live data is never labelled offline,error-handling,active
+PILG-113,Pilgrimage,deterministic,P0,No pack and no network,Without a stored pack an unreachable Atlas stays an error,error-handling,active

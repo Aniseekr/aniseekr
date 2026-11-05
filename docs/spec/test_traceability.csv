@@ -244,3 +244,16 @@ PILG-102,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,capture and in
 PILG-103,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,visited migration recovers coordinates from anitabi_spots,covered
 PILG-104,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,anitabi_spots drop waits until every store write succeeds,covered
 PILG-105,__tests__/unit/pilgrimage/atlas-legacy-migration.test.ts,missing anitabi_spots query is guarded and cleanup remains safe,covered
+PILG-106,__tests__/unit/pilgrimage/offline-pack.test.ts,stays inside the OpenFreeMap per-download tile limit for any spot count,covered
+PILG-106,__tests__/unit/pilgrimage/offline-pack.test.ts,always keeps the street-level tile under every located spot,covered
+PILG-107,__tests__/unit/pilgrimage/offline-pack.test.ts,ignores spots without usable coordinates,covered
+PILG-108,__tests__/unit/pilgrimage/offline-pack.test.ts,parses a stored manifest and rejects malformed or foreign versions,covered
+PILG-109,__tests__/unit/pilgrimage/offline-pack.test.ts,offers an update only when Atlas reports a different dataVersion,covered
+PILG-109,__tests__/unit/pilgrimage/offline-pack.test.ts,an active download or failure wins over the stored copy,covered
+PILG-110,__tests__/unit/pilgrimage/offline-pack.test.ts,never runs more than four tile requests at once,covered
+PILG-110,__tests__/unit/pilgrimage/offline-pack.test.ts,stops before the per-download byte cap and reports partial coverage,covered
+PILG-110,__tests__/unit/pilgrimage/offline-pack.test.ts,resumes by skipping tiles already on disk and fails honestly on network errors,covered
+PILG-111,__tests__/unit/pilgrimage/offline-pack.test.ts,rewrites every remote resource to the on-device pack,covered
+PILG-112,__tests__/unit/pilgrimage/offline-pack.test.ts,serves the stored pack labelled with its download date when Atlas is unreachable,covered
+PILG-112,__tests__/unit/pilgrimage/offline-pack.test.ts,never labels live Atlas data as an offline copy,covered
+PILG-113,__tests__/unit/pilgrimage/offline-pack.test.ts,without a pack an unreachable Atlas stays an error,covered

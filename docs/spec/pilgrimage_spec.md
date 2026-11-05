@@ -73,3 +73,31 @@ fails and the migration retries.
 When a stored capture id is absent from the loaded Atlas work, album hydration
 uses the same 50 metre matcher as a display-only safety net. Explicitly legacy
 records stay unpaired and are labelled "Old spot".
+
+## 8. Offline trip pack (Pro)
+
+A Pro user can download one work for offline use. Viewing stays free; only the
+download action is gated (`useSubscription().isPro`, else `PaywallSheet`).
+A pack stores the work's Atlas index row and work document (spots, scenes,
+addresses, confidence, sources) plus OpenFreeMap vector tiles around the
+located spots, under `Documents/offline-packs` so clearing caches keeps it.
+User-imported reference screenshots already live in Documents and are never
+touched by packs.
+
+Tiles follow the OpenFreeMap Terms of Service for offline downloads: at most
+3,000 tiles and 50 MB per download, at most 4 parallel requests, and a
+User-Agent naming the app. The plan keeps an overview of the spots' bounding
+box at z5–z8 and walking radii around each spot up to z14, shrinking radii
+until it fits; the z14 tile under each spot is never dropped. Packs download
+one at a time. If the byte cap stops the download the pack is kept and labelled
+as a partial map. The size estimate shown before downloading is the planned
+tile count times a measured mean tile size plus the work data size.
+
+Reads use live Atlas first. Only when the network and `CacheService` both fail
+does the stored pack answer, and the work carries `offlineCopy.downloadedAt`
+so the UI says "offline copy · date". Without a pack this remains an error.
+When the Atlas `dataVersion` differs from the pack's, the pack offers an
+update; when the latest version is unknown it claims neither. The map engine
+loads the pack's on-device style (local tiles, glyphs, sprite) while a probe of
+the Atlas host fails or when the user forces cached tiles. Size, update and
+delete are listed in Settings → Cache.

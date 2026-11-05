@@ -23,6 +23,7 @@ export const CAPTURES_STORAGE_KEY = '@aniseekr/pilgrimage/captures/v1';
 export const CAPTURES_STORAGE_KEY_V2 = '@aniseekr/pilgrimage/captures/v2';
 export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
 export const SPOT_REFERENCES_STORAGE_KEY = 'aniseekr.pilgrimage.spot-references.v1';
+export const OFFLINE_PACKS_STORAGE_KEY = 'aniseekr.pilgrimage.offline-packs.v1';
 export const SCENE_ID_DISCLOSURE_STORAGE_KEY = 'aniseekr.pilgrimage.sceneId.disclosure.v1';
 export const NEWS_FOLLOWS_STORAGE_KEY = 'aniseekr.news.follows.v1';
 
