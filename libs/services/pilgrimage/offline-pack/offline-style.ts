@@ -22,11 +22,22 @@ export interface StyleLike {
 export const OFFLINE_ATTRIBUTION = 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap';
 
 /**
- * Glyph ranges stored per font: Latin, Latin extended, general punctuation,
- * CJK symbols + kana, fullwidth forms. CJK ideographs are drawn by MapLibre's
- * local ideograph rasterizer, so their ~80 ranges per font are not needed.
+ * Glyph ranges stored per font: Latin, Latin extended, Greek, Cyrillic (OSM
+ * names in Japan include some — seen near Kakegawa on device), general
+ * punctuation, letterlike symbols, CJK symbols + kana, fullwidth forms. CJK
+ * ideographs are drawn by MapLibre's local ideograph rasterizer, so their ~80
+ * ranges per font are not needed.
  */
-export const OFFLINE_GLYPH_RANGES = ['0-255', '256-511', '8192-8447', '12288-12543', '65280-65535'];
+export const OFFLINE_GLYPH_RANGES = [
+  '0-255',
+  '256-511',
+  '768-1023',
+  '1024-1279',
+  '8192-8447',
+  '8448-8703',
+  '12288-12543',
+  '65280-65535',
+];
 
 /** Directory-safe font name; the offline style references fonts by it. */
 export function offlineFontDir(fontName: string): string {
