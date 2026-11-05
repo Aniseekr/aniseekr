@@ -24,27 +24,27 @@ function entry(id: number) {
 
 describe('anime-tourism-88 manual data overrides', () => {
   it('uses Anitabi-backed canonical subjects for franchise rows', () => {
-    expect(entry(9).externalIds).toMatchObject({
+    expect(entry(11).externalIds).toMatchObject({
       bangumi: 40310,
       anilist: 14131,
       mal: 14131,
     });
-    expect(entry(31).externalIds).toMatchObject({
+    expect(entry(37).externalIds).toMatchObject({
       bangumi: 148099,
       anilist: 21403,
       mal: 31765,
     });
-    expect(entry(54).externalIds).toMatchObject({
+    expect(entry(62).externalIds).toMatchObject({
       bangumi: 110467,
       anilist: 20812,
       mal: 25835,
     });
-    expect(entry(69).externalIds).toMatchObject({
+    expect(entry(79).externalIds).toMatchObject({
       bangumi: 265,
       anilist: 30,
       mal: 30,
     });
-    expect(entry(83).externalIds).toMatchObject({
+    expect(entry(98).externalIds).toMatchObject({
       bangumi: 289,
       anilist: 934,
       mal: 934,

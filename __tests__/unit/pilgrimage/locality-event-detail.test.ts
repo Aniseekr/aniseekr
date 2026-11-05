@@ -30,13 +30,13 @@ describe('canonical locality event detail', () => {
     expect(String(detail?.stops[0].place.id)).toBe('yuwaku-onsen');
   });
 
-  it('PILG-056 builds the integrated list from all canonical events and surfaces all 201 stops', () => {
+  it('PILG-056 builds the integrated list from all canonical events and surfaces all 236 stops', () => {
     const rows = getLocalityEventListRows(new Date('2026-07-18T00:00:00.000Z'), localityRepository);
 
-    expect(rows).toHaveLength(9);
+    expect(rows).toHaveLength(12);
     expect(
       rows.flatMap((row) => row.stops).filter((stop) => stop.role.kind === 'stamp_stop')
-    ).toHaveLength(201);
+    ).toHaveLength(236);
     expect(rows.at(-1)?.state.state).toBe('ended');
     const ongoing = rows.find((row) => row.event.id === 'numazu-machiaruki-stamp');
     expect(ongoing?.event.schedule.kind).toBe('ongoing');

@@ -1,13 +1,12 @@
 {
-  "generatedAt": "2026-05-13",
-  "resolvedAt": "2026-05-13T08:55:01Z",
-  "source": "https://animetourism88.com/animespot88/2025edition/",
-  "year": 2025,
-  "count": 124,
+  "generatedAt": "2026-11-05",
+  "source": "https://animetourism88.com/topic/%E3%80%8E%E8%A8%AA%E3%82%8C%E3%81%A6%E3%81%BF%E3%81%9F%E3%81%84%E6%97%A5%E6%9C%AC%E3%81%AE%E3%82%A2%E3%83%8B%E3%83%A1%E8%81%96%E5%9C%B0-88%E3%80%8F2026%E5%B9%B4%E7%89%88-%E9%81%B8%E5%AE%9A%E3%81%AB/",
+  "year": 2026,
+  "count": 146,
   "entries": [
     {
       "id": 1,
-      "year": 2025,
+      "year": 2026,
       "titleJa": "薄桜鬼 真改",
       "titleEn": "HAKUOKI SHINKAI",
       "region": "hokkaido_tohoku",
@@ -22,11 +21,16 @@
       "anilistPopularity": 1092,
       "anilistMeanScore": 60,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg",
+      "areaAnchor": {
+        "lat": 41.768793,
+        "lng": 140.729008,
+        "query": "函館市, 北海道, 日本"
+      }
     },
     {
       "id": 2,
-      "year": 2025,
+      "year": 2026,
       "titleJa": "ラブライブ！サンシャイン!!",
       "titleEn": "Love Live! Sunshine!!",
       "region": "hokkaido_tohoku",
@@ -40,17 +44,45 @@
       },
       "anilistPopularity": 58725,
       "anilistMeanScore": 72,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d3/37/165553_5f88z.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d3/37/165553_5f88z.jpg",
+      "areaAnchor": {
+        "lat": 41.768793,
+        "lng": 140.729008,
+        "query": "函館市, 北海道, 日本"
+      }
     },
     {
       "id": 3,
-      "year": 2025,
-      "titleJa": "艦隊これくしょん – 艦これ –",
-      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "hokkaido_tohoku",
+      "prefecture": "青森県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 40.886943,
+        "lng": 140.590121,
+        "query": "青森県, 日本"
+      }
+    },
+    {
+      "id": 4,
+      "year": 2026,
+      "titleJa": "艦隊これくしょん ‐艦これ‐",
+      "titleEn": "",
       "region": "hokkaido_tohoku",
       "prefecture": "青森県",
       "city": "むつ市（大湊）",
-      "regionEn": "Aomori Pref. / Mutsu City(Ominato)",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 84386,
         "anilist": 20553,
@@ -58,29 +90,62 @@
       },
       "anilistPopularity": 52398,
       "anilistMeanScore": 64,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg"
-    },
-    {
-      "id": 4,
-      "year": 2025,
-      "titleJa": "バクテン!!",
-      "titleEn": "Backflip!!",
-      "region": "hokkaido_tohoku",
-      "prefecture": "宮城県",
-      "city": "岩沼市",
-      "regionEn": "Miyagi Pref. / Iwanuma City",
-      "externalIds": {
-        "bangumi": 318541,
-        "anilist": 125839,
-        "mal": 43756
-      },
-      "anilistPopularity": 40243,
-      "anilistMeanScore": 74,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/8b/bf/318541_d6L93.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg",
+      "areaAnchor": {
+        "lat": 41.2928444,
+        "lng": 141.1831247,
+        "query": "むつ市, 青森県, 日本"
+      }
     },
     {
       "id": 5,
-      "year": 2025,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "hokkaido_tohoku",
+      "prefecture": "岩手県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 39.5713763,
+        "lng": 141.4253574,
+        "query": "岩手県, 日本"
+      }
+    },
+    {
+      "id": 6,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "hokkaido_tohoku",
+      "prefecture": "宮城県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 38.3880155,
+        "lng": 140.9761025,
+        "query": "宮城県, 日本"
+      }
+    },
+    {
+      "id": 7,
+      "year": 2026,
       "titleJa": "釣りキチ三平",
       "titleEn": "Fisherman Sanpei",
       "region": "hokkaido_tohoku",
@@ -94,29 +159,39 @@
       },
       "anilistPopularity": 2047,
       "anilistMeanScore": 69,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e4/6e/208612_OqMbo.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e4/6e/208612_OqMbo.jpg",
+      "areaAnchor": {
+        "lat": 39.3137847,
+        "lng": 140.5667433,
+        "query": "横手市, 秋田県, 日本"
+      }
     },
     {
-      "id": 6,
-      "year": 2025,
-      "titleJa": "好きでも嫌いなあまのじゃく",
-      "titleEn": "My Oni Girl",
+      "id": 8,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
       "region": "hokkaido_tohoku",
-      "prefecture": "山形県",
-      "city": "米沢市",
-      "regionEn": "Yamagata Pref. / Yonezawa City",
+      "prefecture": "福島県",
+      "city": "",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 485154,
-        "anilist": 148080,
-        "mal": 58449
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
       },
-      "anilistPopularity": 17375,
-      "anilistMeanScore": 68,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/94/f9/485154_P3Av6.jpg"
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 37.3662591,
+        "lng": 140.2511854,
+        "query": "福島県, 日本"
+      }
     },
     {
-      "id": 7,
-      "year": 2025,
+      "id": 9,
+      "year": 2026,
       "titleJa": "薄桜鬼 真改",
       "titleEn": "HAKUOKI SHINKAI",
       "region": "hokkaido_tohoku",
@@ -131,30 +206,39 @@
       "anilistPopularity": 1092,
       "anilistMeanScore": 60,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg",
+      "areaAnchor": {
+        "lat": 37.4947487,
+        "lng": 139.9297446,
+        "query": "会津若松市, 福島県, 日本"
+      }
     },
     {
-      "id": 8,
-      "year": 2025,
-      "titleJa": "ウルトラマンシリーズ（円谷英二氏生誕の地）",
-      "titleEn": "ULTRAMAN SERIES (Birthplace of Eiji Tsuburaya)",
-      "region": "hokkaido_tohoku",
-      "prefecture": "福島県",
-      "city": "須賀川市",
-      "regionEn": "Fukushima Pref. / Sukagawa City",
+      "id": 10,
+      "year": 2026,
+      "titleJa": "ラブライブ！スーパースター!!",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "茨城県",
+      "city": "牛久市",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 38650,
-        "anilist": null,
-        "mal": null
+        "bangumi": 306742,
+        "anilist": 114979,
+        "mal": 41169
       },
-      "anilistPopularity": null,
-      "anilistMeanScore": null,
-      "anilistReviewNote": "unresolved:no_results",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6a/d4/38650_Rt2kI.jpg"
+      "anilistPopularity": 29106,
+      "anilistMeanScore": 78,
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/92/306742_MvLk2.jpg",
+      "areaAnchor": {
+        "lat": 35.9790551,
+        "lng": 140.1495982,
+        "query": "牛久市, 茨城県, 日本"
+      }
     },
     {
-      "id": 9,
-      "year": 2025,
+      "id": 11,
+      "year": 2026,
       "titleJa": "ガールズ＆パンツァー 最終章",
       "titleEn": "GIRLS und PANZER das FINALE",
       "region": "kanto",
@@ -169,11 +253,39 @@
       "anilistPopularity": 82707,
       "anilistMeanScore": 74,
       "anilistReviewNote": "match=manual_prefer_main_series; anilist={\"romaji\":\"Girls und Panzer\",\"english\":\"Girls und Panzer\",\"native\":\"ガールズ&パンツァー\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a3/af/40310_suEF6.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a3/af/40310_suEF6.jpg",
+      "areaAnchor": {
+        "lat": 36.3133375,
+        "lng": 140.5747222,
+        "query": "大洗町, 茨城県, 日本"
+      }
     },
     {
-      "id": 10,
-      "year": 2025,
+      "id": 12,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "栃木県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 36.6782167,
+        "lng": 139.8096549,
+        "query": "栃木県, 日本"
+      }
+    },
+    {
+      "id": 13,
+      "year": 2026,
       "titleJa": "秒速5センチメートル",
       "titleEn": "5 Centimeters per Second",
       "region": "kanto",
@@ -188,11 +300,60 @@
       "anilistPopularity": 238665,
       "anilistMeanScore": 72,
       "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Byousoku 5 Centimeter\",\"english\":\"5 Centimeters per Second\",\"native\":\"秒速５センチメートル\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1f/44/927_J2Q9a.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1f/44/927_J2Q9a.jpg",
+      "areaAnchor": {
+        "lat": 36.3818177,
+        "lng": 139.733591,
+        "query": "栃木市, 栃木県, 日本"
+      }
     },
     {
-      "id": 11,
-      "year": 2025,
+      "id": 14,
+      "year": 2026,
+      "titleJa": "頭文字D",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "群馬県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 8290,
+        "anilist": 15059,
+        "mal": 15059
+      },
+      "anilistPopularity": 42906,
+      "anilistMeanScore": 79,
+      "areaAnchor": {
+        "lat": 36.52198,
+        "lng": 139.033483,
+        "query": "群馬県, 日本"
+      }
+    },
+    {
+      "id": 15,
+      "year": 2026,
+      "titleJa": "前橋ウィッチーズ",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "群馬県",
+      "city": "前橋市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 511207,
+        "anilist": 180825,
+        "mal": 59744
+      },
+      "anilistPopularity": 7864,
+      "anilistMeanScore": 69,
+      "areaAnchor": {
+        "lat": 36.3893418,
+        "lng": 139.0632826,
+        "query": "前橋市, 群馬県, 日本"
+      }
+    },
+    {
+      "id": 16,
+      "year": 2026,
       "titleJa": "菜なれ花なれ",
       "titleEn": "Narenare -Cheer for you!-",
       "region": "kanto",
@@ -206,11 +367,16 @@
       },
       "anilistPopularity": 16511,
       "anilistMeanScore": 61,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d5/89/464561_DRdV0.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d5/89/464561_DRdV0.jpg",
+      "areaAnchor": {
+        "lat": 36.3220984,
+        "lng": 139.0032758,
+        "query": "高崎市, 群馬県, 日本"
+      }
     },
     {
-      "id": 12,
-      "year": 2025,
+      "id": 17,
+      "year": 2026,
       "titleJa": "菜なれ花なれ",
       "titleEn": "Narenare -Cheer for you!-",
       "region": "kanto",
@@ -224,11 +390,16 @@
       },
       "anilistPopularity": 16511,
       "anilistMeanScore": 61,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d5/89/464561_DRdV0.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d5/89/464561_DRdV0.jpg",
+      "areaAnchor": {
+        "lat": 36.6440697,
+        "lng": 139.0428829,
+        "query": "沼田市, 群馬県, 日本"
+      }
     },
     {
-      "id": 13,
-      "year": 2025,
+      "id": 18,
+      "year": 2026,
       "titleJa": "宇宙よりも遠い場所",
       "titleEn": "A Place Further than the Universe",
       "region": "kanto",
@@ -242,11 +413,16 @@
       },
       "anilistPopularity": 161010,
       "anilistMeanScore": 84,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/16/de/218708_99YjL.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/16/de/218708_99YjL.jpg",
+      "areaAnchor": {
+        "lat": 36.2454338,
+        "lng": 139.5421576,
+        "query": "館林市, 群馬県, 日本"
+      }
     },
     {
-      "id": 14,
-      "year": 2025,
+      "id": 19,
+      "year": 2026,
       "titleJa": "その着せ替え人形は恋をする",
       "titleEn": "My Dress-up Darling",
       "region": "kanto",
@@ -260,11 +436,16 @@
       },
       "anilistPopularity": 389152,
       "anilistMeanScore": 80,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/9c/4d/333158_PA0F4.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/9c/4d/333158_PA0F4.jpg",
+      "areaAnchor": {
+        "lat": 35.8616141,
+        "lng": 139.6455666,
+        "query": "さいたま市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 15,
-      "year": 2025,
+      "id": 20,
+      "year": 2026,
       "titleJa": "神様はじめました",
       "titleEn": "Kamisama Hajime Mashita",
       "region": "kanto",
@@ -278,11 +459,16 @@
       },
       "anilistPopularity": 24198,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d9/f1/43525_lOAlP.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d9/f1/43525_lOAlP.jpg",
+      "areaAnchor": {
+        "lat": 35.9251145,
+        "lng": 139.4856927,
+        "query": "川越市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 16,
-      "year": 2025,
+      "id": 21,
+      "year": 2026,
       "titleJa": "月がきれい",
       "titleEn": "Tsukigakirei",
       "region": "kanto",
@@ -296,11 +482,16 @@
       },
       "anilistPopularity": 151773,
       "anilistMeanScore": 79,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a8/41/207573_95N29.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a8/41/207573_95N29.jpg",
+      "areaAnchor": {
+        "lat": 35.9251145,
+        "lng": 139.4856927,
+        "query": "川越市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 17,
-      "year": 2025,
+      "id": 22,
+      "year": 2026,
       "titleJa": "あの日見た花の名前を僕達はまだ知らない。",
       "titleEn": "Anohana:The Flower We Saw That Day",
       "region": "kanto",
@@ -314,11 +505,16 @@
       },
       "anilistPopularity": 379852,
       "anilistMeanScore": 80,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6c/e8/10440_8HP6O.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6c/e8/10440_8HP6O.jpg",
+      "areaAnchor": {
+        "lat": 35.9914509,
+        "lng": 139.0857612,
+        "query": "秩父市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 18,
-      "year": 2025,
+      "id": 23,
+      "year": 2026,
       "titleJa": "心が叫びたがってるんだ。",
       "titleEn": "The Anthem of the Heart",
       "region": "kanto",
@@ -332,11 +528,16 @@
       },
       "anilistPopularity": 94788,
       "anilistMeanScore": 76,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/95/fe/119344_7z3dO.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/95/fe/119344_7z3dO.jpg",
+      "areaAnchor": {
+        "lat": 35.9914509,
+        "lng": 139.0857612,
+        "query": "秩父市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 19,
-      "year": 2025,
+      "id": 24,
+      "year": 2026,
       "titleJa": "空の青さを知る人よ",
       "titleEn": "Her Blue Sky",
       "region": "kanto",
@@ -350,11 +551,16 @@
       },
       "anilistPopularity": 46414,
       "anilistMeanScore": 73,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/3f/c1/278557_ogF5c.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/3f/c1/278557_ogF5c.jpg",
+      "areaAnchor": {
+        "lat": 35.9914509,
+        "lng": 139.0857612,
+        "query": "秩父市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 20,
-      "year": 2025,
+      "id": 25,
+      "year": 2026,
       "titleJa": "女子高生の無駄づかい",
       "titleEn": "Wasteful Days of High School Girl",
       "region": "kanto",
@@ -368,17 +574,22 @@
       },
       "anilistPopularity": 42750,
       "anilistMeanScore": 75,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/f3/d0/265708_QDkDe.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/f3/d0/265708_QDkDe.jpg",
+      "areaAnchor": {
+        "lat": 35.7987179,
+        "lng": 139.4696758,
+        "query": "所沢市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 21,
-      "year": 2025,
-      "titleJa": "ヤマノススメNext Summit",
-      "titleEn": "Yama no susume Next Summit",
+      "id": 26,
+      "year": 2026,
+      "titleJa": "ヤマノススメ Next Summit",
+      "titleEn": "",
       "region": "kanto",
       "prefecture": "埼玉県",
       "city": "飯能市",
-      "regionEn": "Saitama Pref. / Hanno City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 290980,
         "anilist": 131182,
@@ -386,11 +597,16 @@
       },
       "anilistPopularity": 10165,
       "anilistMeanScore": 77,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/64/5a/290980_Jju6q.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/64/5a/290980_Jju6q.jpg",
+      "areaAnchor": {
+        "lat": 35.8556902,
+        "lng": 139.3276436,
+        "query": "飯能市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 22,
-      "year": 2025,
+      "id": 27,
+      "year": 2026,
       "titleJa": "さよなら私のクラマー",
       "titleEn": "Sayonara, Football: Farewell, My Dear Cramer",
       "region": "kanto",
@@ -404,11 +620,16 @@
       },
       "anilistPopularity": 16677,
       "anilistMeanScore": 56,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/23/dc/314163_QOk21.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/23/dc/314163_QOk21.jpg",
+      "areaAnchor": {
+        "lat": 35.8263705,
+        "lng": 139.6791302,
+        "query": "蕨市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 23,
-      "year": 2025,
+      "id": 28,
+      "year": 2026,
       "titleJa": "『冴えない彼女の育てかた』シリーズ",
       "titleEn": "Saekano : How to Raise a Boring Girlfriend　series",
       "region": "kanto",
@@ -423,11 +644,16 @@
       "anilistPopularity": 170883,
       "anilistMeanScore": 73,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Saenai Heroine no Sodatekata\",\"english\":\"Saekano: How to Raise a Boring Girlfriend\",\"native\":\"冴えない彼女の育てかた\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6b/01/100403_R8KN2.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6b/01/100403_R8KN2.jpg",
+      "areaAnchor": {
+        "lat": 35.7817053,
+        "lng": 139.6058692,
+        "query": "和光市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 24,
-      "year": 2025,
+      "id": 29,
+      "year": 2026,
       "titleJa": "らき☆すた",
       "titleEn": "Lucky Star",
       "region": "kanto",
@@ -441,11 +667,16 @@
       },
       "anilistPopularity": 138506,
       "anilistMeanScore": 75,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/db/8e/276_1Cr5K.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/db/8e/276_1Cr5K.jpg",
+      "areaAnchor": {
+        "lat": 36.0617964,
+        "lng": 139.6671445,
+        "query": "久喜市, 埼玉県, 日本"
+      }
     },
     {
-      "id": 25,
-      "year": 2025,
+      "id": 30,
+      "year": 2026,
       "titleJa": "心が叫びたがってるんだ。",
       "titleEn": "The Anthem of the Heart",
       "region": "kanto",
@@ -459,11 +690,16 @@
       },
       "anilistPopularity": 94788,
       "anilistMeanScore": 76,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/95/fe/119344_7z3dO.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/95/fe/119344_7z3dO.jpg",
+      "areaAnchor": {
+        "lat": 35.9873227,
+        "lng": 139.0999999,
+        "query": "横瀬町, 埼玉県, 日本"
+      }
     },
     {
-      "id": 26,
-      "year": 2025,
+      "id": 31,
+      "year": 2026,
       "titleJa": "私に天使が舞い降りた! プレシャス・フレンズ",
       "titleEn": "Wataten!: An Angel Flew Down to Me: Precious Friends",
       "region": "kanto",
@@ -477,11 +713,16 @@
       },
       "anilistPopularity": 10525,
       "anilistMeanScore": 75,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/16/73/320493_mMG4Z.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/16/73/320493_mMG4Z.jpg",
+      "areaAnchor": {
+        "lat": 36.1146759,
+        "lng": 139.1096479,
+        "query": "長瀞町, 埼玉県, 日本"
+      }
     },
     {
-      "id": 27,
-      "year": 2025,
+      "id": 32,
+      "year": 2026,
       "titleJa": "青のオーケストラ",
       "titleEn": "Blue Orchestra",
       "region": "kanto",
@@ -495,11 +736,39 @@
       },
       "anilistPopularity": 25278,
       "anilistMeanScore": 70,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/fe/5d/377769_e4pyy.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/fe/5d/377769_e4pyy.jpg",
+      "areaAnchor": {
+        "lat": 35.6070629,
+        "lng": 140.1062653,
+        "query": "千葉市, 千葉県, 日本"
+      }
     },
     {
-      "id": 28,
-      "year": 2025,
+      "id": 33,
+      "year": 2026,
+      "titleJa": "俺の妹がこんなに可愛いわけがない",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "千葉県",
+      "city": "千葉市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 5436,
+        "anilist": 8769,
+        "mal": 10108
+      },
+      "anilistPopularity": 148335,
+      "anilistMeanScore": 62,
+      "anilistReviewNote": "manual: top match was the Animated Commentary special (10108); 8769 is the 2010 TV series",
+      "areaAnchor": {
+        "lat": 35.6070629,
+        "lng": 140.1062653,
+        "query": "千葉市, 千葉県, 日本"
+      }
+    },
+    {
+      "id": 34,
+      "year": 2026,
       "titleJa": "『やはり俺の青春ラブコメはまちがっている。』シリーズ",
       "titleEn": "『My Teen Romantic Comedy SNAFU』Series",
       "region": "kanto",
@@ -514,11 +783,16 @@
       "anilistPopularity": 358049,
       "anilistMeanScore": 78,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yahari Ore no Seishun Love Come wa Machigatteiru.\",\"english\":\"My Teen Romantic Comedy SNAFU\",\"native\":\"やはり俺の青春ラブコメはまちがっている。\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1e/f1/54433_JZ99l.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1e/f1/54433_JZ99l.jpg",
+      "areaAnchor": {
+        "lat": 35.6070629,
+        "lng": 140.1062653,
+        "query": "千葉市, 千葉県, 日本"
+      }
     },
     {
-      "id": 29,
-      "year": 2025,
+      "id": 35,
+      "year": 2026,
       "titleJa": "『アマガミSS』シリーズ",
       "titleEn": "『Amagami SS』Series",
       "region": "kanto",
@@ -533,11 +807,16 @@
       "anilistPopularity": 85314,
       "anilistMeanScore": 69,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Amagami SS\",\"english\":\"Amagami SS\",\"native\":\"アマガミSS\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/ae/5e/5656_WUY5N.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/ae/5e/5656_WUY5N.jpg",
+      "areaAnchor": {
+        "lat": 35.7345338,
+        "lng": 140.8272667,
+        "query": "銚子市, 千葉県, 日本"
+      }
     },
     {
-      "id": 30,
-      "year": 2025,
+      "id": 36,
+      "year": 2026,
       "titleJa": "映画『トラペジウム』",
       "titleEn": "Trapezium",
       "region": "kanto",
@@ -551,11 +830,16 @@
       },
       "anilistPopularity": 10914,
       "anilistMeanScore": 69,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/aa/a9/469877_lj00s.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/aa/a9/469877_lj00s.jpg",
+      "areaAnchor": {
+        "lat": 34.9965304,
+        "lng": 139.8699838,
+        "query": "館山市, 千葉県, 日本"
+      }
     },
     {
-      "id": 31,
-      "year": 2025,
+      "id": 37,
+      "year": 2026,
       "titleJa": "劇場版 ソードアート・オンライン -オーディナル・スケール-",
       "titleEn": "SWORD ART ONLINE THE MOVIE -Ordinal Scale-",
       "region": "tokyo",
@@ -570,11 +854,39 @@
       "anilistPopularity": 186467,
       "anilistMeanScore": 74,
       "anilistReviewNote": "match=manual_exact_subject; anilist={\"romaji\":\"Sword Art Online: Ordinal Scale\",\"english\":\"Sword Art Online the Movie: Ordinal Scale\",\"native\":\"ソードアート・オンライン -オーディナル・スケール-\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a7/db/148099_EPbSE.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a7/db/148099_EPbSE.jpg",
+      "areaAnchor": {
+        "lat": 35.6768601,
+        "lng": 139.7638947,
+        "query": "東京都, 日本"
+      }
     },
     {
-      "id": 32,
-      "year": 2025,
+      "id": 38,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 35.6768601,
+        "lng": 139.7638947,
+        "query": "東京都, 日本"
+      }
+    },
+    {
+      "id": 39,
+      "year": 2026,
       "titleJa": "『BanG Dream!』シリーズ",
       "titleEn": "『BanG Dream!』Series",
       "region": "tokyo",
@@ -589,29 +901,16 @@
       "anilistPopularity": 38396,
       "anilistMeanScore": 68,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"BanG Dream!\",\"english\":\"BanG Dream!\",\"native\":\"BanG Dream!（バンドリ！）\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/70/a5/186515_ZJhwb.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/70/a5/186515_ZJhwb.jpg",
+      "areaAnchor": {
+        "lat": 35.6768601,
+        "lng": 139.7638947,
+        "query": "東京都, 日本"
+      }
     },
     {
-      "id": 33,
-      "year": 2025,
-      "titleJa": "ふれる。",
-      "titleEn": "FURERU",
-      "region": "tokyo",
-      "prefecture": "東京都",
-      "city": "（高田馬場）",
-      "regionEn": "Tokyo / Takadanobaba",
-      "externalIds": {
-        "bangumi": 469033,
-        "anilist": 171109,
-        "mal": 57448
-      },
-      "anilistPopularity": 6885,
-      "anilistMeanScore": 66,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/8d/d1/469033_Nzf2l.jpg"
-    },
-    {
-      "id": 34,
-      "year": 2025,
+      "id": 40,
+      "year": 2026,
       "titleJa": "STEINS;GATE（シュタインズ・ゲート）",
       "titleEn": "STEINS;GATE",
       "region": "tokyo",
@@ -625,11 +924,16 @@
       },
       "anilistPopularity": 562558,
       "anilistMeanScore": 89,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a9/79/10380_YwP4R.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a9/79/10380_YwP4R.jpg",
+      "areaAnchor": {
+        "lat": 35.6938097,
+        "lng": 139.7532163,
+        "query": "千代田区, 東京都, 日本"
+      }
     },
     {
-      "id": 35,
-      "year": 2025,
+      "id": 41,
+      "year": 2026,
       "titleJa": "ラブライブ！",
       "titleEn": "Love Live!",
       "region": "tokyo",
@@ -644,11 +948,16 @@
       "anilistPopularity": 58725,
       "anilistMeanScore": 72,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Love Live! Sunshine!!\",\"english\":\"Love Live! Sunshine!!\",\"native\":\"ラブライブ！サンシャイン!!\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/75/74/49294_ISOI2.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/75/74/49294_ISOI2.jpg",
+      "areaAnchor": {
+        "lat": 35.6938097,
+        "lng": 139.7532163,
+        "query": "千代田区, 東京都, 日本"
+      }
     },
     {
-      "id": 36,
-      "year": 2025,
+      "id": 42,
+      "year": 2026,
       "titleJa": "江戸前エルフ",
       "titleEn": "Otaku Elf",
       "region": "tokyo",
@@ -662,17 +971,44 @@
       },
       "anilistPopularity": 25943,
       "anilistMeanScore": 71,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d7/ea/387803_nQONr.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d7/ea/387803_nQONr.jpg",
+      "areaAnchor": {
+        "lat": 35.6706436,
+        "lng": 139.7719923,
+        "query": "中央区, 東京都, 日本"
+      }
     },
     {
-      "id": 37,
-      "year": 2025,
-      "titleJa": "デジモンアドベンチャー（1999年）",
-      "titleEn": "DIGIMON ADVENTURE (1999)",
+      "id": 43,
+      "year": 2026,
+      "titleJa": "薫る花は凛と咲く",
+      "titleEn": "",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "港区（マクセル アクアパーク品川）",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 513345,
+        "anilist": 181444,
+        "mal": 59845
+      },
+      "anilistPopularity": 219557,
+      "anilistMeanScore": 84,
+      "areaAnchor": {
+        "lat": 35.6580089,
+        "lng": 139.7515137,
+        "query": "港区, 東京都, 日本"
+      }
+    },
+    {
+      "id": 44,
+      "year": 2026,
+      "titleJa": "デジモンアドベンチャー(1999年)",
+      "titleEn": "",
       "region": "tokyo",
       "prefecture": "東京都",
       "city": "港区（お台場）",
-      "regionEn": "Tokyo / Minato-ku　Odaiba",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 3128,
         "anilist": 552,
@@ -681,17 +1017,22 @@
       "anilistPopularity": 68935,
       "anilistMeanScore": 75,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Digimon Adventure\",\"english\":\"Digimon: Digital Monsters\",\"native\":\"デジモンアドベンチャー\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/df/f8/3128_4QNAH.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/df/f8/3128_4QNAH.jpg",
+      "areaAnchor": {
+        "lat": 35.6580089,
+        "lng": 139.7515137,
+        "query": "港区, 東京都, 日本"
+      }
     },
     {
-      "id": 38,
-      "year": 2025,
-      "titleJa": "ラブライブ！ 虹ヶ咲学園スクールアイド同好会",
-      "titleEn": "Love Live! Nijigasaki High School Idol Club",
+      "id": 45,
+      "year": 2026,
+      "titleJa": "ラブライブ！虹ヶ咲学園スクールアイドル同好会",
+      "titleEn": "",
       "region": "tokyo",
       "prefecture": "東京都",
       "city": "港区",
-      "regionEn": "Tokyo / Minato-ku",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 296659,
         "anilist": 113970,
@@ -700,11 +1041,16 @@
       "anilistPopularity": 31944,
       "anilistMeanScore": 74,
       "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Love Live! Nijigasaki Gakuen School Idol Doukoukai\",\"english\":\"Love Live! Nijigasaki High School Idol Club\",\"native\":\"ラブライブ！虹ヶ咲学園スクールアイドル同好会\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a7/35/296659_o709D.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a7/35/296659_o709D.jpg",
+      "areaAnchor": {
+        "lat": 35.6580089,
+        "lng": 139.7515137,
+        "query": "港区, 東京都, 日本"
+      }
     },
     {
-      "id": 39,
-      "year": 2025,
+      "id": 46,
+      "year": 2026,
       "titleJa": "リコリス・リコイル",
       "titleEn": "Lycoris Recoil",
       "region": "tokyo",
@@ -718,11 +1064,16 @@
       },
       "anilistPopularity": 198501,
       "anilistMeanScore": 81,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/65/19/364450_xx2zx.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/65/19/364450_xx2zx.jpg",
+      "areaAnchor": {
+        "lat": 35.7104196,
+        "lng": 139.8017421,
+        "query": "墨田区, 東京都, 日本"
+      }
     },
     {
-      "id": 40,
-      "year": 2025,
+      "id": 47,
+      "year": 2026,
       "titleJa": "アイドルマスター ミリオンライブ！",
       "titleEn": "THE IDOLM@STER MILLION LIVE!",
       "region": "tokyo",
@@ -736,17 +1087,22 @@
       },
       "anilistPopularity": 5618,
       "anilistMeanScore": 69,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/a0/309807_927A1.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/a0/309807_927A1.jpg",
+      "areaAnchor": {
+        "lat": 35.6727747,
+        "lng": 139.8169621,
+        "query": "江東区, 東京都, 日本"
+      }
     },
     {
-      "id": 41,
-      "year": 2025,
-      "titleJa": "ラブライブ！ 虹ヶ咲学園スクールアイド同好会",
-      "titleEn": "Love Live! Nijigasaki High School Idol Club",
+      "id": 48,
+      "year": 2026,
+      "titleJa": "ラブライブ！虹ヶ咲学園スクールアイドル同好会",
+      "titleEn": "",
       "region": "tokyo",
       "prefecture": "東京都",
       "city": "江東区",
-      "regionEn": "Tokyo / Koto-ku",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 296659,
         "anilist": 113970,
@@ -755,30 +1111,16 @@
       "anilistPopularity": 31944,
       "anilistMeanScore": 74,
       "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Love Live! Nijigasaki Gakuen School Idol Doukoukai\",\"english\":\"Love Live! Nijigasaki High School Idol Club\",\"native\":\"ラブライブ！虹ヶ咲学園スクールアイドル同好会\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a7/35/296659_o709D.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a7/35/296659_o709D.jpg",
+      "areaAnchor": {
+        "lat": 35.6727747,
+        "lng": 139.8169621,
+        "query": "江東区, 東京都, 日本"
+      }
     },
     {
-      "id": 42,
-      "year": 2025,
-      "titleJa": "ウルトラマンシリーズ（ウルトラマン商店街）",
-      "titleEn": "“ULTRAMAN SERIES (Ultraman shopping Street)”",
-      "region": "tokyo",
-      "prefecture": "東京都",
-      "city": "世田谷区",
-      "regionEn": "Tokyo / Setagaya-ku",
-      "externalIds": {
-        "bangumi": 38650,
-        "anilist": null,
-        "mal": null
-      },
-      "anilistPopularity": null,
-      "anilistMeanScore": null,
-      "anilistReviewNote": "unresolved:no_results",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6a/d4/38650_Rt2kI.jpg"
-    },
-    {
-      "id": 43,
-      "year": 2025,
+      "id": 49,
+      "year": 2026,
       "titleJa": "秒速5センチメートル",
       "titleEn": "5 Centimeters per Second",
       "region": "tokyo",
@@ -793,11 +1135,16 @@
       "anilistPopularity": 238665,
       "anilistMeanScore": 72,
       "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Byousoku 5 Centimeter\",\"english\":\"5 Centimeters per Second\",\"native\":\"秒速５センチメートル\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1f/44/927_J2Q9a.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1f/44/927_J2Q9a.jpg",
+      "areaAnchor": {
+        "lat": 35.6469025,
+        "lng": 139.652531,
+        "query": "世田谷区, 東京都, 日本"
+      }
     },
     {
-      "id": 44,
-      "year": 2025,
+      "id": 50,
+      "year": 2026,
       "titleJa": "ぼっち・ざ・ろっく！",
       "titleEn": "BOCCHI THE ROCK!",
       "region": "tokyo",
@@ -811,11 +1158,16 @@
       },
       "anilistPopularity": 244113,
       "anilistMeanScore": 87,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e2/e7/328609_2EHLJ.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e2/e7/328609_2EHLJ.jpg",
+      "areaAnchor": {
+        "lat": 35.6469025,
+        "lng": 139.652531,
+        "query": "世田谷区, 東京都, 日本"
+      }
     },
     {
-      "id": 45,
-      "year": 2025,
+      "id": 51,
+      "year": 2026,
       "titleJa": "夜のクラゲは泳げない",
       "titleEn": "Jellyfish Can’t Swim in the Night",
       "region": "tokyo",
@@ -829,17 +1181,22 @@
       },
       "anilistPopularity": 58845,
       "anilistMeanScore": 76,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/f2/8f/425909_M7W7T.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/f2/8f/425909_M7W7T.jpg",
+      "areaAnchor": {
+        "lat": 35.6633709,
+        "lng": 139.6964952,
+        "query": "渋谷区, 東京都, 日本"
+      }
     },
     {
-      "id": 46,
-      "year": 2025,
-      "titleJa": "ラブライブ！ スーパースター‼",
-      "titleEn": "Love Live! Superstar!!",
+      "id": 52,
+      "year": 2026,
+      "titleJa": "ラブライブ！スーパースター!!",
+      "titleEn": "",
       "region": "tokyo",
       "prefecture": "東京都",
       "city": "渋谷区",
-      "regionEn": "Tokyo / Shibuya-ku",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 306742,
         "anilist": 114979,
@@ -847,11 +1204,16 @@
       },
       "anilistPopularity": 29106,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/92/306742_MvLk2.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/92/306742_MvLk2.jpg",
+      "areaAnchor": {
+        "lat": 35.6633709,
+        "lng": 139.6964952,
+        "query": "渋谷区, 東京都, 日本"
+      }
     },
     {
-      "id": 47,
-      "year": 2025,
+      "id": 53,
+      "year": 2026,
       "titleJa": "『冴えない彼女の育てかた』シリーズ",
       "titleEn": "Saekano : How to Raise a Boring Girlfriend　series",
       "region": "tokyo",
@@ -866,11 +1228,16 @@
       "anilistPopularity": 170883,
       "anilistMeanScore": 73,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Saenai Heroine no Sodatekata\",\"english\":\"Saekano: How to Raise a Boring Girlfriend\",\"native\":\"冴えない彼女の育てかた\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6b/01/100403_R8KN2.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6b/01/100403_R8KN2.jpg",
+      "areaAnchor": {
+        "lat": 35.725913,
+        "lng": 139.7166365,
+        "query": "豊島区, 東京都, 日本"
+      }
     },
     {
-      "id": 48,
-      "year": 2025,
+      "id": 54,
+      "year": 2026,
       "titleJa": "その着せ替え人形は恋をする",
       "titleEn": "My Dress-Up Darling",
       "region": "tokyo",
@@ -884,11 +1251,16 @@
       },
       "anilistPopularity": 389152,
       "anilistMeanScore": 80,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/9c/4d/333158_PA0F4.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/9c/4d/333158_PA0F4.jpg",
+      "areaAnchor": {
+        "lat": 35.725913,
+        "lng": 139.7166365,
+        "query": "豊島区, 東京都, 日本"
+      }
     },
     {
-      "id": 49,
-      "year": 2025,
+      "id": 55,
+      "year": 2026,
       "titleJa": "デュラララ!!",
       "titleEn": "Durarara!!",
       "region": "tokyo",
@@ -902,11 +1274,16 @@
       },
       "anilistPopularity": 281853,
       "anilistMeanScore": 79,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/43/2463_FGJkn.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/43/2463_FGJkn.jpg",
+      "areaAnchor": {
+        "lat": 35.725913,
+        "lng": 139.7166365,
+        "query": "豊島区, 東京都, 日本"
+      }
     },
     {
-      "id": 50,
-      "year": 2025,
+      "id": 56,
+      "year": 2026,
       "titleJa": "『BanG Dream!』シリーズ",
       "titleEn": "『BanG Dream!』series",
       "region": "tokyo",
@@ -921,17 +1298,44 @@
       "anilistPopularity": 38396,
       "anilistMeanScore": 68,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"BanG Dream!\",\"english\":\"BanG Dream!\",\"native\":\"BanG Dream!（バンドリ！）\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/70/a5/186515_ZJhwb.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/70/a5/186515_ZJhwb.jpg",
+      "areaAnchor": {
+        "lat": 35.725913,
+        "lng": 139.7166365,
+        "query": "豊島区, 東京都, 日本"
+      }
     },
     {
-      "id": 51,
-      "year": 2025,
-      "titleJa": "デジモンアドベンチャー（1999年）",
-      "titleEn": "DIGIMON ADVENTURE (1999)",
+      "id": 57,
+      "year": 2026,
+      "titleJa": "四月は君の嘘",
+      "titleEn": "",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "練馬区",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 100444,
+        "anilist": 20665,
+        "mal": 23273
+      },
+      "anilistPopularity": 623533,
+      "anilistMeanScore": 84,
+      "areaAnchor": {
+        "lat": 35.7506445,
+        "lng": 139.6162651,
+        "query": "練馬区, 東京都, 日本"
+      }
+    },
+    {
+      "id": 58,
+      "year": 2026,
+      "titleJa": "デジモンアドベンチャー(1999年)",
+      "titleEn": "",
       "region": "tokyo",
       "prefecture": "東京都",
       "city": "練馬区（光が丘）",
-      "regionEn": "Tokyo / Nerima-ku　Hikarigaoka",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 3128,
         "anilist": 552,
@@ -940,11 +1344,38 @@
       "anilistPopularity": 68935,
       "anilistMeanScore": 75,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Digimon Adventure\",\"english\":\"Digimon: Digital Monsters\",\"native\":\"デジモンアドベンチャー\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/df/f8/3128_4QNAH.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/df/f8/3128_4QNAH.jpg",
+      "areaAnchor": {
+        "lat": 35.7506445,
+        "lng": 139.6162651,
+        "query": "練馬区, 東京都, 日本"
+      }
     },
     {
-      "id": 52,
-      "year": 2025,
+      "id": 59,
+      "year": 2026,
+      "titleJa": "日々は過ぎれど飯うまし",
+      "titleEn": "",
+      "region": "tokyo",
+      "prefecture": "東京都",
+      "city": "八王子市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 531159,
+        "anilist": 185939,
+        "mal": 60658
+      },
+      "anilistPopularity": 25386,
+      "anilistMeanScore": 77,
+      "areaAnchor": {
+        "lat": 35.6663595,
+        "lng": 139.3163653,
+        "query": "八王子市, 東京都, 日本"
+      }
+    },
+    {
+      "id": 60,
+      "year": 2026,
       "titleJa": "とある科学の超電磁砲",
       "titleEn": "A Certain Scientific Railgun T",
       "region": "tokyo",
@@ -958,11 +1389,16 @@
       },
       "anilistPopularity": 148762,
       "anilistMeanScore": 75,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/e7/2585_pn2eP.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/e7/2585_pn2eP.jpg",
+      "areaAnchor": {
+        "lat": 35.7139057,
+        "lng": 139.4077701,
+        "query": "立川市, 東京都, 日本"
+      }
     },
     {
-      "id": 53,
-      "year": 2025,
+      "id": 61,
+      "year": 2026,
       "titleJa": "とある魔術の禁書目録",
       "titleEn": "A Certain Magical Index Ⅲ",
       "region": "tokyo",
@@ -976,11 +1412,16 @@
       },
       "anilistPopularity": 182795,
       "anilistMeanScore": 70,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/76/6d/1014_tLHlc.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/76/6d/1014_tLHlc.jpg",
+      "areaAnchor": {
+        "lat": 35.7139057,
+        "lng": 139.4077701,
+        "query": "立川市, 東京都, 日本"
+      }
     },
     {
-      "id": 54,
-      "year": 2025,
+      "id": 62,
+      "year": 2026,
       "titleJa": "劇場版「SHIROBAKO」",
       "titleEn": "SHIROBAKO THE MOVIE",
       "region": "tokyo",
@@ -995,11 +1436,16 @@
       "anilistPopularity": 109716,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=manual_prefer_main_series; anilist={\"romaji\":\"SHIROBAKO\",\"english\":\"SHIROBAKO\",\"native\":\"SHIROBAKO\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/73/26/110467_Fx9tT.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/73/26/110467_Fx9tT.jpg",
+      "areaAnchor": {
+        "lat": 35.7177239,
+        "lng": 139.5659802,
+        "query": "武蔵野市, 東京都, 日本"
+      }
     },
     {
-      "id": 55,
-      "year": 2025,
+      "id": 63,
+      "year": 2026,
       "titleJa": "『ゆるキャン△』シリーズ",
       "titleEn": "LAID-BACK CAMP series",
       "region": "tokyo",
@@ -1014,11 +1460,16 @@
       "anilistPopularity": 160391,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg",
+      "areaAnchor": {
+        "lat": 35.7058081,
+        "lng": 139.3536109,
+        "query": "昭島市, 東京都, 日本"
+      }
     },
     {
-      "id": 56,
-      "year": 2025,
+      "id": 64,
+      "year": 2026,
       "titleJa": "ゲゲゲの鬼太郎",
       "titleEn": "GeGeGe no Kitaro",
       "region": "tokyo",
@@ -1032,29 +1483,38 @@
       },
       "anilistPopularity": 1800,
       "anilistMeanScore": 67,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/46/0d/18176_4To58.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/46/0d/18176_4To58.jpg",
+      "areaAnchor": {
+        "lat": 35.6506036,
+        "lng": 139.5407066,
+        "query": "調布市, 東京都, 日本"
+      }
     },
     {
-      "id": 57,
-      "year": 2025,
-      "titleJa": "おちこぼれフルーツタルト",
-      "titleEn": "Dropout Idol Fruit Tart",
+      "id": 65,
+      "year": 2026,
+      "titleJa": "うたごえはミルフィーユ",
+      "titleEn": "",
       "region": "tokyo",
       "prefecture": "東京都",
-      "city": "小金井市",
-      "regionEn": "Tokyo / Koganei City",
+      "city": "町田市",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 279059,
-        "anilist": 108713,
-        "mal": 39609
+        "bangumi": 441670,
+        "anilist": 166215,
+        "mal": 55689
       },
-      "anilistPopularity": 17308,
+      "anilistPopularity": 3832,
       "anilistMeanScore": 65,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/0d/2e/279059_NNOnk.jpg"
+      "areaAnchor": {
+        "lat": 35.5466803,
+        "lng": 139.4386999,
+        "query": "町田市, 東京都, 日本"
+      }
     },
     {
-      "id": 58,
-      "year": 2025,
+      "id": 66,
+      "year": 2026,
       "titleJa": "しかのこのこのここしたんたん",
       "titleEn": "My Deer Friend Nokotan",
       "region": "tokyo",
@@ -1068,11 +1528,16 @@
       },
       "anilistPopularity": 100595,
       "anilistMeanScore": 67,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/b1/7b/484761_r83E8.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/b1/7b/484761_r83E8.jpg",
+      "areaAnchor": {
+        "lat": 35.6713394,
+        "lng": 139.3949801,
+        "query": "日野市, 東京都, 日本"
+      }
     },
     {
-      "id": 59,
-      "year": 2025,
+      "id": 67,
+      "year": 2026,
       "titleJa": "薄桜鬼 真改",
       "titleEn": "HAKUOKI SHINKAI",
       "region": "tokyo",
@@ -1087,11 +1552,16 @@
       "anilistPopularity": 1092,
       "anilistMeanScore": 60,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg",
+      "areaAnchor": {
+        "lat": 35.6713394,
+        "lng": 139.3949801,
+        "query": "日野市, 東京都, 日本"
+      }
     },
     {
-      "id": 60,
-      "year": 2025,
+      "id": 68,
+      "year": 2026,
       "titleJa": "女子高生の無駄づかい",
       "titleEn": "Wasteful Days of High School Girl",
       "region": "tokyo",
@@ -1105,29 +1575,16 @@
       },
       "anilistPopularity": 42750,
       "anilistMeanScore": 75,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/f3/d0/265708_QDkDe.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/f3/d0/265708_QDkDe.jpg",
+      "areaAnchor": {
+        "lat": 35.768929,
+        "lng": 139.484539,
+        "query": "東村山市, 東京都, 日本"
+      }
     },
     {
-      "id": 61,
-      "year": 2025,
-      "titleJa": "GAMERA -Rebirth-",
-      "titleEn": "GAMERA -Rebirth-",
-      "region": "tokyo",
-      "prefecture": "東京都",
-      "city": "福生市",
-      "regionEn": "Tokyo",
-      "externalIds": {
-        "bangumi": 418289,
-        "anilist": 160831,
-        "mal": 53627
-      },
-      "anilistPopularity": 2052,
-      "anilistMeanScore": 62,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/da/0b/418289_09OVI.jpg"
-    },
-    {
-      "id": 62,
-      "year": 2025,
+      "id": 69,
+      "year": 2026,
       "titleJa": "ラブライブ！スーパースター!!",
       "titleEn": "Love Live! Superstar!!",
       "region": "tokyo",
@@ -1141,11 +1598,16 @@
       },
       "anilistPopularity": 29106,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/92/306742_MvLk2.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/bf/92/306742_MvLk2.jpg",
+      "areaAnchor": {
+        "lat": 34.2060924,
+        "lng": 139.1348719,
+        "query": "神津島村, 東京都, 日本"
+      }
     },
     {
-      "id": 63,
-      "year": 2025,
+      "id": 70,
+      "year": 2026,
       "titleJa": "文豪ストレイドッグス",
       "titleEn": "Bungo Stray Dogs",
       "region": "kanto",
@@ -1159,11 +1621,16 @@
       },
       "anilistPopularity": 401001,
       "anilistMeanScore": 77,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/01/4b/144357_Lg83V.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/01/4b/144357_Lg83V.jpg",
+      "areaAnchor": {
+        "lat": 35.4503381,
+        "lng": 139.6343802,
+        "query": "横浜市, 神奈川県, 日本"
+      }
     },
     {
-      "id": 64,
-      "year": 2025,
+      "id": 71,
+      "year": 2026,
       "titleJa": "ガールズバンドクライ",
       "titleEn": "GIRLS BAND CRY",
       "region": "kanto",
@@ -1177,17 +1644,22 @@
       },
       "anilistPopularity": 61894,
       "anilistMeanScore": 83,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/75/c1/431767_bX7FZ.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/75/c1/431767_bX7FZ.jpg",
+      "areaAnchor": {
+        "lat": 35.5306639,
+        "lng": 139.7037668,
+        "query": "川崎市, 神奈川県, 日本"
+      }
     },
     {
-      "id": 65,
-      "year": 2025,
-      "titleJa": "艦隊これくしょん – 艦これ –",
-      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "id": 72,
+      "year": 2026,
+      "titleJa": "艦隊これくしょん ‐艦これ‐",
+      "titleEn": "",
       "region": "kanto",
       "prefecture": "神奈川県",
       "city": "横須賀市",
-      "regionEn": "Kanagawa Pref. / Yokosuka City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 84386,
         "anilist": 20553,
@@ -1195,11 +1667,16 @@
       },
       "anilistPopularity": 52398,
       "anilistMeanScore": 64,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg",
+      "areaAnchor": {
+        "lat": 35.2814779,
+        "lng": 139.6719597,
+        "query": "横須賀市, 神奈川県, 日本"
+      }
     },
     {
-      "id": 66,
-      "year": 2025,
+      "id": 73,
+      "year": 2026,
       "titleJa": "スローループ",
       "titleEn": "SLOW LOOP",
       "region": "kanto",
@@ -1213,11 +1690,16 @@
       },
       "anilistPopularity": 27891,
       "anilistMeanScore": 71,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e8/57/323626_4yEBY.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e8/57/323626_4yEBY.jpg",
+      "areaAnchor": {
+        "lat": 35.2814779,
+        "lng": 139.6719597,
+        "query": "横須賀市, 神奈川県, 日本"
+      }
     },
     {
-      "id": 67,
-      "year": 2025,
+      "id": 74,
+      "year": 2026,
       "titleJa": "ハイスクール・フリート",
       "titleEn": "HIGH SCHOOL FLEET",
       "region": "kanto",
@@ -1231,11 +1713,16 @@
       },
       "anilistPopularity": 30998,
       "anilistMeanScore": 70,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/83/dd/144843_1nqUr.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/83/dd/144843_1nqUr.jpg",
+      "areaAnchor": {
+        "lat": 35.2814779,
+        "lng": 139.6719597,
+        "query": "横須賀市, 神奈川県, 日本"
+      }
     },
     {
-      "id": 68,
-      "year": 2025,
+      "id": 75,
+      "year": 2026,
       "titleJa": "青春ブタ野郎はバニーガール先輩の夢を見ない",
       "titleEn": "Rascal Does Not Dream of Bunny Girl Senpai",
       "region": "kanto",
@@ -1249,11 +1736,82 @@
       },
       "anilistPopularity": 544386,
       "anilistMeanScore": 81,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/b9/45/240038_b5j7g.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/b9/45/240038_b5j7g.jpg",
+      "areaAnchor": {
+        "lat": 35.3388615,
+        "lng": 139.4909335,
+        "query": "藤沢市, 神奈川県, 日本"
+      }
     },
     {
-      "id": 69,
-      "year": 2025,
+      "id": 76,
+      "year": 2026,
+      "titleJa": "TARI TARI",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "藤沢市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 37137,
+        "anilist": 13333,
+        "mal": 13333
+      },
+      "anilistPopularity": 41224,
+      "anilistMeanScore": 70,
+      "areaAnchor": {
+        "lat": 35.3388615,
+        "lng": 139.4909335,
+        "query": "藤沢市, 神奈川県, 日本"
+      }
+    },
+    {
+      "id": 77,
+      "year": 2026,
+      "titleJa": "MFゴースト",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "小田原市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 364252,
+        "anilist": 143327,
+        "mal": 50695
+      },
+      "anilistPopularity": 35349,
+      "anilistMeanScore": 74,
+      "areaAnchor": {
+        "lat": 35.2645301,
+        "lng": 139.152246,
+        "query": "小田原市, 神奈川県, 日本"
+      }
+    },
+    {
+      "id": 78,
+      "year": 2026,
+      "titleJa": "薫る花は凛と咲く",
+      "titleEn": "",
+      "region": "kanto",
+      "prefecture": "神奈川県",
+      "city": "茅ヶ崎市（茅ヶ崎市立図書館）",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 513345,
+        "anilist": 181444,
+        "mal": 59845
+      },
+      "anilistPopularity": 219557,
+      "anilistMeanScore": 84,
+      "areaAnchor": {
+        "lat": 35.329479,
+        "lng": 139.405371,
+        "query": "茅ヶ崎市, 神奈川県, 日本"
+      }
+    },
+    {
+      "id": 79,
+      "year": 2026,
       "titleJa": "『エヴァンゲリオン』シリーズ",
       "titleEn": "EVANGELION",
       "region": "kanto",
@@ -1268,11 +1826,16 @@
       "anilistPopularity": 464837,
       "anilistMeanScore": 83,
       "anilistReviewNote": "match=manual_prefer_main_series; anilist={\"romaji\":\"Shin Seiki Evangelion\",\"english\":\"Neon Genesis Evangelion\",\"native\":\"新世紀エヴァンゲリオン\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e5/69/265_Z5Uou.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e5/69/265_Z5Uou.jpg",
+      "areaAnchor": {
+        "lat": 35.2323662,
+        "lng": 139.1068849,
+        "query": "箱根町, 神奈川県, 日本"
+      }
     },
     {
-      "id": 70,
-      "year": 2025,
+      "id": 80,
+      "year": 2026,
       "titleJa": "弱虫ペダル",
       "titleEn": "Yowamushi Pedal",
       "region": "kanto",
@@ -1286,11 +1849,39 @@
       },
       "anilistPopularity": 50520,
       "anilistMeanScore": 77,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/33/d1/59583_B192u.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/33/d1/59583_B192u.jpg",
+      "areaAnchor": {
+        "lat": 35.2323662,
+        "lng": 139.1068849,
+        "query": "箱根町, 神奈川県, 日本"
+      }
     },
     {
-      "id": 71,
-      "year": 2025,
+      "id": 81,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "新潟県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 37.6452283,
+        "lng": 138.7669125,
+        "query": "新潟県, 日本"
+      }
+    },
+    {
+      "id": 82,
+      "year": 2026,
       "titleJa": "Do It Yourself!! -どぅー・いっと・ゆあせるふ-",
       "titleEn": "Do It Yourself!!",
       "region": "chubu",
@@ -1304,11 +1895,39 @@
       },
       "anilistPopularity": 46848,
       "anilistMeanScore": 74,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/ba/28/331445_cUsfp.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/ba/28/331445_cUsfp.jpg",
+      "areaAnchor": {
+        "lat": 37.6361174,
+        "lng": 138.9613971,
+        "query": "三条市, 新潟県, 日本"
+      }
     },
     {
-      "id": 72,
-      "year": 2025,
+      "id": 83,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "富山県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 36.6468015,
+        "lng": 137.2183531,
+        "query": "富山県, 日本"
+      }
+    },
+    {
+      "id": 84,
+      "year": 2026,
       "titleJa": "おおかみこどもの雨と雪",
       "titleEn": "Wolf Children",
       "region": "chubu",
@@ -1322,29 +1941,16 @@
       },
       "anilistPopularity": 186830,
       "anilistMeanScore": 83,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d7/9a/28440_IfcS4.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d7/9a/28440_IfcS4.jpg",
+      "areaAnchor": {
+        "lat": 36.7474574,
+        "lng": 137.0099947,
+        "query": "上市町, 富山県, 日本"
+      }
     },
     {
-      "id": 73,
-      "year": 2025,
-      "titleJa": "数分間のエールを",
-      "titleEn": "A Few Moments of Cheers",
-      "region": "chubu",
-      "prefecture": "石川県",
-      "city": "金沢市",
-      "regionEn": "Ishikawa Pref. / Kanazawa City",
-      "externalIds": {
-        "bangumi": 476808,
-        "anilist": 173935,
-        "mal": 57915
-      },
-      "anilistPopularity": 6086,
-      "anilistMeanScore": 74,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/03/f8/476808_U4Hmm.jpg"
-    },
-    {
-      "id": 74,
-      "year": 2025,
+      "id": 85,
+      "year": 2026,
       "titleJa": "花咲くいろは",
       "titleEn": "Hanasaku Iroha: Blossoms for Tomorrow",
       "region": "chubu",
@@ -1358,29 +1964,83 @@
       },
       "anilistPopularity": 77227,
       "anilistMeanScore": 77,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/56/2d/22759_A5N6H.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/56/2d/22759_A5N6H.jpg",
+      "areaAnchor": {
+        "lat": 36.561627,
+        "lng": 136.6568822,
+        "query": "金沢市, 石川県, 日本"
+      }
     },
     {
-      "id": 75,
-      "year": 2025,
-      "titleJa": "数分間のエールを",
-      "titleEn": "A Few Moments of Cheers",
+      "id": 86,
+      "year": 2026,
+      "titleJa": "TVアニメ「君は放課後インソムニア」",
+      "titleEn": "",
       "region": "chubu",
       "prefecture": "石川県",
-      "city": "羽咋市",
-      "regionEn": "Ishikawa Pref. / Hakui City",
+      "city": "七尾市",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 476808,
-        "anilist": 173935,
-        "mal": 57915
+        "bangumi": 365437,
+        "anilist": null,
+        "mal": null
       },
-      "anilistPopularity": 6086,
-      "anilistMeanScore": 74,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/03/f8/476808_U4Hmm.jpg"
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 37.0521078,
+        "lng": 136.946461,
+        "query": "七尾市, 石川県, 日本"
+      }
     },
     {
-      "id": 76,
-      "year": 2025,
+      "id": 87,
+      "year": 2026,
+      "titleJa": "千歳くんはラムネ瓶のなか",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "福井県",
+      "city": "福井市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 507634,
+        "anilist": 180082,
+        "mal": 59517
+      },
+      "anilistPopularity": 51804,
+      "anilistMeanScore": 73,
+      "areaAnchor": {
+        "lat": 36.061751,
+        "lng": 136.2260542,
+        "query": "福井市, 福井県, 日本"
+      }
+    },
+    {
+      "id": 88,
+      "year": 2026,
+      "titleJa": "mono",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "山梨県",
+      "city": "甲府市ほか（県央ネットやまなし）",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 485936,
+        "anilist": 176246,
+        "mal": 58492
+      },
+      "anilistPopularity": 27721,
+      "anilistMeanScore": 76,
+      "areaAnchor": {
+        "lat": 35.6652481,
+        "lng": 138.5710441,
+        "query": "甲府市, 山梨県, 日本"
+      }
+    },
+    {
+      "id": 89,
+      "year": 2026,
       "titleJa": "『ゆるキャン△』シリーズ",
       "titleEn": "LAID-BACK CAMP series",
       "region": "chubu",
@@ -1395,11 +2055,16 @@
       "anilistPopularity": 160391,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg",
+      "areaAnchor": {
+        "lat": 35.6928452,
+        "lng": 138.6871263,
+        "query": "山梨市, 山梨県, 日本"
+      }
     },
     {
-      "id": 77,
-      "year": 2025,
+      "id": 90,
+      "year": 2026,
       "titleJa": "スーパーカブ",
       "titleEn": "Super Cub",
       "region": "chubu",
@@ -1413,11 +2078,16 @@
       },
       "anilistPopularity": 46441,
       "anilistMeanScore": 72,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1a/de/294337_w4y8P.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1a/de/294337_w4y8P.jpg",
+      "areaAnchor": {
+        "lat": 35.7764838,
+        "lng": 138.4235673,
+        "query": "北杜市, 山梨県, 日本"
+      }
     },
     {
-      "id": 78,
-      "year": 2025,
+      "id": 91,
+      "year": 2026,
       "titleJa": "『ゆるキャン△』シリーズ",
       "titleEn": "LAID-BACK CAMP series",
       "region": "chubu",
@@ -1432,11 +2102,16 @@
       "anilistPopularity": 160391,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg",
+      "areaAnchor": {
+        "lat": 35.4680507,
+        "lng": 138.4425665,
+        "query": "身延町, 山梨県, 日本"
+      }
     },
     {
-      "id": 79,
-      "year": 2025,
+      "id": 92,
+      "year": 2026,
       "titleJa": "サマーウォーズ",
       "titleEn": "SUMMER WARS",
       "region": "chubu",
@@ -1450,11 +2125,38 @@
       },
       "anilistPopularity": 110868,
       "anilistMeanScore": 77,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/73/e0/1905_5tj44.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/73/e0/1905_5tj44.jpg",
+      "areaAnchor": {
+        "lat": 36.4021192,
+        "lng": 138.2490506,
+        "query": "上田市, 長野県, 日本"
+      }
     },
     {
-      "id": 80,
-      "year": 2025,
+      "id": 93,
+      "year": 2026,
+      "titleJa": "Turkey!",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "長野県",
+      "city": "千曲市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 413567,
+        "anilist": 159483,
+        "mal": 54028
+      },
+      "anilistPopularity": 11083,
+      "anilistMeanScore": 63,
+      "areaAnchor": {
+        "lat": 36.5336984,
+        "lng": 138.120123,
+        "query": "千曲市, 長野県, 日本"
+      }
+    },
+    {
+      "id": 94,
+      "year": 2026,
       "titleJa": "小市民シリーズ",
       "titleEn": "SHOSHIMIN: How to become Ordinary",
       "region": "chubu",
@@ -1468,11 +2170,16 @@
       },
       "anilistPopularity": 58070,
       "anilistMeanScore": 74,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e2/f4/474906_z0h44.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e2/f4/474906_z0h44.jpg",
+      "areaAnchor": {
+        "lat": 35.4230949,
+        "lng": 136.7627526,
+        "query": "岐阜市, 岐阜県, 日本"
+      }
     },
     {
-      "id": 81,
-      "year": 2025,
+      "id": 95,
+      "year": 2026,
       "titleJa": "氷菓",
       "titleEn": "Hyouka",
       "region": "chubu",
@@ -1486,11 +2193,16 @@
       },
       "anilistPopularity": 336063,
       "anilistMeanScore": 79,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/cd/38/27364_1ZFmr.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/cd/38/27364_1ZFmr.jpg",
+      "areaAnchor": {
+        "lat": 36.1396246,
+        "lng": 137.2510322,
+        "query": "高山市, 岐阜県, 日本"
+      }
     },
     {
-      "id": 82,
-      "year": 2025,
+      "id": 96,
+      "year": 2026,
       "titleJa": "『やくならマグカップも』シリーズ",
       "titleEn": "『Let’s Make a Mug Too』Series",
       "region": "chubu",
@@ -1505,17 +2217,44 @@
       "anilistPopularity": 19192,
       "anilistMeanScore": 64,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yakunara Mug Cup Mo\",\"english\":\"Let's Make a Mug Too\",\"native\":\"やくならマグカップも\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/de/ad/311615_UleOW.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/de/ad/311615_UleOW.jpg",
+      "areaAnchor": {
+        "lat": 35.3329961,
+        "lng": 137.1319459,
+        "query": "多治見市, 岐阜県, 日本"
+      }
     },
     {
-      "id": 83,
-      "year": 2025,
-      "titleJa": "ひぐらしのなく頃に業・卒",
-      "titleEn": "“Higurashi: When They Cry – GOU Higurashi: When They Cry – SOTSU”",
+      "id": 97,
+      "year": 2026,
+      "titleJa": "ウマ娘 シンデレラグレイ",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "岐阜県",
+      "city": "笠松町",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 509297,
+        "anilist": 180516,
+        "mal": 59636
+      },
+      "anilistPopularity": 49034,
+      "anilistMeanScore": 85,
+      "areaAnchor": {
+        "lat": 35.3685714,
+        "lng": 136.7639924,
+        "query": "笠松町, 岐阜県, 日本"
+      }
+    },
+    {
+      "id": 98,
+      "year": 2026,
+      "titleJa": "ひぐらしのなく頃に 業・卒",
+      "titleEn": "",
       "region": "chubu",
       "prefecture": "岐阜県",
       "city": "白川村",
-      "regionEn": "Gifu Pref. / Shirakawa Village",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 289,
         "anilist": 934,
@@ -1524,29 +2263,16 @@
       "anilistPopularity": 170712,
       "anilistMeanScore": 76,
       "anilistReviewNote": "match=manual_prefer_main_series; anilist={\"romaji\":\"Higurashi no Naku Koro ni\",\"english\":\"When They Cry\",\"native\":\"ひぐらしのなく頃に\"}",
+      "areaAnchor": {
+        "lat": 36.2710215,
+        "lng": 136.8986129,
+        "query": "白川村, 岐阜県, 日本"
+      },
       "posterUrl": "https://lain.bgm.tv/pic/cover/l/83/9a/289_h0nz0.jpg"
     },
     {
-      "id": 84,
-      "year": 2025,
-      "titleJa": "化け猫あんずちゃん",
-      "titleEn": "Ghost Cat Anzu",
-      "region": "chubu",
-      "prefecture": "静岡県",
-      "city": "伊豆",
-      "regionEn": "Shizuoka Pref. / Izu",
-      "externalIds": {
-        "bangumi": 441447,
-        "anilist": 158641,
-        "mal": 54603
-      },
-      "anilistPopularity": 4488,
-      "anilistMeanScore": 72,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/ba/eb/441447_EsFl2.jpg"
-    },
-    {
-      "id": 85,
-      "year": 2025,
+      "id": 99,
+      "year": 2026,
       "titleJa": "『エヴァンゲリオン』シリーズ",
       "titleEn": "EVANGELION",
       "region": "chubu",
@@ -1561,11 +2287,16 @@
       "anilistPopularity": 464837,
       "anilistMeanScore": 83,
       "anilistReviewNote": "match=manual_prefer_main_series; anilist={\"romaji\":\"Shin Seiki Evangelion\",\"english\":\"Neon Genesis Evangelion\",\"native\":\"新世紀エヴァンゲリオン\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e5/69/265_Z5Uou.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e5/69/265_Z5Uou.jpg",
+      "areaAnchor": {
+        "lat": 34.7109786,
+        "lng": 137.7259431,
+        "query": "浜松市, 静岡県, 日本"
+      }
     },
     {
-      "id": 86,
-      "year": 2025,
+      "id": 100,
+      "year": 2026,
       "titleJa": "『ゆるキャン△』シリーズ",
       "titleEn": "LAID-BACK CAMP series",
       "region": "chubu",
@@ -1580,11 +2311,16 @@
       "anilistPopularity": 160391,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg",
+      "areaAnchor": {
+        "lat": 34.7109786,
+        "lng": 137.7259431,
+        "query": "浜松市, 静岡県, 日本"
+      }
     },
     {
-      "id": 87,
-      "year": 2025,
+      "id": 101,
+      "year": 2026,
       "titleJa": "ラブライブ！サンシャイン!!",
       "titleEn": "Love Live! Sunshine!!",
       "region": "chubu",
@@ -1598,11 +2334,38 @@
       },
       "anilistPopularity": 58725,
       "anilistMeanScore": 72,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d3/37/165553_5f88z.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d3/37/165553_5f88z.jpg",
+      "areaAnchor": {
+        "lat": 35.0957963,
+        "lng": 138.8633946,
+        "query": "沼津市, 静岡県, 日本"
+      }
     },
     {
-      "id": 88,
-      "year": 2025,
+      "id": 102,
+      "year": 2026,
+      "titleJa": "ぐらんぶる",
+      "titleEn": "",
+      "region": "chubu",
+      "prefecture": "静岡県",
+      "city": "伊東市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 235130,
+        "anilist": 100922,
+        "mal": 37105
+      },
+      "anilistPopularity": 240296,
+      "anilistMeanScore": 82,
+      "areaAnchor": {
+        "lat": 34.9656621,
+        "lng": 139.101729,
+        "query": "伊東市, 静岡県, 日本"
+      }
+    },
+    {
+      "id": 103,
+      "year": 2026,
       "titleJa": "『ゆるキャン△』シリーズ",
       "titleEn": "LAID-BACK CAMP series",
       "region": "chubu",
@@ -1617,29 +2380,16 @@
       "anilistPopularity": 160391,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg",
+      "areaAnchor": {
+        "lat": 35.0468744,
+        "lng": 138.0817607,
+        "query": "川根本町, 静岡県, 日本"
+      }
     },
     {
-      "id": 89,
-      "year": 2025,
-      "titleJa": "シキザクラ",
-      "titleEn": "SHIKIZAKURA",
-      "region": "chubu",
-      "prefecture": "愛知県",
-      "city": "名古屋市",
-      "regionEn": "Aichi Pref. / Nagoya City",
-      "externalIds": {
-        "bangumi": 262547,
-        "anilist": 105119,
-        "mal": 38440
-      },
-      "anilistPopularity": 6010,
-      "anilistMeanScore": 54,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1b/62/262547_5lLEP.jpg"
-    },
-    {
-      "id": 90,
-      "year": 2025,
+      "id": 104,
+      "year": 2026,
       "titleJa": "『ゆるキャン△』シリーズ",
       "titleEn": "LAID-BACK CAMP series",
       "region": "chubu",
@@ -1654,11 +2404,16 @@
       "anilistPopularity": 160391,
       "anilistMeanScore": 81,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuru Camp△\",\"english\":\"Laid-Back Camp\",\"native\":\"ゆるキャン△\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/18/bc/207195_2Cp3o.jpg",
+      "areaAnchor": {
+        "lat": 35.1851045,
+        "lng": 136.8998438,
+        "query": "名古屋市, 愛知県, 日本"
+      }
     },
     {
-      "id": 91,
-      "year": 2025,
+      "id": 105,
+      "year": 2026,
       "titleJa": "負けヒロインが多すぎる！",
       "titleEn": "TOO MANY LOSING HEROINES!",
       "region": "chubu",
@@ -1672,29 +2427,39 @@
       },
       "anilistPopularity": 118011,
       "anilistMeanScore": 81,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e4/dc/464376_NsZRw.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e4/dc/464376_NsZRw.jpg",
+      "areaAnchor": {
+        "lat": 34.769123,
+        "lng": 137.391461,
+        "query": "豊橋市, 愛知県, 日本"
+      }
     },
     {
-      "id": 92,
-      "year": 2025,
-      "titleJa": "シキザクラ",
-      "titleEn": "SHIKIZAKURA",
-      "region": "chubu",
-      "prefecture": "愛知県",
-      "city": "豊田市",
-      "regionEn": "Aichi Pref. / Toyota City",
+      "id": 106,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "kinki",
+      "prefecture": "三重県",
+      "city": "",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 262547,
-        "anilist": 105119,
-        "mal": 38440
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
       },
-      "anilistPopularity": 6010,
-      "anilistMeanScore": 54,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1b/62/262547_5lLEP.jpg"
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 34.7339685,
+        "lng": 136.5154489,
+        "query": "三重県, 日本"
+      }
     },
     {
-      "id": 93,
-      "year": 2025,
+      "id": 107,
+      "year": 2026,
       "titleJa": "凪のあすから",
       "titleEn": "Nagi no Asu kara",
       "region": "kinki",
@@ -1708,11 +2473,16 @@
       },
       "anilistPopularity": 133413,
       "anilistMeanScore": 77,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/16/29/47889_gZy58.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/16/29/47889_gZy58.jpg",
+      "areaAnchor": {
+        "lat": 33.8885409,
+        "lng": 136.100411,
+        "query": "熊野市, 三重県, 日本"
+      }
     },
     {
-      "id": 94,
-      "year": 2025,
+      "id": 108,
+      "year": 2026,
       "titleJa": "薄桜鬼 真改",
       "titleEn": "HAKUOKI SHINKAI",
       "region": "kinki",
@@ -1727,17 +2497,22 @@
       "anilistPopularity": 1092,
       "anilistMeanScore": 60,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Hakuouki Shinkai: Kaze no Shou\",\"english\":null,\"native\":\"薄桜鬼 真改 風ノ章 - 通常版\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/85/26/4315_9cksk.jpg",
+      "areaAnchor": {
+        "lat": 35.0115754,
+        "lng": 135.7681441,
+        "query": "京都市, 京都府, 日本"
+      }
     },
     {
-      "id": 95,
-      "year": 2025,
-      "titleJa": "艦隊これくしょん – 艦これ –",
-      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "id": 109,
+      "year": 2026,
+      "titleJa": "艦隊これくしょん ‐艦これ‐",
+      "titleEn": "",
       "region": "kinki",
       "prefecture": "京都府",
       "city": "舞鶴市",
-      "regionEn": "Kyoto / Maizuru City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 84386,
         "anilist": 20553,
@@ -1745,17 +2520,22 @@
       },
       "anilistPopularity": 52398,
       "anilistMeanScore": 64,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg",
+      "areaAnchor": {
+        "lat": 35.4747274,
+        "lng": 135.3860338,
+        "query": "舞鶴市, 京都府, 日本"
+      }
     },
     {
-      "id": 96,
-      "year": 2025,
-      "titleJa": "一休さん（酬恩庵一休寺）",
-      "titleEn": "IKKYU-SAN",
+      "id": 110,
+      "year": 2026,
+      "titleJa": "一休さん(酬恩庵一休寺)",
+      "titleEn": "",
       "region": "kinki",
       "prefecture": "京都府",
       "city": "京田辺市",
-      "regionEn": "Kyoto / Kyotanabe City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 9540,
         "anilist": 4935,
@@ -1764,11 +2544,16 @@
       "anilistPopularity": 881,
       "anilistMeanScore": 71,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Ikkyuu-san\",\"english\":\"Ikkyu the Little Monk\",\"native\":\"一休さん\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d1/d6/9540_sp3Iz.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d1/d6/9540_sp3Iz.jpg",
+      "areaAnchor": {
+        "lat": 34.8143918,
+        "lng": 135.7677347,
+        "query": "京田辺市, 京都府, 日本"
+      }
     },
     {
-      "id": 97,
-      "year": 2025,
+      "id": 111,
+      "year": 2026,
       "titleJa": "『涼宮ハルヒの憂鬱』シリーズ",
       "titleEn": "『The Melancholy of Haruhi Suzumiya』Series",
       "region": "kinki",
@@ -1783,11 +2568,39 @@
       "anilistPopularity": 115249,
       "anilistMeanScore": 71,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Suzumiya Haruhi no Yuuutsu (2009)\",\"english\":\"The Melancholy of Haruhi Suzumiya (2009)\",\"native\":\"涼宮ハルヒの憂鬱\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/21/8a/485_Et062.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/21/8a/485_Et062.jpg",
+      "areaAnchor": {
+        "lat": 34.7377745,
+        "lng": 135.3413128,
+        "query": "西宮市, 兵庫県, 日本"
+      }
     },
     {
-      "id": 98,
-      "year": 2025,
+      "id": 112,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "kinki",
+      "prefecture": "和歌山県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 33.8070292,
+        "lng": 135.5930743,
+        "query": "和歌山県, 日本"
+      }
+    },
+    {
+      "id": 113,
+      "year": 2026,
       "titleJa": "ひなビタ♪",
       "titleEn": "Hinabita♪",
       "region": "chugoku_shikoku",
@@ -1802,11 +2615,15 @@
       "anilistPopularity": null,
       "anilistMeanScore": null,
       "anilistReviewNote": "unresolved:no_results",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/66/e8/496369_uvme3.jpg"
+      "areaAnchor": {
+        "lat": 35.430166,
+        "lng": 133.825525,
+        "query": "倉吉市, 鳥取県, 日本"
+      }
     },
     {
-      "id": 99,
-      "year": 2025,
+      "id": 114,
+      "year": 2026,
       "titleJa": "ゲゲゲの鬼太郎",
       "titleEn": "GeGeGe no Kitaro",
       "region": "chugoku_shikoku",
@@ -1820,11 +2637,39 @@
       },
       "anilistPopularity": 1800,
       "anilistMeanScore": 67,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/46/0d/18176_4To58.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/46/0d/18176_4To58.jpg",
+      "areaAnchor": {
+        "lat": 35.5391751,
+        "lng": 133.2318575,
+        "query": "境港市, 鳥取県, 日本"
+      }
     },
     {
-      "id": 100,
-      "year": 2025,
+      "id": 115,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "chugoku_shikoku",
+      "prefecture": "島根県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 34.9418212,
+        "lng": 132.537439,
+        "query": "島根県, 日本"
+      }
+    },
+    {
+      "id": 116,
+      "year": 2026,
       "titleJa": "推しが武道館いってくれたら死ぬ",
       "titleEn": "If My Favorite Pop Idol Made it to the Budokan, I Would Die",
       "region": "chugoku_shikoku",
@@ -1838,17 +2683,45 @@
       },
       "anilistPopularity": 18880,
       "anilistMeanScore": 72,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/9d/a6/246915_115H3.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/9d/a6/246915_115H3.jpg",
+      "areaAnchor": {
+        "lat": 34.6553944,
+        "lng": 133.9194595,
+        "query": "岡山市, 岡山県, 日本"
+      }
     },
     {
-      "id": 101,
-      "year": 2025,
-      "titleJa": "艦隊これくしょん – 艦これ –",
-      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "id": 117,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "chugoku_shikoku",
+      "prefecture": "広島県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 34.5666725,
+        "lng": 132.753565,
+        "query": "広島県, 日本"
+      }
+    },
+    {
+      "id": 118,
+      "year": 2026,
+      "titleJa": "艦隊これくしょん ‐艦これ‐",
+      "titleEn": "",
       "region": "chugoku_shikoku",
       "prefecture": "広島県",
       "city": "呉市",
-      "regionEn": "Hiroshima Pref. / Kure City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 84386,
         "anilist": 20553,
@@ -1856,11 +2729,16 @@
       },
       "anilistPopularity": 52398,
       "anilistMeanScore": 64,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg",
+      "areaAnchor": {
+        "lat": 34.2484488,
+        "lng": 132.5652498,
+        "query": "呉市, 広島県, 日本"
+      }
     },
     {
-      "id": 102,
-      "year": 2025,
+      "id": 119,
+      "year": 2026,
       "titleJa": "たまゆら",
       "titleEn": "TAMAYURA",
       "region": "chugoku_shikoku",
@@ -1874,29 +2752,38 @@
       },
       "anilistPopularity": 16542,
       "anilistMeanScore": 70,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a1/ad/8452_xCgma.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/a1/ad/8452_xCgma.jpg",
+      "areaAnchor": {
+        "lat": 34.3418377,
+        "lng": 132.9070476,
+        "query": "竹原市, 広島県, 日本"
+      }
     },
     {
-      "id": 103,
-      "year": 2025,
-      "titleJa": "朝霧の巫女",
-      "titleEn": "Asagiri no Miko",
+      "id": 120,
+      "year": 2026,
+      "titleJa": "『蒼穹のファフナー』シリーズ",
+      "titleEn": "",
       "region": "chugoku_shikoku",
       "prefecture": "広島県",
-      "city": "三次市",
-      "regionEn": "Hiroshima Pref. / Miyoshi City",
+      "city": "尾道市",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 12786,
-        "anilist": 231,
-        "mal": 231
+        "bangumi": 2936,
+        "anilist": 143201,
+        "mal": 50675
       },
-      "anilistPopularity": 1900,
-      "anilistMeanScore": 57,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/5d/ac/12786_Iji2d.jpg"
+      "anilistPopularity": 1482,
+      "anilistMeanScore": 69,
+      "areaAnchor": {
+        "lat": 34.4088519,
+        "lng": 133.2051549,
+        "query": "尾道市, 広島県, 日本"
+      }
     },
     {
-      "id": 104,
-      "year": 2025,
+      "id": 121,
+      "year": 2026,
       "titleJa": "『エヴァンゲリオン』シリーズ",
       "titleEn": "EVANGELION",
       "region": "chugoku_shikoku",
@@ -1911,11 +2798,83 @@
       "anilistPopularity": 464837,
       "anilistMeanScore": 83,
       "anilistReviewNote": "match=manual_prefer_main_series; anilist={\"romaji\":\"Shin Seiki Evangelion\",\"english\":\"Neon Genesis Evangelion\",\"native\":\"新世紀エヴァンゲリオン\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e5/69/265_Z5Uou.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/e5/69/265_Z5Uou.jpg",
+      "areaAnchor": {
+        "lat": 33.9518498,
+        "lng": 131.2472243,
+        "query": "宇部市, 山口県, 日本"
+      }
     },
     {
-      "id": 105,
-      "year": 2025,
+      "id": 122,
+      "year": 2026,
+      "titleJa": "ざつ旅-That’s Journey-",
+      "titleEn": "",
+      "region": "chugoku_shikoku",
+      "prefecture": "香川県",
+      "city": "",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 437593,
+        "anilist": null,
+        "mal": null
+      },
+      "anilistPopularity": null,
+      "anilistMeanScore": null,
+      "anilistReviewNote": "unresolved:no_results",
+      "areaAnchor": {
+        "lat": 34.2480104,
+        "lng": 134.0586579,
+        "query": "香川県, 日本"
+      }
+    },
+    {
+      "id": 123,
+      "year": 2026,
+      "titleJa": "Summer Pockets",
+      "titleEn": "",
+      "region": "chugoku_shikoku",
+      "prefecture": "香川県",
+      "city": "男木島",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 363957,
+        "anilist": 143200,
+        "mal": 50694
+      },
+      "anilistPopularity": 38154,
+      "anilistMeanScore": 71,
+      "areaAnchor": {
+        "lat": 34.4250543,
+        "lng": 134.060021,
+        "query": "男木島, 香川県, 日本"
+      }
+    },
+    {
+      "id": 124,
+      "year": 2026,
+      "titleJa": "Summer Pockets",
+      "titleEn": "",
+      "region": "chugoku_shikoku",
+      "prefecture": "香川県",
+      "city": "女木島",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 363957,
+        "anilist": 143200,
+        "mal": 50694
+      },
+      "anilistPopularity": 38154,
+      "anilistMeanScore": 71,
+      "areaAnchor": {
+        "lat": 34.3943259,
+        "lng": 134.0497057,
+        "query": "女木島, 香川県, 日本"
+      }
+    },
+    {
+      "id": 125,
+      "year": 2026,
       "titleJa": "『結城友奈は勇者である』シリーズ",
       "titleEn": "『YukiYuna is a Hero』Series",
       "region": "chugoku_shikoku",
@@ -1930,29 +2889,38 @@
       "anilistPopularity": 48079,
       "anilistMeanScore": 72,
       "anilistReviewNote": "match=top1_fallback; anilist={\"romaji\":\"Yuuki Yuuna wa Yuusha de Aru\",\"english\":\"Yuki Yuna is a Hero\",\"native\":\"結城友奈は勇者である\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/2f/0c/109328_MXDN2.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/2f/0c/109328_MXDN2.jpg",
+      "areaAnchor": {
+        "lat": 34.1284693,
+        "lng": 133.6628679,
+        "query": "観音寺市, 香川県, 日本"
+      }
     },
     {
-      "id": 106,
-      "year": 2025,
-      "titleJa": "からかい上手の高木さん",
-      "titleEn": "Teasing Master Takagi-san",
+      "id": 126,
+      "year": 2026,
+      "titleJa": "からかい上手の高木さん３",
+      "titleEn": "",
       "region": "chugoku_shikoku",
       "prefecture": "香川県",
       "city": "土庄町",
-      "regionEn": "Kagawa Pref. / Tonosho Town",
+      "regionEn": "",
       "externalIds": {
-        "bangumi": 219200,
-        "anilist": 99468,
-        "mal": 35860
+        "bangumi": 347887,
+        "anilist": 138424,
+        "mal": 49721
       },
-      "anilistPopularity": 163205,
-      "anilistMeanScore": 74,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/09/16/219200_wFT9i.jpg"
+      "anilistPopularity": 57348,
+      "anilistMeanScore": 82,
+      "areaAnchor": {
+        "lat": 34.4862397,
+        "lng": 134.1859682,
+        "query": "土庄町, 香川県, 日本"
+      }
     },
     {
-      "id": 107,
-      "year": 2025,
+      "id": 127,
+      "year": 2026,
       "titleJa": "がんばっていきまっしょい",
       "titleEn": "Give It All",
       "region": "chugoku_shikoku",
@@ -1966,11 +2934,38 @@
       },
       "anilistPopularity": 3136,
       "anilistMeanScore": 63,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/61/fc/485868_zP648.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/61/fc/485868_zP648.jpg",
+      "areaAnchor": {
+        "lat": 33.8395188,
+        "lng": 132.7653521,
+        "query": "松山市, 愛媛県, 日本"
+      }
     },
     {
-      "id": 108,
-      "year": 2025,
+      "id": 128,
+      "year": 2026,
+      "titleJa": "私を喰べたい、ひとでなし",
+      "titleEn": "",
+      "region": "chugoku_shikoku",
+      "prefecture": "愛媛県",
+      "city": "伊予市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 520842,
+        "anilist": 183385,
+        "mal": 60168
+      },
+      "anilistPopularity": 44701,
+      "anilistMeanScore": 74,
+      "areaAnchor": {
+        "lat": 33.7578962,
+        "lng": 132.7039458,
+        "query": "伊予市, 愛媛県, 日本"
+      }
+    },
+    {
+      "id": 129,
+      "year": 2026,
       "titleJa": "竜とそばかすの姫",
       "titleEn": "BELLE",
       "region": "chugoku_shikoku",
@@ -1984,11 +2979,16 @@
       },
       "anilistPopularity": 66743,
       "anilistMeanScore": 73,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4e/48/322535_0sF9l.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4e/48/322535_0sF9l.jpg",
+      "areaAnchor": {
+        "lat": 33.5317521,
+        "lng": 133.2513578,
+        "query": "越知町, 高知県, 日本"
+      }
     },
     {
-      "id": 109,
-      "year": 2025,
+      "id": 130,
+      "year": 2026,
       "titleJa": "ブルバスター",
       "titleEn": "BULLBUSTER",
       "region": "kyushu_okinawa",
@@ -2002,11 +3002,16 @@
       },
       "anilistPopularity": 5218,
       "anilistMeanScore": 58,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/c1/b6/408361_Lnsqi.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/c1/b6/408361_Lnsqi.jpg",
+      "areaAnchor": {
+        "lat": 33.8829996,
+        "lng": 130.8749015,
+        "query": "北九州市, 福岡県, 日本"
+      }
     },
     {
-      "id": 110,
-      "year": 2025,
+      "id": 131,
+      "year": 2026,
       "titleJa": "色づく世界の明日から",
       "titleEn": "IRODUKU：The World in Colors",
       "region": "kyushu_okinawa",
@@ -2020,11 +3025,16 @@
       },
       "anilistPopularity": 95310,
       "anilistMeanScore": 73,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/53/f0/240562_1Ce5Q.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/53/f0/240562_1Ce5Q.jpg",
+      "areaAnchor": {
+        "lat": 32.7501611,
+        "lng": 129.8781002,
+        "query": "長崎市, 長崎県, 日本"
+      }
     },
     {
-      "id": 111,
-      "year": 2025,
+      "id": 132,
+      "year": 2026,
       "titleJa": "きみの色",
       "titleEn": "THE COLORS WITHIN",
       "region": "kyushu_okinawa",
@@ -2038,17 +3048,22 @@
       },
       "anilistPopularity": 25707,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg",
+      "areaAnchor": {
+        "lat": 32.7501611,
+        "lng": 129.8781002,
+        "query": "長崎市, 長崎県, 日本"
+      }
     },
     {
-      "id": 112,
-      "year": 2025,
-      "titleJa": "艦隊これくしょん – 艦これ –",
-      "titleEn": "Fleet Girls Collection ”KanColle”",
+      "id": 133,
+      "year": 2026,
+      "titleJa": "艦隊これくしょん ‐艦これ‐",
+      "titleEn": "",
       "region": "kyushu_okinawa",
       "prefecture": "長崎県",
       "city": "佐世保市",
-      "regionEn": "Nagasaki Pref. / Sasebo City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 84386,
         "anilist": 20553,
@@ -2056,11 +3071,16 @@
       },
       "anilistPopularity": 52398,
       "anilistMeanScore": 64,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/36/81/84386_2KHHI.jpg",
+      "areaAnchor": {
+        "lat": 33.1799965,
+        "lng": 129.7152872,
+        "query": "佐世保市, 長崎県, 日本"
+      }
     },
     {
-      "id": 113,
-      "year": 2025,
+      "id": 134,
+      "year": 2026,
       "titleJa": "きみの色",
       "titleEn": "THE COLORS WITHIN",
       "region": "kyushu_okinawa",
@@ -2074,17 +3094,22 @@
       },
       "anilistPopularity": 25707,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg",
+      "areaAnchor": {
+        "lat": 33.1799965,
+        "lng": 129.7152872,
+        "query": "佐世保市, 長崎県, 日本"
+      }
     },
     {
-      "id": 114,
-      "year": 2025,
-      "titleJa": "アンゴルモア 元寇合戦記",
-      "titleEn": "Angolmois: Record of Mongol Invasion",
+      "id": 135,
+      "year": 2026,
+      "titleJa": "アンゴルモア元寇合戦記",
+      "titleEn": "",
       "region": "kyushu_okinawa",
       "prefecture": "長崎県",
       "city": "対馬市",
-      "regionEn": "Nagasaki Pref. / Tsushima City",
+      "regionEn": "",
       "externalIds": {
         "bangumi": 218572,
         "anilist": 99412,
@@ -2092,29 +3117,16 @@
       },
       "anilistPopularity": 16077,
       "anilistMeanScore": 68,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/8e/ee/218572_VDgMO.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/8e/ee/218572_VDgMO.jpg",
+      "areaAnchor": {
+        "lat": 34.2053717,
+        "lng": 129.2946547,
+        "query": "対馬市, 長崎県, 日本"
+      }
     },
     {
-      "id": 115,
-      "year": 2025,
-      "titleJa": "GAMERA -Rebirth-",
-      "titleEn": "GAMERA -Rebirth-",
-      "region": "kyushu_okinawa",
-      "prefecture": "長崎県",
-      "city": "対馬市",
-      "regionEn": "Nagasaki Pref. / Tsushima City",
-      "externalIds": {
-        "bangumi": 418289,
-        "anilist": 160831,
-        "mal": 53627
-      },
-      "anilistPopularity": 2052,
-      "anilistMeanScore": 62,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/da/0b/418289_09OVI.jpg"
-    },
-    {
-      "id": 116,
-      "year": 2025,
+      "id": 136,
+      "year": 2026,
       "titleJa": "蒼の彼方のフォーリズム",
       "titleEn": "AOKANA -Four Rhythm Across the Blue-",
       "region": "kyushu_okinawa",
@@ -2128,11 +3140,16 @@
       },
       "anilistPopularity": 34447,
       "anilistMeanScore": 63,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/07/d4/117601_1AaI3.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/07/d4/117601_1AaI3.jpg",
+      "areaAnchor": {
+        "lat": 32.6951424,
+        "lng": 128.8408104,
+        "query": "五島市, 長崎県, 日本"
+      }
     },
     {
-      "id": 117,
-      "year": 2025,
+      "id": 137,
+      "year": 2026,
       "titleJa": "きみの色",
       "titleEn": "THE COLORS WITHIN",
       "region": "kyushu_okinawa",
@@ -2146,11 +3163,16 @@
       },
       "anilistPopularity": 25707,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg",
+      "areaAnchor": {
+        "lat": 32.6951424,
+        "lng": 128.8408104,
+        "query": "五島市, 長崎県, 日本"
+      }
     },
     {
-      "id": 118,
-      "year": 2025,
+      "id": 138,
+      "year": 2026,
       "titleJa": "蒼の彼方のフォーリズム",
       "titleEn": "AOKANA -Four Rhythm Across the Blue-",
       "region": "kyushu_okinawa",
@@ -2164,11 +3186,16 @@
       },
       "anilistPopularity": 34447,
       "anilistMeanScore": 63,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/07/d4/117601_1AaI3.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/07/d4/117601_1AaI3.jpg",
+      "areaAnchor": {
+        "lat": 32.984431,
+        "lng": 129.0732539,
+        "query": "新上五島町, 長崎県, 日本"
+      }
     },
     {
-      "id": 119,
-      "year": 2025,
+      "id": 139,
+      "year": 2026,
       "titleJa": "きみの色",
       "titleEn": "THE COLORS WITHIN",
       "region": "kyushu_okinawa",
@@ -2182,11 +3209,16 @@
       },
       "anilistPopularity": 25707,
       "anilistMeanScore": 78,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/4b/e6/409576_Q13qt.jpg",
+      "areaAnchor": {
+        "lat": 32.984431,
+        "lng": 129.0732539,
+        "query": "新上五島町, 長崎県, 日本"
+      }
     },
     {
-      "id": 120,
-      "year": 2025,
+      "id": 140,
+      "year": 2026,
       "titleJa": "夏目友人帳",
       "titleEn": "Natsume’s Book of Friends",
       "region": "kyushu_okinawa",
@@ -2200,11 +3232,16 @@
       },
       "anilistPopularity": 122971,
       "anilistMeanScore": 80,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/cf/a0/259_7C5D9.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/cf/a0/259_7C5D9.jpg",
+      "areaAnchor": {
+        "lat": 32.2056644,
+        "lng": 130.7601392,
+        "query": "manual: 人吉市 centroid (geocoded by Nominatim)"
+      }
     },
     {
-      "id": 121,
-      "year": 2025,
+      "id": 141,
+      "year": 2026,
       "titleJa": "放課後ていぼう日誌",
       "titleEn": "Diary of Our Days at the Breakwater",
       "region": "kyushu_okinawa",
@@ -2218,11 +3255,38 @@
       },
       "anilistPopularity": 25338,
       "anilistMeanScore": 72,
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/97/b6/280678_rQ75K.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/97/b6/280678_rQ75K.jpg",
+      "areaAnchor": {
+        "lat": 32.2963945,
+        "lng": 130.5465555,
+        "query": "芦北町, 熊本県, 日本"
+      }
     },
     {
-      "id": 122,
-      "year": 2025,
+      "id": 142,
+      "year": 2026,
+      "titleJa": "男女の友情は成立する?（いや、しないっ!!）",
+      "titleEn": "",
+      "region": "kyushu_okinawa",
+      "prefecture": "宮崎県",
+      "city": "延岡市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 395493,
+        "anilist": 153554,
+        "mal": 52709
+      },
+      "anilistPopularity": 69846,
+      "anilistMeanScore": 64,
+      "areaAnchor": {
+        "lat": 32.5823063,
+        "lng": 131.6649034,
+        "query": "延岡市, 宮崎県, 日本"
+      }
+    },
+    {
+      "id": 143,
+      "year": 2026,
       "titleJa": "秒速5センチメートル",
       "titleEn": "5 Centimeters per Second",
       "region": "kyushu_okinawa",
@@ -2237,11 +3301,60 @@
       "anilistPopularity": 238665,
       "anilistMeanScore": 72,
       "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Byousoku 5 Centimeter\",\"english\":\"5 Centimeters per Second\",\"native\":\"秒速５センチメートル\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1f/44/927_J2Q9a.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/1f/44/927_J2Q9a.jpg",
+      "areaAnchor": {
+        "lat": 30.591848,
+        "lng": 130.9958948,
+        "query": "種子島, 鹿児島県, 日本"
+      }
     },
     {
-      "id": 123,
-      "year": 2025,
+      "id": 144,
+      "year": 2026,
+      "titleJa": "劇場版 のんのんびより ばけーしょん",
+      "titleEn": "",
+      "region": "kyushu_okinawa",
+      "prefecture": "沖縄県",
+      "city": "八重山諸島",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 215618,
+        "anilist": 98779,
+        "mal": 36990
+      },
+      "anilistPopularity": 27917,
+      "anilistMeanScore": 81,
+      "areaAnchor": {
+        "lat": 24.0478557,
+        "lng": 123.7948791,
+        "query": "八重山諸島, 沖縄県, 日本"
+      }
+    },
+    {
+      "id": 145,
+      "year": 2026,
+      "titleJa": "沖縄で好きになった子が方言すぎてツラすぎる",
+      "titleEn": "",
+      "region": "kyushu_okinawa",
+      "prefecture": "沖縄県",
+      "city": "うるま市",
+      "regionEn": "",
+      "externalIds": {
+        "bangumi": 443930,
+        "anilist": 166699,
+        "mal": 55842
+      },
+      "anilistPopularity": 31925,
+      "anilistMeanScore": 69,
+      "areaAnchor": {
+        "lat": 26.3791496,
+        "lng": 127.8573107,
+        "query": "うるま市, 沖縄県, 日本"
+      }
+    },
+    {
+      "id": 146,
+      "year": 2026,
       "titleJa": "白い砂のアクアトープ",
       "titleEn": "The aquatope on white sand",
       "region": "kyushu_okinawa",
@@ -2256,27 +3369,13 @@
       "anilistPopularity": 62142,
       "anilistMeanScore": 73,
       "anilistReviewNote": "match=manual_retry; anilist={\"romaji\":\"Shiroi Suna no Aquatope\",\"english\":\"The aquatope on white sand\",\"native\":\"白い砂のアクアトープ\"}",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d4/a3/325281_CZa9A.jpg"
-    },
-    {
-      "id": 124,
-      "year": 2025,
-      "titleJa": "ウルトラマンシリーズ（金城哲夫資料館）",
-      "titleEn": "ULTRAMAN SERIES (Syofuen/Archive of Tetsuo Kinjo)",
-      "region": "kyushu_okinawa",
-      "prefecture": "沖縄県",
-      "city": "南風原町",
-      "regionEn": "Okinawa Pref. / Haebaru Town",
-      "externalIds": {
-        "bangumi": 38650,
-        "anilist": null,
-        "mal": null
-      },
-      "anilistPopularity": null,
-      "anilistMeanScore": null,
-      "anilistReviewNote": "unresolved:no_results",
-      "posterUrl": "https://lain.bgm.tv/pic/cover/l/6a/d4/38650_Rt2kI.jpg"
+      "posterUrl": "https://lain.bgm.tv/pic/cover/l/d4/a3/325281_CZa9A.jpg",
+      "areaAnchor": {
+        "lat": 26.1632092,
+        "lng": 127.7705563,
+        "query": "南城市, 沖縄県, 日本"
+      }
     }
   ],
-  "anilistResolvedAt": "2026-05-13T12:09:34.791Z"
+  "anilistResolvedAt": "2026-11-05T05:02:17.305Z"
 }
