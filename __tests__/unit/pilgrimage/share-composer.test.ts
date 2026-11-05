@@ -149,9 +149,17 @@ describe('share composer · watermark font + color (Phase 2)', () => {
 });
 
 describe('share composer · export dimensions', () => {
-  it('exports three resolution presets at 720 / 1080 / 2160 short-edge', () => {
-    const bases = EXPORT_RESOLUTIONS.map((r) => r.base);
-    expect(bases).toEqual([720, 1080, 2160]);
+  it('keeps the three free presets at 720 / 1080 / 2160 short-edge; only `full` is Pro', () => {
+    const free = EXPORT_RESOLUTIONS.filter((r) => !r.pro).map((r) => r.base);
+    expect(free).toEqual([720, 1080, 2160]);
+    expect(EXPORT_RESOLUTIONS.filter((r) => r.pro).map((r) => r.id)).toEqual(['full']);
+  });
+
+  it('full follows the shot short edge, never below 4K, long edge capped at 6144', () => {
+    expect(getExportDimensions('1:1', 'full', 3024)).toEqual({ width: 3024, height: 3024 });
+    expect(getExportDimensions('1:1', 'full', 1200)).toEqual({ width: 2160, height: 2160 });
+    expect(getExportDimensions('1:1', 'full', null)).toEqual({ width: 2160, height: 2160 });
+    expect(getExportDimensions('9:16', 'full', 6048)).toEqual({ width: 3456, height: 6144 });
   });
 
   it('returns square dimensions for 1:1', () => {

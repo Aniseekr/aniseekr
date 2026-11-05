@@ -7,7 +7,7 @@
 // side-by-side) is driven by the ratio so every template stays useful in
 // every ratio.
 
-import { useCallback, useMemo, useState, type Ref } from 'react';
+import { useCallback, useMemo, useState, type ReactNode, type Ref } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type ViewInstance } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +25,8 @@ import {
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
 import { FilteredImage } from './FilteredImage';
+import { BrandMark } from './BrandMark';
+import type { BrandMarkStyle } from '../../libs/services/pilgrimage/share-brand-mark';
 import {
   cornerFractionsToMatrix4,
   type Pt,
@@ -102,6 +104,16 @@ export type ShareCardProps = {
    */
   shotWidth?: number;
   shotHeight?: number;
+  /**
+   * Aniseekr mark drawn in the bottom-right corner of the user's photo.
+   * Pass the already-gated style (`effectiveBrandMark`); `none` draws nothing.
+   */
+  brandMark?: { style: BrandMarkStyle; dateline: string } | null;
+  /**
+   * Decode the photos at their own size instead of the on-screen cell size,
+   * so a large export carries real detail rather than an upscaled thumbnail.
+   */
+  fullResolution?: boolean;
   ref?: Ref<ViewInstance>;
 };
 
@@ -138,6 +150,15 @@ export function ShareCard(props: ShareCardProps) {
       : (props.shotWidth as number) / (props.shotHeight as number);
   const cellAspect = ratio === '9:16' ? 9 / 16 : 16 / 9;
   const shotContentFit = shotContentFitForCell(shotAspect, cellAspect);
+  const markNode =
+    props.brandMark && props.brandMark.style !== 'none' ? (
+      <BrandMark
+        style={props.brandMark.style}
+        dateline={props.brandMark.dateline}
+        accent={props.accent}
+        surface="photo"
+      />
+    ) : null;
 
   return (
     <View ref={props.ref} collapsable={false} style={{ width, height, overflow: 'hidden' }}>
@@ -147,6 +168,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : template === 'classic' ? (
         <ClassicTemplate
@@ -154,6 +176,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : template === 'minimal' ? (
         <MinimalTemplate
@@ -161,6 +184,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : template === 'comic' ? (
         <ComicTemplate
@@ -168,6 +192,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : (
         <MangaTemplate
@@ -175,6 +200,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       )}
       {watermarkText ? (
@@ -195,6 +221,7 @@ type TemplateProps = ShareCardProps & {
   height: number;
   canvasBg: string;
   shotContentFit: 'cover' | 'contain';
+  markNode: ReactNode;
 };
 
 // ----- shared image layout -----
@@ -213,6 +240,8 @@ function ImagePair({
   shotPerspectiveTransform,
   shotManualWarpCorners,
   shotContentFit = 'cover',
+  markNode = null,
+  fullResolution = false,
 }: {
   ratio: ShareRatio;
   imageUrl: string;
@@ -227,6 +256,8 @@ function ImagePair({
   shotPerspectiveTransform?: RNPerspectiveTransform;
   shotManualWarpCorners?: readonly Pt[] | null;
   shotContentFit?: 'cover' | 'contain';
+  markNode?: ReactNode;
+  fullResolution?: boolean;
 }) {
   const isPortrait = ratio === '9:16';
   const order = resolveImagePairOrder(swapOrder);
@@ -239,6 +270,7 @@ function ImagePair({
         color={accent}
         radius={borderRadius}
         style={badgeStyle}
+        fullResolution={fullResolution}
       />
     ),
     real: (
@@ -253,6 +285,8 @@ function ImagePair({
         perspectiveTransform={shotPerspectiveTransform}
         manualWarpCorners={shotManualWarpCorners}
         contentFit={shotContentFit}
+        overlay={markNode}
+        fullResolution={fullResolution}
       />
     ),
   };
@@ -331,12 +365,14 @@ function PerspectiveImage({
   manualWarpCorners,
   autoTransform,
   contentFit = 'cover',
+  fullResolution = false,
 }: {
   uri: string;
   filterMatrix?: number[] | null;
   manualWarpCorners?: readonly Pt[] | null;
   autoTransform?: RNPerspectiveTransform;
   contentFit?: 'cover' | 'contain';
+  fullResolution?: boolean;
 }) {
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -359,10 +395,20 @@ function PerspectiveImage({
     <View style={StyleSheet.absoluteFill} onLayout={needsMeasure ? onLayout : undefined}>
       {transform ? (
         <View style={[StyleSheet.absoluteFill, { transform }]}>
-          <FilteredImage uri={uri} matrix={filterMatrix} contentFit={contentFit} />
+          <FilteredImage
+          uri={uri}
+          matrix={filterMatrix}
+          contentFit={contentFit}
+          allowDownscaling={!fullResolution}
+        />
         </View>
       ) : (
-        <FilteredImage uri={uri} matrix={filterMatrix} contentFit={contentFit} />
+        <FilteredImage
+          uri={uri}
+          matrix={filterMatrix}
+          contentFit={contentFit}
+          allowDownscaling={!fullResolution}
+        />
       )}
     </View>
   );
@@ -378,6 +424,8 @@ function ImageCell({
   perspectiveTransform,
   manualWarpCorners,
   contentFit = 'cover',
+  overlay = null,
+  fullResolution = false,
 }: {
   uri: string;
   badge: string;
@@ -388,6 +436,8 @@ function ImageCell({
   perspectiveTransform?: RNPerspectiveTransform;
   manualWarpCorners?: readonly Pt[] | null;
   contentFit?: 'cover' | 'contain';
+  overlay?: ReactNode;
+  fullResolution?: boolean;
 }) {
   return (
     <View
@@ -404,7 +454,13 @@ function ImageCell({
         manualWarpCorners={manualWarpCorners}
         autoTransform={perspectiveTransform}
         contentFit={contentFit}
+        fullResolution={fullResolution}
       />
+      {overlay ? (
+        <View pointerEvents="none" style={{ position: 'absolute', right: 8, bottom: 8 }}>
+          {overlay}
+        </View>
+      ) : null}
       {style === 'sticker' ? (
         <View
           style={{
@@ -540,6 +596,8 @@ function PolaroidTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
 
@@ -715,6 +773,8 @@ function ClassicTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
 
@@ -814,6 +874,8 @@ function MinimalTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
       <LinearGradient
@@ -960,6 +1022,8 @@ function ComicTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
 
@@ -1082,6 +1146,7 @@ function MangaTemplate(props: TemplateProps) {
           source={{ uri: imageUrl }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
+          allowDownscaling={!props.fullResolution}
         />
         <SpeedLines side={ratio === '9:16' ? 'top' : 'left'} />
         <View
@@ -1112,8 +1177,14 @@ function MangaTemplate(props: TemplateProps) {
           manualWarpCorners={props.shotManualWarpCorners}
           autoTransform={props.shotPerspectiveTransform}
           contentFit={props.shotContentFit}
+          fullResolution={props.fullResolution}
         />
         <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
+        {props.markNode ? (
+          <View pointerEvents="none" style={{ position: 'absolute', right: 8, bottom: 8 }}>
+            {props.markNode}
+          </View>
+        ) : null}
         <View
           style={{
             position: 'absolute',

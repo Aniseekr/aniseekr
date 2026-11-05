@@ -63,6 +63,8 @@ interface AniseekrLogoProps {
   interactive?: boolean;
   /** Stamp in once on mount (launch screen). */
   stampOnMount?: boolean;
+  /** No idle blink: for marks captured into images (a capture mid-blink would ship shut eyes). */
+  still?: boolean;
   style?: ViewStyle;
 }
 
@@ -79,10 +81,11 @@ function AniseekrLogoComponent({
   variant = 'lockup',
   interactive = true,
   stampOnMount = false,
+  still = false,
   style,
 }: AniseekrLogoProps) {
   const { theme } = useTheme();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotion() || still;
   const vb = viewBox(variant);
   const width = (height * vb[2]) / vb[3];
 
