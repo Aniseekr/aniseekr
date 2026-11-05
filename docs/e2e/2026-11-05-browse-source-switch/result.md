@@ -53,8 +53,29 @@ Build：同一台 S20 FE `.e2e` dev client，Metro :8081 重新 `--clear`，從 
 整體（範圍＝季番四個 bug）：**PASS**。
 
 ## 還沒處理（不在這次範圍）
-- 來源不是 AniList 時，詳情頁的「相關作品」還是會 `HTTP 404`：詳情頁的 cross-platform 區塊是依 browseSource 去打 Kitsu 等來源。
+- ~~來源不是 AniList 時，詳情頁的「相關作品」404~~ → 已修，見下一節。
 - 季番清單的中文標題「物語系列 外傳季&amp;怪物季」有 `&amp;`：來自標題在地化（Bangumi name_cn），不是 Simkl。
 - 探索 / 搜尋 / 評分還是寫死 AniList（產品決策還沒定）。
 
 清理：browseSource 已切回 AniList（確認「目前使用」）、dev client force-stop、移除 adb reverse、停 Metro。另一個 session 的 `emulator-5554` 沒碰。
+
+---
+
+# 詳情頁「相關作品」修復（2026-11-06）
+
+根因有兩個：
+1. `AnimeRepository.fetchAnime{Staff,Relations,Streaming,Themes,Statistics}` 依 browseSource 選來源。詳情頁傳的是 AniList id（`sourcePlatform: 'anilist'`），在 Kitsu 底下就把 AniList id 拿去問 Kitsu → 404。改成：呼叫端有講 id 屬於哪個平台，就用那個平台的來源（REPO-065）。
+2. 舊 bug，跟來源無關：AniList 的相關作品 id 用 `idMal ?? id`，點下去把 MAL id 送進 AniList 詳情 → 404。改成 AniList id（ANIL-012）。
+
+實機（S20 FE，Kitsu 來源，Metro bundle 確認含修正）：
+| Case | 預期 | 實際 | 判定 | 證據 |
+|---|---|---|---|---|
+| D1 Kitsu 下開「歸還者的魔法要特別 第二季」詳情 | 相關作品 / 製作團隊 / 觀看平台都載得到，沒有 404 | 相關作品出現 Prequel（Kikansha no Mahou… TV）、Alternative（漫畫）；製作團隊、Crunchyroll / Bilibili 都有；log 沒有 AnimeDetail 錯誤 | PASS | rel-K1-detail-relations.jpg |
+| D2 點 Prequel | 打開第一季 | 「歸還者的魔法要特別」、FINISHED、★6.9，log 無錯 | PASS | rel-K2-prequel.jpg |
+
+修正前：D1 log 有 `[AnimeDetail] relations failed HTTP 404`；D2 第一次點是 `AniList HTTP 404`（修 ANIL-012 前實測）。
+
+偏差 / 環境：
+- 冷啟動後用 deep link 直接開資料來源頁，「返回」沒有上一頁，跳出 expo-router 的 Console Error。這是測試路徑造成的，之後改用 deep link 進追番 tab。
+- 測試中我把手機的 `screen_off_timeout` 改成 600000（10 分鐘），原值沒記到，**需要手動改回**。
+- 清理：來源已切回 AniList、dev client force-stop、移除 adb reverse、停 Metro。
