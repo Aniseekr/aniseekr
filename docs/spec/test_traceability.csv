@@ -257,3 +257,7 @@ PILG-111,__tests__/unit/pilgrimage/offline-pack.test.ts,rewrites every remote re
 PILG-112,__tests__/unit/pilgrimage/offline-pack.test.ts,serves the stored pack labelled with its download date when Atlas is unreachable,covered
 PILG-112,__tests__/unit/pilgrimage/offline-pack.test.ts,never labels live Atlas data as an offline copy,covered
 PILG-113,__tests__/unit/pilgrimage/offline-pack.test.ts,without a pack an unreachable Atlas stays an error,covered
+SHIK-006,__tests__/unit/providers/shikimori-data-source.test.ts,seasonal sends season as <season>_<year>,covered
+SIMKL-007,__tests__/unit/providers/simkl-data-source.test.ts,premieres simkl_id stable id poster suffix one page season filter,covered
+REPO-063,__tests__/unit/repositories/anime-repository.test.ts,non-AniList seasonal rows anchored to AniList; unmatched dropped,covered
+REPO-064,__tests__/unit/repositories/anime-repository.test.ts,legacy mapping keys rows by AniList id,covered

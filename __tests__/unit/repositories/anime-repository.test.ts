@@ -354,8 +354,17 @@ describe('AnimeRepository', () => {
   it('REPO-050 batched seasonal fetch continues when a source returns smaller fixed-size pages', async () => {
     const fetchSeasonal = mock(async (page?: number) => {
       if (!page || page > 3) return [];
-      return Array.from({ length: 20 }, (_, idx) =>
-        makeItem({ id: `p${page}-${idx}`, source: 'bangumi' })
+      // Bangumi seasonal rows are AniList-backed, so they carry an AniList id.
+      return Array.from(
+        { length: 20 },
+        (_, idx) =>
+          new UnifiedAnimeItem({
+            title: 'Test',
+            platformData: {
+              bangumi: { id: `p${page}-${idx}` },
+              anilist: { id: `${page * 100 + idx}` },
+            },
+          })
       );
     });
     const source = buildMockSource({
@@ -373,6 +382,67 @@ describe('AnimeRepository', () => {
     expect(result).toHaveLength(60);
     expect(fetchSeasonal).toHaveBeenCalledTimes(3);
     expect(fetchSeasonal.mock.calls.map((call) => call[0])).toEqual([1, 2, 3]);
+  });
+
+  it('REPO-063 non-AniList seasonal rows are anchored to their AniList entry; unmatched and AniList-adult rows are dropped', async () => {
+    const kitsuItem = (kitsuId: string, idMal?: number) =>
+      new UnifiedAnimeItem({
+        title: `Kitsu ${kitsuId}`,
+        idMal: idMal ?? null,
+        platformData: { kitsu: { id: kitsuId } },
+      });
+    const source = buildMockSource({
+      type: 'kitsu',
+      fetchSeasonalAnime: mock(async (page?: number) =>
+        page === 1
+          ? [kitsuItem('10'), kitsuItem('11', 77), kitsuItem('12'), kitsuItem('13', 88)]
+          : []
+      ),
+    });
+    spyOn(idMappingService, 'translate').mockImplementation(async (id, from, to) =>
+      from === 'kitsu' && String(id) === '10' && to === 'anilist' ? 500 : null
+    );
+    const airing = { airingAt: 1_800_000_000, episode: 6 };
+    const media = (id: number, idMal: number | null) =>
+      ({
+        id,
+        idMal,
+        popularity: 1234,
+        nextAiringEpisode: airing,
+        coverImage: {},
+        genres: [],
+        tags: [],
+      }) as unknown as AniListAnime;
+    const aniListLookup = {
+      byIds: mock(async (ids: number[]) => ids.map((id) => media(id, null))),
+      byMalIds: mock(async (ids: number[]) => [
+        ...ids.filter((m) => m === 77).map(() => media(600, 77)),
+        // AniList-only adult signal: must be hidden like it is on the AniList source.
+        ...ids.filter((m) => m === 88).map(() => ({ ...media(700, 88), isAdult: true })),
+      ]),
+    };
+    const repo = new AnimeRepository({ kitsu: source }, { aniListLookup });
+
+    const result = await repo.fetchSeasonalAnimeBatched('FALL', 2026, {
+      perPage: 50,
+      maxItems: 50,
+      preferredSource: 'kitsu',
+    });
+
+    const legacy = result.map(unifiedToLegacyAnime);
+    expect(legacy.map((a) => a.id)).toEqual(['500', '600']);
+    expect(legacy.map((a) => a.title)).toEqual(['Kitsu 10', 'Kitsu 11']);
+    expect(legacy[0].nextAiringEpisode).toEqual(airing);
+    expect(aniListLookup.byMalIds).toHaveBeenCalledWith([77, 88]);
+  });
+
+  it('REPO-064 legacy mapping keys rows by AniList id even when a Bangumi id wins priority', () => {
+    const item = new UnifiedAnimeItem({
+      title: '藥師少女的獨語',
+      platformData: { bangumi: { id: '9999' }, anilist: { id: '161645' } },
+    });
+    expect(item.id).toBe('9999');
+    expect(unifiedToLegacyAnime(item).id).toBe('161645');
   });
 
   // -------- Genres fallback (REPO-020) --------

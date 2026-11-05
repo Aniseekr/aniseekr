@@ -250,3 +250,7 @@ PILG-110,Pilgrimage,deterministic,P0,Offline pack bounded download,Tile download
 PILG-111,Pilgrimage,deterministic,P0,Offline pack map style,Offline style references only on-device tiles glyphs and sprites and drops sources the pack does not store,mapping,active
 PILG-112,Pilgrimage,deterministic,P0,Offline pack read fallback,When Atlas network and cache fail a stored pack answers with an offline-copy date; live data is never labelled offline,error-handling,active
 PILG-113,Pilgrimage,deterministic,P0,No pack and no network,Without a stored pack an unreachable Atlas stays an error,error-handling,active
+SHIK-006,Shikimori,deterministic,P0,Seasonal season param format,fetchSeasonalAnime sends season=<season>_<year> (e.g. fall_2026); year-first is rejected with 422,mapping,active
+SIMKL-007,Simkl,deterministic,P0,Premieres as one season page,Premieres read ids.simkl_id as the stable id; bare poster keys get _m.jpg; page>1 is empty; rows outside the requested JST broadcast cour are dropped,mapping,active
+REPO-063,Repository,deterministic,P0,Seasonal rows anchored to AniList,Non-AniList seasonal rows resolve their AniList id via ID mapping then AniList idMal and take nextAiringEpisode; rows with no AniList entry are dropped,mapping,active
+REPO-064,Repository,deterministic,P0,Legacy anime keyed by AniList id,unifiedToLegacyAnime uses the AniList id when present even if another platform id wins priority,mapping,active

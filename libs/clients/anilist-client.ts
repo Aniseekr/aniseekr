@@ -493,6 +493,30 @@ export class AniListClient {
     return data.Page.media;
   }
 
+  /** Look titles up by their MyAnimeList id (`idMal_in`). Max 50 ids per call. */
+  static async getAnimeByMalIds(
+    malIds: number[],
+    options: AniListLegacyQueryOptions = {}
+  ): Promise<AniListAnime[]> {
+    if (malIds.length === 0) return [];
+    const query = `
+      query ($malIds: [Int], $perPage: Int, $isAdult: Boolean) {
+        Page(page: 1, perPage: $perPage) {
+          media(idMal_in: $malIds, type: ANIME, isAdult: $isAdult) {
+            ...mediaFields
+          }
+        }
+      }
+      ${MEDIA_FRAGMENT}
+    `;
+    const data = await AniListClient.getDefaultInstance().query<AniListPage<AniListAnime>>(query, {
+      malIds,
+      perPage: malIds.length,
+      ...adultQueryVariables(options),
+    });
+    return data.Page.media;
+  }
+
   static async getAnimeByGenre(
     genre: string,
     page = 1,
