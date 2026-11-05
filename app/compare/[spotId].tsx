@@ -101,6 +101,10 @@ import { captureModeToastCopy } from '../../libs/services/pilgrimage/capture-mod
 import { buildCameraPreviewParams } from '../../libs/services/pilgrimage/preview-capture';
 import { trackMetadataJob, type RecordTarget } from '../../libs/services/pilgrimage/record-capture';
 import { useRecordCapture } from '../../hooks/useRecordCapture';
+import { useCameraLookStore } from '../../hooks/useCameraLook';
+import { useSubscription } from '../../context/SubscriptionContext';
+import { isCameraLookAvailable } from '../../modules/camera-look/src';
+import { LookButton, LookTray } from '../../components/pilgrimage/camera/LookTray';
 import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../libs/navigation/floating-tab-bar-layout';
 import {
   importReferenceImage,
@@ -284,6 +288,15 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
   const { hasPermission, requestPermission, canRequestPermission, status } = useCameraPermission();
 
   const { settings, setSettings } = useCameraSettings();
+  // Film looks: the pick lives in its own store so a strength drag never
+  // re-renders this screen; only a committed pick is written to settings.
+  const { isPro } = useSubscription();
+  const looksAvailable = isCameraLookAvailable();
+  const lookStore = useCameraLookStore({ id: settings.look, intensity: settings.lookIntensity });
+  const commitLook = useCallback(
+    (look: CameraSettings['look'], lookIntensity: number) => setSettings({ look, lookIntensity }),
+    [setSettings]
+  );
 
   // CLAUDE.md Rule 9: the camera HUD's discrete interaction state (facing,
   // flash, aspect, overlay config, panels, toasts) lives in one reducer hook,
@@ -309,6 +322,7 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
     orientationMode,
     cameraMode,
     settingsOpen,
+    lookTrayOpen,
     overlayVisible,
     captureModeToast,
     autoCaptureToast,
@@ -1485,6 +1499,8 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
               showWarmup={!cameraIsReady || strategic.isSwitching}
               freezeFrameUri={freezeFrameUri}
               frameOutput={sceneAnalyzer.frameOutput}
+              lookStore={looksAvailable ? lookStore : undefined}
+              lookIsPro={isPro}
             />
           </CameraErrorBoundary>
 
@@ -1707,7 +1723,18 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
         {/* ── Bottom chrome bands — fixed at the bottom edge in BOTH orientations ── */}
 
         {/* Overlay quick-controls popover (reposition/flip/edge/subject), above the zoom band. */}
-        {chrome.showOverlayQuickControls ? (
+        {looksAvailable && lookTrayOpen && chrome.showZoomBand ? (
+          <View
+            pointerEvents="box-none"
+            style={[styles.bandRow, { bottom: overlayQuickControlsBottom }]}>
+            <LookTray
+              store={lookStore}
+              isPro={isPro}
+              themeColor={themeColor}
+              onCommit={commitLook}
+            />
+          </View>
+        ) : chrome.showOverlayQuickControls ? (
           <View
             pointerEvents="box-none"
             style={[styles.bandRow, { bottom: overlayQuickControlsBottom }]}>
@@ -1759,6 +1786,15 @@ export default function CompareCaptureScreen({ tabRoot = false }: { tabRoot?: bo
                     overlayOpacityByMode: { ...prev.overlayOpacityByMode, [overlayMode]: o },
                   }))
                 }
+              />
+            ) : null}
+            {looksAvailable ? (
+              <LookButton
+                store={lookStore}
+                isPro={isPro}
+                open={lookTrayOpen}
+                themeColor={themeColor}
+                onPress={() => setHud((s) => ({ lookTrayOpen: !s.lookTrayOpen }))}
               />
             ) : null}
           </View>

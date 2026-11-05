@@ -21,6 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type Ref,
 } from 'react';
 import { Image as RNImage, Platform, StyleSheet, View } from 'react-native';
@@ -59,7 +60,16 @@ import {
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { useTheme } from '../../../context/ThemeContext';
-import { persistPhotoForSkiaPipeline } from '../../../libs/services/pilgrimage/vision-camera-photo';
+import {
+  normalizeJpegQualityPercent,
+  persistPhotoForSkiaPipeline,
+} from '../../../libs/services/pilgrimage/vision-camera-photo';
+import { gradeJpeg, LookFilterView } from '../../../modules/camera-look/src';
+import {
+  activeCameraLook,
+  useActiveCameraLook,
+  type CameraLookStore,
+} from '../../../hooks/useCameraLook';
 import { useResolvedCameraDevice } from '../../../hooks/useResolvedCameraDevice';
 import type {
   CameraDeviceInfo,
@@ -170,6 +180,13 @@ export interface CameraStageProps {
    * `useCameraOrientation` in `compare/[spotId].tsx` — do not hardcode here.
    */
   orientationSource: OrientationSource;
+  /**
+   * Film look pick (camera-looks.ts). The preview is drawn through it and every
+   * saved photo is graded with the look that was showing when the shutter fired.
+   */
+  lookStore?: CameraLookStore;
+  /** Pro unlocks the Pro looks and the strength slider. */
+  lookIsPro?: boolean;
   ref?: Ref<CameraEngineHandle>;
 }
 
@@ -196,12 +213,16 @@ export function CameraStage({
   device: deviceProp,
   freezeFrameUri,
   orientationSource,
+  lookStore,
+  lookIsPro = false,
   ref,
 }: CameraStageProps) {
   const { theme } = useTheme();
   const cameraRef = useRef<CameraRef>(null);
   const enableShutterSoundRef = useRef(enableShutterSound);
   enableShutterSoundRef.current = enableShutterSound;
+  const lookIsProRef = useRef(lookIsPro);
+  lookIsProRef.current = lookIsPro;
 
   // Device resolution: caller-supplied `deviceProp` wins (the strategic
   // lens-switching hook owns this end), with the legacy in-stage resolver
@@ -321,6 +342,20 @@ export function CameraStage({
           targetResolution,
           quality,
         });
+        // The look the viewfinder showed when the shutter fired goes into the
+        // file before anything else reads it (composites, EXIF, camera roll).
+        const look = lookStore
+          ? activeCameraLook(lookStore.get(), lookIsProRef.current).matrix
+          : null;
+        if (look) {
+          try {
+            const ms = await gradeJpeg(persisted.uri, look, normalizeJpegQualityPercent(quality));
+            if (__DEV__) console.log(`[CameraStage] look graded in ${ms}ms`);
+          } catch (error) {
+            // Keep the shot ungraded rather than lose it.
+            console.warn('[CameraStage] look grading failed', error);
+          }
+        }
 
         return {
           uri: persisted.uri,
@@ -334,7 +369,7 @@ export function CameraStage({
         photo.dispose();
       }
     },
-    [photoOutput, quality, targetResolution]
+    [photoOutput, quality, targetResolution, lookStore]
   );
 
   const focus = useCallback(async (point: { x: number; y: number }) => {
@@ -625,6 +660,9 @@ export function CameraStage({
     <View style={styles.root}>
       <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, tapGesture)}>
         <View style={StyleSheet.absoluteFill}>
+          {/* Preview + freeze-frame are drawn through the film look; the
+              warm-up vignette above stays untinted. */}
+          <LiveLookFilter store={lookStore} isPro={lookIsPro}>
           {device ? (
             <Animated.View style={[StyleSheet.absoluteFill, cameraAnimatedStyle]}>
               <Camera
@@ -666,6 +704,7 @@ export function CameraStage({
               />
             </Animated.View>
           ) : null}
+          </LiveLookFilter>
           <Animated.View
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, styles.warmup, overlayAnimatedStyle]}>
@@ -697,6 +736,42 @@ export function CameraStage({
         </View>
       </GestureDetector>
     </View>
+  );
+}
+
+// Subscribes to the look store on its own so a strength drag re-renders this
+// wrapper only, not the camera session above it.
+function LiveLookFilter({
+  store,
+  isPro,
+  children,
+}: {
+  store: CameraLookStore | undefined;
+  isPro: boolean;
+  children: ReactNode;
+}) {
+  if (!store) return <View style={StyleSheet.absoluteFill}>{children}</View>;
+  return (
+    <StoreLookFilter store={store} isPro={isPro}>
+      {children}
+    </StoreLookFilter>
+  );
+}
+
+function StoreLookFilter({
+  store,
+  isPro,
+  children,
+}: {
+  store: CameraLookStore;
+  isPro: boolean;
+  children: ReactNode;
+}) {
+  const { matrix } = useActiveCameraLook(store, isPro);
+  return (
+    <LookFilterView matrix={matrix} style={StyleSheet.absoluteFill}>
+      {children}
+    </LookFilterView>
   );
 }
 

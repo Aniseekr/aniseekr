@@ -1928,6 +1928,18 @@
     "overlayModeA11y": "疊層模式 {mode}",
     "overlayOff": "疊層關閉",
     "overlayOpacity": "疊層不透明度",
+    "cameraLook": {
+      "button": "色調",
+      "original": "原色",
+      "filmWarm": "暖底片",
+      "mono": "黑白",
+      "coolDusk": "薄暮藍",
+      "fadedCel": "褪色賽璐璐",
+      "summer": "盛夏",
+      "strength": "強度",
+      "pro": "PRO",
+      "strengthLocked": "強度調整（Pro）"
+    },
     "photos": "照片",
     "previousOverlayMode": "上一個疊層模式",
     "nextOverlayMode": "下一個疊層模式",
@@ -2334,6 +2346,7 @@
   },
   "subscription": {
     "allPremiumThemes": "所有進階主題",
+    "cameraLooks": "全部相機底片色調，可調強度",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "無廣告",
     "privacyPolicy": "隱私權政策",

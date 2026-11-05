@@ -1928,6 +1928,18 @@
     "overlayModeA11y": "Overlay mode {mode}",
     "overlayOff": "Overlay Off",
     "overlayOpacity": "Overlay opacity",
+    "cameraLook": {
+      "button": "Film look",
+      "original": "Original",
+      "filmWarm": "Warm film",
+      "mono": "Mono",
+      "coolDusk": "Cool dusk",
+      "fadedCel": "Faded cel",
+      "summer": "Summer",
+      "strength": "Strength",
+      "pro": "PRO",
+      "strengthLocked": "Strength — Pro"
+    },
     "photos": "Photos",
     "previousOverlayMode": "Previous overlay mode",
     "nextOverlayMode": "Next overlay mode",
@@ -2334,6 +2346,7 @@
   },
   "subscription": {
     "allPremiumThemes": "All premium themes",
+    "cameraLooks": "Every camera film look, with strength control",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "No ads",
     "privacyPolicy": "Privacy Policy",
