@@ -727,7 +727,7 @@
       "active": "Premium 已啟用",
       "unlock": "解鎖 Premium",
       "activeDesc": "管理訂閱與權益",
-      "pitch": "無廣告、全部主題",
+      "pitch": "旅行工具＋你的風格",
       "manage": "管理",
       "upgrade": "升級"
     }
@@ -899,7 +899,7 @@
         "manage": "管理",
         "manageSubtitle": "管理你的訂閱與權益",
         "unlock": "解鎖 Premium",
-        "unlockSubtitle": "去除廣告、所有主題",
+        "unlockSubtitle": "聖地巡禮旅行工具與進階風格",
         "upgrade": "升級"
       },
       "title": "個人",
@@ -2261,7 +2261,7 @@
     "manageSubscriptionA11y": "管理訂閱",
     "premium": "Premium",
     "premiumOnly": "僅限 Premium",
-    "premiumPitch": "解鎖所有主題與無廣告體驗",
+    "premiumPitch": "聖地巡禮旅行工具與進階風格，無廣告",
     "upgradeToPremiumA11y": "升級至 Premium",
     "enableAdultContentAreYouMessage": "確定要啟用成人內容嗎?",
     "enableAdultContentAreYouTitle": "啟用成人內容?",
@@ -2333,13 +2333,13 @@
     "cameraDiagnosticsSubtitle": "硬體指紋＋相機分組"
   },
   "subscription": {
-    "allPremiumThemes": "所有進階主題",
+    "allPremiumThemes": "進階主題與外觀：字體、紋理、配套 App 圖示",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "無廣告",
     "privacyPolicy": "隱私權政策",
     "purchaseFailed": "購買失敗",
     "termsOfService": "服務條款",
-    "unlockTheFullToolkit": "解鎖完整工具組",
+    "unlockTheFullToolkit": "巡禮路上的旅行工具，還有屬於你的風格。",
     "annual": "年繳",
     "monthly": "月繳",
     "lifetime": "買斷",

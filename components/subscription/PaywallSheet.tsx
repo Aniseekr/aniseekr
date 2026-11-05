@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -38,12 +38,16 @@ function unsupportedMessage(
   }
 }
 
+// What Pro unlocks, in pitch order: pilgrimage travel tools first, then style,
+// then no ads. Only list what ships in this build. Each travel tool (film
+// looks, offline trip pack, Pro export, batch album import) adds its own row
+// above the style row when it lands, with its label under `subscription.*`.
 const FEATURES: {
-  icon: 'block' | 'palette';
+  icon: ComponentProps<typeof MaterialIcons>['name'];
   labelKey: TranslationKey;
 }[] = [
-  { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'block', labelKey: 'subscription.noAds' },
 ];
 
 export interface PaywallSheetProps {
