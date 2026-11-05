@@ -177,4 +177,34 @@ describe('SimklDataSource', () => {
     );
     expect(wrapSimklPoster(null)).toBeNull();
   });
+
+  it('SIMKL-007 premieres: simkl_id is the stable id, bare poster keys get a size suffix, one page only, filtered to the season', async () => {
+    const premiere = (simklId: number, date: string) => ({
+      title: 'Off &amp; Monster',
+      ids: { simkl_id: simklId, slug: `s-${simklId}` },
+      poster: '20/2037687747aa4ac60b',
+      date,
+      anime_type: 'movie',
+    });
+    const { spy, calls } = captureFetch([
+      makeJsonResponse([
+        premiere(1, '2026-11-13T00:00:00+09:00'),
+        // 1 Jan JST is still 31 Dec UTC — must count as WINTER 2027.
+        premiere(2, '2027-01-01T00:00:00+09:00'),
+      ]),
+    ]);
+    activeSpy = spy;
+
+    const items = await source.fetchSeasonalAnime(1, 'FALL', 2026);
+    expect(items.map((i) => i.platformData.simkl?.id)).toEqual(['1']);
+    expect(items[0].id).toBe('1');
+    expect(items[0].title).toBe('Off & Monster');
+    expect(items[0].coverImageURL).toBe(
+      'https://wsrv.nl/?url=https://simkl.in/posters/20/2037687747aa4ac60b_m.jpg'
+    );
+
+    // The endpoint has no paging: page 2 must not repeat page 1.
+    expect(await source.fetchSeasonalAnime(2, 'FALL', 2026)).toEqual([]);
+    expect(calls).toHaveLength(1);
+  });
 });

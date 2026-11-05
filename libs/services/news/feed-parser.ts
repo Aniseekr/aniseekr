@@ -1,4 +1,5 @@
 import type { NewsArticle } from './types';
+import { decodeHtmlEntities } from '../../utils/decode-html-entities';
 
 const MAX_EXCERPT = 200;
 
@@ -110,7 +111,7 @@ function text(xml: string, tag: string): string | undefined {
   const escaped = tag.replace(':', '\\:');
   const re = new RegExp(`<${escaped}\\b[^>]*>([\\s\\S]*?)<\\/${escaped}>`, 'i');
   const match = re.exec(xml);
-  return match ? decodeText(match[1]) : undefined;
+  return match ? decodeHtmlEntities(match[1]) : undefined;
 }
 
 function attrFromOpenTag(xml: string, attr: string): string | undefined {
@@ -141,7 +142,7 @@ function atomLink(xml: string): string | undefined {
 function attrValue(tag: string, attr: string): string | undefined {
   const re = new RegExp(`${attr}=["']([^"']+)["']`, 'i');
   const match = re.exec(tag);
-  return match ? decodeText(match[1]) : undefined;
+  return match ? decodeHtmlEntities(match[1]) : undefined;
 }
 
 function imgFromHtml(html: string): string | undefined {
@@ -151,7 +152,7 @@ function imgFromHtml(html: string): string | undefined {
 
 function cleanText(value?: string): string {
   if (!value) return '';
-  return decodeText(value)
+  return decodeHtmlEntities(value)
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -170,13 +171,3 @@ function parseDate(value?: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function decodeText(value: string): string {
-  return value
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}

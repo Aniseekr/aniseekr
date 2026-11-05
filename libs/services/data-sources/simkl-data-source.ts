@@ -1,13 +1,14 @@
 // Simkl data source — implements `AnimeDataSource` against the Simkl REST API.
 // Mapping rules mirror the iOS aniseeker port (see api_contracts.md §7).
 
-import { SimklClient, wrapSimklPoster } from '../../clients/simkl-client';
+import { SimklClient, wrapSimklFanart, wrapSimklPoster } from '../../clients/simkl-client';
 import { isDataSourceError } from './data-source-error';
 import type { PlatformImageData } from '../../models/platform-image-data';
 import { PLATFORM_PRIORITY, UnifiedAnimeItem } from '../../models/unified-anime-item';
 import type { PlatformAnimeData } from '../../models/unified-anime-item';
 import type { PlatformType } from '../auth/types';
 import { getCurrentYear } from '../../utils/season-utils';
+import { decodeHtmlEntities } from '../../utils/decode-html-entities';
 import {
   defaultStatsStub,
   type AnimeDataSource,
@@ -24,6 +25,8 @@ const SIMKL_TOP_FALLBACK_DEPTH = 3;
 
 interface SimklIds {
   simkl?: number | null;
+  /** List endpoints (e.g. `/anime/premieres`) name the Simkl id `simkl_id`. */
+  simkl_id?: number | null;
   slug?: string | null;
   mal?: number | null;
   anidb?: number | null;
@@ -63,6 +66,8 @@ interface SimklSearchItem {
   overview?: string | null;
   genres?: string[] | null;
   aired_at?: string | null;
+  /** Premiere date on list endpoints such as `/anime/premieres`. */
+  date?: string | null;
 }
 
 interface SimklAnimeDetail {
@@ -100,6 +105,16 @@ function parseAirDate(raw: string | null | undefined): {
   return { date, year: Number.isFinite(year) ? year : null };
 }
 
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const COURS = ['WINTER', 'SPRING', 'SUMMER', 'FALL'] as const;
+
+/** Broadcast cour (Jan–Mar / Apr–Jun / Jul–Sep / Oct–Dec) of a premiere, in JST. */
+function broadcastCourJst(date: Date | null): { season: string; year: number } | null {
+  if (!date) return null;
+  const jst = new Date(date.getTime() + JST_OFFSET_MS);
+  return { season: COURS[Math.floor(jst.getUTCMonth() / 3)], year: jst.getUTCFullYear() };
+}
+
 /**
  * Capture cross-platform IDs from `ids.*` into a typed `platformData` map.
  * Simkl is the only provider that publishes MAL/AniList/Kitsu IDs alongside
@@ -107,7 +122,8 @@ function parseAirDate(raw: string | null | undefined): {
  */
 function buildPlatformData(ids: SimklIds): Partial<Record<PlatformType, PlatformAnimeData>> {
   const out: Partial<Record<PlatformType, PlatformAnimeData>> = {};
-  if (ids.simkl != null) out.simkl = { id: String(ids.simkl) };
+  const simklId = ids.simkl ?? ids.simkl_id;
+  if (simklId != null) out.simkl = { id: String(simklId) };
   if (ids.mal != null) out.myanimelist = { id: String(ids.mal) };
   if (ids.anilist != null) out.anilist = { id: String(ids.anilist) };
   if (ids.kitsu != null) out.kitsu = { id: String(ids.kitsu) };
@@ -116,7 +132,7 @@ function buildPlatformData(ids: SimklIds): Partial<Record<PlatformType, Platform
 
 function buildItem(item: SimklSearchItem | SimklAnimeDetail): UnifiedAnimeItem {
   const poster = wrapSimklPoster(item.poster);
-  const fanart = wrapSimklPoster(item.fanart);
+  const fanart = wrapSimklFanart(item.fanart);
 
   const platformImages: Partial<Record<PlatformType, PlatformImageData>> = {};
   if (poster || fanart) {
@@ -131,17 +147,18 @@ function buildItem(item: SimklSearchItem | SimklAnimeDetail): UnifiedAnimeItem {
   const platformData = buildPlatformData(ids);
   // Ensure simkl is always present even when ids.simkl is null (rare).
   if (!platformData.simkl) {
-    platformData.simkl = { id: ids.simkl != null ? String(ids.simkl) : '' };
+    platformData.simkl = { id: '' };
   }
 
   const malScore = item.ratings?.mal?.rating ?? null;
   const totalEpisodes = item.ep_count ?? item.total_episodes ?? null;
-  const aired = (item as SimklAnimeDetail).first_aired ?? item.aired_at ?? null;
+  const aired = (item as SimklAnimeDetail).first_aired ?? item.aired_at ?? (item as SimklSearchItem).date ?? null;
   const { date: startDate, year: airedYear } = parseAirDate(aired);
   const year = item.year ?? airedYear;
   const format = item.anime_type ?? null;
   const overview = item.overview ?? null;
-  const englishTitle = item.en_title ?? item.title ?? null;
+  const title = decodeHtmlEntities(item.title);
+  const englishTitle = item.en_title ? decodeHtmlEntities(item.en_title) : title;
 
   const syncStatus: Partial<Record<string, 'synced'>> = { simkl: 'synced' };
   // Carry sync hints for any cross-linked platform so the merge layer knows
@@ -154,7 +171,7 @@ function buildItem(item: SimklSearchItem | SimklAnimeDetail): UnifiedAnimeItem {
   }
 
   return new UnifiedAnimeItem({
-    title: item.title,
+    title,
     titleEnglish: englishTitle,
     synopsis: overview,
     idMal: ids.mal ?? null,
@@ -246,16 +263,29 @@ export class SimklDataSource implements AnimeDataSource {
     return [];
   }
 
+  /**
+   * Simkl has no per-season catalogue; `/anime/premieres` is one unpaginated
+   * list of upcoming premieres. Serve it as page 1 only and keep just the
+   * titles whose premiere date falls in the requested season, so the schedule
+   * never shows the same rows on every page or another season's premieres.
+   */
   async fetchSeasonalAnime(
-    _page?: number,
-    _season?: string,
-    _year?: number
+    page?: number,
+    season?: string,
+    year?: number
   ): Promise<UnifiedAnimeItem[]> {
+    if ((page ?? 1) > 1) return [];
     const items = await SimklClient.get<SimklSearchItem[]>('/anime/premieres', {
       limit: SIMKL_PAGE_SIZE,
       extended: 'full',
     });
-    return (items ?? []).map(buildItem);
+    const built = (items ?? []).map(buildItem);
+    if (!season || year == null) return built;
+    const wanted = season.toUpperCase();
+    return built.filter((item) => {
+      const cour = broadcastCourJst(item.startDate);
+      return cour != null && cour.year === year && cour.season === wanted;
+    });
   }
 
   async fetchAnimeDetail(id: string): Promise<UnifiedAnimeItem> {
