@@ -20,6 +20,7 @@ import { IntelEventsList } from './IntelEventsList';
 import { PilgrimageDetailControls } from './PilgrimageDetailControls';
 import { SpotRow } from './SpotRow';
 import { SelectedSpotCard } from './SelectedSpotCard';
+import { OfflinePackRow } from './OfflinePackRow';
 
 export interface PilgrimageDetailSheetProps {
   anime: PilgrimageWork | null;
@@ -205,6 +206,8 @@ function PilgrimageDetailSheetImpl({
           onPress={onSearchOpen}
         />
       </View>
+
+      {anime ? <OfflinePackRow anime={anime} themeColor={themeColor} theme={theme} /> : null}
 
       <PilgrimageDetailControls
         spotSearchQuery={spotSearchQuery}

@@ -127,7 +127,7 @@ export interface MapSurfaceProps {
   clusterDisableAtZoom?: number;
   /** Style/source URL (resolved via `map-source-prefs.resolveMapStyleUrl`). */
   styleUrl?: string;
-  /** On-location offline-only mode. Reserved until explicit MapLibre packs land. */
+  /** Force the downloaded offline trip pack's tiles even while online. */
   offlineOnly?: boolean;
   /** Pixels to lift in-map controls/attribution off the bottom edge. */
   controlsBottomOffset?: number;

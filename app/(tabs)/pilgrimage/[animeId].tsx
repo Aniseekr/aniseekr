@@ -32,7 +32,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../../context/ThemeContext';
-import { ThemedText, readableTextOn } from '../../../components/themed';
+import { ThemedButton, ThemedText, readableTextOn } from '../../../components/themed';
 import { PLATFORM_CONFIGS, type PlatformType } from '../../../libs/services/auth/types';
 import { isSupportedBrowseSource } from '../../../libs/services/data-source-config';
 import { getNumberParam, getStringParam } from '../../../libs/utils/route-params';
@@ -624,6 +624,11 @@ export default function PilgrimageDetailScreen() {
             <ThemedText variant="bodyMedium" tone="secondary" align="center">
               {error}
             </ThemedText>
+            <ThemedButton
+              variant="secondary"
+              label={t('pilgrimage.detail.errorRetry')}
+              onPress={handleSeriesRetry}
+            />
             <Pressable
               style={[styles.backBtn, { backgroundColor: theme.accent }]}
               onPress={handleBack}>

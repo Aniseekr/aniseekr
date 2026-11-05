@@ -49,6 +49,7 @@ const FEATURES: {
   /** Hide the row on devices where the feature can't run (e.g. film looks on iOS). */
   available?: () => boolean;
 }[] = [
+  { icon: 'cloud-download', labelKey: 'subscription.offlineTripPack' },
   { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks', available: isCameraLookAvailable },
   { icon: 'photo-library', labelKey: 'subscription.batchImport' },
   { icon: 'hd', labelKey: 'subscription.proExport' },

@@ -12,9 +12,10 @@
 // STATUS: device-render is the one remaining gate — MapLibre is a native module
 // that cannot render headlessly (spec §15). Validate on a prebuilt dev client.
 //
-// Offline: MapLibre's automatic ambient cache provides cache-as-you-browse;
-// explicit `offlineOnly` / per-region `createPack` UX is reserved, so
-// `offlineOnly` is accepted but not yet enforced here.
+// Offline: MapLibre's ambient cache provides cache-as-you-browse. When the user
+// has an offline trip pack, the engine swaps to the pack's on-device style
+// while offline (or when `offlineOnly` forces cached tiles) — see
+// libs/services/pilgrimage/offline-pack.
 import { useCallback, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Colors } from '../../../../constants/DesignSystem';
@@ -36,6 +37,7 @@ import type {
   MapSurfaceProps,
 } from '../../../../libs/services/pilgrimage/map-engine/types';
 import { resolveMapStyleUrl } from '../../../../libs/services/pilgrimage/map-source-prefs';
+import { useOfflineAwareStyleUrl } from '../../../../libs/services/pilgrimage/offline-pack/use-offline-pack';
 import { resolveMarkerVisual } from '../../../../libs/services/pilgrimage/map-engine/marker-style';
 import { routeLineFeature } from '../../../../libs/services/pilgrimage/map-engine/route-shape';
 import {
@@ -74,6 +76,7 @@ export function MapLibreEngine({
   visitedIds,
   clusterDisableAtZoom = CLUSTER_DISABLE_AT.default,
   styleUrl,
+  offlineOnly = false,
   controlsBottomOffset = 0,
   onMarkerPress,
   onMapPress,
@@ -138,7 +141,10 @@ export function MapLibreEngine({
     maxZoom: clusterMaxZoom(clusterDisableAtZoom),
   });
 
-  const styleURL = styleUrl ?? resolveMapStyleUrl('light', null);
+  const styleURL = useOfflineAwareStyleUrl(
+    styleUrl ?? resolveMapStyleUrl('light', null),
+    offlineOnly
+  );
   const initialCenter: [number, number] = center ? [center.lng, center.lat] : DEFAULT_CENTER;
 
   const refreshViewport = useCallback(async () => {

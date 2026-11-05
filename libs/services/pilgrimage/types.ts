@@ -22,4 +22,7 @@ export interface PilgrimageWork extends AtlasWork {
   titleEn: string;
   titleZh?: AtlasTitles;
   spots: PilgrimageSpot[];
+  /** Set only when this work was read from a downloaded offline trip pack
+   *  because Atlas was unreachable; the UI labels it "offline copy · date". */
+  offlineCopy?: { downloadedAt: number };
 }
