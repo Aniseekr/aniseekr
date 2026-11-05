@@ -11,7 +11,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Radius, Spacing, Size } from '../../constants/DesignSystem';
 import { FeatureFlags } from '../../constants/FeatureFlags';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { useTheme, type ThemeId, type ThemeMode } from '../../context/ThemeContext';
+import {
+  isThemeUnlocked,
+  useTheme,
+  type ThemeId,
+  type ThemeMode,
+} from '../../context/ThemeContext';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import { EditDisplayNameSheet } from '../../components/profile/EditDisplayNameSheet';
 import {
@@ -84,6 +89,7 @@ export default function SettingsScreen() {
     setThemeMode,
     setCustomAccent,
     themes,
+    grandfatheredThemeId,
   } = useTheme();
 
   const [prefs, setPrefs] = useState<UserPrefs>(loadUserPrefsSync);
@@ -183,22 +189,28 @@ export default function SettingsScreen() {
 
   const themeActions: QuickAction[] = useMemo(
     () =>
-      themes.map((themeOption) => ({
-        key: themeOption.id,
-        label: themeOption.name,
-        description:
-          themeOption.isPremium && !isPro ? t('settingsUi.premiumOnly') : undefined,
-        icon: 'color-palette-outline',
-        selected: themeOption.id === themeId,
-        onPress: () => {
-          if (themeOption.isPremium && !isPro) {
-            setPaywallVisible(true);
-            return;
-          }
-          void setTheme(themeOption.id as ThemeId);
-        },
-      })),
-    [themes, themeId, isPro, setTheme, t]
+      themes.map((themeOption) => {
+        const locked = !isThemeUnlocked(themeOption, {
+          isPro,
+          activeThemeId: themeId,
+          grandfatheredThemeId,
+        });
+        return {
+          key: themeOption.id,
+          label: themeOption.name,
+          description: locked ? t('settingsUi.premiumOnly') : undefined,
+          icon: 'color-palette-outline',
+          selected: themeOption.id === themeId,
+          onPress: () => {
+            if (locked) {
+              setPaywallVisible(true);
+              return;
+            }
+            void setTheme(themeOption.id as ThemeId);
+          },
+        };
+      }),
+    [themes, themeId, isPro, grandfatheredThemeId, setTheme, t]
   );
 
   const themeModeActions: QuickAction[] = useMemo(
@@ -422,9 +434,7 @@ export default function SettingsScreen() {
       case 'premium':
         return {
           title: isPro ? t('settingsUi.premium') : t('settingsUi.aniseekrPremium'),
-          subtitle: isPro
-            ? t('settingsUi.manageSubscription')
-            : t('settingsUi.premiumPitch'),
+          subtitle: isPro ? t('settingsUi.manageSubscription') : t('settingsUi.premiumPitch'),
           actions: premiumActions,
         };
       default:
@@ -459,10 +469,7 @@ export default function SettingsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <SettingsHeader
-          title={t('settings.title')}
-          onBack={() => router.back()}
-        />
+        <SettingsHeader title={t('settings.title')} onBack={() => router.back()} />
 
         <ScrollView
           style={styles.scrollView}

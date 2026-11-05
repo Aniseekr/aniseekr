@@ -727,7 +727,7 @@
       "active": "Premium 已啟用",
       "unlock": "解鎖 Premium",
       "activeDesc": "管理訂閱與權益",
-      "pitch": "無廣告、全部主題",
+      "pitch": "旅行工具＋你的風格",
       "manage": "管理",
       "upgrade": "升級"
     }
@@ -899,7 +899,7 @@
         "manage": "管理",
         "manageSubtitle": "管理你的訂閱與權益",
         "unlock": "解鎖 Premium",
-        "unlockSubtitle": "去除廣告、所有主題",
+        "unlockSubtitle": "聖地巡禮旅行工具與進階風格",
         "upgrade": "升級"
       },
       "title": "個人",
@@ -2286,7 +2286,7 @@
     "manageSubscriptionA11y": "管理訂閱",
     "premium": "Premium",
     "premiumOnly": "僅限 Premium",
-    "premiumPitch": "解鎖所有主題與無廣告體驗",
+    "premiumPitch": "聖地巡禮旅行工具與進階風格，無廣告",
     "upgradeToPremiumA11y": "升級至 Premium",
     "enableAdultContentAreYouMessage": "確定要啟用成人內容嗎?",
     "enableAdultContentAreYouTitle": "啟用成人內容?",
@@ -2358,7 +2358,7 @@
     "cameraDiagnosticsSubtitle": "硬體指紋＋相機分組"
   },
   "subscription": {
-    "allPremiumThemes": "所有進階主題",
+    "allPremiumThemes": "進階主題與外觀：字體、紋理、配套 App 圖示",
     "cameraLooks": "全部相機底片色調，可調強度",
     "batchImport": "一次匯入整趟旅程的照片",
     "aniseekrPro": "Aniseekr Pro",
@@ -2366,7 +2366,7 @@
     "privacyPolicy": "隱私權政策",
     "purchaseFailed": "購買失敗",
     "termsOfService": "服務條款",
-    "unlockTheFullToolkit": "解鎖完整工具組",
+    "unlockTheFullToolkit": "巡禮路上的旅行工具，還有屬於你的風格。",
     "annual": "年繳",
     "monthly": "月繳",
     "lifetime": "買斷",
@@ -2424,14 +2424,22 @@
         "nightLines": "夜之集中線",
         "oneEye": "獨眼",
         "mangaOrange": "漫畫橘",
-        "mangaNight": "漫畫夜"
+        "mangaNight": "漫畫夜",
+        "washi": "和紙",
+        "screentone": "網點",
+        "twilight": "黃昏月台",
+        "yozakura": "夜櫻",
+        "cel": "賽璐珞",
+        "natsuzora": "夏空"
       },
       "androidTitle": "要換 App 圖示嗎？",
       "androidBody": "Android 可能會先關掉 Aniseekr 才能套用新圖示，從主畫面再打開就好。",
       "confirm": "換",
       "cancel": "取消",
       "failed": "圖示換不了，再試一次。",
-      "unsupported": "這台裝置不能換 App 圖示。"
+      "unsupported": "這台裝置不能換 App 圖示。",
+      "themeIcons": "主題圖示",
+      "matchesTheme": "配合目前主題"
     }
   }
 }

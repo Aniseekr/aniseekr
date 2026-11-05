@@ -162,6 +162,19 @@ export const FontFamily = {
 } as const;
 
 /**
+ * Display faces that premium theme skins put on display/headline text
+ * (`ThemeSkin.displayFont`). Each is one static OFL weight bundled by the
+ * expo-font plugin (app.json; licences in assets/fonts/*-OFL.txt). Latin
+ * only — CJK headlines keep the system face. iOS resolves the family name in
+ * the file; Android resolves the plugin's `fontFamily`, which can't hold spaces.
+ */
+export const SkinFont = {
+  serif: Platform.select({ ios: 'DM Serif Display', default: 'DMSerifDisplay' }),
+  comic: 'Bangers',
+  retro: 'Righteous',
+} as const;
+
+/**
  * Tracking for uppercase caption labels (section titles, eyebrows, tab label).
  * Latin caps need air; CJK has no case and spaced-out ideographs read as
  * "應 用 語 言", so callers resolve this through `useCapsTracking()` /

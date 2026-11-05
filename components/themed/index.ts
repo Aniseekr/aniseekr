@@ -32,6 +32,7 @@ export {
   ON_LIGHT,
 } from './contrast';
 export { Halftone } from './Halftone';
+export { SkinTexture } from './SkinTexture';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { Skeleton } from './Skeleton';
 export { SheetBackdrop, SheetHandle, ThemedBottomSheet, useSheetDrag } from './sheet';

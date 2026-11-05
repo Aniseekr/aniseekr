@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -17,6 +17,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useSubscription } from '../../context/SubscriptionContext';
 import type { SubscriptionOfferingPackage } from '../../libs/services/subscription/subscription-service';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { isCameraLookAvailable } from '../../modules/camera-look/src';
 
 function unsupportedMessage(
   reason: ReturnType<typeof useSubscription>['unsupportedReason'],
@@ -38,14 +39,20 @@ function unsupportedMessage(
   }
 }
 
+// What Pro unlocks, in pitch order: pilgrimage travel tools first, then style,
+// then no ads. Only list what ships in this build. Each travel tool (film
+// looks, offline trip pack, Pro export, batch album import) adds its own row
+// above the style row when it lands, with its label under `subscription.*`.
 const FEATURES: {
-  icon: keyof typeof MaterialIcons.glyphMap;
+  icon: ComponentProps<typeof MaterialIcons>['name'];
   labelKey: TranslationKey;
+  /** Hide the row on devices where the feature can't run (e.g. film looks on iOS). */
+  available?: () => boolean;
 }[] = [
-  { icon: 'block', labelKey: 'subscription.noAds' },
-  { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
-  { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks' },
+  { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks', available: isCameraLookAvailable },
   { icon: 'photo-library', labelKey: 'subscription.batchImport' },
+  { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'block', labelKey: 'subscription.noAds' },
 ];
 
 export interface PaywallSheetProps {
@@ -152,7 +159,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
 
           <ScrollView style={{ maxHeight: 480 }}>
             <View style={styles.features}>
-              {FEATURES.map((feature) => (
+              {FEATURES.filter((feature) => feature.available?.() ?? true).map((feature) => (
                 <View key={feature.labelKey} style={styles.featureRow}>
                   <View style={[styles.featureIcon, { backgroundColor: theme.accent + '24' }]}>
                     <MaterialIcons name={feature.icon} size={18} color={theme.accent} />

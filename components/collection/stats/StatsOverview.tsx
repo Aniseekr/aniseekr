@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useT } from '../../../libs/i18n';
 import { Spacing } from '../../../constants/DesignSystem';
+import { chartRamp, useTheme } from '../../../context/ThemeContext';
 import { ThemedText, Skeleton } from '../../themed';
 import { EmptyStateView } from '../../common/EmptyStateView';
 import { ErrorStateView } from '../../common/ErrorStateView';
@@ -21,14 +22,6 @@ import {
   achievementService,
   AchievementWithProgress,
 } from '../../../libs/services/achievements/achievement-service';
-
-const STATUS_COLORS = {
-  watching: '#30D158',
-  completed: '#0A84FF',
-  planned: '#5E5CE6',
-  dropped: '#FF453A',
-  onHold: '#FF9F0A',
-} as const;
 
 interface Props {
   /**
@@ -88,16 +81,19 @@ export function StatsOverview({
     return undefined;
   }, [summary, showThresholdHighlight]);
 
+  // Status colours come from the theme's chart ramp (watching → dropped), so a
+  // premium skin recolours the donut; free themes keep the old status colours.
+  const ramp = chartRamp(useTheme().theme);
   const donutSlices = useMemo(() => {
     if (!summary) return [];
     return [
-      { label: t('commonUi.watching'), value: summary.watching, color: STATUS_COLORS.watching },
-      { label: t('commonUi.completed'), value: summary.completed, color: STATUS_COLORS.completed },
-      { label: t('commonUi.plan'), value: summary.planned, color: STATUS_COLORS.planned },
-      { label: t('collectionUi.onHold'), value: summary.onHold, color: STATUS_COLORS.onHold },
-      { label: t('commonUi.dropped'), value: summary.dropped, color: STATUS_COLORS.dropped },
+      { label: t('commonUi.watching'), value: summary.watching, color: ramp[0] },
+      { label: t('commonUi.completed'), value: summary.completed, color: ramp[1] },
+      { label: t('commonUi.plan'), value: summary.planned, color: ramp[2] },
+      { label: t('collectionUi.onHold'), value: summary.onHold, color: ramp[3] },
+      { label: t('commonUi.dropped'), value: summary.dropped, color: ramp[4] },
     ];
-  }, [summary, t]);
+  }, [summary, t, ramp]);
 
   const monthlyHasData = useMemo(() => monthly.some((b) => b.hours > 0), [monthly]);
 

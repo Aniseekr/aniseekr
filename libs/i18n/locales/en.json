@@ -727,7 +727,7 @@
       "active": "Premium active",
       "unlock": "Unlock Premium",
       "activeDesc": "Manage your subscription and benefits",
-      "pitch": "No ads, all themes",
+      "pitch": "Travel tools + your own style",
       "manage": "Manage",
       "upgrade": "Upgrade"
     }
@@ -899,7 +899,7 @@
         "manage": "Manage",
         "manageSubtitle": "Manage your subscription and benefits",
         "unlock": "Unlock Premium",
-        "unlockSubtitle": "No ads, all themes",
+        "unlockSubtitle": "Pilgrimage travel tools and premium style",
         "upgrade": "Upgrade"
       },
       "title": "Profile",
@@ -2286,7 +2286,7 @@
     "manageSubscriptionA11y": "Manage subscription",
     "premium": "Premium",
     "premiumOnly": "Premium only",
-    "premiumPitch": "Unlock all themes and no ads",
+    "premiumPitch": "Pilgrimage travel tools and premium style, no ads",
     "upgradeToPremiumA11y": "Upgrade to Premium",
     "enableAdultContentAreYouMessage": "Are you sure you want to enable adult content?",
     "enableAdultContentAreYouTitle": "Enable adult content?",
@@ -2358,7 +2358,7 @@
     "cameraDiagnosticsSubtitle": "Hardware fingerprint + cohort classification"
   },
   "subscription": {
-    "allPremiumThemes": "All premium themes",
+    "allPremiumThemes": "Premium themes & skins: fonts, textures, matching app icons",
     "cameraLooks": "Every camera film look, with strength control",
     "batchImport": "Import a whole trip's photos at once",
     "aniseekrPro": "Aniseekr Pro",
@@ -2366,7 +2366,7 @@
     "privacyPolicy": "Privacy Policy",
     "purchaseFailed": "Purchase failed",
     "termsOfService": "Terms of Service",
-    "unlockTheFullToolkit": "Unlock the full toolkit",
+    "unlockTheFullToolkit": "Travel tools for your pilgrimages, and a look that's yours.",
     "annual": "Annual",
     "monthly": "Monthly",
     "lifetime": "Lifetime",
@@ -2424,14 +2424,22 @@
         "nightLines": "Night lines",
         "oneEye": "One eye",
         "mangaOrange": "Manga orange",
-        "mangaNight": "Manga night"
+        "mangaNight": "Manga night",
+        "washi": "Washi",
+        "screentone": "Screentone",
+        "twilight": "Twilight",
+        "yozakura": "Yozakura",
+        "cel": "Cel",
+        "natsuzora": "Natsuzora"
       },
       "androidTitle": "Switch app icon?",
       "androidBody": "Android may close Aniseekr to apply the new icon. Just open it again from your home screen.",
       "confirm": "Switch",
       "cancel": "Cancel",
       "failed": "Couldn't change the icon. Try again.",
-      "unsupported": "This device can't change app icons."
+      "unsupported": "This device can't change app icons.",
+      "themeIcons": "Theme icons",
+      "matchesTheme": "Matches your theme"
     }
   }
 }

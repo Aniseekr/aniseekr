@@ -17,6 +17,7 @@ import {
   type ThemeMode,
   type ThemePalette,
   type TintIntensity,
+  isThemeUnlocked,
   useTheme,
 } from '../../context/ThemeContext';
 import { useSubscription } from '../../context/SubscriptionContext';
@@ -67,6 +68,7 @@ export default function AppearanceScreen() {
     setTintIntensity,
     increaseContrast,
     setIncreaseContrast,
+    grandfatheredThemeId,
   } = useTheme();
 
   const [bootstrapPrefs] = useState(loadUserPrefsSync);
@@ -84,9 +86,12 @@ export default function AppearanceScreen() {
 
   // Prefs are seeded synchronously above; no async load required.
 
+  const isLocked = (palette: ThemePalette) =>
+    !isThemeUnlocked(palette, { isPro, activeThemeId: themeId, grandfatheredThemeId });
+
   const handleThemePress = (palette: ThemePalette) => {
     if (palette.id === themeId && !customAccent) return;
-    if (palette.isPremium && !isPro) {
+    if (isLocked(palette)) {
       hapticsBridge.warning();
       setPaywallVisible(true);
       return;
@@ -138,7 +143,7 @@ export default function AppearanceScreen() {
                 key={palette.id}
                 palette={palette}
                 isSelected={palette.id === themeId}
-                isLocked={!!palette.isPremium && !isPro}
+                isLocked={isLocked(palette)}
                 onPress={() => handleThemePress(palette)}
               />
             ))}
@@ -443,12 +448,8 @@ function ThemeCard({
           <View style={[styles.themeSwatch, { backgroundColor: palette.accent }]} />
           <View style={[styles.themeSwatch, { backgroundColor: palette.accentLight }]} />
           <View style={[styles.themeSwatch, { backgroundColor: palette.secondary }]} />
-        </View>
-        <View style={{ flex: 1 }} />
-        <View style={styles.themeFooter}>
-          <ThemedText variant="titleSmall" weight="700" style={{ color: palette.text.primary }}>
-            {palette.name}
-          </ThemedText>
+          {/* Pill sits up here so long names ("Twilight Platform") keep the
+              footer for the name and the selected check. */}
           {FeatureFlags.PREMIUM_ENABLED && palette.isPremium ? (
             <View style={[styles.premiumPill, { backgroundColor: palette.accent + '40' }]}>
               <Ionicons
@@ -461,6 +462,16 @@ function ThemeCard({
               </ThemedText>
             </View>
           ) : null}
+        </View>
+        <View style={{ flex: 1 }} />
+        <View style={styles.themeFooter}>
+          <ThemedText
+            variant="titleSmall"
+            weight="700"
+            numberOfLines={1}
+            style={{ color: palette.text.primary, flexShrink: 1 }}>
+            {palette.name}
+          </ThemedText>
           {isSelected ? (
             <MaterialIcons name="check-circle" size={18} color={palette.accent} />
           ) : null}
@@ -654,7 +665,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Spacing.sm + 2,
   },
-  themeSwatchRow: { flexDirection: 'row', gap: 6 },
+  themeSwatchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   themeSwatch: { width: 16, height: 16, borderRadius: Radius.sm },
   themeFooter: {
     flexDirection: 'row',
@@ -662,6 +673,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   premiumPill: {
+    marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
