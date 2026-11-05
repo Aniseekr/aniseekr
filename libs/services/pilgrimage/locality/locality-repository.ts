@@ -1,4 +1,3 @@
-import { bundledLocalityDataLoader } from '@/libs/services/pilgrimage/locality/bundled-loader';
 import type {
   AreaDestinationQuery,
   EventQuery,
@@ -22,6 +21,7 @@ import type {
   PlaceId,
   PlaceRole,
 } from '@/libs/services/pilgrimage/locality/types';
+import { remoteLocalityDataLoader } from '@/libs/services/pilgrimage/locality/remote-loader';
 import { validateLocalityDataEnvelope } from '@/libs/services/pilgrimage/locality/validator';
 
 /** Validated synchronous queries over the current locality snapshot. */
@@ -184,4 +184,4 @@ export class LocalityRepositoryImpl implements LocalityRepository {
   }
 }
 
-export const localityRepository = new LocalityRepositoryImpl(bundledLocalityDataLoader);
+export const localityRepository = new LocalityRepositoryImpl(remoteLocalityDataLoader);

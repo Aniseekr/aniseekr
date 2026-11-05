@@ -8,6 +8,7 @@ export * from '@/libs/services/pilgrimage/locality/repository';
 export * from '@/libs/services/pilgrimage/locality/migration';
 export * from '@/libs/services/pilgrimage/locality/validator';
 export * from '@/libs/services/pilgrimage/locality/bundled-loader';
+export * from '@/libs/services/pilgrimage/locality/remote-loader';
 export * from '@/libs/services/pilgrimage/locality/locality-repository';
 export * from '@/libs/services/pilgrimage/locality/event-detail';
 export * from '@/libs/services/pilgrimage/locality/event-calendar';

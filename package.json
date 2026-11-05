@@ -32,7 +32,8 @@
     "build:ios:local": "bunx eas build --platform ios --profile production --local",
     "submit:android": "./scripts/android-submit.sh",
     "gcp:bootstrap": "./scripts/gcp-bootstrap.sh",
-    "gcp:rotate-key": "./scripts/gcp-rotate-key.sh"
+    "gcp:rotate-key": "./scripts/gcp-rotate-key.sh",
+    "locality:sync": "bun scripts/sync-locality.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

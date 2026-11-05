@@ -20,6 +20,7 @@ import { authService } from '../libs/services/auth/auth-service';
 import { isOnboardingCompleteSync } from '../libs/services/onboarding-service';
 import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
+import { localityRepository } from '../libs/services/pilgrimage/locality/locality-repository';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
 import { atlasClient } from '../libs/services/pilgrimage/atlas/atlas-client';
 import { migrateLegacyPilgrimageRecords } from '../libs/services/pilgrimage/atlas/legacy-migration';
@@ -116,6 +117,8 @@ export default function RootLayout() {
         })
         .catch((e) => console.warn('[updateMappings]', e));
       void atlasClient.works().catch((e) => console.warn('[hydrateAtlas]', e));
+      // Events / stamp rallies / Anime Tourism 88 from R2; screens re-render via subscribe.
+      void localityRepository.refresh().catch((e) => console.warn('[locality.refresh]', e));
       void migrateLegacyPilgrimageRecords().catch((e) =>
         console.warn('[migrateLegacyPilgrimageRecords]', e)
       );
