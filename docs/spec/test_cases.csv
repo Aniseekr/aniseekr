@@ -254,3 +254,5 @@ SHIK-006,Shikimori,deterministic,P0,Seasonal season param format,fetchSeasonalAn
 SIMKL-007,Simkl,deterministic,P0,Premieres as one season page,Premieres read ids.simkl_id as the stable id; bare poster keys get _m.jpg; page>1 is empty; rows outside the requested JST broadcast cour are dropped,mapping,active
 REPO-063,Repository,deterministic,P0,Seasonal rows anchored to AniList,Non-AniList seasonal rows resolve their AniList id via ID mapping then AniList idMal and take nextAiringEpisode; rows with no AniList entry are dropped,mapping,active
 REPO-064,Repository,deterministic,P0,Legacy anime keyed by AniList id,unifiedToLegacyAnime uses the AniList id when present even if another platform id wins priority,mapping,active
+REPO-065,Repository,deterministic,P0,Detail media follows id platform,Staff/relations/streaming/themes/statistics query the source named by sourcePlatform instead of the browse source,mapping,active
+ANIL-012,AniList,deterministic,P0,Relations keyed by AniList id,fetchAnimeRelations returns node.id (AniList) not idMal so detail navigation opens the right title,mapping,active

@@ -411,4 +411,29 @@ describe('AniListDataSource', () => {
       year: 2026,
     });
   });
+
+  it('ANIL-012 relations are keyed by AniList id so the detail screen can open them', async () => {
+    const { ds } = buildSubject(() =>
+      fakeJson({
+        data: {
+          Media: {
+            id: 20,
+            idMal: 200,
+            title: { romaji: 'S2' },
+            relations: {
+              edges: [
+                {
+                  relationType: 'PREQUEL',
+                  node: { id: 10, idMal: 100, title: { userPreferred: 'S1' }, format: 'TV' },
+                },
+              ],
+            },
+          },
+        },
+      })
+    );
+
+    const relations = await ds.fetchAnimeRelations('20', 'anilist');
+    expect(relations.map((r) => r.id)).toEqual(['10']);
+  });
 });

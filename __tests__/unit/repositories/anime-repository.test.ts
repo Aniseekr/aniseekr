@@ -20,6 +20,7 @@ import { AniListClient, type AniListAnime } from '../../../libs/clients/anilist-
 import {
   type AnimeDataSource,
   type AnimeGenre,
+  type AnimeRelation,
   type AnimeStaff,
 } from '../../../libs/services/data-sources/anime-data-source';
 import { CacheService } from '../../../libs/services/cache-service';
@@ -434,6 +435,23 @@ describe('AnimeRepository', () => {
     expect(legacy.map((a) => a.title)).toEqual(['Kitsu 10', 'Kitsu 11']);
     expect(legacy[0].nextAiringEpisode).toEqual(airing);
     expect(aniListLookup.byMalIds).toHaveBeenCalledWith([77, 88]);
+  });
+
+  it('REPO-065 detail media for an AniList id queries AniList even when browsing another source', async () => {
+    const relation: AnimeRelation = { id: '21', type: 'SEQUEL', title: 'Sequel' };
+    const anilistRelations = mock(async (_id: string): Promise<AnimeRelation[]> => [relation]);
+    const kitsuRelations = mock(async (_id: string): Promise<AnimeRelation[]> => []);
+    await dataSourceConfig.setBrowseSource('kitsu');
+    const repo = new AnimeRepository({
+      anilist: buildMockSource({ type: 'anilist', fetchAnimeRelations: anilistRelations }),
+      kitsu: buildMockSource({ type: 'kitsu', fetchAnimeRelations: kitsuRelations }),
+    });
+
+    const relations = await repo.fetchAnimeRelations(20, 'anilist');
+
+    expect(relations).toEqual([relation]);
+    expect(anilistRelations).toHaveBeenCalledWith('20');
+    expect(kitsuRelations).not.toHaveBeenCalled();
   });
 
   it('REPO-064 legacy mapping keys rows by AniList id even when a Bangumi id wins priority', () => {

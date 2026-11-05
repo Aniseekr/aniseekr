@@ -749,7 +749,10 @@ export class AnimeRepository {
   // MARK: - Cross-platform media data
 
   async fetchAnimeStaff(id: number, sourcePlatform?: PlatformType): Promise<AnimeStaff[]> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
 
     const result = await this.callWithCrossPlatform<AnimeStaff[]>(
@@ -774,7 +777,10 @@ export class AnimeRepository {
   }
 
   async fetchAnimeRelations(id: number, sourcePlatform?: PlatformType): Promise<AnimeRelation[]> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
 
     const result = await this.callWithCrossPlatform<AnimeRelation[]>(
@@ -797,7 +803,10 @@ export class AnimeRepository {
   }
 
   async fetchAnimeStreaming(id: number, sourcePlatform?: PlatformType): Promise<AnimeStreaming[]> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
 
     const result = await this.callWithCrossPlatform<AnimeStreaming[]>(
@@ -820,7 +829,10 @@ export class AnimeRepository {
   }
 
   async fetchAnimeThemes(id: number, sourcePlatform?: PlatformType): Promise<AnimeTheme | null> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
     const queryId = await this.translateId(id, originPlatform, source.type);
     const native = await source.fetchAnimeThemes(queryId);
@@ -841,7 +853,10 @@ export class AnimeRepository {
     id: number,
     sourcePlatform?: PlatformType
   ): Promise<PlatformRatingData | null> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
     const queryId = await this.translateId(id, originPlatform, source.type);
     return source.fetchStatistics(queryId);

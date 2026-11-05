@@ -394,10 +394,11 @@ export class AniListDataSource implements AnimeDataSource {
     return edges
       .map((edge): AnimeRelation | null => {
         const node = edge.node;
-        if (!node || !edge.relationType) return null;
-        const entryId = node.idMal ?? node.id;
+        if (!node?.id || !edge.relationType) return null;
+        // The detail screen opens relations by id and is AniList-keyed; the
+        // previous `idMal ?? id` sent MAL ids there and every tap 404'd.
         return {
-          id: String(entryId ?? ''),
+          id: String(node.id),
           type: humanizeRelation(edge.relationType),
           title: node.title?.userPreferred ?? '',
           format: node.format ?? node.type ?? undefined,

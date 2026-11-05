@@ -261,3 +261,5 @@ SHIK-006,__tests__/unit/providers/shikimori-data-source.test.ts,seasonal sends s
 SIMKL-007,__tests__/unit/providers/simkl-data-source.test.ts,premieres simkl_id stable id poster suffix one page season filter,covered
 REPO-063,__tests__/unit/repositories/anime-repository.test.ts,non-AniList seasonal rows anchored to AniList; unmatched dropped,covered
 REPO-064,__tests__/unit/repositories/anime-repository.test.ts,legacy mapping keys rows by AniList id,covered
+REPO-065,__tests__/unit/repositories/anime-repository.test.ts,detail media for an AniList id queries AniList even when browsing another source,covered
+ANIL-012,__tests__/unit/providers/anilist-data-source.test.ts,relations are keyed by AniList id,covered
