@@ -62,6 +62,14 @@ export function activeCameraLook(selection: CameraLookSelection, isPro: boolean)
   return { look, intensity, matrix: lookMatrixAt(look, intensity) };
 }
 
+const noStore = () => () => undefined;
+
+/** Whether any look is on. Re-renders only when that flips, not on every drag tick. */
+export function useCameraLookActive(store: CameraLookStore | undefined, isPro: boolean): boolean {
+  const read = () => (store ? activeCameraLook(store.get(), isPro).matrix !== null : false);
+  return useSyncExternalStore(store ? store.subscribe : noStore, read, read);
+}
+
 export function useActiveCameraLook(store: CameraLookStore, isPro: boolean): ActiveCameraLook {
   const selection = useCameraLookSelection(store);
   return useMemo(() => activeCameraLook(selection, isPro), [selection, isPro]);
