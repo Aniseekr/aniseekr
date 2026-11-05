@@ -39,11 +39,12 @@ function unsupportedMessage(
 }
 
 const FEATURES: {
-  icon: 'block' | 'palette';
+  icon: 'block' | 'palette' | 'hd';
   labelKey: TranslationKey;
 }[] = [
   { icon: 'block', labelKey: 'subscription.noAds' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'hd', labelKey: 'subscription.proExport' },
 ];
 
 export interface PaywallSheetProps {
@@ -349,6 +350,7 @@ const styles = StyleSheet.create({
   },
   featureLabel: {
     ...Typography.titleMedium,
+    flexShrink: 1,
   },
   packageRow: {
     flexDirection: 'row',
