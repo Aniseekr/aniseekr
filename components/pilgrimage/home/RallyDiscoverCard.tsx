@@ -32,7 +32,11 @@ export function RallyDiscoverCard({
   const work = row.event.animeIds
     .map((id) => works.find((candidate) => candidate.bgm?.includes(id)))
     .find((candidate) => candidate !== undefined);
-  const imageUri = work?.bgm?.[0] ? bangumiSubjectImageUrl(work.bgm[0], 'common') : undefined;
+  // The event's own Bangumi id is enough for a poster even when the work has no
+  // Atlas scenes (so isn't in `works`); same source as RallyPoster on the hub/detail.
+  const posterBangumiId = work?.bgm?.[0] ?? row.event.animeIds[0];
+  const imageUri =
+    posterBangumiId !== undefined ? bangumiSubjectImageUrl(posterBangumiId, 'common') : undefined;
 
   if (!imageUri || coverFailed) {
     return (
