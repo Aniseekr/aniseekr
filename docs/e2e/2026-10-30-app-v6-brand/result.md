@@ -43,9 +43,10 @@ Code changes the upgrade required:
   ("import from expo-media-library/legacy"). Save-to-Photos in companion / compare preview / share / standalone
   capture was broken on SDK 57; imports now come from `expo-media-library/legacy`.
 - `ios.enableSceneSupport` dropped from app.json (built in on SDK 58).
+- `react-native-performance` 6 → 7: v6's iOS code calls `StartupLogger` getters RN 0.88 removed (build error); v7 keeps the JS API.
 
 Left on their current major on purpose (need a decision or a device to verify):
 `react-native-google-mobile-ads` 16.0.0 (pinned 2026-09-20 for an Android break; latest 17.4),
 `@react-native-google-signin/google-signin` 16 → 17 (auth), `react-native-purchases` 10 → 11 (payments),
-`react-native-performance` 6 → 7, `supercluster` 8 → 9 (pilgrimage clustering), `@rnrepo/build-tools` 0.1 → 0.2,
+`supercluster` 8 → 9 (pilgrimage clustering), `@rnrepo/build-tools` 0.1 → 0.2,
 `typescript` 6 → 7, `eslint` 9 → 10, `@babel/core` 7 → 8, `prettier-plugin-tailwindcss` 0.6 → 0.8.
