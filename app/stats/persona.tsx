@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../../../../context/ThemeContext';
-import { Radius, Spacing, Typography } from '../../../../constants/DesignSystem';
-import { ThemedText, readableTextOn, Skeleton } from '../../../../components/themed';
-import { EmptyStateView } from '../../../../components/common/EmptyStateView';
-import { StatsExhibitFrame } from '../../../../components/collection/stats/StatsExhibitFrame';
-import { useT } from '../../../../libs/i18n';
-import { loadUserAnimeRows, summarize } from '../../../../libs/services/collection/stats-service';
-import { computePersona, PersonaResult } from '../../../../libs/services/collection/persona';
+import { useTheme } from '../../context/ThemeContext';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { ThemedText, readableTextOn, Skeleton } from '../../components/themed';
+import { EmptyStateView } from '../../components/common/EmptyStateView';
+import { StatsExhibitFrame } from '../../components/collection/stats/StatsExhibitFrame';
+import { useT } from '../../libs/i18n';
+import { loadUserAnimeRows, summarize } from '../../libs/services/collection/stats-service';
+import { computePersona, PersonaResult } from '../../libs/services/collection/persona';
 
 export default function PersonaExhibit() {
   const { theme } = useTheme();

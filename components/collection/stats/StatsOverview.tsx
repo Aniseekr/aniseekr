@@ -106,7 +106,7 @@ export function StatsOverview({
         icon: 'psychology' as const,
         gradientFrom: '#7C5BFF',
         gradientTo: '#21D4FD',
-        route: '/collection/stats/persona',
+        route: '/stats/persona',
         featured: true,
         minTotal: 3,
       },
@@ -117,7 +117,7 @@ export function StatsOverview({
         icon: 'auto-stories' as const,
         gradientFrom: '#FF6CAB',
         gradientTo: '#FF8E1E',
-        route: '/collection/stats/year-in-review',
+        route: '/stats/year-in-review',
         minTotal: 1,
       },
       {
@@ -127,7 +127,7 @@ export function StatsOverview({
         icon: 'emoji-events' as const,
         gradientFrom: '#F2994A',
         gradientTo: '#F2C94C',
-        route: '/collection/stats/hall-of-fame',
+        route: '/stats/hall-of-fame',
         minTotal: 0,
       },
       {
@@ -137,7 +137,7 @@ export function StatsOverview({
         icon: 'star-rate' as const,
         gradientFrom: '#0F2027',
         gradientTo: '#2C5364',
-        route: '/collection/stats/top-picks',
+        route: '/stats/top-picks',
         minTotal: 3,
       },
       {
@@ -147,7 +147,7 @@ export function StatsOverview({
         icon: 'favorite' as const,
         gradientFrom: '#FF5C8A',
         gradientTo: '#7C5BFF',
-        route: '/collection/stats/top-favorites',
+        route: '/stats/top-favorites',
         minTotal: 1,
       },
     ],
@@ -204,7 +204,7 @@ export function StatsOverview({
       {achievements.length > 0 ? (
         <AchievementsGrid
           achievements={achievements}
-          onPressViewAll={() => router.push('/collection/stats/hall-of-fame')}
+          onPressViewAll={() => router.push('/stats/hall-of-fame')}
         />
       ) : null}
 

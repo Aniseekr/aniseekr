@@ -336,7 +336,7 @@ export default function ProfileScreen() {
               label={t('tabs.profileScreen.statLabel.cards')}
               onPress={() => {
                 hapticsBridge.tap();
-                router.push('/collection/stats/year-in-review');
+                router.push('/stats/year-in-review');
               }}
             />
             <StatTile
@@ -344,7 +344,7 @@ export default function ProfileScreen() {
               label={t('tabs.profileScreen.statLabel.rated')}
               onPress={() => {
                 hapticsBridge.tap();
-                router.push('/collection/stats/top-picks');
+                router.push('/stats/top-picks');
               }}
             />
             <StatTile
@@ -352,7 +352,7 @@ export default function ProfileScreen() {
               label={t('tabs.profileScreen.statLabel.liked')}
               onPress={() => {
                 hapticsBridge.tap();
-                router.push('/collection/stats/top-favorites');
+                router.push('/stats/top-favorites');
               }}
             />
           </Animated.View>
@@ -363,7 +363,7 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => {
                 hapticsBridge.tap();
-                router.push('/collection/stats');
+                router.push('/stats');
               }}
               style={({ pressed }) => [
                 styles.statsHero,

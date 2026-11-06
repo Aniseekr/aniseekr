@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Share, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../../context/ThemeContext';
-import { Radius, Spacing, Typography } from '../../../../constants/DesignSystem';
-import { ThemedText, Skeleton } from '../../../../components/themed';
-import { EmptyStateView } from '../../../../components/common/EmptyStateView';
-import { StatsExhibitFrame } from '../../../../components/collection/stats/StatsExhibitFrame';
-import { useT } from '../../../../libs/i18n';
+import { useTheme } from '../../context/ThemeContext';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import { ThemedText, Skeleton } from '../../components/themed';
+import { EmptyStateView } from '../../components/common/EmptyStateView';
+import { StatsExhibitFrame } from '../../components/collection/stats/StatsExhibitFrame';
+import { useT } from '../../libs/i18n';
 import {
   loadUserAnimeRows,
   summarize,
   UserAnimeRow,
-} from '../../../../libs/services/collection/stats-service';
+} from '../../libs/services/collection/stats-service';
 
 export default function TopPicksExhibit() {
   const { theme } = useTheme();
