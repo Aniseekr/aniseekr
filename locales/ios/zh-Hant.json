@@ -1,0 +1,7 @@
+{
+  "NSCameraUsageDescription": "AniSeekr 使用相機，讓你對著動畫參考圖取景並拍下聖地場景。",
+  "NSPhotoLibraryUsageDescription": "AniSeekr 會開啟你的相簿，讓你匯入巡禮照片或用來比對的參考圖，或選擇大頭貼。",
+  "NSPhotoLibraryAddUsageDescription": "AniSeekr 會把巡禮比對照片存到你的相簿，方便之後分享。",
+  "NSLocationWhenInUseUsageDescription": "AniSeekr 使用你的位置來顯示附近的動畫聖地。",
+  "NSFaceIDUsageDescription": "AniSeekr 會在顯示成人內容前使用 Face ID 確認。"
+}

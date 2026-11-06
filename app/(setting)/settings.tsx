@@ -154,7 +154,7 @@ export default function SettingsScreen() {
     const enrolled = hasHw && (await LocalAuthentication.isEnrolledAsync());
     if (enrolled) {
       const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to enable adult content',
+        promptMessage: t('settings.adultContentAuthPrompt'),
         cancelLabel: t('common.cancel'),
       });
       if (res.success) await updatePref('allowAdultContent', true);

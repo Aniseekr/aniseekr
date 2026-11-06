@@ -734,7 +734,8 @@
       "pitch": "旅行工具＋你的風格",
       "manage": "管理",
       "upgrade": "升級"
-    }
+    },
+    "adultContentAuthPrompt": "驗證身分以開啟成人內容"
   },
   "titleLanguage": {
     "intro": "標題會以你優先順序最高、且該作品有提供的語言顯示。點箭頭可調整順序。",

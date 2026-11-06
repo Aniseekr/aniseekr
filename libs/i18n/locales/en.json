@@ -734,7 +734,8 @@
       "pitch": "Travel tools + your own style",
       "manage": "Manage",
       "upgrade": "Upgrade"
-    }
+    },
+    "adultContentAuthPrompt": "Authenticate to enable adult content"
   },
   "titleLanguage": {
     "intro": "Titles will be shown in the highest-priority language available for each anime. Tap the arrows to reorder.",

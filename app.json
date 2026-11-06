@@ -418,6 +418,12 @@
       "eas": {
         "projectId": "f1a05e03-8db4-4188-94bf-11d0cc39bf9a"
       }
+    },
+    "locales": {
+      "zh-Hant": "./locales/ios/zh-Hant.json",
+      "zh-Hans": "./locales/ios/zh-Hans.json",
+      "ja": "./locales/ios/ja.json",
+      "ko": "./locales/ios/ko.json"
     }
   }
 }
