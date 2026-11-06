@@ -1,6 +1,6 @@
 import { Alert, View, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Application from 'expo-application';
@@ -11,7 +11,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Radius, Spacing, Size } from '../../constants/DesignSystem';
 import { FeatureFlags } from '../../constants/FeatureFlags';
 import { useSubscription } from '../../context/SubscriptionContext';
-import { useTheme, type ThemeId, type ThemeMode } from '../../context/ThemeContext';
+import {
+  isThemeUnlocked,
+  useTheme,
+  type ThemeId,
+  type ThemeMode,
+} from '../../context/ThemeContext';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import { EditDisplayNameSheet } from '../../components/profile/EditDisplayNameSheet';
 import {
@@ -22,6 +27,8 @@ import {
 } from '../../components/settings/SettingsList';
 import { QuickActionSheet, type QuickAction } from '../../components/settings/QuickActionSheet';
 import { ThemedText, readableTextOn } from '../../components/themed';
+import { AniseekrLogo } from '../../components/brand/AniseekrLogo';
+import { supportsAlternateIcons } from '../../libs/brand/app-icon';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import {
@@ -31,6 +38,7 @@ import {
   type UserPrefs,
 } from '../../libs/services/user-prefs';
 import { UserRepository, type UserProfile } from '../../libs/repositories/user-repository';
+import { SEEKR_POSES } from '../../components/brand/SeekrPose';
 import { authService } from '../../libs/services/auth/auth-service';
 
 interface PurchasesShowManage {
@@ -70,7 +78,6 @@ const PRESET_ACCENTS: { hex: string; name: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { top } = useSafeAreaInsets();
   const subscription = useSubscription();
   const t = useT();
   const {
@@ -82,6 +89,7 @@ export default function SettingsScreen() {
     setThemeMode,
     setCustomAccent,
     themes,
+    grandfatheredThemeId,
   } = useTheme();
 
   const [prefs, setPrefs] = useState<UserPrefs>(loadUserPrefsSync);
@@ -181,21 +189,28 @@ export default function SettingsScreen() {
 
   const themeActions: QuickAction[] = useMemo(
     () =>
-      themes.map((t) => ({
-        key: t.id,
-        label: t.name,
-        description: t.isPremium && !isPro ? 'Premium only' : undefined,
-        icon: 'color-palette-outline',
-        selected: t.id === themeId,
-        onPress: () => {
-          if (t.isPremium && !isPro) {
-            setPaywallVisible(true);
-            return;
-          }
-          void setTheme(t.id as ThemeId);
-        },
-      })),
-    [themes, themeId, isPro, setTheme]
+      themes.map((themeOption) => {
+        const locked = !isThemeUnlocked(themeOption, {
+          isPro,
+          activeThemeId: themeId,
+          grandfatheredThemeId,
+        });
+        return {
+          key: themeOption.id,
+          label: themeOption.name,
+          description: locked ? t('settingsUi.premiumOnly') : undefined,
+          icon: 'color-palette-outline',
+          selected: themeOption.id === themeId,
+          onPress: () => {
+            if (locked) {
+              setPaywallVisible(true);
+              return;
+            }
+            void setTheme(themeOption.id as ThemeId);
+          },
+        };
+      }),
+    [themes, themeId, isPro, grandfatheredThemeId, setTheme, t]
   );
 
   const themeModeActions: QuickAction[] = useMemo(
@@ -267,8 +282,23 @@ export default function SettingsScreen() {
         description: t('settingsUi.pullTheLatestFromConnected'),
         icon: 'refresh-circle-outline',
         onPress: () => {
-          void UserRepository.syncAllPlatforms();
-          hapticsBridge.success();
+          UserRepository.syncAllPlatforms().then(
+            (result) => {
+              if (result.errors.length > 0) {
+                hapticsBridge.error();
+                Alert.alert(
+                  t('settingsUi.syncNow'),
+                  result.errors.map((e) => `${e.platform}: ${e.error}`).join('\n')
+                );
+              } else {
+                hapticsBridge.success();
+              }
+            },
+            (e) => {
+              hapticsBridge.error();
+              Alert.alert(t('settingsUi.syncNow'), e instanceof Error ? e.message : String(e));
+            }
+          );
         },
       },
       {
@@ -355,7 +385,7 @@ export default function SettingsScreen() {
         key: 'upgrade',
         label: t('settingsUi.upgradeNow'),
         description: t('settingsUi.unlockThemesSyncNoAds'),
-        icon: 'sparkles-outline',
+        icon: 'ribbon-outline',
         onPress: () => setPaywallVisible(true),
       },
       {
@@ -403,8 +433,8 @@ export default function SettingsScreen() {
         };
       case 'premium':
         return {
-          title: isPro ? 'Premium' : 'Aniseekr Premium',
-          subtitle: isPro ? 'Manage your subscription' : 'Unlock all themes, sync, no ads',
+          title: isPro ? t('settingsUi.premium') : t('settingsUi.aniseekrPremium'),
+          subtitle: isPro ? t('settingsUi.manageSubscription') : t('settingsUi.premiumPitch'),
           actions: premiumActions,
         };
       default:
@@ -431,24 +461,15 @@ export default function SettingsScreen() {
     setUser(next);
   }, []);
 
-  const displayName = user?.username ?? t('profile.animeFan');
+  const displayName = user?.username || t('tabs.profileScreen.anonName');
   const avatarUri = user?.avatarUrl ?? '';
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase())
-    .join('');
+  const mascot = prefs.profileMascot;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
-        <SettingsHeader
-          title={t('settings.title')}
-          subtitle={t('settings.longPressHint')}
-          onBack={() => router.back()}
-        />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <SettingsHeader title={t('settings.title')} onBack={() => router.back()} />
 
         <ScrollView
           style={styles.scrollView}
@@ -480,9 +501,12 @@ export default function SettingsScreen() {
                 {avatarUri ? (
                   <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                 ) : (
-                  <ThemedText variant="titleMedium" weight="800" style={{ color: ctaFg }}>
-                    {initials || 'A'}
-                  </ThemedText>
+                  <Image
+                    source={SEEKR_POSES[mascot]}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    contentPosition="top"
+                  />
                 )}
               </LinearGradient>
 
@@ -530,28 +554,30 @@ export default function SettingsScreen() {
               }}
               style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}
               accessibilityRole="button"
-              accessibilityLabel={isPro ? 'Manage subscription' : 'Upgrade to Premium'}>
+              accessibilityLabel={
+                isPro
+                  ? t('settingsUi.manageSubscriptionA11y')
+                  : t('settingsUi.upgradeToPremiumA11y')
+              }>
               <LinearGradient
                 colors={[theme.accent, theme.accentDark]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.premiumHero}>
                 <View style={styles.premiumHeroLeft}>
-                  <Ionicons name="sparkles" size={22} color={ctaFg} />
+                  <Ionicons name="ribbon" size={22} color={ctaFg} />
                   <View style={styles.premiumTextWrap}>
                     <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
-                      {isPro ? 'Premium active' : 'Unlock Premium'}
+                      {isPro ? t('settings.premium.active') : t('settings.premium.unlock')}
                     </ThemedText>
                     <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
-                      {isPro
-                        ? 'Manage your subscription and benefits'
-                        : 'No ads, all themes, unlimited sync'}
+                      {isPro ? t('settings.premium.activeDesc') : t('settings.premium.pitch')}
                     </ThemedText>
                   </View>
                 </View>
                 <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
                   <ThemedText variant="titleSmall" weight="700">
-                    {isPro ? 'Manage' : 'Upgrade'}
+                    {isPro ? t('settings.premium.manage') : t('settings.premium.upgrade')}
                   </ThemedText>
                 </View>
               </LinearGradient>
@@ -562,7 +588,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="people-circle-outline"
               label={t('settings.connectedPlatforms')}
-              value={connectedCount > 0 ? `${connectedCount}` : t('common.no')}
+              value={connectedCount > 0 ? `${connectedCount}` : t('settings.connectedNone')}
               onPress={() => router.push('/(setting)/account')}
               onLongPress={() => setActiveSheet('platforms')}
             />
@@ -584,8 +610,12 @@ export default function SettingsScreen() {
               label={t('settings.watchPlatforms')}
               description={
                 prefs.streamingPlatforms.enabled.length > 0
-                  ? `${prefs.streamingPlatforms.enabled.length} enabled · primary: ${prefs.streamingPlatforms.primary ?? 'none'}`
-                  : 'Pick where you watch (Netflix, Bahamut, Crunchyroll…)'
+                  ? t('settings.watchPlatformsSummary', {
+                      count: prefs.streamingPlatforms.enabled.length,
+                      primary:
+                        prefs.streamingPlatforms.primary ?? t('settings.watchPlatformsNoPrimary'),
+                    })
+                  : undefined
               }
               onPress={() => router.push('/(setting)/watch-platforms')}
             />
@@ -597,7 +627,7 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="cloud-upload-outline"
               label={t('settings.backup')}
-              description="iCloud · Google Drive · import old aniseeker data"
+              description={t('settings.backupHint')}
               onPress={() => router.push('/(setting)/backup')}
             />
           </SettingsSection>
@@ -605,7 +635,7 @@ export default function SettingsScreen() {
           <SettingsSection title={t('settings.sections.appearance')}>
             <SettingsRow
               icon="color-palette-outline"
-              label={t('settings.appearance.title')}
+              label={t('settings.appearanceTitle')}
               description={`${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`}
               right={
                 <View
@@ -624,6 +654,13 @@ export default function SettingsScreen() {
               description={t('settings.languageSubtitle')}
               onPress={() => router.push('/(setting)/language')}
             />
+            {supportsAlternateIcons ? (
+              <SettingsRow
+                icon="apps-outline"
+                label={t('brand.appIcon.title')}
+                onPress={() => router.push('/(setting)/app-icon')}
+              />
+            ) : null}
           </SettingsSection>
 
           <SettingsSection title={t('settings.sections.preferences')}>
@@ -647,13 +684,6 @@ export default function SettingsScreen() {
               description={t('settings.prefs.showScoreDesc')}
               value={prefs.bangumiShowScoreProminently}
               onValueChange={(v) => void updatePref('bangumiShowScoreProminently', v)}
-            />
-            <SettingsSwitchRow
-              icon="folder-open-outline"
-              label={t('settings.prefs.showEmptySystemFolders')}
-              description={t('settings.prefs.showEmptySystemFoldersDesc')}
-              value={prefs.showEmptySystemFolders}
-              onValueChange={(v) => void updatePref('showEmptySystemFolders', v)}
             />
           </SettingsSection>
 
@@ -679,6 +709,13 @@ export default function SettingsScreen() {
               onPress={() => router.push('/(setting)/terms')}
             />
           </SettingsSection>
+
+          <View style={styles.brandFooter}>
+            <AniseekrLogo height={34} />
+            <ThemedText variant="bodySmall" tone="secondary" align="center">
+              {t('brand.tagline')}
+            </ThemedText>
+          </View>
 
           <Pressable
             onPress={() => {
@@ -770,7 +807,7 @@ const styles = StyleSheet.create({
   proBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   proBadgeText: {
     letterSpacing: 1,
@@ -806,7 +843,7 @@ const styles = StyleSheet.create({
   upgradePill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   accentSwatch: {
     width: 22,
@@ -814,8 +851,12 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 1,
   },
+  brandFooter: {
+    marginTop: Spacing.xxl,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   versionRow: {
-    marginTop: Spacing.md,
     minHeight: Size.minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',

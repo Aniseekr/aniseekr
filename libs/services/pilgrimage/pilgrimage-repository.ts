@@ -1,182 +1,255 @@
-// Higher-level entrypoint for the pilgrimage feature.
-// - Resolves an anime's Bangumi subject ID (direct or via IDMappingService)
-// - Delegates to AnitabiService for the actual fetch + cache
-// See spec/pilgrimage_spec.md §5 and spec/architecture.md §4.
-
 import { IDMappingService } from '../sync/id-mapping-service';
-import { lookupBangumiByPlatformId } from './anitabi-cross-index';
-import { AnitabiService, anitabiService } from './anitabi-service';
+import { atlasClient, AtlasClient } from './atlas/atlas-client';
+import { resolveAtlasWork } from './atlas/atlas-resolver';
+import type { AtlasWork, AtlasWorkDetail } from './atlas/types';
 import { LocationService, locationService, type LatLng } from './location-service';
-import type { AnitabiBangumi, AnitabiPoint } from './types';
+import type { PilgrimageSpot, PilgrimageWork } from './types';
 
-/** Returned by {@link PilgrimageRepository.getNearbyAnime}. */
 export interface NearbyAnimeResult {
-  anime: AnitabiBangumi;
+  anime: PilgrimageWork;
   distanceKm: number;
 }
 
-/**
- * Anime context passed by callers. Either pass a raw {@link bangumiId}, or
- * a `unifiedItem`-shaped object whose Bangumi id may live under
- * `platformData.bangumi.id`.
- */
 export interface AnimeContext {
-  /** The anime's source platform (e.g. 'anilist'). Used for fallback ID translation. */
   sourcePlatform?: string;
-  /** Source-platform-native id (used when bangumi id missing). */
   id?: string | number;
-  /** Direct Bangumi subject id, if known. */
-  bangumiId?: number | null;
-  /** Optional UnifiedAnimeItem-like platformData bag. */
+  bangumiId?: number | string | null;
+  malId?: number | string | null;
+  anilistId?: number | string | null;
+  title?: string | null;
+  titleJa?: string | null;
+  titleEn?: string | null;
   platformData?: {
     bangumi?: { id?: number | string | null } | null;
+    myanimelist?: { id?: number | string | null } | null;
+    anilist?: { id?: number | string | null } | null;
     [key: string]: unknown;
   };
 }
 
+export interface AnimeDetailAtlasSource {
+  id: string;
+  sourcePlatform?: string | null;
+  idMal?: number | null;
+  title?: string | null;
+  titleJapanese?: string | null;
+  titleEnglish?: string | null;
+  titleRomaji?: string | null;
+  platformData?: AnimeContext['platformData'];
+}
+
+/** Build an Atlas context from IDs whose platform is known. */
+export function animeDetailAtlasContext(anime: AnimeDetailAtlasSource): AnimeContext {
+  const malId = anime.platformData?.myanimelist?.id ?? anime.idMal;
+  return {
+    ...(malId != null ? { sourcePlatform: 'myanimelist', id: malId } : {}),
+    anilistId:
+      anime.platformData?.anilist?.id ??
+      (anime.sourcePlatform === 'anilist' ? anime.id : null),
+    malId,
+    bangumiId: anime.platformData?.bangumi?.id,
+    titleJa: anime.titleJapanese,
+    titleEn: anime.titleEnglish,
+    title: anime.titleRomaji ?? anime.title,
+  };
+}
+
+/** Reads a downloaded offline trip pack (see offline-pack/offline-pack-store). */
+export interface OfflinePackReader {
+  readWork(key: string): Promise<{
+    manifest: { downloadedAt: number };
+    entry: AtlasWork;
+    detail: AtlasWorkDetail;
+  } | null>;
+}
+
+const defaultOfflinePacks: OfflinePackReader = {
+  readWork: async (key) => {
+    const { offlinePackStore } = await import('./offline-pack/offline-pack-store');
+    return offlinePackStore.readWork(key);
+  },
+};
+
 interface RepositoryOptions {
-  service?: AnitabiService;
+  client?: AtlasClient;
+  offlinePacks?: OfflinePackReader;
   mappingService?: IDMappingService;
   locationService?: LocationService;
 }
 
 export class PilgrimageRepository {
-  private service: AnitabiService;
-  private mappingService: IDMappingService;
-  private locationService: LocationService;
+  private readonly client: AtlasClient;
+  private readonly mappingService: IDMappingService;
+  private readonly locationService: LocationService;
+  private readonly offlinePacks: OfflinePackReader;
 
-  constructor(opts: RepositoryOptions = {}) {
-    this.service = opts.service ?? anitabiService;
-    this.mappingService = opts.mappingService ?? IDMappingService.getInstance();
-    this.locationService = opts.locationService ?? locationService;
+  constructor(options: RepositoryOptions = {}) {
+    this.client = options.client ?? atlasClient;
+    this.offlinePacks = options.offlinePacks ?? defaultOfflinePacks;
+    this.mappingService = options.mappingService ?? IDMappingService.getInstance();
+    this.locationService = options.locationService ?? locationService;
+  }
+
+  async getSpotsForAnime(context: AnimeContext): Promise<PilgrimageWork | null> {
+    const works = (await this.client.works()).works;
+    const resolutionContext = resolveContextIds(context);
+    if (resolutionContext.bgmId == null) {
+      resolutionContext.bgmId = await this.resolveBangumiId(context);
+    }
+    const key = await resolveAtlasWork(resolutionContext, works);
+    if (!key) return null;
+    return this.loadWork(key, works.find((work) => work.key === key));
+  }
+
+  async getWorksIndex(): Promise<AtlasWork[]> {
+    return (await this.client.works()).works;
+  }
+
+  async getSpotsByBangumiId(bangumiId: number): Promise<PilgrimageWork | null> {
+    const indexEntry = (await this.client.works()).works.find((work) =>
+      (work.bgm ?? []).includes(bangumiId)
+    );
+    if (!indexEntry) return null;
+    return this.loadWork(indexEntry.key, indexEntry);
+  }
+
+  async getSpotsByKey(key: string): Promise<PilgrimageWork | null> {
+    const indexEntry = (await this.client.works()).works.find((work) => work.key === key);
+    return this.loadWork(key, indexEntry);
   }
 
   /**
-   * Fetch the lite pilgrimage payload for an anime.
-   * Returns null when:
-   *   - the anime has no Bangumi id (and ID-mapping fallback also yields nothing)
-   *   - Anitabi returns 404 for the resolved id
+   * Live Atlas (network or CacheService) first. Only when that throws — no
+   * network and no cached copy — does a downloaded offline pack answer, and
+   * the result carries `offlineCopy` so it is never shown as fresh data.
    */
-  async getSpotsForAnime(context: AnimeContext): Promise<AnitabiBangumi | null> {
-    const bangumiId = await this.resolveBangumiId(context);
-    if (bangumiId === null) return null;
-
-    return this.service.getAnimePilgrimage(bangumiId);
+  private async loadWork(key: string, indexEntry: AtlasWork | undefined) {
+    try {
+      if (!indexEntry) throw new Error(`Atlas work not in index: ${key}`);
+      const detail = await this.client.work(indexEntry.key);
+      return detail ? this.toPilgrimageWork(indexEntry, detail) : null;
+    } catch (error) {
+      const pack = await this.offlinePacks.readWork(key).catch(() => null);
+      if (!pack) {
+        if (!indexEntry) return null;
+        throw error;
+      }
+      return {
+        ...this.toPilgrimageWork(pack.entry, pack.detail),
+        offlineCopy: { downloadedAt: pack.manifest.downloadedAt },
+      };
+    }
   }
 
-  /**
-   * Convenience overload — fetch directly by Bangumi subject id.
-   */
-  async getSpotsByBangumiId(bangumiId: number): Promise<AnitabiBangumi | null> {
-    return this.service.getAnimePilgrimage(bangumiId);
+  async getDetailedPointsByBangumiId(bangumiId: number): Promise<PilgrimageSpot[]> {
+    const work = await this.getSpotsByBangumiId(bangumiId);
+    return work?.spots ?? [];
   }
 
-  /**
-   * Lazy-load the complete points list (e.g. once the user opens the map screen).
-   */
-  async getDetailedPointsByBangumiId(bangumiId: number): Promise<AnitabiPoint[]> {
-    return this.service.getDetailedPoints(bangumiId);
-  }
-
-  /**
-   * Discover nearby anime relative to the supplied user location.
-   *
-   * Fetches each candidate Bangumi id in parallel, drops nulls
-   * (no pilgrimage data) and entries with a missing/empty `geo` center,
-   * then sorts by ascending haversine distance.
-   *
-   * @param userLocation user lat/lng (typically from {@link LocationService.getCurrentLocation})
-   * @param candidates Bangumi subject ids to consider
-   * @param options.limit cap on the number of results returned (default: all)
-   */
   async getNearbyAnime(
     userLocation: LatLng,
     candidates: number[],
     options: { limit?: number } = {}
   ): Promise<NearbyAnimeResult[]> {
-    if (!candidates.length) return [];
+    if (candidates.length === 0) return [];
 
     const fetched = await Promise.all(
-      candidates.map((id) =>
-        this.service.getAnimePilgrimage(id).catch((err: unknown) => {
-          console.warn('[PilgrimageRepository] getNearbyAnime fetch failed:', id, err);
-          return null;
-        })
-      )
+      candidates.map((id) => this.getSpotsByBangumiId(id).catch(() => null))
     );
-
-    const enriched: NearbyAnimeResult[] = [];
+    const results: NearbyAnimeResult[] = [];
     for (const anime of fetched) {
       if (!anime) continue;
-      const geo = anime.geo;
-      if (!geo || geo.length < 2) continue;
-      const [lat, lng] = geo;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      if (lat === 0 && lng === 0) continue;
-      const distanceKm = this.locationService.getDistanceKm(userLocation, {
-        latitude: lat,
-        longitude: lng,
+      const distances = anime.spots.flatMap((spot) => {
+        if (spot.lat === null || spot.lon === null) return [];
+        return [
+          this.locationService.getDistanceKm(userLocation, {
+            latitude: spot.lat,
+            longitude: spot.lon,
+          }),
+        ];
       });
-      if (!Number.isFinite(distanceKm)) continue;
-      enriched.push({ anime, distanceKm });
+      const distanceKm = distances.length ? Math.min(...distances) : Number.NaN;
+      if (Number.isFinite(distanceKm)) results.push({ anime, distanceKm });
     }
 
-    enriched.sort((a, b) => a.distanceKm - b.distanceKm);
-
-    if (typeof options.limit === 'number' && options.limit > 0) {
-      return enriched.slice(0, options.limit);
-    }
-    return enriched;
+    results.sort((a, b) => a.distanceKm - b.distanceKm);
+    return options.limit && options.limit > 0 ? results.slice(0, options.limit) : results;
   }
 
-  /**
-   * Resolve a usable Bangumi subject id for the supplied anime context.
-   * Returns null when no id can be derived.
-   */
   async resolveBangumiId(context: AnimeContext): Promise<number | null> {
-    // 1. Direct bangumiId field wins.
-    if (typeof context.bangumiId === 'number' && context.bangumiId > 0) {
-      return context.bangumiId;
-    }
+    const direct = numericId(
+      context.bangumiId ??
+        context.platformData?.bangumi?.id ??
+        (context.sourcePlatform === 'bangumi' ? context.id : null)
+    );
+    if (direct !== null) return direct;
+    if (!context.sourcePlatform || context.id == null) return null;
 
-    // 2. platformData.bangumi.id
-    const fromPlatform = context.platformData?.bangumi?.id;
-    if (typeof fromPlatform === 'number' && fromPlatform > 0) {
-      return fromPlatform;
+    try {
+      const translated = await this.mappingService.mapID(
+        context.sourcePlatform,
+        context.id,
+        'bangumi'
+      );
+      return numericId(translated);
+    } catch {
+      return null;
     }
-    if (typeof fromPlatform === 'string' && fromPlatform.trim().length > 0) {
-      const parsed = Number(fromPlatform);
-      if (Number.isFinite(parsed) && parsed > 0) return parsed;
-    }
-
-    // 3. L2 in-memory cross-index lookup. This is offline, cache-free and
-    //    ~free CPU, so we check it before the SQLite-backed L1 fallback to
-    //    short-circuit the common case where the user browses anilist/MAL.
-    if (context.sourcePlatform && context.id !== undefined && context.id !== null) {
-      const l2 = lookupBangumiByPlatformId(context.sourcePlatform, context.id);
-      if (l2 !== null) return l2;
-    }
-
-    // 4. L1 ID-mapping translation when source/id known.
-    if (context.sourcePlatform && context.id !== undefined && context.id !== null) {
-      try {
-        const translated = await this.mappingService.mapID(
-          context.sourcePlatform,
-          context.id,
-          'bangumi'
-        );
-        if (typeof translated === 'number' && translated > 0) return translated;
-        if (typeof translated === 'string') {
-          const parsed = Number(translated);
-          if (Number.isFinite(parsed) && parsed > 0) return parsed;
-        }
-      } catch (err) {
-        console.warn('[PilgrimageRepository] ID mapping failed:', err);
-      }
-    }
-
-    return null;
   }
+
+  private toPilgrimageWork(
+    row: AtlasWork,
+    detail: Awaited<ReturnType<AtlasClient['work']>>
+  ): PilgrimageWork {
+    if (!detail) throw new Error(`Atlas work missing: ${row.key}`);
+    return {
+      ...row,
+      dataVersion: detail.dataVersion,
+      titleJa: detail.titleJa,
+      titleEn: detail.titleEn ?? row.en ?? '',
+      titleZh: row.zh ?? detail.titleZh ?? undefined,
+      spots: detail.spots.map((spot): PilgrimageSpot => ({
+        id: spot.id,
+        workKey: row.key,
+        name: spot.name_ja,
+        address: spot.address_ja || '',
+        note: spot.note_ja || '',
+        lat: spot.location?.lat ?? null,
+        lon: spot.location?.lon ?? null,
+        precision: spot.location?.precision ?? null,
+        confidence: spot.confidence,
+        scenes: spot.scenes ?? [],
+        sources: spot.sources,
+      })),
+    };
+  }
+}
+
+function resolveContextIds(context: AnimeContext) {
+  const sourceId = context.id;
+  return {
+    bgmId:
+      context.bangumiId ??
+      context.platformData?.bangumi?.id ??
+      (context.sourcePlatform === 'bangumi' ? sourceId : null),
+    malId:
+      context.malId ??
+      context.platformData?.myanimelist?.id ??
+      (context.sourcePlatform === 'myanimelist' ? sourceId : null),
+    anilistId:
+      context.anilistId ??
+      context.platformData?.anilist?.id ??
+      (context.sourcePlatform === 'anilist' ? sourceId : null),
+    title: context.title,
+    titleJa: context.titleJa,
+    titleEn: context.titleEn,
+  };
+}
+
+function numericId(value: number | string | null | undefined): number | null {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value;
+  if (typeof value === 'string' && /^\d+$/.test(value)) return Number(value);
+  return null;
 }
 
 export const pilgrimageRepository = new PilgrimageRepository();

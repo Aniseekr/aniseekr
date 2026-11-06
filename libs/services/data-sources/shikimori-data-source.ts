@@ -267,7 +267,8 @@ export class ShikimoriDataSource implements AnimeDataSource {
       limit: SHIKIMORI_PAGE_SIZE,
     };
     if (season && year != null) {
-      params.season = `${year}_${season.toLowerCase()}`;
+      // Shikimori wants `<season>_<year>` (e.g. `fall_2026`); `2026_fall` is a 422.
+      params.season = `${season.toLowerCase()}_${year}`;
     } else if (year != null) {
       params.season = String(year);
     }

@@ -59,17 +59,21 @@ export function titleForLanguage(
 
 /**
  * Resolve the display title by walking the user's title-language priority
- * order. Falls back to the canonical `title` (never empty) when no preferred
- * language is available.
+ * order. When neither Latin-language field is available, a saved `title`
+ * occupies the first English/Romaji slot. Higher-priority languages still
+ * win. Falls back to the canonical `title` when no preferred language exists.
  */
 export function resolveTitleByOrder(
   bundle: AnimeTitleBundle,
   order: readonly TitleLanguageId[],
   script: ChineseScript = 'hant'
 ): string {
+  const savedLatinTitle =
+    !nonEmpty(bundle.titleEnglish) && !nonEmpty(bundle.titleRomaji) ? nonEmpty(bundle.title) : null;
   for (const lang of order) {
     const candidate = titleForLanguage(bundle, lang, script);
     if (candidate) return candidate;
+    if (savedLatinTitle && (lang === 'english' || lang === 'romaji')) return savedLatinTitle;
   }
   return bundle.title;
 }

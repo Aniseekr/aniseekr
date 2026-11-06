@@ -1,15 +1,16 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
 import { GestureDetector } from 'react-native-gesture-handler';
-import type { ComposedGesture } from 'react-native-gesture-handler';
+import type { LegacyComposedGesture } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import type { AnimatedStyle } from 'react-native-reanimated';
 import { Canvas, Image as SkiaImage } from '@shopify/react-native-skia';
 import type { SkImage } from '@shopify/react-native-skia';
 import { ThemedText } from '../../themed';
 import type { OverlayMode } from './types';
+import { Radius } from '../../../constants/DesignSystem';
+import { useT } from '../../../libs/i18n';
 
 interface OverlayLayerProps {
   mode: OverlayMode;
@@ -19,7 +20,7 @@ interface OverlayLayerProps {
   opacity: number;
   editMode: boolean;
   themeColor: string;
-  composedGesture: ComposedGesture;
+  composedGesture: LegacyComposedGesture;
   animatedStyle: StyleProp<AnimatedStyle<ViewStyle>>;
   edgeOrSketchImage: SkImage | null;
   edgeOrSketchLoading: boolean;
@@ -107,10 +108,11 @@ function OverlayContent({
   edgeOrSketchError,
   edgeSourceOpacity,
 }: OverlayContentProps) {
+  const t = useT();
   if (mode === 'anime') {
     return (
       <ExpoImage
-        source={anitabiImageSource(hiResImageUrl)}
+        source={{ uri: hiResImageUrl }}
         style={[styles.overlayImage, { width: winW, height: winH, opacity }]}
         contentFit="contain"
         transition={120}
@@ -120,7 +122,7 @@ function OverlayContent({
   const edgeBackdrop =
     mode === 'edge' && edgeSourceOpacity > 0 ? (
       <ExpoImage
-        source={anitabiImageSource(hiResImageUrl)}
+        source={{ uri: hiResImageUrl }}
         style={[
           styles.absoluteOverlayImage,
           { width: winW, height: winH, opacity: opacity * edgeSourceOpacity },
@@ -129,8 +131,13 @@ function OverlayContent({
         transition={120}
       />
     ) : null;
-  const errorLabel =
-    mode === 'subject' ? '無法載入主體' : mode === 'sketch' ? '無法載入草稿' : '無法載入描邊';
+  const errorLabel = t(
+    mode === 'subject'
+      ? 'pilgrimageUi.camera.overlayError.subject'
+      : mode === 'sketch'
+        ? 'pilgrimageUi.camera.overlayError.sketch'
+        : 'pilgrimageUi.camera.overlayError.edge'
+  );
 
   if (edgeOrSketchLoading) {
     return (
@@ -197,7 +204,7 @@ const styles = StyleSheet.create({
   errorTile: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',
     backgroundColor: 'rgba(0,0,0,0.7)',

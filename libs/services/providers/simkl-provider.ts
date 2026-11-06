@@ -34,6 +34,9 @@ interface SimklUser {
 
 export class SimklProvider implements WritableAnimeProvider {
   platform: PlatformType = 'simkl';
+  supportsScoreClearing = true;
+  // The current endpoint removes watch history, not just a list membership.
+  supportsListRemoval = false;
 
   private getClientId(): string {
     const config = PLATFORM_CONFIGS.simkl;
@@ -70,8 +73,12 @@ export class SimklProvider implements WritableAnimeProvider {
   }
 
   async fetchUserList(token: string): Promise<UniversalAnimeItem[]> {
-    const data = await this.request<{ anime: SimklItem[] }>('/sync/all-items/anime/', token);
-    return data.anime.map((item) => this.mapEntry(item));
+    const data = await this.request<{ anime?: SimklItem[] } | null>(
+      '/sync/all-items/anime/',
+      token
+    );
+    // SIMKL returns null / no `anime` key for an empty list.
+    return (data?.anime ?? []).map((item) => this.mapEntry(item));
   }
 
   async fetchUserProfile(token: string): Promise<ImportedUserProfile> {
@@ -90,6 +97,10 @@ export class SimklProvider implements WritableAnimeProvider {
 
   async updateScore(animeId: string, score: number, token: string): Promise<void> {
     await this.syncToSimkl(animeId, { score }, token);
+  }
+
+  async clearScore(animeId: string, token: string): Promise<void> {
+    await this.syncToSimkl(animeId, { user_rating: null }, token);
   }
 
   async updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void> {

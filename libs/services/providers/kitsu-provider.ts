@@ -45,6 +45,8 @@ interface JSONAPIResponse<T> {
 
 export class KitsuProvider implements WritableAnimeProvider {
   platform: PlatformType = 'kitsu';
+  supportsScoreClearing = true;
+  supportsListRemoval = true;
 
   private async request<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${KITSU_API}${endpoint}`, {
@@ -147,6 +149,13 @@ export class KitsuProvider implements WritableAnimeProvider {
       return;
     }
     await this.updateLibraryEntry(libraryEntryId, { ratingTwenty }, token);
+  }
+
+  async clearScore(animeId: string, token: string): Promise<void> {
+    const libraryEntryId = await this.getLibraryEntryId(animeId, token);
+    if (libraryEntryId) {
+      await this.updateLibraryEntry(libraryEntryId, { ratingTwenty: null }, token);
+    }
   }
 
   async updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void> {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { SettingsScreenLayout } from '../../components/setting/SettingsScreenLayout';
@@ -359,13 +359,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm + 2,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   sourceIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm + 2,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   radio: {
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     overflow: 'hidden',
   },

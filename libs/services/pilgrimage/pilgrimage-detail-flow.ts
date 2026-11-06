@@ -1,4 +1,5 @@
-import type { AnitabiPoint, AnitabiSpot } from './types';
+import type { AtlasScene } from './atlas/types';
+import type { PilgrimageSpot } from './types';
 
 export type PilgrimageDetailViewPreset = 'grid' | 'rows' | 'map';
 export type PilgrimageDetailViewMode = 'list' | 'map';
@@ -19,29 +20,28 @@ export function getPilgrimageDetailViewPreset(
 export function resolvePilgrimageDetailViewPreset(
   preset: PilgrimageDetailViewPreset
 ): PilgrimageDetailViewState {
-  if (preset === 'map') {
-    return { viewMode: 'map', listLayout: 'grid' };
-  }
-  return { viewMode: 'list', listLayout: preset };
+  return preset === 'map'
+    ? { viewMode: 'map', listLayout: 'grid' }
+    : { viewMode: 'list', listLayout: preset };
 }
 
-export function getInitialSpotSheetScene(spot: AnitabiSpot): AnitabiPoint | null {
+export function getInitialSpotSheetScene(spot: PilgrimageSpot): AtlasScene | null {
   return spot.scenes[0] ?? null;
 }
 
 export function resolveSpotSheetSceneStack(
-  activeSpot: AnitabiPoint | null,
-  groupedSpot: AnitabiSpot | null | undefined
-): readonly AnitabiPoint[] {
-  if (!activeSpot) return [];
-  if (!groupedSpot || groupedSpot.scenes.length === 0) return [activeSpot];
-  if (!groupedSpot.scenes.some((scene) => scene.id === activeSpot.id)) return [activeSpot];
+  activeScene: AtlasScene | null,
+  groupedSpot: PilgrimageSpot | null | undefined
+): readonly AtlasScene[] {
+  if (!activeScene) return [];
+  if (!groupedSpot || groupedSpot.scenes.length === 0) return [activeScene];
+  if (!groupedSpot.scenes.includes(activeScene)) return [activeScene];
   return groupedSpot.scenes;
 }
 
 export function getSpotSheetVisitedTarget(
-  activeSpot: AnitabiPoint | null,
-  scenes: readonly AnitabiPoint[]
-): AnitabiPoint | null {
-  return scenes[0] ?? activeSpot;
+  activeScene: AtlasScene | null,
+  scenes: readonly AtlasScene[]
+): AtlasScene | null {
+  return scenes[0] ?? activeScene;
 }

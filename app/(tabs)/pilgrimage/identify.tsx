@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Radius, Spacing, bottomPad } from '../../../constants/DesignSystem';
-import { AnitabiOriginCredit } from '../../../components/pilgrimage/common/AnitabiOriginCredit';
 import { SceneIdDisclosureSheet } from '../../../components/pilgrimage/scene-id/SceneIdDisclosureSheet';
 import { SceneIdResultView } from '../../../components/pilgrimage/scene-id/SceneIdResultView';
 import {
@@ -19,47 +18,32 @@ import {
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../../libs/i18n/use-display-title';
-import { anitabiImageSource } from '../../../libs/services/pilgrimage/anitabi-image';
-import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import {
-  buildPilgrimageDetailRoute,
-  getPilgrimageSceneIdSeed,
-} from '../../../libs/services/pilgrimage/pilgrimage-navigation';
+import { buildPilgrimageDetailRoute } from '../../../libs/services/pilgrimage/pilgrimage-navigation';
 import {
   acceptSceneIdDisclosure,
   hasAcceptedSceneIdDisclosure,
 } from '../../../libs/services/pilgrimage/scene-id/disclosure';
 import {
-  getKnownAnitabiScene,
   sceneIdService,
-  type AnitabiSceneIdentificationResult,
+  type SceneIdentificationResult,
 } from '../../../libs/services/pilgrimage/scene-id/scene-id-service';
 import {
   pickSceneImage,
   prepareSceneImage,
 } from '../../../libs/services/pilgrimage/scene-id/scene-image';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 
-type RequestSource = 'standalone' | 'anitabi';
+type RequestSource = 'screenshot';
 type ScreenPhase = 'idle' | 'processing' | 'result' | 'photo-denied';
 
 export default function PilgrimageSceneIdScreen() {
-  const params = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
-  const seed = useMemo(() => getPilgrimageSceneIdSeed(params), [params]);
-  const knownResult = useMemo(
-    () => (seed ? getKnownAnitabiScene(seed.bangumiId, seed.point) : null),
-    [seed]
-  );
-  const [imageUri, setImageUri] = useState<string | null>(seed?.point.image ?? null);
-  const [phase, setPhase] = useState<ScreenPhase>(knownResult ? 'result' : 'idle');
-  const [result, setResult] = useState<AnitabiSceneIdentificationResult | null>(knownResult);
-  const [activeRequestSource, setActiveRequestSource] = useState<RequestSource>(
-    seed ? 'anitabi' : 'standalone'
-  );
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [phase, setPhase] = useState<ScreenPhase>('idle');
+  const [result, setResult] = useState<SceneIdentificationResult | null>(null);
   const [disclosureVisible, setDisclosureVisible] = useState(false);
   const pendingRequestRef = useRef<{ uri: string; source: RequestSource } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -80,7 +64,6 @@ export default function PilgrimageSceneIdScreen() {
       abortRef.current = controller;
       const requestId = ++requestIdRef.current;
       setImageUri(uri);
-      setActiveRequestSource(source);
       setResult(null);
       setPhase('processing');
 
@@ -90,14 +73,7 @@ export default function PilgrimageSceneIdScreen() {
         if (controller.signal.aborted || requestId !== requestIdRef.current) return;
 
         const searchInput = { ...prepared.searchInput, signal: controller.signal };
-        const nextResult =
-          source === 'anitabi' && seed
-            ? await sceneIdService.identifyAnitabiScene({
-                image: searchInput,
-                point: seed.point,
-                knownBangumiId: seed.bangumiId,
-              })
-            : await sceneIdService.identify(searchInput);
+        const nextResult = await sceneIdService.identify(searchInput);
         if (controller.signal.aborted || requestId !== requestIdRef.current) return;
         setResult(nextResult);
         setPhase('result');
@@ -110,7 +86,7 @@ export default function PilgrimageSceneIdScreen() {
         if (abortRef.current === controller) abortRef.current = null;
       }
     },
-    [seed]
+    []
   );
 
   const requestIdentification = useCallback(
@@ -121,7 +97,6 @@ export default function PilgrimageSceneIdScreen() {
       }
       pendingRequestRef.current = { uri, source };
       setImageUri(uri);
-      setActiveRequestSource(source);
       setDisclosureVisible(true);
     },
     [runIdentification]
@@ -134,12 +109,8 @@ export default function PilgrimageSceneIdScreen() {
       setPhase('photo-denied');
       return;
     }
-    requestIdentification(picked.uri, 'standalone');
+    requestIdentification(picked.uri, 'screenshot');
   }, [requestIdentification]);
-
-  const handleIdentifyAnitabi = useCallback(() => {
-    if (seed) requestIdentification(seed.point.image, 'anitabi');
-  }, [requestIdentification, seed]);
 
   const handleAcceptDisclosure = useCallback(() => {
     const pending = pendingRequestRef.current;
@@ -159,13 +130,6 @@ export default function PilgrimageSceneIdScreen() {
     else router.replace('/pilgrimage');
   }, [router]);
 
-  const resultBangumiId =
-    result?.status === 'metadata'
-      ? result.bangumiId
-      : result?.status === 'identified'
-        ? result.bangumiId
-        : null;
-  const resultAnime = result?.status === 'identified' ? result.anime : null;
   const traceTitleSource = useMemo(() => {
     if (result?.status !== 'identified') return null;
     const trace = result.trace;
@@ -182,36 +146,31 @@ export default function PilgrimageSceneIdScreen() {
     };
   }, [result]);
   const traceDisplayTitle = useAnimeDisplayTitle(traceTitleSource);
-  const resultAnimeTitles = useMemo(
-    () => (resultAnime ? getPilgrimageAnimeTitles(resultAnime) : null),
-    [resultAnime]
-  );
+  const resultWork = result?.status === 'identified' ? result.work : null;
   const chrome = useMemo(
     () => ({
-      title: resultAnimeTitles?.primary ?? seed?.chrome.title,
-      titleSecondary: resultAnimeTitles?.secondary ?? seed?.chrome.titleSecondary,
-      poster: resultAnime?.cover ?? seed?.chrome.poster,
-      themeColor: resultAnime?.color ?? seed?.chrome.themeColor,
+      title: resultWork?.titleJa,
+      poster: resultWork?.bgm?.[0] ? `https://api.bgm.tv/v0/subjects/${resultWork.bgm[0]}/image?type=common` : undefined,
     }),
-    [resultAnime, resultAnimeTitles, seed]
+    [resultWork]
   );
 
   const handleOpenPilgrimage = useCallback(() => {
-    if (resultBangumiId === null) return;
-    router.push(buildPilgrimageDetailRoute(resultBangumiId, chrome));
-  }, [chrome, resultBangumiId, router]);
+    if (!resultWork) return;
+    router.push(buildPilgrimageDetailRoute(resultWork.key, chrome));
+  }, [chrome, resultWork, router]);
 
   const handleOpenSpot = useCallback(
-    (spot: AnitabiPoint) => {
-      if (resultBangumiId === null) return;
+    (spot: PilgrimageSpot) => {
+      if (!resultWork) return;
       router.push(
-        buildPilgrimageDetailRoute(resultBangumiId, {
+        buildPilgrimageDetailRoute(resultWork.key, {
           ...chrome,
           focusSpotId: spot.id,
         })
       );
     },
-    [chrome, resultBangumiId, router]
+    [chrome, resultWork, router]
   );
 
   const handleOpenAnime = useCallback(() => {
@@ -228,11 +187,7 @@ export default function PilgrimageSceneIdScreen() {
     Linking.openSettings().catch(() => undefined);
   }, []);
 
-  const selectedImageSource = imageUri
-    ? /^https?:\/\//i.test(imageUri)
-      ? anitabiImageSource(imageUri)
-      : { uri: imageUri }
-    : null;
+  const selectedImageSource = imageUri ? { uri: imageUri } : null;
 
   return (
     <>
@@ -240,7 +195,7 @@ export default function PilgrimageSceneIdScreen() {
       <SafeAreaView style={[styles.root, { backgroundColor: theme.background.primary }]}>
         <View style={styles.header}>
           <ThemedIconButton
-            icon={(color) => <Ionicons name="chevron-back" size={22} color={color} />}
+            icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
             accessibilityLabel={t('common.back')}
             onPress={handleBack}
             variant="ghost"
@@ -260,10 +215,6 @@ export default function PilgrimageSceneIdScreen() {
           {phase === 'processing' && selectedImageSource ? (
             <View style={styles.processing}>
               <Image source={selectedImageSource} style={styles.heroImage} contentFit="cover" />
-              <AnitabiOriginCredit
-                source={activeRequestSource === 'anitabi' ? seed?.point : null}
-                variant="inline"
-              />
               <ThemedText variant="titleMedium" weight="700">
                 {t('pilgrimage.identify.analyzing')}
               </ThemedText>
@@ -276,8 +227,6 @@ export default function PilgrimageSceneIdScreen() {
               imageUri={imageUri}
               result={result}
               identifiedTitle={traceDisplayTitle}
-              seedTitle={chrome.title}
-              sourcePoint={activeRequestSource === 'anitabi' ? seed?.point : null}
               onChooseAnother={handlePickImage}
               onOpenAnime={handleOpenAnime}
               onOpenPilgrimage={handleOpenPilgrimage}
@@ -302,28 +251,6 @@ export default function PilgrimageSceneIdScreen() {
                 label={t('pilgrimage.identify.chooseScreenshot')}
                 onPress={handlePickImage}
                 variant="secondary"
-                shape="rounded"
-                fullWidth
-              />
-            </View>
-          ) : seed ? (
-            <View style={styles.idle}>
-              <Image
-                source={anitabiImageSource(seed.point.image)}
-                style={styles.heroImage}
-                contentFit="cover"
-              />
-              <AnitabiOriginCredit source={seed.point} variant="inline" />
-              <ThemedText variant="titleLarge" weight="700">
-                {seed.chrome.title || seed.point.name}
-              </ThemedText>
-              <ThemedButton
-                label={t('pilgrimage.identify.entry')}
-                accessibilityLabel={t('pilgrimage.identify.scanSceneA11y')}
-                onPress={handleIdentifyAnitabi}
-                icon={
-                  <Ionicons name="scan-outline" size={18} color={readableTextOn(theme.accent)} />
-                }
                 shape="rounded"
                 fullWidth
               />
@@ -401,7 +328,7 @@ const styles = StyleSheet.create({
   scanIcon: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xs,

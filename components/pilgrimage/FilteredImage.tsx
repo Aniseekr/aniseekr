@@ -25,6 +25,11 @@ export type FilteredImageProps = {
   matrix?: number[] | null;
   /** Mirror of expo-image contentFit; only "cover" makes sense for share cards. */
   contentFit?: 'cover' | 'contain';
+  /**
+   * expo-image decodes at the view's on-screen size by default. Export paths
+   * that render larger than the screen pass `false` to keep the full bitmap.
+   */
+  allowDownscaling?: boolean;
 };
 
 function isIdentity(m: number[] | null | undefined): boolean {
@@ -34,7 +39,12 @@ function isIdentity(m: number[] | null | undefined): boolean {
   return true;
 }
 
-export function FilteredImage({ uri, matrix, contentFit = 'cover' }: FilteredImageProps) {
+export function FilteredImage({
+  uri,
+  matrix,
+  contentFit = 'cover',
+  allowDownscaling = true,
+}: FilteredImageProps) {
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const skip = isIdentity(matrix ?? null);
   // useImage runs unconditionally so hook order stays stable when the user
@@ -51,7 +61,12 @@ export function FilteredImage({ uri, matrix, contentFit = 'cover' }: FilteredIma
   if (skip || !image || !size) {
     return (
       <View onLayout={onLayout} style={StyleSheet.absoluteFill}>
-        <ExpoImage source={{ uri }} style={StyleSheet.absoluteFill} contentFit={contentFit} />
+        <ExpoImage
+          source={{ uri }}
+          style={StyleSheet.absoluteFill}
+          contentFit={contentFit}
+          allowDownscaling={allowDownscaling}
+        />
       </View>
     );
   }

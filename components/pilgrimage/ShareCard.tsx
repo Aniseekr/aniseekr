@@ -7,8 +7,8 @@
 // side-by-side) is driven by the ratio so every template stays useful in
 // every ratio.
 
-import { useCallback, useMemo, useState, type Ref } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { useCallback, useMemo, useState, type ReactNode, type Ref } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent, type ViewInstance } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -25,7 +25,8 @@ import {
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
 import { FilteredImage } from './FilteredImage';
-import { anitabiImageSource } from '../../libs/services/pilgrimage/anitabi-image';
+import { BrandMark } from './BrandMark';
+import type { BrandMarkStyle } from '../../libs/services/pilgrimage/share-brand-mark';
 import {
   cornerFractionsToMatrix4,
   type Pt,
@@ -35,6 +36,7 @@ import {
   shotContentFitForCell,
   shotOrientation,
 } from '../../libs/services/pilgrimage/share-aspect';
+import { Radius } from '../../constants/DesignSystem';
 
 export type ShareTemplate = 'polaroid' | 'classic' | 'minimal' | 'comic' | 'manga';
 export type ShareRatio = '1:1' | '9:16' | '16:9';
@@ -102,7 +104,18 @@ export type ShareCardProps = {
    */
   shotWidth?: number;
   shotHeight?: number;
-  ref?: Ref<View>;
+  /**
+   * Aniseekr mark drawn in the outer bottom-right corner of the image pair.
+   * Pass the already-gated style (`effectiveBrandMark`); `none` (Pro) draws
+   * nothing and also drops the classic template's `aniseekr` footer.
+   */
+  brandMark?: { style: BrandMarkStyle; dateline: string } | null;
+  /**
+   * Decode the photos at their own size instead of the on-screen cell size,
+   * so a large export carries real detail rather than an upscaled thumbnail.
+   */
+  fullResolution?: boolean;
+  ref?: Ref<ViewInstance>;
 };
 
 const RATIO_VALUES: Record<ShareRatio, number> = {
@@ -138,6 +151,15 @@ export function ShareCard(props: ShareCardProps) {
       : (props.shotWidth as number) / (props.shotHeight as number);
   const cellAspect = ratio === '9:16' ? 9 / 16 : 16 / 9;
   const shotContentFit = shotContentFitForCell(shotAspect, cellAspect);
+  const markNode =
+    props.brandMark && props.brandMark.style !== 'none' ? (
+      <BrandMark
+        style={props.brandMark.style}
+        dateline={props.brandMark.dateline}
+        accent={props.accent}
+        surface="photo"
+      />
+    ) : null;
 
   return (
     <View ref={props.ref} collapsable={false} style={{ width, height, overflow: 'hidden' }}>
@@ -147,6 +169,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : template === 'classic' ? (
         <ClassicTemplate
@@ -154,6 +177,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : template === 'minimal' ? (
         <MinimalTemplate
@@ -161,6 +185,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : template === 'comic' ? (
         <ComicTemplate
@@ -168,6 +193,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       ) : (
         <MangaTemplate
@@ -175,6 +201,7 @@ export function ShareCard(props: ShareCardProps) {
           height={height}
           canvasBg={canvasBg}
           shotContentFit={shotContentFit}
+          markNode={markNode}
         />
       )}
       {watermarkText ? (
@@ -195,6 +222,7 @@ type TemplateProps = ShareCardProps & {
   height: number;
   canvasBg: string;
   shotContentFit: 'cover' | 'contain';
+  markNode: ReactNode;
 };
 
 // ----- shared image layout -----
@@ -213,6 +241,8 @@ function ImagePair({
   shotPerspectiveTransform,
   shotManualWarpCorners,
   shotContentFit = 'cover',
+  markNode = null,
+  fullResolution = false,
 }: {
   ratio: ShareRatio;
   imageUrl: string;
@@ -227,6 +257,8 @@ function ImagePair({
   shotPerspectiveTransform?: RNPerspectiveTransform;
   shotManualWarpCorners?: readonly Pt[] | null;
   shotContentFit?: 'cover' | 'contain';
+  markNode?: ReactNode;
+  fullResolution?: boolean;
 }) {
   const isPortrait = ratio === '9:16';
   const order = resolveImagePairOrder(swapOrder);
@@ -239,6 +271,7 @@ function ImagePair({
         color={accent}
         radius={borderRadius}
         style={badgeStyle}
+        fullResolution={fullResolution}
       />
     ),
     real: (
@@ -253,9 +286,20 @@ function ImagePair({
         perspectiveTransform={shotPerspectiveTransform}
         manualWarpCorners={shotManualWarpCorners}
         contentFit={shotContentFit}
+        fullResolution={fullResolution}
       />
     ),
   };
+  // No scene image (a free shot, or a spot without one): the card is just the
+  // photo — never an empty black "ANIME" frame.
+  if (!imageUrl) {
+    return (
+      <View style={{ flex: 1 }}>
+        {cells.real}
+        <CornerMark node={markNode} />
+      </View>
+    );
+  }
   return (
     <View
       style={{
@@ -265,6 +309,21 @@ function ImagePair({
       }}>
       {cells[order.first]}
       {cells[order.second]}
+      <CornerMark node={markNode} />
+    </View>
+  );
+}
+
+/**
+ * The Aniseekr mark, pinned to the outer bottom-right corner of the image
+ * pair: always the far corner of the second cell, so it never sits on the
+ * seam between the anime frame and the real shot, whichever order they're in.
+ */
+function CornerMark({ node }: { node: ReactNode }) {
+  if (!node) return null;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', right: 8, bottom: 8 }}>
+      {node}
     </View>
   );
 }
@@ -328,12 +387,14 @@ function PerspectiveImage({
   manualWarpCorners,
   autoTransform,
   contentFit = 'cover',
+  fullResolution = false,
 }: {
   uri: string;
   filterMatrix?: number[] | null;
   manualWarpCorners?: readonly Pt[] | null;
   autoTransform?: RNPerspectiveTransform;
   contentFit?: 'cover' | 'contain';
+  fullResolution?: boolean;
 }) {
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -356,10 +417,20 @@ function PerspectiveImage({
     <View style={StyleSheet.absoluteFill} onLayout={needsMeasure ? onLayout : undefined}>
       {transform ? (
         <View style={[StyleSheet.absoluteFill, { transform }]}>
-          <FilteredImage uri={uri} matrix={filterMatrix} contentFit={contentFit} />
+          <FilteredImage
+          uri={uri}
+          matrix={filterMatrix}
+          contentFit={contentFit}
+          allowDownscaling={!fullResolution}
+        />
         </View>
       ) : (
-        <FilteredImage uri={uri} matrix={filterMatrix} contentFit={contentFit} />
+        <FilteredImage
+          uri={uri}
+          matrix={filterMatrix}
+          contentFit={contentFit}
+          allowDownscaling={!fullResolution}
+        />
       )}
     </View>
   );
@@ -375,6 +446,7 @@ function ImageCell({
   perspectiveTransform,
   manualWarpCorners,
   contentFit = 'cover',
+  fullResolution = false,
 }: {
   uri: string;
   badge: string;
@@ -385,6 +457,7 @@ function ImageCell({
   perspectiveTransform?: RNPerspectiveTransform;
   manualWarpCorners?: readonly Pt[] | null;
   contentFit?: 'cover' | 'contain';
+  fullResolution?: boolean;
 }) {
   return (
     <View
@@ -401,6 +474,7 @@ function ImageCell({
         manualWarpCorners={manualWarpCorners}
         autoTransform={perspectiveTransform}
         contentFit={contentFit}
+        fullResolution={fullResolution}
       />
       {style === 'sticker' ? (
         <View
@@ -450,7 +524,7 @@ function ImageCell({
             gap: 4,
             paddingHorizontal: 6,
             paddingVertical: 3,
-            borderRadius: 999,
+            borderRadius: Radius.sm,
             backgroundColor: 'rgba(0,0,0,0.55)',
             borderWidth: 1,
             borderColor: color,
@@ -531,12 +605,14 @@ function PolaroidTemplate(props: TemplateProps) {
           successColor={successColor}
           swapOrder={swapOrder}
           badgeStyle="pill"
-          borderRadius={4}
+          borderRadius={Radius.sm}
           gap={6}
           shotFilterMatrix={props.shotFilterMatrix}
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
 
@@ -684,7 +760,7 @@ function ClassicTemplate(props: TemplateProps) {
               gap: 4,
               paddingHorizontal: 10,
               paddingVertical: 5,
-              borderRadius: 999,
+              borderRadius: Radius.sm,
               backgroundColor: `${successColor}22`,
               borderWidth: 1,
               borderColor: successColor,
@@ -712,6 +788,8 @@ function ClassicTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
 
@@ -738,6 +816,7 @@ function ClassicTemplate(props: TemplateProps) {
         ) : null}
       </View>
 
+      {props.brandMark?.style === 'none' ? null : (
       <View
         style={{
           flexDirection: 'row',
@@ -751,7 +830,7 @@ function ClassicTemplate(props: TemplateProps) {
           style={{
             width: 24,
             height: 24,
-            borderRadius: 6,
+            borderRadius: Radius.sm,
             backgroundColor: accent,
             alignItems: 'center',
             justifyContent: 'center',
@@ -762,6 +841,7 @@ function ClassicTemplate(props: TemplateProps) {
           aniseekr · Pilgrimage
         </ThemedText>
       </View>
+      )}
     </View>
   );
 }
@@ -811,6 +891,8 @@ function MinimalTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
       <LinearGradient
@@ -919,7 +1001,7 @@ function ComicTemplate(props: TemplateProps) {
             backgroundColor: '#000',
             paddingHorizontal: 10,
             paddingVertical: 6,
-            borderRadius: 4,
+            borderRadius: Radius.sm,
             transform: [{ rotate: '-1deg' }],
           }}>
           <ThemedText
@@ -957,6 +1039,8 @@ function ComicTemplate(props: TemplateProps) {
           shotPerspectiveTransform={props.shotPerspectiveTransform}
           shotManualWarpCorners={props.shotManualWarpCorners}
           shotContentFit={props.shotContentFit}
+          markNode={props.markNode}
+          fullResolution={props.fullResolution}
         />
       </View>
 
@@ -978,18 +1062,21 @@ function ComicTemplate(props: TemplateProps) {
           ) : null}
           {showDate ? (
             <ThemedText variant="captionSmall" weight="700" style={{ color: '#000' }}>
-              ✦ {date}
+              {date}
             </ThemedText>
           ) : null}
         </View>
         {showLocation && locationText ? (
-          <ThemedText
-            variant="captionSmall"
-            weight="700"
-            numberOfLines={1}
-            style={{ color: '#000', maxWidth: 160 }}>
-            📍 {locationText}
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: 160 }}>
+            <Ionicons name="location" size={11} color="#000" />
+            <ThemedText
+              variant="captionSmall"
+              weight="700"
+              numberOfLines={1}
+              style={{ color: '#000', flexShrink: 1 }}>
+              {locationText}
+            </ThemedText>
+          </View>
         ) : null}
       </View>
     </View>
@@ -1005,7 +1092,7 @@ function SpeechBubble({ children, color }: { children: string; color: string }) 
         borderColor: '#000',
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 16,
+        borderRadius: Radius.card,
         transform: [{ rotate: '4deg' }],
       }}>
       <ThemedText variant="titleSmall" weight="700" style={{ color, letterSpacing: 0.5 }}>
@@ -1073,9 +1160,10 @@ function MangaTemplate(props: TemplateProps) {
     anime: (
       <View key="anime" style={{ flex: 1, position: 'relative' }}>
         <Image
-          source={anitabiImageSource(imageUrl)}
+          source={{ uri: imageUrl }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
+          allowDownscaling={!props.fullResolution}
         />
         <SpeedLines side={ratio === '9:16' ? 'top' : 'left'} />
         <View
@@ -1106,6 +1194,7 @@ function MangaTemplate(props: TemplateProps) {
           manualWarpCorners={props.shotManualWarpCorners}
           autoTransform={props.shotPerspectiveTransform}
           contentFit={props.shotContentFit}
+          fullResolution={props.fullResolution}
         />
         <SpeedLines side={ratio === '9:16' ? 'bottom' : 'right'} />
         <View
@@ -1200,14 +1289,21 @@ function MangaTemplate(props: TemplateProps) {
           flexDirection: ratio === '9:16' ? 'column' : 'row',
           gap: 0,
         }}>
-        {cells[order.first]}
-        <View
-          style={{
-            backgroundColor: '#000',
-            ...(ratio === '9:16' ? { height: 3 } : { width: 3 }),
-          }}
-        />
-        {cells[order.second]}
+        {imageUrl ? (
+          <>
+            {cells[order.first]}
+            <View
+              style={{
+                backgroundColor: '#000',
+                ...(ratio === '9:16' ? { height: 3 } : { width: 3 }),
+              }}
+            />
+            {cells[order.second]}
+          </>
+        ) : (
+          cells.real
+        )}
+        <CornerMark node={props.markNode} />
       </View>
 
       <View
@@ -1301,14 +1397,14 @@ function SpeedLines({ side }: { side: 'left' | 'right' | 'top' | 'bottom' }) {
   );
 }
 
-// `label` holds a TranslationKey resolved via t() at the render site (ids/emoji
-// unchanged) so the template picker localizes with the user's app language.
-export const SHARE_TEMPLATES: { id: ShareTemplate; label: TranslationKey; emoji: string }[] = [
-  { id: 'polaroid', label: 'pilgrimageUi.polaroid', emoji: '📷' },
-  { id: 'classic', label: 'pilgrimageUi.classic', emoji: '◆' },
-  { id: 'minimal', label: 'pilgrimageUi.minimal', emoji: '◻' },
-  { id: 'comic', label: 'pilgrimageUi.comic', emoji: '✦' },
-  { id: 'manga', label: 'pilgrimageUi.manga', emoji: '✎' },
+// `label` holds a TranslationKey resolved via t() at the render site so the
+// template picker localizes with the user's app language.
+export const SHARE_TEMPLATES: { id: ShareTemplate; label: TranslationKey }[] = [
+  { id: 'polaroid', label: 'pilgrimageUi.polaroid' },
+  { id: 'classic', label: 'pilgrimageUi.classic' },
+  { id: 'minimal', label: 'pilgrimageUi.minimal' },
+  { id: 'comic', label: 'pilgrimageUi.comic' },
+  { id: 'manga', label: 'pilgrimageUi.manga' },
 ];
 
 export const SHARE_RATIOS: { id: ShareRatio; label: string; hint: string }[] = [

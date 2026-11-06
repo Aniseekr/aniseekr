@@ -5,7 +5,7 @@
 // this is a minimal themed banner rather than a bespoke one-off `View`.
 
 import { useEffect, useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Shadow, Spacing } from '../../../constants/DesignSystem';
@@ -46,26 +46,20 @@ export function ProximityCheckInBanner({
 
   const distanceLabel = useMemo(() => formatDistanceKm(distanceMeters / 1000), [distanceMeters]);
 
+  // One line over the map: which spot and how far, plus the check-in. It sits
+  // under the header buttons without hiding the map it is about.
   return (
     <Animated.View style={[styles.wrap, animatedStyle]} pointerEvents="box-none">
-      <ThemedSurface
-        variant="elevated"
-        radius={Radius.lg}
-        padded
-        style={[styles.surface, Shadow.medium]}>
-        <View style={[styles.iconBadge, { backgroundColor: `${theme.accent}22` }]}>
-          <Ionicons name="location" size={18} color={theme.accent} />
-        </View>
-        <View style={styles.body}>
-          <ThemedText variant="bodyMedium" weight="700" numberOfLines={2}>
-            {t('pilgrimage.detail.nearSpotPrompt', { name: spotName })}
-          </ThemedText>
-          {distanceLabel ? (
-            <ThemedText variant="captionSmall" tone="secondary">
-              {distanceLabel}
-            </ThemedText>
-          ) : null}
-        </View>
+      <ThemedSurface variant="elevated" radius={Radius.lg} style={[styles.surface, Shadow.subtle]}>
+        <Ionicons name="location" size={16} color={theme.accent} />
+        <ThemedText
+          variant="bodySmall"
+          weight="700"
+          numberOfLines={1}
+          style={styles.body}
+          accessibilityLabel={t('pilgrimage.detail.nearSpotPrompt', { name: spotName })}>
+          {distanceLabel ? `${spotName} · ${distanceLabel}` : spotName}
+        </ThemedText>
         <ThemedButton
           label={t('pilgrimageUi.checkIn')}
           size="sm"
@@ -93,18 +87,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-  },
-  iconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingLeft: Spacing.md,
+    paddingRight: Spacing.xs,
+    paddingVertical: Spacing.xs,
   },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
   },
   dismissBtn: {
     width: 28,

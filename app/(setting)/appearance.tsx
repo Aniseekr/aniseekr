@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing } from '../../constants/DesignSystem';
+import { Radius, Spacing } from '../../constants/DesignSystem';
 import { FeatureFlags } from '../../constants/FeatureFlags';
 import {
   ACCENT_GRADIENTS,
@@ -17,16 +17,18 @@ import {
   type ThemeMode,
   type ThemePalette,
   type TintIntensity,
+  isThemeUnlocked,
   useTheme,
 } from '../../context/ThemeContext';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import { ScreenHeader, ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import { useT } from '../../libs/i18n';
 import { loadUserPrefsSync, patchUserPrefs, type UserPrefs } from '../../libs/services/user-prefs';
 import { useMapThemePref } from '../../hooks/useMapThemePref';
 import type { MapThemePref } from '../../libs/services/pilgrimage/map-theme-prefs';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 const MODE_DEFS: { id: ThemeMode; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { id: 'light', icon: 'sunny-outline' },
@@ -66,6 +68,7 @@ export default function AppearanceScreen() {
     setTintIntensity,
     increaseContrast,
     setIncreaseContrast,
+    grandfatheredThemeId,
   } = useTheme();
 
   const [bootstrapPrefs] = useState(loadUserPrefsSync);
@@ -83,9 +86,12 @@ export default function AppearanceScreen() {
 
   // Prefs are seeded synchronously above; no async load required.
 
+  const isLocked = (palette: ThemePalette) =>
+    !isThemeUnlocked(palette, { isPro, activeThemeId: themeId, grandfatheredThemeId });
+
   const handleThemePress = (palette: ThemePalette) => {
     if (palette.id === themeId && !customAccent) return;
-    if (palette.isPremium && !isPro) {
+    if (isLocked(palette)) {
       hapticsBridge.warning();
       setPaywallVisible(true);
       return;
@@ -118,23 +124,7 @@ export default function AppearanceScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.navBar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('settingsUi.backToSettings')}
-            style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-            <ThemedText variant="bodyMedium" weight="500">
-              {t('settings.title')}
-            </ThemedText>
-          </Pressable>
-          <ThemedText variant="titleLarge" weight="600">
-            {t('settings.appearance.title')}
-          </ThemedText>
-          <View style={{ width: 80 }} />
-        </View>
+        <ScreenHeader title={t('settings.appearanceTitle')} />
 
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
@@ -153,7 +143,7 @@ export default function AppearanceScreen() {
                 key={palette.id}
                 palette={palette}
                 isSelected={palette.id === themeId}
-                isLocked={!!palette.isPremium && !isPro}
+                isLocked={isLocked(palette)}
                 onPress={() => handleThemePress(palette)}
               />
             ))}
@@ -350,14 +340,10 @@ export default function AppearanceScreen() {
                 {t('settings.appearance.increaseContrastDesc')}
               </ThemedText>
             </View>
-            <Switch
+            <ThemedSwitch
               value={increaseContrast}
-              onValueChange={(v) => {
-                hapticsBridge.selection();
-                void setIncreaseContrast(v);
-              }}
-              trackColor={{ false: theme.background.tertiary, true: accent }}
-              thumbColor={theme.text.primary}
+              onValueChange={(v) => void setIncreaseContrast(v)}
+              accent={accent}
             />
           </View>
 
@@ -407,7 +393,7 @@ function PreviewCard({
       end={{ x: 1, y: 1 }}
       style={styles.previewCard}>
       <View style={[styles.previewBubble, { backgroundColor: accent }]}>
-        <Ionicons name="sparkles" size={20} color={accentFg} />
+        <Ionicons name="color-palette" size={20} color={accentFg} />
       </View>
       <View style={{ flex: 1 }}>
         <ThemedText variant="titleMedium" weight="700" style={{ color: text.primary }}>
@@ -462,16 +448,12 @@ function ThemeCard({
           <View style={[styles.themeSwatch, { backgroundColor: palette.accent }]} />
           <View style={[styles.themeSwatch, { backgroundColor: palette.accentLight }]} />
           <View style={[styles.themeSwatch, { backgroundColor: palette.secondary }]} />
-        </View>
-        <View style={{ flex: 1 }} />
-        <View style={styles.themeFooter}>
-          <ThemedText variant="titleSmall" weight="700" style={{ color: palette.text.primary }}>
-            {palette.name}
-          </ThemedText>
+          {/* Pill sits up here so long names ("Twilight Platform") keep the
+              footer for the name and the selected check. */}
           {FeatureFlags.PREMIUM_ENABLED && palette.isPremium ? (
             <View style={[styles.premiumPill, { backgroundColor: palette.accent + '40' }]}>
               <Ionicons
-                name={isLocked ? 'lock-closed' : 'sparkles'}
+                name={isLocked ? 'lock-closed' : 'ribbon'}
                 size={9}
                 color={palette.accent}
               />
@@ -480,6 +462,16 @@ function ThemeCard({
               </ThemedText>
             </View>
           ) : null}
+        </View>
+        <View style={{ flex: 1 }} />
+        <View style={styles.themeFooter}>
+          <ThemedText
+            variant="titleSmall"
+            weight="700"
+            numberOfLines={1}
+            style={{ color: palette.text.primary, flexShrink: 1 }}>
+            {palette.name}
+          </ThemedText>
           {isSelected ? (
             <MaterialIcons name="check-circle" size={18} color={palette.accent} />
           ) : null}
@@ -647,7 +639,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm + 2,
     padding: Spacing.md,
-    borderRadius: 18,
+    borderRadius: Radius.card,
   },
   previewBubble: {
     width: 44,
@@ -659,34 +651,35 @@ const styles = StyleSheet.create({
   previewChip: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   themeCard: {
     width: '48%',
     height: 130,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   themeCardFill: {
     flex: 1,
     padding: Spacing.sm + 2,
   },
-  themeSwatchRow: { flexDirection: 'row', gap: 6 },
-  themeSwatch: { width: 16, height: 16, borderRadius: 8 },
+  themeSwatchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  themeSwatch: { width: 16, height: 16, borderRadius: Radius.sm },
   themeFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
   },
   premiumPill: {
+    marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   modeChip: {
     flex: 1,
@@ -695,7 +688,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   accentSwatchWrap: {
@@ -723,7 +716,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   gradientCard: {
-    borderRadius: 14,
+    borderRadius: Radius.card,
     overflow: 'hidden',
   },
   gradientFill: {
@@ -736,21 +729,13 @@ const styles = StyleSheet.create({
 
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.background.primary },
-    navBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      height: 48,
-    },
-    navBack: { flexDirection: 'row', alignItems: 'center', gap: 2, minWidth: 80 },
     scroll: { paddingHorizontal: 20, paddingTop: Spacing.xs, gap: 14 },
     themeGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: Spacing.sm,
     },
+    root: { flex: 1, backgroundColor: theme.background.primary },
     modeRow: { flexDirection: 'row', gap: Spacing.sm },
     presetGrid: {
       flexDirection: 'row',
@@ -769,7 +754,7 @@ function makeStyles(theme: ThemePalette) {
     accentActions: { gap: Spacing.xs, marginTop: Spacing.xs },
     sliderCard: {
       backgroundColor: theme.background.secondary,
-      borderRadius: 16,
+      borderRadius: Radius.card,
       borderWidth: 1,
       borderColor: theme.glassBorder,
       padding: Spacing.md,
@@ -783,7 +768,7 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
       gap: Spacing.sm,
       backgroundColor: theme.background.secondary,
-      borderRadius: 16,
+      borderRadius: Radius.card,
       borderWidth: 1,
       borderColor: theme.glassBorder,
       padding: Spacing.md,
@@ -794,10 +779,10 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
-    sampleDot: { width: 8, height: 8, borderRadius: 4 },
+    sampleDot: { width: 8, height: 8, borderRadius: Radius.sm },
     previewLink: {
       alignSelf: 'center',
       flexDirection: 'row',

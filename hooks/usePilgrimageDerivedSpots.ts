@@ -1,29 +1,8 @@
-// usePilgrimageDerivedSpots — the long memoization chain that turns raw
-// `points` into grouped, sorted, searched, filtered slices, plus the helpers
-// that compute distance / intent / capture state per spot.
-//
-// Phase 4 splits the legacy `stats` memo into two so flipping `visited` no
-// longer reruns the N-haversine `radiusKm` computation. `filteredPoints` is
-// now derived from `filteredGroupedSpots` (one filter chain, not two).
-
 import { useCallback, useMemo } from 'react';
-import { groupPointsIntoSpots } from '../libs/services/pilgrimage/anitabi-points';
-import { hasValidGeo } from '../components/pilgrimage/detail/_helpers';
 import { locationService, type LatLng } from '../libs/services/pilgrimage/location-service';
-import {
-  countPilgrimageSpotFilters,
-  filterPilgrimageSpots,
-  normalizePilgrimageSearchQuery,
-  sortPilgrimageSpotsByIntent,
-  type PilgrimageSpotFilter,
-} from '../libs/services/pilgrimage/pilgrimage-detail-filter';
-import {
-  getNearestSceneForSpot,
-  getSpotDistanceKm,
-  sortSpotsByDistance,
-} from '../libs/services/pilgrimage/spot-distance-sort';
+import type { PilgrimageSpot, PilgrimageWork } from '../libs/services/pilgrimage/types';
+import type { PilgrimageSpotFilter } from '../libs/services/pilgrimage/pilgrimage-detail-filter';
 import type { SpotIntentMap } from '../libs/services/pilgrimage/spot-intents';
-import type { AnitabiBangumi, AnitabiPoint, AnitabiSpot } from '../libs/services/pilgrimage/types';
 import type { PilgrimageCapture } from '../libs/services/pilgrimage/captures';
 import type { VisitedMap } from '../libs/services/pilgrimage/visited-prefs';
 
@@ -31,38 +10,44 @@ export interface SpotStats {
   spotCount: number;
   radiusKm: number;
 }
+
 export interface UserSpotStats {
   visitedCount: number;
   capturedCount: number;
 }
 
+export interface PilgrimageSpotFilterCounts {
+  all: number;
+  visited: number;
+  unvisited: number;
+  photos: number;
+  saved: number;
+  planned: number;
+}
+
 export interface UsePilgrimageDerivedSpotsResult {
-  groupedSpots: readonly AnitabiSpot[];
-  groupedSpotByPointId: Map<string, AnitabiSpot>;
-  filteredGroupedSpots: readonly AnitabiSpot[];
-  filteredPoints: readonly AnitabiPoint[];
-  filteredPointIds: Set<string>;
-  filteredMappablePointCount: number;
-  groupedCounts: ReturnType<typeof countPilgrimageSpotFilters>;
+  groupedSpots: readonly PilgrimageSpot[];
+  groupedSpotByPointId: Map<string, PilgrimageSpot>;
+  filteredGroupedSpots: readonly PilgrimageSpot[];
+  filteredPoints: readonly PilgrimageSpot[];
+  groupedCounts: PilgrimageSpotFilterCounts;
   normalizedSpotSearchQuery: string;
-  fallbackSelectedSpotId: string | null;
   spotStats: SpotStats;
   userStats: UserSpotStats;
-  distanceFor: (spot: AnitabiPoint) => number | null;
-  distanceForGroup: (group: AnitabiSpot) => number | null;
-  representativeForGroup: (group: AnitabiSpot) => AnitabiPoint;
+  distanceFor: (spot: PilgrimageSpot) => number | null;
+  distanceForGroup: (group: PilgrimageSpot) => number | null;
+  representativeForGroup: (group: PilgrimageSpot) => PilgrimageSpot;
 }
 
 export interface UsePilgrimageDerivedSpotsArgs {
-  anime: AnitabiBangumi | null;
-  points: readonly AnitabiPoint[];
+  anime: PilgrimageWork | null;
+  points: readonly PilgrimageSpot[];
   userLocation: LatLng | null;
   visited: VisitedMap;
   captures: Record<string, PilgrimageCapture>;
   spotIntents: SpotIntentMap;
   spotFilter: PilgrimageSpotFilter;
   spotSearchQuery: string;
-  viewMode: 'list' | 'map';
 }
 
 export function usePilgrimageDerivedSpots({
@@ -74,151 +59,162 @@ export function usePilgrimageDerivedSpots({
   spotIntents,
   spotFilter,
   spotSearchQuery,
-  viewMode,
 }: UsePilgrimageDerivedSpotsArgs): UsePilgrimageDerivedSpotsResult {
-  // Phase 4: spotStats only depends on the immutable side (anime + points).
-  // Toggling visited / capturing a photo no longer reruns N haversines.
   const spotStats = useMemo<SpotStats>(() => {
-    const spotCount = anime?.pointsLength ?? points.length;
+    const mapped = points.filter(hasLocation);
     let radiusKm = 0;
-    if (anime && hasValidGeo(anime.geo)) {
-      const [centerLat, centerLng] = anime.geo;
-      let max = 0;
-      for (const p of points) {
-        if (!hasValidGeo(p.geo)) continue;
-        const d = locationService.getDistanceKm(
-          { latitude: centerLat, longitude: centerLng },
-          { latitude: p.geo[0], longitude: p.geo[1] }
-        );
-        if (Number.isFinite(d) && d > max) max = d;
+    if (mapped.length > 1) {
+      const center = mapped.reduce(
+        (sum, spot) => ({
+          latitude: sum.latitude + spot.lat / mapped.length,
+          longitude: sum.longitude + spot.lon / mapped.length,
+        }),
+        { latitude: 0, longitude: 0 }
+      );
+      for (const spot of mapped) {
+        const distance = locationService.getDistanceKm(center, {
+          latitude: spot.lat,
+          longitude: spot.lon,
+        });
+        if (Number.isFinite(distance)) radiusKm = Math.max(radiusKm, distance);
       }
-      radiusKm = max;
     }
-    return { spotCount, radiusKm };
+    return { spotCount: anime?.n ?? points.length, radiusKm };
   }, [anime, points]);
 
-  const userStats = useMemo<UserSpotStats>(() => {
-    let visitedCount = 0;
-    let capturedCount = 0;
-    for (const p of points) {
-      if (visited[p.id]) visitedCount += 1;
-      if (captures[p.id]) capturedCount += 1;
-    }
-    return { visitedCount, capturedCount };
-  }, [points, visited, captures]);
-
-  const groupedSpots = useMemo(() => groupPointsIntoSpots(points), [points]);
-
-  const groupedSpotByPointId = useMemo(() => {
-    const map = new Map<string, AnitabiSpot>();
-    for (const spot of groupedSpots) {
-      for (const scene of spot.scenes) map.set(scene.id, spot);
-    }
-    return map;
-  }, [groupedSpots]);
-
-  const distanceSortedGroupedSpots = useMemo(
-    () => sortSpotsByDistance(groupedSpots, userLocation),
-    [groupedSpots, userLocation]
+  const userStats = useMemo<UserSpotStats>(
+    () => ({
+      visitedCount: points.filter((spot) => visited[spot.id] === true).length,
+      capturedCount: points.filter((spot) => !!captures[spot.id]).length,
+    }),
+    [points, visited, captures]
   );
 
-  const sortedGroupedSpots = useMemo(
-    () => sortPilgrimageSpotsByIntent(distanceSortedGroupedSpots, spotIntents),
-    [distanceSortedGroupedSpots, spotIntents]
+  const groupedSpots = points;
+  const groupedSpotByPointId = useMemo(
+    () => new Map(points.map((spot) => [spot.id, spot])),
+    [points]
   );
+  const normalizedSpotSearchQuery = normalizeQuery(spotSearchQuery);
 
-  const normalizedSpotSearchQuery = useMemo(
-    () => normalizePilgrimageSearchQuery(spotSearchQuery),
-    [spotSearchQuery]
+  const rankedSpots = useMemo(() => {
+    const rank = (spot: PilgrimageSpot) => {
+      const intent = spotIntents[spot.id];
+      return intent?.saved && intent.planned ? 3 : intent?.planned ? 2 : intent?.saved ? 1 : 0;
+    };
+    return [...points].sort((a, b) => {
+      const intentOrder = rank(b) - rank(a);
+      if (intentOrder !== 0) return intentOrder;
+      const aDistance = getDistance(a, userLocation);
+      const bDistance = getDistance(b, userLocation);
+      return (aDistance ?? Number.POSITIVE_INFINITY) - (bDistance ?? Number.POSITIVE_INFINITY);
+    });
+  }, [points, spotIntents, userLocation]);
+
+  const searchedSpots = useMemo(
+    () => rankedSpots.filter((spot) => spotMatchesQuery(spot, normalizedSpotSearchQuery)),
+    [rankedSpots, normalizedSpotSearchQuery]
   );
-
-  const searchedGroupedSpots = useMemo(
-    () => filterPilgrimageSpots(sortedGroupedSpots, { query: spotSearchQuery }),
-    [sortedGroupedSpots, spotSearchQuery]
+  const groupedCounts = useMemo(
+    () => countFilters(searchedSpots, visited, captures, spotIntents),
+    [searchedSpots, visited, captures, spotIntents]
   );
-
   const filteredGroupedSpots = useMemo(
     () =>
-      filterPilgrimageSpots(searchedGroupedSpots, {
-        filter: spotFilter,
-        visited,
-        captures,
-        intents: spotIntents,
-      }),
-    [searchedGroupedSpots, spotFilter, visited, captures, spotIntents]
+      searchedSpots.filter((spot) =>
+        matchesFilter(spot, spotFilter, visited, captures, spotIntents)
+      ),
+    [searchedSpots, spotFilter, visited, captures, spotIntents]
   );
-
-  // Phase 4: derive `filteredPoints` from `filteredGroupedSpots` instead of
-  // running a second filter chain over `points`. They are by construction the
-  // same set of scenes.
-  const filteredPoints = useMemo<readonly AnitabiPoint[]>(() => {
-    const out: AnitabiPoint[] = [];
-    for (const group of filteredGroupedSpots) {
-      for (const scene of group.scenes) out.push(scene);
-    }
-    return out;
-  }, [filteredGroupedSpots]);
-
-  const filteredPointIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const point of filteredPoints) ids.add(point.id);
-    return ids;
-  }, [filteredPoints]);
-
-  const filteredMappablePointCount = useMemo(
-    () => filteredPoints.reduce((count, point) => count + (hasValidGeo(point.geo) ? 1 : 0), 0),
-    [filteredPoints]
-  );
-
-  const groupedCounts = useMemo(
-    () => countPilgrimageSpotFilters(searchedGroupedSpots, visited, captures, spotIntents),
-    [searchedGroupedSpots, visited, captures, spotIntents]
-  );
-
-  const fallbackSelectedSpotId = useMemo(() => {
-    if (viewMode !== 'map' || filteredGroupedSpots.length === 0) return null;
-    const firstValid = filteredGroupedSpots
-      .map((spot) => getNearestSceneForSpot(spot, userLocation))
-      .find((point) => hasValidGeo(point.geo));
-    return firstValid ? firstValid.id : null;
-  }, [viewMode, filteredGroupedSpots, userLocation]);
 
   const distanceFor = useCallback(
-    (spot: AnitabiPoint): number | null => {
-      if (!userLocation || !hasValidGeo(spot.geo)) return null;
-      const d = locationService.getDistanceKm(userLocation, {
-        latitude: spot.geo[0],
-        longitude: spot.geo[1],
-      });
-      return Number.isFinite(d) ? d : null;
-    },
+    (spot: PilgrimageSpot) => getDistance(spot, userLocation),
     [userLocation]
   );
-
-  const distanceForGroup = useCallback(
-    (group: AnitabiSpot): number | null => getSpotDistanceKm(group, userLocation),
-    [userLocation]
-  );
-
-  const representativeForGroup = useCallback(
-    (group: AnitabiSpot): AnitabiPoint => getNearestSceneForSpot(group, userLocation),
-    [userLocation]
-  );
+  const distanceForGroup = distanceFor;
+  const representativeForGroup = useCallback((spot: PilgrimageSpot) => spot, []);
 
   return {
     groupedSpots,
     groupedSpotByPointId,
     filteredGroupedSpots,
-    filteredPoints,
-    filteredPointIds,
-    filteredMappablePointCount,
+    filteredPoints: filteredGroupedSpots,
     groupedCounts,
     normalizedSpotSearchQuery,
-    fallbackSelectedSpotId,
     spotStats,
     userStats,
     distanceFor,
     distanceForGroup,
     representativeForGroup,
+  };
+}
+
+function hasLocation(spot: PilgrimageSpot): spot is PilgrimageSpot & { lat: number; lon: number } {
+  return (
+    spot.lat !== null && spot.lon !== null && Number.isFinite(spot.lat) && Number.isFinite(spot.lon)
+  );
+}
+
+function getDistance(spot: PilgrimageSpot, userLocation: LatLng | null): number | null {
+  if (!userLocation || !hasLocation(spot)) return null;
+  const distance = locationService.getDistanceKm(userLocation, {
+    latitude: spot.lat,
+    longitude: spot.lon,
+  });
+  return Number.isFinite(distance) ? distance : null;
+}
+
+function normalizeQuery(query: string): string {
+  return query.normalize('NFKC').trim().toLowerCase();
+}
+
+function spotMatchesQuery(spot: PilgrimageSpot, query: string): boolean {
+  if (!query) return true;
+  const episodeQuery = query.match(/^(?:ep|episode|第)?0*(\d+)(?:話|话|集)?$/);
+  if (episodeQuery) {
+    const episode = Number(episodeQuery[1]);
+    return spot.scenes.some((scene) => Number(scene.episode.match(/\d+/)?.[0]) === episode);
+  }
+  const fields = [spot.name, spot.address, ...spot.scenes.map((scene) => scene.episode)];
+  return fields.some((value) => normalizeQuery(value).includes(query));
+}
+
+function matchesFilter(
+  spot: PilgrimageSpot,
+  filter: PilgrimageSpotFilter,
+  visited: VisitedMap,
+  captures: Record<string, PilgrimageCapture>,
+  intents: SpotIntentMap
+): boolean {
+  switch (filter) {
+    case 'visited':
+      return visited[spot.id] === true;
+    case 'unvisited':
+      return visited[spot.id] !== true;
+    case 'photos':
+      return !!captures[spot.id];
+    case 'saved':
+      return intents[spot.id]?.saved === true;
+    case 'planned':
+      return intents[spot.id]?.planned === true;
+    default:
+      return true;
+  }
+}
+
+function countFilters(
+  spots: readonly PilgrimageSpot[],
+  visited: VisitedMap,
+  captures: Record<string, PilgrimageCapture>,
+  intents: SpotIntentMap
+): PilgrimageSpotFilterCounts {
+  const visitedCount = spots.filter((spot) => visited[spot.id] === true).length;
+  return {
+    all: spots.length,
+    visited: visitedCount,
+    unvisited: spots.length - visitedCount,
+    photos: spots.filter((spot) => !!captures[spot.id]).length,
+    saved: spots.filter((spot) => intents[spot.id]?.saved === true).length,
+    planned: spots.filter((spot) => intents[spot.id]?.planned === true).length,
   };
 }

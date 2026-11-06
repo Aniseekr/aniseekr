@@ -157,4 +157,13 @@ describe('ShikimoriDataSource', () => {
     expect(calls[0].url).toMatch(/order=ranked/);
     expect(calls[0].url).toMatch(/limit=20/);
   });
+
+  it('SHIK-006 fetchSeasonalAnime sends season as <season>_<year>', async () => {
+    const { spy, calls } = captureFetch([makeJsonResponse([buildShikimoriListItem()])]);
+    activeSpy = spy;
+
+    await source.fetchSeasonalAnime(1, 'FALL', 2026);
+    // `2026_fall` is rejected by Shikimori with HTTP 422.
+    expect(new URL(calls[0].url).searchParams.get('season')).toBe('fall_2026');
+  });
 });

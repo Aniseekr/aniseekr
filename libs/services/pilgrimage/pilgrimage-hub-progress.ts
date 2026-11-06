@@ -8,24 +8,15 @@
 // list exists, so a stale/sample id that isn't actually in the real list
 // can't inflate the count (honesty case: a visited id from litePoints that
 // is missing from fullPoints does not count).
-import type { AnitabiBangumi } from './types';
+import type { PilgrimageWork } from './types';
 import type { VisitedMap } from './visited-prefs';
 
 export function resolveHubAnimeProgress(
-  anime: AnitabiBangumi,
+  anime: PilgrimageWork,
   visited: VisitedMap,
   fullPoints?: readonly { id: string }[] | null
 ): { visitedCount: number; total: number | null } {
-  if (fullPoints && fullPoints.length > 0) {
-    let visitedCount = 0;
-    for (const p of fullPoints) {
-      if (visited[p.id]) visitedCount += 1;
-    }
-    return { visitedCount, total: fullPoints.length };
-  }
-  let visitedCount = 0;
-  for (const p of anime.litePoints ?? []) {
-    if (visited[p.id]) visitedCount += 1;
-  }
-  return { visitedCount, total: null };
+  const spots = anime.spots ?? fullPoints ?? [];
+  const visitedCount = spots.reduce((count, spot) => count + Number(visited[spot.id] === true), 0);
+  return { visitedCount, total: spots.length };
 }

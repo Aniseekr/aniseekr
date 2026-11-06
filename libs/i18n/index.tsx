@@ -7,33 +7,13 @@
 //   memoization key is the language id so unrelated state changes don't
 //   invalidate consumer callbacks.
 
-import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { use, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { kvSet } from '../services/storage/app-storage';
 import { APP_LANGUAGE_KEY } from '../services/storage/keys';
 import { LANGUAGES, translate } from './engine';
-import { getAppLanguageSync, readPreferenceSync, readSystemLanguage } from './app-language';
-import type {
-  AppLanguagePreference,
-  LanguageId,
-  LanguageMeta,
-  TranslationKey,
-  TranslationValues,
-} from './types';
-
-interface I18nContextValue {
-  /** The resolved active language (system value if preference is `auto`). */
-  language: LanguageId;
-  /** The user's stored preference — distinct from `language` when set to `auto`. */
-  preference: AppLanguagePreference;
-  /** Persist a new preference. */
-  setPreference: (next: AppLanguagePreference) => void;
-  /** Translate a key. Prefer `useT()` for stable identities in deps arrays. */
-  t: (key: TranslationKey | string, values?: TranslationValues) => string;
-  /** Static metadata for the language picker. */
-  languages: Record<LanguageId, LanguageMeta>;
-}
-
-const I18nContext = createContext<I18nContextValue | null>(null);
+import { readPreferenceSync, readSystemLanguage } from './app-language';
+import { I18nContext, type I18nContextValue } from './context';
+import type { AppLanguagePreference, LanguageId, TranslationKey, TranslationValues } from './types';
 
 // Re-exported for component convenience (`import { getAppLanguageSync } from
 // '@/libs/i18n'`). Service / non-React code should import from
@@ -83,6 +63,9 @@ export function useI18n(): I18nContextValue {
 export function useT(): I18nContextValue['t'] {
   return useI18n().t;
 }
+
+export { useUiLanguage } from './ui-language';
+export { capsTracking, containsCjk, isCjkLabel, isCjkLanguage } from './script';
 
 export { LANGUAGES, LANGUAGE_IDS, resolveSystemLanguage, translate } from './engine';
 export type {

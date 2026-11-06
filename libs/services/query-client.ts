@@ -42,6 +42,10 @@ export interface QueryClientStats {
 }
 
 const DEFAULT_STALE_TIME_MS = 5 * 60 * 1000;
+// Every detail id and every search string used to stay in memory for the
+// whole session. Entries are short-lived dedup copies (CacheService holds the
+// durable ones), so a small LRU loses nothing.
+const MAX_CACHE_ENTRIES = 200;
 
 export class QueryClient {
   private static instance: QueryClient | null = null;
@@ -79,6 +83,8 @@ export class QueryClient {
     if (cached) {
       const age = this.nowFn() - cached.timestamp;
       if (age < stale) {
+        this.cache.delete(serialized);
+        this.cache.set(serialized, cached);
         return cached.value as T;
       }
     }
@@ -96,11 +102,17 @@ export class QueryClient {
       try {
         const value = await fetcher();
         if (generationAtStart === this.generation) {
+          this.cache.delete(serialized);
           this.cache.set(serialized, {
             value,
             timestamp: this.nowFn(),
             serializedKey: serialized,
           });
+          while (this.cache.size > MAX_CACHE_ENTRIES) {
+            const oldest = this.cache.keys().next().value as string | undefined;
+            if (oldest === undefined) break;
+            this.cache.delete(oldest);
+          }
         }
         return value;
       } finally {

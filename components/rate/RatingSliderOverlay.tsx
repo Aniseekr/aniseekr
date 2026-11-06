@@ -2,7 +2,7 @@ import { memo, useEffect, useState } from 'react';
 import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderRadius: 24,
+    borderRadius: Radius.xl,
     padding: Spacing.md,
     gap: Spacing.sm,
   },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     alignItems: 'center',
   },
   cancelButton: {

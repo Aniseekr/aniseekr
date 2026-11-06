@@ -12,9 +12,11 @@ describe('canonical locality event calendar', () => {
     const october = mapLocalityEventRowsByDay(rows, { year: 2026, month: 10 });
 
     expect(july.get('2026-07-19')?.map((row) => String(row.event.id))).toEqual([
+      'nipponsangoku-yonto-junranki-2026',
       'yuwaku-bonbori-lighting-2026',
     ]);
     expect(october.get('2026-10-17')?.map((row) => String(row.event.id))).toEqual([
+      'nipponsangoku-yonto-junranki-2026',
       'yuwaku-bonbori-matsuri',
     ]);
     expect(
@@ -39,7 +41,8 @@ describe('canonical locality event calendar', () => {
     );
     expect(march.has('2026-04-01')).toBe(false);
 
-    expect(april.size).toBe(22);
+    // 04-01..04-22 (watakon) plus 04-28..04-30 (Nippon Sangoku rally opens)
+    expect(april.size).toBe(25);
     expect(String(april.get('2026-04-01')?.[0]?.event.id)).toBe(
       'watakon-chiyoda-sakura-stamp-2026'
     );

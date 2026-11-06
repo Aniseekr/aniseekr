@@ -3,7 +3,6 @@ import { File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
-import { anitabiImageSource, toFullResImageUrl } from '../anitabi-image';
 import { disposeSceneImageFiles, getSceneImageResize } from './scene-image-policy';
 import type { TraceMoeSearchInput } from './trace-moe-client';
 
@@ -37,7 +36,7 @@ export async function pickSceneImage(): Promise<PickSceneImageResult> {
 export async function prepareSceneImage(uri: string): Promise<PreparedSceneImage> {
   const temporaryFiles: File[] = [];
   try {
-    const localUri = await materializeUri(uri, temporaryFiles);
+    const localUri = materializeUri(uri);
     const source = await ImageManipulator.manipulate(localUri).renderAsync();
     const resize = getSceneImageResize(source.width);
     const rendered = resize
@@ -66,14 +65,7 @@ export async function prepareSceneImage(uri: string): Promise<PreparedSceneImage
   }
 }
 
-async function materializeUri(uri: string, temporaryFiles: File[]): Promise<string> {
-  if (!/^https?:\/\//i.test(uri)) return uri;
-
-  const source = anitabiImageSource(toFullResImageUrl(uri));
-  const destination = new File(Paths.cache, `scene-id-source-${Crypto.randomUUID()}.image`);
-  const downloaded = await File.downloadFileAsync(source.uri, destination, {
-    idempotent: true,
-  });
-  temporaryFiles.push(downloaded);
-  return downloaded.uri;
+function materializeUri(uri: string): string {
+  if (/^https?:\/\//i.test(uri)) throw new Error('Choose a local screenshot from your library.');
+  return uri;
 }

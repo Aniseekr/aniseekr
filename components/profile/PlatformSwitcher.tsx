@@ -1,7 +1,15 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { Colors, Spacing, Typography, FontFamily, Shadow } from '../../constants/DesignSystem';
+import {
+  Colors,
+  FontFamily,
+  Radius,
+  Shadow,
+  Spacing,
+  Typography,
+} from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 export interface PlatformInfo {
   id: string;
@@ -37,7 +45,7 @@ export function PlatformSwitcher({
   const t = useT();
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{t('profile.platforms')}</Text>
+      <CapsText style={styles.label}>{t('profile.platforms')}</CapsText>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -79,7 +87,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.4,
     marginBottom: Spacing.sm,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   row: {
     flexDirection: 'row',
@@ -103,13 +111,13 @@ const styles = StyleSheet.create({
   icon: {
     width: '100%',
     height: '100%',
-    borderRadius: 22,
+    borderRadius: Radius.xl,
   },
   initial: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   connectedDot: {
     position: 'absolute',

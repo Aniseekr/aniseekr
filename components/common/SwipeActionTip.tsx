@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     margin: Spacing.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   row: {

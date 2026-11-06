@@ -26,6 +26,9 @@ export interface SceneCutout {
 // url → resolved cutout (memoised so preview + capture share one lift, and a
 // mode re-toggle doesn't re-run segmentation).
 const cutoutCache = new Map<string, SceneCutout>();
+// Decoded cut-outs are full-resolution native buffers; keep only the latest few.
+// Evicted images are dropped, not disposed — a mounted screen may still draw one.
+const MAX_DECODED_CUTOUTS = 3;
 const skImageCache = new Map<string, SkImage>();
 
 /**
@@ -60,12 +63,21 @@ export async function resolveSceneCutout(remoteUrl: string): Promise<SceneCutout
 
 async function decodeSkImage(uri: string): Promise<SkImage> {
   const cached = skImageCache.get(uri);
-  if (cached) return cached;
+  if (cached) {
+    skImageCache.delete(uri);
+    skImageCache.set(uri, cached);
+    return cached;
+  }
   const data = await Skia.Data.fromURI(uri);
   if (!data) throw new Error('Failed to load subject cut-out data');
   const image = Skia.Image.MakeImageFromEncoded(data);
   if (!image) throw new Error('Failed to decode subject cut-out');
   skImageCache.set(uri, image);
+  while (skImageCache.size > MAX_DECODED_CUTOUTS) {
+    const oldest = skImageCache.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    skImageCache.delete(oldest);
+  }
   return image;
 }
 

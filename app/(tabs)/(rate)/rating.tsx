@@ -1,31 +1,39 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { runAfterInteractions } from '../../../libs/utils/after-interactions';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Photo, DeckItem } from '../../../components/rate/types';
 import { AnimeRepository } from '../../../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { isAdSlotEnabled } from '../../../libs/services/ads/ad-config';
-import { isRateNativeAdSuppressedSync } from '../../../libs/services/ads/rate-native-ad-session';
+import {
+  claimRateNativeAd,
+  hasReadyRateNativeAd,
+  preloadRateNativeAd,
+  releaseAllClaimedRateNativeAds,
+  subscribeRateNativeAdReady,
+} from '../../../libs/services/ads/rate-native-ad-pool';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ModePill } from '../../../components/rate/ModePill';
-import { ModeSwitcherSheet, type ModeOption } from '../../../components/rate/ModeSwitcherSheet';
-import { RatingActionButtons, type RatingType } from '../../../components/rate/RatingActionButtons';
+import type { RatingType } from '../../../components/rate/RatingActionButtons';
 import { ImageDisplaySettingsSheet } from '../../../components/rate/ImageDisplaySettingsSheet';
 import { SwipeDeck, type SwipeDeckRef } from '../../../components/rate/SwipeDeck';
 import { ImagePreloader } from '../../../libs/image-preloader';
 import { trackingService } from '../../../libs/services/tracking/tracking-service';
 import { LocalDB } from '../../../libs/db';
 import {
-  DEFAULT_SWIPE_PREFS,
   loadUserPrefsSync,
   patchSwipePrefs,
-  type SwipeMode,
   type SwipePrefs,
 } from '../../../libs/services/user-prefs';
 import { useTheme } from '../../../context/ThemeContext';
 import { useSubscription } from '../../../context/SubscriptionContext';
-import { readableTextOn, Skeleton } from '../../../components/themed';
+import {
+  Skeleton,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+} from '../../../components/themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { getDeck, putDeck, clearDeck } from '../../../libs/services/rate/deck-cache';
 import { loadGenreSwipePage } from '../../../libs/services/rate/genre-deck-prefetch';
@@ -35,7 +43,9 @@ import { isExhaustedSwipeDeck } from '../../../libs/services/rate/swipe-paginati
 import { loadNextUsableSwipePage } from '../../../libs/services/rate/swipe-page-loader';
 import {
   buildRatingDeck,
+  findAdInsertIndex,
   getUpcomingPhotoUrls,
+  insertAdCard,
   removeAdCardsPreservingPhotoIndex,
 } from '../../../libs/services/rate/rating-deck';
 import { SWIPE_PERSISTENCE_DELAY_MS } from '../../../libs/services/rate/swipe-animation';
@@ -44,6 +54,7 @@ import {
   type SwipePersistenceJob,
 } from '../../../libs/services/rate/swipe-persistence';
 import { useT } from '../../../libs/i18n';
+import { Radius, Spacing } from '../../../constants/DesignSystem';
 
 // Trigger and refill from remaining-card pressure, not source page length.
 // AniList pages are 20 upstream, but R18/seen/image filters can leave any
@@ -53,16 +64,17 @@ const LOAD_MORE_TARGET_PHOTOS = PREFETCH_THRESHOLD + 4;
 const FILTERED_EMPTY_PAGE_SKIP_LIMIT = 2;
 const PREFETCH_PHOTO_COUNT = 5;
 // Card sizing — the top padding stacks on top of the safe-area inset so the
-// card always clears the X + ModePill on notched devices (otherwise the
+// card always clears the header buttons on notched devices (otherwise the
 // inline Tap-for-info chip sits behind the pill). The bottom only needs to
 // clear the action buttons since the hint now lives inside the card.
 const CARD_HORIZONTAL_PADDING = 28;
 const CARD_TOP_GAP = 56;
 const CARD_PADDING_BOTTOM = 125;
 
-function deriveRatingFromDirection(direction: 'left' | 'right', mode: SwipeMode): RatingType {
-  if (direction === 'left') return 'skip';
-  return mode === 'plan' ? 'tracking' : 'like';
+// One gesture vocabulary: right = want to watch, left = skip. "Seen it and
+// liked it" is the heart button, so there is no mode to switch.
+function deriveRatingFromDirection(direction: 'left' | 'right'): RatingType {
+  return direction === 'left' ? 'skip' : 'tracking';
 }
 
 function isPositiveRating(rating: RatingType): boolean {
@@ -84,8 +96,15 @@ async function applyOutcome(photo: Photo, rating: RatingType): Promise<void> {
     }
 
     if (rating === 'like' || rating === 'love') {
-      // Existing path: addRating('like') + addFavorite.
+      // ♥ means "seen it, liked it": record the like/favorite and, unless the
+      // user already tracks it, file it under Completed so it shows in Library.
       await AnimeRepository.rateAnime(photo.id, 'like');
+      if (!(await trackingService.getStatus(photo.id))) {
+        await trackingService.updateStatus(photo.id, 'completed', {
+          title: photo.title,
+          imageUrl: photo.url,
+        });
+      }
       return;
     }
 
@@ -107,7 +126,7 @@ function scheduleSwipePersistence(photo: Photo, rating: RatingType): void {
   swipePersistenceTimer = setTimeout(() => {
     swipePersistenceTimer = null;
     const jobs = swipePersistenceQueue.splice(0);
-    InteractionManager.runAfterInteractions(() => {
+    runAfterInteractions(() => {
       for (const job of jobs) {
         void persistSwipeJob(job, {
           applyOutcome,
@@ -129,16 +148,6 @@ function releaseQueuedSwipeSeen(ids: string[]): void {
   }
 }
 
-const PLAN_COLOR = '#0A84FF';
-const LIKE_COLOR = '#FF4F5E';
-const SKIP_COLOR = '#FF6F60';
-
-const SKIP_INDICATOR = { icon: 'close', color: SKIP_COLOR } as const;
-const RIGHT_INDICATOR_BY_MODE: Record<SwipeMode, { icon: 'bookmark' | 'heart'; color: string }> = {
-  plan: { icon: 'bookmark', color: PLAN_COLOR },
-  like: { icon: 'heart', color: LIKE_COLOR },
-};
-
 export default function RatingScreen() {
   const { top, bottom } = useSafeAreaInsets();
   const router = useRouter();
@@ -147,17 +156,10 @@ export default function RatingScreen() {
   const { theme } = useTheme();
   const subscription = useSubscription();
   const t = useT();
-  const MODE_OPTIONS: readonly ModeOption[] = useMemo(
-    () => [
-      {
-        value: 'plan',
-        label: t('tabs.ratingScreen.mode.plan'),
-        icon: 'bookmark',
-        color: PLAN_COLOR,
-      },
-      { value: 'like', label: t('tabs.ratingScreen.mode.like'), icon: 'heart', color: LIKE_COLOR },
-    ],
-    [t]
+  // Swipe stamps follow the theme: plan = accent, like/skip = the error red.
+  const skipIndicator = useMemo(
+    () => ({ icon: 'close', color: theme.status.error }) as const,
+    [theme.status.error]
   );
 
   useEffect(() => {
@@ -179,13 +181,14 @@ export default function RatingScreen() {
   // from a tab).
   const [swipePrefs, setSwipePrefs] = useState<SwipePrefs>(() => loadUserPrefsSync().swipe);
   const [showSettings, setShowSettings] = useState(false);
-  const [showModeSwitcher, setShowModeSwitcher] = useState(false);
   const [restartableSeenIds, setRestartableSeenIds] = useState<string[]>([]);
   // Bumped on restart to force-remount the SwipeDeck so its internal topIndex
   // and outgoing-card list start clean.
   const [deckGeneration, setDeckGeneration] = useState(0);
-  const adsEnabled =
-    !subscription.isPro && isAdSlotEnabled('rate_native') && !isRateNativeAdSuppressedSync();
+  // Load failures only stop the background preloader (see rate-native-ad-pool);
+  // they never pull an already-loaded ad card out of the deck.
+  const adsEnabled = !subscription.adFree && !params.animeId && isAdSlotEnabled('rate_native');
+  const adReady = useSyncExternalStore(subscribeRateNativeAdReady, hasReadyRateNativeAd);
 
   // IDs the user has already swiped past in any previous session. Mirrored from
   // SQLite once on mount; new swipes are pushed into both the local ref and the
@@ -196,7 +199,6 @@ export default function RatingScreen() {
   const photosRef = useRef<Photo[]>([]);
   const deckRef = useRef<DeckItem[]>([]);
   const animeIdRef = useRef<string | undefined>(undefined);
-  const swipeModeRef = useRef<SwipeMode>(DEFAULT_SWIPE_PREFS.mode);
   // The initial top index for SwipeDeck at mount/remount time. Resetting this
   // alongside deckGeneration is how cache hydration and restart drop the user
   // onto the right card without SwipeDeck reacting to startIndex changes
@@ -206,7 +208,10 @@ export default function RatingScreen() {
   photosRef.current = photos;
   deckRef.current = deck;
   animeIdRef.current = params.animeId;
-  swipeModeRef.current = swipePrefs.mode;
+  const rightIndicator = useMemo(
+    () => ({ icon: 'bookmark', color: theme.accent }) as const,
+    [theme.accent]
+  );
 
   // Imperative handle into SwipeDeck — bottom buttons commit via swipeDeckRef.
   const swipeDeckRef = useRef<SwipeDeckRef>(null);
@@ -226,12 +231,6 @@ export default function RatingScreen() {
 
   // Swipe prefs are seeded synchronously above via `loadUserPrefsSync` so the
   // deck opens in the user's chosen mode on frame 1. No async hydrate needed.
-
-  const handleModeChange = useCallback((mode: SwipeMode) => {
-    setSwipePrefs((prev) => ({ ...prev, mode }));
-    void patchSwipePrefs({ mode });
-    hapticsBridge.selection();
-  }, []);
 
   const handleSwipePrefsChange = useCallback((next: SwipePrefs) => {
     setSwipePrefs(next);
@@ -267,9 +266,12 @@ export default function RatingScreen() {
             ) {
               await clearDeck(params.genreId);
             } else {
-              const cachedDeck = adsEnabled
-                ? { deck: snapshot.deck, currentIndex: snapshot.currentIndex }
-                : removeAdCardsPreservingPhotoIndex(snapshot.deck, snapshot.currentIndex);
+              // Cached ad cards have no loaded ad behind them; fresh ones are
+              // inserted as the preloader delivers.
+              const cachedDeck = removeAdCardsPreservingPhotoIndex(
+                snapshot.deck,
+                snapshot.currentIndex
+              );
               setPhotos(snapshot.photos);
               setDeck(cachedDeck.deck);
               setCurrentIndex(cachedDeck.currentIndex);
@@ -336,7 +338,7 @@ export default function RatingScreen() {
         console.log('First photo URL:', validPhotos[0].url);
       }
       setPhotos(validPhotos);
-      setDeck(buildRatingDeck(validPhotos, adsEnabled));
+      setDeck(buildRatingDeck(validPhotos));
       setCurrentIndex(0);
       startIndexRef.current = 0;
       setCurrentPage(nextCurrentPage);
@@ -390,7 +392,7 @@ export default function RatingScreen() {
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
-      setDeck((prev) => [...prev, ...buildRatingDeck(newPhotos, adsEnabled)]);
+      setDeck((prev) => [...prev, ...buildRatingDeck(newPhotos)]);
       setCurrentPage(pageResult.currentPage);
       setHasMore(pageResult.hasMore);
     } catch (err) {
@@ -399,7 +401,6 @@ export default function RatingScreen() {
       setLoadingMore(false);
     }
   }, [
-    adsEnabled,
     currentPage,
     hasMore,
     loading,
@@ -416,11 +417,32 @@ export default function RatingScreen() {
     if (deck.length === 0) return;
     const nextPhotos = getUpcomingPhotoUrls(deck, currentIndex, PREFETCH_PHOTO_COUNT);
     if (nextPhotos.length === 0) return;
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       ImagePreloader.preload(nextPhotos);
     });
     return () => task.cancel();
   }, [currentIndex, deck]);
+
+  useEffect(() => {
+    if (!adsEnabled) return;
+    preloadRateNativeAd();
+    return releaseAllClaimedRateNativeAds;
+  }, [adsEnabled]);
+
+  // Insert an ad card only once one has loaded, behind the visible stack.
+  useEffect(() => {
+    if (!adsEnabled || loading) return;
+    const at = findAdInsertIndex(deck, currentIndex);
+    if (at === null) return;
+    if (!adReady) {
+      // No-op while a load is in flight or the failure cooldown is active.
+      preloadRateNativeAd();
+      return;
+    }
+    const id = claimRateNativeAd();
+    if (!id) return;
+    setDeck((prev) => insertAdCard(prev, at, id));
+  }, [adReady, adsEnabled, currentIndex, deck, loading]);
 
   useEffect(() => {
     if (adsEnabled) return;
@@ -479,7 +501,7 @@ export default function RatingScreen() {
       if (item.kind === 'photo') {
         const pending = pendingRatingRef.current;
         const rating: RatingType =
-          pending ?? deriveRatingFromDirection(direction, swipeModeRef.current);
+          pending ?? deriveRatingFromDirection(direction);
         // Persist that we've shown this card, regardless of action. The next
         // session's deck filters by this set so the user resumes where they
         // left off instead of re-seeing the same items.
@@ -603,42 +625,48 @@ export default function RatingScreen() {
 
   const currentItem = deck[currentIndex];
   const currentPhoto = currentItem?.kind === 'photo' ? currentItem.photo : undefined;
-  const activeModeOption = MODE_OPTIONS.find((m) => m.value === swipePrefs.mode) ?? MODE_OPTIONS[0];
   const canRestartCurrentGenre = !!params.genreId && !params.animeId;
   const showEmptyRestart = canRestartCurrentGenre && restartableSeenIds.length > 0;
   const showDeck = !loading && deck.length > 0;
   const showEmpty = !loading && deck.length === 0;
   const showExhausted = !loading && deck.length > 0 && currentIndex >= deck.length;
+  const genreLabel = params.genreName ? String(params.genreName) : null;
+  const backLabel = genreLabel
+    ? t('tabs.ratingScreen.backTo', { genre: genreLabel })
+    : t('tabs.ratingScreen.goBack');
 
   return (
-    <SafeAreaView style={[styles.container, { paddingTop: 0 }]} edges={['left', 'right']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background.primary }]}
+      edges={['left', 'right']}>
       {/* Header — close (left) + compact mode pill, then optional settings (right). */}
       <View style={[styles.headerContainer, { paddingTop: top + 10 }]}>
         <View style={styles.topBar}>
           <View style={styles.headerLeftCluster}>
-            <Pressable
+            <ThemedIconButton
+              size={36}
+              accessibilityLabel={t('tabs.ratingScreen.closeA11y')}
+              icon={(c) => <Ionicons name="close" size={20} color={c} />}
               onPress={handleClose}
-              style={styles.closeButton}
-              accessibilityLabel={t('tabs.ratingScreen.closeA11y')}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </Pressable>
-            <ModePill
-              icon={activeModeOption.icon}
-              label={activeModeOption.label}
-              color={activeModeOption.color ?? theme.accent}
-              onPress={() => setShowModeSwitcher(true)}
             />
           </View>
 
-          <Pressable
-            style={styles.actionButton}
+          {genreLabel ? (
+            <ThemedText
+              variant="titleSmall"
+              weight="700"
+              numberOfLines={1}
+              align="center"
+              style={styles.headerTitle}>
+              {genreLabel}
+            </ThemedText>
+          ) : null}
+          <ThemedIconButton
+            size={36}
             accessibilityLabel={t('tabs.ratingScreen.preferencesA11y')}
-            onPress={() => {
-              hapticsBridge.tap();
-              setShowSettings(true);
-            }}>
-            <Ionicons name="options-outline" size={20} color="#fff" />
-          </Pressable>
+            icon={(c) => <Ionicons name="options-outline" size={20} color={c} />}
+            onPress={() => setShowSettings(true)}
+          />
         </View>
       </View>
 
@@ -651,39 +679,14 @@ export default function RatingScreen() {
         ) : null}
 
         {showEmpty ? (
-          hasMore || loadingMore ? (
-            <View style={styles.loadingContainer}>
-              <Ionicons name="planet" size={48} color="#666" />
-              <Text style={styles.loadingText}>{t('tabs.ratingScreen.loadingMore')}</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#666" />
-              <Text style={styles.emptyText}>{t('tabs.ratingScreen.noPhotos')}</Text>
-              <View style={styles.emptyActions}>
-                {showEmptyRestart ? (
-                  <Pressable
-                    onPress={confirmRestart}
-                    style={[styles.restartButton, { backgroundColor: theme.accent }]}
-                    accessibilityLabel={t('tabs.ratingScreen.restartConfirm.deckA11y')}>
-                    <Ionicons
-                      name="refresh"
-                      size={16}
-                      color={readableTextOn(theme.accent)}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text
-                      style={[styles.restartButtonText, { color: readableTextOn(theme.accent) }]}>
-                      {t('tabs.ratingScreen.restart')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable onPress={handleClose} style={styles.goBackButton}>
-                  <Text style={styles.goBackButtonText}>{t('tabs.ratingScreen.goBack')}</Text>
-                </Pressable>
-              </View>
-            </View>
-          )
+          <DeckStatus
+            busy={hasMore || loadingMore}
+            icon="images-outline"
+            message={t('tabs.ratingScreen.noPhotos')}
+            backLabel={backLabel}
+            onBack={handleClose}
+            onRestart={showEmptyRestart ? confirmRestart : undefined}
+          />
         ) : null}
 
         {showDeck ? (
@@ -698,45 +701,20 @@ export default function RatingScreen() {
             onTopChange={handleTopChange}
             onNeedMore={loadMorePhotos}
             onPressTop={handlePressTopCard}
-            rightIndicator={RIGHT_INDICATOR_BY_MODE[swipePrefs.mode]}
-            leftIndicator={SKIP_INDICATOR}
+            rightIndicator={rightIndicator}
+            leftIndicator={skipIndicator}
           />
         ) : null}
 
         {showExhausted ? (
-          hasMore || loadingMore ? (
-            <View style={styles.loadingContainer}>
-              <Ionicons name="planet" size={48} color="#666" />
-              <Text style={styles.loadingText}>{t('tabs.ratingScreen.loadingMore')}</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="checkmark-done-circle-outline" size={64} color="#666" />
-              <Text style={styles.emptyText}>{t('tabs.ratingScreen.allCaughtUp')}</Text>
-              <View style={styles.emptyActions}>
-                {canRestartCurrentGenre ? (
-                  <Pressable
-                    onPress={confirmRestart}
-                    style={[styles.restartButton, { backgroundColor: theme.accent }]}
-                    accessibilityLabel={t('tabs.ratingScreen.restartConfirm.deckA11y')}>
-                    <Ionicons
-                      name="refresh"
-                      size={16}
-                      color={readableTextOn(theme.accent)}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text
-                      style={[styles.restartButtonText, { color: readableTextOn(theme.accent) }]}>
-                      {t('tabs.ratingScreen.restart')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable onPress={handleClose} style={styles.goBackButton}>
-                  <Text style={styles.goBackButtonText}>{t('tabs.ratingScreen.goBack')}</Text>
-                </Pressable>
-              </View>
-            </View>
-          )
+          <DeckStatus
+            busy={hasMore || loadingMore}
+            icon="checkmark-done-circle-outline"
+            message={t('tabs.ratingScreen.allCaughtUp')}
+            backLabel={backLabel}
+            onBack={handleClose}
+            onRestart={canRestartCurrentGenre ? confirmRestart : undefined}
+          />
         ) : null}
       </View>
 
@@ -746,43 +724,39 @@ export default function RatingScreen() {
         style={[styles.overlayContainer, { paddingBottom: bottom + 16 }]}
         pointerEvents="box-none">
         {currentPhoto ? (
-          swipePrefs.mode === 'plan' ? (
-            <View style={styles.planButtonsRow}>
-              <Pressable
-                onPress={() => triggerSwipe('left')}
-                style={styles.planSideButton}
-                accessibilityLabel={t('tabs.ratingScreen.skipA11y')}>
-                <Ionicons name="close" size={26} color="#FF6F60" />
-              </Pressable>
-
-              <Pressable
-                onPress={() => handleRateFromButton('tracking')}
-                style={[
-                  styles.planSideButton,
-                  styles.planSidePrimary,
-                  { borderColor: theme.accent },
-                ]}
-                accessibilityLabel={t('tabs.ratingScreen.addToPlanA11y')}>
-                <Ionicons name="bookmark" size={24} color={theme.accent} />
-              </Pressable>
-            </View>
-          ) : (
-            <RatingActionButtons
-              style={styles.likeModeButtons}
-              mode={swipePrefs.ratingButtons === 'five' ? 'fiveButtons' : 'threeButtons'}
-              onRate={handleRateFromButton}
-            />
-          )
+          <View style={styles.planButtonsRow}>
+            <Pressable
+              onPress={() => triggerSwipe('left')}
+              style={[
+                styles.planSideButton,
+                { backgroundColor: theme.background.secondary, borderColor: theme.status.error },
+              ]}
+              accessibilityLabel={t('tabs.ratingScreen.skipA11y')}>
+              <Ionicons name="close" size={26} color={theme.status.error} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleRateFromButton('like')}
+              style={[
+                styles.planSideButton,
+                styles.likeButton,
+                { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+              ]}
+              accessibilityLabel={t('tabs.ratingScreen.likeA11y')}>
+              <Ionicons name="heart" size={22} color={theme.status.error} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleRateFromButton('tracking')}
+              style={[
+                styles.planSideButton,
+                styles.planSidePrimary,
+                { backgroundColor: theme.background.secondary, borderColor: theme.accent },
+              ]}
+              accessibilityLabel={t('tabs.ratingScreen.addToPlanA11y')}>
+              <Ionicons name="bookmark" size={24} color={theme.accent} />
+            </Pressable>
+          </View>
         ) : null}
       </View>
-
-      <ModeSwitcherSheet
-        visible={showModeSwitcher}
-        value={swipePrefs.mode}
-        options={MODE_OPTIONS}
-        onSelect={handleModeChange}
-        onClose={() => setShowModeSwitcher(false)}
-      />
 
       <ImageDisplaySettingsSheet
         visible={showSettings}
@@ -796,10 +770,58 @@ export default function RatingScreen() {
   );
 }
 
+function DeckStatus({
+  busy,
+  icon,
+  message,
+  backLabel,
+  onBack,
+  onRestart,
+}: {
+  busy: boolean;
+  icon: 'images-outline' | 'checkmark-done-circle-outline';
+  message: string;
+  backLabel: string;
+  onBack: () => void;
+  onRestart?: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = useT();
+  if (busy) {
+    return (
+      <View style={styles.statusContainer}>
+        <ActivityIndicator color={theme.text.secondary} />
+        <ThemedText variant="bodyLarge" tone="secondary">
+          {t('tabs.ratingScreen.loadingMore')}
+        </ThemedText>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.statusContainer}>
+      <Ionicons name={icon} size={56} color={theme.text.tertiary} />
+      <ThemedText variant="titleLarge" weight="700" align="center">
+        {message}
+      </ThemedText>
+      <View style={styles.statusActions}>
+        <ThemedButton size="lg" fullWidth label={backLabel} onPress={onBack} />
+        {onRestart ? (
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('tabs.ratingScreen.restart')}
+            icon={<Ionicons name="refresh" size={16} color={theme.text.primary} />}
+            onPress={onRestart}
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#050505',
   },
   headerContainer: {
     position: 'absolute',
@@ -815,88 +837,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 8,
   },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(30,30,34,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  headerTitle: { flex: 1, marginHorizontal: 8 },
   headerLeftCluster: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(30,30,34,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   cardStackContainer: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
-  loadingContainer: {
+  statusContainer: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: Spacing.md,
     zIndex: 20,
-    paddingHorizontal: 28,
+    paddingHorizontal: CARD_HORIZONTAL_PADDING,
   },
-  loadingText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    zIndex: 20,
-    paddingHorizontal: 28,
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  emptyActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
-  goBackButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-  },
-  goBackButtonText: {
-    color: '#000',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  restartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  restartButtonText: {
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  statusActions: { alignSelf: 'stretch', gap: Spacing.sm, marginTop: Spacing.xs },
   skeletonCardWrapper: {
     flex: 1,
     width: '100%',
@@ -921,23 +882,13 @@ const styles = StyleSheet.create({
   planSideButton: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(20,20,22,0.85)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 111, 96, 0.55)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
   },
+  likeButton: { width: 52, height: 52 },
   planSidePrimary: {
     borderWidth: 1.5,
-  },
-  likeModeButtons: {
-    marginTop: 16,
-    paddingTop: 16,
   },
 });

@@ -6,7 +6,6 @@ import {
   type AppStateStatus,
   Platform,
   StyleSheet,
-  Switch,
   TextInput,
   View,
 } from 'react-native';
@@ -50,6 +49,7 @@ import {
   BACKUP_PROVIDER_KEY,
 } from '../../libs/services/storage/keys';
 import { useT } from '../../libs/i18n';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 let SecureStore: {
   getItemAsync(k: string): Promise<string | null>;
@@ -926,15 +926,7 @@ function ToggleRow({
           </ThemedText>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }
@@ -1056,13 +1048,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.md,
-    borderRadius: 18,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   statusIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1075,7 +1067,7 @@ const styles = StyleSheet.create({
   toggleIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { readableTextOn, ThemedBottomSheet, ThemedText } from '../../themed';
+import { readableTextOn, ThemedBottomSheet, ThemedButton, ThemedText } from '../../themed';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
@@ -16,7 +16,9 @@ import {
   type ResolutionTier,
 } from '../../../hooks/useCameraSettings';
 import type { AspectRatio } from './types';
+import type { CameraOrientationMode } from '../../../libs/services/pilgrimage/camera-ui';
 import { CAPTURE_MODE_HELP_TEXT_KEY } from '../../../libs/services/pilgrimage/capture-mode-copy';
+import { ThemedSwitch } from '../../themed/ThemedSwitch';
 
 const CAPTURE_MODES: CaptureMode[] = ['single', 'burst', 'auto'];
 const CAPTURE_MODE_LABEL: Record<CaptureMode, string> = {
@@ -42,7 +44,15 @@ export interface CameraSettingsSheetProps {
   onAspectChange: (a: AspectRatio) => void;
   captureMode: CaptureMode;
   onCaptureModeChange: (m: CaptureMode) => void;
+  orientationMode: CameraOrientationMode;
+  onOrientationModeChange: (m: CameraOrientationMode) => void;
+  /** Opens the GPS alignment helper; omitted when the spot has no coordinates. */
+  onOpenGuide?: () => void;
+  /** Opens trace.moe screenshot identification. */
+  onOpenIdentify?: () => void;
 }
+
+const ORIENTATION_MODES: CameraOrientationMode[] = ['auto', 'landscape'];
 
 const COUNTDOWN_LABEL: Record<CountdownSeconds, string> = {
   0: 'Off',
@@ -65,6 +75,10 @@ export default function CameraSettingsSheet({
   onAspectChange,
   captureMode,
   onCaptureModeChange,
+  orientationMode,
+  onOrientationModeChange,
+  onOpenGuide,
+  onOpenIdentify,
 }: CameraSettingsSheetProps) {
   const { theme } = useTheme();
   const t = useT();
@@ -76,7 +90,6 @@ export default function CameraSettingsSheet({
   };
 
   const handleSwitch = <K extends keyof CameraSettings>(key: K, value: boolean) => {
-    hapticsBridge.selection();
     onSettingsChange({ [key]: value } as Partial<CameraSettings>);
   };
 
@@ -116,6 +129,20 @@ export default function CameraSettingsSheet({
           <ThemedText variant="caption" tone="secondary">
             {t(CAPTURE_MODE_HELP_TEXT_KEY)}
           </ThemedText>
+        </SettingsSection>
+
+        <SettingsSection title={t('pilgrimageUi.camera.orientation')}>
+          <SegmentedRow
+            options={ORIENTATION_MODES.map((m) => ({
+              value: m,
+              label: t(`pilgrimageUi.camera.orientationMode.${m}`),
+            }))}
+            value={orientationMode}
+            onSelect={(m) => {
+              hapticsBridge.selection();
+              onOrientationModeChange(m);
+            }}
+          />
         </SettingsSection>
 
         <SettingsSection title={t('pilgrimageUi.aspectRatio')}>
@@ -172,6 +199,27 @@ export default function CameraSettingsSheet({
           value={settings.autoCapture}
           onValueChange={(v) => handleSwitch('autoCapture', v)}
         />
+        {onOpenGuide ? (
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimageUi.openFramingGuide')}
+            icon={<Ionicons name="compass-outline" size={18} color={theme.text.primary} />}
+            onPress={() => {
+              onClose();
+              onOpenGuide();
+            }}
+          />
+        ) : null}
+        {onOpenIdentify ? (
+          <ThemedButton
+            variant="secondary"
+            fullWidth
+            label={t('pilgrimageUi.camera.identifyScreenshot')}
+            icon={<Ionicons name="scan-outline" size={18} color={theme.text.primary} />}
+            onPress={onOpenIdentify}
+          />
+        ) : null}
       </ScrollView>
     </ThemedBottomSheet>
   );
@@ -285,13 +333,7 @@ function SwitchRow({ label, description, value, onValueChange }: SwitchRowProps)
           </ThemedText>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: theme.background.tertiary, true: theme.accent }}
-        thumbColor={theme.text.primary}
-        accessibilityLabel={label}
-      />
+      <ThemedSwitch value={value} onValueChange={onValueChange} accessibilityLabel={label} />
     </View>
   );
 }
@@ -315,7 +357,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

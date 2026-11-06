@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Anime } from '../rate/types';
 import { RatingSlider } from '../common/RatingSlider';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
@@ -14,6 +14,7 @@ import { collectionService } from '../../libs/services/collection/collection-ser
 import type { AnimeStatus } from '../../libs/services/auth/types';
 import type { CollectionFolder } from '../../types';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 type UiStatus = 'watching' | 'wishlist' | 'completed' | 'paused' | 'dropped';
 
@@ -28,6 +29,14 @@ const STATUS_OPTIONS: {
   { key: 'paused', labelKey: 'bangumiTab.paused', icon: 'pause-circle-outline' },
   { key: 'dropped', labelKey: 'commonUi.dropped', icon: 'cancel' },
 ];
+
+const DB_STATUS_TO_UI: Partial<Record<AnimeStatus, UiStatus>> = {
+  watching: 'watching',
+  planned: 'wishlist',
+  completed: 'completed',
+  on_hold: 'paused',
+  dropped: 'dropped',
+};
 
 const UI_STATUS_TO_DB: Record<UiStatus, AnimeStatus> = {
   watching: 'watching',
@@ -49,7 +58,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
   const t = useT();
   const activeFg = readableTextOn(theme.accent);
   const [status, setStatus] = useState<UiStatus>('watching');
-  const [score, setScore] = useState(7);
+  // 0–10 in the UI; null = not rated. Stored ×10 (user_anime.score is 0–100).
+  const [score, setScore] = useState<number | null>(null);
+  const [scoreTouched, setScoreTouched] = useState(false);
   const [progress, setProgress] = useState(0);
   const [folders, setFolders] = useState<CollectionFolder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -64,11 +75,19 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
   useEffect(() => {
     if (!visible) return;
     setStatus('watching');
-    setScore(7);
+    setScore(null);
+    setScoreTouched(false);
     setProgress(0);
     setSelectedFolderId(null);
     let cancelled = false;
     void (async () => {
+      // Open on what's saved, so editing a tracked title never resets it.
+      const existing = anime ? await trackingService.getStatus(anime.id).catch(() => null) : null;
+      if (!cancelled && existing) {
+        setStatus(DB_STATUS_TO_UI[existing.status] ?? 'watching');
+        setProgress(existing.progress ?? 0);
+        setScore(existing.score ? existing.score / 10 : null);
+      }
       try {
         const list = await collectionService.getFolders();
         if (cancelled) return;
@@ -90,7 +109,7 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
       await trackingService.upsertTracking({
         animeId: anime.id,
         status: UI_STATUS_TO_DB[status],
-        score,
+        score: scoreTouched ? (score === null ? null : Math.round(score * 10)) : undefined,
         progress,
         totalEpisodes,
         title: anime.title,
@@ -105,7 +124,18 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
     } finally {
       setSaving(false);
     }
-  }, [anime, saving, status, score, progress, totalEpisodes, selectedFolderId, onSaved, onClose]);
+  }, [
+    anime,
+    saving,
+    status,
+    score,
+    scoreTouched,
+    progress,
+    totalEpisodes,
+    selectedFolderId,
+    onSaved,
+    onClose,
+  ]);
 
   const decrementProgress = useCallback(() => {
     hapticsBridge.selection();
@@ -144,9 +174,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.status')}
-          </Text>
+          </CapsText>
           <View style={styles.statusRow}>
             {STATUS_OPTIONS.map((opt) => {
               const active = status === opt.key;
@@ -182,18 +212,48 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
             })}
           </View>
 
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.score')}
-          </Text>
+          </CapsText>
           <View style={styles.scoreRow}>
-            <Text style={[styles.scoreValue, { color: theme.accent }]}>{score.toFixed(1)}</Text>
-            <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
+            {score === null ? (
+              <Text style={[styles.scoreValue, { color: theme.text.tertiary }]}>
+                {t('collectionUi.unrated')}
+              </Text>
+            ) : (
+              <>
+                <Text style={[styles.scoreValue, { color: theme.accent }]}>
+                  {score.toFixed(1)}
+                </Text>
+                <Text style={[styles.scoreMax, { color: theme.text.tertiary }]}>/ 10</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('collectionUi.clear')}
+                  hitSlop={12}
+                  style={styles.scoreClear}
+                  onPress={() => {
+                    hapticsBridge.selection();
+                    setScore(null);
+                    setScoreTouched(true);
+                  }}>
+                  <MaterialIcons name="close" size={18} color={theme.text.tertiary} />
+                </Pressable>
+              </>
+            )}
           </View>
-          <RatingSlider value={score} onChange={setScore} width={320} step={0.5} />
+          <RatingSlider
+            value={score ?? 0}
+            onChange={(next) => {
+              setScore(next);
+              setScoreTouched(true);
+            }}
+            width={320}
+            step={0.5}
+          />
 
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('commonUi.episodes')}
-          </Text>
+          </CapsText>
           <View style={styles.stepperRow}>
             <Pressable
               onPress={decrementProgress}
@@ -234,9 +294,9 @@ function AddTrackingSheetComponent({ visible, anime, onClose, onSaved }: AddTrac
             </Pressable>
           </View>
 
-          <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+          <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
             {t('bangumiTab.folder')}
-          </Text>
+          </CapsText>
           <View style={styles.folderRow}>
             <Pressable
               onPress={() => {
@@ -348,7 +408,7 @@ const styles = StyleSheet.create({
   cover: {
     width: 56,
     height: 80,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   headerText: {
@@ -382,13 +442,14 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   statusChipLabel: {
     ...Typography.titleSmall,
     fontWeight: '600',
   },
+  scoreClear: { marginLeft: Spacing.sm, padding: 4 },
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -413,7 +474,7 @@ const styles = StyleSheet.create({
   stepperButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -421,7 +482,7 @@ const styles = StyleSheet.create({
   stepperValue: {
     flex: 1,
     height: 40,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -438,7 +499,7 @@ const styles = StyleSheet.create({
   folderChip: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   folderChipLabel: {
@@ -453,7 +514,7 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     alignItems: 'center',
   },

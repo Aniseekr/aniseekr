@@ -207,6 +207,12 @@ const MLKIT_META_VALUE = 'subject_segment';
 function addMlkitDependency(androidManifest) {
   const app = androidManifest.manifest.application && androidManifest.manifest.application[0];
   if (!app) return androidManifest;
+  // Library manifests can declare the same key (expo-dev-launcher ships
+  // `barcode_ui` in dev builds) and the manifest merger rejects the clash;
+  // the app's value wins. Dev-only models still download on first use.
+  androidManifest.manifest.$ = androidManifest.manifest.$ || {};
+  androidManifest.manifest.$['xmlns:tools'] =
+    androidManifest.manifest.$['xmlns:tools'] || 'http://schemas.android.com/tools';
   app['meta-data'] = app['meta-data'] || [];
   const existing = app['meta-data'].find((m) => m.$ && m.$['android:name'] === MLKIT_META_NAME);
   if (existing) {
@@ -218,9 +224,14 @@ function addMlkitDependency(androidManifest) {
       parts.push(MLKIT_META_VALUE);
       existing.$['android:value'] = parts.join(',');
     }
+    existing.$['tools:replace'] = 'android:value';
   } else {
     app['meta-data'].push({
-      $: { 'android:name': MLKIT_META_NAME, 'android:value': MLKIT_META_VALUE },
+      $: {
+        'android:name': MLKIT_META_NAME,
+        'android:value': MLKIT_META_VALUE,
+        'tools:replace': 'android:value',
+      },
     });
   }
   return androidManifest;

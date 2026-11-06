@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  type TextInputInstance,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AnimeTitleText } from '../themed';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -87,7 +88,7 @@ export function CollectionSearchModal({ visible, onClose, folders }: CollectionS
   const [indexReady, setIndexReady] = useState(false);
   const [titleCacheVersion, setTitleCacheVersion] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   // `recent` is seeded synchronously from MMKV above; modal opens with the
   // user's history already rendered. No async re-read needed.
@@ -594,7 +595,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   input: {
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     maxWidth: 220,
   },
@@ -664,13 +665,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   iconBubble: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

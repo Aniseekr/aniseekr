@@ -1,5 +1,3 @@
-export type ViewMode = 'discovery' | 'tracking' | 'trend';
-
 export interface Anime {
   id: string;
   title: string;
@@ -9,10 +7,18 @@ export interface Anime {
   titleChinese?: string;
   titleChineseTraditional?: string;
   titleRussian?: string;
+  idMal?: number | null;
+  platformData?: {
+    anilist?: { id?: string | null } | null;
+    myanimelist?: { id?: string | null } | null;
+    bangumi?: { id?: string | null } | null;
+  };
   image: string;
   bannerImage?: string;
   rank?: number;
   score?: number; // [NEW] 0-100 or 0-10
+  /** AniList users with this title on a list; null when the source has none. */
+  anilistListCount?: number;
   type?: string; // [NEW] TV, MOVIE, etc.
   tags?: string[];
   mood?: string;
@@ -37,12 +43,6 @@ export type Genre = {
   id: string;
   displayName: string;
   image: string;
-};
-
-export type Recommendation = {
-  id: string;
-  anime: Anime;
-  reason: string;
 };
 
 export type Photo = {

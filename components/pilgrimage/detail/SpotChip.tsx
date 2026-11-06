@@ -8,13 +8,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
 import type { ThemePalette } from '../../../context/ThemeContext';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { getPilgrimageSpotTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
-import { formatDistanceKm, getPointSourceLabel } from './_helpers';
+import { formatDistanceKm, getSpotEpisode } from './_helpers';
 import { spotChipPropsEqual } from './_equality';
 
 export interface SpotChipProps {
-  spot: AnitabiPoint;
+  spot: PilgrimageSpot;
   active: boolean;
   themeColor: string;
   themeColorFg: string;
@@ -24,7 +24,7 @@ export interface SpotChipProps {
   planned: boolean;
   hasCapture: boolean;
   theme: ThemePalette;
-  onPress: (spot: AnitabiPoint) => void;
+  onPress: (spot: PilgrimageSpot) => void;
 }
 
 function SpotChipImpl({
@@ -42,8 +42,7 @@ function SpotChipImpl({
 }: SpotChipProps) {
   const styles = useMemo(() => makeSpotChipStyles(theme), [theme]);
   const label = getPilgrimageSpotTitles(spot).primary;
-  const sourceLabel = getPointSourceLabel(spot);
-  const epLabel = `${sourceLabel ? `${sourceLabel} ` : ''}EP ${spot.ep}`;
+  const epLabel = getSpotEpisode(spot) ?? '—';
   const handlePress = useCallback(() => onPress(spot), [onPress, spot]);
   return (
     <Pressable
@@ -114,7 +113,7 @@ function makeSpotChipStyles(theme: ThemePalette) {
       paddingLeft: 6,
       paddingRight: 12,
       paddingVertical: 6,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       maxWidth: 280,
       minHeight: 36,
@@ -122,7 +121,7 @@ function makeSpotChipStyles(theme: ThemePalette) {
     epBadge: {
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       minWidth: 40,
       alignItems: 'center',
       justifyContent: 'center',
@@ -134,7 +133,7 @@ function makeSpotChipStyles(theme: ThemePalette) {
     distanceBadge: {
       paddingHorizontal: 7,
       paddingVertical: 3,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },

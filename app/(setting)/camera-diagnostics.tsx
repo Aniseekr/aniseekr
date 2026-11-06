@@ -25,7 +25,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCameraDevices, type CameraDevice } from 'react-native-vision-camera';
 import { Radius, Size, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import { ThemedSurface, ThemedText, readableTextOn } from '../../components/themed';
+import {
+  ScreenHeader,
+  ThemedIconButton,
+  ThemedSurface,
+  ThemedText,
+  readableTextOn,
+} from '../../components/themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import { classifyCohort, type DeviceCohort } from '../../libs/services/pilgrimage/device-cohort';
@@ -151,49 +157,22 @@ export default function CameraDiagnosticsScreen() {
     <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={[styles.header, { paddingTop: insets.top > 0 ? 0 : Spacing.sm }]}>
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              router.back();
-            }}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [
-              styles.iconButton,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}>
-            <Ionicons name="arrow-back" size={20} color={theme.text.primary} />
-          </Pressable>
-          <View style={styles.headerTitleWrap}>
-            <ThemedText variant="titleLarge" weight="700">
-              {t('settingsUi.cameraDiagnostics')}
-            </ThemedText>
-            <ThemedText variant="bodySmall" tone="secondary">
-              Hardware fingerprint + cohort classification
-            </ThemedText>
-          </View>
-          <Pressable
-            onPress={handleRefresh}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('settingsUi.refreshDeviceSnapshot')}
-            style={({ pressed }) => [
-              styles.iconButton,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}>
-            <Ionicons name="refresh" size={20} color={theme.text.primary} />
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title={t('settingsUi.cameraDiagnostics')}
+          subtitle={t('settingsUi.cameraDiagnosticsSubtitle')}
+          onBack={() => {
+            hapticsBridge.tap();
+            router.back();
+          }}
+          right={
+            <ThemedIconButton
+              size={40}
+              accessibilityLabel={t('settingsUi.refreshDeviceSnapshot')}
+              icon={(c) => <Ionicons name="refresh" size={20} color={c} />}
+              onPress={handleRefresh}
+            />
+          }
+        />
 
         <ScrollView
           contentContainerStyle={[
@@ -350,29 +329,13 @@ function DeviceCard({ device }: { device: CameraDump }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  iconButton: {
-    width: Size.minTouchTarget,
-    height: Size.minTouchTarget,
-    borderRadius: Size.minTouchTarget / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleWrap: { flex: 1 },
   content: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
     gap: Spacing.lg,
   },
+  root: { flex: 1 },
+  safe: { flex: 1 },
   section: { gap: Spacing.xs },
   sectionTitle: {
     paddingHorizontal: Spacing.sm,

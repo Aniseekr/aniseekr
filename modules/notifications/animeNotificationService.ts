@@ -99,6 +99,12 @@ class AnimeNotificationService {
     return true;
   }
 
+  /** Check OS authorization without showing a permission prompt. */
+  async hasPermission(): Promise<boolean> {
+    const status = await notificationService.getPermission();
+    return status.granted;
+  }
+
   async requestPermissions(): Promise<boolean> {
     await this.init();
     const status = await notificationService.requestPermission();

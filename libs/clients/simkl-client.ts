@@ -48,18 +48,32 @@ function parseRetryAfter(headerValue: string | null): number {
 }
 
 /**
- * Build a poster URL by wrapping a Simkl CDN path in the wsrv.nl proxy.
- * Posters are returned as path fragments like `12/12345_w.jpg`.
- *
- * Returns `null` for empty input.
+ * Simkl image fields are bare CDN keys like `20/2037687747aa4ac60b`; the CDN
+ * only serves them with a size suffix (`_m.jpg` posters, `_medium.jpg`
+ * fanart). Keys that already carry an extension are used as-is.
  */
-export function wrapSimklPoster(path: string | null | undefined): string | null {
+function wrapSimklImage(
+  path: string | null | undefined,
+  folder: 'posters' | 'fanart',
+  suffix: string
+): string | null {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) {
     // Already absolute — wrap to take advantage of the wsrv CDN cache.
     return `https://wsrv.nl/?url=${path}`;
   }
-  return `https://wsrv.nl/?url=https://simkl.in/posters/${path}`;
+  const file = /\.(jpe?g|png|webp)$/i.test(path) ? path : `${path}${suffix}`;
+  return `https://wsrv.nl/?url=https://simkl.in/${folder}/${file}`;
+}
+
+/** Poster URL through the wsrv.nl proxy. Returns `null` for empty input. */
+export function wrapSimklPoster(path: string | null | undefined): string | null {
+  return wrapSimklImage(path, 'posters', '_m.jpg');
+}
+
+/** Fanart (banner) URL through the wsrv.nl proxy. Returns `null` for empty input. */
+export function wrapSimklFanart(path: string | null | undefined): string | null {
+  return wrapSimklImage(path, 'fanart', '_medium.jpg');
 }
 
 export class SimklClient {

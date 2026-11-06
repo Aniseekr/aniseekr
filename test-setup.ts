@@ -726,6 +726,8 @@ mock.module('react-native', () => {
     Platform,
     TurboModuleRegistry,
     NativeModules,
+    // iOS NSUserDefaults reader (app-language reads AppleLanguages).
+    Settings: { get: () => undefined, set: () => undefined },
     AppState,
     findNodeHandle: () => null,
     useColorScheme: () => 'light',

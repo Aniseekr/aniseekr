@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentProps } from 'react';
-import { View, Platform, StyleSheet, Pressable, Text } from 'react-native';
+import { View, Platform, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
@@ -12,7 +12,17 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Radius, TabBar as TabBarTokens, bottomPad } from '../constants/DesignSystem';
+import {
+  Ink,
+  CAPS_TRACKING,
+  Radius,
+  Shadow,
+  TabBar as TabBarTokens,
+  Typography,
+  bottomPad,
+} from '../constants/DesignSystem';
+import { isCjkLabel } from '../libs/i18n/script';
+import { useUiLanguage } from '../libs/i18n/ui-language';
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import {
   isFloatingTabBarHidden,
@@ -23,6 +33,8 @@ import {
   FLOATING_TAB_BAR_SHOW_DURATION_MS,
 } from '../libs/navigation/floating-tab-bar-animation';
 import { Springs } from '../libs/animations/presets';
+import { CapsText } from './themed/CapsText';
+import { readableTextOn, withAlpha } from './themed/contrast';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 type FloatingTabBarProps = BottomTabBarProps & {
@@ -35,8 +47,9 @@ const PILL_INNER_PADDING = 8;
 const COLLAPSED_WIDTH = 44;
 const TAB_HEIGHT = 44;
 const LABEL_TRAILING_PAD = 14;
-const ACTIVE_ICON_SIZE = 18;
-const INACTIVE_ICON_SIZE = 20;
+// One icon size for both states: focus reads through colour and the pill, not
+// a 2pt size jump.
+const ICON_SIZE = 22;
 
 const PRESS_OUT_SPRING = { damping: 12, stiffness: 280 } as const;
 // Slide far enough that the elevation shadow on Android also clears the screen.
@@ -58,7 +71,8 @@ const isTransientlyHidden = (options: any) =>
 export default function FloatingTabBar({
   state,
   descriptors,
-  navigation,
+  emitter,
+  navigateToTab,
   visibleRouteNames,
 }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -164,19 +178,19 @@ export default function FloatingTabBar({
                   : route.name;
 
             const onPress = () => {
-              const event = navigation.emit({
+              const event = emitter.emit({
                 type: 'tabPress',
                 target: route.key,
                 canPreventDefault: true,
               });
               if (!isFocused && !event.defaultPrevented) {
                 Haptics.selectionAsync().catch(() => undefined);
-                navigation.navigate(route.name, route.params);
+                navigateToTab(route.key);
               }
             };
 
             const onLongPress = () => {
-              navigation.emit({ type: 'tabLongPress', target: route.key });
+              emitter.emit({ type: 'tabLongPress', target: route.key });
             };
 
             return (
@@ -210,11 +224,13 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
   const focusProgress = useSharedValue(isFocused ? 1 : 0);
   const { theme } = useTheme();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const activeFg = theme.accent;
+  const labelTracking = isCjkLabel(label, useUiLanguage()) ? 0 : CAPS_TRACKING;
+  // v6: the active tab is a solid accent tag (the web nav's current-page tag);
+  // its label/icon pick whichever ink reads on the accent.
+  const activeFg = readableTextOn(theme.accent);
   const inactiveFg = theme.text.tertiary;
-  // Active pill fill = accent at ~18% alpha (0x2E), border = accent at ~45% (0x73).
-  const activeBg = `${theme.accent}2E`;
-  const activeBorder = `${theme.accent}73`;
+  const activeBg = theme.accent;
+  const activeBorder = theme.accent;
 
   useEffect(() => {
     focusProgress.value = withSpring(isFocused ? 1 : 0, Springs.focus);
@@ -264,27 +280,27 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
                 {renderIcon({
                   focused: false,
                   color: inactiveFg,
-                  size: INACTIVE_ICON_SIZE,
+                  size: ICON_SIZE,
                 })}
               </Animated.View>
               <Animated.View style={[StyleSheet.absoluteFill, styles.iconCenter, activeIconStyle]}>
                 {renderIcon({
                   focused: true,
                   color: activeFg,
-                  size: ACTIVE_ICON_SIZE,
+                  size: ICON_SIZE,
                 })}
               </Animated.View>
             </>
           ) : null}
         </View>
         <Animated.Text
-          style={[styles.label, { color: activeFg }, labelStyle]}
+          style={[styles.label, { color: activeFg, letterSpacing: labelTracking }, labelStyle]}
           numberOfLines={1}
           allowFontScaling={false}>
           {label}
         </Animated.Text>
       </Animated.View>
-      <Text
+      <CapsText
         style={styles.labelMeasure}
         numberOfLines={1}
         allowFontScaling={false}
@@ -293,7 +309,7 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
           if (w !== labelWidth) setLabelWidth(w);
         }}>
         {label}
-      </Text>
+      </CapsText>
     </Pressable>
   );
 }
@@ -312,15 +328,7 @@ const makeStyles = (theme: ThemePalette) =>
       overflow: 'hidden',
       paddingHorizontal: PILL_INNER_PADDING,
       height: TabBarTokens.height,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.32,
-          shadowRadius: 24,
-        },
-        android: { elevation: 14 },
-      }),
+      ...Shadow.float,
     },
     pillBackground: {
       ...StyleSheet.absoluteFill,
@@ -331,8 +339,8 @@ const makeStyles = (theme: ThemePalette) =>
     pillBorder: {
       ...StyleSheet.absoluteFill,
       borderRadius: Radius.tabBar,
-      borderWidth: 1,
-      borderColor: theme.glassBorder,
+      borderWidth: Ink.hairline,
+      borderColor: withAlpha(theme.text.primary, 0.22),
     },
     tabRow: {
       flex: 1,
@@ -342,11 +350,11 @@ const makeStyles = (theme: ThemePalette) =>
     },
     tabPill: {
       height: TAB_HEIGHT,
-      borderRadius: TAB_HEIGHT / 2,
+      borderRadius: Radius.sm,
       flexDirection: 'row',
       alignItems: 'center',
       overflow: 'hidden',
-      borderWidth: 1,
+      borderWidth: Ink.hairline,
     },
     iconBox: {
       width: COLLAPSED_WIDTH,
@@ -359,18 +367,12 @@ const makeStyles = (theme: ThemePalette) =>
       justifyContent: 'center',
     },
     label: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 1,
-      textTransform: 'uppercase',
+      ...Typography.overline,
       marginRight: LABEL_TRAILING_PAD,
     },
     labelMeasure: {
+      ...Typography.overline,
       position: 'absolute',
       opacity: 0,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 1,
-      textTransform: 'uppercase',
     },
   });

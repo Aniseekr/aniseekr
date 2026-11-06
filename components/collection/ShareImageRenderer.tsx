@@ -1,10 +1,10 @@
 import { useMemo, type Ref } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type ViewInstance } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAppLanguageSync, useT } from '../../libs/i18n';
 import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
-import { Colors, FontFamily, Typography } from '../../constants/DesignSystem';
+import { Colors, FontFamily, Radius, Typography } from '../../constants/DesignSystem';
 import type {
   ShareEntry,
   ShareTemplateBuild,
@@ -23,7 +23,7 @@ const POSTER_HEIGHT = 1920;
 
 interface ShareImageRendererProps {
   build: ShareTemplateBuild;
-  ref?: Ref<View>;
+  ref?: Ref<ViewInstance>;
 }
 
 function PosterFooter() {
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: 96,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     letterSpacing: 0.6,
   },
   headerSubtitle: {
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: 28,
     fontWeight: '600',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     letterSpacing: 0.5,
   },
   top10List: {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 24,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 28,
+    borderRadius: Radius.xl,
     paddingVertical: 18,
     paddingHorizontal: 22,
     borderWidth: 1,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   rankBadge: {
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -324,12 +324,12 @@ const styles = StyleSheet.create({
     color: '#0E0A06',
     fontSize: 32,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   top10Cover: {
     width: 80,
     height: 120,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     backgroundColor: '#222',
   },
   top10Meta: {
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   scoreBadge: {
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     backgroundColor: 'rgba(255,159,10,0.18)',
     borderWidth: 1,
     borderColor: 'rgba(255,159,10,0.4)',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 30,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   yearlyGrid: {
     flexDirection: 'row',
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   yearlyCard: {
     width: '47%',
     backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 32,
+    borderRadius: Radius.xl,
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     fontSize: 56,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
     marginBottom: 18,
   },
   yearlyCovers: {
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   yearlyCover: {
     flex: 1,
     aspectRatio: 2 / 3,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     backgroundColor: '#222',
   },
   yearlyTitles: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   starterCover: {
     width: '100%',
     aspectRatio: 2 / 3,
-    borderRadius: 18,
+    borderRadius: Radius.card,
     backgroundColor: '#222',
   },
   starterTitle: {
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
   masterpieceCoverFrame: {
     width: '100%',
     aspectRatio: 2 / 3,
-    borderRadius: 32,
+    borderRadius: Radius.xl,
     overflow: 'hidden',
     position: 'relative',
     marginBottom: 40,
@@ -464,8 +464,9 @@ const styles = StyleSheet.create({
   masterpieceStampText: {
     color: '#FF453A',
     fontSize: 32,
-    fontWeight: '900',
-    fontFamily: FontFamily.rounded,
+    // The bundled display face ships up to 800 (ExtraBold).
+    fontWeight: '800',
+    fontFamily: FontFamily.display,
     textAlign: 'center',
     lineHeight: 36,
   },
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
   masterpieceScoreBadge: {
     paddingHorizontal: 22,
     paddingVertical: 10,
-    borderRadius: 22,
+    borderRadius: Radius.xl,
     backgroundColor: 'rgba(255,159,10,0.22)',
     borderWidth: 1,
     borderColor: 'rgba(255,159,10,0.4)',
@@ -501,7 +502,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 30,
     fontWeight: '800',
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   masterpieceSynopsis: {
     color: Colors.text.primary,
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   masterpieceEmptyText: {
     color: Colors.text.secondary,
     fontSize: 36,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
   coverFallback: {
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -530,6 +531,6 @@ const styles = StyleSheet.create({
   coverFallbackText: {
     color: Colors.text.tertiary,
     fontSize: 36,
-    fontFamily: FontFamily.rounded,
+    fontFamily: FontFamily.display,
   },
 });

@@ -6,10 +6,11 @@
 // for an anime, while `getUnique88Anime` collapses them into one card per
 // anime with its location list.
 //
-// Regenerate with: `bun run scripts/build-anime-tourism-88.ts`.
+// Source of truth: aniseekr-atlas/atlas/locality/anime-tourism-88.json (`bun run locality:sync`).
 
 import { getCityCentroid, getPrefectureAreaAnchor } from './jp-city-centroids';
 import { localityRepository } from './locality/locality-repository';
+import { remoteLocalityDataLoader } from './locality/remote-loader';
 import type { LocalityRepository } from './locality/repository';
 import type { AreaDestination, PlaceId } from './locality/types';
 
@@ -50,6 +51,12 @@ export interface AnimeTourism88Entry {
   regionEn: string;
   /** Cross-platform anime IDs. Bangumi is always resolved; anilist/mal may be null. */
   externalIds: AnimeTourism88ExternalIds;
+  /**
+   * Map label position for the municipality / prefecture this row names, shipped
+   * with the data (aniseekr-atlas anchor-anime88). Older bundles lack it and fall
+   * back to the in-app city table. Always an AREA anchor, never a visitable point.
+   */
+  areaAnchor?: { lat: number; lng: number };
   /** AniList popularity score (null when unresolved on AniList — e.g. tokusatsu). */
   anilistPopularity?: number | null;
   /** AniList mean score 0..100 (null when unresolved). */
@@ -69,19 +76,11 @@ export interface AnimeTourism88DataFile {
   entries: AnimeTourism88Entry[];
 }
 
-// Lazy + memoized: the 64KB Anime Tourism 88 JSON is required and parsed only
-// on first access, not at module-eval time, to keep this ~64KB parse off the
-// cold-start JS thread.
-let _data: AnimeTourism88DataFile | null = null;
-
+// The rows come from the same source as the locality snapshot (bundle, or the
+// published copy the remote loader swapped in), so a new edition's rows and its
+// AreaDestinations always arrive together. The loader memoizes them.
 function getData(): AnimeTourism88DataFile {
-  if (_data) return _data;
-  // require (sync) so every exported lookup below stays sync on first call.
-  // Bun returns the parsed object directly; bun:test mock.module wraps it in
-  // `{ default }`.
-  const mod = require('./anime-tourism-88.data.json');
-  _data = (mod?.default ?? mod) as AnimeTourism88DataFile;
-  return _data;
+  return remoteLocalityDataLoader.currentAnimeTourism88() as unknown as AnimeTourism88DataFile;
 }
 
 export interface UniqueAnime88Entry {
@@ -154,7 +153,7 @@ export class AnimeTourism88Repository {
   getEntriesWithCoords(): AnimeTourism88EntryWithCoords[] {
     const out: AnimeTourism88EntryWithCoords[] = [];
     for (const entry of this.getAllEntries()) {
-      const centroid = this.cityCentroid(entry.prefecture, entry.city);
+      const centroid = entry.areaAnchor ?? this.cityCentroid(entry.prefecture, entry.city);
       if (!centroid) continue;
       out.push({ ...entry, lat: centroid.lat, lng: centroid.lng });
     }
@@ -243,9 +242,14 @@ export class AnimeTourism88Repository {
 }
 
 let _repository: AnimeTourism88Repository | null = null;
+let _repositoryData: AnimeTourism88DataFile | null = null;
 
 function getRepository(): AnimeTourism88Repository {
-  _repository ??= new AnimeTourism88Repository(getData(), localityRepository);
+  const data = getData();
+  if (!_repository || _repositoryData !== data) {
+    _repository = new AnimeTourism88Repository(data, localityRepository);
+    _repositoryData = data;
+  }
   return _repository;
 }
 

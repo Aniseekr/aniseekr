@@ -1,0 +1,231 @@
+import { CacheService } from '../../cache-service';
+import type {
+  AtlasCitiesIndex,
+  AtlasMeta,
+  AtlasSpotsLite,
+  AtlasSpotShard,
+  AtlasWorkDetail,
+  AtlasWorkIndex,
+} from './types';
+
+const BASE_URL = 'https://atlas.aniseekr.moe';
+const GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+type Cache = Pick<typeof CacheService, 'getSyncWithMeta' | 'getWithMeta' | 'set'>;
+
+export class AtlasClient {
+  private version: string | null = null;
+  private pending = new Map<string, Promise<unknown>>();
+  private cityLookupVersion: string | null = null;
+  private cityLookupValues: ReadonlyMap<string, AtlasCityLabel> | null = null;
+  constructor(private readonly options: { fetcher?: typeof fetch; cache?: Cache | null } = {}) {}
+  private get fetcher() {
+    return this.options.fetcher ?? fetch;
+  }
+  private get cache() {
+    return this.options.cache === undefined ? CacheService : this.options.cache;
+  }
+
+  async meta(): Promise<AtlasMeta> {
+    const key = 'atlas:meta';
+    const cached = this.cache?.getSyncWithMeta<AtlasMeta>(key, Number.MAX_SAFE_INTEGER);
+    if (cached) {
+      this.version = cached.value.dataVersion;
+      if (cached.isStale) void this.refreshMeta(key).catch(() => undefined);
+      return cached.value;
+    }
+    const cachedWithMeta = await this.cache?.getWithMeta<AtlasMeta>(key, Number.MAX_SAFE_INTEGER);
+    if (cachedWithMeta) {
+      this.version = cachedWithMeta.value.dataVersion;
+      if (cachedWithMeta.isStale) void this.refreshMeta(key).catch(() => undefined);
+      return cachedWithMeta.value;
+    }
+    const meta = await this.refreshMeta(key);
+    this.version = meta.dataVersion;
+    return meta;
+  }
+  async works(): Promise<AtlasWorkIndex> {
+    const snapshot = require('./works.snapshot.json') as AtlasWorkIndex;
+    let cacheVersion = this.version;
+    if (!cacheVersion) {
+      const cachedMeta = await this.cache?.getWithMeta<AtlasMeta>(
+        'atlas:meta', Number.MAX_SAFE_INTEGER
+      );
+      cacheVersion = cachedMeta?.value.dataVersion ?? null;
+      if (cacheVersion) this.version = cacheVersion;
+    }
+    if (cacheVersion) {
+      const cached = await this.cache?.getWithMeta<AtlasWorkIndex>(
+        `atlas:${cacheVersion}:works`, GRACE_MS
+      );
+      if (cached) {
+        if (cached.isStale) void this.revalidateWorks(snapshot).catch(() => undefined);
+        return cached.value;
+      }
+    }
+
+    void this.revalidateWorks(snapshot).catch(() => undefined);
+    return snapshot;
+  }
+  async work(key: string): Promise<AtlasWorkDetail | null> {
+    try {
+      return await this.asset(`work:${key}`, null, (meta) =>
+        meta.paths.work.replace('{key}', encodeURIComponent(key))
+      );
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) return null;
+      throw error;
+    }
+  }
+  async spotsLite(): Promise<AtlasSpotsLite> {
+    return this.asset<AtlasSpotsLite>('spots-lite', null, (meta) => meta.paths.spotsLite);
+  }
+  async spotShard(shard: string): Promise<AtlasSpotShard> {
+    return this.asset<AtlasSpotShard>(`spot-shard:${shard}`, null, (meta) =>
+      meta.paths.spotShard?.replace('{shard}', shard) ??
+      `/v/${meta.dataVersion}/spots/${shard}.json`
+    );
+  }
+  async cities(): Promise<AtlasCitiesIndex> {
+    return this.asset<AtlasCitiesIndex>(
+      'cities',
+      null,
+      (meta) => meta.paths.cities ?? `/v/${meta.dataVersion}/cities.json`
+    );
+  }
+  async cityLookup(): Promise<ReadonlyMap<string, AtlasCityLabel>> {
+    const index = await this.cities();
+    if (this.cityLookupVersion !== index.dataVersion || !this.cityLookupValues) {
+      this.cityLookupValues = atlasCityLookup(index.cities);
+      this.cityLookupVersion = index.dataVersion;
+    }
+    return this.cityLookupValues;
+  }
+  async moved(): Promise<{ moved: Record<string, string | null> }> {
+    return this.asset<{ moved: Record<string, string | null> }>(
+      'moved',
+      null,
+      (meta) => meta.paths.moved ?? `/v/${meta.dataVersion}/moved.json`
+    );
+  }
+  async resolveMovedSpot(id: string): Promise<string | null> {
+    const mapping = (await this.moved()).moved;
+    return Object.prototype.hasOwnProperty.call(mapping, id) ? mapping[id] : id;
+  }
+  private async asset<T>(
+    name: string,
+    seed: T | null,
+    path: (meta: AtlasMeta) => string
+  ): Promise<T> {
+    let meta = await this.meta();
+    const key = `atlas:${meta.dataVersion}:${name}`;
+    const stale =
+      this.cache?.getSyncWithMeta<T>(key, GRACE_MS) ??
+      (await this.cache?.getWithMeta<T>(key, GRACE_MS));
+    if (stale) {
+      if (stale.isStale) void this.refresh(key, path(meta)).catch(() => undefined);
+      return stale.value;
+    }
+    if (seed) {
+      void this.refresh(key, path(meta)).catch(() => undefined);
+      return seed;
+    }
+    try {
+      return await this.refresh(key, path(meta));
+    } catch (error) {
+      if (!(error instanceof HttpError) || error.status !== 404) throw error;
+      meta = await this.refreshMeta('atlas:meta');
+      return this.refresh(`atlas:${meta.dataVersion}:${name}`, path(meta));
+    }
+  }
+  private async refresh<T>(key: string, urlPath: string): Promise<T> {
+    const pending = this.pending.get(key) as Promise<T> | undefined;
+    if (pending) return pending;
+    const request = (async () => {
+      const value = await this.fetchJson<T>(`${BASE_URL}${urlPath}`);
+      await this.cache?.set(key, value, 7 * 24 * 60 * 60 * 1000);
+      return value;
+    })();
+    this.pending.set(key, request);
+    try {
+      return await request;
+    } finally {
+      this.pending.delete(key);
+    }
+  }
+  private async refreshMeta(key: string): Promise<AtlasMeta> {
+    const pending = this.pending.get(key) as Promise<AtlasMeta> | undefined;
+    if (pending) return pending;
+    const request = (async () => {
+      let stale: AtlasMeta | undefined;
+      try {
+        stale = (await this.cache?.getWithMeta<AtlasMeta>(key, Number.MAX_SAFE_INTEGER))?.value;
+        const value = await this.fetchJson<AtlasMeta>(`${BASE_URL}/meta.json`);
+        this.version = value.dataVersion;
+        await this.cache?.set(key, value, 60_000);
+        return value;
+      } catch (error) {
+        if (stale) return stale;
+        throw error;
+      }
+    })();
+    this.pending.set(key, request);
+    try {
+      return await request;
+    } finally {
+      this.pending.delete(key);
+    }
+  }
+
+  private async revalidateWorks(snapshot: AtlasWorkIndex): Promise<void> {
+    const meta = await this.meta();
+    const key = `atlas:${meta.dataVersion}:works`;
+    const cached = await this.cache?.getWithMeta<AtlasWorkIndex>(key, GRACE_MS);
+    if (cached && !cached.isStale) return;
+    if (cached) {
+      await this.refresh(key, meta.paths.works);
+      return;
+    }
+
+    try {
+      await this.refresh(key, meta.paths.works);
+    } catch (error) {
+      if (!(error instanceof HttpError) || error.status !== 404) throw error;
+      const latestMeta = await this.fetchJson<AtlasMeta>(`${BASE_URL}/meta.json`);
+      await this.cache?.set('atlas:meta', latestMeta, 60_000);
+      await this.refresh(`atlas:${latestMeta.dataVersion}:works`, latestMeta.paths.works);
+    }
+    if (!meta.dataVersion) {
+      await this.cache?.set('atlas:snapshot:works', snapshot, 7 * 24 * 60 * 60 * 1000);
+    }
+  }
+  private async fetchJson<T>(url: string): Promise<T> {
+    const response = await this.fetcher(url);
+    if (!response.ok) throw new HttpError(response.status);
+    return response.json() as Promise<T>;
+  }
+}
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`Atlas HTTP ${status}`);
+  }
+}
+
+export type AtlasCityLabel = Pick<import('./types').AtlasCity, 'pref' | 'name'>;
+
+function atlasCityLookup(
+  cities: AtlasCitiesIndex['cities']
+): ReadonlyMap<string, AtlasCityLabel> {
+  return new Map(cities.map(({ muniCd, pref, name }) => [muniCd, { pref, name }]));
+}
+
+export const atlasClient = new AtlasClient();
+
+/** Must match the Atlas API's FNV-1a UTF-8 shard assignment. */
+export function atlasSpotShardOf(id: string): string {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(id)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return (hash & 0xff).toString(16).padStart(2, '0');
+}

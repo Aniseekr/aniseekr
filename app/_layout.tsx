@@ -4,7 +4,8 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '../global.css';
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Stack, useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
-import { InteractionManager, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { runAfterInteractions } from '../libs/utils/after-interactions';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -19,10 +20,14 @@ import { authService } from '../libs/services/auth/auth-service';
 import { isOnboardingCompleteSync } from '../libs/services/onboarding-service';
 import { loadUserPrefs } from '../libs/services/user-prefs';
 import { idMappingService } from '../libs/services/sync/id-mapping-service';
+import { localityRepository } from '../libs/services/pilgrimage/locality/locality-repository';
 import { titleLocalizationService } from '../libs/services/title-localization-service';
-import { hydrateAllPilgrimageData } from '../libs/services/pilgrimage/anitabi-data-service';
+import { atlasClient } from '../libs/services/pilgrimage/atlas/atlas-client';
+import { migrateLegacyPilgrimageRecords } from '../libs/services/pilgrimage/atlas/legacy-migration';
 import { hydratePilgrimageHubSnapshotFromCache } from '../libs/services/pilgrimage/pilgrimage-hub-cache';
 import { CacheManager } from '../libs/services/cache/cache-manager';
+import { CacheService, STALE_RETENTION_MS } from '../libs/services/cache-service';
+import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { isCameraCapturePath } from '../libs/services/pilgrimage/camera-ui';
 import { resolveOnboardingGate } from '../libs/navigation/root-layout-navigation';
 import {
@@ -43,12 +48,20 @@ installPromiseRejectionFilter();
 // evaluating — everything above this line is part of the bundle-eval cost.
 markRootModuleEvaluated();
 
+// Rule 10 on a cold launch: the memory mirror starts empty, so the first tab's
+// `…Sync()` reads would all miss and show skeletons even with rows on disk.
+// Seed just those few keys synchronously before the first render.
+const warmedFirstPaintRows = CacheService.warmSync(AnimeRepository.firstPaintCacheKeys());
+if (__DEV__) console.log(`[CacheService] warmSync mirrored ${warmedFirstPaintRows} rows`);
+
 export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const navigationRef = useNavigationContainerRef();
+  // Expo Router 58 dropped the container's 'ready' event (isReady() is always
+  // true there); 'state' is the remaining signal that the container settled.
   const subscribeRootNavigationReady = useCallback(
-    (onStoreChange: () => void) => navigationRef.addListener('ready', onStoreChange),
+    (onStoreChange: () => void) => navigationRef.addListener('state', onStoreChange),
     [navigationRef]
   );
   const getRootNavigationReady = useCallback(() => navigationRef.isReady(), [navigationRef]);
@@ -81,17 +94,20 @@ export default function RootLayout() {
     // We still call `loadUserPrefs()` here once for the `syncAdultFlag`
     // side effect — it mirrors the user's `allowAdultContent` pref onto
     // `dataSourceConfig.allowR18Content` when the two have drifted.
-    void loadUserPrefs();
+    void loadUserPrefs().catch((e) => console.warn('[loadUserPrefs]', e));
 
     // Rule 10: everything below is non-critical for the first frame. Defer it
     // past the initial interaction so analytics / auth / notification setup
     // doesn't compete with the JS thread while the launch screen crossfades
     // into the first route. Each service short-circuits when its local copy
     // is still fresh, so deferral is cheap on warm launches.
-    const handle = InteractionManager.runAfterInteractions(() => {
+    const handle = runAfterInteractions(() => {
       initClarity();
-      void authService.initialize();
-      void notificationService.initialize();
+      // A SecureStore failure here leaves auth uninitialised; surface it with a tag.
+      void authService.initialize().catch((e) => console.warn('[authService.initialize]', e));
+      void notificationService
+        .initialize()
+        .catch((e) => console.warn('[notificationService.initialize]', e));
       void idMappingService
         .updateMappings()
         .then((imported) => {
@@ -100,18 +116,18 @@ export default function RootLayout() {
           if (imported) void titleLocalizationService.onMappingDataRefreshed();
         })
         .catch((e) => console.warn('[updateMappings]', e));
-      void hydrateAllPilgrimageData().catch((e) => console.warn('[hydratePilgrimage]', e));
-      // No spot-index/points-top hydrators: api.anitabi.cn is WAF-403 and those
-      // release assets were discontinued (see the pilgrimage WAF risk note).
-      // Bundled indexes are permanent; boot must not issue guaranteed 404s.
-      // Root layout so the warm finishes long before the user reaches the
-      // pilgrimage tab — a pilgrimage/_layout effect would run in the SAME
-      // commit as the hub's useState initializer and always lose that race.
+      void atlasClient.works().catch((e) => console.warn('[hydrateAtlas]', e));
+      // Events / stamp rallies / Anime Tourism 88 from R2; screens re-render via subscribe.
+      void localityRepository.refresh().catch((e) => console.warn('[locality.refresh]', e));
+      void migrateLegacyPilgrimageRecords().catch((e) =>
+        console.warn('[migrateLegacyPilgrimageRecords]', e)
+      );
       void hydratePilgrimageHubSnapshotFromCache().catch((e) =>
         console.warn('[hydrateHubSnapshot]', e)
       );
+      // Keep stale rows inside the longest SWR grace so offline copies survive.
       void CacheManager.getInstance()
-        .pruneAll()
+        .pruneAll({ retainStaleMs: STALE_RETENTION_MS })
         .then(({ totalRemoved }) => {
           if (totalRemoved > 0) {
             console.log(`[CacheManager] pruned ${totalRemoved} expired entries on boot`);
@@ -209,6 +225,7 @@ export default function RootLayout() {
                   <Stack.Screen name="anime/[id]" />
                   <Stack.Screen name="search" />
                   <Stack.Screen name="trending" />
+                  <Stack.Screen name="stats" />
                   <Stack.Screen name="onboarding" />
                   <Stack.Screen name="companion/index" />
                   <Stack.Screen name="companion/library" />

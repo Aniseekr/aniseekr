@@ -1,23 +1,12 @@
 import { memo, ReactNode } from 'react';
 import { Text, type StyleProp, type TextProps, type TextStyle } from 'react-native';
-import { Typography } from '../../constants/DesignSystem';
-import { useTheme } from '../../context/ThemeContext';
+import { SkinFont } from '../../constants/DesignSystem';
+import { useTheme, type SkinFontId } from '../../context/ThemeContext';
+import { isCjkLabel } from '../../libs/i18n/script';
+import { useUiLanguage } from '../../libs/i18n/ui-language';
+import { resolveThemedTextStyles, type ThemedTextVariant } from './text-style';
 
-export type ThemedTextVariant =
-  | 'displayLarge'
-  | 'displayMedium'
-  | 'headlineLarge'
-  | 'headlineMedium'
-  | 'headlineSmall'
-  | 'titleLarge'
-  | 'titleMedium'
-  | 'titleSmall'
-  | 'bodyLarge'
-  | 'bodyMedium'
-  | 'bodySmall'
-  | 'caption'
-  | 'captionSmall'
-  | 'monospace';
+export type { ThemedTextVariant } from './text-style';
 
 export type ThemedTextTone =
   'primary' | 'secondary' | 'tertiary' | 'accent' | 'success' | 'warning' | 'error' | 'inverse';
@@ -41,6 +30,7 @@ function ThemedTextComponent({
   ...rest
 }: ThemedTextProps) {
   const { theme } = useTheme();
+  const cjk = isCjkLabel(children, useUiLanguage());
 
   let color: string;
   switch (tone) {
@@ -71,13 +61,39 @@ function ThemedTextComponent({
       break;
   }
 
+  const skinFont = !cjk ? skinDisplayFace(theme.skin?.displayFont, variant) : null;
+
   return (
     <Text
       {...rest}
-      style={[Typography[variant], { color, textAlign: align, fontWeight: weight }, style]}>
+      style={[resolveThemedTextStyles({ variant, color, weight, align, cjk, style }), skinFont]}>
       {children}
     </Text>
   );
+}
+
+const SKIN_FACE_VARIANTS = new Set<ThemedTextVariant>([
+  'displayLarge',
+  'displayMedium',
+  'headlineLarge',
+  'headlineMedium',
+  'headlineSmall',
+]);
+
+// Skin faces ship one static weight that is already a display weight, so the
+// variant's 600–800 is reset to 'normal' rather than asking the OS to fake bold.
+const skinFaceStyles = new Map<SkinFontId, TextStyle>();
+function skinDisplayFace(
+  font: SkinFontId | undefined,
+  variant: ThemedTextVariant
+): TextStyle | null {
+  if (!font || !SKIN_FACE_VARIANTS.has(variant)) return null;
+  let face = skinFaceStyles.get(font);
+  if (!face) {
+    face = { fontFamily: SkinFont[font], fontWeight: 'normal' };
+    skinFaceStyles.set(font, face);
+  }
+  return face;
 }
 
 export const ThemedText = memo(ThemedTextComponent);

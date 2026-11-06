@@ -2,18 +2,18 @@ import { getAppLanguageSync } from '../../i18n/app-language';
 import { getEffectiveTitleOrderSync, type TitleLanguageId } from '../../i18n/title-language';
 import { chineseScriptFor } from '../../utils/anime-localization-service';
 import { toTraditional } from '../../utils/chinese-converter';
-import { lookupByBangumiId, type AnitabiCrossIndexEntry } from './anitabi-cross-index';
-import type { AnitabiPoint } from './types';
+import type { PilgrimageSpot, PilgrimageWork } from './types';
 
 export interface PilgrimageAnimeTitleInput {
-  id?: number;
   bangumiId?: number;
   title?: string | null;
-  cn?: string | null;
   titleJa?: string | null;
-  titleCn?: string | null;
   titleEnglish?: string | null;
   titleRomaji?: string | null;
+  titleZh?: { hans?: string | null; hant?: string | null } | null;
+  ja?: string;
+  en?: string | null;
+  zh?: { hans?: string | null; hant?: string | null } | null;
 }
 
 export interface PilgrimageDisplayTitles {
@@ -27,7 +27,6 @@ export interface PilgrimageDisplayTitles {
 }
 
 export interface PilgrimageTitleOptions {
-  lookupCrossIndex?: (bangumiId: number) => AnitabiCrossIndexEntry | null;
   /** Injectable for tests; defaults to the active app language. */
   appLanguage?: string;
 }
@@ -36,18 +35,23 @@ export function getPilgrimageAnimeTitles(
   anime: PilgrimageAnimeTitleInput,
   options: PilgrimageTitleOptions = {}
 ): PilgrimageDisplayTitles {
-  const bangumiId = anime.bangumiId ?? anime.id;
-  const cross =
-    typeof bangumiId === 'number'
-      ? (options.lookupCrossIndex ?? lookupByBangumiId)(bangumiId)
-      : null;
   const appLanguage = options.appLanguage ?? getAppLanguageSync();
 
-  const english = firstNonEmpty(anime.titleEnglish, cross?.titleEnglish);
-  const romaji = firstNonEmpty(anime.titleRomaji, cross?.titleRomaji);
-  const original = firstNonEmpty(anime.titleJa, anime.title, cross?.titleJa);
-  const rawChinese = firstNonEmpty(anime.titleCn, anime.cn, cross?.titleCn);
-  // Anitabi/Bangumi ship Simplified; zh-Hant users expect Traditional.
+  const english = firstNonEmpty(anime.titleEnglish, anime.en);
+  const romaji = firstNonEmpty(anime.titleRomaji);
+  const original = firstNonEmpty(anime.titleJa, anime.ja, anime.title);
+  const chineseCandidates = [
+    anime.titleZh?.hant,
+    anime.titleZh?.hans,
+    anime.zh?.hant,
+    anime.zh?.hans,
+  ];
+  const rawChinese = firstNonEmpty(
+    ...(appLanguage.toLowerCase().startsWith('zh')
+      ? chineseCandidates.filter(hasHanCharacters)
+      : chineseCandidates)
+  );
+  // Convert Simplified Atlas titles for zh-Hant users.
   const chinese =
     rawChinese && chineseScriptFor(appLanguage) === 'hant' ? toTraditional(rawChinese) : rawChinese;
 
@@ -62,7 +66,7 @@ export function getPilgrimageAnimeTitles(
     russian: null,
   };
   const ranked = getEffectiveTitleOrderSync(appLanguage).map((lang) => byLanguage[lang]);
-  const primary = firstNonEmpty(...ranked, english, original, chinese, romaji, 'Unknown Title')!;
+  const primary = firstNonEmpty(...ranked, english, original, chinese, romaji) ?? '';
   const supporting = distinctTitles(primary, ...ranked, english, original, chinese, romaji);
 
   return {
@@ -76,17 +80,21 @@ export function getPilgrimageAnimeTitles(
   };
 }
 
-export function getPilgrimageSpotTitles(spot: AnitabiPoint): PilgrimageDisplayTitles {
+export function getPilgrimageAnimeWorkTitles(work: PilgrimageWork): PilgrimageDisplayTitles {
+  return getPilgrimageAnimeTitles(work);
+}
+
+export function getPilgrimageSpotTitles(spot: PilgrimageSpot): PilgrimageDisplayTitles {
   const original = firstNonEmpty(spot.name);
-  const chinese = firstNonEmpty(spot.cn);
-  const primary = firstNonEmpty(original, chinese, `EP ${spot.ep}`)!;
-  const supporting = distinctTitles(primary, chinese);
+  const secondary = firstNonEmpty(spot.address);
+  const primary = original ?? '';
+  const supporting = distinctTitles(primary, secondary);
 
   return {
     primary,
     secondary: supporting[0],
     original: original ?? undefined,
-    chinese: chinese ?? undefined,
+    chinese: undefined,
   };
 }
 
@@ -124,6 +132,10 @@ function toNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function hasHanCharacters(value: unknown): boolean {
+  return typeof value === 'string' && /\p{Script=Han}/u.test(value);
 }
 
 function normalizeForCompare(value: string): string {

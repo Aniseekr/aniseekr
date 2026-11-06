@@ -134,116 +134,19 @@ export default function FolderDetailScreen() {
     setLoadError(false);
     try {
       if (!id) return;
-      const db = await LocalDB.getDatabase();
-
-      // Favorites live in their own table and may not have a user_anime row.
-      // Load them directly so the folder isn't empty when nothing is tracked.
-      if (id === 'system_favorites') {
-        const favRows = await db.getAllAsync<{
-          id: string;
-          title: string | null;
-          image: string | null;
-        }>('SELECT id, title, image FROM favorites ORDER BY addedAt DESC');
-
-        let trackingMap = new Map<
-          string,
-          {
-            progress: number;
-            total_episodes: number;
-            status: string;
-            score: number;
-            notes: string | null;
-            rewatch_count: number | null;
-            updated_at: number | null;
-          }
-        >();
-        if (favRows.length > 0) {
-          const placeholders = favRows.map(() => '?').join(',');
-          const trackingRows = await db.getAllAsync<{
-            anime_id: string;
-            progress: number;
-            total_episodes: number;
-            status: string;
-            score: number;
-            notes: string | null;
-            rewatch_count: number | null;
-            updated_at: number | null;
-          }>(
-            `SELECT anime_id, progress, total_episodes, status, score, notes, rewatch_count,
-                    updated_at
-               FROM user_anime
-              WHERE anime_id IN (${placeholders})`,
-            ...favRows.map((r) => r.id)
-          );
-          trackingMap = new Map(trackingRows.map((t) => [t.anime_id, t]));
-        }
-
-        const mapped = favRows.map((r) => {
-          const t = trackingMap.get(r.id);
-          return {
-            id: r.id,
-            title: r.title || 'Unknown Title',
-            image_url: r.image || '',
-            progress: t?.progress ?? 0,
-            total_episodes: t?.total_episodes ?? 0,
-            status: t?.status ?? 'favorites',
-            score: t?.score ?? 0,
-            notes: t?.notes ?? '',
-            rewatch_count: t?.rewatch_count ?? 0,
-            updated_at: t?.updated_at ?? null,
-          };
-        });
-        folderSnapshotCache.set(id, mapped);
-        setItems(mapped);
-        return;
-      }
-
-      const animeIds = await collectionService.getFolderItems(id);
-      if (animeIds.length === 0) {
-        folderSnapshotCache.set(id, []);
-        setItems([]);
-        return;
-      }
-
-      const placeholders = animeIds.map(() => '?').join(',');
-      const rows = await db.getAllAsync<{
-        anime_id: string;
-        title: string;
-        image_url: string;
-        progress: number;
-        total_episodes: number;
-        status: string;
-        score: number;
-        notes: string | null;
-        rewatch_count: number | null;
-        updated_at: number | null;
-      }>(
-        `SELECT anime_id, title, image_url, progress, total_episodes, status, score,
-                notes, rewatch_count, updated_at
-           FROM user_anime
-          WHERE anime_id IN (${placeholders})`,
-        ...animeIds
-      );
-      const byId = new Map(rows.map((r) => [r.anime_id, r]));
-
-      const loadedItems: FolderItem[] = [];
-      for (const animeId of animeIds) {
-        const row = byId.get(animeId);
-        if (row) {
-          loadedItems.push({
-            id: row.anime_id,
-            title: row.title || 'Unknown Title',
-            image_url: row.image_url,
-            progress: row.progress || 0,
-            total_episodes: row.total_episodes || 0,
-            status: row.status,
-            score: row.score,
-            notes: row.notes ?? '',
-            rewatch_count: row.rewatch_count ?? 0,
-            updated_at: row.updated_at ?? null,
-          });
-        }
-      }
+      const folderAnime = await collectionService.getFolderAnimeWithProgress(id);
+      const loadedItems: FolderItem[] = folderAnime.map((item) => ({
+        id: item.id,
+        title: item.title || t('tabs.collectionScreen.untitled'),
+        image_url: item.imageUrl ?? '',
+        progress: item.progress,
+        total_episodes: item.totalEpisodes ?? 0,
+        status: item.status,
+        score: item.score,
+        notes: item.notes,
+        rewatch_count: item.rewatchCount,
+        updated_at: item.updatedAt,
+      }));
       folderSnapshotCache.set(id, loadedItems);
       setItems(loadedItems);
     } catch (error) {
@@ -252,7 +155,7 @@ export default function FolderDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     loadItems();
@@ -533,7 +436,7 @@ export default function FolderDetailScreen() {
           <NearbyPilgrimageBadge
             sourcePlatform="anilist"
             id={item.id}
-            onPress={(data) => router.push(`/pilgrimage/${data.id}`)}
+            onPress={(data) => router.push(`/pilgrimage/${data.key}`)}
           />
         </View>
       </View>
@@ -566,21 +469,11 @@ export default function FolderDetailScreen() {
       />
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable
-          onPress={handleBack}
-          hitSlop={10}
-          accessibilityRole="button"
+        <ThemedIconButton
           accessibilityLabel={t('tabs.collectionFolderScreen.back')}
-          style={({ pressed }) => [
-            styles.headerBtn,
-            {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
-            },
-            pressed && { opacity: 0.78 },
-          ]}>
-          <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
-        </Pressable>
+          icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+          onPress={handleBack}
+        />
         <View style={styles.headerText}>
           <ThemedText variant="titleMedium" weight="700" numberOfLines={1}>
             {name || t('tabs.collectionFolderScreen.folder')}
@@ -801,7 +694,7 @@ const styles = StyleSheet.create({
   headerBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -835,7 +728,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   searchInput: {
@@ -851,7 +744,7 @@ const styles = StyleSheet.create({
   sortChip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   swipeWrap: {

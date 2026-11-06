@@ -5,16 +5,16 @@
 // skeleton — everything is seeded synchronously from MMKV (Rule 10).
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Radius, Spacing } from '../../../../constants/DesignSystem';
 import { useTheme } from '../../../../context/ThemeContext';
-import { ThemedButton, ThemedText } from '../../../../components/themed';
-import { SpotImage } from '../../../../components/pilgrimage/SpotImage';
+import { ThemedButton, ThemedIconButton, ThemedText } from '../../../../components/themed';
 import { MapSurface } from '../../../../components/pilgrimage/map/MapSurface';
 import { LocateFab } from '../../../../components/pilgrimage/LocateFab';
 import type {
@@ -31,19 +31,20 @@ import {
   orderSpotsByNearestNeighbor,
 } from '../../../../libs/services/pilgrimage/route-order';
 import { buildMultiStopDirectionsUrl } from '../../../../libs/services/pilgrimage/pilgrimage-navigation';
-import { getIndexedById } from '../../../../libs/services/pilgrimage/anitabi-index';
 import { useUserLocationTracking } from '../../../../libs/services/pilgrimage/use-user-location-tracking';
-import { getNumberParam } from '../../../../libs/utils/route-params';
+import { getStringParam } from '../../../../libs/utils/route-params';
 import { formatDistanceKm, hasValidGeo } from '../../../../components/pilgrimage/detail/_helpers';
-import { useT } from '../../../../libs/i18n';
+import { useI18n, useT } from '../../../../libs/i18n';
+import { buildPilgrimageWebUrl } from '../../../../libs/services/pilgrimage/pilgrimage-web-link';
 
 export default function PilgrimageTripScreen() {
   const params = useLocalSearchParams();
-  const animeId = getNumberParam(params, 'animeId');
+  const animeId = getStringParam(params, 'animeId');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
   const t = useT();
+  const { language } = useI18n();
 
   const mapRef = useRef<MapSurfaceHandle>(null);
   const tracking = useUserLocationTracking({
@@ -80,15 +81,15 @@ export default function PilgrimageTripScreen() {
     [intents, animeId]
   );
 
-  const indexed = animeId != null ? getIndexedById(animeId) : null;
-  const title = group?.name || indexed?.title || indexed?.cn || '';
-  const accent = indexed?.color || theme.accent;
+  const hasLegacySpots = group?.spots.some((spot) => spot.legacy) ?? false;
+  const title = group?.name || (hasLegacySpots ? t('pilgrimage.album.oldSpot') : '');
+  const accent = theme.accent;
 
   // Drop points with no usable geo before route-ordering them (a spot with
   // (0,0) or non-finite coords would otherwise anchor the nearest-neighbor
   // chain and the route line at a bogus location).
   const validSpots = useMemo(
-    () => (group ? group.spots.filter((s) => hasValidGeo(s.geo)) : []),
+    () => (group ? group.spots.filter((s) => !s.legacy && hasValidGeo(s.geo)) : []),
     [group]
   );
 
@@ -106,7 +107,6 @@ export default function PilgrimageTripScreen() {
         lng: s.geo[1],
         kind: 'spot',
         title,
-        image: s.image,
         color: accent,
         visited: visited[s.id] === true,
         markerMode: 'bubble',
@@ -138,9 +138,7 @@ export default function PilgrimageTripScreen() {
 
   const initialCenter = ordered[0]
     ? { lat: ordered[0].geo[0], lng: ordered[0].geo[1] }
-    : indexed
-      ? { lat: indexed.lat, lng: indexed.lng }
-      : undefined;
+    : undefined;
 
   const handleBack = useCallback(() => {
     Haptics.selectionAsync().catch(() => undefined);
@@ -165,6 +163,14 @@ export default function PilgrimageTripScreen() {
   }, [ordered, t]);
 
   const hasStops = ordered.length > 0;
+  const webUrl = group?.animeId
+    ? buildPilgrimageWebUrl(group.animeId, language, 'trip')
+    : null;
+
+  const handleOpenWeb = useCallback(() => {
+    if (!webUrl) return;
+    void WebBrowser.openBrowserAsync(webUrl).catch(() => undefined);
+  }, [webUrl]);
 
   return (
     <View style={styles.container}>
@@ -188,18 +194,11 @@ export default function PilgrimageTripScreen() {
 
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
-        <Pressable
-          onPress={handleBack}
-          hitSlop={8}
-          accessibilityRole="button"
+        <ThemedIconButton
           accessibilityLabel={t('pilgrimage.trip.back')}
-          style={({ pressed }) => [
-            styles.roundBtn,
-            { backgroundColor: `${theme.background.secondary}E6`, borderColor: theme.glassBorder },
-            pressed && { opacity: 0.8 },
-          ]}>
-          <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
-        </Pressable>
+          icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+          onPress={handleBack}
+        />
         <View
           style={[
             styles.titlePill,
@@ -232,11 +231,17 @@ export default function PilgrimageTripScreen() {
           ]}>
           {!hasStops ? (
             <ThemedText variant="bodySmall" tone="secondary" align="center">
-              {t('pilgrimage.trip.empty')}
+              {hasLegacySpots ? t('pilgrimage.album.oldSpot') : t('pilgrimage.trip.empty')}
             </ThemedText>
           ) : nextStop ? (
             <View style={styles.nextRow}>
-              <SpotImage uri={nextStop.image} style={styles.nextThumb} recyclingKey={nextStop.id} />
+              <View
+                style={[
+                  styles.nextThumb,
+                  { backgroundColor: theme.background.tertiary, alignItems: 'center', justifyContent: 'center' },
+                ]}>
+                <Ionicons name="location-outline" size={20} color={theme.text.secondary} />
+              </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <ThemedText variant="captionSmall" tone="tertiary" weight="700">
                   {t('pilgrimage.trip.nextStop')}
@@ -254,11 +259,26 @@ export default function PilgrimageTripScreen() {
             </ThemedText>
           )}
 
+          {hasStops && hasLegacySpots ? (
+            <ThemedText variant="captionSmall" tone="tertiary" align="center">
+              {t('pilgrimage.album.oldSpot')}
+            </ThemedText>
+          ) : null}
+
           {hasStops ? (
             <ThemedButton
               label={t('pilgrimage.trip.openInMaps')}
               accessibilityLabel={t('pilgrimage.trip.openInMapsA11y')}
               onPress={handleOpenMaps}
+              size="md"
+              fullWidth
+            />
+          ) : null}
+          {webUrl ? (
+            <ThemedButton
+              variant="secondary"
+              label={t('pilgrimage.openMapTripPlannerOnWeb')}
+              onPress={handleOpenWeb}
               size="md"
               fullWidth
             />
@@ -281,19 +301,11 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.screenPadding,
   },
-  roundBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
   titlePill: {
     flex: 1,
     minWidth: 0,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     borderWidth: 1,
     justifyContent: 'center',
     paddingHorizontal: 14,
@@ -307,5 +319,5 @@ const styles = StyleSheet.create({
   },
   card: { borderRadius: Radius.lg, borderWidth: 1, padding: Spacing.md, gap: Spacing.sm },
   nextRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  nextThumb: { width: 56, height: 42, borderRadius: 8 },
+  nextThumb: { width: 56, height: 42, borderRadius: Radius.sm },
 });

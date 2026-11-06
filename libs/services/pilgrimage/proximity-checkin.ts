@@ -5,16 +5,18 @@
 // the detail screen holds (Rule 9), never a live-frequency sensor path.
 
 import { pickNearestWithin, type NearestSpotSuggestion } from './nearest-cached-spot';
-import type { AnitabiPoint } from './types';
+import type { PilgrimageSpot } from './types';
 import type { VisitedMap } from './visited-prefs';
 
-/** Nearest point NOT already checked in, within radiusMeters. animeId is irrelevant here (0). */
+/** Nearest spot not already checked in, within radiusMeters. */
 export function nearestUnvisitedWithin(
-  points: readonly AnitabiPoint[],
+  points: readonly PilgrimageSpot[],
   visited: VisitedMap,
   user: { latitude: number; longitude: number },
   radiusMeters: number
 ): NearestSpotSuggestion | null {
-  const flat = points.filter((p) => visited[p.id] !== true).map((spot) => ({ animeId: 0, spot }));
+  const flat = points
+    .filter((spot) => visited[spot.id] !== true)
+    .map((spot) => ({ workKey: spot.workKey, spot }));
   return pickNearestWithin(flat, user, radiusMeters);
 }

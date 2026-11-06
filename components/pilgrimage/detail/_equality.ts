@@ -5,7 +5,7 @@
 // component files re-export and wire them into `React.memo(..., areEqual)`.
 
 import type { ThemePalette } from '../../../context/ThemeContext';
-import type { AnitabiPoint, AnitabiSpot } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 import type { SpotIntentKind } from '../../../libs/services/pilgrimage/spot-intents';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
@@ -24,99 +24,18 @@ interface ThemedProps {
 }
 
 // ------------------------------------------------------------------------
-// SceneTile
-// ------------------------------------------------------------------------
-
-export interface SceneTileEqualityProps extends ThemedProps {
-  spot: AnitabiPoint;
-  sceneCount: number;
-  distanceKm: number | null;
-  visited: boolean;
-  saved: boolean;
-  planned: boolean;
-  hasCapture: boolean;
-  captureUri: string | null;
-  onPress: (spot: AnitabiPoint) => void;
-  onToggleVisited: (spot: AnitabiPoint) => void;
-  onTakeComparison: (spot: AnitabiPoint) => void;
-}
-
-export function sceneTilePropsEqual(
-  prev: SceneTileEqualityProps,
-  next: SceneTileEqualityProps
-): boolean {
-  return (
-    prev.spot.id === next.spot.id &&
-    prev.spot.image === next.spot.image &&
-    prev.spot.name === next.spot.name &&
-    prev.sceneCount === next.sceneCount &&
-    prev.themeColor === next.themeColor &&
-    prev.themeColorFg === next.themeColorFg &&
-    prev.distanceKm === next.distanceKm &&
-    prev.visited === next.visited &&
-    prev.saved === next.saved &&
-    prev.planned === next.planned &&
-    prev.hasCapture === next.hasCapture &&
-    prev.captureUri === next.captureUri &&
-    prev.theme === next.theme &&
-    prev.onPress === next.onPress &&
-    prev.onToggleVisited === next.onToggleVisited &&
-    prev.onTakeComparison === next.onTakeComparison
-  );
-}
-
-// ------------------------------------------------------------------------
-// SpotRow
-// ------------------------------------------------------------------------
-
-export interface SpotRowEqualityProps extends ThemedProps {
-  spot: AnitabiPoint;
-  sceneCount: number;
-  distanceKm: number | null;
-  visited: boolean;
-  saved: boolean;
-  planned: boolean;
-  hasCapture: boolean;
-  captureUri: string | null;
-  onPress: (spot: AnitabiPoint) => void;
-  onToggleVisited: (spot: AnitabiPoint) => void;
-  onOpenMaps: (spot: AnitabiPoint) => void;
-}
-
-export function spotRowPropsEqual(prev: SpotRowEqualityProps, next: SpotRowEqualityProps): boolean {
-  return (
-    prev.spot.id === next.spot.id &&
-    prev.spot.image === next.spot.image &&
-    prev.spot.name === next.spot.name &&
-    prev.sceneCount === next.sceneCount &&
-    prev.themeColor === next.themeColor &&
-    prev.themeColorFg === next.themeColorFg &&
-    prev.distanceKm === next.distanceKm &&
-    prev.visited === next.visited &&
-    prev.saved === next.saved &&
-    prev.planned === next.planned &&
-    prev.hasCapture === next.hasCapture &&
-    prev.captureUri === next.captureUri &&
-    prev.theme === next.theme &&
-    prev.onPress === next.onPress &&
-    prev.onToggleVisited === next.onToggleVisited &&
-    prev.onOpenMaps === next.onOpenMaps
-  );
-}
-
-// ------------------------------------------------------------------------
 // SpotChip
 // ------------------------------------------------------------------------
 
 export interface SpotChipEqualityProps extends ThemedProps {
-  spot: AnitabiPoint;
+  spot: PilgrimageSpot;
   active: boolean;
   distanceKm: number | null;
   visited: boolean;
   saved: boolean;
   planned: boolean;
   hasCapture: boolean;
-  onPress: (spot: AnitabiPoint) => void;
+  onPress: (spot: PilgrimageSpot) => void;
 }
 
 export function spotChipPropsEqual(
@@ -125,7 +44,7 @@ export function spotChipPropsEqual(
 ): boolean {
   return (
     prev.spot.id === next.spot.id &&
-    prev.spot.ep === next.spot.ep &&
+    JSON.stringify(prev.spot.scenes) === JSON.stringify(next.spot.scenes) &&
     prev.active === next.active &&
     prev.themeColor === next.themeColor &&
     prev.themeColorFg === next.themeColorFg &&
@@ -266,15 +185,15 @@ export function computeVisitedIdsKey(markers: readonly MapMarkerStructural[]): s
 // ------------------------------------------------------------------------
 
 export interface HasIntentArgs {
-  spot: AnitabiPoint;
+  spot: PilgrimageSpot;
   intent: SpotIntentKind;
-  group: AnitabiSpot | undefined;
+  group: PilgrimageSpot | undefined;
   spotIntents: Readonly<Record<string, Partial<Record<SpotIntentKind, boolean>>>>;
 }
 
 export function hasIntentForSpot({ spot, intent, group, spotIntents }: HasIntentArgs): boolean {
   if (group) {
-    return group.scenes.some((p) => spotIntents[p.id]?.[intent] === true);
+    return spotIntents[group.id]?.[intent] === true;
   }
   return spotIntents[spot.id]?.[intent] === true;
 }
@@ -283,16 +202,12 @@ export function hasIntentForSpot({ spot, intent, group, spotIntents }: HasIntent
 // Tiny helpers that may grow into more pure pipelines.
 // ------------------------------------------------------------------------
 
-export function flattenScenesFromGroups(groups: readonly AnitabiSpot[]): AnitabiPoint[] {
-  const out: AnitabiPoint[] = [];
-  for (const g of groups) {
-    for (const s of g.scenes) out.push(s);
-  }
-  return out;
+export function flattenScenesFromGroups(groups: readonly PilgrimageSpot[]): PilgrimageSpot[] {
+  return [...groups];
 }
 
 export function visitedCountForPoints(
-  points: readonly AnitabiPoint[],
+  points: readonly PilgrimageSpot[],
   visited: VisitedMap
 ): number {
   let count = 0;
@@ -301,7 +216,7 @@ export function visitedCountForPoints(
 }
 
 export function capturedCountForPoints(
-  points: readonly AnitabiPoint[],
+  points: readonly PilgrimageSpot[],
   captures: Readonly<Record<string, PilgrimageCapture>>
 ): number {
   let count = 0;

@@ -11,7 +11,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   TextInput,
   View,
 } from 'react-native';
@@ -32,6 +31,8 @@ import {
   type WatermarkPosition,
 } from '../../libs/services/pilgrimage/share-composer';
 import { FILTER_PRESETS, type FilterPresetId } from '../../libs/services/pilgrimage/share-filters';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
+import { ProBadge } from '../subscription/ProBadge';
 
 // Watermark ink swatches. `null` means "auto" — derive from canvas contrast.
 // `label` holds a TranslationKey resolved via t() at render (ids/hex unchanged).
@@ -83,6 +84,10 @@ export type ShareComposerControlsProps = {
   onWatermarkFontChange: (next: WatermarkFontId) => void;
   exportResolution: ExportResolution;
   onExportResolutionChange: (next: ExportResolution) => void;
+  /** Gates the Pro-only resolutions (`full`). */
+  isPro: boolean;
+  /** A locked Pro option was tapped — the caller shows the paywall. */
+  onProLocked: () => void;
   filterPreset: FilterPresetId;
   onFilterPresetChange: (next: FilterPresetId) => void;
   filterIntensity: number;
@@ -130,6 +135,8 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
     onWatermarkFontChange,
     exportResolution,
     onExportResolutionChange,
+    isPro,
+    onProLocked,
     filterPreset,
     onFilterPresetChange,
     filterIntensity,
@@ -197,16 +204,19 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
         <View style={styles.resGroup}>
           {EXPORT_RESOLUTIONS.map((r) => {
             const active = r.id === exportResolution;
+            const locked = r.pro && !isPro;
+            const label = r.id === 'full' ? t('pilgrimage.share.fullRes') : r.label;
             return (
               <Pressable
                 key={r.id}
                 onPress={() => {
                   hapticsBridge.selection();
-                  onExportResolutionChange(r.id);
+                  if (locked) onProLocked();
+                  else onExportResolutionChange(r.id);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={t('pilgrimage.share.a11y.export', {
-                  label: r.label,
+                  label,
                   hint: r.hint,
                 })}
                 accessibilityState={{ selected: active }}
@@ -222,8 +232,9 @@ export function ShareComposerControls(props: ShareComposerControlsProps) {
                   variant="captionSmall"
                   weight="700"
                   style={{ color: active ? accentFg : theme.text.primary }}>
-                  {r.label}
+                  {label}
                 </ThemedText>
+                {r.pro ? <ProBadge locked={locked} color={active ? accentFg : undefined} /> : null}
               </Pressable>
             );
           })}
@@ -665,16 +676,7 @@ function SmartToggle({
           {subtitle}
         </ThemedText>
       </View>
-      <Switch
-        value={value}
-        disabled={disabled}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.tertiary, true: accent }}
-        thumbColor={theme.text.primary}
-      />
+      <ThemedSwitch value={value} onValueChange={onChange} disabled={disabled} accent={accent} />
     </View>
   );
 }
@@ -691,7 +693,7 @@ const smartStyles = StyleSheet.create({
   icon: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -710,6 +712,7 @@ function makeStyles(theme: ThemePalette) {
     },
     row: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       gap: 8,
     },
@@ -719,7 +722,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     resGroup: {
@@ -728,9 +731,12 @@ function makeStyles(theme: ThemePalette) {
       marginLeft: 'auto',
     },
     resChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 7,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     section: {
@@ -743,7 +749,7 @@ function makeStyles(theme: ThemePalette) {
     filterChip: {
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     cropChip: {
@@ -752,7 +758,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     smartGroup: {

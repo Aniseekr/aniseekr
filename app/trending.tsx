@@ -13,7 +13,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated from 'react-native-reanimated';
-import { readableTextOn, Skeleton } from '../components/themed';
+import { readableTextOn, Skeleton, ThemedIconButton } from '../components/themed';
 import { AnimeRepository } from '../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../libs/utils/navigate-to-anime';
 import { Anime } from '../components/rate/types';
@@ -23,6 +23,7 @@ import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import { useT } from '../libs/i18n';
 import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
 import { listItemEnter } from '../libs/animations/presets';
+import { formatScore } from '../libs/utils/format-score';
 
 type TrendRange = 'week' | 'all';
 
@@ -127,19 +128,16 @@ export default function TrendingScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]}>
+      <SafeAreaView style={[styles.safe, { paddingTop: top > 0 ? 0 : Spacing.xs }]} edges={['top']}>
         <View style={styles.headerRow}>
-          <Pressable
+          <ThemedIconButton
+            accessibilityLabel={t('common.back')}
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
             onPress={() => {
               hapticsBridge.tap();
               router.back();
             }}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={20} color={theme.text.primary} />
-          </Pressable>
+          />
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>{t('trending.title')}</Text>
             <Text style={styles.headerSubtitle}>
@@ -242,7 +240,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const displayTitle = useAnimeDisplayTitle(anime);
-  const score = anime.score != null ? formatScore(anime.score) : null;
+  const score = formatScore(anime.score);
   const isTop3 = rank <= 3;
   return (
     <Pressable
@@ -285,11 +283,6 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
   );
 }
 
-function formatScore(score: number): string {
-  if (score > 10) return (score / 10).toFixed(1);
-  return score.toFixed(1);
-}
-
 const makeStyles = (theme: ThemePalette) =>
   StyleSheet.create({
     root: {
@@ -309,7 +302,7 @@ const makeStyles = (theme: ThemePalette) =>
     iconButton: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -326,7 +319,7 @@ const makeStyles = (theme: ThemePalette) =>
     },
     headerTitle: {
       ...Typography.titleLarge,
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       color: theme.text.primary,
     },
     headerSubtitle: {
@@ -342,7 +335,7 @@ const makeStyles = (theme: ThemePalette) =>
     rangePill: {
       flexDirection: 'row',
       padding: 3,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -351,7 +344,7 @@ const makeStyles = (theme: ThemePalette) =>
     rangePillItem: {
       paddingHorizontal: 16,
       paddingVertical: 8,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       minWidth: 96,
@@ -382,7 +375,7 @@ const makeStyles = (theme: ThemePalette) =>
     retryBtn: {
       paddingHorizontal: 18,
       paddingVertical: 10,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       backgroundColor: theme.accent,
     },
     retryText: {
@@ -405,14 +398,14 @@ const makeStyles = (theme: ThemePalette) =>
       color: theme.text.tertiary,
       fontSize: 22,
       fontWeight: '800',
-      fontFamily: FontFamily.rounded,
+      fontFamily: FontFamily.display,
       minWidth: 32,
       textAlign: 'center',
     },
     thumb: {
       width: 52,
       height: 70,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.tertiary,
     },
     body: {

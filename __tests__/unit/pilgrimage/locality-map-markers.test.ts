@@ -43,8 +43,8 @@ describe('canonical locality map markers', () => {
     const entries = get88EntriesWithCoords();
     const markers = buildAnime88AreaMarkers(entries, PALETTE.area);
 
-    expect(entries).toHaveLength(124);
-    expect(markers).toHaveLength(124);
+    expect(entries).toHaveLength(146);
+    expect(markers).toHaveLength(146);
     expect(markers.every((marker) => marker.kind === 'area')).toBe(true);
     expect(markers.every((marker) => marker.precision === 'area')).toBe(true);
     expect(markers.every((marker) => marker.placeId === undefined)).toBe(true);

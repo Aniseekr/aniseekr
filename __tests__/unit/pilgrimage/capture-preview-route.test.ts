@@ -30,7 +30,7 @@ describe('capture preview route shot hydration', () => {
     };
 
     expect(buildCaptureSessionShotFromRoute(params)).toEqual({
-      id: 'route:spot-7:1710000000000:file:///album/shot.jpg',
+      id: 'route:1710000000000:file:///album/shot.jpg',
       uri: 'file:///album/shot.jpg',
       width: 1440,
       height: 1080,

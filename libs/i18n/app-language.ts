@@ -10,7 +10,7 @@
 //
 // Mirrors `title-language.ts` / `data-language-prefs.ts`: pure, no hooks.
 
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules, Platform, Settings } from 'react-native';
 import { kvGet } from '../services/storage/app-storage';
 import { APP_LANGUAGE_KEY } from '../services/storage/keys';
 import { resolveSystemLanguage } from './engine';
@@ -18,20 +18,35 @@ import type { AppLanguagePreference, LanguageId } from './types';
 
 export function readSystemLanguage(): LanguageId {
   if (Platform.OS === 'ios') {
-    const settings =
-      (NativeModules?.SettingsManager?.settings as
-        { AppleLocale?: string; AppleLanguages?: string[] } | undefined) ?? undefined;
-    const tag = settings?.AppleLocale ?? settings?.AppleLanguages?.[0];
-    return resolveSystemLanguage(tag);
+    // The language list (what the user picked, incl. per-app language) wins
+    // over AppleLocale, which is only the region format. `Settings` reads
+    // NSUserDefaults and works under the new architecture, where the legacy
+    // `NativeModules.SettingsManager` can be missing — that gap made zh
+    // devices fall through to English.
+    const languages = Settings.get('AppleLanguages') as string[] | string | undefined;
+    const first = Array.isArray(languages) ? languages[0] : languages;
+    const legacy = NativeModules?.SettingsManager?.settings as
+      | { AppleLocale?: string; AppleLanguages?: string[] }
+      | undefined;
+    const tag =
+      first ??
+      legacy?.AppleLanguages?.[0] ??
+      (Settings.get('AppleLocale') as string | undefined) ??
+      legacy?.AppleLocale;
+    if (tag) return resolveSystemLanguage(tag);
   }
   if (Platform.OS === 'android') {
     const tag = (NativeModules?.I18nManager?.localeIdentifier as string | undefined) ?? undefined;
-    return resolveSystemLanguage(tag);
+    if (tag) return resolveSystemLanguage(tag);
   }
   if (typeof navigator !== 'undefined' && navigator.language) {
     return resolveSystemLanguage(navigator.language);
   }
-  return 'en';
+  try {
+    return resolveSystemLanguage(Intl.DateTimeFormat().resolvedOptions().locale);
+  } catch {
+    return 'en';
+  }
 }
 
 export function readPreferenceSync(): AppLanguagePreference {

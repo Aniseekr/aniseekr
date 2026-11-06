@@ -182,7 +182,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 3,
       paddingHorizontal: 8,
       paddingVertical: 3,
-      borderRadius: 8,
+      borderRadius: Radius.sm,
       backgroundColor: `${officialAccent}12`,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: `${officialAccent}55`,

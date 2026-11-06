@@ -5,7 +5,6 @@ import {
   TextInput,
   Modal,
   StyleSheet,
-  Switch,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
@@ -17,6 +16,8 @@ import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { readableTextOn } from '../themed';
 import type { IoniconsName } from '../../libs/utils/icon-types';
+import { ThemedSwitch } from '../themed/ThemedSwitch';
+import { Radius } from '../../constants/DesignSystem';
 
 export interface NewFolderData {
   name: string;
@@ -166,12 +167,7 @@ export function CreateFolderModal({
 
               <View style={styles.switchRow}>
                 <Text style={styles.label}>{t('collectionUi.containsR18Content')}</Text>
-                <Switch
-                  value={isR18}
-                  onValueChange={setIsR18}
-                  trackColor={{ false: theme.background.tertiary, true: theme.status.error }}
-                  thumbColor={theme.text.primary}
-                />
+                <ThemedSwitch value={isR18} onValueChange={setIsR18} accent={theme.status.error} />
               </View>
 
               <AnimatedPressable
@@ -203,8 +199,8 @@ function makeStyles(theme: ThemePalette) {
     },
     modalContainer: {
       backgroundColor: theme.background.secondary,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
       padding: 24,
       paddingBottom: 40,
     },
@@ -230,7 +226,7 @@ function makeStyles(theme: ThemePalette) {
     },
     input: {
       backgroundColor: theme.background.tertiary,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       padding: 16,
       color: theme.text.primary,
       fontSize: 16,
@@ -242,7 +238,7 @@ function makeStyles(theme: ThemePalette) {
     iconButton: {
       width: 48,
       height: 48,
-      borderRadius: 24,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.tertiary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -259,7 +255,7 @@ function makeStyles(theme: ThemePalette) {
     },
     createButton: {
       backgroundColor: theme.accent,
-      borderRadius: 12,
+      borderRadius: Radius.card,
       padding: 16,
       alignItems: 'center',
       marginTop: 16,

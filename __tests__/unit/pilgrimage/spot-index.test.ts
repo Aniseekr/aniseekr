@@ -6,8 +6,8 @@ import {
   type SpotIndexRow,
 } from '../../../libs/services/pilgrimage/spot-index';
 
-function row(pointId: string, lat: number, lng: number, bangumiId = 1): SpotIndexRow {
-  return { pointId, bangumiId, lat, lng, name: pointId, cn: '', image: `/i/${pointId}.jpg` };
+function row(spotId: string, lat: number, lon: number, workKey = 'sample'): SpotIndexRow {
+  return { spotId, workKey, lat, lon, name: spotId, confidence: 'confirmed', episodes: [1] };
 }
 
 describe('boundsForRadius', () => {
@@ -37,7 +37,7 @@ describe('rankSpotsByDistance', () => {
       row('mid', 35.1, 139), // ~11km
     ];
     const out = rankSpotsByDistance(candidates, 35, 139, 30, 10);
-    expect(out.map((s) => s.pointId)).toEqual(['near', 'mid']); // 'far' dropped
+    expect(out.map((s) => s.spotId)).toEqual(['near', 'mid']); // 'far' dropped
     expect(out[0].distanceKm).toBeLessThan(out[1].distanceKm);
     expect(out[0]).toHaveProperty('distanceKm');
   });

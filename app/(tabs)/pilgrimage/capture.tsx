@@ -1,5 +1,5 @@
-import StandaloneCaptureScreen from '../../../components/pilgrimage/screens/StandaloneCaptureScreen';
+import CameraScreen from '../../compare/[spotId]';
 
 export default function PilgrimageCaptureRoute() {
-  return <StandaloneCaptureScreen />;
+  return <CameraScreen />;
 }

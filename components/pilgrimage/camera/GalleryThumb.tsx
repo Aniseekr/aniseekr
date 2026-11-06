@@ -6,6 +6,7 @@ import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { readableTextOn } from '../../themed';
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
+import { Radius } from '../../../constants/DesignSystem';
 
 export interface GalleryThumbModel {
   thumbUri: string | null;
@@ -93,7 +94,7 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     paddingHorizontal: 4,
-    borderRadius: 9,
+    borderRadius: Radius.card,
     alignItems: 'center',
     justifyContent: 'center',
   },

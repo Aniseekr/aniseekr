@@ -18,9 +18,13 @@ export function clusterMaxZoom(disableAt: number): number {
   return disableAt - 1;
 }
 
-/** Dot when zoomed out (text unreadable) or the count is uninformative. */
-export function isDotCluster(zoom: number, count: number): boolean {
-  return zoom <= 8 || count < 10;
+/**
+ * Dot only when zoomed out far enough that a number is unreadable. A small
+ * cluster at street zoom still gets its count: a bare 12px dot was hard to see,
+ * harder to tap, and hid that several spots were stacked there.
+ */
+export function isDotCluster(zoom: number, _count: number): boolean {
+  return zoom <= 8;
 }
 
 /** Dot diameter scales with member count so dense regions still read as "more". */
@@ -33,6 +37,7 @@ export function clusterDotSize(count: number): number {
 
 /** Numbered-bubble diameter by member count. */
 export function clusterBubbleSize(count: number): number {
+  if (count < 10) return 30;
   if (count < 50) return 34;
   if (count < 200) return 42;
   return 50;

@@ -104,9 +104,7 @@ function LocalityEventCalendarComponent({
 
         <View style={styles.legendRow}>
           <View style={styles.legendCopy}>
-            <View style={[styles.legendRing, { borderColor: theme.accent }]}>
-              <Ionicons name="sparkles" size={10} color={theme.accent} />
-            </View>
+            <View style={[styles.legendRing, { borderColor: theme.accent }]} />
             <ThemedText variant="captionSmall" tone="secondary" style={styles.legendText}>
               {t('news.calendar.markerLegend')}
             </ThemedText>
@@ -376,7 +374,7 @@ const styles = StyleSheet.create({
   dayNumber: {
     minWidth: Spacing.xl,
     height: Spacing.xl,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xxs,
@@ -393,7 +391,7 @@ const styles = StyleSheet.create({
     height: MARKER_SIZE,
     marginLeft: -Spacing.xxs,
     paddingHorizontal: Spacing.xxs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

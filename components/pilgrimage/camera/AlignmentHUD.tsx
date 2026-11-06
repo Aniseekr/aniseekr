@@ -8,6 +8,8 @@ import { CAMERA_TOP_BAR_CONTENT_HEIGHT } from '../../../libs/services/pilgrimage
 import { CameraChrome, cameraControlShadow } from './cameraChrome';
 import { AlignmentRing } from './AlignmentRing';
 import type { AlignmentScoreView } from './types';
+import { Radius } from '../../../constants/DesignSystem';
+import { formatDistanceKm } from '../detail/_helpers';
 
 interface AlignmentHUDProps {
   score: AlignmentScoreView;
@@ -36,7 +38,9 @@ function formatPercent(total: number | null): string {
 function formatDistance(meters: number | null): string {
   if (meters === null) return '—';
   if (meters < 100) return `${meters.toFixed(1)}m`;
-  return `${Math.round(meters)}m`;
+  // Far from the spot the exact metre count is noise ("191088m").
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return formatDistanceKm(meters / 1000);
 }
 
 function formatHeadingDelta(deg: number | null): string {
@@ -214,7 +218,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 11,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     ...cameraControlShadow,
   },
@@ -234,7 +238,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     backgroundColor: CameraChrome.controlFill,
     borderWidth: 1,
     ...cameraControlShadow,
@@ -245,7 +249,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     backgroundColor: CameraChrome.controlFill,
     borderWidth: 1,
     borderColor: CameraChrome.border,
@@ -259,7 +263,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
     zIndex: 65,
   },
 });

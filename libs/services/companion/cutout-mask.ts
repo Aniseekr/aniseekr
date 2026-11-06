@@ -80,14 +80,13 @@ export function makeWhiteMask(w: number, h: number): SkImage {
 }
 
 export function strokePath(op: StrokeOp): SkPath {
-  const path = Skia.Path.Make();
   const pts = op.points;
-  if (pts.length === 0) return path;
-  path.moveTo(pts[0].x, pts[0].y);
+  if (pts.length === 0) return Skia.Path.Make();
+  const path = Skia.PathBuilder.Make().moveTo(pts[0].x, pts[0].y);
   // A single tap still draws a dot thanks to the round cap.
   if (pts.length === 1) path.lineTo(pts[0].x + 0.01, pts[0].y);
   for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x, pts[i].y);
-  return path;
+  return path.detach();
 }
 
 export function strokePaint(op: StrokeOp): SkPaint {
@@ -194,7 +193,7 @@ function writeBytes(name: string, bytes: Uint8Array): string {
   const file = new File(companionDir(), name);
   if (file.exists) file.delete();
   file.create();
-  file.write(bytes);
+  file.writeSync(bytes);
   return file.uri;
 }
 

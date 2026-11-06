@@ -163,10 +163,8 @@ PilgrimageRepository
   ├─ if no bangumiId → return null (anime has no pilgrimage data)
   ├─ check SQLite cache (table: pilgrimage_spots, FK by bangumiId, TTL: 7 days)
   └─ AnitabiService.getAnimePilgrimage(bangumiId)
-       ├─ GET https://api.anitabi.cn/bangumi/{id}/lite
-       ├─ only on HTTP 403:
-          ├─ GET https://www.anitabi.cn/d/g.json
-          └─ GET https://www.anitabi.cn/d/g{page}.json
+       ├─ GET https://api.anitabi.cn/bangumi/{id}/lite   (documented api.md only)
+       ├─ HTTP 403 → 30-min backoff, no other URLs, serve cache
        └─ AnitabiBangumi { id, cn, title, city, cover, color, geo, zoom, litePoints[], pointsLength, imagesLength }
   ← persist to SQLite + return
 ```

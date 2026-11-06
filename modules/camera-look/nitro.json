@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": ["aniseekr", "cameralook"],
+  "ios": {
+    "iosModuleName": "AniseekrCameraLook"
+  },
+  "android": {
+    "androidNamespace": ["aniseekr", "cameralook"],
+    "androidCxxLibName": "AniseekrCameraLook"
+  },
+  "autolinking": {
+    "LookFrameFilter": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridLookFrameFilter"
+      }
+    }
+  },
+  "ignorePaths": ["**/node_modules"]
+}

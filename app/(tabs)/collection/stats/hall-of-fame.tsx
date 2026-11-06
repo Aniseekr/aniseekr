@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   featuredIcon: {
     width: 96,
     height: 96,
-    borderRadius: 48,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1AAA',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   featuredTitle: {
     ...Typography.headlineMedium,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   medallionIcon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   lockedIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

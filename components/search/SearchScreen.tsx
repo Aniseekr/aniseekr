@@ -21,6 +21,7 @@ import { Anime } from '../rate/types';
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { EmptyStateView } from '../common/EmptyStateView';
+import { TrendingSuggestions } from './TrendingSuggestions';
 import { ErrorStateView } from '../common/ErrorStateView';
 import { IconSize, Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
@@ -28,7 +29,6 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { isStringArray, safeJsonParse } from '../../libs/utils/safe-json';
 import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
-import { lookupBangumiByPlatformId } from '../../libs/services/pilgrimage/anitabi-cross-index';
 import {
   pilgrimageSearchService,
   type PilgrimageSearchResult,
@@ -43,11 +43,11 @@ import { sameArrayBy } from '../../libs/utils/state-array';
 
 import { kvGet, kvSet } from '../../libs/services/storage/app-storage';
 import { SEARCH_RECENT_KEY } from '../../libs/services/storage/keys';
-import { Skeleton, ThemedButton, ThemedIconButton, ThemedText } from '../themed';
+import { Skeleton, ThemedButton, ThemedIconButton } from '../themed';
 import { useT } from '../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { listItemEnter } from '../../libs/animations/presets';
-import { floatingTabBarOverlayBottom } from '../../libs/navigation/floating-tab-bar-layout';
+import { formatScore } from '../../libs/utils/format-score';
 
 const MAX_RECENT = 8;
 
@@ -67,6 +67,7 @@ type FilterKey = 'all' | 'tv' | 'movie' | 'recent';
 
 type SearchAnime = Anime & {
   bangumiId?: number;
+  pilgrimageWorkKey?: string;
   hasPilgrimage?: boolean;
   pilgrimageSource?: PilgrimageSearchResult['source'];
   secondaryTitle?: string;
@@ -113,11 +114,7 @@ function sameSearchResults(current: SearchAnime[], next: SearchAnime[]): boolean
   ]);
 }
 
-interface SearchScreenProps {
-  tabRoot?: boolean;
-}
-
-export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
+export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -127,7 +124,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
   // /pilgrimage/[bangumiId] instead of /anime/[id]. Any other value falls
   // through to the default global-search behaviour.
   const params = useLocalSearchParams<{ context?: string; q?: string }>();
-  const isPilgrimageMode = tabRoot || params.context === 'pilgrimage';
+  const isPilgrimageMode = params.context === 'pilgrimage';
   const initialQuery = getStringParam(params, 'q') ?? '';
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchAnime[]>([]);
@@ -195,12 +192,13 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
     toastTimerRef.current = setTimeout(() => setBookmarkToast(null), 2000);
   }, []);
 
+  const routeQuery = getStringParam(params, 'q') ?? '';
+
   useEffect(() => {
-    const next = getStringParam(params, 'q') ?? '';
-    if (next === routeQueryRef.current) return;
-    routeQueryRef.current = next;
-    setQuery(next);
-  }, [params]);
+    if (routeQuery === routeQueryRef.current) return;
+    routeQueryRef.current = routeQuery;
+    setQuery(routeQuery);
+  }, [routeQuery]);
 
   // `recent` is seeded synchronously from MMKV above; no async hydrate.
 
@@ -270,11 +268,10 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
           titleSecondary: anime.secondaryTitle ?? anime.titleEnglish ?? null,
           poster: anime.image,
         };
-        const returnTarget = tabRoot ? 'explorer-search' : 'search';
         if (typeof anime.bangumiId === 'number') {
           router.push(
-            buildPilgrimageDetailRoute(anime.bangumiId, {
-              returnTo: returnTarget,
+            buildPilgrimageDetailRoute(anime.pilgrimageWorkKey ?? String(anime.bangumiId), {
+              returnTo: 'search',
               returnQuery: query,
               ...chromeSeed,
             })
@@ -300,8 +297,8 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
             return;
           }
           router.push(
-            buildPilgrimageDetailRoute(bangumiId, {
-              returnTo: returnTarget,
+            buildPilgrimageDetailRoute(String(bangumiId), {
+              returnTo: 'search',
               returnQuery: query,
               ...chromeSeed,
             })
@@ -320,7 +317,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
 
       pushAnimeDetail(router, anime);
     },
-    [recent, persistRecent, router, isPilgrimageMode, query, t, tabRoot]
+    [recent, persistRecent, router, isPilgrimageMode, query, t]
   );
 
   const handleBookmarkToggle = useCallback(
@@ -445,31 +442,18 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
 
   return (
     <View style={styles.root}>
-      {tabRoot ? null : <Stack.Screen options={{ headerShown: false }} />}
+      <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View
           style={[styles.headerShell, { paddingTop: insets.top > 0 ? Spacing.xs : Spacing.sm }]}>
-          {tabRoot ? (
-            <View style={styles.tabTitleBlock}>
-              <ThemedText variant="headlineMedium" weight="700">
-                {t('search.pilgrimage.title')}
-              </ThemedText>
-              <ThemedText variant="bodySmall" tone="secondary">
-                {t('search.pilgrimage.description')}
-              </ThemedText>
-            </View>
-          ) : null}
-
           <View style={styles.searchHeader}>
-            {!tabRoot ? (
-              <ThemedIconButton
-                onPress={handleClose}
-                accessibilityLabel={t('common.back')}
-                haptic="none"
-                icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
-              />
-            ) : null}
+            <ThemedIconButton
+              onPress={handleClose}
+              accessibilityLabel={t('common.back')}
+              haptic="none"
+              icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
+            />
 
             <View style={styles.searchBar}>
               <Ionicons
@@ -478,7 +462,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                 color={isPilgrimageMode ? theme.accent : theme.text.secondary}
               />
               <TextInput
-                autoFocus={!tabRoot}
+                autoFocus
                 placeholder={
                   isPilgrimageMode
                     ? t('search.placeholder.pilgrimage')
@@ -497,7 +481,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                 // Old results stay visible while a new query runs — without this
                 // spinner the screen reads as stale/stuck (the skeleton only
                 // covers the zero-results case).
-                <Skeleton.Block width={18} height={18} borderRadius={9} />
+                <Skeleton.Block width={18} height={18} borderRadius={Radius.card} />
               ) : null}
               {query.length > 0 ? (
                 <ThemedIconButton
@@ -571,7 +555,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
               { paddingBottom: insets.bottom + 100 },
               // The discover prompt centers in the viewport; the recents list
               // keeps normal top-aligned flow.
-              recent.length === 0 && styles.centerGrow,
+              isPilgrimageMode && recent.length === 0 && styles.centerGrow,
             ]}
             keyboardShouldPersistTaps="handled">
             {recent.length > 0 ? (
@@ -598,18 +582,19 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                   ))}
                 </View>
               </View>
+            ) : null}
+            {isPilgrimageMode ? (
+              recent.length === 0 ? (
+                <EmptyStateView
+                  icon="search"
+                  title={t('search.pilgrimage.emptyTitle')}
+                  description={t('search.pilgrimage.emptyDescription')}
+                />
+              ) : null
             ) : (
-              <EmptyStateView
-                icon="search"
-                title={
-                  isPilgrimageMode ? t('search.pilgrimage.emptyTitle') : t('search.discoverTitle')
-                }
-                description={
-                  isPilgrimageMode
-                    ? t('search.pilgrimage.emptyDescription')
-                    : t('search.discoverDescription')
-                }
-              />
+              <View style={styles.suggestions}>
+                <TrendingSuggestions />
+              </View>
             )}
           </ScrollView>
         ) : loading && results.length === 0 ? (
@@ -699,10 +684,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                 <ResultCard
                   anime={item}
                   pending={resolvingId === item.id}
-                  hasPilgrimage={
-                    item.hasPilgrimage === true ||
-                    lookupBangumiByPlatformId('anilist', item.id) !== null
-                  }
+                  hasPilgrimage={item.hasPilgrimage === true}
                   isBookmarked={trackedIds.has(item.id)}
                   bookmarkPending={bookmarkPendingId === item.id}
                   onPress={() => handleSelect(item)}
@@ -720,7 +702,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
                 <View style={styles.footerLoader}>
                   <Skeleton.AnimeCardList count={2} />
                 </View>
-              ) : null
+              ) : undefined
             }
           />
         )}
@@ -730,12 +712,7 @@ export default function SearchScreen({ tabRoot = false }: SearchScreenProps) {
           style={[
             styles.toast,
             {
-              bottom:
-                keyboardHeight > 0
-                  ? keyboardHeight + Spacing.sm
-                  : tabRoot
-                    ? floatingTabBarOverlayBottom(insets.bottom)
-                    : insets.bottom + Spacing.lg,
+              bottom: keyboardHeight > 0 ? keyboardHeight + Spacing.sm : insets.bottom + Spacing.lg,
             },
           ]}>
           <Ionicons name="bookmark" size={16} color={theme.accent} />
@@ -752,8 +729,7 @@ interface ResultCardProps {
   anime: SearchAnime;
   pending?: boolean;
   /**
-   * Whether the L2 Anitabi cross-index resolved a pilgrimage entry for this
-   * anime. Renders a 📍 marker on the title row so users can see at a glance
+   * Whether Atlas resolved a pilgrimage entry for this anime. Renders a location-pin icon so users can see at a glance
    * which results have real pilgrimage data — no fake markers; falsy = no
    * marker, never a placeholder.
    */
@@ -772,9 +748,10 @@ function mapPilgrimageResultToAnime(
   t: ReturnType<typeof useT>
 ): SearchAnime {
   const titles = getPilgrimageAnimeTitles({
-    id: result.bangumiId,
+    bangumiId: result.bangumiId ?? undefined,
+    ja: result.title,
     title: result.title,
-    titleCn: result.titleCn,
+    zh: { hans: result.titleCn },
     titleEnglish: result.titleEnglish,
     titleRomaji: result.titleRomaji,
   });
@@ -785,7 +762,8 @@ function mapPilgrimageResultToAnime(
 
   return {
     id: String(result.bangumiId),
-    bangumiId: result.bangumiId,
+    bangumiId: result.bangumiId ?? undefined,
+    pilgrimageWorkKey: result.workKey,
     hasPilgrimage: true,
     pilgrimageSource: result.source,
     title: titles.primary,
@@ -818,7 +796,7 @@ function ResultCard({
   const isPilgrimageRow = anime.pilgrimageSource !== undefined;
   const localizedTitle = useAnimeDisplayTitle(isPilgrimageRow ? null : anime);
   const displayTitle = isPilgrimageRow ? anime.title : localizedTitle || anime.title;
-  const score = typeof anime.score === 'number' ? formatScore(anime.score) : null;
+  const score = formatScore(anime.score);
   const tags = anime.tags?.slice(0, 3) ?? [];
   return (
     <Pressable
@@ -910,21 +888,12 @@ function ResultCard({
   );
 }
 
-function formatScore(score: number): string {
-  if (score > 10) return (score / 10).toFixed(1);
-  return score.toFixed(1);
-}
 
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background.primary },
     safe: { flex: 1 },
     headerShell: { gap: Spacing.xs, paddingBottom: Spacing.sm },
-    tabTitleBlock: {
-      gap: Spacing.xxs,
-      paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.xs,
-    },
     searchHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -999,6 +968,7 @@ function makeStyles(theme: ThemePalette) {
       ...Shadow.heavy,
     },
     recentSection: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
+    suggestions: { paddingHorizontal: Spacing.md },
     sectionRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -1014,7 +984,7 @@ function makeStyles(theme: ThemePalette) {
       alignItems: 'center',
       gap: Spacing.xs,
       paddingHorizontal: Spacing.sm,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       backgroundColor: theme.background.secondary,
       borderWidth: 1,
       borderColor: theme.glassBorder,
@@ -1070,7 +1040,7 @@ function makeStyles(theme: ThemePalette) {
     bookmarkBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.background.tertiary,

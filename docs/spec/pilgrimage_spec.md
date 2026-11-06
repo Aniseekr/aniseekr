@@ -2,529 +2,102 @@
 
 ## 1. Goal
 
-Allow users browsing an anime in aniseekr to discover and view real-world
-filming/inspiration locations (聖地巡礼) when the anime has Anitabi data.
-
-## 2. Data Source: Anitabi
-
-Anitabi is maintained by the anitabi.cn community and links anime by Bangumi
-subject ID. JSON requests use `https://api.anitabi.cn` first. Only an explicit
-HTTP 403 falls back to the same official static files as the website:
-
-- `https://www.anitabi.cn/d/g.json` for the complete anime catalog and compact point coordinates.
-- `https://www.anitabi.cn/d/g{page}.json` for per-anime point metadata.
-- `https://img-tc.anitabi.cn/...` for covers and scene images (the origin used
-  by Anitabi's own `www.anitabi.cn` frontend).
-
-No authentication is required. Images use `https://img-tc.anitabi.cn/...`.
-`https://www.anitabi.cn/images/...` is not an image endpoint: it returns the
-website HTML shell with HTTP 200 and must never be handed to an image decoder.
-The legacy `https://image.anitabi.cn/...` origin is WAF-blocked in Japan;
-cached URLs from that origin are rewritten to `img-tc.anitabi.cn`.
-
-## 3. Types
-
-```ts
-// Single scene/location point
-export interface AnitabiPoint {
-  id: string; // unique within an anime, e.g., "abc123"
-  cn?: string; // Chinese name of the spot
-  name: string; // Japanese name (canonical)
-  image: string; // scene screenshot URL from the anime
-  ep: number; // episode number where this scene appears
-  s: number; // second/scene marker within the episode
-  geo: [number, number]; // [latitude, longitude]
-}
-
-// Anime entry from Anitabi (the "container")
-export interface AnitabiBangumi {
-  id: number; // Bangumi subject ID (THE link key)
-  cn: string; // Chinese title
-  title: string; // Japanese title (original)
-  city: string; // primary city/prefecture (e.g., "東京都")
-  cover: string; // cover image URL
-  color: string; // dominant theme color hex (e.g., "#8DC5D8")
-  geo: [number, number]; // center coordinates [lat, lng]
-  zoom: number; // recommended map zoom level (8–14)
-  modified: number; // last-modified epoch
-  litePoints: AnitabiPoint[]; // sample points (for cards)
-  pointsLength: number; // total spot count
-  imagesLength: number; // total scene image count
-}
-
-// Full point with extended fields (from /points/detail)
-export interface AnitabiPointDetail extends AnitabiPoint {
-  origin?: { lat: number; lng: number; address: string };
-  zoom?: number;
-  ja?: string;
-  haveImage?: boolean;
-}
-```
-
-## 4. Service Contract
-
-```ts
-class AnitabiService {
-  static instance: AnitabiService;
-
-  // Lite fetch: returns null if anime has no pilgrimage data
-  async getAnimePilgrimage(bangumiId: number): Promise<AnitabiBangumi | null>;
-
-  // Full points fetch (large; lazy-load on map screen)
-  async getDetailedPoints(bangumiId: number): Promise<AnitabiPointDetail[]>;
-
-  // Cache controls
-  invalidate(bangumiId?: number): void;
-  invalidateAll(): void;
-}
-```
-
-Caching:
-
-- In-memory: session lifetime, 100-entry LRU per method
-- SQLite: table `pilgrimage_spots` keyed by `bangumi_id`, TTL 7 days
-
-## 5. Linking Anime ↔ Pilgrimage Spots
-
-### Primary lookup
-
-```
-unifiedAnimeItem.platformData.bangumi?.id  →  AnitabiService.getAnimePilgrimage(bangumiId)
-```
-
-### Fallback when anime lacks Bangumi ID
-
-1. Try `idMappingService.translate(unifiedItem.id, from: source, to: 'bangumi')`
-2. If still no Bangumi ID, return `null` (anime has no pilgrimage)
-
-### Bulk enrichment
-
-For lists (e.g., seasonal anime grid), the repository should NOT eager-fetch pilgrimage
-data for every item. Instead, expose a hook `usePilgrimageBadge(bangumiId)` that fetches
-on-demand when an item enters the viewport.
-
-## 6. SQLite Schema Addition
-
-```sql
-CREATE TABLE IF NOT EXISTS pilgrimage_spots (
-  bangumi_id INTEGER PRIMARY KEY NOT NULL,
-  title TEXT NOT NULL,
-  title_cn TEXT,
-  city TEXT,
-  cover TEXT,
-  color TEXT,
-  center_lat REAL,
-  center_lng REAL,
-  zoom INTEGER,
-  points_length INTEGER,
-  images_length INTEGER,
-  lite_points_json TEXT,  -- JSON-encoded AnitabiPoint[]
-  cached_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_pilg_city ON pilgrimage_spots(city);
-CREATE INDEX IF NOT EXISTS idx_pilg_expires ON pilgrimage_spots(expires_at);
-```
-
-## 7. UI Components
-
-### AnimePilgrimageCard
-
-Ported verbatim from japanwalker. Self-contained; only depends on:
-
-- `expo-image` for cover
-- `expo-haptics` for touch feedback
-- `Ionicons` from `@expo/vector-icons`
-- `expo-linear-gradient`
-
-Props:
-
-```ts
-interface AnimePilgrimageCardProps {
-  anime: AnitabiBangumi;
-  distance?: number; // optional km from user
-  onPress?: (anime: AnitabiBangumi) => void;
-}
-```
-
-Renders:
-
-- Cover image with bottom gradient
-- Top-right badge: `{pointsLength} spots`
-- Top-left distance badge if provided
-- Title (Japanese) + Chinese name
-- City tag with location pin icon
-- Grid of first 3 `litePoints[].image` thumbnails with `+N more` overlay
-- Theme color from `anime.color`
-
-Behavior:
-
-- `onPress(anime)` → navigation to `/pilgrimage/{anime.id}`
-- Haptic feedback on press
-- Scale animation 1.0 → 0.98 on press
-
-### NearbyPilgrimageBadge
-
-Inline badge shown on `UnifiedAnimeItem` cards (search/seasonal/detail) when the
-anime has pilgrimage data. Loads lazily.
-
-Props:
-
-```ts
-interface NearbyPilgrimageBadgeProps {
-  bangumiId: number;
-  variant?: 'icon' | 'pill';
-}
-```
-
-Renders nothing until data loaded; then shows pin icon (icon variant) or
-`📍 {city}` pill.
-
-### PilgrimageSpotList
-
-Used on `/pilgrimage/[animeId]` route. Grid of all spots with scene image, Japanese
-name, episode number, and "Open in Maps" action.
-
-## 8. Routes
-
-```
-app/
-├── pilgrimage/
-│   └── [animeId].tsx     # animeId = Bangumi subject ID
-```
-
-`/pilgrimage/{bangumiId}` screen flow:
-
-1. Hydrate `AnitabiBangumi` from cache or fetch
-2. Show header (cover, title, city, points count)
-3. Show "View on Map" button (deep link to native Maps with first point)
-4. Render `PilgrimageSpotList`
-
-For MVP, **no embedded map view**. Map links open native Maps app via:
-
-```
-https://maps.apple.com/?q={lat},{lng}
-https://www.google.com/maps/search/?api=1&query={lat},{lng}
-```
-
-## 9. Anitabi Data Behavior Notes
-
-- API 404 maps to `null`. API 403 alone activates the static fallback; 429,
-  5xx, decoding failures, and network errors keep their normal error semantics.
-- A Bangumi ID absent from fallback `g.json` also maps to `null`.
-- The static catalog stores point coordinates in groups of four
-  (`id, lat, lng, priority`); the matching `g{page}.json` row supplies names,
-  images, episode markers, folders, and attribution links.
-- `litePoints` is the first 10 displayable points; full detail retains every
-  point with an image.
-- `geo` is sometimes `[0, 0]` for old/incomplete entries → treat as missing.
-- Relative image paths are resolved against `https://img-tc.anitabi.cn`.
-  Invalid `https://www.anitabi.cn/images/...` values persisted by older builds
-  and legacy `https://image.anitabi.cn/...` values are healed back to the
-  official www image CDN before rendering.
-- Cross-index hydration must reject a candidate with less than 80% of the
-  current entry count. This prevents a partial CI fallback from replacing the
-  complete bundled cross-index.
-
-## 10. Street View Data
-
-Spot-level street view availability is resolved lazily through a pure
-TypeScript resolver before any native or UI surface renders a preview.
-
-Resolver behavior:
-
-- iOS first asks an injected Look Around provider whether Apple has a nearby
-  scene. A positive answer returns a `lookaround` result without calling
-  Mapillary.
-- A negative iOS answer falls back to Mapillary. Android and other platforms
-  skip Look Around and use Mapillary directly.
-- Look Around availability is cached by rounded coordinate for 30 days.
-- Mapillary metadata is cached by rounded coordinate for 24 hours because
-  thumbnail URLs are signed and can expire.
-- When no provider has data, or Mapillary is disabled by a missing token, the
-  resolver returns `null` so UI can omit the whole section instead of rendering
-  fake content.
-- A synchronous peek (`peekStreetView`) reads the in-memory cache mirror and
-  returns a definite verdict only when the cached entries fully determine the
-  async chain; warm opens therefore paint on the first frame without a
-  skeleton.
-- Successful-but-empty Mapillary answers are cached like hits (`[]`, 24h) so
-  no-coverage spots don't refire radius+bbox on every open; error answers
-  (`null`) are never cached.
-- When the native Look Around preview reports its scene unavailable despite a
-  cached positive verdict, the verdict is overwritten to `false` and the
-  resolver re-runs, falling through to Mapillary.
-
-Mapillary behavior:
-
-- Requests use `process.env.EXPO_PUBLIC_MAPILLARY_TOKEN`; missing token returns
-  `null` without network I/O.
-- Search uses a 50m radius first. If that returns no parseable images, it tries
-  a bbox of ±0.0025° around the coordinate to recover from slightly offset
-  Anitabi points.
-- Parsed image metadata includes thumbnail URL, coordinate, compass angle,
-  panorama flag, quality score, capture date, and distance from the spot.
-- Images are ordered by nearest distance, then higher quality score, then
-  panorama preference.
-- HTTP 429, network failures, and malformed payloads return `null`.
-
-## 11. Multi-angle Spot Grouping
-
-`groupPointsIntoSpots` treats Anitabi folders as authoritative. For loose
-points that have no folder metadata, it groups same-location cuts only when the
-normalized names match and the representative coordinates are within 60m.
-
-Loose-point name normalization folds Unicode with NFKC and strips common
-multi-angle suffixes before comparison:
-
-- `別角度`
-- `別カット`
-- `アングル`
-- `その[0-9]+`
-- trailing ASCII or full-width digits
-- trailing circled numerals such as `①②③`
-- trailing bracketed notes such as `（別角度）`
-
-The 60m threshold and folder-first representative ordering are unchanged.
-
-## 12. Screenshot Scene Identification
-
-Scene identification is a user-triggered bridge between local screenshots,
-trace.moe anime metadata, and Anitabi pilgrimage points. The UI never calls the
-provider directly.
-
-Provider behavior:
-
-- Search requests are serialized through the shared `traceMoe` RateLimiter
-  channel with a 1,000ms minimum interval.
-- HTTP 402 is a shared `service-limited` state because trace.moe conflates
-  quota and concurrency. HTTP 429 registers `Retry-After` (60 seconds when
-  absent) and returns `rate-limited`. Neither status retries automatically.
-- Only the highest-similarity valid result is considered. Similarity below 0.9
-  is `no-match`.
-- `episode` may be a number, string, array, or null. Episode/scene matching
-  requires one unambiguous positive numeric episode.
-- A finite `at` timestamp is preferred. When absent, the midpoint of finite
-  `from` and `to` values is used.
-- Preview URLs are transient display data. They may be carried in memory or as
-  route chrome seeds, but are never written to app storage or the database.
-
-Before upload, the selected image is re-encoded as JPEG and images wider than
-640px are downscaled without upscaling smaller images. Temporary upload files
-are deleted best-effort. The first trace search requires a versioned local
-disclosure acknowledgement; accepting it is the only persisted scene-ID state.
-
-Anitabi match ladder:
-
-- `scene`: episode matches and one or more points with real timestamps are
-  within 15 seconds. Candidates are sorted by absolute timestamp delta.
-- `episode`: episode matches real points but no timestamp is within 15 seconds.
-- `anime`: the mapped work has pilgrimage data but no episode match.
-- `identified`: trace.moe identified an anime but no mapped pilgrimage work is
-  available.
-
-Points with `ep <= 0` or `s <= 0` cannot participate in scene matching. An
-existing Anitabi point with both values uses that metadata directly and does
-not spend a trace.moe request. An incomplete point may be explicitly searched,
-but its known Bangumi identity remains authoritative; a result mapped to a
-different work is rejected.
-
-Navigation carries an optional `focusSpotId` into `/pilgrimage/[animeId]`. The
-detail route consumes a focus once after points are available and must not
-reopen the sheet after the user closes it during that mount.
-
-## 13. Local Intel Layer
-
-The local intel layer surfaces curated locality data around pilgrimage spots —
-anime-tied shops, collab events (stamp rallies, festivals, collab cafes), and
-best-viewing hints — plus real solar timing computed from spot coordinates.
-All curated content is human-verified: every entry carries provenance
-(`sourceUrl`, `verifiedAt`) and entries missing `id`, `kind`, `sourceUrl`, or
-`verifiedAt` are dropped during load. The layer never fabricates data: ended
-events can never present as active, unannounced festival dates are shown as
-"date TBA", and displayed time windows come from real solar math.
-
-Dataset and loading:
-
-- One bundled dataset `local-intel.data.json` with the standard envelope
-  (`generatedAt`, `source`, `count`, `entries[]`, optional `$schema`).
-- Entries are a discriminated union on `kind`: `shop`, `event`, `viewing_hint`.
-  The loader lazily `require()`s the bundle on first access, partitions by
-  kind, and memoizes. Queries are synchronous (frame-1 safe).
-- Entries link to anime via `bangumiIds[]` (a work can span multiple Bangumi
-  subjects) and optionally to Anitabi points via bangumiId-qualified
-  `spotRefs` (point ids are only stable within one anime). Geo proximity
-  (per-entry `radiusM`, default 250m) is the fallback anchor; an exact
-  `spotRefs` match always beats proximity.
-- `hydrateLocalIntelFromRuntime(file)` swaps in a runtime payload (future
-  server sync), guarded by the shared runtime-coverage ratio so a degraded
-  payload cannot replace the bundled seed. Hydration bumps a version counter
-  and notifies subscribers.
-
-Canonical locality migration (schema v1):
-
-- Bundled local-intel, Anime Tourism 88 area rows, and curated news-source
-  definitions migrate into one normalized `Place` / `PlaceRole` / `Event` /
-  `AreaDestination` envelope. Every entity has display-ready provenance and
-  every foreign key is validated before a snapshot can become readable.
-- The bundled conservation baseline is 11 pre-rally local-intel records, 7
-  stamp-rally campaigns with 201 campaign-specific stop roles, 124 Anime
-  Tourism 88 administrative destinations, and 17 news sources. Deduplication
-  may reduce physical Places but never stop memberships.
-- `gamers-numazu` is one Place at the address-backed coordinate
-  `[35.101505, 138.856827]`, carrying one shop role plus three campaign stop
-  roles and every distinct source credit used by the merge.
-- Anime Tourism 88 city rows are coordinate-free area destinations. City
-  centroids may frame a viewport but cannot become `Place.geo` or visitable
-  map markers.
-- Scene Places are an async overlay projected by `AnitabiSceneProjector` from
-  the existing detailed-points fetch/cache and `groupPointsIntoSpots` path.
-  The locality bundle never copies or forks Anitabi point data.
-- Existing local-intel, Anime Tourism 88, and news reader APIs are compatibility
-  projections over the canonical repository. Replacing the bundled loader
-  with a validated remote loader therefore requires no reader change.
-
-P2 event and map surfaces:
-
-- `/pilgrimage/event/[eventId]` is the first-class destination for an event or
-  campaign. It joins the canonical event to its `stamp_stop` and
-  `festival_venue` roles, renders every stop with its sourced name/address,
-  Google Maps search target, map pin, and visible provenance, and stores stamp
-  progress by canonical role id rather than by place or display label.
-- The 聖地資訊 Activities tab is the event home: a vertical canonical list with
-  localized date/state, venue/area, anime cover/title, category, stop count,
-  status, and attribution. The former horizontal hub rail is retired; every
-  event row and reminder entry opens the first-class event destination.
-- Hub and anime-detail maps keep one additive marker layer. Scene markers remain
-  unchanged while canonical `stamp_stop`, `shop`, and `festival_venue` roles
-  use distinct pin shapes/icons and a visible legend. Anime Tourism 88 city-only
-  rows use labelled `precision: area` markers; they never expose navigation or
-  visit state and never acquire a `Place.geo`.
-- Canonical provenance is visible UI, not hidden metadata: each credit renders
-  localized `sourceName`, an official/source link, `verifiedAt`, and any
-  license/copyright notice beside the relevant event, stop, shop, or guide.
-
-Event scheduling is a pure date-state machine over `now`:
-
-- `fixed` schedules compare `now` against `[startsAt 00:00, endsAt 23:59:59]`
-  in the event timezone (date-only strings are end-of-day inclusive).
-  States: `upcoming` (with days-until), `active`, `ended`.
-- `annual` schedules carry `typicalMonth` plus zero or more per-year
-  `confirmed` occurrences. The latest relevant confirmed occurrence wins;
-  when only past occurrences exist the state is `unannounced` (rendered as
-  "held annually in month N · dates TBA" — a date is never synthesized).
-  `discontinued` forces `ended`.
-- `ongoing` schedules model permanent programs with no end date; they are
-  always `active` and are never reminder-schedulable (there is no start to
-  remind about).
-- Integrated-list ordering: `active` events first (ongoing programs use the
-  localized Permanent/常設 label), then dated `upcoming` by start date, then
-  honestly `unannounced` annuals by typical month, and visibly `ended` history
-  last. Keeping ended campaigns reachable is what makes all 201 preserved
-  stamp-stop memberships inspectable. The legacy reader retains its horizon
-  projection for compatibility only.
-- Calendar projection groups those canonical rows into a requested civil month
-  using only real `active` or `upcoming` occurrence windows. Fixed and confirmed
-  annual windows are clipped to the month; ongoing, unannounced, and ended
-  records contribute no day key, so the calendar can never synthesize a date.
-
-Solar timing (`solar.ts`) implements the NOAA sunrise/sunset algorithm as
-pure functions with no dependencies: sunrise, sunset, solar noon, and the
-morning/evening golden-hour windows (sun altitude between the horizon and
-+6°) for a lat/lng and civil date. Polar edge cases return an explicit
-`polar` flag instead of fabricated times. Formatting uses
-`Intl.DateTimeFormat` with a fixed-offset fallback (Asia/Tokyo = UTC+9, no
-DST) so correctness never depends on Hermes `Intl` support. Every spot may
-display its computed golden-hour window; spots with a curated viewing hint
-upgrade to the full best-time card. Computed windows reuse the
-`{ jp, en, range }` display shape from scene analysis but are flagged
-`computed: true`.
-
-Event reminders reuse the notification stack:
-
-- New `NotificationKind` `pilgrimage_event`; per-event scheduling via
-  `cancelByRef`-compatible refs; preference gate `pilgrimageEventReminders`
-  (default on) validated through the standard preference validator.
-- Trigger time is 09:00 event-local on the day before `startsAt`. If that
-  slot has passed but the event has not started, the trigger falls back to
-  now + 5 minutes. Events already started or ended cannot be scheduled;
-  only `upcoming` occurrences are schedulable.
-- Notification taps route to `/pilgrimage/{animeId}?intelEvent={eventId}`;
-  a missing anime id routes nowhere.
-
-Localized text on entries uses `{ ja, en?, zhHant?, zhHans? }` with `ja`
-canonical. Resolution follows the user's title-language priority; `zhHans`
-converts to Traditional via OpenCC when `zhHant` is absent. Resolved values
-are tagged with their `TranslationSource` so the UI never misrepresents
-machine translation as native text.
-
-## 14. Test Coverage
-
-- PILG-001: `AnitabiService.getAnimePilgrimage` returns `null` on 404
-- PILG-002: Caches fetched result in memory (second call no HTTP)
-- PILG-003: Persists to SQLite; reads from SQLite on cold start
-- PILG-004: Expires after 7 days
-- PILG-005: `AnimePilgrimageCard` renders all required fields
-- PILG-006: `AnimePilgrimageCard` shows distance badge only when prop provided
-- PILG-007: `AnimePilgrimageCard` `onPress` callback invoked with full `anime` object
-- PILG-008: `AnimePilgrimageCard` calls haptic feedback on press
-- PILG-009: `NearbyPilgrimageBadge` renders nothing until loaded
-- PILG-010: `NearbyPilgrimageBadge` swallows fetch errors (no UI break)
-- PILG-011: Pilgrimage repository falls back to ID mapping when bangumi ID absent
-- PILG-012: SQLite schema migration is idempotent
-- PILG-013 (E2E): Anime detail with `bangumi.id` → pilgrimage screen → spot list visible
-- PILG-014: Official static catalog and page payloads decode into complete anime and point data
-- PILG-015: A degraded runtime index cannot replace the bundled index
-- PILG-016: Search folds Traditional/Simplified Chinese and reads official English titles
-- PILG-017: Image URLs stay on the image CDN and invalid website-image cache values self-heal
-- PILG-018: JSON uses the API first and requests official website data only after HTTP 403
-- PILG-019: Bangumi fallback always unions with local index hits instead of being suppressed
-- PILG-020: Street view resolver uses iOS Look Around first and Mapillary fallback
-- PILG-021: Mapillary token missing silently disables street view metadata
-- PILG-022: Street view resolver caches Look Around availability by coordinate
-- PILG-023: Mapillary client falls back from 50m radius to bbox and orders parsed images
-- PILG-024: Mapillary HTTP/rate-limit/network/decoding failures return `null`
-- PILG-025: Loose Anitabi scene cuts with angle suffixes merge when within 60m
-- PILG-026: Warm street view cache resolves synchronously so warm opens skip the skeleton
-- PILG-027: Successful empty Mapillary answers are cached; errors are not
-- PILG-028: Look Around scene-unavailable corrects the cached verdict and re-resolves to Mapillary
-- PILG-029: trace.moe results are safely decoded and low-similarity results are rejected
-- PILG-030: trace.moe requests are serialized and map 402/429 without automatic retry
-- PILG-031: AniList results resolve to sorted Anitabi timestamp candidates
-- PILG-032: ambiguous/non-numeric episodes cannot produce episode or scene matches
-- PILG-033: an identified anime remains actionable without pilgrimage data
-- PILG-034: complete Anitabi metadata bypasses trace and fallback rejects cross-anime results
-- PILG-035: `focusSpotId` round-trips and is consumed once
-- PILG-036: upload resize policy caps width and temporary cleanup continues after errors
-- PILG-037: first-use disclosure acknowledgement persists under a versioned key
-- PILG-038: same-episode points outside the scene window remain episode candidates
-- PILG-039: local intel dataset loads, partitions by kind, and drops entries missing provenance
-- PILG-040: fixed event date-state transitions honor end-of-day-inclusive endsAt in the event timezone
-- PILG-041: annual recurrence picks the latest confirmed occurrence, falls back to unannounced, and never synthesizes dates
-- PILG-042: solar sunrise/sunset match NOAA reference values within tolerance and polar latitudes return an explicit flag
-- PILG-043: golden-hour windows precede sunset and format as HH:mm with a fixed-offset timezone fallback
-- PILG-044: viewing-hint resolution prefers exact spotRefs over geo proximity with radius boundaries
-- PILG-045: shop queries filter by bangumiId and sort geo results by distance within radius
-- PILG-046: event reminder triggers fire day-before 09:00 local with past-slot fallback and reject started events
-- PILG-047: pilgrimageEventReminders preference validates and gates scheduling
-- PILG-048: pilgrimage_event notification taps route to first-class event detail when eventId exists and falls back to anime detail only when it does not
-- PILG-049: runtime hydration swaps data, bumps version, notifies subscribers, and rejects low-coverage payloads
-- PILG-050: localized intel text resolves by language priority with zh-Hans→zh-Hant conversion and source tagging
-- PILG-051: hub rail orders active, dated upcoming, then unannounced-in-horizon events deduplicated by id
-- PILG-052: event date blocks localize active, upcoming, ongoing, and unannounced states without embedded UI copy
-- PILG-053: canonical bundled migration conserves every legacy record and membership while emitting coordinate-free Anime Tourism 88 destinations
-- PILG-054: Gamers Numazu resolves to one reviewed Place with four roles and merged provenance; invalid role anime links and failed refreshes retain the last-known-good snapshot
-- PILG-055: scene projection delegates to the existing Anitabi detailed-point source and grouping pipeline and remains outside the bundled snapshot
-- PILG-056: canonical event detail joins every campaign stop or festival venue to its Place, map target, provenance, and first-class route
-- PILG-057: stamp progress persists by namespaced canonical stamp-stop role id without colliding with scene visit state
-- PILG-058: canonical stamp, shop, and festival roles project as distinct exact pins while all 124 Anime Tourism 88 rows remain labelled non-visitable areas
-- PILG-059: canonical calendar mapping expands only real active/upcoming occurrence windows into requested-month day keys and clips cross-month ranges
-
-## 15. Future Extensions (out of MVP scope)
-
-- Embedded `react-native-maps` view
-- "Nearby" mode using `expo-location` to compute distances
-- Proximity-verified or shared campaign stamp progress
-- Photo capture at location with EXIF geo verification
-- Itinerary builder spanning multiple anime/spots
+Pilgrimage discovery uses Aniseekr Atlas as its sole anime location data source.
+The app resolves an anime to an Atlas franchise key, loads that work's spots,
+and uses Atlas spot coordinates for maps and nearby discovery. Reference images
+are imported by the user; Atlas does not provide scene images.
+
+## 2. Atlas contract
+
+The client reads `https://atlas.aniseekr.moe/meta.json`, then resolves assets
+from its versioned `/v/<dataVersion>/` paths. The works index has rows with
+`key`, `ja`, `en`, localized `zh`, `mal`, optional `bgm`, `n`, `conf`, and
+`cities`. A work document has `spots`; each spot carries Japanese name and
+address, confidence, optional coordinates, scenes, and source records. The
+spots-lite document uses column names plus positional rows. `moved.json` maps
+old spot ids to a replacement id or `null` when the spot was removed.
+
+The bundled works snapshot seeds the first frame. All network-backed payloads
+use `CacheService`, with synchronous cache reads for first paint and
+stale-while-revalidate for expired entries. A 404 for a versioned asset causes
+one meta refresh and one retry. Missing network and cache data is an error.
+
+## 3. Domain types
+
+`PilgrimageWork` represents one Atlas franchise document. `PilgrimageSpot`
+contains `id`, `name`, `address`, nullable latitude and longitude, precision,
+confidence, scenes, and sources. It has no image field. Spots without a
+location remain visible in the list with an explicit unconfirmed-location
+label and are omitted from maps and nearby results.
+
+## 4. Anime resolution
+
+Resolution order is Bangumi id, MAL id, exact normalized Japanese or English
+title, then AniList PREQUEL relations for at most three hops. Title
+normalization uses the Atlas API normalization contract (NFKC, lowercase, and
+removal of listed punctuation and whitespace). Relation results are cached.
+No fuzzy match or fallback franchise is allowed; unresolved anime return null.
+
+## 5. UI behavior
+
+Work covers use the Bangumi common image when an Atlas row has a Bangumi id,
+then the anime's own cover. Spot rows show episode badge, name, address, and
+confidence without scene imagery. Reference comparison uses a user-imported
+screenshot. Unverified confidence and reference-based episode/time metadata
+must be labelled honestly. User-facing fixed strings use `useT()`.
+
+## 6. Non-Atlas sources
+
+Anime Tourism 88 and canonical locality/event data remain separate products;
+they do not provide anime pilgrimage spots or scene imagery.
+
+## 7. Legacy record migration
+
+On the first launch after the Atlas migration, the app migrates capture-index,
+visited, and saved/planned intent records off retired spot ids. It resolves the
+record's Bangumi id through the Atlas work resolver, then selects the nearest
+located spot in that work at a haversine distance of at most 50 metres. Captures
+receive Atlas name, coordinates, and scene timing; old remote image URLs are
+cleared. Colliding captures remain newest-first, visited timestamps keep the
+earliest value, and intent flags are combined.
+
+If an Atlas match is unavailable, the original id and user record are retained
+and marked legacy. Visited records recover coordinates and Bangumi id only from
+the old on-device detail cache. Missing network-backed work files postpone the
+migration without setting its versioned done flag. Each store is replaced
+atomically, so a later launch can safely resume after interruption. Local photo
+files are never inspected, moved, or deleted.
+An in-progress journal distinguishes already rehomed ids if a later store write
+fails and the migration retries.
+
+When a stored capture id is absent from the loaded Atlas work, album hydration
+uses the same 50 metre matcher as a display-only safety net. Explicitly legacy
+records stay unpaired and are labelled "Old spot".
+
+## 8. Offline trip pack (Pro)
+
+A Pro user can download one work for offline use. Viewing stays free; only the
+download action is gated (`useSubscription().isPro`, else `PaywallSheet`).
+A pack stores the work's Atlas index row and work document (spots, scenes,
+addresses, confidence, sources) plus OpenFreeMap vector tiles around the
+located spots, under `Documents/offline-packs` so clearing caches keeps it.
+User-imported reference screenshots already live in Documents and are never
+touched by packs.
+
+Tiles follow the OpenFreeMap Terms of Service for offline downloads: at most
+3,000 tiles and 50 MB per download, at most 4 parallel requests, and a
+User-Agent naming the app. The plan keeps an overview of the spots' bounding
+box at z5–z8 and walking radii around each spot up to z14, shrinking radii
+until it fits; the z14 tile under each spot is never dropped. Packs download
+one at a time. If the byte cap stops the download the pack is kept and labelled
+as a partial map. The size estimate shown before downloading is the planned
+tile count times a measured mean tile size plus the work data size.
+
+Reads use live Atlas first. Only when the network and `CacheService` both fail
+does the stored pack answer, and the work carries `offlineCopy.downloadedAt`
+so the UI says "offline copy · date". Without a pack this remains an error.
+When the Atlas `dataVersion` differs from the pack's, the pack offers an
+update; when the latest version is unknown it claims neither. The map engine
+loads the pack's on-device style (local tiles, glyphs, sprite) while a probe of
+the Atlas host fails or when the user forces cached tiles. Size, update and
+delete are listed in Settings → Cache.

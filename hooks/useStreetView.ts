@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { Platform } from 'react-native';
 
-import type { AnitabiPoint } from '../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../libs/services/pilgrimage/types';
 import { isFiniteCoordinate } from '../libs/services/pilgrimage/street-view/coords';
 import {
   markLookAroundUnavailable,
@@ -103,11 +103,11 @@ export function shouldStartStreetViewResolve(
   return enabled && targetKey !== null && state.targetKey === targetKey && state.status === 'idle';
 }
 
-export function streetViewTargetFromSpot(spot: AnitabiPoint | null): StreetViewTarget | null {
-  if (!spot || !Array.isArray(spot.geo) || spot.geo.length < 2) return null;
+export function streetViewTargetFromSpot(spot: PilgrimageSpot | null): StreetViewTarget | null {
+  if (!spot || spot.lat === null || spot.lon === null) return null;
 
-  const latitude = Number(spot.geo[0]);
-  const longitude = Number(spot.geo[1]);
+  const latitude = Number(spot.lat);
+  const longitude = Number(spot.lon);
   if (!isUsableSpotCoordinate(latitude, longitude)) return null;
 
   return {
@@ -126,7 +126,7 @@ export interface UseStreetViewResult extends Pick<StreetViewState, 'status' | 'r
 }
 
 export function useStreetView(
-  spot: AnitabiPoint | null,
+  spot: PilgrimageSpot | null,
   {
     enabled,
     platform = Platform.OS,

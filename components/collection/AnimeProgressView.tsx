@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import type { TranslationKey } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
@@ -12,6 +12,7 @@ import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { RatingSlider } from '../common/RatingSlider';
 import { AnimeStatus, AnimeStatusBadge } from '../common/AnimeStatusBadge';
 import { ThemedBottomSheet, readableTextOn } from '../themed';
+import { CapsText } from '../themed/CapsText';
 
 export interface AnimeProgress {
   status: AnimeStatus;
@@ -107,9 +108,9 @@ function AnimeProgressViewComponent({
             showsVerticalScrollIndicator={false}
             bottomOffset={20}
             keyboardShouldPersistTaps="handled">
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('commonUi.status')}
-            </Text>
+            </CapsText>
             <View style={styles.statusGrid}>
               {STATUS_OPTIONS.map((opt) => {
                 const active = draft.status === opt.key;
@@ -144,9 +145,9 @@ function AnimeProgressViewComponent({
 
             {draft.status !== 'planning' ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                   {t('commonUi.episodes')}
-                </Text>
+                </CapsText>
                 <View
                   style={[
                     styles.counterRow,
@@ -182,9 +183,9 @@ function AnimeProgressViewComponent({
 
             {draft.status === 'rewatching' ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                   {t('collectionUi.rewatches')}
-                </Text>
+                </CapsText>
                 <View
                   style={[
                     styles.counterRow,
@@ -216,9 +217,9 @@ function AnimeProgressViewComponent({
 
             {draft.status !== 'planning' ? (
               <>
-                <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
                   {t('commonUi.score')}
-                </Text>
+                </CapsText>
                 <View style={styles.scoreRow}>
                   <Text style={[styles.scoreValue, { color: theme.accent }]}>
                     {draft.score.toFixed(1)}
@@ -234,9 +235,9 @@ function AnimeProgressViewComponent({
               </>
             ) : null}
 
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('collectionUi.notes')}
-            </Text>
+            </CapsText>
             <TextInput
               value={draft.notes}
               onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   statusLabel: {
@@ -327,13 +328,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     paddingVertical: 4,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   counterButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     minHeight: 80,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     padding: Spacing.sm + 2,
     ...Typography.bodyMedium,
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
   footerButton: {
     flex: 1,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     alignItems: 'center',
   },
   cancelButton: {

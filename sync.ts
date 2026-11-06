@@ -212,10 +212,7 @@ async function runUIVerification(): Promise<void> {
   log('Checking core components...', COLORS.yellow);
 
   const coreComponents = [
-    'components/profile/ProfileHeader.tsx',
-    'components/profile/StatsGrid.tsx',
     'components/profile/EditProfileSheet.tsx',
-    'components/gacha/GachaUI.tsx',
     'components/gacha/CardPackOpening.tsx',
     'components/achievements/Achievements.tsx',
     'components/common/AnimatedPressable.tsx',

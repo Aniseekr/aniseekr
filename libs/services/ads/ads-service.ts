@@ -5,7 +5,7 @@ export type { AdSlot } from './ad-config';
 type AdRequestOptions = { requestNonPersonalizedAdsOnly?: boolean };
 
 interface AdsModule {
-  default: { initialize: () => Promise<unknown> };
+  default: () => { initialize: () => Promise<unknown> };
   InterstitialAd: {
     createForAdRequest: (unitId: string, options?: AdRequestOptions) => InterstitialController;
   };
@@ -71,7 +71,7 @@ export class AdsService {
     if (!mod) return;
 
     try {
-      await mod.default.initialize();
+      await mod.default().initialize();
       this.initialized = true;
     } catch (error) {
       console.error('[ads] initialize failed', error);

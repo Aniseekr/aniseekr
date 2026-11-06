@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Colors, Shadow, Typography } from '../../../../../constants/DesignSystem';
+import { Colors, Radius, Shadow, Typography } from '../../../../../constants/DesignSystem';
 import type {
   MapMarker,
   MapMarkerMode,
@@ -14,7 +14,6 @@ import {
   resolveMarkerVisual,
   type MarkerVisual,
 } from '../../../../../libs/services/pilgrimage/map-engine/marker-style';
-import { anitabiImageSource } from '../../../../../libs/services/pilgrimage/anitabi-image';
 import { readableTextOn } from '../../../../themed/contrast';
 import { sanitizeImageUri } from '../../../spot-image-uri';
 
@@ -94,13 +93,11 @@ function BalloonMarker({
             styles.photoFallback,
             { backgroundColor: visual.ringColor },
           ]}>
-          <Text style={[styles.photoFallbackPin, { color: readableTextOn(visual.ringColor) }]}>
-            📍
-          </Text>
+          <Ionicons name="location" size={20} color={readableTextOn(visual.ringColor)} />
         </View>
         {imageUri ? (
           <Image
-            source={anitabiImageSource(imageUri)}
+            source={{ uri: imageUri }}
             style={StyleSheet.absoluteFill}
             onError={() => undefined}
           />
@@ -130,7 +127,7 @@ function Gold88Marker({ visual, chrome }: { visual: MarkerVisual; chrome: Marker
             ...Shadow.glow(visual.ringColor),
           },
         ]}>
-        <Text style={[styles.star, { color: readableTextOn(visual.ringColor) }]}>★</Text>
+        <Ionicons name="star" size={18} color={readableTextOn(visual.ringColor)} />
       </View>
       <View style={[styles.tail, { borderTopColor: chrome.chrome }]} />
       <Badge visual={visual} chrome={chrome} />
@@ -152,7 +149,7 @@ function LocalityPinMarker({
       ? 'ticket-outline'
       : marker.kind === 'shop'
         ? 'storefront-outline'
-        : 'sparkles-outline';
+        : 'bonfire-outline';
   const border = visual.visited ? chrome.visited : chrome.chrome;
   const foreground = readableTextOn(visual.ringColor);
   const shapeStyle =
@@ -243,8 +240,11 @@ function NativeMapMarkerImpl({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={marker.title}
+      accessibilityState={{ selected: marker.selected === true }}
       onPress={() => onPress?.(marker)}
-      onLongPress={onLongPress ? () => onLongPress(marker) : undefined}>
+      onLongPress={onLongPress ? () => onLongPress(marker) : undefined}
+      // The picked spot grows from its tip so it still points at the place.
+      style={marker.selected ? styles.selected : undefined}>
       {visual.shape === 'dot' ? (
         <DotMarker visual={visual} chrome={chrome} />
       ) : visual.shape === 'gold88' ? (
@@ -263,6 +263,7 @@ function NativeMapMarkerImpl({
 export const NativeMapMarker = memo(NativeMapMarkerImpl);
 
 const styles = StyleSheet.create({
+  selected: { transform: [{ scale: 1.3 }], transformOrigin: 'bottom', zIndex: 1 },
   balloonBox: { alignItems: 'center' },
   photo: {
     width: 48,
@@ -275,7 +276,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoFallbackPin: { ...Typography.titleLarge },
   tail: {
     width: 0,
     height: 0,
@@ -312,11 +312,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stampDisc: {
-    borderRadius: 18,
+    borderRadius: Radius.card,
     borderStyle: 'dashed',
   },
   shopFrame: {
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   shopTape: {
     position: 'absolute',
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     marginTop: 3,
-    borderRadius: 5,
+    borderRadius: Radius.sm,
     transform: [{ rotate: '45deg' }],
   },
   festivalIcon: {
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 17,
     height: 17,
-    borderRadius: 9,
+    borderRadius: Radius.sm,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: 18,
+    borderRadius: Radius.card,
     paddingHorizontal: 8,
   },
   areaText: {
@@ -373,15 +373,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flexShrink: 1,
   },
-  star: { ...Typography.titleLarge },
   dotBox: { alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
+  dot: { width: 18, height: 18, borderRadius: Radius.card, borderWidth: 3 },
   badge: {
     position: 'absolute',
     minWidth: 18,
     paddingHorizontal: 4,
     paddingVertical: 1,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

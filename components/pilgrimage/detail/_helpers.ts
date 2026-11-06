@@ -6,30 +6,20 @@
 
 import { Platform } from 'react-native';
 import type { PlatformType } from '../../../libs/services/auth/types';
-import type { AnitabiPoint } from '../../../libs/services/pilgrimage/types';
-import type { PilgrimageSeriesPoint } from '../../../libs/services/pilgrimage/pilgrimage-series';
+import type { PilgrimageSpot, PilgrimageSpotConfidence } from '../../../libs/services/pilgrimage/types';
+import type { useT } from '../../../libs/i18n';
 
-// Use the `www.` subdomain for all anitabi.cn links. The apex domain issues a
-// 301 redirect that silently STRIPS the `/map` segment from the path
-// (`anitabi.cn/map?bangumiId=297` → `www.anitabi.cn/?bangumiId=297`), which
-// drops users onto the homepage instead of the anime map. Hitting `www.`
-// directly returns 200 with the map preserved.
-const ANITABI_BASE_PAGE = 'https://www.anitabi.cn/bangumi/';
-const ANITABI_MAP_PAGE = 'https://www.anitabi.cn/map?bangumiId=';
-const ANITABI_SITE_HOME = 'https://www.anitabi.cn/';
+type Translate = ReturnType<typeof useT>;
 
-/**
- * URL of the Anitabi web map for a given anime — the entry point we link
- * users to when they want to see every landmark (more than we fetch via the
- * /points API), or to contribute a new spot by clicking an empty coordinate.
- */
-export function buildAnitabiMapUrl(bangumiId: number): string {
-  return `${ANITABI_MAP_PAGE}${bangumiId}`;
-}
-
-/** URL of the Anitabi homepage — used for the global "data by Anitabi" credit. */
-export function getAnitabiSiteUrl(): string {
-  return ANITABI_SITE_HOME;
+export function getSpotConfidenceLabel(t: Translate, confidence: PilgrimageSpotConfidence): string {
+  switch (confidence) {
+    case 'confirmed':
+      return t('pilgrimage.confidence.confirmed');
+    case 'single':
+      return t('pilgrimage.confidence.single');
+    case 'unverified':
+      return t('pilgrimage.confidence.unverified');
+  }
 }
 
 export function buildMapsURL(lat: number, lng: number, name?: string): string {
@@ -47,6 +37,23 @@ export function hasValidGeo(geo: readonly [number, number] | null | undefined): 
   return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
 }
 
+export function getSpotGeo(spot: PilgrimageSpot): [number, number] | null {
+  if (spot.lat === null || spot.lon === null) return null;
+  return hasValidGeo([spot.lat, spot.lon]) ? [spot.lat, spot.lon] : null;
+}
+
+export function getSpotEpisode(spot: PilgrimageSpot): string | null {
+  return spot.scenes[0]?.episode ?? null;
+}
+
+export function getEpisodeNumber(spot: PilgrimageSpot): number | undefined {
+  for (const scene of spot.scenes) {
+    const match = scene.episode.match(/\d+/);
+    if (match) return Number(match[0]);
+  }
+  return undefined;
+}
+
 export function formatDistanceKm(km: number): string {
   if (!Number.isFinite(km)) return '';
   if (km < 1) return `${Math.round(km * 1000)} m`;
@@ -56,17 +63,7 @@ export function formatDistanceKm(km: number): string {
 
 export function buildBrowseUrl(platform: PlatformType, bangumiId: number): string | null {
   if (platform === 'bangumi') return `https://bgm.tv/subject/${bangumiId}`;
-  return `${ANITABI_BASE_PAGE}${bangumiId}`;
-}
-
-export function getPointSourceBangumiId(point: AnitabiPoint): number | null {
-  const source = (point as Partial<PilgrimageSeriesPoint>).sourceBangumiId;
-  return typeof source === 'number' && Number.isFinite(source) && source > 0 ? source : null;
-}
-
-export function getPointSourceLabel(point: AnitabiPoint): string | null {
-  const label = (point as Partial<PilgrimageSeriesPoint>).sourceLabel;
-  return typeof label === 'string' && label.length > 0 ? label : null;
+  return null;
 }
 
 /** Great-circle initial bearing from the user to a spot, degrees 0–360 (north = 0). */

@@ -1,7 +1,7 @@
 # Canonical locality migration map
 
 Status: **P1b implemented (uncommitted)**. The schema-v1 bundled migration,
-validator, repository, Anitabi projection adapter, and compatibility reader
+validator, repository, legacy source projection adapter, and compatibility reader
 cutover described below now live in this directory. The legacy source files and
 types remain as reviewed ingestion/catalog inputs until the chained P1b → P2 →
 P3 → P5 build receives its single batch review.
@@ -46,7 +46,7 @@ Implementation details:
   it honestly falls back to the sourced prefecture name `東京都` as an
   administrative area. No city/prefecture centroid enters `Place.geo` or the
   exact-pin marker path.
-- `AnitabiPipelineSceneProjector` delegates to the existing detailed-points
+- `legacy scene projector` delegates to the existing detailed-points
   fetch/cache and `groupPointsIntoSpots` implementation. Projected Places and
   `scene` roles are query-time overlays and never enter the bundled snapshot.
 - The local-intel, Anime Tourism 88, and news-source modules now act as legacy
@@ -84,7 +84,7 @@ Implementation details:
 P1b should build a reviewed legacy-ref-to-`PlaceId` registry before emitting
 the envelope. Candidate matches are evaluated in this order:
 
-1. a qualified Anitabi `bangumiId + pointId` already assigned to a Place;
+1. a qualified legacy source `bangumiId + pointId` already assigned to a Place;
 2. the same upstream stable id or the same verified full street address;
 3. a reviewed business/landmark name plus corroborating address;
 4. a reviewed name plus close exact coordinates from independent sources.
@@ -104,7 +104,7 @@ rerunning ingestion reuses that slug.
 | `local-intel/local-intel.data.json` viewing hints |                                         1 | Place + `PlaceGuide`                                        |
 | `anime-tourism-88.data.json`                      |                    124 anime-by-city rows | 124 coordinate-free `AreaDestination`s                      |
 | `news/news-sources.data.json`                     |                                  17 feeds | 17 `LocalityNewsSource`s in the same envelope               |
-| existing Anitabi point pipeline                   |                     dynamic grouped spots | projected Place + `SceneRole`; no copied/forked dataset     |
+| existing legacy source point pipeline                   |                     dynamic grouped spots | projected Place + `SceneRole`; no copied/forked dataset     |
 
 The 201 stamp memberships are intentionally not reduced: deduplication reduces
 physical Places, not a Place's participation in separate campaigns. The current
@@ -124,7 +124,7 @@ count is a safe physical-identity count without the reviewed registry.
 | `bangumiIds`                             | `ShopRole.animeIds` and the validated `Place.animeIds` aggregate                                                       |
 | `category`                               | `ShopRole.shopCategory`                                                                                                |
 | `animeConnection`, `description`         | `ShopRole.animeConnection`, `ShopRole.description`                                                                     |
-| `spotRefs`                               | strongest Place-identity match to the existing Anitabi projection; not retained as duplicated nested spot data         |
+| `spotRefs`                               | strongest Place-identity match to the existing legacy source projection; not retained as duplicated nested spot data         |
 
 ### Event entry -> LocalityEvent (+ venue entities)
 
@@ -137,7 +137,7 @@ stable. `placeRefs` and `areaRefs` are always explicit arrays.
   Place by id.
 - `geo: null` creates no fake Place. An area-wide event may use an
   `AreaDestination` only when the source actually identifies that area.
-- Legacy `spotRefs` resolve the referenced projected Anitabi Place and then
+- Legacy `spotRefs` resolve the referenced projected legacy source Place and then
   become normal `placeRefs`.
 
 ### Nested stampSpots -> Places + StampStopRoles
@@ -170,7 +170,7 @@ Place at its exact sourced coordinate and preserves the legacy id for the
 `PlaceGuide`. `bangumiIds`, `name`, `description`, `hint`, `bestMonths`, `note`,
 `radiusM`, and the source fields map to `animeIds`, `name`, `description`,
 `guidanceKind`, `bestMonths`, `note`, `appliesWithinMeters`, and provenance.
-If a future qualified Anitabi match is verified, the guide points to that same
+If a future qualified legacy source match is verified, the guide points to that same
 Place; a fifth role kind is not introduced.
 
 ## Worked dedupe: Gamers Numazu
@@ -205,26 +205,26 @@ shop role, not from campaign inheritance. Each of the three campaign events
 contains the same Place id in `placeRefs`. No event contains a duplicate name,
 address, or coordinate.
 
-## Anitabi projection (adapt, do not fork)
+## legacy source projection (adapt, do not fork)
 
-The canonical locality bundle does **not** copy `anitabi-index.data.json` or
-Anitabi point payloads. P1b composes the existing pipeline:
+The canonical locality bundle does **not** copy `legacy source-index.data.json` or
+legacy source point payloads. P1b composes the existing pipeline:
 
 1. existing `normalizeRawPoints` and `groupPointsIntoSpots` continue to own
    point normalization and physical grouping;
-2. each resulting `AnitabiSpot` projects to a Place whose `animeIds` contains
+2. each resulting `legacy spot` projects to a Place whose `animeIds` contains
    the qualified Bangumi id (or resolves through the reviewed identity registry
    to an existing Place);
 3. one `SceneRole` stores the qualified representative
-   `{ bangumiId, pointId: AnitabiSpot.id }`;
+   `{ bangumiId, pointId: legacy spot.id }`;
 4. screenshots, episode/second metadata, and contributor origins remain in the
-   Anitabi pipeline and are joined by that qualified reference;
-5. role provenance carries Anitabi's source/license and any per-point origin
+   legacy source pipeline and are joined by that qualified reference;
+5. role provenance carries legacy source's source/license and any per-point origin
    credit. `[0, 0]` or otherwise unverified coordinates project as `geo: null`.
 
-An `AnitabiSceneProjector` adapter owns this async delegation. This makes
+An `legacy scene projector` adapter owns this async delegation. This makes
 `getPlacesForAnime` an async repository projection over canonical entities plus
-the existing Anitabi adapter, returning each Place with all matching roles
+the existing legacy source adapter, returning each Place with all matching roles
 (including projected `SceneRole`s). The projection is a read overlay rather
 than a second scene ingestion path or a false member of the envelope snapshot.
 
@@ -284,9 +284,9 @@ definitions belong in this envelope.
    persisted/bundled synchronous snapshot from `loadInitial()` and fetches a
    candidate through `loadLatest()`.
 3. Construct one `LocalityRepository` over the chosen loader and an
-   `AnitabiSceneProjector` over the existing Anitabi pipeline. Envelope queries
+   `legacy scene projector` over the existing legacy source pipeline. Envelope queries
    remain synchronous; `getPlacesForAnime` is async because it may load/project
-   Anitabi scenes. Failed/degraded refreshes retain the last good snapshot and
+   legacy source scenes. Failed/degraded refreshes retain the last good snapshot and
    notify only after a valid replacement.
 4. Compatibility projections now keep legacy reader shapes stable. Legacy
    files/types remain intentionally retained for proof and catalog metadata;

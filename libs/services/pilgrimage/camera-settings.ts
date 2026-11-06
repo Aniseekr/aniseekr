@@ -12,6 +12,12 @@ import { isObject, safeJsonParse } from '../../utils/safe-json';
 import type { OverlayMode } from '../../../components/pilgrimage/camera/types';
 import type { EdgeIntensity } from './edge-overlay';
 import type { SubjectFocus } from './subject-overlay';
+import {
+  clampIntensity,
+  DEFAULT_LOOK_INTENSITY,
+  isCameraLookId,
+  type CameraLookId,
+} from './camera-looks';
 
 // The storage key carries a `:v4` suffix: v4 reshaped the settings around
 // VisionCamera's capture model — `skipProcessing` is gone (VisionCamera has no
@@ -112,6 +118,10 @@ export interface CameraSettings {
    * written through on slide-complete.
    */
   overlayOpacityByMode: Record<OverlayMode, number>;
+  /** Film look picked in the look tray (camera-looks.ts). Pro looks fall back without Pro. */
+  look: CameraLookId;
+  /** Look strength 0..1 (Pro). */
+  lookIntensity: number;
 }
 
 /**
@@ -152,6 +162,8 @@ export const DEFAULT_CAMERA_SETTINGS: CameraSettings = {
   subjectFocus: 'normal',
   subjectCombine: false,
   overlayOpacityByMode: { ...DEFAULT_OVERLAY_OPACITY_BY_MODE },
+  look: 'original',
+  lookIntensity: DEFAULT_LOOK_INTENSITY,
 };
 
 /**
@@ -257,6 +269,8 @@ function pickValidSettings(value: Record<string, unknown>): Partial<CameraSettin
   if (isSubjectFocus(value.subjectFocus)) out.subjectFocus = value.subjectFocus;
   if (typeof value.subjectCombine === 'boolean') out.subjectCombine = value.subjectCombine;
   out.overlayOpacityByMode = pickOverlayOpacityByMode(value.overlayOpacityByMode);
+  if (isCameraLookId(value.look)) out.look = value.look;
+  if (typeof value.lookIntensity === 'number') out.lookIntensity = clampIntensity(value.lookIntensity);
   return out;
 }
 

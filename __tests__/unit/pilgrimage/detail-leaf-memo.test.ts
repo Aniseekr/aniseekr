@@ -15,32 +15,32 @@ import {
   filterPillPropsEqual,
   flattenScenesFromGroups,
   hasIntentForSpot,
-  sceneTilePropsEqual,
   seriesSwitchChipPropsEqual,
   spotChipPropsEqual,
-  spotRowPropsEqual,
   statCellPropsEqual,
   visitedCountForPoints,
   type FilterPillEqualityProps,
   type MapMarkerStructural,
-  type SceneTileEqualityProps,
   type SeriesSwitchChipEqualityProps,
   type SpotChipEqualityProps,
-  type SpotRowEqualityProps,
   type StatCellEqualityProps,
 } from '../../../components/pilgrimage/detail/_equality';
-import type { AnitabiPoint, AnitabiSpot } from '../../../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import type { ThemePalette } from '../../../context/ThemeContext';
 import type { SpotIntentMap } from '../../../libs/services/pilgrimage/spot-intents';
 import type { PilgrimageCapture } from '../../../libs/services/pilgrimage/captures';
 
-const sampleSpot: AnitabiPoint = {
+const sampleSpot: PilgrimageSpot = {
   id: 'p1',
   name: 'Sample',
-  image: 'https://img/1.jpg',
-  ep: 1,
-  s: 0,
-  geo: [35.6, 139.7],
+  workKey: 'sample',
+  address: '',
+  note: '',
+  lat: 35.6,
+  lon: 139.7,
+  confidence: 'confirmed',
+  scenes: [{ episode: '第1話' }],
+  sources: [],
 };
 
 const theme = { __sentinel: 'theme' } as unknown as ThemePalette;
@@ -48,46 +48,6 @@ const theme = { __sentinel: 'theme' } as unknown as ThemePalette;
 // Shared at module scope so equality compares stable references — handlers
 // passed from the parent via useCallback are similarly stable in real usage.
 const noop = () => undefined;
-
-function sceneTileProps(overrides: Partial<SceneTileEqualityProps> = {}): SceneTileEqualityProps {
-  return {
-    spot: sampleSpot,
-    sceneCount: 1,
-    themeColor: '#FF9F0A',
-    themeColorFg: '#000',
-    distanceKm: null,
-    visited: false,
-    saved: false,
-    planned: false,
-    hasCapture: false,
-    captureUri: null,
-    theme,
-    onPress: noop,
-    onToggleVisited: noop,
-    onTakeComparison: noop,
-    ...overrides,
-  };
-}
-
-function spotRowProps(overrides: Partial<SpotRowEqualityProps> = {}): SpotRowEqualityProps {
-  return {
-    spot: sampleSpot,
-    sceneCount: 1,
-    themeColor: '#FF9F0A',
-    themeColorFg: '#000',
-    distanceKm: null,
-    visited: false,
-    saved: false,
-    planned: false,
-    hasCapture: false,
-    captureUri: null,
-    theme,
-    onPress: noop,
-    onToggleVisited: noop,
-    onOpenMaps: noop,
-    ...overrides,
-  };
-}
 
 function spotChipProps(overrides: Partial<SpotChipEqualityProps> = {}): SpotChipEqualityProps {
   return {
@@ -148,74 +108,6 @@ function statCellProps(overrides: Partial<StatCellEqualityProps> = {}): StatCell
   };
 }
 
-describe('sceneTilePropsEqual', () => {
-  it('returns true when no tracked prop changed', () => {
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps())).toBe(true);
-  });
-
-  it.each([
-    ['visited', { visited: true }],
-    ['sceneCount', { sceneCount: 5 }],
-    ['themeColor', { themeColor: '#000' }],
-    ['themeColorFg', { themeColorFg: '#fff' }],
-    ['distanceKm', { distanceKm: 1.5 }],
-    ['saved', { saved: true }],
-    ['planned', { planned: true }],
-    ['hasCapture', { hasCapture: true }],
-    ['captureUri', { captureUri: 'file://x.jpg' }],
-  ] as const)('returns false when %s changes', (_label, patch) => {
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps(patch))).toBe(false);
-  });
-
-  it('returns false when handlers change identity', () => {
-    const otherNoop = () => undefined;
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ onPress: otherNoop }))).toBe(
-      false
-    );
-  });
-
-  it('returns false when the underlying spot image changes', () => {
-    const nextSpot: AnitabiPoint = { ...sampleSpot, image: 'https://img/2.jpg' };
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ spot: nextSpot }))).toBe(false);
-  });
-
-  it('returns false when the underlying spot name changes', () => {
-    // Lite→detailed fetch can replace `spot.name` while keeping `id`+`image`.
-    // The equality fn must catch this so the displayed title refreshes.
-    const nextSpot: AnitabiPoint = { ...sampleSpot, name: 'Updated Name' };
-    expect(sceneTilePropsEqual(sceneTileProps(), sceneTileProps({ spot: nextSpot }))).toBe(false);
-  });
-});
-
-describe('spotRowPropsEqual', () => {
-  it('returns true when no tracked prop changed', () => {
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps())).toBe(true);
-  });
-
-  it('returns false when visited flips', () => {
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ visited: true }))).toBe(false);
-  });
-
-  it('returns false when sceneCount changes', () => {
-    expect(
-      spotRowPropsEqual(spotRowProps({ sceneCount: 1 }), spotRowProps({ sceneCount: 3 }))
-    ).toBe(false);
-  });
-
-  it('returns false when the underlying spot name changes', () => {
-    const nextSpot: AnitabiPoint = { ...sampleSpot, name: 'Updated' };
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ spot: nextSpot }))).toBe(false);
-  });
-
-  it('returns false when captureUri changes', () => {
-    // captureUri toggles the rows' single-image / REAL+ANIME split layout, so
-    // the memo must invalidate when it flips between null and a real uri.
-    expect(spotRowPropsEqual(spotRowProps(), spotRowProps({ captureUri: 'file://x.jpg' }))).toBe(
-      false
-    );
-  });
-});
-
 describe('spotChipPropsEqual', () => {
   it('returns true when no tracked prop changed', () => {
     expect(spotChipPropsEqual(spotChipProps(), spotChipProps())).toBe(true);
@@ -225,8 +117,8 @@ describe('spotChipPropsEqual', () => {
     expect(spotChipPropsEqual(spotChipProps(), spotChipProps({ active: true }))).toBe(false);
   });
 
-  it('returns false when spot.ep changes', () => {
-    const nextSpot = { ...sampleSpot, ep: 5 };
+  it('returns false when spot scenes change', () => {
+    const nextSpot = { ...sampleSpot, scenes: [{ episode: '第5話' }] };
     expect(spotChipPropsEqual(spotChipProps(), spotChipProps({ spot: nextSpot }))).toBe(false);
   });
 });
@@ -332,17 +224,21 @@ describe('SpotMapView marker bridge helpers', () => {
 // ---------------------------------------------------------------------
 
 describe('hasIntentForSpot', () => {
-  const spot: AnitabiPoint = sampleSpot;
-  const otherScene: AnitabiPoint = { ...spot, id: 'p2' };
-  const group: AnitabiSpot = {
+  const spot: PilgrimageSpot = sampleSpot;
+  const group: PilgrimageSpot = {
     id: 'g1',
     name: 'Group',
-    image: spot.image,
-    geo: spot.geo,
-    scenes: [spot, otherScene],
+    workKey: spot.workKey,
+    address: '',
+    note: '',
+    lat: spot.lat,
+    lon: spot.lon,
+    confidence: 'confirmed',
+    scenes: spot.scenes,
+    sources: [],
   };
   const spotIntents: SpotIntentMap = {
-    p2: { saved: true },
+    g1: { saved: true },
   };
 
   it('returns true when any scene in the group has the intent', () => {
@@ -378,27 +274,22 @@ describe('hasIntentForSpot', () => {
 // ---------------------------------------------------------------------
 
 describe('flattenScenesFromGroups', () => {
-  const groupA: AnitabiSpot = {
+  const groupA: PilgrimageSpot = {
     id: 'g1',
     name: 'A',
-    image: 'i',
-    geo: [0, 0],
-    scenes: [
-      { id: 'a1', name: 'A1', image: 'i', ep: 1, s: 0, geo: [0, 0] },
-      { id: 'a2', name: 'A2', image: 'i', ep: 1, s: 0, geo: [0, 0] },
-    ],
+    workKey: 'sample', address: '', note: '', lat: 0, lon: 0,
+    confidence: 'confirmed', scenes: [{ episode: '第1話' }, { episode: '第2話' }], sources: [],
   };
-  const groupB: AnitabiSpot = {
+  const groupB: PilgrimageSpot = {
     id: 'g2',
     name: 'B',
-    image: 'i',
-    geo: [0, 0],
-    scenes: [{ id: 'b1', name: 'B1', image: 'i', ep: 1, s: 0, geo: [0, 0] }],
+    workKey: 'sample', address: '', note: '', lat: 0, lon: 0,
+    confidence: 'single', scenes: [{ episode: '第1話' }], sources: [],
   };
 
   it('flattens grouped scenes preserving order', () => {
     const out = flattenScenesFromGroups([groupA, groupB]);
-    expect(out.map((s) => s.id)).toEqual(['a1', 'a2', 'b1']);
+    expect(out.map((s) => s.id)).toEqual(['g1', 'g2']);
   });
 
   it('handles empty input', () => {
@@ -407,10 +298,10 @@ describe('flattenScenesFromGroups', () => {
 });
 
 describe('visitedCountForPoints / capturedCountForPoints', () => {
-  const points: AnitabiPoint[] = [
-    { id: 'p1', name: '', image: '', ep: 1, s: 0, geo: [0, 0] },
-    { id: 'p2', name: '', image: '', ep: 1, s: 0, geo: [0, 0] },
-    { id: 'p3', name: '', image: '', ep: 1, s: 0, geo: [0, 0] },
+  const points: PilgrimageSpot[] = [
+    { ...sampleSpot, id: 'p1' },
+    { ...sampleSpot, id: 'p2' },
+    { ...sampleSpot, id: 'p3' },
   ];
 
   it('counts only ids present in the visited map', () => {

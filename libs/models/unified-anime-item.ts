@@ -89,6 +89,8 @@ export interface UnifiedAnimeItemInit {
   malScore?: number | null;
   bangumiScore?: number | null;
   anilistScore?: number | null;
+  /** AniList users who have this title on any list (AniList `popularity`). */
+  anilistListCount?: number | null;
   maxProgress?: number;
   totalEpisodes?: number | null;
   year?: number | null;
@@ -140,6 +142,7 @@ export class UnifiedAnimeItem {
   readonly malScore: number | null;
   readonly bangumiScore: number | null;
   readonly anilistScore: number | null;
+  readonly anilistListCount: number | null;
 
   readonly maxProgress: number;
   readonly totalEpisodes: number | null;
@@ -214,6 +217,7 @@ export class UnifiedAnimeItem {
     this.malScore = init.malScore ?? null;
     this.bangumiScore = init.bangumiScore ?? null;
     this.anilistScore = init.anilistScore ?? null;
+    this.anilistListCount = init.anilistListCount ?? null;
 
     this.maxProgress = init.maxProgress ?? 0;
     this.totalEpisodes = init.totalEpisodes ?? null;
@@ -441,6 +445,7 @@ export class UnifiedAnimeItem {
       malScore: mal?.malScore ?? null,
       bangumiScore: bangumi?.bangumiScore ?? null,
       anilistScore: anilist?.anilistScore ?? null,
+      anilistListCount: anilist?.anilistListCount ?? null,
       maxProgress,
       totalEpisodes:
         anilist?.totalEpisodes ??

@@ -9,6 +9,12 @@ import { SheetBackdrop } from './SheetBackdrop';
 import { SheetHandle } from './SheetHandle';
 import { useSheetDrag } from './useSheetDrag';
 
+const SUPPORTED_ORIENTATIONS: ('portrait' | 'landscape-left' | 'landscape-right')[] = [
+  'portrait',
+  'landscape-left',
+  'landscape-right',
+];
+
 type ThemedBottomSheetProps = {
   visible: boolean;
   onClose: () => void;
@@ -51,7 +57,14 @@ export function ThemedBottomSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      // iOS aborts the app when a modal presents in an orientation it does not
+      // support; the camera can be locked to landscape when a sheet opens.
+      supportedOrientations={SUPPORTED_ORIENTATIONS}
+      onRequestClose={handleClose}>
       <View style={styles.root}>
         <SheetBackdrop onPress={handleClose} />
         {disableDrag ? panel : <GestureDetector gesture={panGesture}>{panel}</GestureDetector>}

@@ -33,12 +33,13 @@ export function buildCaptureSessionShotFromRoute(params: RouterParams): CaptureS
   const uri = getStringParam(params, 'shotUri');
   if (!uri) return null;
 
-  const spotId = getStringParam(params, 'spotId') ?? 'unknown';
   const createdAt = getFiniteNumber(params, 'capturedAt') ?? 0;
   const note = sanitizeCaptureNote(getStringParam(params, 'note'));
 
   return {
-    id: `route:${spotId}:${createdAt}:${uri}`,
+    // Keyed by the photo alone: re-pairing it with another reference changes
+    // the spot params but must not look like a different shot.
+    id: `route:${createdAt}:${uri}`,
     uri,
     width: getFiniteNumber(params, 'shotWidth') ?? 0,
     height: getFiniteNumber(params, 'shotHeight') ?? 0,
@@ -52,6 +53,22 @@ export function buildCaptureSessionShotFromRoute(params: RouterParams): CaptureS
     userLocation: getUserLocation(params),
     ...(note ? { note } : {}),
   };
+}
+
+/**
+ * The shots a preview shows. A Journal preview is always the one shot it was
+ * opened for — the camera session outlives the camera screen, so whatever it
+ * still holds belongs to an earlier visit. A camera preview is the session's
+ * album (its shots can be deleted down to none; only then the route shot).
+ */
+export function resolvePreviewShots(
+  sessionShots: readonly CaptureSessionShot[],
+  routeShot: CaptureSessionShot | null,
+  origin: string | null
+): readonly CaptureSessionShot[] {
+  if (origin === 'journal' && routeShot) return [routeShot];
+  if (sessionShots.length > 0 || !routeShot) return sessionShots;
+  return [routeShot];
 }
 
 export function resolveCapturePreviewFocus(

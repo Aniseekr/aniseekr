@@ -119,7 +119,7 @@ function SpecialContentCard({
       <ProgressiveImage
         source={{ uri: item.image }}
         containerStyle={styles.cardImage}
-        borderRadius={14}
+        borderRadius={Radius.card}
       />
       {releaseDate && releaseDateLabel ? (
         <View
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 130,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   formatBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   formatLabel: {
     fontSize: 10,

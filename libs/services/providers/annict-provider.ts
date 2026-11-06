@@ -24,14 +24,17 @@ interface AnnictWork {
   episodes_count: number;
 }
 
-interface AnnictLibraryEntry {
-  work: AnnictWork;
+interface AnnictLibraryEntry extends AnnictWork {
   status: { kind: string };
   next_episode: { number: number } | null;
 }
 
 export class AnnictProvider implements WritableAnimeProvider {
   platform: PlatformType = 'annict';
+  supportsProgressUpdates = false;
+  supportsScoreUpdates = false;
+  supportsScoreClearing = false;
+  supportsListRemoval = true;
 
   private async request<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${ANNICT_API}${endpoint}`, {
@@ -107,14 +110,7 @@ export class AnnictProvider implements WritableAnimeProvider {
   }
 
   async updateScore(animeId: string, score: number, token: string): Promise<void> {
-    await this.request('/me/records', token, {
-      method: 'POST',
-      body: JSON.stringify({
-        work_id: parseInt(animeId),
-        kind: 'anime',
-        rating_overall: score,
-      }),
-    });
+    throw new Error('Annict API does not support numeric work scores');
   }
 
   async updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void> {
@@ -150,7 +146,8 @@ export class AnnictProvider implements WritableAnimeProvider {
   }
 
   private mapEntry(entry: AnnictLibraryEntry): UniversalAnimeItem {
-    const { work, status } = entry;
+    const work = entry;
+    const { status } = entry;
 
     const statusMap: Record<string, AnimeStatus> = {
       watching: 'watching',

@@ -174,7 +174,7 @@ function makeStyles() {
       bottom: Spacing.xs,
       minHeight: IconSize.md,
       maxWidth: '72%',
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       flexDirection: 'row',
       alignItems: 'center',

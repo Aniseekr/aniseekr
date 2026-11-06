@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -11,39 +11,50 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useSubscription } from '../../context/SubscriptionContext';
 import type { SubscriptionOfferingPackage } from '../../libs/services/subscription/subscription-service';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { isCameraLookAvailable } from '../../modules/camera-look/src';
 
 function unsupportedMessage(
-  reason: ReturnType<typeof useSubscription>['unsupportedReason']
+  reason: ReturnType<typeof useSubscription>['unsupportedReason'],
+  platform: Platform['OS'],
+  t: (key: TranslationKey) => string
 ): string {
   switch (reason) {
     case 'billing-unavailable':
-      return Platform.OS === 'android'
-        ? 'Google Play Billing is unavailable on this device. Sign in to the Play Store, use a Google Play emulator image, and make sure the app is published to at least the Internal Testing track with your tester account allowlisted.'
-        : 'In-app purchases are unavailable on this device. Sign in to the App Store and try again.';
+      return t(platform === 'android'
+        ? 'subscription.billingUnavailableAndroid'
+        : 'subscription.billingUnavailableIos');
     case 'network':
-      return 'Could not reach the store. Check your connection and try again.';
+      return t('subscription.networkUnavailable');
     case 'no-key':
-      return 'In-app purchases are not configured for this build. Provide EXPO_PUBLIC_REVENUECAT_*_KEY env vars.';
+      return t('subscription.noRevenueCatKey');
     case 'no-module':
     default:
-      return 'In-app purchases are not configured for this build. Run with a development client that bundles react-native-purchases and provide EXPO_PUBLIC_REVENUECAT_*_KEY env vars to test purchases.';
+      return t('subscription.noPurchasesModule');
   }
 }
 
+// What Pro unlocks, in pitch order: pilgrimage travel tools first, then style,
+// then no ads. Only list what ships in this build. Each travel tool (film
+// looks, offline trip pack, Pro export, batch album import) adds its own row
+// above the style row when it lands, with its label under `subscription.*`.
 const FEATURES: {
-  icon: 'block' | 'palette' | 'cloud-sync' | 'auto-awesome';
+  icon: ComponentProps<typeof MaterialIcons>['name'];
   labelKey: TranslationKey;
+  /** Hide the row on devices where the feature can't run (e.g. film looks on iOS). */
+  available?: () => boolean;
 }[] = [
-  { icon: 'block', labelKey: 'subscription.noAds' },
+  { icon: 'cloud-download', labelKey: 'subscription.offlineTripPack' },
+  { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks', available: isCameraLookAvailable },
+  { icon: 'photo-library', labelKey: 'subscription.batchImport' },
+  { icon: 'hd', labelKey: 'subscription.proExport' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
-  { icon: 'cloud-sync', labelKey: 'subscription.unlimitedSyncPlatforms' },
-  { icon: 'auto-awesome', labelKey: 'subscription.pilgrimageOfflineMaps' },
+  { icon: 'block', labelKey: 'subscription.noAds' },
 ];
 
 export interface PaywallSheetProps {
@@ -81,7 +92,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
         hapticsBridge.success();
         onClose();
       } else {
-        setError('Purchase did not complete. Please try again.');
+        setError(t('subscription.purchaseIncomplete'));
       }
     } catch (e) {
       hapticsBridge.error();
@@ -103,7 +114,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
         hapticsBridge.success();
         onClose();
       } else {
-        setError('No active subscription found on this account.');
+        setError(t('subscription.noActiveSubscription'));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('commonUi.restoreFailed'));
@@ -150,7 +161,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
 
           <ScrollView style={{ maxHeight: 480 }}>
             <View style={styles.features}>
-              {FEATURES.map((feature) => (
+              {FEATURES.filter((feature) => feature.available?.() ?? true).map((feature) => (
                 <View key={feature.labelKey} style={styles.featureRow}>
                   <View style={[styles.featureIcon, { backgroundColor: theme.accent + '24' }]}>
                     <MaterialIcons name={feature.icon} size={18} color={theme.accent} />
@@ -165,17 +176,30 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
             {subscription.unsupported ? (
               <View style={[styles.warning, { borderColor: theme.glassBorder }]}>
                 <Text style={[styles.warningText, { color: theme.text.secondary }]}>
-                  {unsupportedMessage(subscription.unsupportedReason)}
+                  {unsupportedMessage(subscription.unsupportedReason, Platform.OS, t)}
                 </Text>
               </View>
             ) : null}
 
-            {candidates.length === 0 && !subscription.unsupported ? (
+            {candidates.length === 0 && subscription.loading && !subscription.unsupported ? (
               <View style={styles.loading}>
                 <ActivityIndicator color={theme.accent} />
                 <Text style={[styles.loadingLabel, { color: theme.text.secondary }]}>
                   {t('subscription.loadingOfferings')}
                 </Text>
+              </View>
+            ) : null}
+
+            {candidates.length === 0 && !subscription.loading && !subscription.unsupported ? (
+              <View style={styles.warning}>
+                <Text style={[styles.warningText, { color: theme.text.secondary }]}>
+                  {t('subscription.offeringsUnavailable')}
+                </Text>
+                <Pressable onPress={() => void subscription.refresh()}>
+                  <Text style={[styles.restoreLabel, { color: theme.accent }]}>
+                    {t('subscription.retry')}
+                  </Text>
+                </Pressable>
               </View>
             ) : null}
 
@@ -202,9 +226,11 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
                     </Text>
                   ) : null}
                 </View>
-                <Text style={[styles.packagePrice, { color: theme.accent }]}>
-                  {pkg.priceString || '—'}
-                </Text>
+                {pkg.priceString ? (
+                  <Text style={[styles.packagePrice, { color: theme.accent }]}>
+                    {pkg.priceString}
+                  </Text>
+                ) : null}
               </Pressable>
             ))}
 
@@ -212,10 +238,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
 
             {!subscription.unsupported ? (
               <Text style={[styles.disclosure, { color: theme.text.tertiary }]}>
-                Subscriptions auto-renew at the displayed price until cancelled at least 24 hours
-                before the end of the current period. Payment is charged to your Apple ID at
-                confirmation of purchase. Manage or cancel anytime in your Apple ID account
-                settings. Lifetime is a one-time purchase and does not renew.
+                {t('subscription.renewalDisclosure')}
               </Text>
             ) : null}
 
@@ -290,8 +313,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl,
@@ -314,7 +337,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -331,19 +354,20 @@ const styles = StyleSheet.create({
   featureIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   featureLabel: {
     ...Typography.titleMedium,
+    flexShrink: 1,
   },
   packageRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.md,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     marginBottom: Spacing.xs,
   },
@@ -368,7 +392,7 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
   },
   warning: {
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     padding: Spacing.md,
     marginBottom: Spacing.sm,

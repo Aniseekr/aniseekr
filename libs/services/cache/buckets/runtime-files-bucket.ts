@@ -1,8 +1,6 @@
 // RuntimeFilesBucket — FileSystem-level caches the app downloads at boot:
 //
-//   1. anitabi-index.runtime.json        (anitabi-data-service.ts)
-//   2. anitabi-cross-index.runtime.json  (anitabi-data-service.ts)
-//   3. anime-mappings.json               (id-mapping-service.ts) — only the
+//   1. anime-mappings.json               (id-mapping-service.ts) — only the
 //      raw download artifact lives on disk; the imported rows live in
 //      LocalDB's `id_mappings` table and are NOT touched by this bucket.
 //
@@ -20,18 +18,6 @@ interface RuntimeFileDescriptor {
 }
 
 const RUNTIME_FILES: readonly RuntimeFileDescriptor[] = [
-  {
-    id: 'anitabi-index',
-    filename: 'anitabi-index.runtime.json',
-    label: 'Anitabi index',
-    description: 'Pilgrimage spot list and coverage index',
-  },
-  {
-    id: 'anitabi-cross-index',
-    filename: 'anitabi-cross-index.runtime.json',
-    label: 'Anitabi cross-index',
-    description: 'Cross-platform ID mapping index',
-  },
   {
     id: 'id-mappings',
     filename: 'anime-mappings.json',
@@ -62,7 +48,7 @@ function deleteIfExists(filename: string): void {
 export class RuntimeFilesBucket implements CacheBucket {
   readonly id = 'runtime_files';
   readonly label = 'Preloaded files';
-  readonly description = 'Pilgrimage indexes and ID mapping downloads; refreshed on next launch';
+  readonly description = 'ID mapping downloads; refreshed on next launch';
   readonly icon = 'cloud-download';
 
   async getStats(): Promise<BucketStats> {

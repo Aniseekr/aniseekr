@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Spacing } from '../../../constants/DesignSystem';
+import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { ThemedBottomSheet, ThemedButton, ThemedText } from '../../themed';
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
+    borderRadius: Radius.sm,
     marginBottom: Spacing.sm,
   },
   body: {

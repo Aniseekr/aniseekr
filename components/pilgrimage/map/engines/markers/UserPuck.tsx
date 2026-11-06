@@ -3,6 +3,7 @@
 // the device heading the engine pushes via `setHeading`.
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Radius } from '../../../../../constants/DesignSystem';
 
 const USER_BLUE = '#4285F4';
 const CHROME = '#FFFFFF';
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: USER_BLUE },
+  dot: { width: 12, height: 12, borderRadius: Radius.sm, backgroundColor: USER_BLUE },
   // Cone fans upward from the dot; rotated by heading.
   cone: { position: 'absolute', alignItems: 'center', justifyContent: 'flex-start' },
   coneTriangle: {

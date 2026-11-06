@@ -68,7 +68,7 @@ function makeStyles() {
       minWidth: 0,
     },
     badge: {
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       paddingHorizontal: Spacing.sm,
       paddingVertical: 3,
     },

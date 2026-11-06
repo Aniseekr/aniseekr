@@ -1,0 +1,51 @@
+diff --git a/dist/piexif.js b/dist/piexif.js
+index c3d251b1a9b12d5a29d6f677c0e19bd2ba260507..e6aa459fb2c325d1687e98d0f08d3f7401dcbbb3 100644
+--- a/dist/piexif.js
++++ b/dist/piexif.js
+@@ -1985,13 +1985,9 @@
+       const TIFF_HEADER_LENGTH = 8;
+       const tagCount = Object.keys(ifdObj).length;
+       const entryHeader = pack('>H', [tagCount]);
+-      let entriesLength;
+-      if (['0th', '1st'].indexOf(ifdName) > -1) {
+-          entriesLength = 2 + tagCount * 12 + 4;
+-      }
+-      else {
+-          entriesLength = 2 + tagCount * 12;
+-      }
++      // Every IFD ends with a 4-byte next-IFD offset (TIFF 6.0 §2); the
++      // Exif/GPS/Interop writers below append it as 0.
++      const entriesLength = 2 + tagCount * 12 + 4;
+       let entries = '';
+       let values = '';
+       let key;
+@@ -2488,17 +2484,18 @@
+           exifIfdLength =
+               exifIfdSet[0].length +
+                   Number(existInteropIfd) * 12 +
++                  4 +
+                   exifIfdSet[1].length;
+       }
+       if (existGpsIfd) {
+           gpsIfdSet = dictToBytes(gpsIfd, 'GPS', zerothIfdLength + exifIfdLength);
+-          gpsIfdBytes = gpsIfdSet.join('');
++          gpsIfdBytes = gpsIfdSet[0] + '\x00\x00\x00\x00' + gpsIfdSet[1];
+           gpsIfdLength = gpsIfdBytes.length;
+       }
+       if (existInteropIfd) {
+           const offset = zerothIfdLength + exifIfdLength + gpsIfdLength;
+           interopIfdSet = dictToBytes(interopIfd, 'Interop', offset);
+-          interopIfdBytes = interopIfdSet.join('');
++          interopIfdBytes = interopIfdSet[0] + '\x00\x00\x00\x00' + interopIfdSet[1];
+           interopIfdLength = interopIfdBytes.length;
+       }
+       if (existFirstIfd) {
+@@ -2563,7 +2560,7 @@
+           firstIfdPointer +
+           zerothIfdSet[1];
+       if (existExifIfd) {
+-          exifIfdBytes = exifIfdSet[0] + interopPointer + exifIfdSet[1];
++          exifIfdBytes = exifIfdSet[0] + interopPointer + '\x00\x00\x00\x00' + exifIfdSet[1];
+       }
+       return (header +
+           zerothIfdBinary +

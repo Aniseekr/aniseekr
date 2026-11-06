@@ -6,13 +6,12 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Notifications from 'expo-notifications';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { readableTextOn } from '../../components/themed';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -31,6 +30,8 @@ import {
   saveNotificationPrefs,
 } from '../../libs/services/notifications/notification-service';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../../components/themed/CapsText';
+import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
 
 // Storage now lives on MMKV via notification-service.saveNotificationPrefs.
 
@@ -250,7 +251,13 @@ export default function NotificationsScreen() {
     );
   };
 
-  const permissionLabel = permission.status;
+  // The OS enum ('undetermined') is not copy — show a localized state.
+  const permissionLabel =
+    permission.status === 'granted'
+      ? t('settings.notificationsScreen.permissionStatus.granted')
+      : permission.status === 'denied'
+        ? t('settings.notificationsScreen.permissionStatus.denied')
+        : t('settings.notificationsScreen.permissionStatus.undetermined');
 
   return (
     <SettingsScreenLayout
@@ -383,9 +390,9 @@ export default function NotificationsScreen() {
           groupedPending.map((group, gIdx) => (
             <View key={group.key}>
               {group.label ? (
-                <Text style={[styles.groupHeader, { color: theme.text.secondary }]}>
+                <CapsText style={[styles.groupHeader, { color: theme.text.secondary }]}>
                   {group.label}
-                </Text>
+                </CapsText>
               ) : null}
               {group.items.map((item, idx) => (
                 <View key={item.identifier}>
@@ -493,15 +500,8 @@ function ToggleSwitchRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? '#fff' : '#ddd'}
-      />
+      {/* The row callers' update helper already fires the selection haptic. */}
+      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
     </View>
   );
 }
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.md,
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
   },
   bannerTitle: {
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   bannerAction: {
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
-    borderRadius: 18,
+    borderRadius: Radius.card,
   },
   bannerActionLabel: {
     ...Typography.titleSmall,
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   toggleIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
   scheduledIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

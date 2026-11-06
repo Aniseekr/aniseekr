@@ -12,9 +12,10 @@
 // STATUS: device-render is the one remaining gate — MapLibre is a native module
 // that cannot render headlessly (spec §15). Validate on a prebuilt dev client.
 //
-// Offline: MapLibre's automatic ambient cache provides cache-as-you-browse;
-// explicit `offlineOnly` / per-region `createPack` UX is reserved, so
-// `offlineOnly` is accepted but not yet enforced here.
+// Offline: MapLibre's ambient cache provides cache-as-you-browse. When the user
+// has an offline trip pack, the engine swaps to the pack's on-device style
+// while offline (or when `offlineOnly` forces cached tiles) — see
+// libs/services/pilgrimage/offline-pack.
 import { useCallback, useImperativeHandle, useMemo, useRef, useState, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Colors } from '../../../../constants/DesignSystem';
@@ -36,6 +37,7 @@ import type {
   MapSurfaceProps,
 } from '../../../../libs/services/pilgrimage/map-engine/types';
 import { resolveMapStyleUrl } from '../../../../libs/services/pilgrimage/map-source-prefs';
+import { useOfflineAwareStyleUrl } from '../../../../libs/services/pilgrimage/offline-pack/use-offline-pack';
 import { resolveMarkerVisual } from '../../../../libs/services/pilgrimage/map-engine/marker-style';
 import { routeLineFeature } from '../../../../libs/services/pilgrimage/map-engine/route-shape';
 import {
@@ -74,8 +76,10 @@ export function MapLibreEngine({
   visitedIds,
   clusterDisableAtZoom = CLUSTER_DISABLE_AT.default,
   styleUrl,
+  offlineOnly = false,
   controlsBottomOffset = 0,
   onMarkerPress,
+  onMapPress,
   onMarkerLongPress,
   onClusterPress,
   onPanned,
@@ -88,6 +92,16 @@ export function MapLibreEngine({
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivationRef = useRef<{ key: string; at: number } | null>(null);
+
+  const activateOnce = (key: string, action: () => void) => {
+    // Native Marker.onPress and its React child can report the same tap.
+    const now = Date.now();
+    const previous = lastActivationRef.current;
+    if (previous?.key === key && now - previous.at < 250) return;
+    lastActivationRef.current = { key, at: now };
+    action();
+  };
 
   // Coarse, settle-time viewport (zoom + bbox): drives clustering + bounds emit.
   const [viewport, setViewport] = useState<ClusterViewport>({ zoom, bbox: null });
@@ -127,7 +141,10 @@ export function MapLibreEngine({
     maxZoom: clusterMaxZoom(clusterDisableAtZoom),
   });
 
-  const styleURL = styleUrl ?? resolveMapStyleUrl('light', null);
+  const styleURL = useOfflineAwareStyleUrl(
+    styleUrl ?? resolveMapStyleUrl('light', null),
+    offlineOnly
+  );
   const initialCenter: [number, number] = center ? [center.lng, center.lat] : DEFAULT_CENTER;
 
   const refreshViewport = useCallback(async () => {
@@ -169,7 +186,11 @@ export function MapLibreEngine({
         }),
       setHeading: (deg) => setHeadingState(deg),
       focus: (target) =>
-        cameraRef.current?.flyTo({ center: [target.lng, target.lat], zoom: target.zoom }),
+        cameraRef.current?.flyTo({
+          center: [target.lng, target.lat],
+          zoom: target.zoom,
+          ...(target.bottomInset ? { padding: { bottom: target.bottomInset } } : {}),
+        }),
       fitBounds: (box, opts) => fitBox(box, opts?.animate !== false),
       updateVisited: (ids) => setVisitedOverride(ids),
     }),
@@ -197,6 +218,7 @@ export function MapLibreEngine({
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         mapStyle={styleURL}
+        onPress={onMapPress}
         attributionPosition={{ bottom: 8 + controlsBottomOffset, right: 8 }}
         logoPosition={{ bottom: 8 + controlsBottomOffset, left: 8 }}
         onRegionWillChange={(e) => {
@@ -236,12 +258,24 @@ export function MapLibreEngine({
         {items.map((it) => {
           if (it.type === 'cluster') {
             return (
-              <Marker key={`c:${it.clusterId}`} lngLat={[it.lng, it.lat]} anchor="center">
+              <Marker
+                key={`c:${it.clusterId}`}
+                lngLat={[it.lng, it.lat]}
+                anchor="center"
+                onPress={() =>
+                  activateOnce(`c:${it.clusterId}`, () =>
+                    handleClusterPress(it.clusterId, it.count)
+                  )
+                }>
                 <ClusterBubble
                   count={it.count}
                   color={it.color}
                   zoom={viewport.zoom}
-                  onPress={() => handleClusterPress(it.clusterId, it.count)}
+                  onPress={() =>
+                    activateOnce(`c:${it.clusterId}`, () =>
+                      handleClusterPress(it.clusterId, it.count)
+                    )
+                  }
                 />
               </Marker>
             );
@@ -252,12 +286,13 @@ export function MapLibreEngine({
             <Marker
               key={`m:${it.id}`}
               lngLat={[it.lng, it.lat]}
-              anchor={resolveMarkerVisual(m, markerMode).anchor}>
+              anchor={resolveMarkerVisual(m, markerMode).anchor}
+              onPress={() => activateOnce(m.id, () => onMarkerPress?.(m))}>
               <NativeMapMarker
                 marker={m}
                 defaultMode={markerMode}
                 chrome={markerChrome}
-                onPress={onMarkerPress}
+                onPress={() => activateOnce(m.id, () => onMarkerPress?.(m))}
                 onLongPress={onMarkerLongPress}
               />
             </Marker>

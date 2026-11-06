@@ -9,6 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { readableTextOn, ThemedButton, ThemedBottomSheet, ThemedText } from '../themed';
 import { PersonalizedPickState } from './types';
+import { formatScore } from '../../libs/utils/format-score';
 
 type Props = {
   visible: boolean;
@@ -67,7 +68,7 @@ function PersonalizedPickSheetComponent({ visible, data, onClose, onSelect, onRe
               styles.iconBubble,
               { backgroundColor: theme.accent + '22', borderColor: theme.accent + '55' },
             ]}>
-            <Ionicons name="sparkles" size={14} color={theme.accent} />
+            <Ionicons name="heart-circle" size={14} color={theme.accent} />
           </View>
           <View>
             <ThemedText variant="titleLarge" weight="700">
@@ -242,7 +243,7 @@ function LoadingState({ accent }: { accent: string }) {
           { borderColor: accent + '55', backgroundColor: accent + '11' },
           Shadow.glow(accent),
         ]}>
-        <Ionicons name="sparkles" size={28} color={accent} />
+        <Ionicons name="heart-circle" size={28} color={accent} />
       </View>
       <ThemedText variant="titleMedium" align="center">
         Finding your next favorite…
@@ -358,11 +359,6 @@ function ErrorState({ onRefresh }: { onRefresh?: () => void }) {
   );
 }
 
-function formatScore(raw: number): string {
-  const n = raw > 10 ? raw / 10 : raw;
-  return n.toFixed(1);
-}
-
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
@@ -378,7 +374,7 @@ const styles = StyleSheet.create({
   iconBubble: {
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -386,7 +382,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -428,7 +424,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     gap: 4,
     marginBottom: 2,
   },
@@ -450,7 +446,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     marginTop: Spacing.md,
   },

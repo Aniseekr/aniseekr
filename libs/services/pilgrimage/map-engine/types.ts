@@ -67,6 +67,8 @@ export interface MapMarker {
   episode?: number;
   /** Per-marker bubble vs dot rendering for `kind: 'spot'`. */
   markerMode?: MapMarkerMode;
+  /** The spot currently picked in the list / on the map; drawn larger. */
+  selected?: boolean;
 }
 
 /** The user's location puck; `heading` rotates the cone (null clears it). */
@@ -104,7 +106,8 @@ export interface MapWaypoint {
 export interface MapSurfaceHandle {
   recenter: (lat: number, lng: number, zoom?: number, opts?: { animate?: boolean }) => void;
   setHeading: (deg: number | null) => void;
-  focus?: (target: { lat: number; lng: number; zoom?: number }) => void;
+  /** `bottomInset` keeps the target clear of a sheet covering the map's bottom edge. */
+  focus?: (target: { lat: number; lng: number; zoom?: number; bottomInset?: number }) => void;
   fitBounds?: (box: BBox, opts?: { animate?: boolean }) => void;
   updateVisited?: (ids: readonly string[]) => void;
 }
@@ -124,11 +127,12 @@ export interface MapSurfaceProps {
   clusterDisableAtZoom?: number;
   /** Style/source URL (resolved via `map-source-prefs.resolveMapStyleUrl`). */
   styleUrl?: string;
-  /** On-location offline-only mode. Reserved until explicit MapLibre packs land. */
+  /** Force the downloaded offline trip pack's tiles even while online. */
   offlineOnly?: boolean;
   /** Pixels to lift in-map controls/attribution off the bottom edge. */
   controlsBottomOffset?: number;
   onMarkerPress?: (marker: MapMarker) => void;
+  onMapPress?: () => void;
   /** Long-press on a marker → contextual quick actions. */
   onMarkerLongPress?: (marker: MapMarker) => void;
   onClusterPress?: (markers: readonly MapMarker[]) => void;

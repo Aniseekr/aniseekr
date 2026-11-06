@@ -1,5 +1,5 @@
 import { RefObject } from 'react';
-import { Share, Platform, View } from 'react-native';
+import { Share, Platform, View, type ViewInstance } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
 import { getAppLanguageSync } from '../../libs/i18n/app-language';
@@ -25,7 +25,7 @@ export interface ShareScheduleOptions {
   seasonLabel: string;
   groupedAnime: DailyAnime[];
   totalCount: number;
-  viewRef?: RefObject<View | null>;
+  viewRef?: RefObject<ViewInstance | null>;
 }
 
 /**
@@ -33,7 +33,9 @@ export interface ShareScheduleOptions {
  * Useful when you've mounted an off-screen poster component and want to
  * snapshot it before passing the URI to the share sheet.
  */
-async function captureScheduleImage(viewRef: RefObject<View | null>): Promise<string | null> {
+async function captureScheduleImage(
+  viewRef: RefObject<ViewInstance | null>
+): Promise<string | null> {
   if (!viewRef.current) return null;
   try {
     const uri = await captureRef(viewRef, {

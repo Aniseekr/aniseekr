@@ -19,7 +19,7 @@ import {
 } from '../libs/services/pilgrimage/local-intel/local-intel-repository';
 import type { LocalIntelViewingHint } from '../libs/services/pilgrimage/local-intel/types';
 import { haversineKm } from '../libs/services/pilgrimage/spot-index';
-import type { AnitabiPoint } from '../libs/services/pilgrimage/types';
+import type { PilgrimageSpot } from '../libs/services/pilgrimage/types';
 import type { NearbyShopRow } from '../components/pilgrimage/detail/IntelShopsSection';
 
 const SHOP_RADIUS_KM = 5;
@@ -35,19 +35,22 @@ export interface SpotSheetIntel {
 
 const EMPTY_INTEL: SpotSheetIntel = { bestTime: null, hint: null, shopRows: [], event: null };
 
-function hasGeo(spot: AnitabiPoint | null): spot is AnitabiPoint {
+function hasGeo(
+  spot: PilgrimageSpot | null
+): spot is PilgrimageSpot & { lat: number; lon: number } {
   return (
     !!spot &&
-    Array.isArray(spot.geo) &&
-    Number.isFinite(spot.geo[0]) &&
-    Number.isFinite(spot.geo[1]) &&
-    (spot.geo[0] !== 0 || spot.geo[1] !== 0)
+    spot.lat !== null &&
+    spot.lon !== null &&
+    Number.isFinite(spot.lat) &&
+    Number.isFinite(spot.lon) &&
+    (spot.lat !== 0 || spot.lon !== 0)
   );
 }
 
 export function usePilgrimageDetailIntel(
   bangumiId: number | null,
-  spot: AnitabiPoint | null
+  spot: PilgrimageSpot | null
 ): SpotSheetIntel {
   const version = useSyncExternalStore(
     subscribeLocalIntel,
@@ -56,8 +59,8 @@ export function usePilgrimageDetailIntel(
   );
 
   const spotId = spot?.id ?? null;
-  const lat = hasGeo(spot) ? spot.geo[0] : null;
-  const lng = hasGeo(spot) ? spot.geo[1] : null;
+  const lat = hasGeo(spot) ? spot.lat : null;
+  const lng = hasGeo(spot) ? spot.lon : null;
 
   return useMemo(() => {
     if (spotId === null || lat === null || lng === null) return EMPTY_INTEL;
@@ -66,7 +69,7 @@ export function usePilgrimageDetailIntel(
     const now = new Date();
 
     const hint =
-      (bangumiId !== null ? getViewingHintForSpot(bangumiId, spotId) : null) ??
+      (bangumiId !== null ? getViewingHintForSpot(String(bangumiId), spotId) : null) ??
       getViewingHintNear(geo);
     const bestTime = computeBestTimeForSpot(geo, now, hint);
 

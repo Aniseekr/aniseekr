@@ -1,6 +1,6 @@
 import { CacheService } from '../cache-service';
 import type { LatLng } from './location-service';
-import type { AnitabiBangumi } from './types';
+import type { PilgrimageWork } from './types';
 import type { VisitedMap } from './visited-prefs';
 
 // Default `getPilgrimageHubSnapshot()` budget for callers that genuinely need
@@ -35,8 +35,8 @@ const defaultCache: HubCacheAdapter = {
 };
 
 export interface PilgrimageHubSnapshot {
-  collectionAnimes?: AnitabiBangumi[];
-  featuredAnimes?: AnitabiBangumi[];
+  collectionAnimes?: PilgrimageWork[];
+  featuredAnimes?: PilgrimageWork[];
   visited?: VisitedMap;
   userLocation?: LatLng | null;
   userLocationUpdatedAt?: number;

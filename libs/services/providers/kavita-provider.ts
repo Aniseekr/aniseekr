@@ -17,10 +17,11 @@ interface KavitaSeries {
   pages: number;
 }
 
-interface KavitaUser {
+interface KavitaPluginAuth {
   username: string;
-  email: string;
 }
+
+const PAGE_SIZE = 100;
 
 export class KavitaProvider implements AnimeSourceProvider {
   platform: PlatformType = 'kavita';
@@ -36,7 +37,7 @@ export class KavitaProvider implements AnimeSourceProvider {
     const response = await fetch(`${cleanBaseUrl}${endpoint}`, {
       ...options,
       headers: {
-        Authorization: `Bearer ${token}`,
+        'x-api-key': token,
         'Content-Type': 'application/json',
         ...options.headers,
       },
@@ -55,13 +56,33 @@ export class KavitaProvider implements AnimeSourceProvider {
     return credentials.token.accessToken;
   }
 
+  /** Throws when the server is unreachable or rejects the API key. */
+  async verify(apiKey: string, serverUrl: string): Promise<KavitaPluginAuth> {
+    const url = `/api/Plugin/authenticate?apiKey=${encodeURIComponent(apiKey)}&pluginName=Aniseekr`;
+    return this.request<KavitaPluginAuth>(url, apiKey, serverUrl, { method: 'POST' });
+  }
+
   async fetchUserList(token: string): Promise<UniversalAnimeItem[]> {
     const credentials = authService.getCredentials('kavita');
     if (!credentials?.serverUrl) throw new Error('Kavita server URL not configured');
 
     const baseUrl = credentials.serverUrl;
 
-    const seriesList = await this.request<KavitaSeries[]>('/api/Series/all', token, baseUrl);
+    // Kavita 0.8+: the old GET /api/Series/all is gone; all-v2 is a paged POST with a filter body.
+    const seriesList: KavitaSeries[] = [];
+    for (let page = 1; ; page++) {
+      const batch = await this.request<KavitaSeries[]>(
+        `/api/Series/all-v2?PageNumber=${page}&PageSize=${PAGE_SIZE}`,
+        token,
+        baseUrl,
+        {
+          method: 'POST',
+          body: JSON.stringify({ statements: [], combination: 1, limitTo: 0 }),
+        }
+      );
+      seriesList.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+    }
 
     return seriesList.map((item) => this.mapEntry(item, baseUrl, token));
   }
@@ -70,7 +91,7 @@ export class KavitaProvider implements AnimeSourceProvider {
     const credentials = authService.getCredentials('kavita');
     if (!credentials?.serverUrl) throw new Error('Kavita server URL not configured');
 
-    const user = await this.request<KavitaUser>('/api/users/me', token, credentials.serverUrl);
+    const user = await this.verify(token, credentials.serverUrl);
 
     return {
       username: user.username,

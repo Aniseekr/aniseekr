@@ -1,22 +1,15 @@
 /**
- * Temporary kill switches for the free-version posture.
+ * Feature switches for monetization surfaces.
  *
- * Why: at this stage we want to stay clear of CC-NC licensing concerns
- * around commercial use, so subscription paywalls and AdMob slots are
- * suppressed app-wide. The underlying services (RevenueCat, Google Mobile
- * Ads) are still wired up — these flags just gate every consumer.
- *
- * Flip back to `true` to restore the original behavior; no other code
- * changes should be required.
+ * Anitabi and its CC-NC content have been removed, so premium subscriptions
+ * are enabled again. Ad availability remains independently controlled.
  */
 export const FeatureFlags = {
   /**
-   * When false:
-   *  - `useSubscription()` short-circuits `isPro` to `true`, which auto-
-   *    unlocks premium themes and any other isPro-gated feature.
-   *  - All paywall / "Upgrade" / PRO badge UI is hidden at the call site.
+   * When false, premium features are unlocked and paywall / upgrade UI is
+   * hidden at the call site.
    */
-  PREMIUM_ENABLED: false,
+  PREMIUM_ENABLED: true,
 
   /**
    * When false:
@@ -24,6 +17,8 @@ export const FeatureFlags = {
    *    (banner, native, interstitial, rewarded) renders nothing.
    *  - The `EXPO_PUBLIC_ADS_DISABLED=1` env kill switch still works the
    *    same way and is independent of this flag.
+   * Ads are gated on `useSubscription().adFree` (the real entitlement), not
+   * `isPro`.
    */
-  ADS_ENABLED: false,
+  ADS_ENABLED: true,
 } as const;

@@ -386,37 +386,15 @@ function cloneWithChineseTitle(
       status: item.status,
     };
   }
+  // Spread the source item so AniList-only fields (nextAiringEpisode,
+  // anilistListCount, displayStatus, isAdult…) survive enrichment — dropping
+  // them emptied the weekly schedule for every enriched title.
   return new UnifiedAnimeItem({
+    ...item,
     title: chineseTitle,
-    titleEnglish: item.titleEnglish,
-    titleJapanese: item.titleJapanese,
     titleChinese: chineseTitle,
-    titleChineseTraditional: item.titleChineseTraditional,
-    titleRussian: item.titleRussian,
-    titleRomaji: item.titleRomaji,
-    synonyms: item.synonyms,
-    synopsis: item.synopsis,
-    idMal: item.idMal,
-    format: item.format,
-    coverImageURL: item.coverImageURL,
-    extraLargeImageURL: item.extraLargeImageURL,
-    bannerImageURL: item.bannerImageURL,
-    platformImages: item.platformImages,
-    malScore: item.malScore,
-    bangumiScore: item.bangumiScore,
-    anilistScore: item.anilistScore,
-    maxProgress: item.maxProgress,
-    totalEpisodes: item.totalEpisodes,
-    year: item.year,
-    season: item.season,
-    startDate: item.startDate,
-    broadcastDay: item.broadcastDay,
-    status: item.status,
-    genres: item.genres,
-    tags: item.tags,
-    studios: item.studios,
+    searchKeywords: undefined,
     platformData,
-    syncStatus: item.syncStatus,
   });
 }
 

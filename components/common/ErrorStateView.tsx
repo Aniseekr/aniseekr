@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: Radius.sm,
     backgroundColor: 'rgba(255, 69, 58, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderRadius: 22,
+    borderRadius: Radius.xl,
   },
   buttonLabel: {
     ...Typography.titleSmall,

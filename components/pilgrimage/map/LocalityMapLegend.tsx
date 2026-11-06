@@ -22,7 +22,7 @@ const ICONS: Record<LegendKind, ComponentProps<typeof Ionicons>['name']> = {
   scene: 'image-outline',
   stamp: 'ticket-outline',
   shop: 'storefront-outline',
-  festival: 'sparkles-outline',
+  festival: 'bonfire-outline',
   area: 'map-outline',
 };
 
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   festivalIcon: { transform: [{ rotate: '-45deg' }] },
   area: {
     width: Spacing.xxl,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderStyle: 'dashed',
   },
 });

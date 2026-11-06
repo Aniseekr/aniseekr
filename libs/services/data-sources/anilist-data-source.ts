@@ -17,7 +17,7 @@ import type { PlatformType } from '../auth/types';
 import { AniListClient } from '../../clients/anilist-client';
 import { dataSourceConfig } from '../data-source-config';
 import { idMappingService } from '../sync/id-mapping-service';
-import { getCurrentSeason, getCurrentYear } from '../../utils/season-utils';
+import { getBroadcastSeason } from '../../utils/season-utils';
 import {
   type AnimeDataSource,
   type AnimeGenre,
@@ -89,6 +89,13 @@ interface RawAniListRelationEdge {
     type?: string | null;
     format?: string | null;
   };
+}
+
+export interface AnimePrequelRelation {
+  anilistId: number;
+  malId: number | null;
+  title: string;
+  relationType: 'PREQUEL';
 }
 
 interface RawAniListMedia {
@@ -293,8 +300,9 @@ export class AniListDataSource implements AnimeDataSource {
     year?: number,
     options: AnimePageOptions = {}
   ): Promise<UnifiedAnimeItem[]> {
-    const seasonUpper = (season ?? getCurrentSeason()).toUpperCase();
-    const targetYear = year ?? getCurrentYear();
+    const current = getBroadcastSeason();
+    const seasonUpper = (season ?? current.season).toUpperCase();
+    const targetYear = year ?? current.year;
     const vars: Record<string, unknown> = {
       season: seasonUpper,
       year: targetYear,
@@ -386,16 +394,34 @@ export class AniListDataSource implements AnimeDataSource {
     return edges
       .map((edge): AnimeRelation | null => {
         const node = edge.node;
-        if (!node || !edge.relationType) return null;
-        const entryId = node.idMal ?? node.id;
+        if (!node?.id || !edge.relationType) return null;
+        // The detail screen opens relations by id and is AniList-keyed; the
+        // previous `idMal ?? id` sent MAL ids there and every tap 404'd.
         return {
-          id: String(entryId ?? ''),
+          id: String(node.id),
           type: humanizeRelation(edge.relationType),
-          title: node.title?.userPreferred ?? 'Unknown',
+          title: node.title?.userPreferred ?? '',
           format: node.format ?? node.type ?? undefined,
         };
       })
       .filter((r): r is AnimeRelation => r !== null);
+  }
+
+  async fetchAnimePrequelRelations(id: string): Promise<AnimePrequelRelation[]> {
+    const data = await this.fetchDetailRaw(id, 'anilist');
+    if (!data) return [];
+    return (data.relations?.edges ?? []).flatMap((edge) => {
+      const node = edge.node;
+      if (edge.relationType?.toUpperCase() !== 'PREQUEL' || !node?.id) return [];
+      return [
+        {
+          anilistId: node.id,
+          malId: node.idMal ?? null,
+          title: node.title?.userPreferred ?? 'Unknown',
+          relationType: 'PREQUEL' as const,
+        },
+      ];
+    });
   }
 
   async fetchAnimeStreaming(id: string, sourcePlatform?: PlatformType): Promise<AnimeStreaming[]> {
@@ -526,6 +552,7 @@ export class AniListDataSource implements AnimeDataSource {
       bannerImageURL: media.bannerImage ?? null,
       platformImages,
       anilistScore: media.averageScore ?? null,
+      anilistListCount: media.popularity ?? null,
       totalEpisodes: media.episodes ?? null,
       year: media.seasonYear ?? null,
       season: media.season ? media.season.toUpperCase() : null,

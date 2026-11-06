@@ -1,9 +1,11 @@
 import React, { createContext, use, useCallback, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
+import type { AppIconName } from '../libs/brand/app-icon';
 import { kvGet, kvSet } from '../libs/services/storage/app-storage';
 import {
   THEME_CUSTOM_ACCENT_KEY,
+  THEME_GRANDFATHERED_KEY,
   THEME_ID_KEY,
   THEME_INCREASE_CONTRAST_KEY,
   THEME_MODE_KEY,
@@ -85,7 +87,13 @@ export type ThemeId =
   | 'ocean'
   | 'attackOnTitan'
   | 'sunset'
-  | 'candy';
+  | 'candy'
+  | 'washi'
+  | 'screentone'
+  | 'twilight'
+  | 'yozakura'
+  | 'cel'
+  | 'natsuzora';
 
 export interface ThemeStatus {
   success: string;
@@ -94,10 +102,43 @@ export interface ThemeStatus {
   info: string;
 }
 
+/** Tiled texture drawn inside `ThemedSurface`; see `components/themed/SkinTexture.tsx`. */
+export type SkinTextureKind = 'washi' | 'halftone' | 'grain' | 'scanline' | 'petals' | 'clouds';
+/**
+ * Card edge: `ink` = full-ink manga panel line, `seal` = vermilion-seal frame
+ * in the accent, `glass` = soft accent-tinted hairline.
+ */
+export type SkinEdge = 'ink' | 'glass' | 'seal';
+/** Display faces bundled for skins (all OFL); resolved in `constants/DesignSystem` `SkinFont`. */
+export type SkinFontId = 'serif' | 'comic' | 'retro';
+
+/**
+ * The non-colour half of a premium theme. Optional: free themes have none and
+ * render exactly as before. Read through the themed primitives
+ * (`ThemedSurface`, `ThemedText` display/headline variants, `chartRamp`) —
+ * screens never branch on it.
+ */
+export interface ThemeSkin {
+  texture: {
+    kind: SkinTextureKind;
+    /** Tint source: ink = text.primary, accent = accent, paper = background.primary. */
+    tone: 'ink' | 'accent' | 'paper';
+    opacity: number;
+  };
+  /** Latin display face for display/headline text; CJK keeps the system face. */
+  displayFont?: SkinFontId;
+  edge: SkinEdge;
+  /** Five chart colours, in collection-status order (watching → dropped). */
+  chartRamp: readonly [string, string, string, string, string];
+  /** Matching alternate app icon (`app/(setting)/app-icon.tsx`). */
+  appIcon?: AppIconName;
+}
+
 export interface ThemePalette {
   id: ThemeId;
   name: string;
   isPremium?: boolean;
+  skin?: ThemeSkin;
   accent: string;
   accentLight: string;
   accentDark: string;
@@ -126,6 +167,17 @@ const DEFAULT_STATUS: ThemeStatus = {
   error: '#FF453A',
   info: '#0A84FF',
 };
+
+// Seekr the mascot is artwork, not UI: his body, headband and lemon eye stay
+// the same under every theme (same values as the v6 landing brand.json).
+export const SEEKR_COLORS = {
+  body: '#0B0C10',
+  band: '#2A2D36',
+  eye: '#1B1E28',
+  iris: '#FFD966',
+  outline: '#F4F1EA',
+  shine: '#FFFFFF',
+} as const;
 
 export const THEMES: Record<ThemeId, ThemePalette> = {
   aniseeker: {
@@ -170,6 +222,11 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     glassBorder: 'rgba(255, 42, 109, 0.18)',
     gradient: ['#0A0014', '#150024', '#0A0014'],
     status: { ...DEFAULT_STATUS, info: '#05D9E8' },
+    skin: {
+      texture: { kind: 'scanline', tone: 'accent', opacity: 0.08 },
+      edge: 'glass',
+      chartRamp: ['#FF2A6D', '#05D9E8', '#B967FF', '#FFE66D', '#7A5CFF'],
+    },
   },
   midnight: {
     id: 'midnight',
@@ -236,7 +293,8 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
   },
   attackOnTitan: {
     id: 'attackOnTitan',
-    name: 'Survey Corps',
+    // Display name only: the id stays `attackOnTitan` so saved prefs resolve.
+    name: 'Frontier',
     isPremium: true,
     accent: '#8B4513',
     accentLight: '#C68642',
@@ -255,6 +313,11 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     glassBorder: 'rgba(198, 134, 66, 0.20)',
     gradient: ['#0E0A06', '#1A130C', '#0E0A06'],
     status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'grain', tone: 'ink', opacity: 0.08 },
+      edge: 'ink',
+      chartRamp: ['#C68642', '#A8B5A0', '#8B4513', '#E0C9A6', '#6E7B67'],
+    },
   },
   sunset: {
     id: 'sunset',
@@ -298,9 +361,232 @@ export const THEMES: Record<ThemeId, ThemePalette> = {
     gradient: ['#180614', '#26092A', '#180614'],
     status: DEFAULT_STATUS,
   },
+
+  // ── Premium pack (2026-11). Original palettes, no third-party IP. ──
+  washi: {
+    id: 'washi',
+    name: 'Washi',
+    isPremium: true,
+    accent: '#D9452F',
+    accentLight: '#E8735F',
+    accentDark: '#B23422',
+    secondary: '#C9A35A',
+    background: {
+      primary: '#15120E',
+      secondary: '#201B15',
+      tertiary: '#2C261E',
+    },
+    text: {
+      primary: '#F3ECDD',
+      secondary: 'rgba(243, 236, 221, 0.66)',
+      tertiary: 'rgba(243, 236, 221, 0.38)',
+    },
+    glassBorder: 'rgba(217, 69, 47, 0.22)',
+    gradient: ['#15120E', '#1E1913', '#15120E'],
+    status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'washi', tone: 'ink', opacity: 0.09 },
+      displayFont: 'serif',
+      edge: 'seal',
+      chartRamp: ['#D9452F', '#3F6E8C', '#C9A35A', '#7C8F4E', '#8A8178'],
+      appIcon: 'Washi',
+    },
+  },
+  screentone: {
+    id: 'screentone',
+    name: 'Screentone',
+    isPremium: true,
+    accent: '#0091C2',
+    accentLight: '#3DB4DE',
+    accentDark: '#006F96',
+    secondary: '#B5B5B0',
+    background: {
+      primary: '#0B0B0B',
+      secondary: '#161616',
+      tertiary: '#222222',
+    },
+    text: {
+      primary: '#F4F4F0',
+      secondary: 'rgba(244, 244, 240, 0.64)',
+      tertiary: 'rgba(244, 244, 240, 0.36)',
+    },
+    glassBorder: 'rgba(244, 244, 240, 0.16)',
+    gradient: ['#0B0B0B', '#141414', '#0B0B0B'],
+    status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'halftone', tone: 'ink', opacity: 0.12 },
+      displayFont: 'comic',
+      edge: 'ink',
+      chartRamp: ['#0091C2', '#A6A6A6', '#6E6E6E', '#C9C9C9', '#4A4A4A'],
+      appIcon: 'Screentone',
+    },
+  },
+  twilight: {
+    id: 'twilight',
+    name: 'Twilight Platform',
+    isPremium: true,
+    accent: '#FF8A3D',
+    accentLight: '#FFAD73',
+    accentDark: '#E06A1F',
+    secondary: '#9A7BFF',
+    background: {
+      primary: '#150E24',
+      secondary: '#211634',
+      tertiary: '#2D1F45',
+    },
+    text: {
+      primary: '#FFF2E8',
+      secondary: 'rgba(255, 242, 232, 0.66)',
+      tertiary: 'rgba(255, 242, 232, 0.38)',
+    },
+    glassBorder: 'rgba(255, 138, 61, 0.20)',
+    gradient: ['#2A1430', '#1C1230', '#150E24'],
+    status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'scanline', tone: 'accent', opacity: 0.07 },
+      edge: 'glass',
+      chartRamp: ['#FF8A3D', '#FF5E7A', '#C25BD6', '#8A6CFF', '#4F5BD5'],
+      appIcon: 'Twilight',
+    },
+  },
+  yozakura: {
+    id: 'yozakura',
+    name: 'Yozakura',
+    isPremium: true,
+    accent: '#F28DB7',
+    accentLight: '#F8B5D1',
+    accentDark: '#D9648F',
+    secondary: '#8FA6FF',
+    background: {
+      primary: '#0A0F26',
+      secondary: '#121A38',
+      tertiary: '#1B254C',
+    },
+    text: {
+      primary: '#F8EEF4',
+      secondary: 'rgba(248, 238, 244, 0.66)',
+      tertiary: 'rgba(248, 238, 244, 0.38)',
+    },
+    glassBorder: 'rgba(242, 141, 183, 0.20)',
+    gradient: ['#0A0F26', '#141B3C', '#0A0F26'],
+    status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'petals', tone: 'accent', opacity: 0.16 },
+      displayFont: 'serif',
+      edge: 'glass',
+      chartRamp: ['#F28DB7', '#8FA6FF', '#C9B6FF', '#FFD6E6', '#5C6BC0'],
+      appIcon: 'Yozakura',
+    },
+  },
+  cel: {
+    id: 'cel',
+    name: 'Cel',
+    isPremium: true,
+    accent: '#FF6B57',
+    accentLight: '#FF9A8A',
+    accentDark: '#E04A37',
+    secondary: '#3BB8A6',
+    background: {
+      primary: '#191A2C',
+      secondary: '#24253D',
+      tertiary: '#30324F',
+    },
+    text: {
+      primary: '#FBF3E2',
+      secondary: 'rgba(251, 243, 226, 0.66)',
+      tertiary: 'rgba(251, 243, 226, 0.38)',
+    },
+    glassBorder: 'rgba(251, 243, 226, 0.16)',
+    gradient: ['#191A2C', '#22233A', '#191A2C'],
+    status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'grain', tone: 'ink', opacity: 0.1 },
+      displayFont: 'retro',
+      edge: 'ink',
+      chartRamp: ['#FF6B57', '#3BB8A6', '#F2C14E', '#7B6CD9', '#5AA9E6'],
+      appIcon: 'Cel',
+    },
+  },
+  natsuzora: {
+    id: 'natsuzora',
+    name: 'Natsuzora',
+    isPremium: true,
+    accent: '#2F8FF5',
+    accentLight: '#6DB1FF',
+    accentDark: '#1A6FD1',
+    secondary: '#FFD24D',
+    background: {
+      primary: '#06182E',
+      secondary: '#0D2542',
+      tertiary: '#153356',
+    },
+    text: {
+      primary: '#F4FAFF',
+      secondary: 'rgba(244, 250, 255, 0.68)',
+      tertiary: 'rgba(244, 250, 255, 0.38)',
+    },
+    glassBorder: 'rgba(109, 177, 255, 0.22)',
+    gradient: ['#0B2A4D', '#081F3A', '#06182E'],
+    status: DEFAULT_STATUS,
+    skin: {
+      texture: { kind: 'clouds', tone: 'paper', opacity: 0.7 },
+      edge: 'glass',
+      chartRamp: ['#2F8FF5', '#FFD24D', '#6DD3C7', '#9FB7FF', '#FF8F6B'],
+      appIcon: 'Natsuzora',
+    },
+  },
 };
 
 const THEME_LIST: ThemePalette[] = Object.values(THEMES);
+
+/** Chart colours for free themes — the collection-status colours stats always used. */
+const DEFAULT_CHART_RAMP: ThemeSkin['chartRamp'] = [
+  DEFAULT_STATUS.success,
+  DEFAULT_STATUS.info,
+  '#5E5CE6',
+  DEFAULT_STATUS.warning,
+  DEFAULT_STATUS.error,
+];
+
+/** Five chart colours for the active theme: the skin's ramp, else the default. */
+export function chartRamp(theme: ThemePalette): ThemeSkin['chartRamp'] {
+  return theme.skin?.chartRamp ?? DEFAULT_CHART_RAMP;
+}
+
+/**
+ * Grandfathering. Until 1.3.0 `PREMIUM_ENABLED` was off and everyone counted
+ * as Pro, so people may already sit on a premium theme they never paid for.
+ * The first launch that runs this records that theme once (or '' when the
+ * saved theme is free); after that the record never changes. Returns the
+ * value to store: `recorded` untouched when the migration already ran.
+ */
+export function resolveGrandfatheredTheme(
+  storedThemeId: string | null,
+  recorded: string | null
+): string {
+  if (recorded !== null) return recorded;
+  if (storedThemeId && storedThemeId in THEMES && THEMES[storedThemeId as ThemeId].isPremium) {
+    return storedThemeId;
+  }
+  return '';
+}
+
+/**
+ * Whether a theme can be picked: free themes, any theme for Pro, the theme in
+ * use right now (never lock someone out of what they are looking at), and the
+ * one grandfathered premium theme.
+ */
+export function isThemeUnlocked(
+  palette: ThemePalette,
+  opts: { isPro: boolean; activeThemeId: ThemeId; grandfatheredThemeId: string }
+): boolean {
+  return (
+    !palette.isPremium ||
+    opts.isPro ||
+    palette.id === opts.activeThemeId ||
+    palette.id === opts.grandfatheredThemeId
+  );
+}
 
 // Light-mode surfaces per theme — accent / accentLight / accentDark / secondary
 // / status stay shared with the dark palette, so the theme still has a single
@@ -371,6 +657,66 @@ const THEME_LIGHT_SURFACES: Record<ThemeId, SurfacePalette> = {
     glassBorder: 'rgba(244, 114, 182, 0.22)',
     gradient: ['#FFF8FB', '#FEE5F2', '#FFF8FB'],
   },
+  washi: {
+    background: { primary: '#F5EFE1', secondary: '#ECE3CF', tertiary: '#E1D5BA' },
+    text: {
+      primary: '#1C1813',
+      secondary: 'rgba(28,24,19,0.64)',
+      tertiary: 'rgba(28,24,19,0.42)',
+    },
+    glassBorder: 'rgba(178, 52, 34, 0.24)',
+    gradient: ['#F8F3E7', '#EEE6D3', '#F8F3E7'],
+  },
+  screentone: {
+    background: { primary: '#FFFFFF', secondary: '#F1F1EE', tertiary: '#E3E3DE' },
+    text: {
+      primary: '#0B0B0B',
+      secondary: 'rgba(11,11,11,0.64)',
+      tertiary: 'rgba(11,11,11,0.42)',
+    },
+    glassBorder: 'rgba(11,11,11,0.18)',
+    gradient: ['#FFFFFF', '#F3F3F0', '#FFFFFF'],
+  },
+  twilight: {
+    background: { primary: '#FFF3EA', secondary: '#FCE2D4', tertiary: '#F3D0C8' },
+    text: {
+      primary: '#1F1430',
+      secondary: 'rgba(31,20,48,0.64)',
+      tertiary: 'rgba(31,20,48,0.42)',
+    },
+    glassBorder: 'rgba(154, 123, 255, 0.24)',
+    gradient: ['#FFE9DA', '#FBEAF0', '#EFE6FF'],
+  },
+  yozakura: {
+    background: { primary: '#FFF5F9', secondary: '#FBE5EE', tertiary: '#F4D2E0' },
+    text: {
+      primary: '#141A3A',
+      secondary: 'rgba(20,26,58,0.64)',
+      tertiary: 'rgba(20,26,58,0.42)',
+    },
+    glassBorder: 'rgba(217, 100, 143, 0.24)',
+    gradient: ['#FFF9FB', '#FBE7F0', '#FFF9FB'],
+  },
+  cel: {
+    background: { primary: '#FBF3E2', secondary: '#F3E5C8', tertiary: '#E9D6AE' },
+    text: {
+      primary: '#191A2C',
+      secondary: 'rgba(25,26,44,0.64)',
+      tertiary: 'rgba(25,26,44,0.42)',
+    },
+    glassBorder: 'rgba(25,26,44,0.20)',
+    gradient: ['#FDF8EC', '#F4E7CB', '#FDF8EC'],
+  },
+  natsuzora: {
+    background: { primary: '#F2F8FF', secondary: '#DFEEFF', tertiary: '#C9E1FF' },
+    text: {
+      primary: '#0A2240',
+      secondary: 'rgba(10,34,64,0.64)',
+      tertiary: 'rgba(10,34,64,0.42)',
+    },
+    glassBorder: 'rgba(47, 143, 245, 0.24)',
+    gradient: ['#CFE6FF', '#EAF4FF', '#FFFFFF'],
+  },
 };
 
 interface ThemeContextValue {
@@ -393,6 +739,8 @@ interface ThemeContextValue {
   setTintIntensity: (t: TintIntensity) => Promise<void>;
   increaseContrast: boolean;
   setIncreaseContrast: (v: boolean) => Promise<void>;
+  /** Premium theme kept from the free era ('' = none). See {@link resolveGrandfatheredTheme}. */
+  grandfatheredThemeId: string;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -404,6 +752,7 @@ interface StoredTheme {
   themeMode: ThemeMode;
   tintIntensity: TintIntensity;
   increaseContrast: boolean;
+  grandfatheredThemeId: string;
 }
 
 /**
@@ -419,10 +768,15 @@ function readStoredTheme(): StoredTheme {
     themeMode: 'dark',
     tintIntensity: 'balanced',
     increaseContrast: false,
+    grandfatheredThemeId: '',
   };
   try {
     const storedTheme = kvGet(THEME_ID_KEY);
     if (storedTheme && storedTheme in THEMES) result.themeId = storedTheme as ThemeId;
+
+    const recorded = kvGet(THEME_GRANDFATHERED_KEY);
+    result.grandfatheredThemeId = resolveGrandfatheredTheme(storedTheme, recorded);
+    if (recorded === null) kvSet(THEME_GRANDFATHERED_KEY, result.grandfatheredThemeId);
 
     const storedAccent = kvGet(THEME_CUSTOM_ACCENT_KEY);
     if (storedAccent) {
@@ -611,8 +965,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTintIntensity,
       increaseContrast,
       setIncreaseContrast,
+      grandfatheredThemeId: bootstrap.grandfatheredThemeId,
     }),
     [
+      bootstrap.grandfatheredThemeId,
       resolvedTheme,
       themeId,
       setTheme,
@@ -652,6 +1008,7 @@ export function useTheme(): ThemeContextValue {
       setTintIntensity: async () => {},
       increaseContrast: false,
       setIncreaseContrast: async () => {},
+      grandfatheredThemeId: '',
     };
   }
   return ctx;

@@ -12,6 +12,8 @@ export interface CameraHeaderText {
 }
 
 export type CameraOrientationMode = 'auto' | 'landscape';
+/** 紀錄: shoot and log, no questions. 動漫: line up against a scene screenshot. */
+export type CameraMode = 'record' | 'anime';
 export type CameraOrientationLockIntent = 'portrait' | 'landscape';
 
 export interface CameraActiveInput {
@@ -73,9 +75,10 @@ export function formatCameraHeader(input: CameraHeaderInput): CameraHeaderText {
 export function isCameraCapturePath(pathname: string | null | undefined): boolean {
   const clean = (pathname ?? '').split(/[?#]/)[0]?.replace(/\/+$/, '') ?? '';
   const parts = clean.split('/').filter(Boolean);
-  if (parts.length !== 3) return false;
-  if (parts[0] !== 'pilgrimage' || parts[1] !== 'compare') return false;
-  return !RESERVED_COMPARE_ROUTES.has(parts[2] ?? '');
+  // The compare flow is a root-level stack (`app/compare/*`) so it can be
+  // opened from any tab — the spot camera is `/compare/<spotId>`.
+  if (parts.length !== 2 || parts[0] !== 'compare') return false;
+  return !RESERVED_COMPARE_ROUTES.has(parts[1] ?? '');
 }
 
 export function cameraOrientationLockIntent(
@@ -169,17 +172,29 @@ export const CAMERA_CAROUSEL_BAND_HEIGHT = 48;
 export const CAMERA_BOTTOM_ROW_HEIGHT = 88;
 /** Vertical breathing room between stacked bands. */
 export const CAMERA_BAND_GAP = 8;
+/** 紀錄｜動漫 switch, directly above the shutter row. */
+export const CAMERA_MODE_SWITCH_HEIGHT = 32;
 
 export interface CameraBandLayoutInput {
   /** Safe-area bottom already resolved via {@link resolveCameraBottomInset}. */
   bottomInset: number;
   /** Whether the zoom band participates in the stack (driven by the visibility resolver). */
   showZoomBand: boolean;
+  /**
+   * Whether the overlay-mode carousel participates. Without a reference there is
+   * nothing to overlay, so the band collapses and the zoom band sits right above
+   * the shutter row. Defaults to true.
+   */
+  showCarousel?: boolean;
+  /** Whether the 紀錄｜動漫 switch sits between the shutter row and the bands above. */
+  showModeSwitch?: boolean;
 }
 
 export interface CameraBandLayout {
   shutterRowBottom: number;
   shutterRowHeight: number;
+  modeSwitchBottom: number;
+  modeSwitchHeight: number;
   carouselBottom: number;
   carouselHeight: number;
   zoomBandBottom: number;
@@ -193,23 +208,28 @@ export interface CameraBandLayout {
  *
  * Deliberately takes NO `isLandscape` input: the bands stack identically in both
  * orientations. Landscape no longer reflows the cluster into a right-edge column —
- * only the glyphs inside each band rotate (Apple/Samsung convention). This replaces
- * the old per-layer `bottom: bottomBarHeight + N` offsets and `landscapeCluster`.
+ * only the glyphs inside each band rotate (Apple/Samsung convention). A hidden
+ * band takes no space: the bands above it drop down.
  */
 export function resolveCameraBandLayout(input: CameraBandLayoutInput): CameraBandLayout {
+  const showCarousel = input.showCarousel ?? true;
+  const showModeSwitch = input.showModeSwitch ?? false;
   const shutterRowBottom = input.bottomInset;
-  const carouselBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP;
-  const zoomBandBottom = carouselBottom + CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP;
-  const totalBottomChromeHeight = input.showZoomBand
-    ? CAMERA_BOTTOM_ROW_HEIGHT +
-      CAMERA_BAND_GAP +
-      CAMERA_CAROUSEL_BAND_HEIGHT +
-      CAMERA_BAND_GAP +
-      CAMERA_ZOOM_BAND_HEIGHT
-    : CAMERA_BOTTOM_ROW_HEIGHT + CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT;
+  const modeSwitchBottom = shutterRowBottom + CAMERA_BOTTOM_ROW_HEIGHT;
+  const modeSwitchSpan = showModeSwitch ? CAMERA_MODE_SWITCH_HEIGHT : 0;
+  const carouselBottom = modeSwitchBottom + modeSwitchSpan + CAMERA_BAND_GAP;
+  const carouselSpan = showCarousel ? CAMERA_CAROUSEL_BAND_HEIGHT + CAMERA_BAND_GAP : 0;
+  const zoomBandBottom = carouselBottom + carouselSpan;
+  const totalBottomChromeHeight =
+    CAMERA_BOTTOM_ROW_HEIGHT +
+    modeSwitchSpan +
+    (showCarousel ? CAMERA_BAND_GAP + CAMERA_CAROUSEL_BAND_HEIGHT : 0) +
+    (input.showZoomBand ? CAMERA_BAND_GAP + CAMERA_ZOOM_BAND_HEIGHT : 0);
   return {
     shutterRowBottom,
     shutterRowHeight: CAMERA_BOTTOM_ROW_HEIGHT,
+    modeSwitchBottom,
+    modeSwitchHeight: CAMERA_MODE_SWITCH_HEIGHT,
     carouselBottom,
     carouselHeight: CAMERA_CAROUSEL_BAND_HEIGHT,
     zoomBandBottom,
@@ -225,12 +245,21 @@ export interface CameraChromeVisibilityInput {
   afLocked: boolean;
   /** An overlay mode is selected (`overlayVisible === true`). */
   overlayActive: boolean;
+  /** A reference image exists. Without one every overlay control is meaningless. */
+  hasReference: boolean;
+  /** 紀錄 mode: a plain logging camera, so no reference or overlay chrome at all. */
+  recordMode?: boolean;
 }
 
 export interface CameraChromeVisibility {
   showZoomBand: boolean;
+  /** 紀錄｜動漫 labels; landscape-immersive tucks them away with the zoom band. */
+  showModeSwitch: boolean;
+  /** REF thumbnail + overlay-mode carousel. */
+  showReferenceControls: boolean;
+  /** The light "import this scene's screenshot" affordance. */
+  showImportReference: boolean;
   showOpacityPill: boolean;
-  showTopContextIcons: boolean;
   showCaptureHistory: boolean;
   showAutoCaptureBadge: boolean;
   showFocusExposureBar: boolean;
@@ -239,22 +268,69 @@ export interface CameraChromeVisibility {
 
 /**
  * Immersive-by-subtraction. The chrome is ALWAYS glass (we never change opacity); instead,
- * landscape-immersive hides the secondary controls (zoom band, opacity pill, top contextual
- * icons, capture history), leaving the shutter row, the overlay carousel, and the alignment
- * readout. A tap clears `immersive` to reveal everything again. Supersedes the dock-driven
- * `resolveTransientCameraHudVisibility`.
+ * landscape-immersive hides the secondary controls (zoom band, opacity pill, capture history),
+ * leaving the shutter row, the overlay carousel, and the alignment readout. A tap clears
+ * `immersive` to reveal everything again. Overlay controls exist only once there is a
+ * reference: the camera opens as a plain full-screen viewfinder.
  */
 export function resolveCameraChromeVisibility(
   input: CameraChromeVisibilityInput
 ): CameraChromeVisibility {
   const secondaryHidden = input.isLandscape && input.immersive;
+  const anime = !input.recordMode;
+  const overlay = anime && input.hasReference && input.overlayActive;
   return {
     showZoomBand: !secondaryHidden,
-    showOpacityPill: !secondaryHidden && input.overlayActive,
-    showTopContextIcons: !secondaryHidden,
+    showModeSwitch: !secondaryHidden,
+    showReferenceControls: anime && input.hasReference,
+    showImportReference: anime && !input.hasReference,
+    showOpacityPill: !secondaryHidden && overlay,
     showCaptureHistory: !secondaryHidden,
     showAutoCaptureBadge: true,
-    showFocusExposureBar: input.afLocked,
-    showOverlayQuickControls: input.overlayActive,
+    // Landscape has ~400pt of height: the stacked bands already fill it, so the
+    // EV bar and the per-mode overlay tools stay portrait-only (the focus ring
+    // and AF lock still work).
+    showFocusExposureBar: input.afLocked && !input.isLandscape,
+    showOverlayQuickControls: overlay && !input.isLandscape,
   };
+}
+
+export interface ViewfinderRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Long side over short side of what the photo keeps; null = fill the screen. */
+const VIEWFINDER_RATIO: Record<'4:3' | '16:9' | '1:1' | 'full', number | null> = {
+  '4:3': 4 / 3,
+  '16:9': 16 / 9,
+  '1:1': 1,
+  full: null,
+};
+
+/**
+ * Where the live preview sits so it shows exactly what the photo keeps
+ * (WYSIWYG). Portrait: full width, starting under the status bar; whatever is
+ * left below is the dark band the shutter sits on. Landscape: full height,
+ * centred. 'full' fills the screen (the photo then keeps more than is seen).
+ */
+export function resolveViewfinderRect(input: {
+  winW: number;
+  winH: number;
+  topInset: number;
+  aspect: '4:3' | '16:9' | '1:1' | 'full';
+}): ViewfinderRect {
+  const { winW, winH, topInset } = input;
+  const ratio = VIEWFINDER_RATIO[input.aspect];
+  if (ratio === null) return { left: 0, top: 0, width: winW, height: winH };
+  if (winW > winH) {
+    const width = Math.min(winW, winH * ratio);
+    return { left: (winW - width) / 2, top: 0, width, height: winH };
+  }
+  const available = winH - topInset;
+  const height = Math.min(available, winW * ratio);
+  const width = height === available ? height / ratio : winW;
+  return { left: (winW - width) / 2, top: topInset, width, height };
 }

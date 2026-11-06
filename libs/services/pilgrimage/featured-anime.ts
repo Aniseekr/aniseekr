@@ -1,14 +1,10 @@
-// Curated list of pilgrimage anime that resolve against api.anitabi.cn.
+// Curated Bangumi IDs used to select Atlas works for the pilgrimage hub.
 //
-// These IDs were verified to return non-null payloads with `pointsLength >= 20`
-// and a non-`[0,0]` center geo. They are used as a fallback pool when the
+// These IDs are used as a fallback pool when the
 // signed-in user's collection has too few pilgrimage-eligible anime to fill
 // the hub's "Popular Animes" rail and "Featured Spots" list.
 //
-// IMPORTANT: do not add IDs without confirming
-//   curl https://api.anitabi.cn/bangumi/{id}/lite
-// returns 200 with real `litePoints`. Anitabi only has data for a subset of
-// Bangumi subjects; many otherwise-popular anime return 404.
+// Only IDs present in the Atlas works index produce pilgrimage cards.
 
 export interface FeaturedAnime {
   bangumiId: number;

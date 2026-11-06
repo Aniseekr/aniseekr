@@ -10,16 +10,15 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
+import { Spacing } from '../../../constants/DesignSystem';
 import { useTheme } from '../../../context/ThemeContext';
-import { useI18n, useT } from '../../../libs/i18n';
+import { useI18n, useT, type LanguageId } from '../../../libs/i18n';
 import { resolveLocalIntelText } from '../../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import type {
   EntityProvenance,
   IntelProvenance,
 } from '../../../libs/services/pilgrimage/locality/types';
 import { ThemedText } from '../../themed';
-import { LOCALITY_INNER_RADIUS, LocalityMiniStamp } from './LocalityAesthetic';
 
 export interface LocalityAttributionFooterProps {
   provenance: EntityProvenance | readonly IntelProvenance[];
@@ -40,33 +39,62 @@ export function LocalityAttributionFooter({
     <View
       style={[
         styles.container,
-        {
-          backgroundColor: theme.background.tertiary,
-          borderColor: theme.glassBorder,
-        },
-        variant === 'footer' && styles.footer,
+        variant === 'footer' && [styles.footer, { borderTopColor: theme.glassBorder }],
         style,
       ]}>
-      {provenance.map((credit, index) => {
-        const sourceName = resolveLocalIntelText(credit.sourceName, language).value;
-        const copyright = credit.copyrightNotice
-          ? resolveLocalIntelText(credit.copyrightNotice, language).value
-          : null;
-        return (
+      {dedupeDisplayedCredits(provenance, language).map(
+        ({ key, credit, sourceName, copyright }) => (
           <AttributionCredit
-            key={`${credit.sourceUrl}:${credit.verifiedAt}:${index}`}
+            key={key}
             credit={credit}
             sourceName={sourceName}
             copyright={copyright}
             compact={variant === 'compact'}
             openLabel={t('pilgrimageUi.attribution.openSourceA11y', { source: sourceName })}
           />
-        );
-      })}
+        )
+      )}
     </View>
   );
 }
 
+export interface DisplayedCredit {
+  /** Every displayed field joined — unique within one footer. */
+  key: string;
+  credit: IntelProvenance;
+  sourceName: string;
+  copyright: string | null;
+}
+
+/**
+ * Credits that would render identically (same source, date, licence and notice
+ * — e.g. two pages of the same site) collapse into one line; the first URL is
+ * kept as the link. A notice that only repeats the source name is dropped.
+ */
+export function dedupeDisplayedCredits(
+  provenance: readonly IntelProvenance[],
+  language: LanguageId
+): DisplayedCredit[] {
+  const seen = new Set<string>();
+  const out: DisplayedCredit[] = [];
+  for (const credit of provenance) {
+    const sourceName = resolveLocalIntelText(credit.sourceName, language).value;
+    const notice = credit.copyrightNotice
+      ? resolveLocalIntelText(credit.copyrightNotice, language).value
+      : null;
+    const copyright = notice === sourceName ? null : notice;
+    const key = [sourceName, credit.verifiedAt, credit.license ?? '', copyright ?? ''].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, credit, sourceName, copyright });
+  }
+  return out;
+}
+
+/**
+ * One source credit as plain text: the linked source name, then when it was
+ * verified and any licence / rights notice on the same muted line.
+ */
 function AttributionCredit({
   credit,
   sourceName,
@@ -90,86 +118,54 @@ function AttributionCredit({
     },
     [url]
   );
+  const details = [
+    t('pilgrimageUi.attribution.verifiedAt', { date: credit.verifiedAt }),
+    credit.license ? t('pilgrimageUi.attribution.license', { license: credit.license }) : null,
+    copyright,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={styles.credit}>
-      <View style={styles.sourceRow}>
-        <LocalityMiniStamp accent={theme.accent} icon="shield-checkmark-outline" size="sm" />
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel={openLabel}
-          hitSlop={6}
-          onPress={openSource}
-          style={({ pressed }) => [
-            styles.sourceLink,
-            {
-              backgroundColor: theme.background.secondary,
-              borderColor: theme.glassBorder,
-            },
-            pressed && styles.pressed,
-          ]}>
-          <ThemedText variant="captionSmall" weight="700" tone="accent" numberOfLines={1}>
-            {sourceName}
-          </ThemedText>
-          <Ionicons name="open-outline" size={11} color={theme.accent} />
-        </Pressable>
-        <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-          {t('pilgrimageUi.attribution.verifiedAt', { date: credit.verifiedAt })}
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={openLabel}
+        hitSlop={LINK_HIT_SLOP}
+        onPress={openSource}
+        style={({ pressed }) => [styles.sourceLink, pressed && styles.pressed]}>
+        <ThemedText variant="captionSmall" weight="700" tone="accent" numberOfLines={1}>
+          {sourceName}
         </ThemedText>
-      </View>
-      {credit.license || copyright ? (
-        <ThemedText
-          variant="captionSmall"
-          tone="tertiary"
-          numberOfLines={compact ? 1 : 2}
-          style={styles.rights}>
-          {[
-            credit.license
-              ? t('pilgrimageUi.attribution.license', { license: credit.license })
-              : null,
-            copyright,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </ThemedText>
-      ) : null}
+        <Ionicons name="open-outline" size={11} color={theme.accent} />
+      </Pressable>
+      <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={compact ? 1 : 2}>
+        {details}
+      </ThemedText>
     </View>
   );
 }
 
+// Text links stay visually light; the slop lifts the tap area to 44pt.
+const LINK_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 };
+
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.xs,
-    borderWidth: 1,
-    borderRadius: LOCALITY_INNER_RADIUS,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    gap: Spacing.sm,
   },
   footer: {
-    paddingVertical: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing.sm,
   },
   credit: {
-    gap: Spacing.xxs,
-  },
-  sourceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: Spacing.xxs,
-    minHeight: Size.minTouchTarget,
+    gap: 2,
   },
   sourceLink: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: Spacing.xxs,
-    maxWidth: '70%',
-    minHeight: Size.minTouchTarget,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm,
-  },
-  rights: {
-    paddingLeft: Spacing.xxl,
+    maxWidth: '100%',
   },
   pressed: {
     opacity: 0.64,

@@ -1,10 +1,14 @@
+import type { ComponentProps } from 'react';
+import type Ionicons from '@expo/vector-icons/Ionicons';
+import type { TranslationKey } from '../../i18n/types';
+
 export type ShareTemplateId = 'top10' | 'yearly_best' | 'starter_pack' | 'masterpiece';
 
 export interface ShareTemplate {
   id: ShareTemplateId;
-  title: string;
-  description: string;
-  emoji: string;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
+  icon: ComponentProps<typeof Ionicons>['name'];
   needsManualPick: boolean;
 }
 
@@ -37,41 +41,32 @@ export interface ShareSourceItem {
 export const SHARE_TEMPLATES: ShareTemplate[] = [
   {
     id: 'top10',
-    title: 'Top 10',
-    description: 'Your highest-rated anime',
-    emoji: '🏆',
+    titleKey: 'collectionUi.shareTemplate.top10Title',
+    descriptionKey: 'collectionUi.shareTemplate.top10Desc',
+    icon: 'trophy-outline',
     needsManualPick: false,
   },
   {
     id: 'yearly_best',
-    title: 'Yearly Best',
-    description: 'Top 3 from each of last 4 years',
-    emoji: '📅',
+    titleKey: 'collectionUi.shareTemplate.yearlyBestTitle',
+    descriptionKey: 'collectionUi.shareTemplate.yearlyBestDesc',
+    icon: 'calendar-outline',
     needsManualPick: false,
   },
   {
     id: 'starter_pack',
-    title: 'Starter Pack',
-    description: 'Six anime to recommend to a newcomer',
-    emoji: '🎒',
+    titleKey: 'collectionUi.shareTemplate.starterPackTitle',
+    descriptionKey: 'collectionUi.shareTemplate.starterPackDesc',
+    icon: 'bag-handle-outline',
     needsManualPick: true,
   },
   {
     id: 'masterpiece',
-    title: 'Masterpiece',
-    description: 'A single hero pick worth a poster',
-    emoji: '👑',
+    titleKey: 'collectionUi.shareTemplate.masterpieceTitle',
+    descriptionKey: 'collectionUi.shareTemplate.masterpieceDesc',
+    icon: 'star-outline',
     needsManualPick: true,
   },
-];
-
-const STARTER_TAGS = [
-  '⚔️ Action',
-  '💕 Romance',
-  '🌌 Sci-fi',
-  '😂 Comedy',
-  '🌸 Slice of Life',
-  '🔮 Fantasy',
 ];
 
 function toEntry(item: ShareSourceItem, tag?: string): ShareEntry {
@@ -128,7 +123,7 @@ function buildStarterPack(
   const ranked = rankByScore(items).slice(0, 6);
   return {
     template: SHARE_TEMPLATES[2],
-    entries: ranked.map((it, idx) => toEntry(it, STARTER_TAGS[idx % STARTER_TAGS.length])),
+    entries: ranked.map((it) => toEntry(it)),
     meta: { username: options?.username },
   };
 }

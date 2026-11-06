@@ -1,5 +1,4 @@
-// Composer state for the share card (Track A of the composer pipeline plan:
-// docs/superpowers/plans/2026-05-26-composer-pipeline.md).
+// Composer state for the share card (Track A of the composer pipeline plan).
 //
 // These are pure helpers — no React, no react-native. They are the
 // "below-the-render" layer shared by the pilgrimage compare flow and the
@@ -220,21 +219,31 @@ function srgbLuma(c8: number): number {
 
 // ----- export resolution -----
 
-export type ExportResolution = '720p' | '1080p' | '4k';
+export type ExportResolution = '720p' | '1080p' | '4k' | 'full';
 
 export type ExportResolutionDescriptor = {
   id: ExportResolution;
   label: string;
   hint: string;
-  /** Short-edge target size in pixels. */
+  /** Short-edge target size in pixels. `full` derives it from the shot instead. */
   base: number;
+  /** Pro-only (full-resolution export). */
+  pro: boolean;
 };
 
 export const EXPORT_RESOLUTIONS: ExportResolutionDescriptor[] = [
-  { id: '720p', label: '720p', hint: 'Fast', base: 720 },
-  { id: '1080p', label: '1080p', hint: 'HD', base: 1080 },
-  { id: '4k', label: '4K', hint: 'Sharp', base: 2160 },
+  { id: '720p', label: '720p', hint: 'Fast', base: 720, pro: false },
+  { id: '1080p', label: '1080p', hint: 'HD', base: 1080, pro: false },
+  { id: '4k', label: '4K', hint: 'Sharp', base: 2160, pro: false },
+  { id: 'full', label: 'Full', hint: 'Original', base: 2160, pro: true },
 ];
+
+/**
+ * `full` never goes below 4K, follows the photo's own short edge above that,
+ * and keeps the long edge within what a phone can encode without running out
+ * of memory (a 48 MP shot in a 9:16 card would otherwise be ~8k × 14k).
+ */
+export const FULL_EXPORT_MAX_LONG_EDGE = 6144;
 
 const RATIO_TO_ASPECT: Record<ShareRatio, number> = {
   '1:1': 1,
@@ -243,17 +252,25 @@ const RATIO_TO_ASPECT: Record<ShareRatio, number> = {
 };
 
 /**
- * Output pixel dimensions for `captureRef({ width, height })`. The short edge
- * matches the chosen preset; the long edge is derived from the ratio so the
- * card never gets cropped or letter-boxed at export time.
+ * Output pixel dimensions for the captured card. The short edge matches the
+ * chosen preset; the long edge is derived from the ratio so the card never
+ * gets cropped or letter-boxed at export time. `shotShortEdge` (pixels) only
+ * matters for `full`.
  */
 export function getExportDimensions(
   ratio: ShareRatio,
-  resolution: ExportResolution
+  resolution: ExportResolution,
+  shotShortEdge?: number | null
 ): { width: number; height: number } {
   const desc = EXPORT_RESOLUTIONS.find((r) => r.id === resolution);
-  const base = desc ? desc.base : 1080;
   const aspect = RATIO_TO_ASPECT[ratio];
+  let base = desc ? desc.base : 1080;
+  if (resolution === 'full') {
+    const longPerShort = aspect >= 1 ? aspect : 1 / aspect;
+    const cap = Math.floor(FULL_EXPORT_MAX_LONG_EDGE / longPerShort);
+    const shot = shotShortEdge && Number.isFinite(shotShortEdge) ? Math.round(shotShortEdge) : 0;
+    base = Math.max(base, Math.min(shot, cap));
+  }
   if (aspect >= 1) {
     return { width: Math.round(base * aspect), height: base };
   }

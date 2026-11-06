@@ -5,6 +5,7 @@ import React, { memo, useMemo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ThemePalette } from '../../../context/ThemeContext';
+import { Radius } from '../../../constants/DesignSystem';
 
 export interface RoundHeaderButtonProps {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -55,7 +56,7 @@ function makeHeaderStyles(theme: ThemePalette) {
     roundBtn: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: `${theme.background.secondary}CC`,

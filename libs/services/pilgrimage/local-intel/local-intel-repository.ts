@@ -1,9 +1,8 @@
-// Local intel repository (spec §13). Same seam as anitabi-index.ts:
+// Local intel repository (spec §13):
 // lazy-required bundled seed, sync queries, and a runtime-hydration swap for
 // future server sync. The dataset is tens of entries, so queries are linear
 // scans over memoized per-kind partitions.
 
-import { hasSufficientRuntimeCoverage } from '../anitabi-runtime-coverage';
 import { localityRepository } from '../locality/locality-repository';
 import type {
   LocalityDataEnvelope,
@@ -92,7 +91,7 @@ export function hydrateLocalIntelFromRuntime(file: LocalIntelFile): void {
   if (!file || !Array.isArray(file.entries)) return;
   const current = ensureBuilt();
   const candidate = normalize(file);
-  if (!hasSufficientRuntimeCoverage(current.entries.length, candidate.entries.length)) return;
+  if (!hasSufficientCoverage(current.entries.length, candidate.entries.length)) return;
   overrideState = candidate;
   version += 1;
   for (const listener of listeners) listener();
@@ -231,13 +230,16 @@ function tbaMonthDays(row: HubRailEvent, now: Date): number {
 }
 
 export function getViewingHintForSpot(
-  bangumiId: number,
-  pointId: string
+  _workKey: string,
+  _spotId: string
 ): LocalIntelViewingHint | null {
-  const match = ensureBuilt().hints.find((h) =>
-    h.spotRefs?.some((ref) => ref.bangumiId === bangumiId && ref.pointId === pointId)
-  );
-  return match ?? null;
+  return null;
+}
+
+function hasSufficientCoverage(currentSize: number, candidateSize: number): boolean {
+  if (!Number.isFinite(candidateSize) || candidateSize <= 0) return false;
+  if (!Number.isFinite(currentSize) || currentSize <= 0) return true;
+  return candidateSize >= Math.floor(currentSize * 0.8);
 }
 
 export function getViewingHintNear(geo: [number, number]): LocalIntelViewingHint | null {

@@ -37,11 +37,13 @@ describe('camera UI helpers', () => {
   });
 
   it('only treats the dynamic capture screen as orientation-unlocked camera UI', () => {
-    expect(isCameraCapturePath('/pilgrimage/compare/abc123')).toBe(true);
-    expect(isCameraCapturePath('/pilgrimage/compare/tips')).toBe(false);
-    expect(isCameraCapturePath('/pilgrimage/compare/align')).toBe(false);
-    expect(isCameraCapturePath('/pilgrimage/compare/preview')).toBe(false);
+    expect(isCameraCapturePath('/compare/abc123')).toBe(true);
+    expect(isCameraCapturePath('/compare/tips')).toBe(false);
+    expect(isCameraCapturePath('/compare/align')).toBe(false);
+    expect(isCameraCapturePath('/compare/preview')).toBe(false);
     expect(isCameraCapturePath('/pilgrimage')).toBe(false);
+    // The flow moved to the root stack; the old tab-nested path is not the camera.
+    expect(isCameraCapturePath('/pilgrimage/compare/abc123')).toBe(false);
   });
 
   it('locks the interface to portrait in AUTO (stock-camera HUD) and landscape in LAND', () => {

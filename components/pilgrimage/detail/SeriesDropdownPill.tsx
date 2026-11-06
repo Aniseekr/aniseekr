@@ -8,7 +8,15 @@
 // it in the header).
 
 import React, { memo, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, type View as RNView } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type View as RNView,
+  type ViewInstance,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
 import { ThemedText } from '../../themed';
@@ -47,7 +55,7 @@ function SeriesDropdownPillImpl({
 }: SeriesDropdownPillProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const pillRef = useRef<RNView>(null);
+  const pillRef = useRef<ViewInstance>(null);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
 
@@ -65,7 +73,7 @@ function SeriesDropdownPillImpl({
       return canSelectAll ? `${availableCount}` : null;
     }
     const match = entries.find((e) => e.subject.id === selection);
-    return match?.anime?.pointsLength ? `${match.anime.pointsLength}` : null;
+    return match?.anime?.spots.length ? `${match.anime.spots.length}` : null;
   }, [selection, entries, canSelectAll, availableCount]);
 
   const handlePress = () => {
@@ -144,7 +152,7 @@ function SeriesDropdownPillImpl({
                       sublabel={enabled ? title : t('pilgrimageUi.noSpotsYet')}
                       active={active}
                       disabled={!enabled}
-                      badge={entry.anime?.pointsLength}
+                      badge={entry.anime?.spots.length}
                       themeColor={themeColor}
                       themeColorFg={themeColorFg}
                       theme={theme}
@@ -240,14 +248,14 @@ function makeStyles(theme: ThemePalette) {
       paddingRight: 10,
       paddingVertical: 8,
       minHeight: 40,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     badge: {
       minWidth: 22,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 11,
+      borderRadius: Radius.card,
       alignItems: 'center',
       justifyContent: 'center',
     },

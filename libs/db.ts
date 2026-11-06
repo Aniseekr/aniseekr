@@ -1,8 +1,8 @@
 import * as SQLite from 'expo-sqlite';
 
-import type { LatLngBox, SpotIndexRow } from './services/pilgrimage/spot-index';
 
-const DB_NAME = 'aniseekr.db';
+export const LOCAL_DB_NAME = 'aniseekr.db';
+const DB_NAME = LOCAL_DB_NAME;
 
 export interface FavoriteItem {
   id: string;
@@ -22,23 +22,6 @@ export interface UserStats {
   likedCount: number;
 }
 
-export interface PilgrimageRow {
-  bangumi_id: number;
-  title: string;
-  title_cn: string | null;
-  city: string | null;
-  cover: string | null;
-  color: string | null;
-  center_lat: number | null;
-  center_lng: number | null;
-  zoom: number | null;
-  points_length: number | null;
-  images_length: number | null;
-  lite_points_json: string | null;
-  cached_at: number;
-  expires_at: number;
-}
-
 export interface DeckStateRow {
   genre_id: string;
   photos_json: string;
@@ -54,23 +37,6 @@ export interface GenreCoverOverrideRow {
   id: string;
   url: string;
   updated_at: number;
-}
-
-export interface PilgrimageSaveInput {
-  bangumiId: number;
-  title: string;
-  titleCn?: string | null;
-  city?: string | null;
-  cover?: string | null;
-  color?: string | null;
-  centerLat?: number | null;
-  centerLng?: number | null;
-  zoom?: number | null;
-  pointsLength?: number | null;
-  imagesLength?: number | null;
-  litePointsJson?: string | null;
-  cachedAt: number;
-  expiresAt: number;
 }
 
 // Cache the in-flight open as a promise so concurrent callers share one handle.
@@ -331,6 +297,11 @@ const DDL = `
         updated_at INTEGER
       );
       CREATE INDEX IF NOT EXISTS idx_status ON user_anime(status);
+      CREATE TABLE IF NOT EXISTS tracking_tombstones (
+        anime_id TEXT PRIMARY KEY NOT NULL,
+        platform_ids TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
 
       CREATE TABLE IF NOT EXISTS collection_folders (
         id TEXT PRIMARY KEY NOT NULL,
@@ -349,25 +320,6 @@ const DDL = `
         PRIMARY KEY (folder_id, anime_id),
         FOREIGN KEY (folder_id) REFERENCES collection_folders (id) ON DELETE CASCADE
       );
-
-      CREATE TABLE IF NOT EXISTS pilgrimage_spots (
-        bangumi_id INTEGER PRIMARY KEY NOT NULL,
-        title TEXT NOT NULL,
-        title_cn TEXT,
-        city TEXT,
-        cover TEXT,
-        color TEXT,
-        center_lat REAL,
-        center_lng REAL,
-        zoom INTEGER,
-        points_length INTEGER,
-        images_length INTEGER,
-        lite_points_json TEXT,
-        cached_at INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_pilg_city ON pilgrimage_spots(city);
-      CREATE INDEX IF NOT EXISTS idx_pilg_expires ON pilgrimage_spots(expires_at);
 
       CREATE TABLE IF NOT EXISTS sync_dirty_records (
         anime_id TEXT NOT NULL,
@@ -479,16 +431,6 @@ const DDL = `
         updated_at INTEGER NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS anitabi_spots (
-        point_id TEXT PRIMARY KEY NOT NULL,
-        bangumi_id INTEGER NOT NULL,
-        lat REAL NOT NULL,
-        lng REAL NOT NULL,
-        name TEXT,
-        cn TEXT,
-        image TEXT
-      );
-      CREATE INDEX IF NOT EXISTS idx_anitabi_spots_lat ON anitabi_spots(lat);
     `;
 
 export const LocalDB = {
@@ -645,125 +587,4 @@ export const LocalDB = {
     };
   },
 
-  async getPilgrimage(bangumiId: number): Promise<PilgrimageRow | null> {
-    const db = await openDb();
-    const row = await db.getFirstAsync<PilgrimageRow>(
-      'SELECT * FROM pilgrimage_spots WHERE bangumi_id = ?',
-      bangumiId
-    );
-    return row ?? null;
-  },
-
-  async savePilgrimage(entry: PilgrimageSaveInput): Promise<void> {
-    const db = await openDb();
-    await db.runAsync(
-      `INSERT OR REPLACE INTO pilgrimage_spots (
-        bangumi_id, title, title_cn, city, cover, color,
-        center_lat, center_lng, zoom,
-        points_length, images_length, lite_points_json,
-        cached_at, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      entry.bangumiId,
-      entry.title,
-      entry.titleCn ?? null,
-      entry.city ?? null,
-      entry.cover ?? null,
-      entry.color ?? null,
-      entry.centerLat ?? null,
-      entry.centerLng ?? null,
-      entry.zoom ?? null,
-      entry.pointsLength ?? null,
-      entry.imagesLength ?? null,
-      entry.litePointsJson ?? null,
-      entry.cachedAt,
-      entry.expiresAt
-    );
-  },
-
-  async cleanExpiredPilgrimage(now: number = Date.now()): Promise<number> {
-    const db = await openDb();
-    const result = await db.runAsync('DELETE FROM pilgrimage_spots WHERE expires_at <= ?', now);
-    return result?.changes ?? 0;
-  },
-
-  /**
-   * Replace the entire anitabi_spots table with a fresh hydration payload.
-   * One transaction, chunked multi-row INSERTs (500 rows/statement) so a ~50k
-   * row swap doesn't trip expo-sqlite's variable limit or the "database is
-   * locked" path. Returns the number of rows written.
-   */
-  async hydrateAnitabiSpots(rows: readonly SpotIndexRow[]): Promise<number> {
-    const db = await openDb();
-    const CHUNK = 500;
-    await db.withTransactionAsync(async () => {
-      await db.runAsync('DELETE FROM anitabi_spots');
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        const chunk = rows.slice(i, i + CHUNK);
-        if (chunk.length === 0) continue;
-        const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
-        const args: SQLite.SQLiteBindValue[] = [];
-        for (const r of chunk) {
-          args.push(r.pointId, r.bangumiId, r.lat, r.lng, r.name, r.cn, r.image);
-        }
-        await db.runAsync(
-          `INSERT OR REPLACE INTO anitabi_spots
-             (point_id, bangumi_id, lat, lng, name, cn, image) VALUES ${placeholders}`,
-          ...args
-        );
-      }
-    });
-    return rows.length;
-  },
-
-  /** Coarse box prefilter (lat + lng BETWEEN). Caller ranks exactly by haversine. */
-  async queryAnitabiSpotsByBox(box: LatLngBox): Promise<SpotIndexRow[]> {
-    const db = await openDb();
-    const rows = await db.getAllAsync<{
-      point_id: string;
-      bangumi_id: number;
-      lat: number;
-      lng: number;
-      name: string | null;
-      cn: string | null;
-      image: string | null;
-    }>(
-      `SELECT point_id, bangumi_id, lat, lng, name, cn, image FROM anitabi_spots
-        WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?`,
-      box.minLat,
-      box.maxLat,
-      box.minLng,
-      box.maxLng
-    );
-    return (rows ?? []).map((r) => ({
-      pointId: r.point_id,
-      bangumiId: r.bangumi_id,
-      lat: r.lat,
-      lng: r.lng,
-      name: r.name ?? '',
-      cn: r.cn ?? '',
-      image: r.image ?? '',
-    }));
-  },
-
-  /** Spots inside a map bounding box, capped. Antimeridian-crossing boxes are
-   *  rare for pilgrimage data (all in one hemisphere) — not handled. */
-  async queryAnitabiSpotsInBounds(
-    bbox: { north: number; south: number; east: number; west: number },
-    limit: number
-  ): Promise<SpotIndexRow[]> {
-    return this.queryAnitabiSpotsByBox({
-      minLat: bbox.south,
-      maxLat: bbox.north,
-      minLng: bbox.west,
-      maxLng: bbox.east,
-    }).then((rows) => (limit > 0 ? rows.slice(0, limit) : rows));
-  },
-
-  async getAnitabiSpotCount(): Promise<number> {
-    const db = await openDb();
-    const row = await db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM anitabi_spots'
-    );
-    return row?.count ?? 0;
-  },
 };

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
-import { ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
+import { ScreenHeader, ThemedButton, ThemedText, readableTextOn } from '../../components/themed';
 import { useT, type TranslationKey } from '../../libs/i18n';
+import { Radius } from '../../constants/DesignSystem';
 
 interface Clipboard {
   setStringAsync(value: string): Promise<unknown>;
@@ -66,7 +67,6 @@ const CATEGORIES: { id: Category; labelKey: TranslationKey }[] = [
 ];
 
 export default function DesignTokensScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const t = useT();
   const { theme } = useTheme();
@@ -111,20 +111,7 @@ export default function DesignTokensScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.navBar}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.navBack, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-          </Pressable>
-          <ThemedText variant="titleLarge" weight="600">
-            {t('settingsUi.designTokens')}
-          </ThemedText>
-          <View style={{ width: 24 }} />
-        </View>
+        <ScreenHeader title={t('settingsUi.designTokens')} />
 
         <ThemedText variant="bodySmall" tone="secondary" style={styles.subtitle}>
           {TOKENS.length} tokens · 2 themes (light / dark)
@@ -267,19 +254,11 @@ export default function DesignTokensScreen() {
 
 function makeStyles(theme: ThemePalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.background.primary },
-    navBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      height: 52,
-    },
-    navBack: { minWidth: 24 },
     subtitle: {
       paddingHorizontal: 20,
       paddingBottom: 8,
     },
+    root: { flex: 1, backgroundColor: theme.background.primary },
     chipsRow: {
       flexDirection: 'row',
       gap: 8,
@@ -290,7 +269,7 @@ function makeStyles(theme: ThemePalette) {
     chip: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: Radius.card,
       borderWidth: 1,
     },
     scroll: { padding: 16, gap: 16 },
@@ -299,7 +278,7 @@ function makeStyles(theme: ThemePalette) {
     },
     tokenList: {
       backgroundColor: theme.background.secondary,
-      borderRadius: 14,
+      borderRadius: Radius.card,
       borderWidth: 1,
       borderColor: theme.glassBorder,
       overflow: 'hidden',
@@ -337,7 +316,7 @@ function makeStyles(theme: ThemePalette) {
       borderWidth: 1,
       paddingHorizontal: 14,
       paddingVertical: 8,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
     },
   });
 }

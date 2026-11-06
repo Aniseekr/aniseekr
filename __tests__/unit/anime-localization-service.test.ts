@@ -115,4 +115,78 @@ describe('resolveTitleByOrder', () => {
     expect(titleForLanguage(empty, 'chinese', 'hant')).toBeNull();
     expect(resolveTitleByOrder(empty, ['english', 'chinese'], 'hant')).toBe('Canonical');
   });
+
+  it('keeps a saved Latin title ahead of Russian enrichment for English users', () => {
+    expect(
+      resolveTitleByOrder({ title: 'Tokyo Revengers', titleRussian: 'Токийские мстители' }, [
+        'english',
+        'romaji',
+        'japanese',
+        'chinese',
+        'russian',
+      ])
+    ).toBe('Tokyo Revengers');
+  });
+
+  it('prefers Chinese enrichment before the saved Latin title for Chinese users', () => {
+    expect(
+      resolveTitleByOrder({ title: 'Tokyo Revengers', titleChineseTraditional: '東京復仇者' }, [
+        'chinese',
+        'english',
+        'romaji',
+        'japanese',
+        'russian',
+      ])
+    ).toBe('東京復仇者');
+  });
+
+  it('prefers Russian enrichment before the saved Latin title for Russian users', () => {
+    expect(
+      resolveTitleByOrder({ title: 'Tokyo Revengers', titleRussian: 'Токийские мстители' }, [
+        'russian',
+        'english',
+        'romaji',
+        'japanese',
+        'chinese',
+      ])
+    ).toBe('Токийские мстители');
+  });
+
+  it('preserves an explicit English title instead of using the saved title', () => {
+    expect(
+      resolveTitleByOrder(
+        {
+          title: 'Tokyo Revengers (saved)',
+          titleEnglish: 'Tokyo Revengers',
+          titleRussian: 'Токийские мстители',
+        },
+        ['english', 'romaji', 'japanese', 'chinese', 'russian']
+      )
+    ).toBe('Tokyo Revengers');
+  });
+
+  it('uses the first Latin slot even when Romaji is ranked before English', () => {
+    expect(
+      resolveTitleByOrder({ title: 'Tokyo Revengers', titleJapanese: '東京卍リベンジャーズ' }, [
+        'romaji',
+        'japanese',
+        'english',
+        'chinese',
+        'russian',
+      ])
+    ).toBe('Tokyo Revengers');
+  });
+
+  it('preserves language priority when an explicit Romaji title exists', () => {
+    expect(
+      resolveTitleByOrder(
+        {
+          title: 'Tokyo Revengers (saved)',
+          titleRomaji: 'Tokyo Revengers',
+          titleRussian: 'Токийские мстители',
+        },
+        ['english', 'russian', 'romaji', 'japanese', 'chinese']
+      )
+    ).toBe('Токийские мстители');
+  });
 });

@@ -11,16 +11,21 @@ export const THEME_RECENT_ACCENTS_KEY = '@aniseekr/recentAccents';
 export const THEME_MODE_KEY = '@aniseekr/themeMode';
 export const THEME_TINT_INTENSITY_KEY = '@aniseekr/tintIntensity';
 export const THEME_INCREASE_CONTRAST_KEY = '@aniseekr/increaseContrast';
+/** Premium theme a user kept from the free era; '' once checked with none. */
+export const THEME_GRANDFATHERED_KEY = '@aniseekr/grandfatheredTheme';
 export const MAP_THEME_STORAGE_KEY = 'aniseekr.pilgrimage.mapTheme.v1';
 export const MAP_SOURCE_STYLE_OVERRIDE_KEY = 'aniseekr.pilgrimage.mapSource.styleOverride.v1';
 export const PILGRIMAGE_MAP_VIEW_MODE_STORAGE_KEY = 'aniseekr.pilgrimage.mapViewMode.v1';
 export const VISITED_SPOTS_STORAGE_KEY = 'aniseekr.pilgrimage.visited.v1';
 export const VISITED_SPOTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.visited.v2';
+export const VISITED_SPOTS_LEGACY_KEY = 'aniseekr.pilgrimage.visited.legacy';
 export const SPOT_INTENTS_STORAGE_KEY = 'aniseekr.pilgrimage.spot-intents.v1';
 export const SPOT_INTENTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.spot-intents.v2';
 export const CAPTURES_STORAGE_KEY = '@aniseekr/pilgrimage/captures/v1';
 export const CAPTURES_STORAGE_KEY_V2 = '@aniseekr/pilgrimage/captures/v2';
 export const CAMERA_SETTINGS_STORAGE_KEY = 'aniseekr:camera-settings:v4';
+export const SPOT_REFERENCES_STORAGE_KEY = 'aniseekr.pilgrimage.spot-references.v1';
+export const OFFLINE_PACKS_STORAGE_KEY = 'aniseekr.pilgrimage.offline-packs.v1';
 export const SCENE_ID_DISCLOSURE_STORAGE_KEY = 'aniseekr.pilgrimage.sceneId.disclosure.v1';
 export const NEWS_FOLLOWS_STORAGE_KEY = 'aniseekr.news.follows.v1';
 

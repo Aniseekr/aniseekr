@@ -12,9 +12,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Spacing, Typography } from '../../constants/DesignSystem';
+import { Colors, Ink, Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
+import { CapsText } from '../themed/CapsText';
+import { withAlpha } from '../themed/contrast';
+import { ScreenHeader } from '../themed/ScreenHeader';
 
 interface SettingsScreenLayoutProps {
   title: string;
@@ -65,34 +68,15 @@ export function SettingsScreenLayout({
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={[styles.header, { paddingTop: insets.top > 0 ? 0 : Spacing.sm }]}>
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              router.back();
-            }}
-            hitSlop={12}
-            style={[
-              styles.backButton,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-              },
-            ]}>
-            <MaterialIcons name="arrow-back" size={20} color={theme.text.primary} />
-          </Pressable>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={[styles.title, { color: theme.text.primary }]} numberOfLines={1}>
-              {title}
-            </Text>
-            {subtitle ? (
-              <Text style={[styles.subtitle, { color: theme.text.secondary }]} numberOfLines={1}>
-                {subtitle}
-              </Text>
-            ) : null}
-          </View>
-          <View style={styles.rightSlot}>{rightSlot ?? <View style={{ width: 36 }} />}</View>
-        </View>
+        <ScreenHeader
+          title={title}
+          subtitle={subtitle}
+          right={rightSlot}
+          onBack={() => {
+            hapticsBridge.tap();
+            router.back();
+          }}
+        />
         <Body {...(bodyProps as any)}>{children}</Body>
       </SafeAreaView>
     </View>
@@ -109,12 +93,20 @@ export function SettingsSection({ title, children, style }: SectionProps) {
   return (
     <View style={[styles.section, style]}>
       {title ? (
-        <Text style={[styles.sectionTitle, { color: theme.text.secondary }]}>{title}</Text>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.sectionMark, { backgroundColor: theme.accent }]} />
+          <CapsText style={[styles.sectionTitle, { color: theme.text.secondary }]}>
+            {title}
+          </CapsText>
+        </View>
       ) : null}
       <View
         style={[
           styles.sectionCard,
-          { backgroundColor: theme.background.secondary, borderColor: theme.glassBorder },
+          {
+            backgroundColor: theme.background.secondary,
+            borderColor: withAlpha(theme.text.primary, 0.22),
+          },
         ]}>
         {children}
       </View>
@@ -179,32 +171,6 @@ export function SettingsRow({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rightSlot: {
-    minWidth: 36,
-    alignItems: 'flex-end',
-  },
-  title: {
-    ...Typography.titleLarge,
-  },
-  subtitle: {
-    ...Typography.bodySmall,
-    marginTop: 2,
-  },
   content: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
@@ -213,16 +179,27 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.xs,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  // The web's chapter tag, shrunk to a section marker.
+  sectionMark: {
+    width: 8,
+    height: 8,
+    borderRadius: 1,
+  },
   sectionTitle: {
     ...Typography.captionSmall,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 4,
-    paddingHorizontal: 4,
   },
   sectionCard: {
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: Radius.card,
+    borderWidth: Ink.hairline,
     overflow: 'hidden',
   },
   row: {
@@ -235,7 +212,7 @@ const styles = StyleSheet.create({
   rowIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

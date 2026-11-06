@@ -34,11 +34,10 @@ Aniseekr is a client that queries third-party catalogues at runtime. The
 catalogue content (titles, posters, synopses, tags, scene coordinates, etc.)
 belongs to its respective providers and is governed by their own terms.
 
-  - Anitabi (聖地巡礼 scene coordinates and screenshots)
-      Licensed under CC BY-NC-SA 4.0 by the Anitabi community.
-      https://anitabi.cn  ·  https://creativecommons.org/licenses/by-nc-sa/4.0/
-      The Aniseekr app surfaces Anitabi attribution on every screen that
-      renders Anitabi-sourced data (detail, sheet, scene tiles, compare flow).
+  - Aniseekr Atlas (聖地巡礼 spots, episode/scene references)
+      Pilgrimage data: Aniseekr Atlas, maintained for Aniseekr and served
+      from https://atlas.aniseekr.moe. The app ships no third-party scene
+      screenshots; reference frames are imported by the user.
 
   - Bangumi (bgm.tv)            https://bangumi.github.io/api/
   - AniList                     https://docs.anilist.co/

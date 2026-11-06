@@ -1,9 +1,6 @@
 import { useReducer } from 'react';
 import type { PilgrimageSpotFilter } from '../libs/services/pilgrimage/pilgrimage-detail-filter';
-import type {
-  PilgrimageDetailListLayout,
-  PilgrimageDetailViewMode,
-} from '../libs/services/pilgrimage/pilgrimage-detail-flow';
+import type { PilgrimageDetailViewMode } from '../libs/services/pilgrimage/pilgrimage-detail-flow';
 import type { PilgrimageSeriesSelection } from '../libs/services/pilgrimage/pilgrimage-series';
 
 /** Map marker rendering style on the pilgrimage detail map. */
@@ -22,21 +19,21 @@ export type MapMarkerMode = 'photo' | 'dot';
 export interface PilgrimageDetailViewState {
   seriesSelection: PilgrimageSeriesSelection;
   viewMode: PilgrimageDetailViewMode;
-  listLayout: PilgrimageDetailListLayout;
   mapMarkerMode: MapMarkerMode;
   mapOfflineOnly: boolean;
   spotFilter: PilgrimageSpotFilter;
   spotSearchQuery: string;
+  searchOpen: boolean;
 }
 
 export const INITIAL_PILGRIMAGE_DETAIL_VIEW: PilgrimageDetailViewState = {
   seriesSelection: 'all',
   viewMode: 'list',
-  listLayout: 'grid',
   mapMarkerMode: 'photo',
   mapOfflineOnly: false,
   spotFilter: 'all',
   spotSearchQuery: '',
+  searchOpen: false,
 };
 
 /**

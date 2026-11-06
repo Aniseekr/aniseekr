@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import type Ionicons from '@expo/vector-icons/Ionicons';
+import type { TranslationKey } from '../i18n/types';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -18,124 +19,112 @@ export type ShortcutId =
   | 'attribution'
   | 'terms'
   | 'theme-preview'
-  | 'design-tokens';
+  | 'design-tokens'
+  | 'characters';
 
 export interface ShortcutSpec {
   id: ShortcutId;
-  label: string;
+  labelKey: TranslationKey;
   icon: IoniconName;
-  // Per-category brand tint used as the icon's circle background.
-  // Treated like PLATFORM_CONFIGS brand colors — semantic identifiers,
-  // not theme-derived, so quick recognition is consistent across themes.
-  tint: string;
   route: string;
 }
 
 const SHORTCUT_CATALOG: Record<ShortcutId, ShortcutSpec> = {
   notifications: {
     id: 'notifications',
-    label: 'Notifications',
+    labelKey: 'profile.shortcut.notifications',
     icon: 'notifications-outline',
-    tint: '#FF9F0A',
     route: '/(setting)/notifications',
   },
   appearance: {
     id: 'appearance',
-    label: 'Appearance',
+    labelKey: 'profile.shortcut.appearance',
     icon: 'color-palette-outline',
-    tint: '#E8A0BF',
     route: '/(setting)/appearance',
   },
   language: {
     id: 'language',
-    label: 'Language',
+    labelKey: 'profile.shortcut.language',
     icon: 'language-outline',
-    tint: '#0A84FF',
     route: '/(setting)/language',
   },
   privacy: {
     id: 'privacy',
-    label: 'Privacy',
+    labelKey: 'profile.shortcut.privacy',
     icon: 'shield-checkmark-outline',
-    tint: '#30D158',
     route: '/(setting)/privacy',
   },
   cache: {
     id: 'cache',
-    label: 'Cache',
+    labelKey: 'profile.shortcut.cache',
     icon: 'cloud-download-outline',
-    tint: '#BF5AF2',
     route: '/(setting)/cache',
   },
   'sync-hub': {
     id: 'sync-hub',
-    label: 'Sync hub',
+    labelKey: 'profile.shortcut.syncHub',
     icon: 'sync-outline',
-    tint: '#FFD60A',
     route: '/(setting)/sync-hub',
   },
   'data-source': {
     id: 'data-source',
-    label: 'Sources',
+    labelKey: 'profile.shortcut.sources',
     icon: 'cloud-outline',
-    tint: '#22D3EE',
     route: '/(setting)/data-source',
   },
   'otaku-dna': {
     id: 'otaku-dna',
-    label: 'Otaku DNA',
+    labelKey: 'profile.shortcut.otakuDna',
     icon: 'finger-print-outline',
-    tint: '#5E5CE6',
     route: '/(setting)/otaku-dna',
   },
   account: {
     id: 'account',
-    label: 'Accounts',
+    labelKey: 'profile.shortcut.accounts',
     icon: 'people-circle-outline',
-    tint: '#FF453A',
     route: '/(setting)/account',
   },
   achievements: {
     id: 'achievements',
-    label: 'Trophies',
+    labelKey: 'profile.shortcut.trophies',
     icon: 'trophy-outline',
-    tint: '#FFD700',
     route: '/(setting)/achievements',
   },
   import: {
     id: 'import',
-    label: 'Import',
+    labelKey: 'profile.shortcut.import',
     icon: 'cloud-upload-outline',
-    tint: '#06B6D4',
     route: '/(setting)/import-wizard',
   },
   attribution: {
     id: 'attribution',
-    label: 'Credits',
+    labelKey: 'profile.shortcut.credits',
     icon: 'ribbon-outline',
-    tint: '#FF9F0A',
     route: '/(setting)/attribution',
   },
   terms: {
     id: 'terms',
-    label: 'Terms',
+    labelKey: 'profile.shortcut.terms',
     icon: 'document-text-outline',
-    tint: '#787878',
     route: '/(setting)/terms',
   },
   'theme-preview': {
     id: 'theme-preview',
-    label: 'Preview',
+    labelKey: 'profile.shortcut.preview',
     icon: 'eye-outline',
-    tint: '#10B981',
     route: '/(setting)/theme-preview',
   },
   'design-tokens': {
     id: 'design-tokens',
-    label: 'Tokens',
+    labelKey: 'profile.shortcut.tokens',
     icon: 'cube-outline',
-    tint: '#A78BFA',
     route: '/(setting)/design-tokens',
+  },
+  characters: {
+    id: 'characters',
+    labelKey: 'profile.shortcut.characters',
+    icon: 'people-outline',
+    route: '/companion/library',
   },
 };
 

@@ -15,12 +15,9 @@ import Animated from 'react-native-reanimated';
 
 import { NewsArticleRow } from '../../../../components/news/NewsArticleRow';
 import { ModeSelector } from '../../../../components/rate/ModeSelector';
-import { LocalityAttributionFooter } from '../../../../components/pilgrimage/common/LocalityAttributionFooter';
 import {
   LOCALITY_CARD_RADIUS,
   LOCALITY_INNER_RADIUS,
-  LocalityMiniStamp,
-  localityCategoryIcon,
   localityEventAccent,
 } from '../../../../components/pilgrimage/common/LocalityAesthetic';
 import {
@@ -28,13 +25,11 @@ import {
   LocalityEventCalendar,
   type LocalityCalendarEventRow,
 } from '../../../../components/pilgrimage/LocalityEventCalendar';
+import { dedupeDisplayedCredits } from '../../../../components/pilgrimage/common/LocalityAttributionFooter';
 import { EventStateChip } from '../../../../components/pilgrimage/detail/IntelEventBanner';
+import { formatEventSchedule } from '../../../../components/pilgrimage/event-date-block';
+import { RallyPoster } from '../../../../components/pilgrimage/rally/RallyPoster';
 import {
-  deriveEventDateBlock,
-  type EventDateBlock,
-} from '../../../../components/pilgrimage/event-date-block';
-import {
-  readableTextOn,
   Skeleton,
   ThemedButton,
   ThemedIconButton,
@@ -43,7 +38,7 @@ import {
   TranslatedText,
 } from '../../../../components/themed';
 import { Radius, Shadow, Spacing } from '../../../../constants/DesignSystem';
-import { useTheme, type ThemePalette } from '../../../../context/ThemeContext';
+import { useTheme } from '../../../../context/ThemeContext';
 import { useNewsStream } from '../../../../hooks/useNewsStream';
 import { useI18n, useT, type TranslationKey } from '../../../../libs/i18n';
 import { getNewsSource } from '../../../../libs/services/news/news-sources';
@@ -51,10 +46,7 @@ import { bannerEnter, listItemEnter } from '../../../../libs/animations/presets'
 import { formatNewsRelativeTime } from '../../../../libs/services/news/news-relative-time';
 import { isSafeArticleUrl } from '../../../../libs/services/news/news-url';
 import { hapticsBridge } from '../../../../modules/haptics/hapticsBridge';
-import {
-  getIndexedById,
-  type AnitabiIndexEntry,
-} from '../../../../libs/services/pilgrimage/anitabi-index';
+import { getAtlasWorkByBangumiId } from '../../../../components/pilgrimage/common/atlas-work-index';
 import { resolveLocalIntelText } from '../../../../libs/services/pilgrimage/local-intel/local-intel-localization';
 import { getLocalityEventListRows } from '../../../../libs/services/pilgrimage/locality/event-detail';
 import {
@@ -67,7 +59,6 @@ import type {
   IsoDate,
   LocalityEvent,
 } from '../../../../libs/services/pilgrimage/locality/types';
-import { getPilgrimageAnimeTitles } from '../../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildPilgrimageEventDetailRoute } from '../../../../libs/services/pilgrimage/pilgrimage-navigation';
 
 type HubTab = 'event' | 'tag' | 'calendar' | 'news';
@@ -137,31 +128,31 @@ export default function LocalityHubScreen() {
   const eventRows = useMemo<EventRow[]>(() => {
     void localitySnapshot;
     return getLocalityEventListRows(now, localityRepository).map((item) => {
-      const bangumiId = item.event.animeIds.find((id) => getIndexedById(id) !== null) ?? null;
-      const indexed = bangumiId !== null ? getIndexedById(bangumiId) : null;
+      const bangumiId = item.event.animeIds.find((id) => getAtlasWorkByBangumiId(id) !== null) ?? null;
+      const indexed = bangumiId !== null ? getAtlasWorkByBangumiId(bangumiId) : null;
       return {
         ...item,
         bangumiId,
-        cover: indexed?.cover ?? null,
-        animeTitle: indexed ? getPilgrimageAnimeTitles(indexed).primary : null,
+        cover: null,
+        animeTitle: indexed?.ja ?? null,
         accent: localityEventAccent(item.state, item.event.category, theme),
       };
     });
   }, [now, localitySnapshot, theme]);
 
   const workFilters = useMemo<WorkFilter[]>(() => {
-    const byId = new Map<number, AnitabiIndexEntry>();
+    const byId = new Map<number, NonNullable<ReturnType<typeof getAtlasWorkByBangumiId>>>();
     for (const row of eventRows) {
       for (const bangumiId of row.event.animeIds) {
-        const indexed = getIndexedById(bangumiId);
+        const indexed = getAtlasWorkByBangumiId(bangumiId);
         if (indexed) byId.set(bangumiId, indexed);
       }
     }
     return [...byId.values()]
       .map((anime) => ({
-        bangumiId: anime.id,
-        title: getPilgrimageAnimeTitles(anime).primary,
-        cover: anime.cover || null,
+        bangumiId: anime.bgm?.[0] ?? 0,
+        title: anime.ja,
+        cover: null,
       }))
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [eventRows]);
@@ -259,8 +250,7 @@ export default function LocalityHubScreen() {
       <View style={styles.header}>
         <ThemedIconButton
           accessibilityLabel={t('common.back')}
-          variant="ghost"
-          icon={(color) => <Ionicons name="chevron-back" size={20} color={color} />}
+          icon={(color) => <Ionicons name="arrow-back" size={20} color={color} />}
           onPress={() => router.back()}
         />
         <View style={styles.headerText}>
@@ -282,7 +272,9 @@ export default function LocalityHubScreen() {
             />
           )}
           onPress={() =>
-            router.push(activeTab === 'news' ? '/pilgrimage/news/sources' : '/pilgrimage/map')
+            activeTab === 'news'
+              ? router.push('/pilgrimage/news/sources')
+              : router.push({ pathname: '/pilgrimage', params: { view: 'map' } })
           }
         />
       </View>
@@ -327,17 +319,6 @@ export default function LocalityHubScreen() {
                 label={t('news.tags.allWorks')}
                 variant={selectedBangumiId === null ? 'primary' : 'secondary'}
                 size="sm"
-                icon={
-                  <Ionicons
-                    name="sparkles-outline"
-                    size={15}
-                    color={
-                      selectedBangumiId === null
-                        ? readableTextOn(theme.accent)
-                        : theme.text.secondary
-                    }
-                  />
-                }
                 onPress={() => setSelectedBangumiId(null)}
                 haptic="selection"
               />
@@ -347,24 +328,15 @@ export default function LocalityHubScreen() {
                   label={work.title}
                   variant={selectedBangumiId === work.bangumiId ? 'primary' : 'secondary'}
                   size="sm"
-                  icon={
-                    <LocalityMiniStamp
-                      accent={theme.accent}
-                      imageUri={work.cover}
-                      icon="sparkles-outline"
-                      size="sm"
-                    />
-                  }
+                  icon={<RallyPoster bangumiId={work.bangumiId} style={styles.chipPoster} />}
                   onPress={() => setSelectedBangumiId(work.bangumiId)}
                   haptic="selection"
                 />
               ))}
             </ScrollView>
-            <ThemedSurface variant="outlined" padded radius={LOCALITY_INNER_RADIUS}>
-              <ThemedText variant="captionSmall" tone="tertiary">
-                {t('news.tags.scopeNote')}
-              </ThemedText>
-            </ThemedSurface>
+            <ThemedText variant="captionSmall" tone="tertiary">
+              {t('news.tags.scopeNote')}
+            </ThemedText>
             <EventList
               rows={taggedEventRows}
               emptyTitle={t('news.tags.emptyTitle')}
@@ -475,6 +447,11 @@ function EventList({
   );
 }
 
+// Every event card is the same size: the work's 2:3 poster sets the height and
+// the name is capped at two lines.
+const EVENT_CARD_HEIGHT = 144;
+const EVENT_POSTER_WIDTH = (EVENT_CARD_HEIGHT * 2) / 3;
+
 function EventRowCard({
   row,
   categoryLabel,
@@ -489,22 +466,29 @@ function EventRowCard({
   const t = useT();
   const styles = useMemo(() => makeStyles(), []);
   const accent = row.accent;
-  const accentForeground = readableTextOn(accent);
-  const dateBlock = deriveEventDateBlock(row.state, language, {
-    ongoing: t('pilgrimageUi.eventDetail.permanent'),
-    tba: t('pilgrimageUi.eventDetail.dateTba'),
-  });
   const eventName = resolveLocalIntelText(row.event.name, language);
   const location = row.primaryLocation
     ? resolveLocalIntelText(row.primaryLocation, language).value
     : null;
-  const locationLabel =
-    location && row.additionalLocationCount > 0
-      ? t('news.events.locationMore', {
-          location,
-          count: row.additionalLocationCount,
-        })
-      : location;
+  // The state chip already says permanent / TBA; the meta line only adds real dates.
+  const hasDates =
+    (row.state.state === 'active' ||
+      row.state.state === 'upcoming' ||
+      row.state.state === 'ended') &&
+    row.state.occurrence !== null &&
+    row.event.schedule.kind !== 'ongoing';
+  const schedule = hasDates ? formatEventSchedule(row.event, row.state, language, t) : null;
+  const facts = [t('news.events.stopCount', { count: row.stopCount }), location]
+    .filter(Boolean)
+    .join(' · ');
+  // Same de-duplication as the detail page's footer, so "+N" never overstates.
+  const credits = dedupeDisplayedCredits(row.event.provenance, language);
+  const sourceName = credits[0]?.sourceName ?? null;
+  const sourceLine = sourceName
+    ? credits.length > 1
+      ? t('news.events.sourceLineMore', { source: sourceName, count: credits.length - 1 })
+      : t('news.events.sourceLine', { source: sourceName })
+    : null;
 
   return (
     <Pressable
@@ -513,108 +497,56 @@ function EventRowCard({
       accessibilityLabel={eventName.value}
       style={({ pressed }) => [pressed && styles.pressed]}>
       <ThemedSurface padded={0} radius={LOCALITY_CARD_RADIUS} style={styles.eventCard}>
-        <View style={styles.eventMainRow}>
-          <DateBlock block={dateBlock} accent={accent} theme={theme} />
-          <LocalityMiniStamp
-            accent={accent}
-            imageUri={row.cover}
-            icon={localityCategoryIcon(row.event.category)}
-          />
-          <View style={styles.eventBody}>
-            <View style={styles.eventMetaRow}>
-              <View style={[styles.eventChip, { backgroundColor: accent }]}>
-                <ThemedText
-                  variant="captionSmall"
-                  weight="800"
-                  numberOfLines={1}
-                  style={{ color: accentForeground }}>
-                  {categoryLabel}
-                </ThemedText>
-              </View>
-              <EventStateChip
-                state={row.state}
-                theme={theme}
-                ongoing={row.event.schedule.kind === 'ongoing'}
-              />
-            </View>
-            <TranslatedText
-              original={row.event.name.ja}
-              translated={eventName.value}
-              source={eventName.source}
-              variant="bodyMedium"
-              weight="800"
-              numberOfLines={2}
-              disableLongPress
-            />
-            {row.animeTitle ? (
-              <View style={styles.infoLine}>
-                <Ionicons name="sparkles-outline" size={13} color={theme.text.tertiary} />
-                <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-                  {row.animeTitle}
-                </ThemedText>
-              </View>
-            ) : null}
-            <View style={styles.infoLine}>
-              <Ionicons name="location-outline" size={13} color={theme.text.tertiary} />
-              {locationLabel ? (
-                <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-                  {locationLabel}
-                </ThemedText>
-              ) : null}
-              <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
-                {t('news.events.stopCount', { count: row.stopCount })}
+        <RallyPoster
+          bangumiId={row.bangumiId ?? row.event.animeIds[0]}
+          style={styles.eventPoster}
+        />
+        <View style={styles.eventBody}>
+          <View style={styles.eventMetaRow}>
+            <View style={[styles.eventChip, { backgroundColor: `${accent}22` }]}>
+              <ThemedText
+                variant="captionSmall"
+                weight="800"
+                numberOfLines={1}
+                style={{ color: accent }}>
+                {categoryLabel}
               </ThemedText>
             </View>
+            <EventStateChip
+              state={row.state}
+              theme={theme}
+              ongoing={row.event.schedule.kind === 'ongoing'}
+            />
           </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.text.tertiary} />
+          <TranslatedText
+            original={row.event.name.ja}
+            translated={eventName.value}
+            source={eventName.source}
+            variant="bodyMedium"
+            weight="700"
+            numberOfLines={2}
+            // The card is a fixed-rhythm list row; the original title lives on the detail page.
+            alwaysShowOriginal={false}
+            disableLongPress
+          />
+          {row.animeTitle ? (
+            <ThemedText variant="caption" tone="secondary" numberOfLines={1}>
+              {row.animeTitle}
+            </ThemedText>
+          ) : null}
+          <View style={styles.eventFoot}>
+            <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
+              {schedule ? `${schedule} · ${facts}` : facts}
+            </ThemedText>
+            {sourceLine ? (
+              <ThemedText variant="captionSmall" tone="tertiary" numberOfLines={1}>
+                {sourceLine}
+              </ThemedText>
+            ) : null}
+          </View>
         </View>
-        <LocalityAttributionFooter
-          provenance={row.event.provenance}
-          variant="compact"
-          style={styles.eventAttribution}
-        />
       </ThemedSurface>
     </Pressable>
-  );
-}
-
-function DateBlock({
-  block,
-  accent,
-  theme,
-}: {
-  block: EventDateBlock;
-  accent: string;
-  theme: ThemePalette;
-}) {
-  const active = block.emphasis === 'active';
-  const foreground = active ? readableTextOn(accent) : theme.text.primary;
-  return (
-    <View
-      style={[
-        stylesStatic.dateBlock,
-        {
-          backgroundColor: active ? accent : theme.background.tertiary,
-          borderColor: active ? accent : theme.glassBorder,
-        },
-      ]}>
-      <ThemedText
-        variant="captionSmall"
-        weight="800"
-        align="center"
-        style={{ color: active ? foreground : theme.text.tertiary }}>
-        {block.top}
-      </ThemedText>
-      {block.main ? (
-        <ThemedText
-          variant="titleLarge"
-          weight="800"
-          align="center"
-          style={{ color: block.emphasis === 'upcoming' ? accent : foreground }}>
-          {block.main}
-        </ThemedText>
-      ) : null}
-    </View>
   );
 }
 
@@ -694,18 +626,6 @@ function eventCategoryKey(event: LocalityEvent): TranslationKey {
   return keys[event.category];
 }
 
-const stylesStatic = StyleSheet.create({
-  dateBlock: {
-    width: 58,
-    minHeight: 66,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xs,
-  },
-});
-
 function makeStyles() {
   return StyleSheet.create({
     root: { flex: 1 },
@@ -721,42 +641,34 @@ function makeStyles() {
     content: { padding: Spacing.screenPadding, gap: Spacing.md },
     tabFrame: { ...Shadow.subtle },
     chipRow: { gap: Spacing.sm, paddingRight: Spacing.screenPadding },
+    chipPoster: { width: 20, height: 30, borderRadius: Radius.sm / 2 },
     empty: {
       alignItems: 'center',
       gap: Spacing.sm,
     },
     eventList: { gap: Spacing.sm },
-    eventCard: { ...Shadow.subtle },
-    eventMainRow: {
+    eventCard: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-      padding: Spacing.md,
-      paddingBottom: Spacing.sm,
+      minHeight: EVENT_CARD_HEIGHT,
+      overflow: 'hidden',
+      ...Shadow.subtle,
     },
-    eventBody: { flex: 1, gap: Spacing.xxs, minWidth: 0 },
+    eventPoster: { width: EVENT_POSTER_WIDTH, minHeight: EVENT_CARD_HEIGHT, alignSelf: 'stretch' },
+    eventBody: { flex: 1, minWidth: 0, padding: Spacing.sm, gap: Spacing.xxs },
     eventMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      flexWrap: 'wrap',
       gap: Spacing.xs,
+      overflow: 'hidden',
     },
     eventChip: {
+      flexShrink: 0,
       maxWidth: 104,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       paddingHorizontal: Spacing.sm,
       paddingVertical: Spacing.xxs,
     },
-    infoLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xxs,
-      minWidth: 0,
-    },
-    eventAttribution: {
-      paddingHorizontal: Spacing.md,
-      paddingBottom: Spacing.md,
-    },
+    eventFoot: { marginTop: 'auto', gap: Spacing.xxs },
     pressed: { opacity: 0.84 },
     calendarSelectionHeader: {
       flexDirection: 'row',
@@ -766,7 +678,7 @@ function makeStyles() {
     calendarSelectionCopy: { flex: 1, minWidth: 0, gap: Spacing.xxs },
     calendarCountChip: {
       minHeight: Spacing.xxl,
-      borderRadius: Radius.full,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',

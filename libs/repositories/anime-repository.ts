@@ -23,11 +23,7 @@ import { AniListClient, type AniListAnime } from '../clients/anilist-client';
 import { BangumiClient, type BangumiV0Subject } from '../clients/bangumi-client';
 import { titleLocalizationService } from '../services/title-localization-service';
 import { LocalDB } from '../db';
-import {
-  IMAGE_PRIORITY,
-  type ImageType,
-  type UnifiedAnimeItem,
-} from '../models/unified-anime-item';
+import { IMAGE_PRIORITY, type ImageType, UnifiedAnimeItem } from '../models/unified-anime-item';
 import type { PlatformImageData } from '../models/platform-image-data';
 import type { PlatformType } from '../services/auth/types';
 import { CacheService } from '../services/cache-service';
@@ -54,6 +50,7 @@ import { idMappingService } from '../services/sync/id-mapping-service';
 import { AnnictClient } from '../clients/annict-client';
 import { expandSearchVariants } from '../utils/chinese-converter';
 import { Logger } from '../utils/logger';
+import { getBroadcastSeason } from '../utils/season-utils';
 import { achievementService } from '../services/achievements/achievement-service';
 import { getOverrides as getGenreCoverOverrides } from '../services/rate/genre-cover-override';
 
@@ -101,6 +98,16 @@ export interface SeasonalFetchOptions {
 // Module-level dedup so two simultaneous SWR refreshes for the same page
 // don't both go to the network.
 const inFlightSeasonalRevalidations = new Set<string>();
+
+function seasonalPageCacheKey(
+  season: string,
+  year: number,
+  page: number,
+  perPage: number,
+  r18Flag: string = r18CacheFlag()
+): string {
+  return `seasonal_${season}_${year}_p${page}_pp${perPage}_r${r18Flag}`;
+}
 
 /**
  * Thrown when an in-flight `fetchSeasonalAnime` discovers the user has
@@ -191,7 +198,10 @@ export function unifiedToLegacyAnime(item: UnifiedAnimeItem): Anime {
   const startDate = toLegacyStartDate(item.startDate);
 
   return {
-    id: item.id,
+    // Every legacy consumer (detail screen, tracking, reminders) is AniList-keyed.
+    // `item.id` follows platform priority, so a Bangumi/MAL/Simkl id would win
+    // there and open the wrong title.
+    id: item.platformData?.anilist?.id || item.id,
     title:
       item.titleEnglish || item.title || item.titleRomaji || item.titleJapanese || 'Unknown Title',
     titleRomaji: item.titleRomaji ?? undefined,
@@ -203,6 +213,7 @@ export function unifiedToLegacyAnime(item: UnifiedAnimeItem): Anime {
     bannerImage: bestImageForLegacy(item, 'banner') ?? undefined,
     rank: item.anilistScore ?? Math.round((item.normalizedScore ?? 0) * 10),
     score: item.normalizedScore ?? undefined,
+    anilistListCount: item.anilistListCount ?? undefined,
     type: item.format ?? 'TV',
     tags: item.genres.length > 0 ? item.genres : item.tags,
     mood: item.synopsis ? item.synopsis.substring(0, 100) + '...' : '',
@@ -224,6 +235,7 @@ export class AnimeRepository {
   private readonly cacheServiceImpl: typeof CacheService;
   private readonly idMapping: typeof idMappingService;
   private readonly config: typeof dataSourceConfig;
+  private readonly aniListLookup: AniListLookup;
 
   constructor(
     sources?: SourceMap,
@@ -232,12 +244,14 @@ export class AnimeRepository {
       cacheService?: typeof CacheService;
       idMappingService?: typeof idMappingService;
       dataSourceConfig?: typeof dataSourceConfig;
+      aniListLookup?: AniListLookup;
     } = {}
   ) {
     this.queryClientImpl = deps.queryClient ?? queryClient;
     this.cacheServiceImpl = deps.cacheService ?? CacheService;
     this.idMapping = deps.idMappingService ?? idMappingService;
     this.config = deps.dataSourceConfig ?? dataSourceConfig;
+    this.aniListLookup = deps.aniListLookup ?? defaultAniListLookup;
 
     if (sources) {
       this.sources = new Map(
@@ -468,7 +482,7 @@ export class AnimeRepository {
         );
       }
 
-      const cacheKey = `seasonalpage_v2_${requestPlatform}_${season}_${year}_p${currentPage}_pp${perPage}_r${r18Flag}`;
+      const cacheKey = `seasonalpage_v3_${requestPlatform}_${season}_${year}_p${currentPage}_pp${perPage}_r${r18Flag}`;
       const queryKey = makeKey('seasonalAnimeBatched', {
         source: requestPlatform,
         page: currentPage,
@@ -504,14 +518,16 @@ export class AnimeRepository {
       }
 
       if (!pageItems) {
-        const items = await this.queryClientImpl.fetch(queryKey, async () =>
-          source.fetchSeasonalAnime(currentPage, season, year, { perPage })
+        const loaded = await this.loadSeasonalBatchedPage(
+          source,
+          season,
+          year,
+          currentPage,
+          perPage,
+          queryKey
         );
-        pageItems = items;
-        // Some sources honor the requested perPage while others keep a fixed
-        // page size. Treat known fixed full pages as continuable, otherwise a
-        // 20-item source page would stop dynamic loading after page 1.
-        hasNextPage = inferSeasonalHasNextPage(items.length, perPage);
+        pageItems = loaded.items;
+        hasNextPage = loaded.hasNextPage;
         if (pageItems.length > 0) {
           await this.cacheServiceImpl.set(
             cacheKey,
@@ -543,6 +559,96 @@ export class AnimeRepository {
     return collected.slice(0, maxItems);
   }
 
+  private async loadSeasonalBatchedPage(
+    source: AnimeDataSource,
+    season: string,
+    year: number,
+    page: number,
+    perPage: number,
+    queryKey: QueryKeyObject
+  ): Promise<SeasonalBatchedPageEntry> {
+    return this.queryClientImpl.fetch(queryKey, async () => {
+      const raw = await source.fetchSeasonalAnime(page, season, year, { perPage });
+      return {
+        items: await this.anchorToAniList(raw),
+        // Some sources honor the requested perPage while others keep a fixed
+        // page size. Treat known fixed full pages as continuable, otherwise a
+        // 20-item source page would stop dynamic loading after page 1. Judge
+        // on the raw page: anchoring may drop rows.
+        hasNextPage: inferSeasonalHasNextPage(raw.length, perPage),
+      };
+    });
+  }
+
+  /**
+   * The schedule, its detail screen, tracking and airing reminders are all
+   * keyed by AniList id, and the weekly view needs AniList's
+   * `nextAiringEpisode`. Items from other sources (Kitsu, Shikimori, Simkl,
+   * MAL) are resolved to their AniList entry — via the local ID mapping first,
+   * then AniList's own `idMal` index — and get the AniList id, airing slot and
+   * list count attached. The source's own titles and art are kept. Items with
+   * no AniList entry are dropped: they could not be opened or tracked.
+   */
+  private async anchorToAniList(items: UnifiedAnimeItem[]): Promise<UnifiedAnimeItem[]> {
+    if (items.every((item) => item.platformData.anilist?.id)) return items;
+
+    const resolved = await Promise.all(
+      items.map(async (item) => ({
+        item,
+        anilistId: await this.mappedAniListId(item),
+        malId: item.idMal ?? numericId(item.platformData.myanimelist?.id),
+      }))
+    );
+
+    const anilistIds = unique(resolved.map((r) => r.anilistId));
+    const malIds = unique(resolved.filter((r) => r.anilistId == null).map((r) => r.malId));
+    const [byIdMedia, byMalMedia] = await Promise.all([
+      inChunks(anilistIds, ANILIST_LOOKUP_CHUNK, (ids) => this.aniListLookup.byIds(ids)),
+      inChunks(malIds, ANILIST_LOOKUP_CHUNK, (ids) => this.aniListLookup.byMalIds(ids)),
+    ]);
+    const byId = new Map(byIdMedia.map((m) => [m.id, m]));
+    const byMal = new Map(
+      byMalMedia.filter((m) => m.idMal != null).map((m) => [m.idMal as number, m])
+    );
+
+    const anchored: UnifiedAnimeItem[] = [];
+    let dropped = 0;
+    for (const { item, anilistId, malId } of resolved) {
+      if (item.platformData.anilist?.id) {
+        anchored.push(item);
+        continue;
+      }
+      const media =
+        (anilistId != null ? byId.get(anilistId) : undefined) ??
+        (malId != null ? byMal.get(malId) : undefined);
+      if (!media) {
+        dropped += 1;
+        continue;
+      }
+      anchored.push(withAniListAnchor(item, media));
+    }
+    if (dropped > 0) {
+      Logger.info(
+        `[AnimeRepository] seasonal: dropped ${dropped}/${items.length} items with no AniList entry`
+      );
+    }
+    return anchored;
+  }
+
+  private async mappedAniListId(item: UnifiedAnimeItem): Promise<number | null> {
+    for (const platform of ANCHOR_SOURCE_PLATFORMS) {
+      const id = item.platformData[platform]?.id;
+      if (!id) continue;
+      try {
+        const mapped = numericId(await this.idMapping.translate(id, platform, 'anilist'));
+        if (mapped != null) return mapped;
+      } catch (err) {
+        Logger.warn(`[AnimeRepository] id mapping ${platform}→anilist failed`, err);
+      }
+    }
+    return null;
+  }
+
   private async revalidateSeasonalBatchedPage(
     source: AnimeDataSource,
     season: string,
@@ -555,18 +661,16 @@ export class AnimeRepository {
     if (inFlightSeasonalRevalidations.has(cacheKey)) return;
     inFlightSeasonalRevalidations.add(cacheKey);
     try {
-      const items = await this.queryClientImpl.fetch(queryKey, async () =>
-        source.fetchSeasonalAnime(page, season, year, { perPage })
+      const loaded = await this.loadSeasonalBatchedPage(
+        source,
+        season,
+        year,
+        page,
+        perPage,
+        queryKey
       );
-      if (items.length > 0) {
-        await this.cacheServiceImpl.set(
-          cacheKey,
-          {
-            items,
-            hasNextPage: inferSeasonalHasNextPage(items.length, perPage),
-          } satisfies SeasonalBatchedPageEntry,
-          SEASONAL_CACHE_TTL_MS
-        );
+      if (loaded.items.length > 0) {
+        await this.cacheServiceImpl.set(cacheKey, loaded, SEASONAL_CACHE_TTL_MS);
       }
     } catch (err) {
       Logger.warn('[AnimeRepository] background revalidate (batched) failed', err);
@@ -645,7 +749,10 @@ export class AnimeRepository {
   // MARK: - Cross-platform media data
 
   async fetchAnimeStaff(id: number, sourcePlatform?: PlatformType): Promise<AnimeStaff[]> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
 
     const result = await this.callWithCrossPlatform<AnimeStaff[]>(
@@ -670,7 +777,10 @@ export class AnimeRepository {
   }
 
   async fetchAnimeRelations(id: number, sourcePlatform?: PlatformType): Promise<AnimeRelation[]> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
 
     const result = await this.callWithCrossPlatform<AnimeRelation[]>(
@@ -693,7 +803,10 @@ export class AnimeRepository {
   }
 
   async fetchAnimeStreaming(id: number, sourcePlatform?: PlatformType): Promise<AnimeStreaming[]> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
 
     const result = await this.callWithCrossPlatform<AnimeStreaming[]>(
@@ -716,7 +829,10 @@ export class AnimeRepository {
   }
 
   async fetchAnimeThemes(id: number, sourcePlatform?: PlatformType): Promise<AnimeTheme | null> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
     const queryId = await this.translateId(id, originPlatform, source.type);
     const native = await source.fetchAnimeThemes(queryId);
@@ -737,7 +853,10 @@ export class AnimeRepository {
     id: number,
     sourcePlatform?: PlatformType
   ): Promise<PlatformRatingData | null> {
-    const source = this.resolveSource(undefined);
+    // An id is only meaningful on the platform it came from: the detail screen
+    // passes AniList ids, so asking the browse source (Kitsu, Shikimori…) for
+    // that id 404s or returns rows keyed by the wrong platform's ids.
+    const source = this.resolveSource(sourcePlatform);
     const originPlatform = sourcePlatform ?? source.type;
     const queryId = await this.translateId(id, originPlatform, source.type);
     return source.fetchStatistics(queryId);
@@ -898,10 +1017,47 @@ export class AnimeRepository {
     return data.map(mapAniListToAnime);
   }
 
-  static async getTrendingAnime(page = 1, perPage = 20): Promise<Anime[]> {
+  static getTrendingAnimeSync(page = 1, perPage = 20): Anime[] | null {
+    const cached = CacheService.getSync<AniListAnime[]>(
+      `trending_anime_${page}_pp${perPage}_r${r18CacheFlag()}`
+    );
+    return cached ? filterAniListAnime(cached).map(mapAniListToAnime) : null;
+  }
+
+  static getSeasonalAnimeSync(season?: string, year?: number): Anime[] | null {
+    const current = getBroadcastSeason();
+    // Same grace as the async getSeasonalAnime path: a stale page still paints
+    // frame 1 while that path revalidates it.
+    const cached = CacheService.getSyncWithMeta<SeasonalPageCacheEntry>(
+      seasonalPageCacheKey(season ?? current.season, year ?? current.year, 1, 50),
+      SEASONAL_PAGE_GRACE_MS
+    );
+    return cached ? filterAniListAnime(cached.value.media).map(mapAniListDetailToAnime) : null;
+  }
+
+  /**
+   * Keys the first launched tab reads synchronously on frame 1 (the rate tab's
+   * genres / seasonal / weekly rows). Seeded by CacheService.warmSync at boot.
+   */
+  static firstPaintCacheKeys(): string[] {
+    const r18 = r18CacheFlag();
+    const current = getBroadcastSeason();
+    return [
+      `genres_list_v3_r${r18}`,
+      seasonalPageCacheKey(current.season, current.year, 1, 50),
+      `trending_anime_1_pp20_r${r18}`,
+    ];
+  }
+
+  static getGenresSync(): Genre[] | null {
+    const cached = CacheService.getSync<Genre[]>(`genres_list_v3_r${r18CacheFlag()}`);
+    return cached ? filterGenreCards(cached) : null;
+  }
+
+  static async getTrendingAnime(page = 1, perPage = 20, forceRefresh = false): Promise<Anime[]> {
     const cacheKey = `trending_anime_${page}_pp${perPage}_r${r18CacheFlag()}`;
-    const cached = await CacheService.get<AniListAnime[]>(cacheKey);
-    if (cached) return cached.map(mapAniListToAnime);
+    const cached = forceRefresh ? null : await CacheService.get<AniListAnime[]>(cacheKey);
+    if (cached) return filterAniListAnime(cached).map(mapAniListToAnime);
 
     const data = filterAniListAnime(
       await AniListClient.getTrendingAnime(page, perPage, legacyAniListOptions())
@@ -916,19 +1072,9 @@ export class AnimeRepository {
     page = 1,
     options: SeasonalFetchOptions = {}
   ): Promise<Anime[]> {
-    const date = new Date();
-    const currentMonth = date.getMonth();
-    const currentYear = date.getFullYear();
-
-    let targetSeason = season;
-    if (!targetSeason) {
-      if (currentMonth >= 2 && currentMonth <= 4) targetSeason = 'SPRING';
-      else if (currentMonth >= 5 && currentMonth <= 7) targetSeason = 'SUMMER';
-      else if (currentMonth >= 8 && currentMonth <= 10) targetSeason = 'FALL';
-      else targetSeason = 'WINTER';
-    }
-
-    const targetYear = year ?? currentYear;
+    const current = getBroadcastSeason();
+    const targetSeason = season ?? current.season;
+    const targetYear = year ?? current.year;
     const perPage = Math.max(1, Math.min(options.perPage ?? 50, 50));
     const maxItems = Math.max(perPage, options.maxItems ?? perPage);
     const forceRefresh = options.forceRefresh === true;
@@ -944,7 +1090,7 @@ export class AnimeRepository {
       // One cache row per page, independent of perPage / maxItems chosen by
       // the caller so two callers asking for different cap can still share
       // the underlying page data.
-      const cacheKey = `seasonal_${targetSeason}_${targetYear}_p${currentPage}_pp${perPage}_r${r18Flag}`;
+      const cacheKey = seasonalPageCacheKey(targetSeason, targetYear, currentPage, perPage, r18Flag);
 
       let pageMedia: AniListAnime[] | null = null;
       let hasNextPage = true;
@@ -1053,6 +1199,11 @@ export class AnimeRepository {
     return data.map(mapAniListToAnime);
   }
 
+  static getAnimeByGenreSync(genre: string, page = 1): Anime[] | null {
+    const cached = CacheService.getSync<AniListAnime[]>(`genre_${genre}_${page}_r${r18CacheFlag()}`);
+    return cached ? cached.map(mapAniListToAnime) : null;
+  }
+
   static async getAnimeByGenre(genre: string, page = 1): Promise<Anime[]> {
     const cacheKey = `genre_${genre}_${page}_r${r18CacheFlag()}`;
     const cached = await CacheService.get<AniListAnime[]>(cacheKey);
@@ -1065,10 +1216,10 @@ export class AnimeRepository {
     return data.map(mapAniListToAnime);
   }
 
-  static async getGenres(): Promise<Genre[]> {
-    const cacheKey = `genres_list_v2_r${r18CacheFlag()}`;
+  static async getGenres(forceRefresh = false): Promise<Genre[]> {
+    const cacheKey = `genres_list_v3_r${r18CacheFlag()}`;
     const overrides = await getGenreCoverOverrides();
-    const cached = await CacheService.get<Genre[]>(cacheKey);
+    const cached = forceRefresh ? null : await CacheService.get<Genre[]>(cacheKey);
     if (cached) {
       // Treat an all-empty cached payload as a miss and re-fetch. Without this,
       // a single failed cold start (e.g. AniList 429-ing the 20-genre burst
@@ -1110,7 +1261,7 @@ export class AnimeRepository {
     if (genresWithImages.some((g) => g.image !== '')) {
       await CacheService.set(cacheKey, genresWithImages, LEGACY_DETAIL_CACHE_TTL_MS);
     }
-    return genresWithImages;
+    return filterGenreCards(genresWithImages);
   }
 
   /**
@@ -1183,9 +1334,9 @@ export class AnimeRepository {
       enTitle: anime.titleEnglish,
       jpTitle: anime.titleJapanese,
       tags: anime.tags,
-      score: anime.rank,
-      year: new Date().getFullYear(),
-      type: 'Anime',
+      score: anime.score,
+      year: anime.startDate?.year ?? undefined,
+      type: anime.format ?? anime.type,
     };
   }
 }
@@ -1201,13 +1352,16 @@ function mapAniListToAnime(item: AniListAnime): Anime {
     titleJapanese: item.title.native || undefined,
     image: item.coverImage.extraLarge || item.coverImage.large,
     rank: item.averageScore || 0,
-    score: item.averageScore || 0,
+    score: item.averageScore ?? undefined,
+    episodes: item.episodes ?? undefined,
     type: item.format || 'TV',
     tags: item.genres.slice(0, 3),
     mood: item.description
       ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...'
       : '',
     durationMinutes: item.duration || 24,
+    startDate: item.startDate || undefined,
+    format: item.format || undefined,
   };
 }
 
@@ -1217,6 +1371,11 @@ function mapAniListDetailToAnime(item: AniListAnime): Anime {
     item.title.english && item.title.english !== primary ? item.title.english : undefined;
   return {
     id: String(item.id),
+    idMal: item.idMal,
+    platformData: {
+      anilist: { id: String(item.id) },
+      ...(item.idMal != null ? { myanimelist: { id: String(item.idMal) } } : {}),
+    },
     title: primary,
     titleEnglish: english,
     titleRomaji: item.title.romaji || undefined,
@@ -1416,6 +1575,63 @@ function isAniListAnimeSFW(item: AniListAnime): boolean {
     isAdult: item.isAdult,
     genres: item.genres,
     tags: item.tags.map((tag) => tag.name).filter((name): name is string => Boolean(name)),
+  });
+}
+
+export interface AniListLookup {
+  byIds(ids: number[]): Promise<AniListAnime[]>;
+  byMalIds(malIds: number[]): Promise<AniListAnime[]>;
+}
+
+const defaultAniListLookup: AniListLookup = {
+  byIds: (ids) => AniListClient.getAnimeByIds(ids, legacyAniListOptions()),
+  byMalIds: (malIds) => AniListClient.getAnimeByMalIds(malIds, legacyAniListOptions()),
+};
+
+const ANILIST_LOOKUP_CHUNK = 50;
+const ANCHOR_SOURCE_PLATFORMS: readonly PlatformType[] = [
+  'myanimelist',
+  'kitsu',
+  'shikimori',
+  'simkl',
+];
+
+function numericId(value: string | number | null | undefined): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function unique(values: (number | null)[]): number[] {
+  return [...new Set(values.filter((v): v is number => v != null))];
+}
+
+async function inChunks<T>(
+  ids: number[],
+  size: number,
+  fetchChunk: (chunk: number[]) => Promise<T[]>
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += size) {
+    out.push(...(await fetchChunk(ids.slice(i, i + size))));
+  }
+  return out;
+}
+
+function withAniListAnchor(item: UnifiedAnimeItem, media: AniListAnime): UnifiedAnimeItem {
+  const cover = item.coverImageURL ?? media.coverImage?.extraLarge ?? media.coverImage?.large ?? null;
+  return new UnifiedAnimeItem({
+    ...item,
+    idMal: item.idMal ?? media.idMal,
+    coverImageURL: cover,
+    extraLargeImageURL: item.extraLargeImageURL ?? cover,
+    anilistListCount: item.anilistListCount ?? media.popularity ?? null,
+    nextAiringEpisode: item.nextAiringEpisode ?? media.nextAiringEpisode ?? null,
+    // Sources like Simkl ship no genres/tags, so AniList's adult signal is the
+    // only one; without it an R18 title passes the list filter and then the
+    // AniList-backed detail screen refuses to open it.
+    isAdult: item.isAdult || !isAniListAnimeSFW(media),
+    platformData: { ...item.platformData, anilist: { id: String(media.id) } },
   });
 }
 

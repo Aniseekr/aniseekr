@@ -14,7 +14,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Stack, useRouter } from 'expo-router';
 import { Image as ExpoImage } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText, ThemedButton, readableTextOn } from '../../components/themed';
+import {
+  readableTextOn,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+} from '../../components/themed';
 import { Radius, Spacing, bottomPad } from '../../constants/DesignSystem';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
@@ -151,14 +156,11 @@ export default function CompanionLibraryScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={14}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('common.back')}
-            style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text.primary} />
-          </Pressable>
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+          />
           <View style={styles.headerCenter}>
             <ThemedText variant="titleLarge" weight="700">
               {t('companion.title')}
@@ -350,7 +352,7 @@ function CharacterCard({
             },
           ]}>
           <Ionicons
-            name={cut ? 'sparkles' : 'image-outline'}
+            name={cut ? 'cut' : 'image-outline'}
             size={10}
             color={cut ? readableTextOn(theme.accent) : theme.text.secondary}
           />
@@ -523,7 +525,7 @@ function makeStyles(theme: ThemePalette) {
     headerBtn: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -545,7 +547,7 @@ function makeStyles(theme: ThemePalette) {
     emptyIcon: {
       width: 92,
       height: 92,
-      borderRadius: 46,
+      borderRadius: Radius.sm,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -575,7 +577,7 @@ function makeStyles(theme: ThemePalette) {
       gap: 3,
       paddingHorizontal: 7,
       paddingVertical: 3,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     cardName: { marginTop: 2 },
@@ -588,7 +590,7 @@ function makeStyles(theme: ThemePalette) {
     toast: {
       paddingHorizontal: 16,
       paddingVertical: 10,
-      borderRadius: 999,
+      borderRadius: Radius.sm,
       borderWidth: 1,
       maxWidth: '86%',
     },
@@ -610,7 +612,7 @@ function makeStyles(theme: ThemePalette) {
       left: 4,
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: Radius.sm,
       borderWidth: 1,
     },
     angleDelete: {

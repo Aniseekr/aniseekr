@@ -159,7 +159,7 @@ const platforms: StreamingPlatformSpec[] = [
     id: 'bahamut',
     displayName: '動漫瘋',
     color: '#F8C73B',
-    icon: 'sparkles',
+    icon: 'play-circle',
     domains: ['ani.gamer.com.tw', 'gamer.com.tw'],
     aliases: [
       'bahamut',

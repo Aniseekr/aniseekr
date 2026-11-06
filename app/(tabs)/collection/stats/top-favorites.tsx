@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   featuredImage: {
     width: '100%',
@@ -267,6 +267,6 @@ const styles = StyleSheet.create({
   restCover: {
     width: 48,
     height: 64,
-    borderRadius: 8,
+    borderRadius: Radius.sm,
   },
 });

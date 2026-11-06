@@ -8,7 +8,7 @@ By submitting a contribution you agree that your work is licensed under the proj
 
 - **Bug reports** — open a [GitHub issue](https://github.com/Aniseekr/aniseekr-expo/issues) with reproduction steps, device + OS, and a build number (Settings → About).
 - **Translations** — UI strings live in [`libs/i18n/locales/*.json`](./libs/i18n/locales) (one file per language; `en.json` is canonical). Anime-data dictionaries (genres, etc.) live in [`libs/i18n/data/`](./libs/i18n/data). **Adding or improving a translation is a one-file PR — no codegen, no build step.** Full guide in [`libs/i18n/README.md`](./libs/i18n/README.md). PRs welcome for `zh-Hant`, `zh-Hans`, `ja`, `ko`, and new languages. Don't translate brand names (Aniseekr, AniList, Bangumi, MAL…) or anime titles.
-- **Pilgrimage spot data** — Anitabi is the source of truth. Submit corrections upstream at [github.com/anitabi/anitabi.cn-document](https://github.com/anitabi/anitabi.cn-document); we re-pull on every release.
+- **Pilgrimage data: Aniseekr Atlas**.
 - **Code** — features, fixes, refactors. Read the rules below before opening a PR.
 - **Security** — see [README → Security](./README.md#security). Do **not** file public issues for vulnerabilities.
 
@@ -53,7 +53,6 @@ If a PR adds another flavour of "PrimaryButton2", inlines `#0A0A0A`, or shows a 
 - [ ] No new hardcoded hex on the render path
 - [ ] No new top-level `useState` dumping ground (see CLAUDE rule 9)
 - [ ] If you touched a detail / list screen, verify the skeleton does **not** flash on warm cache
-- [ ] If you used Anitabi data on a new surface, the attribution chip is present
 - [ ] If you added a runtime dependency, its licence is MIT / Apache-2.0 / BSD-2/3 / ISC. Anything else needs discussion before merge.
 
 ## Commit & PR style
@@ -61,7 +60,7 @@ If a PR adds another flavour of "PrimaryButton2", inlines `#0A0A0A`, or shows a 
 We use Conventional Commits — see recent history for examples:
 
 ```
-feat(pilgrimage): surface Anitabi CC BY-NC-SA attribution
+feat(pilgrimage): offline trip pack store with OpenFreeMap-compliant tile download
 fix(cloudkit): enable CloudKit service in entitlements
 chore(monetization): gate premium UI behind FeatureFlags
 ```

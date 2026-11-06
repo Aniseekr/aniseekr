@@ -389,19 +389,24 @@ See `pilgrimage_spec.md` for full details.
 
 | Property | Value |
 |---|---|
-| Primary base URL | `https://api.anitabi.cn` |
-| HTTP 403 fallback | `https://www.anitabi.cn/d` |
+| Base URL | `https://api.anitabi.cn` |
+| Images | `https://image.anitabi.cn` (`?plan=h160` / `h360` / none) |
 | Auth | None |
+| Headers | `User-Agent: Aniseekr/1.0 (https://aniseekr.moe)`, no Referer |
+| HTTP 403 | Back off 30 min, request nothing else; callers serve cache |
+
+Only the endpoints in anitabi's
+[api.md](https://github.com/anitabi/anitabi.cn-document/blob/main/api.md).
+Any other path (e.g. `/bangumi/{id}/points`, `/bangumi`, `www.anitabi.cn/d/*.json`,
+`img-tc.anitabi.cn`) puts the caller's IP on Cloudflare risk control
+(anitabi.cn-document#94), after which even documented endpoints answer 403.
 
 ### Endpoints
 
 | Purpose | Method | Path |
 |---|---|---|
 | Lite | GET | `/bangumi/{bangumiId}/lite` |
-| Full points | GET | `/bangumi/{bangumiId}/points` |
-| Point attribution | GET | `/bangumi/{bangumiId}/points/detail?haveImage=true` |
-| 403 fallback catalog | GET | `https://www.anitabi.cn/d/g.json` |
-| 403 fallback point page | GET | `https://www.anitabi.cn/d/g{page}.json` |
+| Points with screenshots | GET | `/bangumi/{bangumiId}/points/detail?haveImage=true` (subset of `pointsLength`, #83) |
 | Search bangumi | GET | (uses Bangumi search, not Anitabi) |
 
 ---
@@ -417,7 +422,7 @@ const CHANNELS = {
   kitsu:      { minIntervalMs: 333 },
   shikimori:  { minIntervalMs: 200 },
   simkl:      { minIntervalMs: 500 },
-  anitabi:    { minIntervalMs: 200 },
+  anitabi:    { minIntervalMs: 500 },
 } as const;
 ```
 

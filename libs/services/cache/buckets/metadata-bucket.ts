@@ -2,14 +2,14 @@
 //
 // Sub-buckets are derived from the well-known key prefixes used by
 // anime-repository.ts (`anime_detail_`, `seasonal_`, `search_`, ...) and
-// anitabi-service.ts (`anitabi_detail_`). New prefixes that don't appear
+// Atlas (`atlas:`). New prefixes that don't appear
 // in METADATA_GROUPS fall into the `misc` sub-bucket so they remain
 // visible and clearable.
 //
 // The bucket NEVER touches LocalDB user data or MMKV preferences.
 
 import { CacheService } from '../../cache-service';
-import type { CacheBucket, CacheSubBucket, BucketStats } from '../cache-manager';
+import type { CacheBucket, CacheSubBucket, BucketStats, PruneOptions } from '../cache-manager';
 
 interface MetadataGroup {
   id: string;
@@ -32,10 +32,10 @@ const METADATA_GROUPS: readonly MetadataGroup[] = [
     prefixes: ['seasonal_', 'seasonalpage_'],
   },
   {
-    id: 'anitabi',
-    label: 'Anitabi pilgrimage data',
-    description: 'Anitabi detailed points',
-    prefixes: ['anitabi_detail_'],
+    id: 'atlas',
+    label: 'Aniseekr Atlas',
+    description: 'Pilgrimage work and spot data',
+    prefixes: ['atlas:'],
   },
   {
     id: 'search',
@@ -137,8 +137,8 @@ export class MetadataBucket implements CacheBucket {
     await CacheService.clear();
   }
 
-  async prune(): Promise<{ removed: number }> {
-    const removed = await CacheService.prune();
+  async prune(options?: PruneOptions): Promise<{ removed: number }> {
+    const removed = await CacheService.prune(options?.retainStaleMs);
     if (removed > 0) {
       // Reclaim the disk space the deleted rows were using. VACUUM is fine to
       // run inline here because prune is invoked at startup, not in hot paths.

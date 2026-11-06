@@ -3,16 +3,11 @@ import {
   type BangumiRelatedSubject,
   type BangumiV0Subject,
 } from '../../clients/bangumi-client';
-import { anitabiService } from './anitabi-service';
-import type { AnitabiBangumi, AnitabiPoint } from './types';
+import { pilgrimageRepository } from './pilgrimage-repository';
+import type { PilgrimageSpot, PilgrimageWork } from './types';
 
 export type PilgrimageSeriesSelection = 'all' | number;
-
-export interface PilgrimageSeriesPoint extends AnitabiPoint {
-  sourceBangumiId: number;
-  sourceAnimeTitle: string;
-  sourceLabel: string;
-}
+export type PilgrimageSeriesPoint = PilgrimageSpot;
 
 export interface PilgrimageSeriesSubject {
   id: number;
@@ -26,8 +21,8 @@ export interface PilgrimageSeriesSubject {
 
 export interface PilgrimageSeriesEntry {
   subject: PilgrimageSeriesSubject;
-  anime: AnitabiBangumi | null;
-  points: readonly PilgrimageSeriesPoint[];
+  anime: PilgrimageWork | null;
+  points: readonly PilgrimageSpot[];
 }
 
 export interface PilgrimageSeriesResult {
@@ -35,10 +30,6 @@ export interface PilgrimageSeriesResult {
   entries: PilgrimageSeriesEntry[];
   availableEntries: PilgrimageSeriesEntry[];
   unavailableEntries: PilgrimageSeriesEntry[];
-  /** True when the Bangumi relations couldn't be fetched, so the series list
-   *  may be incomplete (e.g. only the seed season resolved). Surfaced as an
-   *  honest "couldn't load all seasons" warning instead of silently pretending
-   *  the work is single-season. */
   degraded: boolean;
 }
 
@@ -47,13 +38,13 @@ interface BangumiRelatedClient {
   getRelatedSubjects(id: number | string): Promise<BangumiRelatedSubject[]>;
 }
 
-interface AnitabiLiteClient {
-  getAnimePilgrimage(id: number): Promise<AnitabiBangumi | null>;
+interface RepositoryLike {
+  getSpotsByBangumiId(id: number): Promise<PilgrimageWork | null>;
 }
 
 interface ResolveSeriesOptions {
   bangumiClient?: BangumiRelatedClient;
-  anitabi?: AnitabiLiteClient;
+  repository?: RepositoryLike;
   maxDepth?: number;
   maxSubjects?: number;
 }
@@ -66,25 +57,10 @@ interface CandidateSubject {
 
 const DEFAULT_MAX_DEPTH = 2;
 const DEFAULT_MAX_SUBJECTS = 16;
-
 const STRONG_SERIES_RELATIONS = new Set([
-  '续集',
-  '前传',
-  '主线故事',
-  '番外篇',
-  '衍生',
-  '总集篇',
-  '全集',
-  'sequel',
-  'prequel',
-  'main story',
-  'side story',
-  'spin-off',
-  'spin off',
-  'summary',
-  'parent story',
+  '续集', '前传', '主线故事', '番外篇', '衍生', '总集篇', '全集', 'sequel', 'prequel',
+  'main story', 'side story', 'spin-off', 'spin off', 'summary', 'parent story',
 ]);
-
 const SAME_WORLD_RELATIONS = new Set(['相同世界观', 'same setting', 'same universe']);
 
 export async function resolvePilgrimageSeries(
@@ -92,37 +68,34 @@ export async function resolvePilgrimageSeries(
   options: ResolveSeriesOptions = {}
 ): Promise<PilgrimageSeriesResult> {
   const bangumiClient = options.bangumiClient ?? BangumiClient;
-  const anitabi = options.anitabi ?? anitabiService;
-  const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
-  const maxSubjects = options.maxSubjects ?? DEFAULT_MAX_SUBJECTS;
-
-  let seedSubject: BangumiV0Subject | null = null;
+  const repository = options.repository ?? pilgrimageRepository;
+  let seedSubject: BangumiV0Subject;
   try {
     seedSubject = await bangumiClient.getSubject(seedId);
   } catch {
-    const anime = await anitabi.getAnimePilgrimage(seedId).catch(() => null);
-    const fallbackSubject = subjectFromAnimeOrId(seedId, anime);
-    const entry = buildSeriesEntry(fallbackSubject, '原作', anime, 0, 0);
-    // Couldn't even fetch the seed subject — definitely couldn't enumerate the
-    // series, so flag it degraded rather than presenting one season as the whole.
-    return buildSeriesResult(seedId, [entry], true);
+    const work = await repository.getSpotsByBangumiId(seedId).catch(() => null);
+    const entry = buildEntry(
+      { id: seedId, type: 2, name: work?.titleJa ?? '', name_cn: work?.titleZh?.hant ?? '' },
+      '原作',
+      work,
+      0,
+      1
+    );
+    return buildResult(seedId, [entry], true);
   }
 
-  const { candidates, rootRelationsFailed } = await collectRelatedCandidates(seedSubject, {
+  const { candidates, degraded } = await collectCandidates(seedSubject, {
     bangumiClient,
-    maxDepth,
-    maxSubjects,
+    maxDepth: options.maxDepth ?? DEFAULT_MAX_DEPTH,
+    maxSubjects: options.maxSubjects ?? DEFAULT_MAX_SUBJECTS,
   });
-
-  const sorted = sortCandidates(candidates);
-  const anitabiEntries = await Promise.all(
-    sorted.map(async (candidate, index) => {
-      const anime = await anitabi.getAnimePilgrimage(candidate.subject.id).catch(() => null);
-      return buildSeriesEntry(candidate.subject, candidate.relation, anime, index, sorted.length);
-    })
-  );
-
-  return buildSeriesResult(seedId, anitabiEntries, rootRelationsFailed);
+  const sorted = [...candidates].sort((a, b) => dateRank(a.subject.date) - dateRank(b.subject.date)
+    || a.depth - b.depth || a.subject.id - b.subject.id);
+  const entries = await Promise.all(sorted.map(async (candidate, index) => {
+    const work = await repository.getSpotsByBangumiId(candidate.subject.id).catch(() => null);
+    return buildEntry(candidate.subject, candidate.relation, work, index, sorted.length);
+  }));
+  return buildResult(seedId, entries, degraded);
 }
 
 export function shouldIncludeRelatedSubjectInSeries(
@@ -130,262 +103,99 @@ export function shouldIncludeRelatedSubjectInSeries(
   related: BangumiRelatedSubject
 ): boolean {
   if (related.type !== 2) return false;
-  const relation = normalizeRelation(related.relation);
+  const relation = normalize(related.relation);
   if (STRONG_SERIES_RELATIONS.has(relation)) return true;
   if (!SAME_WORLD_RELATIONS.has(relation)) return false;
-  return hasTitleAffinity(seed, related);
+  const keys = [seed.name, seed.name_cn ?? ''].map(compactTitle).filter((value) => value.length >= 5);
+  const title = compactTitle(`${related.name} ${related.name_cn ?? ''}`);
+  return keys.some((key) => title.includes(key));
 }
 
 export function mergePilgrimageSeriesEntries(
   entries: readonly PilgrimageSeriesEntry[],
   selection: PilgrimageSeriesSelection
-): { anime: AnitabiBangumi | null; points: PilgrimageSeriesPoint[] } {
-  const selected =
-    selection === 'all'
-      ? entries.filter((entry) => entry.anime !== null)
-      : entries.filter((entry) => entry.subject.id === selection && entry.anime !== null);
-
-  const available = selected.filter(
-    (entry): entry is PilgrimageSeriesEntry & { anime: AnitabiBangumi } => entry.anime !== null
-  );
+): { anime: PilgrimageWork | null; points: PilgrimageSpot[] } {
+  const available = entries.filter((entry) => entry.anime !== null &&
+    (selection === 'all' || entry.subject.id === selection));
   if (available.length === 0) return { anime: null, points: [] };
-
-  if (selection !== 'all') {
-    const entry = available[0];
-    return {
-      anime: entry.anime,
-      points: [...entry.points],
-    };
-  }
-
-  const primary = available[0].anime;
-  const points = available.flatMap((entry) => entry.points);
-  const anime: AnitabiBangumi = {
-    ...primary,
-    title: primary.title,
-    cn: primary.cn,
-    pointsLength: available.reduce((sum, entry) => sum + (entry.anime.pointsLength ?? 0), 0),
-    imagesLength: available.reduce((sum, entry) => sum + (entry.anime.imagesLength ?? 0), 0),
-    litePoints: points,
-  };
-  return { anime, points };
+  const anime = available[0].anime;
+  return { anime, points: available.flatMap((entry) => entry.points) };
 }
 
-export function annotatePilgrimageSeriesPoints(
-  points: readonly AnitabiPoint[],
-  anime: AnitabiBangumi,
-  label: string
-): PilgrimageSeriesPoint[] {
-  return points.map((point) => annotatePoint(point, anime, label));
-}
-
-async function collectRelatedCandidates(
+async function collectCandidates(
   seed: BangumiV0Subject,
-  options: {
-    bangumiClient: BangumiRelatedClient;
-    maxDepth: number;
-    maxSubjects: number;
-  }
-): Promise<{ candidates: CandidateSubject[]; rootRelationsFailed: boolean }> {
+  options: { bangumiClient: BangumiRelatedClient; maxDepth: number; maxSubjects: number }
+): Promise<{ candidates: CandidateSubject[]; degraded: boolean }> {
   const seen = new Map<number, CandidateSubject>();
-  seen.set(seed.id, { subject: seed, relation: '原作', depth: 0 });
-  const queue: CandidateSubject[] = [{ subject: seed, relation: '原作', depth: 0 }];
-  let rootRelationsFailed = false;
-
-  while (queue.length > 0 && seen.size < options.maxSubjects) {
+  const root = { subject: seed, relation: '原作', depth: 0 };
+  seen.set(seed.id, root);
+  const queue = [root];
+  let degraded = false;
+  while (queue.length && seen.size < options.maxSubjects) {
     const current = queue.shift();
     if (!current || current.depth >= options.maxDepth) continue;
-
-    let related: BangumiRelatedSubject[] = [];
+    let related: BangumiRelatedSubject[];
     try {
       related = await options.bangumiClient.getRelatedSubjects(current.subject.id);
     } catch {
-      // A failed fetch on the seed itself means we couldn't enumerate the
-      // series at all (no sequels/prequels discovered). Deeper-node failures
-      // still leave the primary series intact, so only the root counts.
-      if (current.subject.id === seed.id) rootRelationsFailed = true;
+      if (current.subject.id === seed.id) degraded = true;
       continue;
     }
-
     for (const item of related) {
-      if (seen.size >= options.maxSubjects) break;
+      if (seen.size >= options.maxSubjects || seen.has(item.id)) continue;
       if (!shouldIncludeRelatedSubjectInSeries(seed, item)) continue;
-      if (seen.has(item.id)) continue;
-
-      const subject = relatedToSubject(item);
-      const candidate: CandidateSubject = {
-        subject,
-        relation: item.relation,
-        depth: current.depth + 1,
-      };
-      seen.set(subject.id, candidate);
+      const subject: BangumiV0Subject = { ...item };
+      const candidate = { subject, relation: item.relation, depth: current.depth + 1 };
+      seen.set(item.id, candidate);
       queue.push(candidate);
     }
   }
-
-  return { candidates: [...seen.values()], rootRelationsFailed };
+  return { candidates: [...seen.values()], degraded };
 }
 
-function buildSeriesResult(
-  seedId: number,
-  entries: PilgrimageSeriesEntry[],
-  degraded = false
-): PilgrimageSeriesResult {
-  const availableEntries = entries.filter((entry) => entry.anime !== null);
+function buildEntry(
+  subject: BangumiV0Subject,
+  relation: string,
+  work: PilgrimageWork | null,
+  index: number,
+  total: number
+): PilgrimageSeriesEntry {
+  const label = total > 1 ? `S${index + 1}` : 'Main';
+  return {
+    subject: {
+      id: subject.id,
+      title: subject.name,
+      titleCn: subject.name_cn ?? '',
+      relation,
+      date: subject.date ?? null,
+      platform: subject.platform ?? null,
+      label,
+    },
+    anime: work,
+    points: work?.spots ?? [],
+  };
+}
+
+function buildResult(seedId: number, entries: PilgrimageSeriesEntry[], degraded: boolean) {
   return {
     seedId,
     entries,
-    availableEntries,
+    availableEntries: entries.filter((entry) => entry.anime !== null),
     unavailableEntries: entries.filter((entry) => entry.anime === null),
     degraded,
   };
 }
 
-function buildSeriesEntry(
-  subject: BangumiV0Subject,
-  relation: string,
-  anime: AnitabiBangumi | null,
-  index: number,
-  total: number
-): PilgrimageSeriesEntry {
-  const label = resolveSeriesLabel(subject, relation, index, total);
-  const seriesSubject: PilgrimageSeriesSubject = {
-    id: subject.id,
-    title: subject.name,
-    titleCn: subject.name_cn ?? '',
-    relation,
-    date: subject.date ?? null,
-    platform: subject.platform ?? null,
-    label,
-  };
-  return {
-    subject: seriesSubject,
-    anime,
-    points: anime ? annotatePilgrimageSeriesPoints(anime.litePoints ?? [], anime, label) : [],
-  };
-}
-
-function annotatePoint(
-  point: AnitabiPoint,
-  anime: AnitabiBangumi,
-  label: string
-): PilgrimageSeriesPoint {
-  return {
-    ...point,
-    sourceBangumiId: anime.id,
-    sourceAnimeTitle: anime.title,
-    sourceLabel: label,
-  };
-}
-
-function sortCandidates(candidates: CandidateSubject[]): CandidateSubject[] {
-  return [...candidates].sort((a, b) => {
-    const dateA = dateRank(a.subject.date);
-    const dateB = dateRank(b.subject.date);
-    if (dateA !== dateB) return dateA - dateB;
-    if (a.depth !== b.depth) return a.depth - b.depth;
-    return a.subject.id - b.subject.id;
-  });
-}
-
 function dateRank(date: string | undefined): number {
   if (!date) return Number.POSITIVE_INFINITY;
-  const ts = Date.parse(`${date}T00:00:00Z`);
-  return Number.isFinite(ts) ? ts : Number.POSITIVE_INFINITY;
+  const timestamp = Date.parse(`${date}T00:00:00Z`);
+  return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
 }
 
-function resolveSeriesLabel(
-  subject: BangumiV0Subject,
-  relation: string,
-  index: number,
-  total: number
-): string {
-  const title = normalizeTitle(subject.name);
-  const platform = normalizeTitle(subject.platform ?? '');
-  const relationKey = normalizeRelation(relation);
-
-  if (platform.includes('剧场版') || title.includes('映画') || title.includes('劇場版')) {
-    return 'Movie';
-  }
-  const seasonMatch = title.match(/season\s*0*([0-9]+)/);
-  if (seasonMatch) return `S${Number(seasonMatch[1])}`;
-  const ordinalMatch = title.match(/([0-9]+)(?:st|nd|rd|th)\s*season/);
-  if (ordinalMatch) return `S${Number(ordinalMatch[1])}`;
-  if (title.includes('第二季') || title.includes('二期')) return 'S2';
-  if (title.includes('第三季') || title.includes('三期')) return 'S3';
-  if (title.includes('第四季') || title.includes('四期')) return 'S4';
-  const franchiseLabel = getFranchiseLabel(subject.name);
-  if (franchiseLabel) return franchiseLabel;
-  if (relationKey === '总集篇' || relationKey === '全集') return 'Recap';
-  if (relationKey === '番外篇' || relationKey === '衍生') return 'Side';
-  if (total > 1) return `S${index + 1}`;
-  return 'Main';
-}
-
-function getFranchiseLabel(title: string): string | null {
-  const bangDream = title.match(/^BanG Dream!\s*(.*)$/i);
-  if (!bangDream) return null;
-  const suffix = bangDream[1]?.trim();
-  if (!suffix) return 'BanG Dream!';
-  return suffix.replace(/^[:：/\-\s]+/, '') || 'BanG Dream!';
-}
-
-function relatedToSubject(item: BangumiRelatedSubject): BangumiV0Subject {
-  return {
-    id: item.id,
-    type: item.type,
-    name: item.name,
-    name_cn: item.name_cn,
-    date: item.date,
-    platform: item.platform,
-    images: item.images,
-    eps: item.eps,
-    total_episodes: item.total_episodes,
-    summary: item.summary,
-    rating: item.rating,
-    collection: item.collection,
-    tags: item.tags,
-    infobox: item.infobox,
-    nsfw: item.nsfw,
-  };
-}
-
-function subjectFromAnimeOrId(id: number, anime: AnitabiBangumi | null): BangumiV0Subject {
-  return {
-    id,
-    type: 2,
-    name: anime?.title ?? `Bangumi #${id}`,
-    name_cn: anime?.cn ?? '',
-  };
-}
-
-function hasTitleAffinity(seed: BangumiV0Subject, related: BangumiRelatedSubject): boolean {
-  const seedKeys = titleAffinityKeys(seed);
-  const relatedTitle = compactTitle([related.name, related.name_cn].filter(Boolean).join(' '));
-  if (!relatedTitle) return false;
-  return seedKeys.some((key) => key.length >= 5 && relatedTitle.includes(key));
-}
-
-function titleAffinityKeys(subject: BangumiV0Subject): string[] {
-  const values = [subject.name, subject.name_cn].filter(Boolean);
-  const keys = new Set<string>();
-  for (const value of values) {
-    const compact = compactTitle(value);
-    if (compact.length >= 5) keys.add(compact);
-    const bangDream = compact.match(/bangdream/);
-    if (bangDream) keys.add(bangDream[0]);
-  }
-  return [...keys];
+function normalize(value: string): string {
+  return value.normalize('NFKC').trim().toLowerCase();
 }
 
 function compactTitle(value: string): string {
-  return normalizeTitle(value).replace(/[^0-9a-z\u3040-\u30ff\u3400-\u9fff]+/g, '');
-}
-
-function normalizeRelation(value: string): string {
-  return value.normalize('NFKC').trim().toLowerCase();
-}
-
-function normalizeTitle(value: string): string {
-  return value.normalize('NFKC').trim().toLowerCase();
+  return normalize(value).replace(/[^0-9a-z\u3040-\u30ff\u3400-\u9fff]+/g, '');
 }

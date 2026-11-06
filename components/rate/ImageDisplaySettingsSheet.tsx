@@ -1,19 +1,20 @@
 import { memo, useCallback } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import { BrowseSourceChip } from '../common/BrowseSourceChip';
-import { ON_DARK, ThemedBottomSheet, readableTextOn } from '../themed';
+import { ThemedBottomSheet, readableTextOn } from '../themed';
 import type {
   SwipeContentMode,
   SwipePrefs,
   SwipeRatingButtons,
 } from '../../libs/services/user-prefs';
+import { CapsText } from '../themed/CapsText';
 
 // Re-export aliases for any legacy importers (kept stable across the swipe-prefs migration).
 export type ImageContentMode = SwipeContentMode;
@@ -68,9 +69,9 @@ function ImageDisplaySettingsSheetComponent({
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('commonUi.dataSource')}
-        </Text>
+        </CapsText>
         <View style={styles.sourceRow}>
           <BrowseSourceChip
             onPress={() => {
@@ -81,9 +82,9 @@ function ImageDisplaySettingsSheetComponent({
           />
         </View>
 
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+        <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
           {t('rate.imageFit')}
-        </Text>
+        </CapsText>
         <View style={styles.segmented}>
           {(['fill', 'fit'] as SwipeContentMode[]).map((mode) => {
             const active = preferences.contentMode === mode;
@@ -105,66 +106,18 @@ function ImageDisplaySettingsSheetComponent({
                 />
                 <Text
                   style={[styles.segmentLabel, { color: active ? activeFg : theme.text.primary }]}>
-                  {mode === 'fill' ? 'Fill' : 'Fit'}
+                  {t(mode === 'fill' ? 'rate.imageFill' : 'rate.imageFitMode')}
                 </Text>
               </Pressable>
             );
           })}
         </View>
-
-        <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
-          {t('rate.ratingButtonsLikeMode')}
-        </Text>
-        <View style={styles.segmented}>
-          {(['three', 'five'] as SwipeRatingButtons[]).map((mode) => {
-            const active = preferences.ratingButtons === mode;
-            return (
-              <Pressable
-                key={mode}
-                onPress={() => update('ratingButtons', mode)}
-                style={({ pressed }) => [
-                  styles.segmentItem,
-                  {
-                    backgroundColor: active ? theme.accent : theme.background.tertiary,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}>
-                <Text
-                  style={[styles.segmentLabel, { color: active ? activeFg : theme.text.primary }]}>
-                  {mode === 'three' ? '3 buttons' : '5 buttons'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <ToggleRow
-          icon="auto-awesome"
-          label={t('rate.aiInsights')}
-          description={t('rate.showAiGeneratedRecommendationsOn')}
-          value={preferences.showAIInsights}
-          onChange={(v) => update('showAIInsights', v)}
-        />
-        <ToggleRow
-          icon="bookmark"
-          label={t('rate.trackingShortcut')}
-          description={t('rate.addAnimeToListsDirectly')}
-          value={preferences.trackingShortcut}
-          onChange={(v) => update('trackingShortcut', v)}
-        />
-        <ToggleRow
-          icon="translate"
-          label={t('rate.originalTitles')}
-          description={t('rate.showRomajiOrJapaneseTitles')}
-          value={preferences.showOriginalTitle}
-          onChange={(v) => update('showOriginalTitle', v)}
-        />
 
         {onRestartGenre ? (
           <>
-            <Text style={[styles.sectionLabel, { color: theme.text.secondary }]}>
+            <CapsText style={[styles.sectionLabel, { color: theme.text.secondary }]}>
               {t('rate.deck')}
-            </Text>
+            </CapsText>
             <ActionRow
               icon="refresh"
               label={t('rate.restartThisGenre')}
@@ -223,45 +176,6 @@ function ActionRow({
   );
 }
 
-function ToggleRow({
-  icon,
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  label: string;
-  description: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View
-      style={[
-        styles.toggleRow,
-        { borderColor: theme.glassBorder, backgroundColor: theme.background.tertiary },
-      ]}>
-      <MaterialIcons name={icon} size={22} color={theme.accent} />
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.toggleLabel, { color: theme.text.primary }]}>{label}</Text>
-        <Text style={[styles.toggleDescription, { color: theme.text.secondary }]}>
-          {description}
-        </Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          hapticsBridge.selection();
-          onChange(v);
-        }}
-        trackColor={{ false: theme.background.primary, true: theme.accent }}
-        thumbColor={value ? ON_DARK : theme.text.tertiary}
-      />
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   headerRow: {
@@ -296,7 +210,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: Spacing.sm,
-    borderRadius: 12,
+    borderRadius: Radius.card,
   },
   segmentLabel: {
     ...Typography.titleSmall,
@@ -307,7 +221,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     marginTop: Spacing.sm,
   },
@@ -320,7 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     padding: Spacing.sm,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     marginTop: Spacing.sm,
   },

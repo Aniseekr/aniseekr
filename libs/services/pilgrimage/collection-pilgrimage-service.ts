@@ -1,7 +1,4 @@
-// Bridges the user's collection (user_anime + favorites) with the Anitabi
-// pilgrimage data set. For every collected anime we resolve a Bangumi subject
-// id and ask Anitabi for spots. Anime that can't be resolved or have no
-// Anitabi entry are silently dropped.
+// Bridges the user's collection (user_anime + favorites) with Atlas works.
 //
 // Resolution is three-layered: L2 in-memory cross-index → L1 SQLite
 // id_mappings → L0 online Bangumi title search. The first two are offline
@@ -20,16 +17,15 @@ import { BangumiClient, type BangumiV0SearchResponse } from '../../clients/bangu
 import { CacheService } from '../cache-service';
 import { dataSourceConfig } from '../data-source-config';
 import { idMappingService, IDMappingService } from '../sync/id-mapping-service';
-import { lookupBangumiByPlatformId } from './anitabi-cross-index';
-import { anitabiService, AnitabiService } from './anitabi-service';
+import { pilgrimageRepository, PilgrimageRepository } from './pilgrimage-repository';
 import { pickBangumiSubjectByTitle } from './bangumi-title-match';
-import type { AnitabiBangumi } from './types';
+import type { PilgrimageWork } from './types';
 
 export type CollectionStatus = 'watching' | 'completed' | 'on_hold' | 'dropped' | 'plan_to_watch';
 
 export interface CollectionPilgrimageEntry {
-  /** Resolved Anitabi payload. */
-  anime: AnitabiBangumi;
+  /** Resolved Atlas work. */
+  anime: PilgrimageWork;
   /** Original anime id from user_anime / favorites (browse-source platform id). */
   collectionAnimeId: string;
   /** Resolved bangumi subject id. */
@@ -41,7 +37,7 @@ export interface CollectionPilgrimageEntry {
 }
 
 export interface CollectionPilgrimageStats {
-  /** Number of collected anime that have Anitabi spots. */
+  /** Number of collected anime that have Atlas spots. */
   matched: number;
   /** Total distinct anime ids checked across user_anime + favorites. */
   total: number;
@@ -73,7 +69,7 @@ interface ResolverCache {
 interface ServiceDeps {
   db?: typeof LocalDB;
   mappingService?: IDMappingService;
-  anitabi?: AnitabiService;
+  repository?: PilgrimageRepository;
   /** Override the assumed platform of stored anime ids. Defaults to browseSource. */
   sourcePlatform?: PlatformType;
   /** Bangumi keyword search used by the L0 online resolver. */
@@ -128,7 +124,7 @@ const defaultUnifiedDetailFetcher: UnifiedDetailFetcher = async (animeId, platfo
 export class CollectionPilgrimageService {
   private readonly db: typeof LocalDB;
   private readonly mappingService: IDMappingService;
-  private readonly anitabi: AnitabiService;
+  private readonly repository: PilgrimageRepository;
   private readonly sourceOverride: PlatformType | undefined;
   private readonly bangumiSearch: BangumiSearchClient;
   private readonly cache: ResolverCache;
@@ -137,7 +133,7 @@ export class CollectionPilgrimageService {
   constructor(deps: ServiceDeps = {}) {
     this.db = deps.db ?? LocalDB;
     this.mappingService = deps.mappingService ?? idMappingService;
-    this.anitabi = deps.anitabi ?? anitabiService;
+    this.repository = deps.repository ?? pilgrimageRepository;
     this.sourceOverride = deps.sourcePlatform;
     this.bangumiSearch = deps.bangumiSearch ?? BangumiClient;
     this.cache = deps.cache ?? CacheService;
@@ -145,7 +141,7 @@ export class CollectionPilgrimageService {
   }
 
   /**
-   * Returns every collected anime that has Anitabi pilgrimage data.
+   * Returns every collected anime that has Atlas pilgrimage data.
    * Deduped by bangumi id; favorites that are also tracked in user_anime
    * collapse into a single entry with both flags set.
    */
@@ -220,13 +216,7 @@ export class CollectionPilgrimageService {
       return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     }
 
-    // L2 first: pure in-memory lookup. Hits short-circuit the SQLite
-    // round-trip for the (very common) anilist/myanimelist browse case.
-    const l2 = lookupBangumiByPlatformId(platform, animeId);
-    if (l2 !== null) return l2;
-
-    // L1 fallback: the legacy IDMappingService backed by SQLite + manual
-    // overrides. Slower but covers platforms outside the L2 index.
+    // Resolve the collected platform id through the shared mapping table.
     try {
       const mapped = await this.mappingService.mapID(platform, animeId, 'bangumi');
       if (mapped !== null && mapped !== undefined) {
@@ -329,7 +319,7 @@ export class CollectionPilgrimageService {
     const fetched = await Promise.all(
       resolved.map(async ({ row, bangumiId }) => {
         try {
-          const anime = await this.anitabi.getAnimePilgrimage(bangumiId);
+          const anime = await this.repository.getSpotsByBangumiId(bangumiId);
           if (!anime) return null;
           return { row, bangumiId, anime };
         } catch {

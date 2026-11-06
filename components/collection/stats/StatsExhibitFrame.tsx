@@ -6,7 +6,8 @@ import { Stack, useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
-import { ThemedText } from '../../themed';
+import { ThemedIconButton, ThemedText } from '../../themed';
+import { useT } from '../../../libs/i18n';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 interface Props {
@@ -27,6 +28,7 @@ export function StatsExhibitFrame({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const t = useT();
 
   const body = (
     <View style={[styles.content, { paddingBottom: contentPaddingBottom ?? insets.bottom + 120 }]}>
@@ -43,21 +45,14 @@ export function StatsExhibitFrame({
       />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
-          <Pressable
+          <ThemedIconButton
+            accessibilityLabel={t('common.back')}
+            icon={(c) => <MaterialIcons name="arrow-back" size={20} color={c} />}
             onPress={() => {
               hapticsBridge.tap();
               router.back();
             }}
-            hitSlop={12}
-            style={[
-              styles.iconBtn,
-              {
-                backgroundColor: theme.background.secondary,
-                borderColor: theme.glassBorder,
-              },
-            ]}>
-            <MaterialIcons name="arrow-back" size={18} color={theme.text.primary} />
-          </Pressable>
+          />
           <ThemedText variant="headlineSmall" weight="700" style={styles.title}>
             {title}
           </ThemedText>
@@ -102,7 +97,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 36,
     height: 36,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

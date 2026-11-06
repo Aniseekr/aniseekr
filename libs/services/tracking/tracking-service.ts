@@ -1,7 +1,65 @@
 import { LocalDB } from '../../db';
+import type * as SQLite from 'expo-sqlite';
 import { AnimeStatus, PlatformType, UniversalAnimeItem } from '../auth/types';
-import { multiPlatformSyncService } from '../sync/multi-platform-sync-service';
+import { multiPlatformSyncService, type LocalAnimeChanges } from '../sync/multi-platform-sync-service';
 import { refreshTrackedIdsSafely } from './tracking-refresh';
+
+const PLATFORM_ID_PREFIXES: [string, PlatformType][] = [
+  ['anilist_', 'anilist'],
+  ['mal_', 'myanimelist'],
+  ['bangumi_', 'bangumi'],
+  ['kitsu_', 'kitsu'],
+  ['shikimori_', 'shikimori'],
+  ['simkl_', 'simkl'],
+  ['annict_', 'annict'],
+];
+
+/**
+ * `user_anime.anime_id` predates cross-platform tracking and is a raw AniList
+ * ID for the app's legacy AniList detail flow. New provider-shaped IDs retain
+ * their explicit platform prefix. Never infer a platform from the selected
+ * primary account or from a title.
+ */
+export function platformIdsForLocalAnimeId(
+  animeId: string
+): Partial<Record<PlatformType, string>> {
+  const id = animeId.trim();
+  const prefixed = PLATFORM_ID_PREFIXES.find(([prefix]) => id.startsWith(prefix));
+  if (prefixed) {
+    const platformId = id.slice(prefixed[0].length);
+    return isPositiveIntegerId(platformId) ? { [prefixed[1]]: platformId } : {};
+  }
+  return isPositiveIntegerId(id) ? { anilist: id } : {};
+}
+
+export function localScoreToProviderScore(score: number): number | undefined {
+  return Number.isFinite(score) && score > 0 && score <= 100 ? score / 10 : undefined;
+}
+
+export function changedLocalAnimeFields(
+  previous: { status?: string; progress?: number | null; score?: number | null } | null,
+  next: { status: AnimeStatus; progress?: number; score?: number | null }
+): LocalAnimeChanges {
+  const changes: LocalAnimeChanges = {};
+  if (previous?.status !== next.status) changes.status = next.status;
+  if (next.progress !== undefined && next.progress !== (previous?.progress ?? 0)) {
+    changes.progress = next.progress;
+  }
+  if (next.score !== undefined && (next.score === null || (next.score >= 0 && next.score <= 100))) {
+    const previousScore = previous?.score && previous.score > 0 ? previous.score : null;
+    const nextScore = next.score === null || next.score === 0 ? null : next.score;
+    if (nextScore !== previousScore) {
+      const providerScore = nextScore === null ? null : localScoreToProviderScore(nextScore);
+      if (providerScore !== undefined) changes.score = providerScore;
+    }
+  }
+  return changes;
+}
+
+function isPositiveIntegerId(id: string): boolean {
+  return id.length > 0 && id[0] !== '0' && Array.from(id).every((digit) => digit >= '0' && digit <= '9');
+}
+
 
 export interface UserAnimeStatus {
   animeId: string;
@@ -59,6 +117,11 @@ class TrackingService {
     }
   }
 
+  /** Return the in-memory tracked ids, or null before the first successful load. */
+  getTrackedIdSetSync(): Set<string> | null {
+    return this.trackedIdsCache;
+  }
+
   /**
    * Returns the set of anime ids the user is tracking. Cached in memory; reads
    * after the first call are O(1) until a write invalidates the cache.
@@ -72,10 +135,11 @@ class TrackingService {
       const rows = await db.getAllAsync<{ anime_id: string }>('SELECT anime_id FROM user_anime');
       const set = new Set(rows.map((r) => r.anime_id));
       this.trackedIdsCache = set;
-      this.trackedIdsPromise = null;
       this.notifyTrackedIdsChanged(set);
       return set;
-    })();
+    })().finally(() => {
+      this.trackedIdsPromise = null;
+    });
 
     return this.trackedIdsPromise;
   }
@@ -94,14 +158,8 @@ class TrackingService {
     totalEpisodes?: number,
     animeDetails?: Partial<UniversalAnimeItem>
   ): Promise<void> {
-    const db = await LocalDB.getDatabase();
     const now = Date.now();
-
-    let status: AnimeStatus | undefined;
-    if (totalEpisodes && progress >= totalEpisodes) {
-      status = 'completed';
-    }
-
+    const status = totalEpisodes && progress >= totalEpisodes ? 'completed' : undefined;
     const title = animeDetails?.title || null;
     const imageUrl = animeDetails?.imageUrl || null;
 
@@ -128,33 +186,32 @@ class TrackingService {
     `;
 
     const args = [animeId, progress, totalEpisodes || null, now];
-
     if (status) args.push(status);
     if (title) args.push(title);
     if (imageUrl) args.push(imageUrl);
 
-    await db.runAsync(query, ...args);
+    const item = this.makeSyncItem(
+      animeId,
+      animeDetails,
+      status || animeDetails?.status || 'watching',
+      progress,
+      now
+    );
+    await multiPlatformSyncService.syncLocalMutation(item, async (tx) => {
+      const previous = await tx.getFirstAsync<{ progress: number | null; status: string }>(
+        'SELECT progress, status FROM user_anime WHERE anime_id = ?',
+        animeId
+      );
+      await tx.runAsync(query, ...args);
+
+      const changes: LocalAnimeChanges = {};
+      if (previous?.progress !== progress) changes.progress = progress;
+      if (status && previous?.status !== status) changes.status = status;
+      return { changes, options: { ensureListEntry: !previous } };
+    });
+
     this.invalidateTrackedIds();
     refreshTrackedIdsSafely(() => this.getTrackedIdSet());
-
-    if (animeDetails?.source) {
-      const item: UniversalAnimeItem = {
-        id: animeId,
-        platformIds: { [animeDetails.source]: animeDetails.id || animeId },
-        title: animeDetails.title || '',
-        imageUrl: animeDetails.imageUrl || '',
-        status: status || animeDetails.status || 'watching',
-        progress,
-        totalEpisodes,
-        score: animeDetails.score,
-        updatedAt: new Date(now),
-        source: animeDetails.source,
-      };
-
-      multiPlatformSyncService
-        .syncProgressUpdate(item, progress, status || item.status, item.score)
-        .catch(console.error);
-    }
   }
 
   async updateStatus(
@@ -162,9 +219,7 @@ class TrackingService {
     status: AnimeStatus,
     animeDetails?: Partial<UniversalAnimeItem>
   ): Promise<void> {
-    const db = await LocalDB.getDatabase();
     const now = Date.now();
-
     const title = animeDetails?.title || null;
     const imageUrl = animeDetails?.imageUrl || null;
 
@@ -190,32 +245,27 @@ class TrackingService {
     if (title) args.push(title);
     if (imageUrl) args.push(imageUrl);
 
-    await db.runAsync(query, ...args);
+    const item = this.makeSyncItem(animeId, animeDetails, status, animeDetails?.progress ?? 0, now);
+    await multiPlatformSyncService.syncLocalMutation(item, async (tx) => {
+      const previous = await tx.getFirstAsync<{ status: string }>(
+        'SELECT status FROM user_anime WHERE anime_id = ?',
+        animeId
+      );
+      await tx.runAsync(query, ...args);
+      return {
+        changes: previous?.status !== status ? { status } : {},
+        options: { ensureListEntry: !previous },
+      };
+    });
+
     this.invalidateTrackedIds();
     refreshTrackedIdsSafely(() => this.getTrackedIdSet());
-
-    if (animeDetails?.source) {
-      const item: UniversalAnimeItem = {
-        id: animeId,
-        platformIds: { [animeDetails.source]: animeDetails.id || animeId },
-        title: animeDetails.title || '',
-        imageUrl: animeDetails.imageUrl || '',
-        status,
-        progress: animeDetails.progress || 0,
-        updatedAt: new Date(now),
-        source: animeDetails.source,
-      };
-
-      multiPlatformSyncService
-        .syncProgressUpdate(item, item.progress, status, item.score)
-        .catch(console.error);
-    }
   }
 
   async upsertTracking(input: {
     animeId: string;
     status: AnimeStatus;
-    score?: number;
+    score?: number | null;
     progress?: number;
     totalEpisodes?: number;
     title?: string;
@@ -225,82 +275,193 @@ class TrackingService {
     notes?: string;
     /** Number of times the user has rewatched. Persisted in user_anime.rewatch_count. */
     rewatchCount?: number;
-    /**
-     * Source platform of `animeId`. When provided, remote sync to all connected
-     * writable platforms is kicked off via multiPlatformSyncService.
-     */
+    /** Preferred source for display. It is not used to infer a remote ID. */
     source?: PlatformType;
+    /** Exact per-platform IDs, when the caller has them. */
+    platformIds?: Partial<Record<PlatformType, string>>;
   }): Promise<void> {
-    const db = await LocalDB.getDatabase();
-    const now = Date.now();
-
-    await db.runAsync(
-      `INSERT INTO user_anime (
-        anime_id, title, image_url, status, score, progress, total_episodes,
-        notes, rewatch_count, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(anime_id) DO UPDATE SET
-        status = excluded.status,
-        score = COALESCE(excluded.score, user_anime.score),
-        progress = COALESCE(excluded.progress, user_anime.progress),
-        total_episodes = COALESCE(excluded.total_episodes, user_anime.total_episodes),
-        title = COALESCE(excluded.title, user_anime.title),
-        image_url = COALESCE(excluded.image_url, user_anime.image_url),
-        notes = COALESCE(excluded.notes, user_anime.notes),
-        rewatch_count = COALESCE(excluded.rewatch_count, user_anime.rewatch_count),
-        updated_at = excluded.updated_at`,
-      input.animeId,
-      input.title ?? null,
-      input.imageUrl ?? null,
-      input.status,
-      input.score ?? null,
-      input.progress ?? 0,
-      input.totalEpisodes ?? null,
-      input.notes ?? null,
-      input.rewatchCount ?? null,
-      now
-    );
-
-    if (input.folderId) {
-      await db.runAsync(
-        `INSERT OR IGNORE INTO collection_folder_items (folder_id, anime_id, added_at) VALUES (?, ?, ?)`,
-        input.folderId,
-        input.animeId,
-        now
-      );
+    if (
+      input.score !== undefined &&
+      input.score !== null &&
+      (!Number.isFinite(input.score) || input.score < 0 || input.score > 100)
+    ) {
+      throw new RangeError('Score must be between 0 and 100');
     }
+
+    const now = Date.now();
+    const details: Partial<UniversalAnimeItem> = {
+      title: input.title,
+      imageUrl: input.imageUrl,
+      platformIds: input.platformIds ?? platformIdsForLocalAnimeId(input.animeId),
+      source: input.source,
+    };
+    const item = this.makeSyncItem(input.animeId, details, input.status, input.progress ?? 0, now);
+
+    await multiPlatformSyncService.syncLocalMutation(item, async (tx) => {
+      const previous = await tx.getFirstAsync<{
+        status: string;
+        score: number | null;
+        progress: number | null;
+      }>(
+        'SELECT status, score, progress FROM user_anime WHERE anime_id = ?',
+        input.animeId
+      );
+
+      await tx.runAsync(
+        `INSERT INTO user_anime (
+          anime_id, title, image_url, status, score, progress, total_episodes,
+          notes, rewatch_count, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(anime_id) DO UPDATE SET
+          status = excluded.status,
+          score = CASE WHEN ? THEN excluded.score ELSE user_anime.score END,
+          progress = COALESCE(?, user_anime.progress),
+          total_episodes = COALESCE(excluded.total_episodes, user_anime.total_episodes),
+          title = COALESCE(excluded.title, user_anime.title),
+          image_url = COALESCE(excluded.image_url, user_anime.image_url),
+          notes = COALESCE(excluded.notes, user_anime.notes),
+          rewatch_count = COALESCE(excluded.rewatch_count, user_anime.rewatch_count),
+          updated_at = excluded.updated_at`,
+        input.animeId,
+        input.title ?? null,
+        input.imageUrl ?? null,
+        input.status,
+        input.score === 0 ? null : (input.score ?? null),
+        input.progress ?? previous?.progress ?? 0,
+        input.totalEpisodes ?? null,
+        input.notes ?? null,
+        input.rewatchCount ?? null,
+        now,
+        input.score !== undefined ? 1 : 0,
+        input.progress ?? null
+      );
+
+      if (input.folderId) {
+        await tx.runAsync(
+          `INSERT OR IGNORE INTO collection_folder_items (folder_id, anime_id, added_at) VALUES (?, ?, ?)`,
+          input.folderId,
+          input.animeId,
+          now
+        );
+      }
+
+      return {
+        changes: changedLocalAnimeFields(previous, input),
+        options: { ensureListEntry: !previous },
+      };
+    });
 
     this.invalidateTrackedIds();
     refreshTrackedIdsSafely(() => this.getTrackedIdSet());
+  }
 
-    // Best-effort push to remote platforms. `source` anchors the id-mapping
-    // resolver so other connected platforms can be reached even when only one
-    // platform id is known.
-    if (input.source) {
-      const item: UniversalAnimeItem = {
-        id: input.animeId,
-        platformIds: { [input.source]: input.animeId },
-        title: input.title ?? '',
-        imageUrl: input.imageUrl ?? '',
-        status: input.status,
-        progress: input.progress ?? 0,
-        totalEpisodes: input.totalEpisodes,
-        score: input.score,
-        updatedAt: new Date(now),
-        source: input.source,
-      };
-      multiPlatformSyncService
-        .syncProgressUpdate(item, item.progress, input.status, input.score)
-        .catch(console.error);
-    }
+  /** Apply a selected conflict value and queue it even when the local value already matches. */
+  async applyConflictResolution(input: {
+    conflictId: number;
+    picked: PlatformType;
+    animeId: string;
+    valuesJson: string;
+    field: 'progress' | 'status' | 'score';
+    value: string | number;
+    platformIds: Partial<Record<PlatformType, string>>;
+    aliases: string[];
+  }): Promise<void> {
+    const db = await LocalDB.getDatabase();
+    const placeholders = input.aliases.map(() => '?').join(', ');
+    const findMatches = (tx: SQLite.SQLiteDatabase) => tx.getAllAsync<{ anime_id: string }>(
+      `SELECT anime_id FROM user_anime WHERE anime_id IN (${placeholders})`, ...input.aliases
+    );
+    const matches = await findMatches(db);
+    if (matches.length !== 1) throw new Error('Cannot uniquely identify the local anime for this conflict');
+    const localId = matches[0].anime_id;
+    const now = Date.now();
+    const item = this.makeSyncItem(localId, { platformIds: input.platformIds }, 'watching', 0, now);
+    await multiPlatformSyncService.syncLocalMutation(item, async (tx) => {
+      const current = await findMatches(tx);
+      if (current.length !== 1 || current[0].anime_id !== localId) {
+        throw new Error('Local anime identity changed while resolving conflict');
+      }
+      const result = await tx.runAsync(
+        `UPDATE sync_conflicts SET resolved = 1, resolution = ?, resolved_at = ?
+         WHERE id = ? AND resolved = 0 AND anime_id = ? AND field = ? AND values_json = ?`,
+        `manual:${input.picked}`, now, input.conflictId, input.animeId, input.field, input.valuesJson
+      );
+      if (result.changes !== 1) throw new Error('Conflict changed while resolving it');
+      const localValue = input.field === 'score'
+        ? (input.value === 0 ? null : Math.round((input.value as number) * 10))
+        : input.value;
+      await tx.runAsync(
+        `UPDATE user_anime SET ${input.field} = ?, updated_at = ? WHERE anime_id = ?`,
+        localValue, now, localId
+      );
+      const changes: LocalAnimeChanges = input.field === 'status'
+        ? { status: input.value as AnimeStatus }
+        : input.field === 'progress'
+          ? { progress: input.value as number }
+          : { score: input.value === 0 ? null : input.value as number };
+      return { changes };
+    });
+    this.invalidateTrackingCache();
   }
 
   async removeTracking(animeId: string): Promise<void> {
     const db = await LocalDB.getDatabase();
-    await db.runAsync('DELETE FROM user_anime WHERE anime_id = ?', animeId);
-    await db.runAsync('DELETE FROM collection_folder_items WHERE anime_id = ?', animeId);
+    const previous = await db.getFirstAsync<{
+      status: string;
+      progress: number | null;
+      title: string | null;
+      image_url: string | null;
+    }>(
+      'SELECT status, progress, title, image_url FROM user_anime WHERE anime_id = ?',
+      animeId
+    );
+    const removeLocal = async (tx: SQLite.SQLiteDatabase) => {
+      await tx.runAsync('DELETE FROM user_anime WHERE anime_id = ?', animeId);
+      await tx.runAsync('DELETE FROM collection_folder_items WHERE anime_id = ?', animeId);
+    };
+
+    if (previous) {
+      const item = this.makeSyncItem(
+        animeId,
+        {
+          title: previous.title ?? undefined,
+          imageUrl: previous.image_url ?? undefined,
+          platformIds: platformIdsForLocalAnimeId(animeId),
+        },
+        previous.status as AnimeStatus,
+        previous.progress ?? 0,
+        Date.now()
+      );
+      await multiPlatformSyncService.removeLocalTracking(item, removeLocal);
+    } else {
+      await db.withExclusiveTransactionAsync(removeLocal);
+    }
+
     this.invalidateTrackedIds();
     refreshTrackedIdsSafely(() => this.getTrackedIdSet());
+  }
+
+  private makeSyncItem(
+    animeId: string,
+    details: Partial<UniversalAnimeItem> | undefined,
+    status: AnimeStatus,
+    progress: number,
+    now: number
+  ): UniversalAnimeItem {
+    const platformIds = details?.platformIds ?? platformIdsForLocalAnimeId(animeId);
+    const source =
+      (Object.keys(platformIds)[0] as PlatformType | undefined) ?? details?.source ?? 'anilist';
+    return {
+      id: animeId,
+      platformIds,
+      title: details?.title ?? '',
+      imageUrl: details?.imageUrl ?? '',
+      status,
+      progress,
+      totalEpisodes: details?.totalEpisodes,
+      updatedAt: new Date(now),
+      source,
+    };
   }
 
   async getStatus(animeId: string): Promise<UserAnimeStatus | null> {
@@ -309,7 +470,7 @@ class TrackingService {
       anime_id: string;
       status: string;
       progress: number;
-      score: number;
+      score: number | null;
       total_episodes: number;
       updated_at: number;
       title: string;
@@ -324,7 +485,7 @@ class TrackingService {
       animeId: row.anime_id,
       status: row.status as AnimeStatus,
       progress: row.progress,
-      score: row.score,
+      score: row.score ?? undefined,
       totalEpisodes: row.total_episodes,
       updatedAt: new Date(row.updated_at),
       title: row.title,

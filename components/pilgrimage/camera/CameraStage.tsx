@@ -21,6 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type Ref,
 } from 'react';
 import { Image as RNImage, Platform, StyleSheet, View } from 'react-native';
@@ -41,8 +42,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Gesture,
   GestureDetector,
-  type PinchGesture,
-  type TapGesture,
+  type LegacyPinchGesture,
+  type LegacyTapGesture,
 } from 'react-native-gesture-handler';
 import {
   Camera,
@@ -59,7 +60,25 @@ import {
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { useTheme } from '../../../context/ThemeContext';
-import { persistPhotoForSkiaPipeline } from '../../../libs/services/pilgrimage/vision-camera-photo';
+import {
+  normalizeJpegQualityPercent,
+  persistPhotoForSkiaPipeline,
+} from '../../../libs/services/pilgrimage/vision-camera-photo';
+import {
+  getIosLookFilter,
+  gradeJpeg,
+  IosLookPreviewView,
+  LookFilterView,
+  useIosLookPreview,
+  type IosLookPreview,
+} from '../../../modules/camera-look/src';
+import {
+  activeCameraLook,
+  useActiveCameraLook,
+  useCameraLookActive,
+  type CameraLookStore,
+} from '../../../hooks/useCameraLook';
+
 import { useResolvedCameraDevice } from '../../../hooks/useResolvedCameraDevice';
 import type {
   CameraDeviceInfo,
@@ -70,6 +89,8 @@ import type {
 } from './camera-engine';
 import type { AspectRatio, CameraFacing } from './types';
 
+// iOS draws looks through its own frame output (see camera-look/ios-preview).
+const IOS_LOOK_FILTER = getIosLookFilter();
 const FILE_SCHEME = 'file://';
 
 type ResolutionTier = '4k' | '2k';
@@ -110,8 +131,8 @@ export interface CameraStageProps {
   /** Whether the next capture should fire the system shutter sound. Defaults to true. */
   enableShutterSound?: boolean;
 
-  pinchGesture: PinchGesture;
-  tapGesture: TapGesture;
+  pinchGesture: LegacyPinchGesture;
+  tapGesture: LegacyTapGesture;
 
   /** Fired when the underlying session first starts streaming preview frames. */
   onCameraReady?: () => void;
@@ -170,6 +191,13 @@ export interface CameraStageProps {
    * `useCameraOrientation` in `compare/[spotId].tsx` — do not hardcode here.
    */
   orientationSource: OrientationSource;
+  /**
+   * Film look pick (camera-looks.ts). The preview is drawn through it and every
+   * saved photo is graded with the look that was showing when the shutter fired.
+   */
+  lookStore?: CameraLookStore;
+  /** Pro unlocks the Pro looks and the strength slider. */
+  lookIsPro?: boolean;
   ref?: Ref<CameraEngineHandle>;
 }
 
@@ -196,12 +224,16 @@ export function CameraStage({
   device: deviceProp,
   freezeFrameUri,
   orientationSource,
+  lookStore,
+  lookIsPro = false,
   ref,
 }: CameraStageProps) {
   const { theme } = useTheme();
   const cameraRef = useRef<CameraRef>(null);
   const enableShutterSoundRef = useRef(enableShutterSound);
   enableShutterSoundRef.current = enableShutterSound;
+  const lookIsProRef = useRef(lookIsPro);
+  lookIsProRef.current = lookIsPro;
 
   // Device resolution: caller-supplied `deviceProp` wins (the strategic
   // lens-switching hook owns this end), with the legacy in-stage resolver
@@ -226,9 +258,14 @@ export function CameraStage({
   // alongside the photo output so the session streams preview frames to the
   // worklet. The frame output is dropped from the list when undefined to avoid
   // spinning up an unused frame-processing thread.
+  // iOS looks: a preview-sized frame output feeds the tint, attached only
+  // while a look is on so the plain camera never pays for it.
+  const iosLookPreview = useIosLookPreview(IOS_LOOK_FILTER);
+  const lookActive = useCameraLookActive(lookStore, lookIsPro);
+  const iosLookOutput = IOS_LOOK_FILTER && lookActive ? iosLookPreview.frameOutput : undefined;
   const outputs = useMemo(
-    () => (frameOutput ? [photoOutput, frameOutput] : [photoOutput]),
-    [photoOutput, frameOutput]
+    () => [photoOutput, ...(frameOutput ? [frameOutput] : []), ...(iosLookOutput ? [iosLookOutput] : [])],
+    [photoOutput, frameOutput, iosLookOutput]
   );
   const constraints = useMemo<Constraint[]>(
     () => (preferHdr ? [{ photoHDR: true }] : []),
@@ -321,6 +358,20 @@ export function CameraStage({
           targetResolution,
           quality,
         });
+        // The look the viewfinder showed when the shutter fired goes into the
+        // file before anything else reads it (composites, EXIF, camera roll).
+        const look = lookStore
+          ? activeCameraLook(lookStore.get(), lookIsProRef.current).matrix
+          : null;
+        if (look) {
+          try {
+            const ms = await gradeJpeg(persisted.uri, look, normalizeJpegQualityPercent(quality));
+            if (__DEV__) console.log(`[CameraStage] look graded in ${ms}ms`);
+          } catch (error) {
+            // Keep the shot ungraded rather than lose it.
+            console.warn('[CameraStage] look grading failed', error);
+          }
+        }
 
         return {
           uri: persisted.uri,
@@ -334,7 +385,7 @@ export function CameraStage({
         photo.dispose();
       }
     },
-    [photoOutput, quality, targetResolution]
+    [photoOutput, quality, targetResolution, lookStore]
   );
 
   const focus = useCallback(async (point: { x: number; y: number }) => {
@@ -625,11 +676,22 @@ export function CameraStage({
     <View style={styles.root}>
       <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, tapGesture)}>
         <View style={StyleSheet.absoluteFill}>
+          {/* Preview + freeze-frame are drawn through the film look; the
+              warm-up vignette above stays untinted. */}
+          <LiveLookFilter
+            store={lookStore}
+            isPro={lookIsPro}
+            iosPreview={IOS_LOOK_FILTER ? iosLookPreview : null}>
           {device ? (
             <Animated.View style={[StyleSheet.absoluteFill, cameraAnimatedStyle]}>
               <Camera
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
+                // TextureView: a SurfaceView preview inside the tab navigator kept
+                // its raw 1440×1080 buffer unscaled, so only the top of the screen
+                // showed the scene (Android). It also follows the parent's
+                // opacity/transform during lens switches.
+                implementationMode="compatible"
                 device={device}
                 outputs={outputs}
                 isActive={active}
@@ -661,6 +723,7 @@ export function CameraStage({
               />
             </Animated.View>
           ) : null}
+          </LiveLookFilter>
           <Animated.View
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, styles.warmup, overlayAnimatedStyle]}>
@@ -692,6 +755,56 @@ export function CameraStage({
         </View>
       </GestureDetector>
     </View>
+  );
+}
+
+// Subscribes to the look store on its own so a strength drag re-renders this
+// wrapper only, not the camera session above it.
+function LiveLookFilter({
+  store,
+  isPro,
+  iosPreview,
+  children,
+}: {
+  store: CameraLookStore | undefined;
+  isPro: boolean;
+  iosPreview: IosLookPreview | null;
+  children: ReactNode;
+}) {
+  if (!store) return <View style={StyleSheet.absoluteFill}>{children}</View>;
+  return (
+    <StoreLookFilter store={store} isPro={isPro} iosPreview={iosPreview}>
+      {children}
+    </StoreLookFilter>
+  );
+}
+
+function StoreLookFilter({
+  store,
+  isPro,
+  iosPreview,
+  children,
+}: {
+  store: CameraLookStore;
+  isPro: boolean;
+  iosPreview: IosLookPreview | null;
+  children: ReactNode;
+}) {
+  const { matrix } = useActiveCameraLook(store, isPro);
+  if (IOS_LOOK_FILTER && iosPreview) {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        {children}
+        {matrix ? (
+          <IosLookPreviewView filter={IOS_LOOK_FILTER} preview={iosPreview} matrix={matrix} />
+        ) : null}
+      </View>
+    );
+  }
+  return (
+    <LookFilterView matrix={matrix} style={StyleSheet.absoluteFill}>
+      {children}
+    </LookFilterView>
   );
 }
 

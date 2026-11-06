@@ -212,6 +212,44 @@ describe('AniListDataSource', () => {
     expect(calls[0].parsedBody.variables).toEqual({ idMal: 42 });
   });
 
+  it('ANIL-002 fetchAnimePrequelRelations always queries by AniList id', async () => {
+    const { ds, calls } = buildSubject(() =>
+      fakeJson({
+        data: {
+          Media: {
+            id: 104459,
+            relations: {
+              edges: [
+                {
+                  relationType: 'PREQUEL',
+                  node: {
+                    id: 98444,
+                    idMal: 34798,
+                    title: { userPreferred: 'ゆるキャン△' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      })
+    );
+
+    const relations = await ds.fetchAnimePrequelRelations('104459');
+
+    expect(relations).toEqual([
+      {
+        anilistId: 98444,
+        malId: 34798,
+        title: 'ゆるキャン△',
+        relationType: 'PREQUEL',
+      },
+    ]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].parsedBody.variables).toEqual({ id: 104459 });
+    expect(calls[0].parsedBody.variables).not.toHaveProperty('idMal');
+  });
+
   it('ANIL-004 maps title.english to titleEnglish (preserves all language slots)', async () => {
     const { ds } = buildSubject(() =>
       fakeJson({
@@ -372,5 +410,30 @@ describe('AniListDataSource', () => {
       season: 'SPRING',
       year: 2026,
     });
+  });
+
+  it('ANIL-012 relations are keyed by AniList id so the detail screen can open them', async () => {
+    const { ds } = buildSubject(() =>
+      fakeJson({
+        data: {
+          Media: {
+            id: 20,
+            idMal: 200,
+            title: { romaji: 'S2' },
+            relations: {
+              edges: [
+                {
+                  relationType: 'PREQUEL',
+                  node: { id: 10, idMal: 100, title: { userPreferred: 'S1' }, format: 'TV' },
+                },
+              ],
+            },
+          },
+        },
+      })
+    );
+
+    const relations = await ds.fetchAnimeRelations('20', 'anilist');
+    expect(relations.map((r) => r.id)).toEqual(['10']);
   });
 });

@@ -14,8 +14,17 @@ export interface AnimeSourceProvider {
 }
 
 export interface WritableAnimeProvider extends AnimeSourceProvider {
+  /** Defaults to true; set false when progress writes cannot set an exact watched count. */
+  supportsProgressUpdates?: boolean;
+  /** Defaults to true; set false when the platform has no numeric score update API. */
+  supportsScoreUpdates?: boolean;
+  /** Defaults to false; opt in only when the API can clear an existing score safely. */
+  supportsScoreClearing?: boolean;
+  /** Defaults to true; set false when removal would delete broader history or is unsupported. */
+  supportsListRemoval?: boolean;
   updateProgress(animeId: string, progress: number, token: string): Promise<void>;
   updateScore(animeId: string, score: number, token: string): Promise<void>;
+  clearScore?(animeId: string, token: string): Promise<void>;
   updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void>;
   addToList(animeId: string, status: AnimeStatus, token: string): Promise<void>;
   removeFromList(animeId: string, token: string): Promise<void>;

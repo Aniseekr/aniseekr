@@ -1,16 +1,8 @@
 /* eslint-disable no-restricted-syntax -- Existing detail screen styles predate token lint; Phase 3 only swaps loaders and adds resolved-content fade. */
-/* eslint-disable react-hooks/set-state-in-effect -- Existing detail fetch effects populate local state; Phase 3 keeps first-paint data flow unchanged. */
 import { useLocalSearchParams, useNavigation, useRouter, Stack } from 'expo-router';
 import { useEffect, useMemo, useReducer, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  InteractionManager,
-  Linking,
-  Share,
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, Share, StyleSheet } from 'react-native';
+import { runAfterInteractions } from '../../libs/utils/after-interactions';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +11,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AnimeRepository } from '../../libs/repositories/anime-repository';
+import { formatScore } from '../../libs/utils/format-score';
 import { pushAnimeDetail } from '../../libs/utils/navigate-to-anime';
 import { LocalDB } from '../../libs/db';
 import { Anime } from '../../components/rate/types';
@@ -31,13 +24,22 @@ import type {
   PlatformRatingData,
 } from '../../libs/services/data-sources/anime-data-source';
 import type { PlatformType } from '../../libs/services/auth/types';
-import { pilgrimageRepository } from '../../libs/services/pilgrimage/pilgrimage-repository';
-import { lookupBangumiByPlatformId } from '../../libs/services/pilgrimage/anitabi-cross-index';
-import { dataSourceConfig } from '../../libs/services/data-source-config';
-import { Skeleton } from '../../components/themed';
+import {
+  animeDetailAtlasContext,
+  pilgrimageRepository,
+} from '../../libs/services/pilgrimage/pilgrimage-repository';
+import {
+  Skeleton,
+  ThemedButton,
+  ThemedIconButton,
+  ThemedText,
+  readableTextOn,
+  withAlpha,
+} from '../../components/themed';
+import { useTheme } from '../../context/ThemeContext';
 import { PlatformLogo } from '../../components/streaming/PlatformLogo';
 import { AnimePilgrimageCard } from '../../components/pilgrimage/AnimePilgrimageCard';
-import type { AnitabiBangumi } from '../../libs/services/pilgrimage/types';
+import type { PilgrimageWork } from '../../libs/services/pilgrimage/types';
 import { AddToCollectionSheet } from '../../components/collection/AddToCollectionSheet';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { collectionService } from '../../libs/services/collection/collection-service';
@@ -58,6 +60,7 @@ import {
 } from '../../modules/notifications/animeNotificationService';
 import { useT } from '../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
+import { Ink, Radius, Size, Spacing } from '../../constants/DesignSystem';
 
 type RatingEntry = { platform: PlatformType; data: PlatformRatingData };
 
@@ -124,6 +127,11 @@ export default function AnimeDetailScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const actionTileColors = {
+    backgroundColor: theme.background.secondary,
+    borderColor: withAlpha(theme.text.primary, 0.22),
+  };
   const t = useT();
 
   useEffect(() => {
@@ -166,7 +174,45 @@ export default function AnimeDetailScreen() {
     (initialAnime.description !== undefined || initialAnime.episodes !== undefined)
   );
   const [loading, setLoading] = useState(!hasFullRecord);
-  const [pilgrimage, setPilgrimage] = useState<AnitabiBangumi | null>(null);
+  const [pilgrimage, setPilgrimage] = useState<PilgrimageWork | null>(null);
+  const detailId = anime?.id ?? null;
+  const detailLoaded = anime?.idMal !== undefined;
+  const detailTitle = anime?.title ?? null;
+  const detailAniListId = anime?.platformData?.anilist?.id ?? null;
+  const detailMalId = anime?.platformData?.myanimelist?.id ?? anime?.idMal ?? null;
+  const detailBangumiId = anime?.platformData?.bangumi?.id ?? null;
+  const detailTitleJa = anime?.titleJapanese ?? null;
+  const detailTitleEn = anime?.titleEnglish ?? null;
+  const detailTitleRomaji = anime?.titleRomaji ?? anime?.title ?? null;
+  const atlasContext = useMemo(
+    () =>
+      detailId && detailLoaded
+        ? animeDetailAtlasContext({
+            id: detailAniListId ?? detailId,
+            idMal: detailMalId == null ? null : Number(detailMalId),
+            title: detailTitle,
+            titleJapanese: detailTitleJa,
+            titleEnglish: detailTitleEn,
+            titleRomaji: detailTitleRomaji,
+            platformData: {
+              anilist: detailAniListId == null ? null : { id: detailAniListId },
+              myanimelist: detailMalId == null ? null : { id: detailMalId },
+              bangumi: detailBangumiId == null ? null : { id: detailBangumiId },
+            },
+          })
+        : null,
+    [
+      detailId,
+      detailLoaded,
+      detailAniListId,
+      detailBangumiId,
+      detailMalId,
+      detailTitle,
+      detailTitleEn,
+      detailTitleJa,
+      detailTitleRomaji,
+    ]
+  );
 
   const [media, dispatchMedia] = useReducer(mediaReducer, INITIAL_MEDIA);
   const {
@@ -228,7 +274,7 @@ export default function AnimeDetailScreen() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       void refreshCollectionFlags(id, () => cancelled).then((flags) => {
         if (cancelled || !flags) return;
         setFavorite(flags.favorite);
@@ -251,23 +297,12 @@ export default function AnimeDetailScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!id) return;
+    if (!atlasContext) return;
     setPilgrimage(null);
 
-    // Use the active browse source so the repository's L2 cross-index lookup
-    // can short-circuit (anilist/myanimelist hit L2, others fall through to
-    // the L1 SQLite mapping table). Pre-resolving the bangumiId via L2 also
-    // gives the AnimePilgrimageCard a stable key when we hand it off later.
-    const sourcePlatform = dataSourceConfig.browseSource;
-    const directBangumiId = lookupBangumiByPlatformId(sourcePlatform, id);
-
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       pilgrimageRepository
-        .getSpotsForAnime({
-          sourcePlatform,
-          id,
-          bangumiId: directBangumiId,
-        })
+        .getSpotsForAnime(atlasContext)
         .then((result) => {
           if (cancelled) return;
           setPilgrimage(result);
@@ -280,7 +315,7 @@ export default function AnimeDetailScreen() {
       cancelled = true;
       task.cancel();
     };
-  }, [id]);
+  }, [atlasContext]);
 
   // Cross-platform media: streaming, themes, relations, staff, ratings.
   // Fired in parallel after the navigation interaction has settled. The
@@ -299,7 +334,7 @@ export default function AnimeDetailScreen() {
     let cancelled = false;
     const repo = AnimeRepository.defaultInstance();
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       const tasks: Promise<unknown>[] = [
         repo
           .fetchAnimeStreaming(numericId, 'anilist')
@@ -496,27 +531,11 @@ export default function AnimeDetailScreen() {
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
           <Skeleton.HeroDetail showEpisodes={true} />
         </ScrollView>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          accessibilityRole="button"
+        <ThemedIconButton
           accessibilityLabel={t('common.back')}
-          style={{
-            top: insets.top + 10,
-            left: 20,
-            position: 'absolute',
-            zIndex: 50,
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.2)',
-          }}>
-          <Ionicons name="chevron-back" size={24} color="white" />
-        </Pressable>
+          icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+          onPress={() => router.back()}
+        />
       </View>
     );
   }
@@ -531,6 +550,9 @@ export default function AnimeDetailScreen() {
             source={{ uri: anime.bannerImage || anime.image }}
             style={{ width: '100%', height: '100%', opacity: 0.6 }}
             contentFit="cover"
+            // Without a banner the portrait poster fills this wide strip; keep
+            // the top (faces, logo) instead of the centre.
+            contentPosition={anime.bannerImage ? 'center' : 'top'}
             transition={120}
             cachePolicy="memory-disk"
             recyclingKey={anime.id}
@@ -539,27 +561,13 @@ export default function AnimeDetailScreen() {
             colors={['transparent', '#000']}
             style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 150 }}
           />
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={10}
-            accessibilityRole="button"
+          <ThemedIconButton
             accessibilityLabel={t('common.back')}
-            style={{
-              top: insets.top + 10,
-              left: 20,
-              position: 'absolute',
-              zIndex: 50,
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
-            }}>
-            <Ionicons name="chevron-back" size={24} color="white" />
-          </Pressable>
+            size={40}
+            icon={(c) => <Ionicons name="arrow-back" size={20} color={c} />}
+            onPress={() => router.back()}
+            style={{ position: 'absolute', top: insets.top + 10, left: 20, zIndex: 50 }}
+          />
         </View>
 
         <View className="-mt-20 px-5">
@@ -569,7 +577,7 @@ export default function AnimeDetailScreen() {
               style={{
                 width: 112,
                 height: 160,
-                borderRadius: 8,
+                borderRadius: Radius.sm,
                 borderWidth: 2,
                 borderColor: 'rgba(255,255,255,0.1)',
               }}
@@ -588,11 +596,13 @@ export default function AnimeDetailScreen() {
                 </Text>
               ) : null}
               <View className="mt-2 flex-row flex-wrap gap-2">
-                <GlassCard intensity={20} className="rounded px-2 py-1">
-                  <Text className="text-xs font-bold text-white/90">
-                    ★ {formatScore(anime.score, anime.rank)}
-                  </Text>
-                </GlassCard>
+                {formatScore(anime.score) ? (
+                  <GlassCard intensity={20} className="rounded px-2 py-1">
+                    <Text className="text-xs font-bold text-white/90">
+                      ★ {formatScore(anime.score)}
+                    </Text>
+                  </GlassCard>
+                ) : null}
                 <GlassCard intensity={20} className="rounded px-2 py-1">
                   <Text className="text-xs font-bold text-white/90">
                     {anime.status || t('anime.detail.statusUnknown')}
@@ -603,43 +613,49 @@ export default function AnimeDetailScreen() {
           </View>
 
           <View className="mt-6 flex-row gap-3">
-            <Pressable
-              onPress={handleWatch}
-              accessibilityLabel={
-                primaryOption
-                  ? t('anime.detail.watchOn', { platform: primaryOption.displayName })
-                  : t('anime.detail.watchOpenAniListA11y')
-              }
-              className="flex-1 flex-row items-center justify-center gap-2 rounded-full bg-white py-3">
-              {primaryOption ? (
-                <PlatformLogo
-                  size={22}
-                  logoDomain={primaryOption.logoDomain}
-                  iconUrl={primaryOption.iconUrl}
-                  monogram={primaryOption.monogram}
-                  brandColor={primaryOption.color}
-                  background="transparent"
-                />
-              ) : (
-                <Ionicons name="play" size={20} color="black" />
-              )}
-              <Text className="text-base font-bold text-black" numberOfLines={1}>
-                {primaryOption
-                  ? t('anime.detail.watchOn', { platform: primaryOption.displayName })
-                  : t('anime.detail.watchNow')}
-              </Text>
-            </Pressable>
+            <View style={{ flex: 1 }}>
+              <ThemedButton
+                fullWidth
+                size="md"
+                onPress={handleWatch}
+                accessibilityLabel={
+                  primaryOption
+                    ? t('anime.detail.watchOn', { platform: primaryOption.displayName })
+                    : t('anime.detail.watchOpenAniListA11y')
+                }
+                icon={
+                  primaryOption ? (
+                    <PlatformLogo
+                      size={22}
+                      logoDomain={primaryOption.logoDomain}
+                      iconUrl={primaryOption.iconUrl}
+                      monogram={primaryOption.monogram}
+                      brandColor={primaryOption.color}
+                      background="transparent"
+                    />
+                  ) : (
+                    <Ionicons name="play" size={20} color={readableTextOn(theme.accent)} />
+                  )
+                }
+                label={
+                  primaryOption
+                    ? t('anime.detail.watchOn', { platform: primaryOption.displayName })
+                    : t('anime.detail.watchNow')
+                }
+              />
+            </View>
             <Pressable
               onPress={openSheet}
               onLongPress={handleQuickAdd}
               delayLongPress={320}
+              accessibilityRole="button"
               accessibilityLabel={t('anime.detail.addToCollection')}
               accessibilityHint={t('anime.detail.addToCollectionHint')}
-              className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
+              style={[styles.actionTile, actionTileColors]}>
               <Ionicons
                 name={inCollection ? 'checkmark' : 'add'}
                 size={24}
-                color={inCollection ? '#34d399' : 'white'}
+                color={inCollection ? theme.status.success : theme.text.primary}
               />
             </Pressable>
             {anime.nextAiringEpisode ? (
@@ -650,11 +666,12 @@ export default function AnimeDetailScreen() {
                     ? t('anime.detail.cancelReminder')
                     : t('anime.detail.setReminder')
                 }
-                className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
+                accessibilityRole="button"
+                style={[styles.actionTile, actionTileColors]}>
                 <Ionicons
                   name={reminderScheduled ? 'notifications' : 'notifications-outline'}
                   size={22}
-                  color={reminderScheduled ? '#fbbf24' : 'white'}
+                  color={reminderScheduled ? theme.accent : theme.text.primary}
                 />
               </Pressable>
             ) : null}
@@ -663,18 +680,20 @@ export default function AnimeDetailScreen() {
               accessibilityLabel={
                 favorite ? t('anime.detail.removeFavorite') : t('anime.detail.addFavorite')
               }
-              className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
+              accessibilityRole="button"
+              style={[styles.actionTile, actionTileColors]}>
               <Ionicons
                 name={favorite ? 'heart' : 'heart-outline'}
                 size={22}
-                color={favorite ? '#f87171' : 'white'}
+                color={favorite ? theme.status.error : theme.text.primary}
               />
             </Pressable>
             <Pressable
               onPress={handleShare}
               accessibilityLabel={t('anime.detail.shareAnime')}
-              className="h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-zinc-800">
-              <Ionicons name="share-outline" size={22} color="white" />
+              accessibilityRole="button"
+              style={[styles.actionTile, actionTileColors]}>
+              <Ionicons name="share-outline" size={22} color={theme.text.primary} />
             </Pressable>
           </View>
 
@@ -698,9 +717,7 @@ export default function AnimeDetailScreen() {
                   </Text>
                   <View className="flex-row flex-wrap gap-2">
                     {anime.tags.map((tag) => (
-                      <View
-                        key={tag}
-                        className="rounded-full border border-white/5 bg-zinc-800 px-3 py-1.5">
+                      <View key={tag} style={[styles.tag, actionTileColors]}>
                         <Text className="text-sm text-zinc-300">{tag}</Text>
                       </View>
                     ))}
@@ -723,7 +740,7 @@ export default function AnimeDetailScreen() {
                   </Text>
                   <AnimePilgrimageCard
                     anime={pilgrimage}
-                    onPress={(target) => router.push(`/pilgrimage/${target.id}`)}
+                    onPress={(target) => router.push(`/pilgrimage/${target.key}`)}
                   />
                 </View>
               ) : null}
@@ -813,29 +830,21 @@ async function refreshCollectionFlags(
   }
 }
 
-// AniList exposes averageScore as 0-100; rank mirrors it. Native shows it as
-// a 0-10 decimal with two-digit precision, so we divide here. Returns 'N/A'
-// when neither field carries a usable number.
-function formatScore(score: number | undefined, rank: number | undefined): string {
-  const raw = score ?? rank;
-  if (raw == null || raw <= 0) return 'N/A';
-  return (raw / 10).toFixed(1);
-}
 
 function AnimeDetailResolvedSkeleton() {
   return (
     <View className="mt-8 gap-6">
       <View className="gap-3">
-        <Skeleton.Block width={120} height={20} borderRadius={8} />
-        <Skeleton.Block width="100%" height={12} borderRadius={6} />
-        <Skeleton.Block width="96%" height={12} borderRadius={6} />
-        <Skeleton.Block width="82%" height={12} borderRadius={6} />
-        <Skeleton.Block width="42%" height={12} borderRadius={6} />
+        <Skeleton.Block width={120} height={20} borderRadius={Radius.sm} />
+        <Skeleton.Block width="100%" height={12} borderRadius={Radius.sm} />
+        <Skeleton.Block width="96%" height={12} borderRadius={Radius.sm} />
+        <Skeleton.Block width="82%" height={12} borderRadius={Radius.sm} />
+        <Skeleton.Block width="42%" height={12} borderRadius={Radius.sm} />
       </View>
       <View className="flex-row gap-2">
-        <Skeleton.Block width={72} height={28} borderRadius={14} />
-        <Skeleton.Block width={88} height={28} borderRadius={14} />
-        <Skeleton.Block width={64} height={28} borderRadius={14} />
+        <Skeleton.Block width={72} height={28} borderRadius={Radius.card} />
+        <Skeleton.Block width={88} height={28} borderRadius={Radius.card} />
+        <Skeleton.Block width={64} height={28} borderRadius={Radius.card} />
       </View>
       <AnimeDetailMediaSkeleton />
     </View>
@@ -845,9 +854,9 @@ function AnimeDetailResolvedSkeleton() {
 function AnimeDetailMediaSkeleton() {
   return (
     <View className="mt-8 gap-3">
-      <Skeleton.Block width={140} height={18} borderRadius={8} />
-      <Skeleton.Block width="100%" height={84} borderRadius={16} />
-      <Skeleton.Block width="100%" height={84} borderRadius={16} />
+      <Skeleton.Block width={140} height={18} borderRadius={Radius.sm} />
+      <Skeleton.Block width="100%" height={84} borderRadius={Radius.card} />
+      <Skeleton.Block width="100%" height={84} borderRadius={Radius.card} />
     </View>
   );
 }
@@ -885,7 +894,9 @@ function WatchOptionsSection({
           onPress={onConfigure}
           accessibilityLabel={t('anime.detail.configureWatchA11y')}
           hitSlop={8}>
-          <Text className="text-xs font-semibold text-blue-400">{t('anime.detail.configure')}</Text>
+          <ThemedText variant="caption" tone="accent" weight="700">
+            {t('anime.detail.configure')}
+          </ThemedText>
         </Pressable>
       </View>
       <ScrollView
@@ -1312,3 +1323,20 @@ function PlatformRatingCard({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  actionTile: {
+    width: Size.minTouchTarget,
+    height: Size.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.sm,
+    borderWidth: Ink.hairline,
+  },
+  tag: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: Radius.sm,
+    borderWidth: Ink.hairline,
+  },
+});

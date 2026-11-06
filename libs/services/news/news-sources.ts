@@ -1,4 +1,3 @@
-import { hasSufficientRuntimeCoverage } from '../pilgrimage/anitabi-runtime-coverage';
 import { localityRepository } from '../pilgrimage/locality/locality-repository';
 import type { LocalityDataEnvelope } from '../pilgrimage/locality/types';
 import type { NewsSource, NewsSourceFile } from './types';
@@ -13,6 +12,7 @@ let overrideState: SourceState | null = null;
 let canonicalCache: { snapshot: LocalityDataEnvelope; state: SourceState } | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
+const MIN_RUNTIME_COVERAGE_RATIO = 0.8;
 
 localityRepository.subscribe(() => {
   if (overrideState) return;
@@ -69,6 +69,12 @@ export function hydrateNewsSourcesFromRuntime(file: NewsSourceFile): void {
   overrideState = candidate;
   version += 1;
   for (const listener of listeners) listener();
+}
+
+function hasSufficientRuntimeCoverage(currentSize: number, candidateSize: number): boolean {
+  if (!Number.isFinite(candidateSize) || candidateSize <= 0) return false;
+  if (!Number.isFinite(currentSize) || currentSize <= 0) return true;
+  return candidateSize >= Math.floor(currentSize * MIN_RUNTIME_COVERAGE_RATIO);
 }
 
 export function subscribeNewsSources(listener: () => void): () => void {

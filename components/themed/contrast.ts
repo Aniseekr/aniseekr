@@ -31,6 +31,14 @@ export function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** `#RRGGBB` + alpha → `rgba(…)`. Non-hex input comes back unchanged. */
+export function withAlpha(hex: string, alpha: number): string {
+  const ex = expandHex(hex);
+  if (!ex) return hex;
+  const v = parseInt(ex.slice(1), 16);
+  return `rgba(${(v >> 16) & 0xff}, ${(v >> 8) & 0xff}, ${v & 0xff}, ${alpha})`;
+}
+
 export const ON_DARK = '#FFFFFF';
 export const ON_LIGHT = '#0E0A06';
 

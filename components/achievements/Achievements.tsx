@@ -22,6 +22,7 @@ import {
 } from '../../libs/services/achievements/definitions';
 import { AchievementWithProgress } from '../../libs/services/achievements/achievement-service';
 import { useT } from '../../libs/i18n';
+import { CapsText } from '../themed/CapsText';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -297,7 +298,7 @@ function EmptyHintCard() {
   return (
     <GlassCard variant="frosted" style={styles.emptyCard}>
       <View style={styles.emptyIconWrap}>
-        <MaterialIcons name="auto-awesome" size={20} color={Colors.primary} />
+        <MaterialIcons name="emoji-events" size={20} color={Colors.primary} />
       </View>
       <View style={styles.emptyTextWrap}>
         <Text style={styles.emptyTitle}>{t('achievementsUi.noBadgesYet')}</Text>
@@ -402,7 +403,7 @@ function AchievementDetailSheet({ item, visible, onClose }: DetailSheetProps) {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rewardCardLabel}>{t('achievementsUi.reward')}</Text>
+              <CapsText style={styles.rewardCardLabel}>{t('achievementsUi.reward')}</CapsText>
               <Text style={styles.rewardCardValue}>{rewardText}</Text>
             </View>
           </View>
@@ -422,7 +423,7 @@ const TILE_BASE_RADIUS = Radius.card;
 const overviewIcon: ViewStyle = {
   width: 40,
   height: 40,
-  borderRadius: 20,
+  borderRadius: Radius.sm,
   alignItems: 'center',
   justifyContent: 'center',
   overflow: 'hidden',
@@ -469,13 +470,13 @@ const styles = StyleSheet.create({
   },
   overviewProgressTrack: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.glass.dark,
     overflow: 'hidden',
   },
   overviewProgressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: Radius.sm,
   },
   rewardRow: {
     flexDirection: 'row',
@@ -488,7 +489,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.glass.medium,
     borderWidth: 1,
     borderColor: Colors.glass.border,
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
   emptyIconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: `${Colors.primary}22`,
@@ -593,7 +594,7 @@ const styles = StyleSheet.create({
   badgeCircle: {
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -618,7 +619,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: Spacing.xs,
     paddingVertical: 3,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     backgroundColor: `${Colors.primary}1F`,
     borderWidth: 1,
     borderColor: `${Colors.primary}55`,
@@ -695,13 +696,13 @@ const styles = StyleSheet.create({
     left: -6,
     right: -6,
     bottom: -6,
-    borderRadius: 70,
+    borderRadius: Radius.xl,
     backgroundColor: `${Colors.primary}40`,
   },
   sheetBadgeCircle: {
     width: 116,
     height: 116,
-    borderRadius: 58,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     backgroundColor: `${Colors.success}1F`,
     borderWidth: 1,
     borderColor: `${Colors.success}55`,
@@ -748,13 +749,13 @@ const styles = StyleSheet.create({
   sheetProgressTrack: {
     width: '100%',
     height: 8,
-    borderRadius: 4,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.glass.dark,
     overflow: 'hidden',
   },
   sheetProgressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: Radius.sm,
   },
   sheetProgressLabel: {
     ...Typography.captionSmall,
@@ -775,7 +776,7 @@ const styles = StyleSheet.create({
   rewardCardIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
@@ -795,7 +796,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.sm + 2,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.glass.heavy,
     borderWidth: 1,
     borderColor: Colors.glass.borderHeavy,

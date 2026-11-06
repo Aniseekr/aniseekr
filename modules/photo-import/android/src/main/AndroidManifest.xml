@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Lets an opened photo keep its GPS tags; it grants no library access. -->
+  <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+</manifest>

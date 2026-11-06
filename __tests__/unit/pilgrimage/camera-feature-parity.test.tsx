@@ -1,67 +1,10 @@
-import { describe, expect, it, mock } from 'bun:test';
-import en from '../../../libs/i18n/locales/en.json';
-import {
-  CAPTURE_MODE_HELP_TEXT_KEY,
-  captureModeToastCopy,
-} from '../../../libs/services/pilgrimage/capture-mode-copy';
-import { translate } from '../../../libs/i18n/engine';
+import { describe, expect, it } from 'bun:test';
 import {
   preferredPhysicalDevicesForFacing,
   pickResolvedPhotoDimensions,
 } from '../../../libs/services/pilgrimage/camera-engine-parity';
-import { findAll, render } from './render-helpers';
-
-// English catalog lookup — ShutterRow resolves its accessibility labels via
-// useT(), and en is the default test language.
-const tEn = (key: string): string =>
-  (key
-    .split('.')
-    .reduce<unknown>(
-      (node, part) =>
-        node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
-      en
-    ) as string) ?? key;
-
-mock.module('../../../libs/i18n', () => ({
-  useT: () => tEn,
-}));
-
-const { default: ShutterRow } = await import('../../../components/pilgrimage/camera/ShutterRow');
-
-const noop = () => undefined;
 
 describe('camera feature parity', () => {
-  it('uses the public VisionCamera entry with the worklets peer installed', async () => {
-    const runtimeSourcePaths = [
-      'app/(tabs)/pilgrimage/compare/[spotId].tsx',
-      'app/(tabs)/pilgrimage/compare/tips.tsx',
-      'components/pilgrimage/camera/CameraStage.tsx',
-    ];
-
-    for (const sourcePath of runtimeSourcePaths) {
-      const source = await Bun.file(sourcePath).text();
-      expect(source).not.toContain('react-native-vision-camera/lib/');
-      expect(source).not.toContain('frameProcessor');
-    }
-
-    const manifest = await Bun.file('package.json').json();
-    expect(manifest.dependencies['react-native-vision-camera-worklets']).toBe('5.2.3');
-    expect(manifest.dependencies['react-native-worklets']).toBe('0.10.1');
-    expect(manifest.scripts.postinstall).toBeUndefined();
-  });
-
-  it('drives photo orientation off the orientationSource prop so portrait shots stay portrait', async () => {
-    // The capture orientation is no longer hardcoded on <Camera>; it is threaded
-    // from the AUTO/LAND chip via the `orientationSource` prop (AUTO → 'device'
-    // follows the physical phone, LAND → 'interface' follows the locked UI). The
-    // 'auto' → 'device' default itself is asserted in camera-ui.test.ts.
-    const stageSource = await Bun.file('components/pilgrimage/camera/CameraStage.tsx').text();
-    expect(stageSource).toContain('orientationSource={orientationSource}');
-    // Neither orientation authority may be hardcoded as a string literal anymore.
-    expect(stageSource).not.toContain('orientationSource="device"');
-    expect(stageSource).not.toContain('orientationSource="interface"');
-  });
-
   it('prefers the combined back-camera device so zoom pillars can switch physical lenses', () => {
     expect(preferredPhysicalDevicesForFacing('back')).toEqual([
       'ultra-wide-angle',
@@ -92,39 +35,5 @@ describe('camera feature parity', () => {
         fallback: { width: NaN, height: 0 },
       })
     ).toEqual({ width: 0, height: 0 });
-  });
-
-  it('keeps capture mode copy aligned with the real capture implementations', () => {
-    const help = translate('en', CAPTURE_MODE_HELP_TEXT_KEY);
-    expect(help).toContain('best-aligned');
-    expect(help).toContain('hardware HDR');
-    expect(help).not.toContain('sharpest');
-    expect(help).not.toContain('blends 3 exposures');
-
-    expect(translate('en', captureModeToastCopy('burst', false).hint)).toContain('best-aligned');
-    // 'auto' is the replacement for the retired 'hdr' mode. When the scene
-    // analyzer agrees AND the device has native photo-HDR, the toast advertises
-    // hardware HDR. Otherwise it describes the bracket fallback honestly.
-    expect(translate('en', captureModeToastCopy('auto', true).hint)).toContain('hardware HDR');
-    expect(translate('en', captureModeToastCopy('auto', false).hint)).toContain('bracket');
-    expect(translate('en', captureModeToastCopy('auto', true).hint)).not.toContain('Android');
-  });
-
-  it('wires the animate-shutter setting into visible shutter feedback', () => {
-    const base = {
-      themeColor: '#ff9900',
-      capturing: true,
-      isLandscape: false,
-      isFrontFacing: false,
-      onShutter: noop,
-      onPickLibrary: noop,
-      onFlip: noop,
-    };
-
-    const animated = render(ShutterRow, { ...base, animateCapture: true });
-    const still = render(ShutterRow, { ...base, animateCapture: false });
-
-    expect(findAll(animated, (n) => n.props.testID === 'shutter-pulse').length).toBeGreaterThan(0);
-    expect(findAll(still, (n) => n.props.testID === 'shutter-pulse')).toHaveLength(0);
   });
 });

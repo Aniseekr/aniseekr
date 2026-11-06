@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Spacing } from '../../constants/DesignSystem';
+import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -30,7 +30,7 @@ interface FolderCardProps {
   onManage?: () => void;
 }
 
-function FolderCard({ folder, cover, onPress, onLongPress, onManage }: FolderCardProps) {
+export function FolderGridItem({ folder, cover, onPress, onLongPress, onManage }: FolderCardProps) {
   const { theme } = useTheme();
   const t = useT();
 
@@ -57,7 +57,12 @@ function FolderCard({ folder, cover, onPress, onLongPress, onManage }: FolderCar
         style={({ pressed }) => [styles.cardContent, { opacity: pressed ? 0.88 : 1 }]}>
         <View style={[styles.cover, { backgroundColor: theme.background.tertiary }]}>
           {cover ? (
-            <Image source={{ uri: cover }} style={styles.coverImage} contentFit="cover" />
+            <Image
+              source={{ uri: cover }}
+              style={styles.coverImage}
+              contentFit="cover"
+              contentPosition="top"
+            />
           ) : (
             <LinearGradient
               colors={[`${theme.accent}33`, 'transparent']}
@@ -137,7 +142,7 @@ function FolderGridComponent({
           {row.map((folder, colIdx) => {
             const entryIndex = idx * 2 + colIdx;
             const card = (
-              <FolderCard
+              <FolderGridItem
                 folder={folder}
                 cover={covers?.[folder.id]}
                 onPress={() => onPressFolder?.(folder)}
@@ -181,7 +186,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -209,7 +214,7 @@ const styles = StyleSheet.create({
     left: 8,
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -233,7 +238,7 @@ const styles = StyleSheet.create({
   r18Pill: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   manageButton: {
     position: 'absolute',

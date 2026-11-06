@@ -66,7 +66,7 @@ export default function PersonaExhibit() {
     return (
       <StatsExhibitFrame title={t('collectionStats.persona.title')}>
         <EmptyStateView
-          icon="auto-awesome"
+          icon="psychology"
           title={t('collectionStats.persona.emptyTitle')}
           description={t('collectionStats.persona.emptyBody')}
         />
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
   },
   heroBody: {
     gap: 4,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: Radius.full,
+    borderRadius: Radius.sm,
     borderWidth: 1,
   },
   dimensionsCard: {
@@ -254,11 +254,11 @@ const styles = StyleSheet.create({
   },
   track: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: Radius.sm,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: Radius.sm,
   },
 });

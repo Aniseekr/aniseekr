@@ -131,7 +131,7 @@ function SeriesSwitchRowImpl({
             sublabel={title}
             active={active}
             disabled={!enabled}
-            badge={entry.anime?.pointsLength ?? 0}
+            badge={entry.anime?.spots.length ?? 0}
             themeColor={themeColor}
             themeColorFg={themeColorFg}
             theme={theme}

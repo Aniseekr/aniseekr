@@ -3,7 +3,7 @@ import { FlatList, Platform, Pressable, StyleSheet, Text, View, ViewStyle } from
 import { BlurView } from 'expo-blur';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
-import { Spacing, Typography } from '../../constants/DesignSystem';
+import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useT } from '../../libs/i18n';
 import { useTheme } from '../../context/ThemeContext';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -79,9 +79,9 @@ function CollectionFloatingActionBarComponent({
           <View style={styles.row}>
             {unratedCount > 0 && onRateUnrated ? (
               <ActionButton
-                icon="auto-awesome"
-                label={`Rate ${Math.min(unratedCount, 3)}`}
-                hint={`${unratedCount} unrated`}
+                icon="star-rate"
+                label={t('collectionUi.rateCount', { count: Math.min(unratedCount, 3) })}
+                hint={t('collectionUi.unratedCount', { count: unratedCount })}
                 accent={theme.accent}
                 onPress={() => {
                   hapticsBridge.tap();
@@ -145,7 +145,7 @@ function CollectionFloatingActionBarComponent({
               {selectedCount > 0 ? (
                 <View style={styles.selectionBadge}>
                   <Text style={[styles.selectionText, { color: theme.text.primary }]}>
-                    {selectedCount} picks
+                    {t('tabs.collectionScreen.share.picks', { count: selectedCount })}
                   </Text>
                 </View>
               ) : null}
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: '100%',
-    borderRadius: 28,
+    borderRadius: Radius.xl,
     overflow: 'hidden',
     paddingHorizontal: 6,
     paddingVertical: 6,
@@ -226,11 +226,11 @@ const styles = StyleSheet.create({
     }),
   },
   barFill: {
-    borderRadius: 28,
+    borderRadius: Radius.xl,
   },
   barBackground: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 28,
+    borderRadius: Radius.xl,
     borderWidth: 1,
   },
   row: {
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 22,
+    borderRadius: Radius.xl,
   },
   buttonLabel: {
     ...Typography.titleSmall,

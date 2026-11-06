@@ -49,9 +49,8 @@ describe('NativeMapMarker', () => {
     const tree = render(NativeMapMarker, {
       marker: marker({ id: '88:7', kind: 'city88', color: '#D4AF37', eightyEightId: 7 }),
     });
-    const text = getAllText(tree);
-    expect(text).toContain('★');
-    expect(text).toContain('#7');
+    expect(findAll(tree, (node) => node.props.name === 'star').length).toBe(1);
+    expect(getAllText(tree)).toContain('#7');
   });
 
   it('PILG-058 renders stamp, shop, and festival pins with distinct icon geometry', () => {
@@ -68,7 +67,7 @@ describe('NativeMapMarker', () => {
     expect(findAll(stamp, (node) => node.props.name === 'ticket-outline').length).toBe(1);
     expect(findAll(stamp, (node) => node.props.name === 'checkmark').length).toBe(1);
     expect(findAll(shop, (node) => node.props.name === 'storefront-outline').length).toBe(1);
-    expect(findAll(festival, (node) => node.props.name === 'sparkles-outline').length).toBe(1);
+    expect(findAll(festival, (node) => node.props.name === 'bonfire-outline').length).toBe(1);
   });
 
   it('PILG-058 renders Anime88 city-only data as a labelled area, not a pin', () => {

@@ -5,8 +5,8 @@ string lives in this folder as a JSON file. **Adding a key, fixing a typo, or
 shipping a new language is a one-file pull request** — no codegen, no build
 step, no extra tools.
 
-> Brand names (Aniseekr, AniList, MyAnimeList, Bangumi, Kitsu, Simkl,
-> Anitabi…) and anime titles **stay in their original form** in every
+> Brand names (Aniseekr, Aniseekr Atlas, AniList, MyAnimeList, Bangumi, Kitsu,
+> Simkl…) and anime titles **stay in their original form** in every
 > language. Only translate UI chrome.
 
 ## Supported languages
@@ -163,7 +163,7 @@ If a placeholder is referenced but no value is provided, the engine leaves
 | **한국어** | 한글 + 영문 혼용 OK | 존댓말 (-요/-니다) | 외래어 표기법 따름 |
 
 Do **not** translate:
-- Brand names: Aniseekr, AniList, MyAnimeList, Bangumi, Kitsu, Simkl, Anitabi
+- Brand names: Aniseekr, Aniseekr Atlas, AniList, MyAnimeList, Bangumi, Kitsu, Simkl
 - Anime titles (they come from the data source, not the catalog)
 - Romaji ("Romaji" stays "Romaji" in every language)
 

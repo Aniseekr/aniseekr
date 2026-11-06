@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   headerBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: Radius.sm,
   },
   viewport: {
     flex: 1,

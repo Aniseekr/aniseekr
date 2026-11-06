@@ -9,6 +9,8 @@ import {
 import { FeatureFlags } from '../constants/FeatureFlags';
 
 interface SubscriptionContextValue extends SubscriptionState {
+  /** Real paid entitlement. Unlike `isPro`, never forced on by the free-version posture. */
+  adFree: boolean;
   offerings: SubscriptionOffering[];
   loading: boolean;
   refresh: () => Promise<void>;
@@ -26,11 +28,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    const next = await subscriptionService.refresh();
-    setState(next);
-    if (!next.unsupported) {
-      const list = await subscriptionService.listOfferings();
-      setOfferings(list);
+    setLoading(true);
+    try {
+      const next = await subscriptionService.refresh();
+      setState(next);
+      if (!next.unsupported) {
+        const list = await subscriptionService.listOfferings();
+        setOfferings(list);
+      }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -74,6 +81,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SubscriptionContextValue>(
     () => ({
       ...state,
+      adFree: state.isPro,
       offerings,
       loading,
       refresh: reload,
@@ -92,6 +100,7 @@ export function useSubscription(): SubscriptionContextValue {
   const ctx = use(SubscriptionContext);
   const base: SubscriptionContextValue = ctx ?? {
     ...ANONYMOUS_STATE,
+    adFree: ANONYMOUS_STATE.isPro,
     offerings: [],
     loading: false,
     refresh: async () => undefined,
@@ -100,8 +109,7 @@ export function useSubscription(): SubscriptionContextValue {
     identify: async () => undefined,
     signOut: async () => undefined,
   };
-  // Free-version posture: treat everyone as Pro so isPro-gated features
-  // (premium themes, no-ads cascade) auto-unlock. See FeatureFlags.ts.
+  // When premium is disabled, unlock premium features. Ads key off `adFree`.
   if (!FeatureFlags.PREMIUM_ENABLED) {
     return { ...base, isPro: true };
   }

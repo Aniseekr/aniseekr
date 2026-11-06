@@ -74,19 +74,36 @@ export const Spacing = {
   sectionSpacing: 24,
 } as const;
 
+/**
+ * v6 corners, shared with aniseekr.moe: controls (buttons, chips, inputs,
+ * icon buttons) are 4, cards and thumbnails 6, large panels and sheets 8.
+ * The older names stay as aliases so call sites keep compiling; `full` is
+ * only for true circles (avatars, dots, rings, switch knobs).
+ */
 export const Radius = {
-  sm: 8,
-  md: 12,
-  chip: 14,
-  chipLg: 16,
-  lg: 16,
-  card: 20,
-  cardLg: 22,
-  xl: 24,
-  tabActive: 26,
-  xxl: 32,
-  tabBar: 36,
+  sm: 4,
+  md: 4,
+  chip: 4,
+  chipLg: 4,
+  lg: 6,
+  card: 6,
+  cardLg: 6,
+  xl: 8,
+  tabActive: 4,
+  xxl: 8,
+  tabBar: 8,
   full: 9999,
+} as const;
+
+/**
+ * v6 manga ink (aniseekr.moe `border: 2px solid var(--line)` +
+ * `box-shadow: 3px 3px 0`). The ink colour is always `theme.text.primary`,
+ * so it flips with light/dark mode; the hard shadow uses ink or the accent.
+ */
+export const Ink = {
+  line: 2,
+  hairline: 1.5,
+  lift: 3,
 } as const;
 
 export const IconSize = {
@@ -130,115 +147,140 @@ export const TabBar = {
   itemGap: 4,
 } as const;
 
+// Font roles. `display` carries headlines and big numerals; `text` is every
+// other tier and stays on the platform system face (`undefined` = SF / Roboto).
+//
+// `display` is Nunito, bundled at build time by the expo-font config plugin
+// (app.json → assets/fonts, static 400/600/700/800; OFL). iOS takes the family
+// name from the files, Android from the plugin's `fontFamily` — both are
+// "Nunito", so `fontFamily + fontWeight` picks the right file on each. Nunito
+// has no CJK glyphs: Chinese/Japanese headlines fall back to the system CJK
+// face at the same weight.
 export const FontFamily = {
-  rounded: Platform.select({
-    ios: 'SF Pro Rounded',
-    android: 'sans-serif-medium',
-    default: undefined,
-  }),
-  display: Platform.select({
-    ios: 'SF Pro Display',
-    android: 'sans-serif',
-    default: undefined,
-  }),
-  text: Platform.select({
-    ios: 'SF Pro Text',
-    android: 'sans-serif',
-    default: undefined,
-  }),
+  display: 'Nunito' as string | undefined,
+  text: undefined as string | undefined,
 } as const;
+
+/**
+ * Display faces that premium theme skins put on display/headline text
+ * (`ThemeSkin.displayFont`). Each is one static OFL weight bundled by the
+ * expo-font plugin (app.json; licences in assets/fonts/*-OFL.txt). Latin
+ * only — CJK headlines keep the system face. iOS resolves the family name in
+ * the file; Android resolves the plugin's `fontFamily`, which can't hold spaces.
+ */
+export const SkinFont = {
+  serif: Platform.select({ ios: 'DM Serif Display', default: 'DMSerifDisplay' }),
+  comic: 'Bangers',
+  retro: 'Righteous',
+} as const;
+
+/**
+ * Tracking for uppercase caption labels (section titles, eyebrows, tab label).
+ * Latin caps need air; CJK has no case and spaced-out ideographs read as
+ * "應 用 語 言", so callers resolve this through `useCapsTracking()` /
+ * `capsTracking()` instead of hardcoding it.
+ */
+export const CAPS_TRACKING = 1;
+
+// Spread into tokens only when a family is set: an explicit `fontFamily:
+// undefined` would clobber a caller's earlier fontFamily when style arrays
+// are flattened.
+const displayFace = FontFamily.display ? { fontFamily: FontFamily.display } : {};
+const textFace = FontFamily.text ? { fontFamily: FontFamily.text } : {};
 
 export const Typography = {
   displayLarge: {
     fontSize: 34,
     fontWeight: '800' as const,
     lineHeight: 41,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.37,
+    ...displayFace,
   },
   displayMedium: {
     fontSize: 30,
     fontWeight: '700' as const,
     lineHeight: 36,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.34,
+    ...displayFace,
   },
   headlineLarge: {
     fontSize: 28,
     fontWeight: '700' as const,
     lineHeight: 34,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.36,
+    ...displayFace,
   },
   headlineMedium: {
     fontSize: 22,
     fontWeight: '600' as const,
     lineHeight: 28,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.35,
+    ...displayFace,
   },
   headlineSmall: {
     fontSize: 20,
     fontWeight: '600' as const,
     lineHeight: 25,
-    fontFamily: FontFamily.rounded,
-    letterSpacing: 0.38,
+    ...displayFace,
   },
   titleLarge: {
     fontSize: 17,
     fontWeight: '600' as const,
     lineHeight: 22,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.43,
+    ...textFace,
   },
   titleMedium: {
     fontSize: 15,
     fontWeight: '600' as const,
     lineHeight: 20,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.24,
+    ...textFace,
   },
   titleSmall: {
     fontSize: 13,
     fontWeight: '600' as const,
     lineHeight: 18,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.08,
+    ...textFace,
   },
   bodyLarge: {
     fontSize: 17,
     fontWeight: '400' as const,
     lineHeight: 22,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.43,
+    ...textFace,
   },
   bodyMedium: {
     fontSize: 15,
     fontWeight: '400' as const,
     lineHeight: 20,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.24,
+    ...textFace,
   },
   bodySmall: {
     fontSize: 13,
     fontWeight: '400' as const,
     lineHeight: 18,
-    fontFamily: FontFamily.text,
-    letterSpacing: -0.08,
+    ...textFace,
   },
   caption: {
     fontSize: 12,
     fontWeight: '500' as const,
     lineHeight: 16,
-    fontFamily: FontFamily.text,
-    letterSpacing: 0,
+    ...textFace,
   },
   captionSmall: {
     fontSize: 11,
     fontWeight: '500' as const,
     lineHeight: 13,
-    fontFamily: FontFamily.text,
-    letterSpacing: 0.07,
+    ...textFace,
+  },
+  // Dense labels on pills laid over imagery (count / region / match tags).
+  badge: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    lineHeight: 12,
+    ...textFace,
+  },
+  overline: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    lineHeight: 14,
+    ...textFace,
+    letterSpacing: CAPS_TRACKING,
+    textTransform: 'uppercase' as const,
   },
   monospace: {
     fontSize: 14,
@@ -281,6 +323,17 @@ export const Shadow = {
       shadowRadius: 16,
     },
     android: { elevation: 12 },
+    default: {},
+  }),
+  /** Chrome that floats over scrolling content (the floating tab bar). */
+  float: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.32,
+      shadowRadius: 24,
+    },
+    android: { elevation: 14 },
     default: {},
   }),
   glow: (color: string) =>

@@ -13,6 +13,8 @@ export const Springs = {
   press: { damping: 14, stiffness: 320 },
   focus: { damping: 20, stiffness: 220, mass: 0.6 },
   sheet: { damping: 20, stiffness: 220, mass: 0.9 },
+  /** Toggle confirmation (pick, bell): overshoots once, settles fast. */
+  pop: { damping: 9, stiffness: 380 },
 } as const;
 
 export const sheetEnter = () => FadeInUp.duration(260).easing(Easing.out(Easing.cubic));
@@ -22,6 +24,8 @@ export const overlayEnter = () => FadeInUp.duration(220).easing(Easing.out(Easin
 export const overlayExit = () => FadeOutDown.duration(180);
 
 export const overlayLayout = () => Layout.duration(150);
+
+export const spotRowLayout = () => Layout.springify().damping(20).stiffness(220);
 
 export const fabEnter = () => ZoomIn.duration(220).easing(Easing.out(Easing.cubic));
 

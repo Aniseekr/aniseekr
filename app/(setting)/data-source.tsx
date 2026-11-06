@@ -1,7 +1,4 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { View, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState, useCallback } from 'react';
 import {
@@ -17,13 +14,18 @@ import {
   dataSourceSwitchingCoordinator,
   type SwitchingState,
 } from '../../libs/services/data-source-switching-coordinator';
-import { GlassCard } from '../../components/common/GlassCard';
-import { Colors, Radius, Spacing, Typography } from '../../constants/DesignSystem';
+import {
+  SettingsScreenLayout,
+  SettingsSection,
+} from '../../components/setting/SettingsScreenLayout';
+import { ThemedText, readableTextOn } from '../../components/themed';
+import { Radius, Spacing } from '../../constants/DesignSystem';
+import { useTheme } from '../../context/ThemeContext';
 import { useT } from '../../libs/i18n';
 
 export default function DataSourceScreen() {
-  const { top } = useSafeAreaInsets();
   const t = useT();
+  const { theme } = useTheme();
   const [browseSource, setBrowseSourceState] = useState<PlatformType>(
     dataSourceConfig.browseSource
   );
@@ -89,179 +91,100 @@ export default function DataSourceScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={Colors.gradients.background as [string, string, ...string[]]}
-        style={StyleSheet.absoluteFill}
-      />
-      <SafeAreaView style={[styles.safeArea, { paddingTop: top }]}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={Colors.text.primary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>{t('settings.dataSourceScreen.title')}</Text>
+    <SettingsScreenLayout title={t('settings.dataSourceScreen.title')}>
+      <ThemedText variant="bodyMedium" tone="secondary">
+        {t('settings.dataSourceScreen.description')}
+      </ThemedText>
+
+      {initLoading ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={theme.text.primary} />
         </View>
-
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.description}>{t('settings.dataSourceScreen.description')}</Text>
-
-          {initLoading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator color={Colors.text.primary} />
-            </View>
-          ) : (
-            <GlassCard variant="frosted" style={styles.card}>
-              {platforms.map((platform, index) => {
-                const isSelected = platform.platform === browseSource;
-                const isSwitchingTo =
-                  switchingState.kind === 'switching' && switchingState.to === platform.platform;
-                return (
-                  <View key={platform.platform}>
-                    <Pressable
-                      onPress={() => handleSelect(platform.platform)}
-                      style={({ pressed }) => [
-                        styles.row,
-                        pressed && { backgroundColor: Colors.glass.light },
-                      ]}
-                      disabled={switchingState.kind === 'switching' || isSelected}>
-                      <View style={styles.rowLeft}>
-                        <View style={[styles.iconCircle, { backgroundColor: platform.color }]}>
-                          <Text style={styles.iconLetter}>
-                            {platform.displayName.substring(0, 1)}
-                          </Text>
-                        </View>
-                        <View>
-                          <Text style={styles.rowLabel}>{platform.displayName}</Text>
-                          <Text style={styles.rowSubLabel}>
-                            {isSelected
-                              ? t('settings.dataSourceScreen.active')
-                              : t('settings.dataSourceScreen.tapToUse')}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.rowRight}>
-                        {isSwitchingTo ? (
-                          <ActivityIndicator color={Colors.text.primary} size="small" />
-                        ) : isSelected ? (
-                          <Ionicons name="checkmark-circle" size={22} color={Colors.success} />
-                        ) : (
-                          <Ionicons
-                            name="radio-button-off"
-                            size={22}
-                            color={Colors.text.disabled}
-                          />
-                        )}
-                      </View>
-                    </Pressable>
-                    {index < platforms.length - 1 && <View style={styles.separator} />}
+      ) : (
+        <SettingsSection>
+          {platforms.map((platform, index) => {
+            const isSelected = platform.platform === browseSource;
+            const isSwitchingTo =
+              switchingState.kind === 'switching' && switchingState.to === platform.platform;
+            return (
+              <View key={platform.platform}>
+                <Pressable
+                  onPress={() => handleSelect(platform.platform)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && { backgroundColor: theme.background.tertiary },
+                  ]}
+                  disabled={switchingState.kind === 'switching' || isSelected}>
+                  <View style={[styles.iconTile, { backgroundColor: platform.color }]}>
+                    <ThemedText
+                      variant="titleSmall"
+                      weight="800"
+                      style={{ color: readableTextOn(platform.color) }}>
+                      {platform.displayName.substring(0, 1)}
+                    </ThemedText>
                   </View>
-                );
-              })}
-            </GlassCard>
-          )}
+                  <View style={styles.rowText}>
+                    <ThemedText variant="titleMedium">{platform.displayName}</ThemedText>
+                    <ThemedText variant="bodySmall" tone={isSelected ? 'accent' : 'tertiary'}>
+                      {isSelected
+                        ? t('settings.dataSourceScreen.active')
+                        : t('settings.dataSourceScreen.tapToUse')}
+                    </ThemedText>
+                  </View>
+                  {isSwitchingTo ? (
+                    <ActivityIndicator color={theme.text.primary} size="small" />
+                  ) : isSelected ? (
+                    <Ionicons name="checkmark-circle" size={22} color={theme.accent} />
+                  ) : (
+                    <Ionicons name="radio-button-off" size={22} color={theme.text.tertiary} />
+                  )}
+                </Pressable>
+                {index < platforms.length - 1 ? (
+                  <View style={[styles.separator, { backgroundColor: theme.glassBorder }]} />
+                ) : null}
+              </View>
+            );
+          })}
+        </SettingsSection>
+      )}
 
-          {switchingState.kind === 'failed' ? (
-            <Text style={styles.errorText}>
-              {t('settings.dataSourceScreen.switchFailed', {
-                message: switchingState.error.message,
-              })}
-            </Text>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+      {switchingState.kind === 'failed' ? (
+        <ThemedText variant="bodySmall" tone="error">
+          {t('settings.dataSourceScreen.switchFailed', {
+            message: switchingState.error.message,
+          })}
+        </ThemedText>
+      ) : null}
+    </SettingsScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background.primary,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.xs,
-    backgroundColor: Colors.glass.light,
-    borderRadius: Radius.full,
-  },
-  headerTitle: {
-    color: Colors.text.primary,
-    ...Typography.headlineSmall,
-  },
-  scrollView: {
-    flex: 1,
-    marginTop: Spacing.md,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: 100,
-    gap: Spacing.lg,
-  },
-  description: {
-    color: Colors.text.secondary,
-    ...Typography.bodyMedium,
-  },
-  card: {
-    padding: 0,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconLetter: {
-    color: Colors.text.primary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  rowLabel: {
-    color: Colors.text.primary,
-    ...Typography.bodyLarge,
-    fontWeight: '600',
-  },
-  rowSubLabel: {
-    color: Colors.text.tertiary,
-    ...Typography.caption,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.glass.border,
-    marginLeft: 64,
-  },
   loadingRow: {
     paddingVertical: Spacing.xl,
     alignItems: 'center',
   },
-  errorText: {
-    color: Colors.error,
-    ...Typography.bodyMedium,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: Spacing.sm + 2,
+  },
+  iconTile: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: {
+    flex: 1,
+  },
+  separator: {
+    height: 1,
+    marginLeft: 56,
   },
 });

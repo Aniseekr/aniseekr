@@ -41,15 +41,15 @@ function parseRetryAfter(headerValue: string | null): number {
 
 /**
  * Prefix a Shikimori-relative image path (e.g. `/uploads/preview/animes/1.jpg`)
- * with the Shikimori host. Returns `null` for empty input or paths whose URL
- * already contains `/missing/` (Shikimori's not-found placeholder).
+ * with the Shikimori host. Returns `null` for empty input or Shikimori's
+ * not-found placeholders (`/missing/…` or `/assets/globals/missing_original.jpg`).
  */
+const SHIKIMORI_MISSING_IMAGE = /\/missing[/_]/;
+
 export function prefixShikimoriImage(rel: string | null | undefined): string | null {
   if (!rel) return null;
-  if (rel.includes('/missing/')) return null;
-  if (/^https?:\/\//.test(rel)) {
-    return rel.includes('/missing/') ? null : rel;
-  }
+  if (SHIKIMORI_MISSING_IMAGE.test(rel)) return null;
+  if (/^https?:\/\//.test(rel)) return rel;
   return `${SHIKIMORI_IMAGE_BASE}${rel}`;
 }
 

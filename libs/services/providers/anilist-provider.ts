@@ -34,6 +34,8 @@ interface AniListEntry {
 
 export class AniListProvider implements WritableAnimeProvider {
   platform: PlatformType = 'anilist';
+  supportsScoreClearing = true;
+  supportsListRemoval = true;
 
   private async graphql<T>(
     query: string,
@@ -162,6 +164,10 @@ export class AniListProvider implements WritableAnimeProvider {
     );
   }
 
+  async clearScore(animeId: string, token: string): Promise<void> {
+    await this.updateScore(animeId, 0, token);
+  }
+
   async updateStatus(animeId: string, status: AnimeStatus, token: string): Promise<void> {
     const statusMap: Record<AnimeStatus, string> = {
       watching: 'CURRENT',
@@ -188,12 +194,21 @@ export class AniListProvider implements WritableAnimeProvider {
   }
 
   async removeFromList(animeId: string, token: string): Promise<void> {
-    const mutation = `
-      mutation ($mediaId: Int!) {
-        DeleteMediaListEntry(mediaId: $mediaId) { deleted }
-      }
-    `;
-    await this.graphql(mutation, { mediaId: this.parseId(animeId) }, token);
+    const mediaId = this.parseId(animeId);
+    const data = await this.graphql<{ Media: { mediaListEntry: { id: number } | null } }>(
+      `query ($mediaId: Int!) { Media(id: $mediaId, type: ANIME) { mediaListEntry { id } } }`,
+      { mediaId },
+      token
+    );
+    const entryId = data.Media.mediaListEntry?.id;
+    if (entryId == null) return;
+    const result = await this.graphql<{ DeleteMediaListEntry: { deleted: boolean } }>(
+      `mutation ($id: Int!) { DeleteMediaListEntry(id: $id) { deleted } }`,
+      { id: entryId },
+      token
+    );
+    if (!result.DeleteMediaListEntry?.deleted)
+      throw new Error('AniList list entry deletion failed');
   }
 
   private mapEntry(entry: AniListEntry): UniversalAnimeItem {

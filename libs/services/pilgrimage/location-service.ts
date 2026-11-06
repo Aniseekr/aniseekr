@@ -13,6 +13,8 @@ export interface LatLng {
   longitude: number;
 }
 
+export type LocationPermission = 'granted' | 'denied' | 'unavailable';
+
 /** Disposer returned by {@link LocationService.subscribeToUpdates}. */
 export type Unsubscribe = () => void;
 
@@ -103,6 +105,22 @@ export class LocationService {
     } catch (err) {
       console.warn('[LocationService] requestPermission failed:', err);
       return false;
+    }
+  }
+
+  /** Read permission without showing the OS prompt. */
+  async getPermission(): Promise<{ status: LocationPermission; canAskAgain: boolean }> {
+    try {
+      if (!(await this.module.hasServicesEnabledAsync())) {
+        return { status: 'unavailable', canAskAgain: false };
+      }
+      const result = await this.module.getForegroundPermissionsAsync();
+      return {
+        status: result.status === 'granted' ? 'granted' : 'denied',
+        canAskAgain: result.canAskAgain,
+      };
+    } catch {
+      return { status: 'unavailable', canAskAgain: false };
     }
   }
 
