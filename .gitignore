@@ -1,4 +1,5 @@
-node_modules/
+# no trailing slash: also ignores the node_modules symlink a worktree points at the main checkout
+node_modules
 .expo/
 dist/
 npm-debug.*

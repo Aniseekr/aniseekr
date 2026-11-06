@@ -6,6 +6,13 @@ const { withNativewind } = require('nativewind/metro');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
+// Per-checkout transform cache. Worktrees symlink node_modules to the main
+// checkout, so with Metro's default cache in the shared system TMPDIR every
+// worktree hit the same transformed expo-router/_ctx (which inlines the app
+// root) and Metro served another worktree's app/ screens.
+const { FileStore } = require('metro-cache');
+config.cacheStores = [new FileStore({ root: path.join(__dirname, '.expo', 'metro-cache') })];
+
 if (!config.resolver.assetExts.includes('wasm')) {
   config.resolver.assetExts.push('wasm');
 }
