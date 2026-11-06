@@ -53,7 +53,6 @@ If a PR adds another flavour of "PrimaryButton2", inlines `#0A0A0A`, or shows a 
 - [ ] No new hardcoded hex on the render path
 - [ ] No new top-level `useState` dumping ground (see CLAUDE rule 9)
 - [ ] If you touched a detail / list screen, verify the skeleton does **not** flash on warm cache
-- [ ] If you used Anitabi data on a new surface, the attribution chip is present
 - [ ] If you added a runtime dependency, its licence is MIT / Apache-2.0 / BSD-2/3 / ISC. Anything else needs discussion before merge.
 
 ## Commit & PR style
@@ -61,7 +60,7 @@ If a PR adds another flavour of "PrimaryButton2", inlines `#0A0A0A`, or shows a 
 We use Conventional Commits — see recent history for examples:
 
 ```
-feat(pilgrimage): surface Anitabi CC BY-NC-SA attribution
+feat(pilgrimage): offline trip pack store with OpenFreeMap-compliant tile download
 fix(cloudkit): enable CloudKit service in entitlements
 chore(monetization): gate premium UI behind FeatureFlags
 ```

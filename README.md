@@ -31,8 +31,8 @@ Aniseekr is a local-first anime tracker for iOS and Android with a built-in pilg
 
 - **Multi-source aggregation.** Pulls metadata from AniList, Bangumi, MyAnimeList (via Jikan), Kitsu, Annict, Simkl and Shikimori. Switch sources without losing your library.
 - **Local-first storage.** Your library, ratings, and visit log live on-device (MMKV + SQLite). Optional encrypted cloud backup to iCloud / Google Drive via [`@noble/ciphers`](https://github.com/paulmillr/noble-ciphers).
-- **Pilgrimage map.** Cross-indexed Anitabi + Anime Tourism 88 scene coordinates, with a Vision-Camera compare flow that overlays the original frame on your live viewfinder.
-- **Themeable.** 8 built-in palettes, custom accent picker, contrast & tint controls, light/dark/auto modes.
+- **Pilgrimage map.** Aniseekr Atlas + Anime Tourism 88 spot coordinates, with a Vision-Camera compare flow that overlays a reference frame you import on your live viewfinder.
+- **Themeable.** 14 built-in palettes, custom accent picker, contrast & tint controls, light/dark/auto modes.
 - **Privacy-respecting.** No third-party tracking SDKs on the data path. Crash/diagnostics via opt-in Microsoft Clarity. See [Privacy](#privacy).
 
 ## Tech stack
@@ -77,7 +77,7 @@ components/themed/       Theme-aware primitives — default for new UI
 components/<feature>/    Feature-scoped components (bangumi, pilgrimage, rate, …)
 context/ThemeContext.tsx Single source of truth for theme palette
 libs/services/           Data layer (sources, cache, prefs, sync)
-libs/services/pilgrimage Pilgrimage / camera / Anitabi pipeline
+libs/services/pilgrimage Pilgrimage / camera / Atlas pipeline
 modules/                 Native bridges (haptics, vibration, CloudKit)
 __tests__/unit/          Bun unit tests
 ```
@@ -98,7 +98,7 @@ Aniseekr is a **client** for several public anime catalogues. The catalogue cont
 | **Aniseekr Atlas** | **Pilgrimage data: Aniseekr Atlas** | Atlas data is maintained for Aniseekr. |
 | [Anime Tourism 88](https://animetourism88.com/) | JP pilgrimage spot index | Public dataset |
 
-If you **fork** Aniseekr and run it under a different brand, you are responsible for honouring each upstream provider's terms — including registering your own API keys where required and complying with Anitabi's non-commercial clause.
+If you **fork** Aniseekr and run it under a different brand, you are responsible for honouring each upstream provider's terms — including registering your own API keys where required.
 
 ## Privacy
 
