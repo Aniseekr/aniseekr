@@ -1,7 +1,9 @@
 {
-  "NSCameraUsageDescription": "アニメの参考画像に合わせて聖地のシーンを撮影するためにカメラを使用します。",
-  "NSPhotoLibraryUsageDescription": "巡礼写真や比較用の参考画像の読み込み、プロフィール画像の選択のために写真ライブラリを開きます。",
-  "NSPhotoLibraryAddUsageDescription": "あとで共有できるよう、巡礼の比較写真を写真ライブラリに保存します。",
-  "NSLocationWhenInUseUsageDescription": "近くのアニメ聖地を表示するために位置情報を使用します。",
-  "NSFaceIDUsageDescription": "成人向けコンテンツを表示する前に Face ID で確認します。"
+  "ios": {
+    "NSCameraUsageDescription": "アニメの参考画像に合わせて聖地のシーンを撮影するためにカメラを使用します。",
+    "NSPhotoLibraryUsageDescription": "巡礼写真や比較用の参考画像の読み込み、プロフィール画像の選択のために写真ライブラリを開きます。",
+    "NSPhotoLibraryAddUsageDescription": "あとで共有できるよう、巡礼の比較写真を写真ライブラリに保存します。",
+    "NSLocationWhenInUseUsageDescription": "近くのアニメ聖地を表示するために位置情報を使用します。",
+    "NSFaceIDUsageDescription": "成人向けコンテンツを表示する前に Face ID で確認します。"
+  }
 }
