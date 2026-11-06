@@ -328,6 +328,8 @@
       "bundleIdentifier": "kidneyweakx.aniseeker",
       "infoPlist": {
         "LSApplicationQueriesSchemes": ["instagram", "instagram-stories", "line"],
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent",
         "NSLocationWhenInUseUsageDescription": "AniSeekr uses your location to surface nearby anime pilgrimage spots.",
         "NSPhotoLibraryUsageDescription": "AniSeekr opens your photos so you can import a pilgrimage shot or a reference image to compare against, or pick a profile picture.",
         "NSPhotoLibraryAddUsageDescription": "AniSeekr saves pilgrimage comparison photos to your library so you can share them later.",
