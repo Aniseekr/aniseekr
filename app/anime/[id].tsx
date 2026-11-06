@@ -33,6 +33,7 @@ import {
   ThemedButton,
   ThemedIconButton,
   ThemedText,
+  TranslatedText,
   readableTextOn,
   withAlpha,
 } from '../../components/themed';
@@ -59,6 +60,8 @@ import {
   useIsAnimeScheduled,
 } from '../../modules/notifications/animeNotificationService';
 import { useT } from '../../libs/i18n';
+import type { TranslationKey } from '../../libs/i18n/types';
+import { useTranslatedGenre } from '../../libs/i18n/use-translated-genre';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { Ink, Radius, Size, Spacing } from '../../constants/DesignSystem';
 
@@ -605,7 +608,7 @@ export default function AnimeDetailScreen() {
                 ) : null}
                 <GlassCard intensity={20} className="rounded px-2 py-1">
                   <Text className="text-xs font-bold text-white/90">
-                    {anime.status || t('anime.detail.statusUnknown')}
+                    {anime.status ? airingStatusLabel(anime.status, t) : t('anime.detail.statusUnknown')}
                   </Text>
                 </GlassCard>
               </View>
@@ -717,9 +720,7 @@ export default function AnimeDetailScreen() {
                   </Text>
                   <View className="flex-row flex-wrap gap-2">
                     {anime.tags.map((tag) => (
-                      <View key={tag} style={[styles.tag, actionTileColors]}>
-                        <Text className="text-sm text-zinc-300">{tag}</Text>
-                      </View>
+                      <TagChip key={tag} tag={tag} style={[styles.tag, actionTileColors]} />
                     ))}
                   </View>
                 </View>
@@ -780,7 +781,7 @@ export default function AnimeDetailScreen() {
                       mins: anime.durationMinutes || '?',
                     })}
                   />
-                  <InfoItem label={t('anime.detail.info.status')} value={anime.status || '?'} />
+                  <InfoItem label={t('anime.detail.info.status')} value={anime.status ? airingStatusLabel(anime.status, t) : '?'} />
                   <InfoItem
                     label={t('anime.detail.info.startDate')}
                     value={anime.startDate?.year ? String(anime.startDate.year) : '?'}
@@ -857,6 +858,35 @@ function AnimeDetailMediaSkeleton() {
       <Skeleton.Block width={140} height={18} borderRadius={Radius.sm} />
       <Skeleton.Block width="100%" height={84} borderRadius={Radius.card} />
       <Skeleton.Block width="100%" height={84} borderRadius={Radius.card} />
+    </View>
+  );
+}
+
+// AniList MediaStatus enum → UI copy; any other source's value is shown as-is.
+const AIRING_STATUS_KEYS: Record<string, TranslationKey> = {
+  FINISHED: 'anime.detail.airingStatus.finished',
+  RELEASING: 'anime.detail.airingStatus.releasing',
+  NOT_YET_RELEASED: 'anime.detail.airingStatus.notYetReleased',
+  CANCELLED: 'anime.detail.airingStatus.cancelled',
+  HIATUS: 'anime.detail.airingStatus.hiatus',
+};
+
+function airingStatusLabel(status: string, t: ReturnType<typeof useT>): string {
+  const key = AIRING_STATUS_KEYS[status];
+  return key ? t(key) : status;
+}
+
+function TagChip({ tag, style }: { tag: string; style: React.ComponentProps<typeof View>['style'] }) {
+  const label = useTranslatedGenre(tag);
+  return (
+    <View style={style}>
+      <TranslatedText
+        original={tag}
+        translated={label.value}
+        source={label.source}
+        variant="bodySmall"
+        tone="secondary"
+      />
     </View>
   );
 }

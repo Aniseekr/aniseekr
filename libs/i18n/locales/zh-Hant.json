@@ -1047,6 +1047,13 @@
         "planToWatch": "想看清單",
         "watching": "觀看中"
       },
+      "airingStatus": {
+        "cancelled": "已取消",
+        "finished": "已完結",
+        "hiatus": "暫停播出",
+        "notYetReleased": "尚未播出",
+        "releasing": "播出中"
+      },
       "statusDistribution": "狀態分佈",
       "statusUnknown": "未知",
       "synopsis": "簡介",

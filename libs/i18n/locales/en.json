@@ -1047,6 +1047,13 @@
         "planToWatch": "Plan to Watch",
         "watching": "Watching"
       },
+      "airingStatus": {
+        "cancelled": "Cancelled",
+        "finished": "Finished",
+        "hiatus": "On hiatus",
+        "notYetReleased": "Not yet aired",
+        "releasing": "Airing"
+      },
       "statusDistribution": "Status Distribution",
       "statusUnknown": "Unknown",
       "synopsis": "Synopsis",
