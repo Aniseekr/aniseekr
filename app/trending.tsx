@@ -22,6 +22,7 @@ import { FontFamily, Radius, Spacing, Typography } from '../constants/DesignSyst
 import { useTheme, type ThemePalette } from '../context/ThemeContext';
 import { useT } from '../libs/i18n';
 import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
+import { useTranslatedGenre } from '../libs/i18n/use-translated-genre';
 import { listItemEnter } from '../libs/animations/presets';
 import { formatScore } from '../libs/utils/format-score';
 
@@ -240,6 +241,8 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
   const t = useT();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const displayTitle = useAnimeDisplayTitle(anime);
+  // curated genre dictionary ('Action' → '動作'); unknown tags fall through unchanged
+  const genre = useTranslatedGenre(anime.tags?.[0] ?? '').value;
   const score = formatScore(anime.score);
   const isTop3 = rank <= 3;
   return (
@@ -265,7 +268,7 @@ function TrendingListRow({ anime, rank, onPress }: TrendingListRowProps) {
         </Text>
         <View style={styles.metaRow}>
           {anime.tags?.[0] ? (
-            <Text style={styles.tag}>{anime.tags[0]}</Text>
+            <Text style={styles.tag}>{genre}</Text>
           ) : anime.type ? (
             <Text style={styles.tag}>{anime.type}</Text>
           ) : null}

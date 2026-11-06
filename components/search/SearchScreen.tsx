@@ -46,6 +46,9 @@ import { SEARCH_RECENT_KEY } from '../../libs/services/storage/keys';
 import { Skeleton, ThemedButton, ThemedIconButton } from '../themed';
 import { useT } from '../../libs/i18n';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
+import { translateGenre } from '../../libs/i18n/data-translator';
+import { useUiLanguage } from '../../libs/i18n/ui-language';
+import { airingStatusLabel } from '../../libs/utils/airing-status';
 import { listItemEnter } from '../../libs/animations/presets';
 import { formatScore } from '../../libs/utils/format-score';
 
@@ -797,7 +800,8 @@ function ResultCard({
   const localizedTitle = useAnimeDisplayTitle(isPilgrimageRow ? null : anime);
   const displayTitle = isPilgrimageRow ? anime.title : localizedTitle || anime.title;
   const score = formatScore(anime.score);
-  const tags = anime.tags?.slice(0, 3) ?? [];
+  const uiLanguage = useUiLanguage();
+  const tags = (anime.tags?.slice(0, 3) ?? []).map((tag) => translateGenre(tag, uiLanguage).value);
   return (
     <Pressable
       onPress={onPress}
@@ -846,7 +850,9 @@ function ResultCard({
           {anime.startDate?.year ? (
             <Text style={styles.resultMeta}>{anime.startDate.year}</Text>
           ) : null}
-          {anime.status ? <Text style={styles.resultMetaSubtle}>· {anime.status}</Text> : null}
+          {anime.status ? (
+            <Text style={styles.resultMetaSubtle}>· {airingStatusLabel(anime.status, t)}</Text>
+          ) : null}
           {score ? (
             <View style={styles.resultScore}>
               <Ionicons name="star" size={11} color={theme.accent} />

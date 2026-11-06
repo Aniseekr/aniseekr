@@ -60,7 +60,7 @@ import {
   useIsAnimeScheduled,
 } from '../../modules/notifications/animeNotificationService';
 import { useT } from '../../libs/i18n';
-import type { TranslationKey } from '../../libs/i18n/types';
+import { airingStatusLabel } from '../../libs/utils/airing-status';
 import { useTranslatedGenre } from '../../libs/i18n/use-translated-genre';
 import { useAnimeDisplayTitle } from '../../libs/i18n/use-display-title';
 import { Ink, Radius, Size, Spacing } from '../../constants/DesignSystem';
@@ -860,20 +860,6 @@ function AnimeDetailMediaSkeleton() {
       <Skeleton.Block width="100%" height={84} borderRadius={Radius.card} />
     </View>
   );
-}
-
-// AniList MediaStatus enum → UI copy; any other source's value is shown as-is.
-const AIRING_STATUS_KEYS: Record<string, TranslationKey> = {
-  FINISHED: 'anime.detail.airingStatus.finished',
-  RELEASING: 'anime.detail.airingStatus.releasing',
-  NOT_YET_RELEASED: 'anime.detail.airingStatus.notYetReleased',
-  CANCELLED: 'anime.detail.airingStatus.cancelled',
-  HIATUS: 'anime.detail.airingStatus.hiatus',
-};
-
-function airingStatusLabel(status: string, t: ReturnType<typeof useT>): string {
-  const key = AIRING_STATUS_KEYS[status];
-  return key ? t(key) : status;
 }
 
 function TagChip({ tag, style }: { tag: string; style: React.ComponentProps<typeof View>['style'] }) {
