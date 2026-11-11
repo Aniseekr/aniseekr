@@ -1,4 +1,4 @@
-import { Alert, View, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
+import { Alert, View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,24 +40,6 @@ import {
 import { UserRepository, type UserProfile } from '../../libs/repositories/user-repository';
 import { SEEKR_POSES } from '../../components/brand/SeekrPose';
 import { authService } from '../../libs/services/auth/auth-service';
-
-interface PurchasesShowManage {
-  default: { showManageSubscriptions: () => Promise<void> };
-}
-
-async function openManageSubscription(): Promise<void> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('react-native-purchases') as PurchasesShowManage;
-    if (mod?.default?.showManageSubscriptions) {
-      await mod.default.showManageSubscriptions();
-      return;
-    }
-  } catch {
-    // fall through to URL fallback
-  }
-  await Linking.openURL('https://apps.apple.com/account/subscriptions').catch(() => undefined);
-}
 
 type QuickSheetKind =
   'appearance' | 'theme' | 'themeMode' | 'accent' | 'platforms' | 'premium' | null;
@@ -376,7 +358,7 @@ export default function SettingsScreen() {
           key: 'manage',
           label: t('settingsUi.manageSubscription'),
           icon: 'card-outline',
-          onPress: () => void openManageSubscription(),
+          onPress: () => router.push('/(setting)/subscription'),
         },
       ];
     }
@@ -545,7 +527,7 @@ export default function SettingsScreen() {
             <Pressable
               onPress={() => {
                 hapticsBridge.tap();
-                if (isPro) void openManageSubscription();
+                if (isPro) router.push('/(setting)/subscription');
                 else setPaywallVisible(true);
               }}
               onLongPress={() => {

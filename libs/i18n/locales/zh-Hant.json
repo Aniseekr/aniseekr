@@ -2355,7 +2355,6 @@
     "light": "淺色",
     "livePreview": "即時預覽",
     "managePlatforms": "管理平台",
-    "manageSubscription": "管理訂閱",
     "manufacturerModel": "製造商 / 型號",
     "migrationComplete": "遷移完成",
     "migrationFailed": "遷移失敗",
@@ -2433,7 +2432,21 @@
     "offeringsUnavailable": "目前無法載入訂閱方案。",
     "retry": "重試",
     "proBadge": "Pro",
-    "proExport": "原圖畫質分享圖，可去浮水印"
+    "proExport": "原圖畫質分享圖，可去浮水印",
+    "screen": {
+      "title": "訂閱",
+      "status": "狀態",
+      "active": "使用中",
+      "inactive": "未訂閱",
+      "plan": "方案",
+      "renewsOn": "下次續訂",
+      "expiresOn": "到期日",
+      "validity": "有效期限",
+      "noExpiry": "永久有效",
+      "included": "包含權益",
+      "manageInStore": "在商店變更或取消",
+      "manageHint": "變更方案與取消訂閱由 App Store 或 Google Play 處理。"
+    }
   },
   "explorer": {
     "rally": {

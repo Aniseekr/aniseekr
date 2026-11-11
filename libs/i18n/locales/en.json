@@ -2331,7 +2331,7 @@
     "disconnectEverythingFromThisDeviceMessage": "This signs you out of every connected platform and erases every stored OAuth token from this device. To also delete data held by each platform, revoke access in their own account settings. To wipe local caches as well, delete the app.",
     "disconnectEverythingFromThisDeviceTitle": "Disconnect everything from this device?",
     "editProfileName": "Edit profile name",
-    "manageSubscription": "Manage your subscription",
+    "manageSubscription": "Manage subscription",
     "manageSubscriptionA11y": "Manage subscription",
     "premium": "Premium",
     "premiumOnly": "Premium only",
@@ -2355,7 +2355,6 @@
     "light": "Light",
     "livePreview": "Live Preview",
     "managePlatforms": "Manage platforms",
-    "manageSubscription": "Manage subscription",
     "manufacturerModel": "Manufacturer / Model",
     "migrationComplete": "Migration complete",
     "migrationFailed": "Migration failed",
@@ -2433,7 +2432,21 @@
     "offeringsUnavailable": "Subscription plans are currently unavailable.",
     "retry": "Try again",
     "proBadge": "Pro",
-    "proExport": "Full-res share images, no watermark"
+    "proExport": "Full-res share images, no watermark",
+    "screen": {
+      "title": "Subscription",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Not subscribed",
+      "plan": "Plan",
+      "renewsOn": "Renews on",
+      "expiresOn": "Ends on",
+      "validity": "Valid until",
+      "noExpiry": "No expiry",
+      "included": "Included",
+      "manageInStore": "Change or cancel in store",
+      "manageHint": "Plan changes and cancellation are handled by the App Store or Google Play."
+    }
   },
   "explorer": {
     "rally": {

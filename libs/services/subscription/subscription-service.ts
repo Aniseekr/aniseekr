@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 export type EntitlementId = 'pro';
 
@@ -65,6 +65,7 @@ interface PurchasesModule {
     logIn: (uid: string) => Promise<{ customerInfo: unknown }>;
     logOut: () => Promise<unknown>;
     setLogLevel: (level: string) => void;
+    showManageSubscriptions?: () => Promise<void>;
     setLogHandler?: (handler: (level: string, message: string) => void) => void;
   };
   LOG_LEVEL: { VERBOSE?: string; DEBUG: string; INFO: string; WARN: string; ERROR: string };
@@ -240,6 +241,27 @@ class SubscriptionService {
     this.cached = mapCustomerInfoToState(info);
     this.notify();
     return this.cached;
+  }
+
+  /**
+   * Opens the store's own subscription management (change plan / cancel).
+   * Prefers RevenueCat's native sheet; falls back to the store account URL.
+   */
+  async manageInStore(): Promise<void> {
+    const mod = await loadPurchases();
+    if (mod?.default.showManageSubscriptions) {
+      try {
+        await mod.default.showManageSubscriptions();
+        return;
+      } catch {
+        // fall through to the URL fallback
+      }
+    }
+    const url =
+      Platform.OS === 'android'
+        ? 'https://play.google.com/store/account/subscriptions'
+        : 'https://apps.apple.com/account/subscriptions';
+    await Linking.openURL(url).catch(() => undefined);
   }
 
   async identify(appUserID: string): Promise<SubscriptionState> {

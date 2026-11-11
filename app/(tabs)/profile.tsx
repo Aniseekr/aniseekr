@@ -194,7 +194,7 @@ export default function ProfileScreen() {
 
   const handleOpenPremium = () => {
     hapticsBridge.tap();
-    if (isPro) router.push('/(setting)/account');
+    if (isPro) router.push('/(setting)/subscription');
     else setPaywallVisible(true);
   };
 
