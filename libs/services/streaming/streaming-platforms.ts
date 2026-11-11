@@ -157,7 +157,7 @@ const platforms: StreamingPlatformSpec[] = [
   },
   {
     id: 'bahamut',
-    displayName: '動漫瘋',
+    displayName: '動畫瘋',
     color: '#F8C73B',
     icon: 'play-circle',
     domains: ['ani.gamer.com.tw', 'gamer.com.tw'],
@@ -173,10 +173,10 @@ const platforms: StreamingPlatformSpec[] = [
     ],
     buildSearch: (q) => `https://ani.gamer.com.tw/search.php?keyword=${encodeURIComponent(q)}`,
     regions: ['TW'],
-    description: '巴哈姆特動漫瘋 (Animation Crazy) — 台灣最大授權動畫平台。',
+    description: '巴哈姆特動畫瘋 (Animation Crazy) — 台灣最大授權動畫平台。',
     // Play Store app icon, pinned because clearbit doesn't index gamer.com.tw
     // and the corporate favicon is the Bahamut dragon rather than the dedicated
-    // 動漫瘋 mark. Falls through to favicon → monogram if this asset ever 404s.
+    // 動畫瘋 mark. Falls through to favicon → monogram if this asset ever 404s.
     iconUrl:
       'https://play-lh.googleusercontent.com/FNShJS-ArMjI28I4-CHlgWaA9HqKnj4DrW8-lXF2B_FH3U0KxP_djBnMuyK7Hxymxrq8=w240-h480-rw',
     logoDomain: 'gamer.com.tw',

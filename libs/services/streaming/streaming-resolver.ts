@@ -11,6 +11,7 @@
 
 import type { AnimeStreaming } from '../data-sources/anime-data-source';
 import type { StreamingPrefs } from '../user-prefs';
+import type { PlatformSite } from './bangumi-data';
 import {
   buildDeepLink,
   buildSearchUrl,
@@ -59,6 +60,8 @@ export interface WatchOption {
 interface ResolveInput {
   animeTitle: string | null | undefined;
   anilistStreaming: AnimeStreaming[];
+  /** Real per-platform pages from bangumi-data (e.g. 巴哈動畫瘋), keyed to this title. */
+  platformSites?: readonly PlatformSite[];
   prefs: StreamingPrefs;
 }
 
@@ -66,15 +69,31 @@ const UNKNOWN_FALLBACK_COLOR = '#3B82F6';
 const UNKNOWN_FALLBACK_ICON = 'play-circle';
 
 export function resolveWatchOptions(input: ResolveInput): WatchOption[] {
-  const { animeTitle, anilistStreaming, prefs } = input;
+  const { animeTitle, anilistStreaming, platformSites = [], prefs } = input;
   const enabledSet = new Set<StreamingPlatformId>(prefs.enabled);
   const usedKeys = new Set<string>();
   const officialByPlatform = new Map<StreamingPlatformId, WatchOption>();
   const officialUnknowns: WatchOption[] = [];
 
-  for (const entry of anilistStreaming) {
+  // AniList links come first (they point at the exact season page); the
+  // bangumi-data pages fill platforms AniList doesn't list — notably 巴哈.
+  // Their platform id is authoritative (木棉花 links are youtube.com URLs).
+  const bangumiDataEntries = platformSites.map((site) => ({
+    site: site.platform,
+    url: site.url,
+    spec: getStreamingPlatform(site.platform),
+  }));
+
+  const entries: (AnimeStreaming & { spec?: StreamingPlatformSpec | null })[] = [
+    ...anilistStreaming,
+    ...bangumiDataEntries,
+  ];
+  for (const entry of entries) {
     if (!entry || !entry.url) continue;
-    const spec = matchStreamingPlatformByUrl(entry.url) ?? matchStreamingPlatformBySite(entry.site);
+    const spec =
+      entry.spec ??
+      matchStreamingPlatformByUrl(entry.url) ??
+      matchStreamingPlatformBySite(entry.site);
 
     if (spec) {
       // Dedup: first URL wins for a given platform.

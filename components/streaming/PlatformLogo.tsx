@@ -6,8 +6,8 @@
  *
  *   0. iconUrl (optional)     — pinned square asset (e.g. Play Store / App
  *      Store icon) for platforms where favicon/clearbit don't carry the right
- *      mark. Used by 動漫瘋 (gamer.com.tw favicon is the Bahamut dragon, not
- *      the dedicated 動漫瘋 logo).
+ *      mark. Used by 動畫瘋 (gamer.com.tw favicon is the Bahamut dragon, not
+ *      the dedicated 動畫瘋 logo).
  *   1. Google S2 favicons     — cover fit, fills the disc, cropped to circle
  *      (covers 木棉花, ANIPLUS, and every other site since they all ship some
  *      favicon — quality may vary but the shape is always round.)

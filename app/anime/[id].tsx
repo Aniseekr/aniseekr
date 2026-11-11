@@ -55,6 +55,8 @@ import {
   type WatchOption,
 } from '../../libs/services/streaming/streaming-resolver';
 import { openWatchOption } from '../../libs/services/streaming/streaming-linker';
+import { getPlatformSites } from '../../libs/services/streaming/bangumi-data';
+import { useBangumiDataVersion } from '../../hooks/useBangumiData';
 import {
   animeNotificationService,
   useIsAnimeScheduled,
@@ -251,14 +253,18 @@ export default function AnimeDetailScreen() {
     };
   }, []);
 
+  const bangumiDataVersion = useBangumiDataVersion();
   const watchOptions: WatchOption[] = useMemo(
     () =>
       resolveWatchOptions({
         animeTitle: anime?.titleEnglish || anime?.title || '',
         anilistStreaming: streaming,
+        platformSites: getPlatformSites(detailAniListId),
         prefs: streamingPrefs,
       }),
-    [anime, streaming, streamingPrefs]
+    // bangumiDataVersion: re-resolve once the on-disk index finishes loading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [anime, streaming, streamingPrefs, detailAniListId, bangumiDataVersion]
   );
   const primaryOption = watchOptions[0] ?? null;
 
