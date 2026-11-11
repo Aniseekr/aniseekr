@@ -36,6 +36,12 @@ export interface Anime {
   nextAiringEpisode?: {
     airingAt: number;
     episode: number;
+    /**
+     * Set when `airingAt` was moved to the user's streaming platform slot
+     * (bangumi-data); `jpAiringAt` keeps AniList's original JP broadcast time.
+     */
+    platform?: string;
+    jpAiringAt?: number;
   };
 }
 

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View, type ViewInstance } from 'react-native';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollViewInstance,
+  type ViewInstance,
+} from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -9,6 +18,7 @@ import {
   ThemedIconButton,
   ThemedSurface,
   ThemedText,
+  readableTextOn,
 } from '../../components/themed';
 import { WeekStrip } from '../../components/bangumi/schedule/WeekStrip';
 import { ScheduleSegments } from '../../components/bangumi/schedule/ScheduleSegments';
@@ -28,12 +38,16 @@ import { useSeasonSchedule } from '../../hooks/useSeasonSchedule';
 import { useSchedulePreferences } from '../../hooks/useSchedulePreferences';
 import { useScheduleActions } from '../../hooks/useScheduleActions';
 import {
+  applyPlatformAiring,
   groupAnimeByWeekday,
   matchesTypeFilter,
   splitSpecialAnime,
 } from '../../libs/services/bangumi/schedule';
+import { getPlatformSites } from '../../libs/services/streaming/bangumi-data';
+import { useBangumiDataVersion, useWatchPlatformOrder } from '../../hooks/useBangumiData';
+import { WeekTimetable } from '../../components/bangumi/schedule/WeekTimetable';
+import { SeasonGrid, type SeasonSort } from '../../components/bangumi/schedule/SeasonGrid';
 import { getBroadcastSeason, getSeasonPhase } from '../../libs/utils/season-utils';
-import { SeasonRankRow } from '../../components/bangumi/schedule/SeasonRankRow';
 import { UpNextRail } from '../../components/bangumi/schedule/UpNextRail';
 import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
 import { bottomPad, Spacing, TabBar } from '../../constants/DesignSystem';
@@ -70,7 +84,14 @@ export default function BangumiScreen() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [deckAnime, setDeckAnime] = useState<Anime[] | null>(null);
   const [sharing, setSharing] = useState(false);
-  const [listMode, setListMode] = useState<'week' | 'rank'>('week');
+  const [listMode, setListMode] = useState<'week' | 'season'>('week');
+  const [seasonSort, setSeasonSort] = useState<SeasonSort | null>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  // Timetable geometry: list origin + each day's offset, for strip jump/follow.
+  const listY = useRef(0);
+  const stripHeight = useRef(0);
+  const dayY = useRef<Record<number, number>>({});
+  const jumpUntil = useRef(0);
   const menuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shareRef = useRef<ViewInstance>(null);
   const deckOpen = deckAnime !== null;
@@ -84,16 +105,25 @@ export default function BangumiScreen() {
     setPrefs,
   } = useSchedulePreferences();
   const schedule = useSeasonSchedule(selection.season, selection.year, adult);
+  const platformOrder = useWatchPlatformOrder();
+  const bangumiDataVersion = useBangumiDataVersion();
+  // Times on the user's watch platform (e.g. 巴哈), JP broadcast otherwise.
+  const allAnime = useMemo(
+    () => applyPlatformAiring(schedule.rawAnime, platformOrder, getPlatformSites),
+    // bangumiDataVersion: recompute once the platform index loads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [schedule.rawAnime, platformOrder, bangumiDataVersion]
+  );
   const actions = useScheduleActions(
     selection.season,
     selection.year,
     () => setSheet('notifications')
   );
   const seasonAnime = useMemo(
-    () => schedule.rawAnime.filter((anime) => matchesTypeFilter(anime, prefs.typeFilter)),
-    [schedule.rawAnime, prefs.typeFilter]
+    () => allAnime.filter((anime) => matchesTypeFilter(anime, prefs.typeFilter)),
+    [allAnime, prefs.typeFilter]
   );
-  const trackedCount = schedule.rawAnime.filter((anime) => trackedIds.has(anime.id)).length;
+  const trackedCount = allAnime.filter((anime) => trackedIds.has(anime.id)).length;
   const segmentPending =
     segmentChoice === null && !trackingReady && params.segment !== 'season' && !trackingError;
   const segment =
@@ -106,7 +136,6 @@ export default function BangumiScreen() {
   const grouped = groupAnimeByWeekday(
     prefs.typeFilter === 'all' && segment === 'season' ? regular : visibleAnime
   );
-  const dayAnime = grouped[day];
   // Finished seasons have no airing week left and upcoming ones rarely have
   // times yet, so both read as a ranking; only the current cour has a week.
   const phase = getSeasonPhase(selection);
@@ -123,12 +152,29 @@ export default function BangumiScreen() {
         : [],
     [phase, seasonAnime, trackedIds]
   );
-  const mode = phase === 'current' ? listMode : 'rank';
-  const ranked = useMemo(() => {
-    const metric = (anime: Anime) =>
-      (phase === 'past' ? anime.score : anime.anilistListCount) ?? null;
-    return [...visibleAnime].sort((a, b) => (metric(b) ?? -1) - (metric(a) ?? -1));
-  }, [visibleAnime, phase]);
+  const mode = phase === 'current' ? listMode : 'season';
+  const sort: SeasonSort = seasonSort ?? (phase === 'past' ? 'score' : 'popular');
+  const jumpToDay = (target: number) => {
+    setDay(target);
+    const y = dayY.current[target];
+    if (y == null) return;
+    jumpUntil.current = Date.now() + 600;
+    scrollRef.current?.scrollTo({ y: listY.current + y - stripHeight.current, animated: true });
+  };
+  // Follow the scroll with the strip highlight; setDay only on change.
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (mode !== 'week' || Date.now() < jumpUntil.current) return;
+    const y = e.nativeEvent.contentOffset.y + stripHeight.current + Spacing.sm - listY.current;
+    let current: number | null = null;
+    let best = -Infinity;
+    for (const [d, top] of Object.entries(dayY.current)) {
+      if (top <= y && top > best) {
+        best = top;
+        current = Number(d);
+      }
+    }
+    if (current != null && current !== day) setDay(current);
+  };
   const untriaged = seasonAnime.filter(
     (anime) => !trackedIds.has(anime.id) && !actions.skips.has(anime.id)
   );
@@ -220,26 +266,11 @@ export default function BangumiScreen() {
       />
     ));
 
-  const renderRanked = () => {
-    let rank = 0;
-    return ranked.map((anime) => {
-      const metric = phase === 'past' ? anime.score : anime.anilistListCount;
-      return (
-        <SeasonRankRow
-          key={anime.id}
-          anime={anime}
-          rank={metric ? ++rank : null}
-          phase={phase}
-          picked={trackedIds.has(anime.id)}
-          onTogglePick={(target, picked) => {
-            if (picked) void actions.handleUnpick(target, (a) => setSheet({ anime: a }));
-            else actions.handleWant(target);
-          }}
-          onLongPress={(target) => setSheet({ anime: target })}
-        />
-      );
-    });
+  const togglePick = (target: Anime, picked: boolean) => {
+    if (picked) void actions.handleUnpick(target, (a) => setSheet({ anime: a }));
+    else actions.handleWant(target);
   };
+  const isEmpty = visibleAnime.length === 0;
 
   return (
     <SafeAreaView
@@ -259,6 +290,10 @@ export default function BangumiScreen() {
         />
       ) : (
         <ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={64}
+          stickyHeaderIndices={[1]}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.content,
@@ -274,6 +309,7 @@ export default function BangumiScreen() {
               colors={[theme.accent]}
             />
           }>
+          <View style={styles.top}>
           <View style={styles.header}>
             <ThemedText variant="headlineLarge" weight="700" style={styles.grow}>
               {t('tabs.bangumi')}
@@ -287,23 +323,6 @@ export default function BangumiScreen() {
               }
               onPress={() => setSheet('season')}
             />
-            {phase === 'current' ? (
-              <ThemedIconButton
-                variant="ghost"
-                haptic="selection"
-                accessibilityLabel={t(
-                  listMode === 'week' ? 'tabs.schedule.mode.rank' : 'tabs.schedule.mode.week'
-                )}
-                onPress={() => setListMode((value) => (value === 'week' ? 'rank' : 'week'))}
-                icon={(color) => (
-                  <MaterialIcons
-                    name={listMode === 'week' ? 'leaderboard' : 'calendar-view-week'}
-                    size={22}
-                    color={color}
-                  />
-                )}
-              />
-            ) : null}
             <ThemedIconButton
               variant="ghost"
               accessibilityLabel={t('tabs.schedule.options')}
@@ -312,8 +331,38 @@ export default function BangumiScreen() {
             />
           </View>
           <UpNextRail anime={upNext} />
-          <View style={styles.section}>
-            {mode === 'week' ? <WeekStrip selected={day} onSelect={setDay} /> : null}
+          </View>
+          <View
+            style={[styles.sticky, { backgroundColor: theme.background.primary }]}
+            onLayout={(e) => {
+              stripHeight.current = e.nativeEvent.layout.height;
+            }}>
+            {phase === 'current' ? (
+              <View style={styles.modeRow}>
+                {(['week', 'season'] as const).map((value) => (
+                  <ThemedButton
+                    key={value}
+                    size="sm"
+                    haptic="selection"
+                    variant={listMode === value ? 'primary' : 'ghost'}
+                    label={t(value === 'week' ? 'tabs.schedule.modeWeek' : 'tabs.schedule.modeSeason')}
+                    icon={
+                      <MaterialIcons
+                        name={value === 'week' ? 'calendar-view-week' : 'grid-view'}
+                        size={16}
+                        color={listMode === value ? readableTextOn(theme.accent) : theme.text.primary}
+                      />
+                    }
+                    onPress={() => {
+                      if (value === listMode) return;
+                      setListMode(value);
+                      scrollRef.current?.scrollTo({ y: 0, animated: false });
+                    }}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {mode === 'week' ? <WeekStrip selected={day} onSelect={jumpToDay} /> : null}
             <ScheduleSegments
               selected={segment}
               onSelect={setSegmentChoice}
@@ -321,7 +370,11 @@ export default function BangumiScreen() {
               seasonCount={schedule.status !== 'loading' ? seasonAnime.length : null}
             />
           </View>
-          <View style={styles.section}>
+          <View
+            style={styles.section}
+            onLayout={(e) => {
+              listY.current = e.nativeEvent.layout.y;
+            }}>
             {schedule.status === 'error' || trackingError ? (
               <ThemedSurface padded style={styles.section}>
                 <ThemedText tone="secondary">
@@ -344,21 +397,33 @@ export default function BangumiScreen() {
             (schedule.status === 'loading' && schedule.rawAnime.length === 0) ||
             (!trackingReady && !trackingError && segment === 'tracking') ? (
               <Skeleton.ListRow count={5} avatarSize={56} avatarShape="square" />
-            ) : mode === 'rank' && ranked.length ? (
-              renderRanked()
-            ) : mode === 'week' && dayAnime.length ? (
-              renderRows(dayAnime)
+            ) : !isEmpty && mode === 'week' ? (
+              <WeekTimetable
+                grouped={grouped}
+                renderRows={renderRows}
+                emptyLabel={t('tabs.schedule.noAiring')}
+                onDayLayout={(d, y) => {
+                  dayY.current[d] = y;
+                }}
+              />
+            ) : !isEmpty ? (
+              <SeasonGrid
+                anime={visibleAnime}
+                sort={sort}
+                onSortChange={setSeasonSort}
+                typeFilter={prefs.typeFilter}
+                onTypeFilterChange={(typeFilter) => setPrefs({ ...prefs, typeFilter })}
+                pickedIds={trackedIds}
+                onTogglePick={togglePick}
+                onLongPress={(target) => setSheet({ anime: target })}
+              />
             ) : schedule.status === 'error' || trackingError ? null : (
               <View style={styles.section}>
                 <ThemedText tone="secondary">
                   {t(
-                    mode === 'rank'
-                      ? segment === 'tracking'
-                        ? 'tabs.schedule.rank.emptyPicks'
-                        : 'tabs.schedule.rank.empty'
-                      : segment === 'tracking'
-                        ? 'tabs.schedule.emptyTracking'
-                        : 'tabs.schedule.emptySeason'
+                    segment === 'tracking'
+                      ? 'tabs.schedule.rank.emptyPicks'
+                      : 'tabs.schedule.rank.empty'
                   )}
                 </ThemedText>
                 {segment === 'tracking' ? (
@@ -469,5 +534,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, gap: Spacing.lg },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   section: { gap: Spacing.sm },
+  top: { gap: Spacing.lg },
+  sticky: { gap: Spacing.sm, paddingVertical: Spacing.xs },
+  modeRow: { flexDirection: 'row', gap: Spacing.xxs },
   offscreen: { position: 'absolute', left: -10000, top: 0 },
 });

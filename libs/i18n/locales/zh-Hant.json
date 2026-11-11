@@ -1003,7 +1003,18 @@
         "minutes": "{count} 分鐘後",
         "hours": "{count} 小時後",
         "days": "{count} 天後"
-      }
+      },
+      "onPlatform": "{time} · {platform}",
+      "jpBroadcast": "日本首播 {time}",
+      "sort": {
+        "popular": "人氣",
+        "score": "評分",
+        "start": "開播日"
+      },
+      "modeSeason": "整季",
+      "modeWeek": "時間表",
+      "noAiring": "這天沒有播出。",
+      "later": "之後"
     }
   },
   "anime": {

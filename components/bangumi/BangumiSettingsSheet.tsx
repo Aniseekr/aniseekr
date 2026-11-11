@@ -22,6 +22,13 @@ export type BangumiViewMode = 'calendar' | 'list' | 'cards';
 export type BangumiBaseViewMode = 'calendar' | 'list';
 export type BangumiFilterMode = 'all' | 'tracking';
 export type BangumiTypeFilter = 'all' | 'tv' | 'movie' | 'ova' | 'special';
+export const TYPE_FILTER_LABELS = {
+  all: 'search.filter.all',
+  tv: 'search.filter.tv',
+  movie: 'bangumiTab.movie',
+  ova: 'tabs.schedule.ova',
+  special: 'bangumiTab.special',
+} as const satisfies Record<BangumiTypeFilter, string>;
 
 export interface BangumiPreferences {
   viewMode: BangumiViewMode;
@@ -77,13 +84,7 @@ export const BangumiSettingsSheet = memo(function BangumiSettingsSheet({
   };
   const update = <K extends keyof BangumiPreferences>(key: K, value: BangumiPreferences[K]) =>
     onChange({ ...preferences, [key]: value });
-  const filters = {
-    all: 'search.filter.all',
-    tv: 'search.filter.tv',
-    movie: 'bangumiTab.movie',
-    ova: 'tabs.schedule.ova',
-    special: 'bangumiTab.special',
-  } as const;
+  const filters = TYPE_FILTER_LABELS;
   return (
     <ThemedBottomSheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={styles.content}>

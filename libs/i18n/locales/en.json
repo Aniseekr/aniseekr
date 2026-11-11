@@ -1003,7 +1003,18 @@
         "minutes": "in {count} min",
         "hours": "in {count} h",
         "days": "in {count} d"
-      }
+      },
+      "onPlatform": "{time} on {platform}",
+      "jpBroadcast": "Japan TV: {time}",
+      "sort": {
+        "popular": "Popular",
+        "score": "Score",
+        "start": "Start date"
+      },
+      "modeSeason": "Whole season",
+      "modeWeek": "Timetable",
+      "noAiring": "Nothing airs this day.",
+      "later": "Later"
     }
   },
   "anime": {

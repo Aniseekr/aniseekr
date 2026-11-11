@@ -1,5 +1,8 @@
 import type { Anime } from '../../../components/rate/types';
 import type { BangumiTypeFilter } from '../../../components/bangumi/BangumiSettingsSheet';
+import { platformAiringAt, type PlatformSite } from '../streaming/bangumi-data';
+
+const WEEK_SEC = 7 * 24 * 60 * 60;
 
 /** Paged providers may repeat an item; retain its first position and value. */
 export function dedupeById<T extends { id: string }>(list: T[]): T[] {
@@ -70,4 +73,51 @@ export function matchesTypeFilter(anime: Anime, filter: BangumiTypeFilter): bool
     default:
       return true;
   }
+}
+
+/**
+ * Move each title's next airing to the first platform in `platformOrder`
+ * (user's primary, then enabled) that has a weekly slot for it, so the week
+ * grid, times and reminders match when the user can actually watch. Titles
+ * with no slot on those platforms keep AniList's JP broadcast time.
+ */
+export function applyPlatformAiring(
+  list: Anime[],
+  platformOrder: readonly string[],
+  sitesFor: (anilistId: string) => readonly PlatformSite[],
+  nowSec: number = Date.now() / 1000
+): Anime[] {
+  if (platformOrder.length === 0) return list;
+  return list.map((anime) => {
+    const next = anime.nextAiringEpisode;
+    if (!next) return anime;
+    const sites = sitesFor(anime.id);
+    for (const platform of platformOrder) {
+      const site = sites.find((s) => s.platform === platform);
+      if (!site) continue;
+      // A platform that lags JP (巴哈 a day or two later) may still owe the
+      // episode JP aired last week — that is its real next drop. Assumes the
+      // weekly JP cadence AniList itself reports via nextAiringEpisode.
+      const prevJp = next.airingAt - WEEK_SEC;
+      const prev = next.episode > 1 ? platformAiringAt(site.broadcast, prevJp) : null;
+      if (prev != null && prev > nowSec) {
+        return {
+          ...anime,
+          nextAiringEpisode: {
+            airingAt: prev,
+            episode: next.episode - 1,
+            platform,
+            jpAiringAt: prevJp,
+          },
+        };
+      }
+      const airingAt = platformAiringAt(site.broadcast, next.airingAt);
+      if (airingAt == null) continue;
+      return {
+        ...anime,
+        nextAiringEpisode: { ...next, airingAt, platform, jpAiringAt: next.airingAt },
+      };
+    }
+    return anime;
+  });
 }

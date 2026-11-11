@@ -3,6 +3,7 @@ import type { Anime } from '../../components/rate/types';
 import {
   dedupeById,
   groupAnimeByWeekday,
+  applyPlatformAiring,
   matchesTypeFilter,
   splitSpecialAnime,
 } from '../../libs/services/bangumi/schedule';
@@ -58,5 +59,24 @@ describe('season schedule regressions', () => {
     expect(matchesTypeFilter(weeklyOna, 'tv')).toBe(true);
     expect(matchesTypeFilter(oneShotOna, 'tv')).toBe(false);
     expect(matchesTypeFilter(oneShotOna, 'special')).toBe(true);
+  });
+
+  it('巴哈 still owes last week\'s JP episode: Chitose-kun ep 5 on Thu, not ep 6 a week later', () => {
+    const at = (iso: string) => Date.parse(iso) / 1000;
+    const chitose: Anime = { ...anime('198727', at('2026-11-17T14:00:00Z')), format: 'TV' };
+    chitose.nextAiringEpisode = { airingAt: at('2026-11-17T14:00:00Z'), episode: 6 };
+    const sites = () => [
+      { platform: 'bahamut' as const, url: 'x', broadcast: 'R/2026-10-14T16:30:00.000Z/P7D' },
+    ];
+    // Wed 11/11 14:00 TW: 巴哈 ep 5 drops Thu 11/12 00:30 TW.
+    const [before] = applyPlatformAiring([chitose], ['bahamut'], sites, at('2026-11-11T06:00:00Z'));
+    expect(before.nextAiringEpisode).toMatchObject({
+      episode: 5,
+      airingAt: at('2026-11-11T16:30:00Z'),
+      jpAiringAt: at('2026-11-10T14:00:00Z'),
+    });
+    // After that drop, the next 巴哈 episode is 6 on Thu 11/19.
+    const [after] = applyPlatformAiring([chitose], ['bahamut'], sites, at('2026-11-12T00:00:00Z'));
+    expect(after.nextAiringEpisode).toMatchObject({ episode: 6, airingAt: at('2026-11-18T16:30:00Z') });
   });
 });

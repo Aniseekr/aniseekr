@@ -14,17 +14,17 @@ export function WeekStrip({
 }) {
   const { theme } = useTheme();
   const t = useT();
-  const monday = new Date();
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  // Same seven days as the timetable below: today first.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.strip}>
       {Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(monday);
-        date.setDate(monday.getDate() + index);
+        const date = new Date(today);
+        date.setDate(today.getDate() + index);
         const day = date.getDay();
         const active = selected === day;
         const color = active ? readableTextOn(theme.accent) : theme.text.primary;

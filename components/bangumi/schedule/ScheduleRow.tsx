@@ -9,11 +9,17 @@ import { ProgressiveImage } from '../../common/ProgressiveImage';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { formatAiringClock } from '../../../libs/utils/airing';
+import { getStreamingPlatform } from '../../../libs/services/streaming/streaming-platforms';
 import { prefetchAnimeDetail, pushAnimeDetail } from '../../../libs/utils/navigate-to-anime';
 import { useIsAnimeScheduled } from '../../../modules/notifications/animeNotificationService';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { useToggleBounce } from '../../../libs/animations/use-toggle-bounce';
 import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
+
+function shortDate(airingAt: number): string {
+  const d = new Date(airingAt * 1000);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
 
 export const ScheduleRow = memo(function ScheduleRow({
   anime,
@@ -30,6 +36,10 @@ export const ScheduleRow = memo(function ScheduleRow({
   const scheduled = useIsAnimeScheduled(anime.id);
   const bellStyle = useToggleBounce(scheduled, true);
   const next = anime.nextAiringEpisode;
+  // Brand name — not translated (CLAUDE.md rule 11).
+  const platformName = next?.platform
+    ? (getStreamingPlatform(next.platform)?.displayName ?? null)
+    : null;
   let relativeDay = '';
   if (next) {
     const airDate = new Date(next.airingAt * 1000);
@@ -76,10 +86,22 @@ export const ScheduleRow = memo(function ScheduleRow({
             {next
               ? t('tabs.schedule.episodeTime', {
                   episode: next.episode,
-                  time: `${relativeDay} ${formatAiringClock(next.airingAt)}`,
+                  time: platformName
+                    ? t('tabs.schedule.onPlatform', {
+                        time: `${relativeDay} ${formatAiringClock(next.airingAt)}`,
+                        platform: platformName,
+                      })
+                    : `${relativeDay} ${formatAiringClock(next.airingAt)}`,
                 })
               : t('tabs.schedule.undated')}
           </ThemedText>
+          {next?.jpAiringAt != null && platformName ? (
+            <ThemedText variant="captionSmall" tone="tertiary">
+              {t('tabs.schedule.jpBroadcast', {
+                time: `${shortDate(next.jpAiringAt)} ${formatAiringClock(next.jpAiringAt)}`,
+              })}
+            </ThemedText>
+          ) : null}
         </View>
       </Pressable>
       <Animated.View style={bellStyle}>
