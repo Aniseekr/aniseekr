@@ -31,15 +31,28 @@ export function groupAnimeByWeekday(list: Anime[]): Record<number | 'unknown', A
   return groups;
 }
 
+/**
+ * ONA is a release channel, not a length: weekly web series (e.g. JoJo: Steel
+ * Ball Run on Netflix) belong in the week grid with TV. Only one-off ONAs
+ * (a single episode with no airing schedule) read as specials.
+ */
+function isSeriesOna(anime: Anime): boolean {
+  return anime.nextAiringEpisode != null || (anime.episodes ?? 0) > 1;
+}
+
+// Bangumi reports web releases as platform "WEB"; AniList / Shikimori say "ONA".
+const isOnaFormat = (format: string) => format === 'ONA' || format === 'WEB';
+
+function isSeries(anime: Anime): boolean {
+  const format = (anime.format ?? '').toUpperCase();
+  if (isOnaFormat(format)) return isSeriesOna(anime);
+  return !['MOVIE', 'OVA', 'SPECIAL'].includes(format);
+}
+
 export function splitSpecialAnime(list: Anime[]) {
   const special: Anime[] = [];
   const regular: Anime[] = [];
-  for (const anime of list) {
-    (['MOVIE', 'OVA', 'ONA', 'SPECIAL'].includes((anime.format ?? '').toUpperCase())
-      ? special
-      : regular
-    ).push(anime);
-  }
+  for (const anime of list) (isSeries(anime) ? regular : special).push(anime);
   return { special, regular };
 }
 
@@ -47,13 +60,13 @@ export function matchesTypeFilter(anime: Anime, filter: BangumiTypeFilter): bool
   const format = (anime.format ?? '').toUpperCase();
   switch (filter) {
     case 'tv':
-      return format === 'TV' || format === 'TV_SHORT';
+      return format === 'TV' || format === 'TV_SHORT' || (isOnaFormat(format) && isSeriesOna(anime));
     case 'movie':
       return format === 'MOVIE';
     case 'ova':
       return format === 'OVA';
     case 'special':
-      return format === 'SPECIAL' || format === 'ONA';
+      return format === 'SPECIAL' || (isOnaFormat(format) && !isSeriesOna(anime));
     default:
       return true;
   }

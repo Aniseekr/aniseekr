@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import type { Anime } from '../../components/rate/types';
-import { dedupeById, groupAnimeByWeekday } from '../../libs/services/bangumi/schedule';
+import {
+  dedupeById,
+  groupAnimeByWeekday,
+  matchesTypeFilter,
+  splitSpecialAnime,
+} from '../../libs/services/bangumi/schedule';
 import { getBroadcastSeason } from '../../libs/utils/season-utils';
 
 const anime = (id: string, airingAt?: number): Anime => ({
@@ -42,5 +47,16 @@ describe('season schedule regressions', () => {
     ] as const) {
       expect(getBroadcastSeason(new Date(2026, month, day))).toEqual({ season, year: 2026 });
     }
+  });
+
+  it('weekly ONA series (JoJo SBR on Netflix) stay in the week grid; one-off ONAs are specials', () => {
+    const weeklyOna: Anime = { ...anime('jojo', 1794556800), format: 'ONA', episodes: 11 };
+    const oneShotOna: Anime = { ...anime('one-shot'), format: 'ONA', episodes: 1 };
+    const { regular, special } = splitSpecialAnime([weeklyOna, oneShotOna]);
+    expect(regular).toEqual([weeklyOna]);
+    expect(special).toEqual([oneShotOna]);
+    expect(matchesTypeFilter(weeklyOna, 'tv')).toBe(true);
+    expect(matchesTypeFilter(oneShotOna, 'tv')).toBe(false);
+    expect(matchesTypeFilter(oneShotOna, 'special')).toBe(true);
   });
 });
