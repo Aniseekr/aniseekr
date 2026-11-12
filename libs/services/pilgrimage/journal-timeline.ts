@@ -1,7 +1,8 @@
 // The journal as a time flow: shots grouped into days, days into trips (a run
 // of days with at most one empty day between them). A trip is what "整理成巡禮
 // 相簿" turns into an album, chaptered by work. Labels come only from real
-// data: a day's places are the spots its shots were filed under.
+// data: a day's places are the spots its shots were filed under. A day also
+// exists when it only has a recorded walk or a stamp pressed on site.
 import type { PilgrimageAlbumEntry } from './album-captures';
 import { getPilgrimageAnimeTitles, getPilgrimageSpotTitles } from './pilgrimage-localization';
 import type { PilgrimageWork } from './types';
@@ -10,6 +11,26 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Days apart (start to start) that still count as the same trip. */
 const MAX_TRIP_GAP_DAYS = 2;
 
+/** A recorded walk, as the timeline needs it. */
+export interface TimelineWalk {
+  id: string;
+  startedAt: number;
+  meters: number;
+  movingMs: number;
+}
+
+/** A stamp pressed on site, as the timeline needs it. */
+export interface TimelineStamp {
+  spotId: string;
+  name: string;
+  at: number;
+}
+
+export interface TimelineExtras {
+  walks?: readonly TimelineWalk[];
+  stamps?: readonly TimelineStamp[];
+}
+
 export interface TimelineDay {
   /** Local midnight of the day (epoch ms). */
   start: number;
@@ -17,6 +38,10 @@ export interface TimelineDay {
   entries: PilgrimageAlbumEntry[];
   /** Spot names in the order they were visited that day. */
   places: string[];
+  /** Oldest first. */
+  walks: TimelineWalk[];
+  /** On-site stamps of the day. */
+  stamps: number;
 }
 
 export interface TimelineTrip {
@@ -28,6 +53,11 @@ export interface TimelineTrip {
   days: TimelineDay[];
   photos: number;
   works: number;
+  /** Totals of the walks recorded on these days; 0 when there are none. */
+  walkMeters: number;
+  walkMovingMs: number;
+  /** On-site stamps on these days. */
+  stamps: number;
 }
 
 export function startOfLocalDay(ms: number): number {
@@ -54,22 +84,43 @@ function spotPlaces(entries: readonly PilgrimageAlbumEntry[]): string[] {
   return names;
 }
 
-export function buildTimeline(entries: readonly PilgrimageAlbumEntry[]): TimelineTrip[] {
-  const byDay = new Map<number, PilgrimageAlbumEntry[]>();
+export function buildTimeline(
+  entries: readonly PilgrimageAlbumEntry[],
+  extras: TimelineExtras = {}
+): TimelineTrip[] {
+  const byDay = new Map<
+    number,
+    { entries: PilgrimageAlbumEntry[]; walks: TimelineWalk[]; stamps: TimelineStamp[] }
+  >();
+  const dayOf = (ms: number) => {
+    const start = startOfLocalDay(ms);
+    let day = byDay.get(start);
+    if (!day) {
+      day = { entries: [], walks: [], stamps: [] };
+      byDay.set(start, day);
+    }
+    return day;
+  };
   for (const entry of entries) {
-    if (entry.capture.legacy) continue;
-    const start = startOfLocalDay(entry.capture.capturedAt);
-    const day = byDay.get(start);
-    if (day) day.push(entry);
-    else byDay.set(start, [entry]);
+    if (!entry.capture.legacy) dayOf(entry.capture.capturedAt).entries.push(entry);
   }
+  for (const walk of extras.walks ?? []) dayOf(walk.startedAt).walks.push(walk);
+  for (const stamp of extras.stamps ?? []) dayOf(stamp.at).stamps.push(stamp);
   const days: TimelineDay[] = [...byDay.entries()]
     .sort(([a], [b]) => b - a)
-    .map(([start, dayEntries]) => ({
-      start,
-      entries: dayEntries.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt),
-      places: spotPlaces(dayEntries),
-    }));
+    .map(([start, day]) => {
+      const places = spotPlaces(day.entries);
+      for (const stamp of [...day.stamps].sort((a, b) => a.at - b.at)) {
+        if (stamp.name && !places.includes(stamp.name)) places.push(stamp.name);
+      }
+      return {
+        start,
+        entries: day.entries.sort((a, b) => b.capture.capturedAt - a.capture.capturedAt),
+        places,
+        walks: day.walks.sort((a, b) => a.startedAt - b.startedAt),
+        stamps: day.stamps.length,
+      };
+    });
 
   const trips: TimelineTrip[] = [];
   for (const day of days) {
@@ -85,6 +136,9 @@ export function buildTimeline(entries: readonly PilgrimageAlbumEntry[]): Timelin
         days: [day],
         photos: 0,
         works: 0,
+        walkMeters: 0,
+        walkMovingMs: 0,
+        stamps: 0,
       });
     }
   }
@@ -92,6 +146,13 @@ export function buildTimeline(entries: readonly PilgrimageAlbumEntry[]): Timelin
     const tripEntries = trip.days.flatMap((day) => day.entries);
     trip.photos = tripEntries.length;
     trip.works = new Set(tripEntries.flatMap((e) => (e.anime ? [e.anime.key] : []))).size;
+    for (const day of trip.days) {
+      trip.stamps += day.stamps;
+      for (const walk of day.walks) {
+        trip.walkMeters += walk.meters;
+        trip.walkMovingMs += walk.movingMs;
+      }
+    }
   }
   return trips;
 }

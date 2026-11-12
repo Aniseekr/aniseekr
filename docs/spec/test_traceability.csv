@@ -264,6 +264,11 @@ PILG-117,__tests__/unit/pilgrimage/stamps.test.ts,restoring a backup keeps every
 PILG-118,__tests__/unit/pilgrimage/stamps.test.ts,old check-ins get their spot snapshot from Atlas and unknown ones stay unknown,covered
 PILG-119,__tests__/unit/pilgrimage/stamps.test.ts,a photo proves a spot only with its own coordinates near the spot,covered
 PILG-120,__tests__/unit/pilgrimage/stamps.test.ts,the footprint groups stamps by prefecture and city and never guesses a place,covered
+PILG-121,__tests__/unit/pilgrimage/track.test.ts,keeps only trustworthy points and measures the walk without counting stops or pauses,covered
+PILG-122,__tests__/unit/pilgrimage/track.test.ts,finds the spots a recorded point is standing at,covered
+PILG-123,__tests__/unit/pilgrimage/track.test.ts,a day with only a walk or an on-site stamp still appears in the timeline,covered
+PILG-124,__tests__/unit/pilgrimage/track.test.ts,a trip route is the recorded walk else the stamps in visit order with no distance,covered
+PILG-125,__tests__/unit/pilgrimage/track.test.ts,a walk exports as GPX 1.1 with one segment per recorded stretch and escaped names,covered
 SHIK-006,__tests__/unit/providers/shikimori-data-source.test.ts,seasonal sends season as <season>_<year>,covered
 SIMKL-007,__tests__/unit/providers/simkl-data-source.test.ts,premieres simkl_id stable id poster suffix one page season filter,covered
 REPO-063,__tests__/unit/repositories/anime-repository.test.ts,non-AniList seasonal rows anchored to AniList; unmatched dropped,covered

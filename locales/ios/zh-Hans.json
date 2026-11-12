@@ -3,7 +3,7 @@
     "NSCameraUsageDescription": "AniSeekr 使用相机，让你对着动画参考图取景并拍下圣地场景。",
     "NSPhotoLibraryUsageDescription": "AniSeekr 会打开你的相册，让你导入巡礼照片或用来比对的参考图，或选择头像。",
     "NSPhotoLibraryAddUsageDescription": "AniSeekr 会把巡礼比对照片存到你的相册，方便之后分享。",
-    "NSLocationWhenInUseUsageDescription": "AniSeekr 使用你的位置来显示附近的动画圣地。",
+    "NSLocationWhenInUseUsageDescription": "AniSeekr 使用你的位置来显示附近的动画圣地，并在你记录巡礼路线时画出走过的路。",
     "NSFaceIDUsageDescription": "AniSeekr 会在显示成人内容前使用面容 ID 确认。"
   }
 }

@@ -74,6 +74,8 @@ export interface BackupPrefsV1 {
    * made before stamps existed. Restored by merging, never by overwriting.
    */
   pilgrimageStamps?: { visited: string | null; details: string | null };
+  /** Recorded pilgrimage walks (JSON array). Restore adds the ones this device lacks. */
+  pilgrimageTracks?: string | null;
 }
 
 export interface BackupLegacyMeta {
@@ -225,6 +227,7 @@ function normalizePrefs(raw: unknown): BackupPrefsV1 {
       details: asNullableString(raw.pilgrimageStamps.details),
     };
   }
+  if (typeof raw.pilgrimageTracks === 'string') prefs.pilgrimageTracks = raw.pilgrimageTracks;
   return prefs;
 }
 

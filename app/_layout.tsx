@@ -14,6 +14,8 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { SubscriptionProvider } from '../context/SubscriptionContext';
 import { I18nProvider } from '../libs/i18n';
 import { notificationService } from '../libs/services/notifications/notification-service';
+// Importing the recorder defines its background location task before the OS can wake the app.
+import { recoverRecording } from '../libs/services/pilgrimage/track/track-recorder';
 import { routeForNotificationResponse } from '../libs/services/streaming/streaming-notification-route';
 import { initClarity } from '../libs/services/analytics/clarity';
 import { authService } from '../libs/services/auth/auth-service';
@@ -88,6 +90,11 @@ export default function RootLayout() {
     // pathname intentionally omitted — we only stamp the first interactive frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rootNavigationReady]);
+
+  // A walk left recording when the app was quit: carry on if the OS still runs it, else close it.
+  useEffect(() => {
+    void recoverRecording();
+  }, []);
 
   useEffect(() => {
     // `dataSourceConfig` is already seeded synchronously from MMKV in its

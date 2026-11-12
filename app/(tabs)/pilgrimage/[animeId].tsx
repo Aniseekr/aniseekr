@@ -53,6 +53,7 @@ import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
 import { spotsOnsite } from '../../../libs/services/pilgrimage/stamp-grade';
 import { StampPressOverlay } from '../../../components/pilgrimage/rally/StampPressOverlay';
+import { TrackHeaderButton } from '../../../components/pilgrimage/track/TrackEntry';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
 import { bannerEnter, bannerExit } from '../../../libs/animations/presets';
@@ -756,6 +757,7 @@ export default function PilgrimageDetailScreen() {
                   ) : null}
                 </View>
                 <View style={styles.headerRightGroup}>
+                  <TrackHeaderButton tint={themeColor} />
                   <RoundHeaderButton
                     icon="images-outline"
                     onPress={handleOpenAlbum}

@@ -37,11 +37,12 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "AniSeekr uses your location to surface nearby anime pilgrimage spots.",
+          "locationWhenInUsePermission": "AniSeekr uses your location to surface nearby anime pilgrimage spots and, while you record a pilgrimage walk, to draw your route.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
-          "isIosBackgroundLocationEnabled": false,
-          "isAndroidBackgroundLocationEnabled": false
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [
@@ -330,7 +331,7 @@
         "LSApplicationQueriesSchemes": ["instagram", "instagram-stories", "line"],
         "UIViewControllerBasedStatusBarAppearance": false,
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
-        "NSLocationWhenInUseUsageDescription": "AniSeekr uses your location to surface nearby anime pilgrimage spots.",
+        "NSLocationWhenInUseUsageDescription": "AniSeekr uses your location to surface nearby anime pilgrimage spots and, while you record a pilgrimage walk, to draw your route.",
         "NSPhotoLibraryUsageDescription": "AniSeekr opens your photos so you can import a pilgrimage shot or a reference image to compare against, or pick a profile picture.",
         "NSPhotoLibraryAddUsageDescription": "AniSeekr saves pilgrimage comparison photos to your library so you can share them later.",
         "NSCameraUsageDescription": "AniSeekr uses the camera so you can frame and capture a pilgrimage scene next to its anime reference.",

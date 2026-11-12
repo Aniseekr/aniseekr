@@ -13,8 +13,9 @@ import {
   type BackupRatingRow,
   type BackupUserAnimeRow,
 } from './schema';
+import { exportTracksJson, restoreTracksJson } from '../pilgrimage/track/track-store';
 import { exportStampRecords, restoreStampRecords } from '../pilgrimage/visited-prefs';
-import { VISITED_SPOTS_STORAGE_KEY_V2 } from '../storage/keys';
+import { TRACK_INDEX_STORAGE_KEY, VISITED_SPOTS_STORAGE_KEY_V2 } from '../storage/keys';
 
 const USER_PREFS_KEY = 'aniseekr.user.prefs.v1';
 const COLLECTION_SORT_MODE_KEY = 'aniseekr.collection.sortMode.v1';
@@ -94,6 +95,7 @@ export class BackupService {
         collectionSortMode: sortMode,
         bangumi: bangumiPrefs,
         pilgrimageStamps: exportStampRecords(),
+        pilgrimageTracks: await exportTracksJson(),
       },
     };
   }
@@ -162,6 +164,10 @@ export class BackupService {
       // Merged with what is on the device, so stamps made since the backup survive.
       restoreStampRecords(env.prefs.pilgrimageStamps);
       summary.prefsRestored.push(VISITED_SPOTS_STORAGE_KEY_V2);
+    }
+    if (env.prefs.pilgrimageTracks) {
+      await restoreTracksJson(env.prefs.pilgrimageTracks);
+      summary.prefsRestored.push(TRACK_INDEX_STORAGE_KEY);
     }
 
     Logger.info('[BackupService] restoreSnapshot summary', summary);

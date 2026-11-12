@@ -257,6 +257,11 @@ PILG-117,Pilgrimage,deterministic,P0,Stamp backup merge,Restoring a backup keeps
 PILG-118,Pilgrimage,deterministic,P0,Stamp snapshot backfill,Check-ins without a spot snapshot get work name coordinates and municipality from Atlas and stay unknown when Atlas cannot answer,fallback,active
 PILG-119,Pilgrimage,deterministic,P0,Photo stamps,A photo stamps a spot on site only when the photo carries coordinates within the photo match radius of a non-legacy spot,mapping,active
 PILG-120,Pilgrimage,deterministic,P0,Footprint by prefecture,Stamps are grouped by prefecture and municipality from the spot snapshot and stamps without a known municipality are counted as unplaced,mapping,active
+PILG-121,Pilgrimage,deterministic,P0,Track point filter and totals,A recorded walk keeps only accurate moving points and its distance and moving time exclude stops pauses and GPS jumps,mapping,active
+PILG-122,Pilgrimage,deterministic,P0,Track spot lookup,A recorded point finds every Atlas spot within the stamp radius including across grid cell borders,mapping,active
+PILG-123,Pilgrimage,deterministic,P1,Timeline days from walks and stamps,A journal day exists when it has only a recorded walk or an on-site stamp and its trip carries the walk totals,mapping,active
+PILG-124,Pilgrimage,deterministic,P1,Trip route source,A trip route is the recorded walk when one exists and otherwise the on-site stamps in visit order with no distance,mapping,active
+PILG-125,Pilgrimage,deterministic,P1,GPX export,A saved walk exports as GPX 1.1 with one segment per recorded stretch UTC times and XML-escaped names,parsing,active
 SHIK-006,Shikimori,deterministic,P0,Seasonal season param format,fetchSeasonalAnime sends season=<season>_<year> (e.g. fall_2026); year-first is rejected with 422,mapping,active
 SIMKL-007,Simkl,deterministic,P0,Premieres as one season page,Premieres read ids.simkl_id as the stable id; bare poster keys get _m.jpg; page>1 is empty; rows outside the requested JST broadcast cour are dropped,mapping,active
 REPO-063,Repository,deterministic,P0,Seasonal rows anchored to AniList,Non-AniList seasonal rows resolve their AniList id via ID mapping then AniList idMal and take nextAiringEpisode; rows with no AniList entry are dropped,mapping,active

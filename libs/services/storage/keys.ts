@@ -20,6 +20,10 @@ export const VISITED_SPOTS_STORAGE_KEY = 'aniseekr.pilgrimage.visited.v1';
 export const VISITED_SPOTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.visited.v2';
 export const VISITED_SPOTS_LEGACY_KEY = 'aniseekr.pilgrimage.visited.legacy';
 export const STAMP_DETAILS_STORAGE_KEY = 'aniseekr.pilgrimage.stamp-details.v1';
+export const TRACK_ACTIVE_STORAGE_KEY = 'aniseekr.pilgrimage.track.active.v1';
+/** Prefix for the recording's point chunks (`…chunk.${n}`). */
+export const TRACK_ACTIVE_CHUNK_KEY_PREFIX = 'aniseekr.pilgrimage.track.active.chunk.';
+export const TRACK_INDEX_STORAGE_KEY = 'aniseekr.pilgrimage.track.index.v1';
 export const SPOT_INTENTS_STORAGE_KEY = 'aniseekr.pilgrimage.spot-intents.v1';
 export const SPOT_INTENTS_STORAGE_KEY_V2 = 'aniseekr.pilgrimage.spot-intents.v2';
 export const CAPTURES_STORAGE_KEY = '@aniseekr/pilgrimage/captures/v1';
