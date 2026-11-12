@@ -14,6 +14,7 @@ import { downloadTiles } from '../../../libs/services/pilgrimage/offline-pack/ti
 import {
   buildOfflineStyle,
   offlineFontDir,
+  rehomeOfflineStyle,
 } from '../../../libs/services/pilgrimage/offline-pack/offline-style';
 
 function spreadSpots(count: number) {
@@ -213,6 +214,14 @@ describe('offline trip pack map style', () => {
     expect(offlineFontDir('Noto Sans Regular')).not.toContain(' ');
     expect(style.glyphs).toBe('file:///docs/offline-packs/glyphs/{fontstack}/{range}.pbf');
     expect(style.sprite).toBe('file:///docs/offline-packs/sprites/ofm');
+  });
+
+  it('PILG-114 re-points a stored style when the app container has moved', () => {
+    const stored = buildOfflineStyle(online, 'file:///old-uuid/Documents/offline-packs');
+    const moved = rehomeOfflineStyle(stored, 'file:///new-uuid/Documents/offline-packs');
+    expect(moved).toEqual(buildOfflineStyle(online, 'file:///new-uuid/Documents/offline-packs'));
+    expect(rehomeOfflineStyle(stored, 'file:///old-uuid/Documents/offline-packs')).toBeNull();
+    expect(rehomeOfflineStyle(online, 'file:///new-uuid/Documents/offline-packs')).toBeNull();
   });
 });
 

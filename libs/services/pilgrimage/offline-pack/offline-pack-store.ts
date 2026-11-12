@@ -27,6 +27,7 @@ import {
   buildOfflineStyle,
   offlineFontDir,
   OFFLINE_GLYPH_RANGES,
+  rehomeOfflineStyle,
   spriteName,
   styleFonts,
   type StyleLike,
@@ -132,8 +133,17 @@ class OfflinePackStore {
     if (this.styleCache.has(mode)) return this.styleCache.get(mode) ?? null;
     let uri: string | null = null;
     try {
-      const file = new File(rootDir(), 'styles', `${mode}.json`);
-      if (file.exists) uri = file.uri;
+      const root = rootDir();
+      const file = new File(root, 'styles', `${mode}.json`);
+      if (file.exists) {
+        // The container path changes on iOS app updates; re-point the style once per launch.
+        const moved = rehomeOfflineStyle(
+          JSON.parse(file.textSync()) as StyleLike,
+          root.uri.replace(/\/$/, '')
+        );
+        if (moved) file.write(JSON.stringify(moved));
+        uri = file.uri;
+      }
     } catch (error) {
       Logger.warn('[OfflinePack] style lookup failed', error);
     }

@@ -63,6 +63,34 @@ export function spriteName(style: StyleLike): string | null {
   return name && /^[A-Za-z0-9_-]+$/.test(name) ? name : null;
 }
 
+const GLYPHS_SUFFIX = '/glyphs/{fontstack}/{range}.pbf';
+
+/**
+ * A stored offline style holds absolute file:// URLs, and iOS moves the app's
+ * data container on every app update, so a style written before an update
+ * points at a directory that no longer exists (blank offline map — seen on
+ * the simulator 2026-11-13). Returns the style re-pointed at `rootUri`, or
+ * null when it already points there or is not one of our offline styles.
+ */
+export function rehomeOfflineStyle(stored: StyleLike, rootUri: string): StyleLike | null {
+  if (typeof stored.glyphs !== 'string' || !stored.glyphs.endsWith(GLYPHS_SUFFIX)) return null;
+  const oldRoot = stored.glyphs.slice(0, -GLYPHS_SUFFIX.length);
+  if (oldRoot === rootUri) return null;
+  const move = (url: unknown) =>
+    typeof url === 'string' && url.startsWith(`${oldRoot}/`)
+      ? rootUri + url.slice(oldRoot.length)
+      : url;
+  const sources: StyleLike['sources'] = {};
+  for (const [id, source] of Object.entries(stored.sources)) {
+    sources[id] = Array.isArray(source.tiles)
+      ? { ...source, tiles: source.tiles.map(move) }
+      : source;
+  }
+  const style: StyleLike = { ...stored, sources, glyphs: move(stored.glyphs) as string };
+  if (typeof stored.sprite === 'string') style.sprite = move(stored.sprite) as string;
+  return style;
+}
+
 export function buildOfflineStyle(online: StyleLike, rootUri: string): StyleLike {
   const keptSources: StyleLike['sources'] = {};
   for (const [id, source] of Object.entries(online.sources)) {
