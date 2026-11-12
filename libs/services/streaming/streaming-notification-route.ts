@@ -37,6 +37,9 @@ export function routeForNotificationResponse(
     }
     case 'daily_digest':
       return '/';
+    case 'track_stamp':
+    case 'track_idle':
+      return '/pilgrimage/track';
     case 'achievement_unlock':
       return '/(setting)/achievements';
     case 'sync_complete':

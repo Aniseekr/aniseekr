@@ -323,8 +323,16 @@ function RecordingView({ active }: { active: ActiveTrack }) {
   const mapRef = useRef<MapSurfaceHandle>(null);
   const following = useRef(true);
   const [busy, setBusy] = useState(false);
-  // Re-read the stored points only when a batch added some.
-  const points = useMemo(() => readActivePoints(active), [active.id, active.count]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Each batch reads only the points it added; the earlier ones are already here.
+  const held = useRef<{ id: string; points: TrackPoint[] }>({ id: '', points: [] });
+  const points = useMemo(() => {
+    const prev = held.current.id === active.id ? held.current.points : [];
+    const next =
+      active.count > prev.length ? [...prev, ...readActivePoints(active, prev.length)] : prev;
+    held.current = { id: active.id, points: next };
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active.id, active.count]);
   const routes = useRouteLines(points, theme.accent);
   const markers = useMemo(
     () => stampMarkers(active.stamped, theme.accent),

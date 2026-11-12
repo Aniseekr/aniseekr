@@ -145,13 +145,14 @@ export function appendActivePoints(
   return { ...active, count, meters, movingMs, last, startNext: false };
 }
 
-export function readActivePoints(active: ActiveTrack): TrackPoint[] {
+/** Kept points from index `from` on; a screen that already holds the earlier ones passes its count. */
+export function readActivePoints(active: ActiveTrack, from = 0): TrackPoint[] {
   const points: TrackPoint[] = [];
   const chunks = Math.ceil(active.count / CHUNK_SIZE);
-  for (let i = 0; i < chunks; i += 1) {
-    for (const packed of parse<PackedPoint[]>(kvGet(chunkKey(i))) ?? []) {
-      points.push(unpackPoint(packed));
-    }
+  for (let i = Math.floor(from / CHUNK_SIZE); i < chunks; i += 1) {
+    const chunk = parse<PackedPoint[]>(kvGet(chunkKey(i))) ?? [];
+    const skip = Math.max(0, from - i * CHUNK_SIZE);
+    for (let j = skip; j < chunk.length; j += 1) points.push(unpackPoint(chunk[j] as PackedPoint));
   }
   return points;
 }

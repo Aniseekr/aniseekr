@@ -78,7 +78,12 @@ async function loadSpotRows(): Promise<AtlasSpotLiteRow[] | null> {
 function spotGrid(): Promise<SpotGrid | null> {
   gridPromise ??= loadSpotRows()
     .then((rows) => (rows ? buildSpotGrid(rows) : null))
-    .catch(() => null);
+    .catch(() => null)
+    .then((grid) => {
+      // A failed load is not remembered: the next batch tries again (signal may be back).
+      if (!grid) gridPromise = null;
+      return grid;
+    });
   return gridPromise;
 }
 
@@ -248,7 +253,7 @@ async function ingest(locations: readonly RawLocation[]): Promise<void> {
     void scheduleIdleReminder(Date.now());
   }
   saveActiveTrack(active);
-  if (Date.now() - active.startedAt >= TRACK_MAX_DURATION_MS) await finishRecording();
+  if (Date.now() - active.startedAt >= TRACK_MAX_DURATION_MS) await stopAndSave();
 }
 
 // One batch at a time: batches read and rewrite the same records.
@@ -354,6 +359,13 @@ export async function resumeRecording(): Promise<boolean> {
 
 /** Stops and saves. Null when the walk never got a line (fewer than two points). */
 export async function finishRecording(): Promise<SavedTrack | null> {
+  await Location.stopLocationUpdatesAsync(TRACK_TASK).catch(() => undefined);
+  // Let a batch that is mid-ingest finish first, or it would write the recording back.
+  await queue;
+  return stopAndSave();
+}
+
+async function stopAndSave(): Promise<SavedTrack | null> {
   const active = loadActiveTrackSync();
   if (!active) return null;
   await Location.stopLocationUpdatesAsync(TRACK_TASK).catch(() => undefined);

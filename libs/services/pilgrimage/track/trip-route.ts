@@ -2,6 +2,7 @@
 // there are any, otherwise the on-site stamps joined in the order they were
 // pressed. The second kind is a visit order, not a path — it has no distance.
 import type { Stamp } from '../stamp-details';
+import { distanceMeters } from '../stamp-grade';
 import { simplifyTrack, trackSegments, unpackPoint } from './track-math';
 import type { SavedTrack } from './track-store';
 
@@ -24,6 +25,8 @@ export interface TripRoute {
 }
 
 const SHARE_TOLERANCE_METERS = 8;
+/** A stamp this close to a recorded point belongs on the walk's drawing. */
+const ROUTE_STOP_RADIUS_METERS = 150;
 
 export function buildTripRoute(
   tracks: readonly SavedTrack[],
@@ -50,8 +53,9 @@ export function buildTripRoute(
     .filter((track) => track.startedAt >= from && track.startedAt <= to)
     .sort((a, b) => a.startedAt - b.startedAt);
   if (walked.length > 0) {
-    const lines = walked.flatMap((track) =>
-      trackSegments(simplifyTrack(track.points.map(unpackPoint), SHARE_TOLERANCE_METERS))
+    const walkedPoints = walked.map((track) => track.points.map(unpackPoint));
+    const lines = walkedPoints.flatMap((points) =>
+      trackSegments(simplifyTrack(points, SHARE_TOLERANCE_METERS))
         .filter((segment) => segment.length >= 2)
         .map((segment) => segment.map(({ lat, lon }) => ({ lat, lon })))
     );
@@ -59,7 +63,18 @@ export function buildTripRoute(
       return {
         kind: 'track',
         lines,
-        stops,
+        // Only the stamps on the walk: one pressed across town would shrink the drawing.
+        stops: stops.filter((stop) =>
+          walkedPoints.some((points) =>
+            points.some(
+              (p) =>
+                distanceMeters(
+                  { latitude: p.lat, longitude: p.lon },
+                  { latitude: stop.lat, longitude: stop.lon }
+                ) <= ROUTE_STOP_RADIUS_METERS
+            )
+          )
+        ),
         meters: walked.reduce((sum, track) => sum + track.meters, 0),
         movingMs: walked.reduce((sum, track) => sum + track.movingMs, 0),
         trackIds: walked.map((track) => track.id),

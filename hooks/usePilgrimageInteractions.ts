@@ -33,6 +33,15 @@ export interface StampEvent {
   upgraded: boolean;
 }
 
+/** A stamp pressed without a new position check needs a fix this recent. */
+const INSTANT_FIX_MAX_AGE_MS = 60_000;
+
+/** The session's last fix when it is fresh enough to stamp on; otherwise a new one is asked for. */
+function recentFix(): StampFix | null {
+  const fix = locationService.getLastFix();
+  return fix && Date.now() - fix.at <= INSTANT_FIX_MAX_AGE_MS ? fix : null;
+}
+
 export function stampMetaOf(spot: PilgrimageSpot): StampMeta {
   const meta: StampMeta = { workKey: spot.workKey, name: spot.name };
   if (spot.muniCd) meta.muniCd = spot.muniCd;
@@ -133,8 +142,15 @@ export function usePilgrimageInteractions(
         const onsiteAt = loadStampDetailsSync()[spot.id]?.onsiteAt;
         if (onsiteAt === undefined) {
           // Standing at a spot noted earlier by hand: the tap proves it instead of removing it.
-          const here = onsiteGroup(spot, locationService.getLastFix(), Date.now());
-          return here ? stampSpots(here, true, true) : checkOut();
+          const here = onsiteGroup(spot, recentFix(), Date.now());
+          if (here) return stampSpots(here, true, true);
+          // An older fix says "here": confirm with a new one instead of removing the note.
+          if (!onsiteGroup(spot, locationService.getLastFix(), Date.now())) return checkOut();
+          void locationService.getFreshFix().then((fix) => {
+            const fresh = onsiteGroup(spot, fix, Date.now());
+            if (fresh) stampSpots(fresh, true, true);
+          });
+          return;
         }
         // An on-site stamp cannot be re-earned from the sofa — confirm first.
         hapticsBridge.warning();
@@ -148,7 +164,7 @@ export function usePilgrimageInteractions(
         );
         return;
       }
-      const group = onsiteGroup(spot, locationService.getLastFix(), Date.now());
+      const group = onsiteGroup(spot, recentFix(), Date.now());
       if (group) return stampSpots(group, true);
       stampSpots([spot], false);
       // The cached fix may just be stale: ask once (never prompts) and upgrade.
@@ -165,9 +181,13 @@ export function usePilgrimageInteractions(
   const checkInHere = useCallback(
     (spot: PilgrimageSpot) => {
       const wasVisited = loadVisitedSpotsSync()[spot.id] === true;
-      const group = onsiteGroup(spot, locationService.getLastFix(), Date.now());
-      if (group) stampSpots(group, true, wasVisited);
-      else if (!wasVisited) stampSpots([spot], false);
+      const group = onsiteGroup(spot, recentFix(), Date.now());
+      if (group) return stampSpots(group, true, wasVisited);
+      if (!wasVisited) stampSpots([spot], false);
+      void locationService.getFreshFix().then((fix) => {
+        const fresh = onsiteGroup(spot, fix, Date.now());
+        if (fresh) stampSpots(fresh, true, true);
+      });
     },
     [onsiteGroup, stampSpots]
   );

@@ -69,12 +69,15 @@ function JournalTimelineImpl({
                   .join(' · ')}
               </ThemedText>
             </View>
-            <ThemedButton
-              size="sm"
-              variant="secondary"
-              label={t('pilgrimage.album.makeAlbum')}
-              onPress={() => onMakeAlbum(trip)}
-            />
+            {/* An album needs photos or a route (a walk, or two stamps to join). */}
+            {trip.photos > 0 || trip.walkMeters > 0 || trip.stamps >= 2 ? (
+              <ThemedButton
+                size="sm"
+                variant="secondary"
+                label={t('pilgrimage.album.makeAlbum')}
+                onPress={() => onMakeAlbum(trip)}
+              />
+            ) : null}
           </View>
           {trip.days.map((day) => (
             <DaySection

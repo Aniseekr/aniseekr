@@ -133,7 +133,8 @@ describe('pilgrimage track recording', () => {
     const walked = buildTripRoute([savedWalk(from + 1000)], stamps, from, to);
     expect(walked).toMatchObject({ kind: 'track', meters: 22, movingMs: 20_000, trackIds: ['w1'] });
     expect(walked?.lines.length).toBe(2); // the pause splits the line
-    expect(walked?.stops.map((s) => s.name)).toEqual(['early', 'late']);
+    // Only the stamp on the walk is drawn; 'late' was pressed a kilometre away.
+    expect(walked?.stops.map((s) => s.name)).toEqual(['early']);
 
     const ordered = buildTripRoute([savedWalk(from - 86_400_000)], stamps, from, to);
     expect(ordered).toMatchObject({ kind: 'order', meters: null, movingMs: null, trackIds: [] });
