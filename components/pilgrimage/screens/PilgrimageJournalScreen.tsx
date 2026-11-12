@@ -31,6 +31,8 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildJournalPreviewParams } from '../../../libs/services/pilgrimage/preview-capture';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
+import { useStamps } from '../../../hooks/useStamps';
+import { useTrackIndex } from '../../../hooks/useTrackRecording';
 import { FootprintMap } from '../../../components/pilgrimage/journal/FootprintMap';
 import { StampBookSection } from '../../../components/pilgrimage/journal/StampBookSection';
 import { JournalTimeline } from '../../../components/pilgrimage/journal/JournalTimeline';
@@ -74,7 +76,20 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
   const [selectedAnimeId, setSelectedAnimeId] = useState<string | null>(animeIdParam ?? null);
   const [segment, setSegment] = useState<JournalSegment>('timeline');
   const { entries, folders, stats, deleteEntry, reload } = usePilgrimageJournalData();
-  const trips = useMemo(() => buildTimeline(entries), [entries]);
+  const walks = useTrackIndex();
+  const stamps = useStamps();
+  const trips = useMemo(
+    () =>
+      buildTimeline(entries, {
+        walks,
+        stamps: stamps.flatMap((stamp) =>
+          stamp.onsiteAt === null
+            ? []
+            : [{ spotId: stamp.spotId, name: stamp.meta?.name ?? '', at: stamp.onsiteAt }]
+        ),
+      }),
+    [entries, walks, stamps]
+  );
   const [importSummary, setImportSummary] = useState<PhotoImportSummary | null>(null);
   // A work matched by an import loads in the background; keep its folder open
   // while it does instead of bouncing back to the journal root.
@@ -135,6 +150,14 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
         pathname: '/pilgrimage/journey',
         params: { from: String(trip.from), to: String(trip.to) },
       });
+    },
+    [router]
+  );
+
+  const openWalk = useCallback(
+    (id: string) => {
+      hapticsBridge.tap();
+      router.push({ pathname: '/pilgrimage/track', params: { id } });
     },
     [router]
   );
@@ -271,14 +294,15 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
                 <StampBookSection onBrowseRallies={() => router.push('/pilgrimage/news')} />
               ) : segment === 'map' ? (
                 <FootprintMap />
-              ) : folders.length && segment === 'timeline' ? (
+              ) : segment === 'timeline' && trips.length ? (
                 <JournalTimeline
                   trips={trips}
                   onOpenEntry={openEntry}
                   onDeleteEntry={deleteEntry}
                   onMakeAlbum={makeAlbum}
+                  onOpenWalk={openWalk}
                 />
-              ) : folders.length ? (
+              ) : segment === 'works' && folders.length ? (
                 <View style={styles.folderGrid}>
                   {folders.map((folder) => (
                     <FolderCard

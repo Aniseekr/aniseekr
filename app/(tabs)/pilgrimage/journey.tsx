@@ -35,6 +35,7 @@ import { SpotImage } from '../../../components/pilgrimage/SpotImage';
 import { formatJournalRange } from '../../../components/pilgrimage/journal/journal-dates';
 import { BrandMark } from '../../../components/pilgrimage/BrandMark';
 import { ProOptionChips } from '../../../components/pilgrimage/ProOptionChips';
+import { RouteCard, useTripRoute } from '../../../components/pilgrimage/track/RouteCard';
 import { PaywallSheet } from '../../../components/subscription/PaywallSheet';
 import { useSubscription } from '../../../context/SubscriptionContext';
 import {
@@ -88,6 +89,8 @@ export default function PilgrimageJourneyScreen() {
     () => (from !== null && to !== null ? buildTripAlbum(entries, from, to) : null),
     [entries, from, to]
   );
+  const route = useTripRoute(from, to);
+  const firstTrackId = route?.trackIds[0];
   const albumRef = useRef<ViewInstance>(null);
   const [sharing, setSharing] = useState(false);
   const { isPro } = useSubscription();
@@ -168,6 +171,8 @@ export default function PilgrimageJourneyScreen() {
   }, [sharing, preparingHighRes, quality, t]);
 
   const hasPhotos = album !== null && album.photos > 0;
+  // A trip with a route but no photos is still an album: the walk itself.
+  const hasAlbum = album !== null && (album.photos > 0 || route !== null);
 
   return (
     <View style={styles.root}>
@@ -187,24 +192,36 @@ export default function PilgrimageJourneyScreen() {
           style={styles.scrollView}
           contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
           showsVerticalScrollIndicator={false}>
-          {hasPhotos && from !== null && to !== null ? (
-            <View
-              ref={albumRef}
-              collapsable={false}
-              onLayout={onAlbumLayout}
-              style={styles.album}>
+          {hasAlbum && album && from !== null && to !== null ? (
+            <View ref={albumRef} collapsable={false} onLayout={onAlbumLayout} style={styles.album}>
               <View style={styles.cover}>
                 <ThemedText variant="headlineLarge" weight="700">
                   {formatJournalRange(from, to, t)}
                 </ThemedText>
-                <ThemedText variant="bodySmall" tone="secondary">
-                  {t('pilgrimage.journey.summary', {
-                    works: album.works,
-                    spots: album.spots,
-                    photos: album.photos,
-                  })}
-                </ThemedText>
+                {hasPhotos ? (
+                  <ThemedText variant="bodySmall" tone="secondary">
+                    {t('pilgrimage.journey.summary', {
+                      works: album.works,
+                      spots: album.spots,
+                      photos: album.photos,
+                    })}
+                  </ThemedText>
+                ) : null}
               </View>
+              {route ? (
+                <RouteCard
+                  route={route}
+                  onPress={
+                    firstTrackId
+                      ? () =>
+                          router.push({
+                            pathname: '/pilgrimage/track',
+                            params: { id: firstTrackId },
+                          })
+                      : undefined
+                  }
+                />
+              ) : null}
               {album.chapters.map((chapter) => (
                 <Chapter
                   key={chapter.work?.key ?? 'casual'}
@@ -235,7 +252,7 @@ export default function PilgrimageJourneyScreen() {
             </View>
           )}
         </ScrollView>
-        {hasPhotos ? (
+        {hasAlbum ? (
           <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}>
             <View style={styles.option}>
               <ThemedText variant="captionSmall" tone="secondary" weight="600">

@@ -1,15 +1,19 @@
-// 時間流: the journal's shots by trip and day, newest first. Each trip header
-// turns that run of days into a pilgrimage album in one tap.
+// 時間流: the journal by trip and day, newest first — photos, recorded walks
+// and on-site stamps. Each trip header turns that run of days into a
+// pilgrimage album in one tap.
 import { memo, useMemo } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme, type ThemePalette } from '../../../context/ThemeContext';
 import { ON_DARK, ThemedButton, ThemedText } from '../../themed';
-import { Radius, Spacing } from '../../../constants/DesignSystem';
+import { Radius, Size, Spacing } from '../../../constants/DesignSystem';
 import { useT } from '../../../libs/i18n';
 import type { PilgrimageAlbumEntry } from '../../../libs/services/pilgrimage/album-captures';
 import { getPilgrimageAnimeTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { TimelineDay, TimelineTrip } from '../../../libs/services/pilgrimage/journal-timeline';
+import { formatTrackDuration } from '../../../libs/services/pilgrimage/track/track-math';
+import { formatDistanceKm } from '../detail/_helpers';
 import { SpotImage } from '../SpotImage';
 import { formatJournalDay, formatJournalRange } from './journal-dates';
 
@@ -21,13 +25,18 @@ interface JournalTimelineProps {
   onOpenEntry: (entry: PilgrimageAlbumEntry) => void;
   onDeleteEntry: (entry: PilgrimageAlbumEntry) => void;
   onMakeAlbum: (trip: TimelineTrip) => void;
+  onOpenWalk: (id: string) => void;
 }
+
+const walkLabel = (meters: number, movingMs: number) =>
+  `${formatDistanceKm(meters / 1000)} · ${formatTrackDuration(movingMs)}`;
 
 function JournalTimelineImpl({
   trips,
   onOpenEntry,
   onDeleteEntry,
   onMakeAlbum,
+  onOpenWalk,
 }: JournalTimelineProps) {
   const t = useT();
   const { theme } = useTheme();
@@ -42,9 +51,22 @@ function JournalTimelineImpl({
                 {formatJournalRange(trip.from, trip.to, t)}
               </ThemedText>
               <ThemedText variant="captionSmall" tone="secondary" numberOfLines={1}>
-                {trip.works > 0
-                  ? t('pilgrimage.album.tripSummary', { photos: trip.photos, works: trip.works })
-                  : t('pilgrimage.album.tripSummaryNoWorks', { photos: trip.photos })}
+                {[
+                  trip.photos === 0
+                    ? null
+                    : trip.works > 0
+                      ? t('pilgrimage.album.tripSummary', {
+                          photos: trip.photos,
+                          works: trip.works,
+                        })
+                      : t('pilgrimage.album.tripSummaryNoWorks', { photos: trip.photos }),
+                  trip.walkMeters > 0 ? walkLabel(trip.walkMeters, trip.walkMovingMs) : null,
+                  trip.stamps > 0
+                    ? t('pilgrimage.stamps.onsiteCount', { count: trip.stamps })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </ThemedText>
             </View>
             <ThemedButton
@@ -62,6 +84,7 @@ function JournalTimelineImpl({
               styles={styles}
               onOpenEntry={onOpenEntry}
               onDeleteEntry={onDeleteEntry}
+              onOpenWalk={onOpenWalk}
             />
           ))}
         </View>
@@ -78,6 +101,7 @@ function DaySection({
   styles,
   onOpenEntry,
   onDeleteEntry,
+  onOpenWalk,
 }: {
   day: TimelineDay;
   /** A one-day trip already shows its date in the trip header. */
@@ -85,8 +109,10 @@ function DaySection({
   styles: ReturnType<typeof makeStyles>;
   onOpenEntry: (entry: PilgrimageAlbumEntry) => void;
   onDeleteEntry: (entry: PilgrimageAlbumEntry) => void;
+  onOpenWalk: (id: string) => void;
 }) {
   const t = useT();
+  const { theme } = useTheme();
   const places = day.places.slice(0, MAX_PLACES).join(' · ');
   const more = day.places.length - MAX_PLACES;
   return (
@@ -109,17 +135,38 @@ function DaySection({
           ) : null}
         </View>
       ) : null}
-      <View style={styles.grid}>
-        {day.entries.map((entry) => (
-          <Thumb
-            key={`${entry.capture.spotId}:${entry.capture.uri}`}
-            entry={entry}
-            styles={styles}
-            onPress={() => onOpenEntry(entry)}
-            onLongPress={() => onDeleteEntry(entry)}
-          />
-        ))}
-      </View>
+      {day.walks.map((walk) => {
+        const started = new Date(walk.startedAt);
+        const clock = `${String(started.getHours()).padStart(2, '0')}:${String(started.getMinutes()).padStart(2, '0')}`;
+        const label = `${clock} · ${walkLabel(walk.meters, walk.movingMs)}`;
+        return (
+          <Pressable
+            key={walk.id}
+            onPress={() => onOpenWalk(walk.id)}
+            accessibilityRole="button"
+            accessibilityLabel={t('pilgrimage.track.walkA11y', { summary: label })}
+            style={({ pressed }) => [styles.walk, { opacity: pressed ? 0.6 : 1 }]}>
+            <Ionicons name="walk" size={18} color={theme.accent} />
+            <ThemedText variant="bodySmall" weight="700" style={styles.walkLabel}>
+              {label}
+            </ThemedText>
+            <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
+          </Pressable>
+        );
+      })}
+      {day.entries.length > 0 ? (
+        <View style={styles.grid}>
+          {day.entries.map((entry) => (
+            <Thumb
+              key={`${entry.capture.spotId}:${entry.capture.uri}`}
+              entry={entry}
+              styles={styles}
+              onPress={() => onOpenEntry(entry)}
+              onLongPress={() => onDeleteEntry(entry)}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -167,6 +214,18 @@ function makeStyles(theme: ThemePalette) {
     day: { gap: Spacing.xs },
     dayHeader: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm },
     places: { flex: 1 },
+    walk: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      minHeight: Size.minTouchTarget,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+      borderColor: theme.glassBorder,
+      backgroundColor: theme.background.secondary,
+    },
+    walkLabel: { flex: 1, fontVariant: ['tabular-nums'] },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
     thumb: {
       // 3 × 32.6% leaves room for the two 2pt gaps on any phone width.
