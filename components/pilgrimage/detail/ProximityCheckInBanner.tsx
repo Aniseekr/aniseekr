@@ -19,6 +19,8 @@ const ENTER_MS = 220;
 export interface ProximityCheckInBannerProps {
   spotName: string;
   distanceMeters: number;
+  /** Unstamped scenes of this work at this place; the button stamps them all. */
+  count?: number;
   theme: ThemePalette;
   t: ReturnType<typeof useT>;
   onCheckIn: () => void;
@@ -28,6 +30,7 @@ export interface ProximityCheckInBannerProps {
 export function ProximityCheckInBanner({
   spotName,
   distanceMeters,
+  count = 1,
   theme,
   t,
   onCheckIn,
@@ -61,10 +64,11 @@ export function ProximityCheckInBanner({
           {distanceLabel ? `${spotName} · ${distanceLabel}` : spotName}
         </ThemedText>
         <ThemedButton
-          label={t('pilgrimageUi.checkIn')}
+          label={
+            count > 1 ? t('pilgrimage.stamps.stampHere', { count }) : t('pilgrimageUi.checkIn')
+          }
           size="sm"
           onPress={onCheckIn}
-          accessibilityLabel={t('pilgrimageUi.checkIn')}
         />
         <Pressable
           onPress={onDismiss}

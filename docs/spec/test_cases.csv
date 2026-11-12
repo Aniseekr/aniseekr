@@ -251,6 +251,10 @@ PILG-111,Pilgrimage,deterministic,P0,Offline pack map style,Offline style refere
 PILG-112,Pilgrimage,deterministic,P0,Offline pack read fallback,When Atlas network and cache fail a stored pack answers with an offline-copy date; live data is never labelled offline,error-handling,active
 PILG-113,Pilgrimage,deterministic,P0,No pack and no network,Without a stored pack an unreachable Atlas stays an error,error-handling,active
 PILG-114,Pilgrimage,deterministic,P0,Offline style after the app container moves,A stored offline style is re-pointed at the current pack directory when the app data path has changed,mapping,active
+PILG-115,Pilgrimage,deterministic,P0,On-site stamp rule,A check-in is on-site only with a recent accurate fix inside the spot radius (wider for area spots) and stamps every spot at that place,mapping,active
+PILG-116,Pilgrimage,deterministic,P0,Stamp detail upgrade,An on-site proof upgrades a manual note and is never downgraded or re-dated; visited spots without detail are manual notes,mapping,active
+PILG-117,Pilgrimage,deterministic,P0,Stamp backup merge,Restoring a backup keeps every stamp with the earlier known time and the on-site proof,mapping,active
+PILG-118,Pilgrimage,deterministic,P0,Stamp snapshot backfill,Check-ins without a spot snapshot get work name coordinates and municipality from Atlas and stay unknown when Atlas cannot answer,fallback,active
 SHIK-006,Shikimori,deterministic,P0,Seasonal season param format,fetchSeasonalAnime sends season=<season>_<year> (e.g. fall_2026); year-first is rejected with 422,mapping,active
 SIMKL-007,Simkl,deterministic,P0,Premieres as one season page,Premieres read ids.simkl_id as the stable id; bare poster keys get _m.jpg; page>1 is empty; rows outside the requested JST broadcast cour are dropped,mapping,active
 REPO-063,Repository,deterministic,P0,Seasonal rows anchored to AniList,Non-AniList seasonal rows resolve their AniList id via ID mapping then AniList idMal and take nextAiringEpisode; rows with no AniList entry are dropped,mapping,active

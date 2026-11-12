@@ -1348,6 +1348,27 @@
       "mountDismiss": "留在自由拍攝",
       "entryA11y": "自由拍攝相機"
     },
+    "stamps": {
+      "book": "集章帳",
+      "openBookA11y": "開啟集章帳，{progress}",
+      "progress": "{collected} / {total}",
+      "onsite": "現地章",
+      "manual": "補記",
+      "onsiteCount": "現地 {count}",
+      "manualCount": "補記 {count}",
+      "complete": "制霸",
+      "stampHere": "蓋這裡的 {count} 個章",
+      "stamped": "蓋了現地章",
+      "stampedMany": "蓋了 {count} 個現地章",
+      "upgraded": "升級成現地章",
+      "removeOnsiteTitle": "要移除這個章嗎？",
+      "removeOnsiteMessage": "這是 {date} 在現場蓋的。",
+      "remove": "移除",
+      "empty": "還沒有章",
+      "loadFailed": "無法載入這部作品的景點",
+      "workBooks": "作品",
+      "openWork": "開啟地圖"
+    },
     "offlinePack": {
       "title": "離線行程包",
       "pitch": "景點、地址與周邊地圖，約 {size}。沒有訊號也能用。",

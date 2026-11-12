@@ -11,6 +11,8 @@ export interface PilgrimageSpot {
   lat: number | null;
   lon: number | null;
   precision?: string | null;
+  /** JIS municipality code; its first two digits are the prefecture. */
+  muniCd?: string | null;
   confidence: PilgrimageSpotConfidence;
   scenes: AtlasScene[];
   sources: AtlasSpot['sources'];

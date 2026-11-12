@@ -28,6 +28,7 @@ import {
 } from '../libs/services/pilgrimage/reference-image';
 import type { PilgrimageWork } from '../libs/services/pilgrimage/types';
 import { buildStampBooks } from '../libs/services/pilgrimage/locality/stamp-rally';
+import { loadStampsSync } from '../libs/services/pilgrimage/visited-prefs';
 import { useStampRallyRows } from '../components/pilgrimage/rally/useStampRallyRows';
 
 export interface JournalFolder {
@@ -52,6 +53,9 @@ export function usePilgrimageJournalData() {
   const { rows, collectedAt } = useStampRallyRows();
 
   useFocusEffect(useCallback(() => setCapturesV2(loadCapturesV2Sync()), []));
+  // Spot stamps (on-site and manual notes); refreshed with the captures on focus.
+  const [spotStamps, setSpotStamps] = useState(loadStampsSync);
+  useFocusEffect(useCallback(() => setSpotStamps(loadStampsSync()), []));
 
   useEffect(() => {
     let cancelled = false;
@@ -142,16 +146,24 @@ export function usePilgrimageJournalData() {
     return [...byId.values()].sort((a, b) => b.lastCapturedAt - a.lastCapturedAt);
   }, [entries, t]);
 
-  const stats = useMemo(
-    () => ({
-      visited: folders.reduce((total, folder) => total + folder.visitedSpots, 0),
+  const stats = useMemo(() => {
+    // A scene counts once whether it was stamped, noted by hand or photographed.
+    const scenes = new Set(spotStamps.map((stamp) => stamp.spotId));
+    for (const folder of folders) {
+      if (folder.key === 'free' || folder.anime === null) continue;
+      for (const entry of folder.entries) if (entry.spot) scenes.add(entry.spot.id);
+    }
+    return {
+      visited: scenes.size,
       photos: folders.reduce((total, folder) => total + folder.entries.length, 0),
-      stamps: buildStampBooks(rows, (roleId) =>
-        roleId in collectedAt ? (collectedAt[roleId] ?? 0) : null
-      ).reduce((total, book) => total + book.collected, 0),
-    }),
-    [folders, rows, collectedAt]
-  );
+      // Stamps = on-site spot stamps + official rally stamps; manual notes are not stamps.
+      stamps:
+        spotStamps.filter((stamp) => stamp.onsiteAt !== null).length +
+        buildStampBooks(rows, (roleId) =>
+          roleId in collectedAt ? (collectedAt[roleId] ?? 0) : null
+        ).reduce((total, book) => total + book.collected, 0),
+    };
+  }, [folders, rows, collectedAt, spotStamps]);
 
   const deleteEntry = useCallback(
     (entry: PilgrimageAlbumEntry) => {

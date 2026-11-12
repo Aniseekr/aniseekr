@@ -20,6 +20,8 @@ export interface SpotRowProps {
   themeColor: string;
   distanceKm: number | null;
   visited: boolean;
+  /** Visited and proven on site (現地章); false = manual note or not visited. */
+  onsite: boolean;
   theme: ThemePalette;
   onPress: (group: PilgrimageSpot) => void;
   onToggleVisited: (group: PilgrimageSpot) => void;
@@ -33,6 +35,7 @@ function SpotRowImpl({
   themeColor,
   distanceKm,
   visited,
+  onsite,
   theme,
   onPress,
   onToggleVisited,
@@ -79,7 +82,9 @@ function SpotRowImpl({
           haptic="none"
           icon={() => (
             <Ionicons
-              name={visited ? 'checkmark-circle' : 'ellipse-outline'}
+              name={
+                onsite ? 'checkmark-circle' : visited ? 'checkmark-circle-outline' : 'ellipse-outline'
+              }
               size={25}
               color={visited ? themeColor : theme.text.tertiary}
             />

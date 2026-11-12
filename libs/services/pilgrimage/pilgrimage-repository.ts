@@ -217,6 +217,7 @@ export class PilgrimageRepository {
         lat: spot.location?.lat ?? null,
         lon: spot.location?.lon ?? null,
         precision: spot.location?.precision ?? null,
+        muniCd: spot.location?.muniCd ?? null,
         confidence: spot.confidence,
         scenes: spot.scenes ?? [],
         sources: spot.sources,

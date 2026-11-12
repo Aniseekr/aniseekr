@@ -27,6 +27,7 @@ import { EventStateChip } from '../detail/IntelEventBanner';
 import { formatStampDate } from '../rally/rally-format';
 import { StampMark } from '../rally/StampMark';
 import { useStampRallyRows } from '../rally/useStampRallyRows';
+import { useWorkStampBooks, WorkStampBooks } from './WorkStampBooks';
 
 const STAMP = 52;
 const STAMPS_PER_ROW = 4;
@@ -77,7 +78,10 @@ export function StampBookSection({ onBrowseRallies }: { onBrowseRallies: () => v
     [router]
   );
 
+  const workBooks = useWorkStampBooks();
+
   if (books.length === 0) {
+    if (workBooks.length > 0) return <WorkStampBooks books={workBooks} />;
     if (joinable === 0) return null;
     return (
       <Pressable
@@ -108,6 +112,7 @@ export function StampBookSection({ onBrowseRallies }: { onBrowseRallies: () => v
           <StampBookCard book={book} onOpen={openBook} />
         </Animated.View>
       ))}
+      <WorkStampBooks books={workBooks} />
     </View>
   );
 }

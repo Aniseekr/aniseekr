@@ -13,6 +13,7 @@ import { useT } from '../../../libs/i18n';
 import type { PilgrimageWork, PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import type { PilgrimageDisplayTitles } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import type { VisitedMap } from '../../../libs/services/pilgrimage/visited-prefs';
+import type { StampDetailMap } from '../../../libs/services/pilgrimage/stamp-details';
 import type { SpotIntentKind } from '../../../libs/services/pilgrimage/spot-intents';
 import type { PilgrimageSpotFilter } from '../../../libs/services/pilgrimage/pilgrimage-detail-filter';
 import { ThemedBottomSheet, ThemedButton, ThemedIconButton, ThemedText } from '../../themed';
@@ -33,6 +34,7 @@ export interface PilgrimageDetailSheetProps {
   themeColor: string;
   theme: ThemePalette;
   visited: VisitedMap;
+  stampDetails: StampDetailMap;
   spotSearchQuery: string;
   searchOpen: boolean;
   groupedCounts: { all: number; unvisited: number; visited: number };
@@ -51,6 +53,7 @@ export interface PilgrimageDetailSheetProps {
   onSpotPress: (group: PilgrimageSpot) => void;
   onClearSelection: () => void;
   onToggleVisited: (group: PilgrimageSpot) => void;
+  onOpenStampBook: () => void;
   onOpenMaps: (spot: PilgrimageSpot) => void;
   onStartCamera: (spot: PilgrimageSpot) => void;
   onFrameShot: (spot: PilgrimageSpot) => void;
@@ -81,6 +84,7 @@ function PilgrimageDetailSheetImpl({
   themeColor,
   theme,
   visited,
+  stampDetails,
   spotSearchQuery,
   searchOpen,
   groupedCounts,
@@ -98,6 +102,7 @@ function PilgrimageDetailSheetImpl({
   onSpotPress,
   onClearSelection,
   onToggleVisited,
+  onOpenStampBook,
   onOpenMaps,
   onStartCamera,
   onFrameShot,
@@ -148,6 +153,7 @@ function PilgrimageDetailSheetImpl({
         themeColor={themeColor}
         distanceKm={distanceForGroup(item)}
         visited={visited[item.id] === true}
+        onsite={stampDetails[item.id]?.onsiteAt !== undefined}
         theme={theme}
         onPress={onSpotPress}
         onToggleVisited={onToggleVisited}
@@ -159,6 +165,7 @@ function PilgrimageDetailSheetImpl({
       onToggleVisited,
       representativeForGroup,
       selectedSpotId,
+      stampDetails,
       theme,
       themeColor,
       visited,
@@ -179,14 +186,30 @@ function PilgrimageDetailSheetImpl({
           <ThemedText variant="titleMedium" weight="800" numberOfLines={1}>
             {animeTitles?.primary ?? fallbackTitle}
           </ThemedText>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${progress * 100}%`, backgroundColor: themeColor },
-              ]}
-            />
-          </View>
+          <Pressable
+            onPress={onOpenStampBook}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t('pilgrimage.stamps.openBookA11y', {
+              progress: t('pilgrimage.stamps.progress', {
+                collected: groupedCounts.visited,
+                total: groupedCounts.all,
+              }),
+            })}
+            style={({ pressed }) => [styles.stampBookRow, pressed && styles.pressed]}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${progress * 100}%`, backgroundColor: themeColor },
+                ]}
+              />
+            </View>
+            <Ionicons name="ribbon-outline" size={16} color={themeColor} />
+            <ThemedText variant="captionSmall" weight="700" style={{ color: themeColor }}>
+              {t('pilgrimage.stamps.book')}
+            </ThemedText>
+          </Pressable>
           {anime ? (
             <Pressable
               onPress={onOpenBrowse}
@@ -352,9 +375,11 @@ function makeStyles(theme: ThemePalette) {
       borderRadius: Radius.sm,
       overflow: 'hidden',
       backgroundColor: theme.background.tertiary,
-      marginTop: 3,
+      flex: 1,
     },
     progressFill: { height: '100%', borderRadius: Radius.sm },
+    stampBookRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minHeight: 28 },
+    pressed: { opacity: 0.7 },
     footer: { gap: Spacing.md, paddingTop: Spacing.lg },
     emptyCard: {
       marginTop: Spacing.lg,

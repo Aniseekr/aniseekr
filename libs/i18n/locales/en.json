@@ -1348,6 +1348,27 @@
       "mountDismiss": "Keep as free capture",
       "entryA11y": "Free capture camera"
     },
+    "stamps": {
+      "book": "Stamp book",
+      "openBookA11y": "Open the stamp book, {progress}",
+      "progress": "{collected} / {total}",
+      "onsite": "On site",
+      "manual": "Noted",
+      "onsiteCount": "On site {count}",
+      "manualCount": "Noted {count}",
+      "complete": "Complete",
+      "stampHere": "Stamp {count} here",
+      "stamped": "Stamped on site",
+      "stampedMany": "{count} stamps on site",
+      "upgraded": "Now an on-site stamp",
+      "removeOnsiteTitle": "Remove this stamp?",
+      "removeOnsiteMessage": "You stamped it on site on {date}.",
+      "remove": "Remove",
+      "empty": "No stamps yet",
+      "loadFailed": "Couldn't load this work's spots",
+      "workBooks": "Works",
+      "openWork": "Open the map"
+    },
     "offlinePack": {
       "title": "Offline trip pack",
       "pitch": "Spots, addresses and the map around them, about {size}. Works with no signal.",

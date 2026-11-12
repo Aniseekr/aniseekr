@@ -14,12 +14,23 @@
 
 import { kvGet, kvSet } from '../storage/app-storage';
 import {
+  STAMP_DETAILS_STORAGE_KEY,
   VISITED_SPOTS_LEGACY_KEY,
   VISITED_SPOTS_STORAGE_KEY,
   VISITED_SPOTS_STORAGE_KEY_V2,
 } from '../storage/keys';
 import { Logger } from '../../utils/logger';
 import type { RoleId } from './locality/types';
+import {
+  applyCheckIn,
+  buildStamps,
+  mergeStampRecords,
+  sanitizeStampDetails,
+  type Stamp,
+  type StampDetailMap,
+  type StampMeta,
+  type StampVia,
+} from './stamp-details';
 
 /** Boolean view — unchanged public type consumed across the pilgrimage UI. */
 export type VisitedMap = Record<string, true>;
@@ -112,9 +123,57 @@ export async function saveVisitedSpots(map: VisitedMap): Promise<void> {
       next[k] = k in prev ? prev[k] : now; // preserve or stamp
     }
     kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify(next));
+    pruneStampDetails(next);
   } catch (err) {
     Logger.warn('[VisitedPrefs] save failed', err);
   }
+}
+
+// ---- Stamp details (on-site proof + spot snapshot), keyed like the visited map ----
+
+let detailsRaw: string | null | undefined;
+let detailsParsed: StampDetailMap = {};
+
+/** Details for visited spots. Parsed once per stored value; treat as read-only. */
+export function loadStampDetailsSync(): StampDetailMap {
+  try {
+    const raw = kvGet(STAMP_DETAILS_STORAGE_KEY) ?? null;
+    if (raw !== detailsRaw) {
+      detailsParsed = raw ? sanitizeStampDetails(JSON.parse(raw)) : {};
+      detailsRaw = raw;
+    }
+    return detailsParsed;
+  } catch (err) {
+    Logger.warn('[VisitedPrefs] stamp details load failed', err);
+    return {};
+  }
+}
+
+function saveStampDetails(next: StampDetailMap) {
+  kvSet(STAMP_DETAILS_STORAGE_KEY, JSON.stringify(next));
+}
+
+/** Drops details whose spot is no longer visited. */
+function pruneStampDetails(visitedAt: VisitedAtMap) {
+  const details = loadStampDetailsSync();
+  const kept: StampDetailMap = {};
+  let dropped = false;
+  for (const [id, detail] of Object.entries(details)) {
+    if (id in visitedAt) kept[id] = detail;
+    else dropped = true;
+  }
+  if (dropped) saveStampDetails(kept);
+}
+
+/** Every spot stamp (visited map joined with its details); rally stops excluded. */
+export function loadStampsSync(): Stamp[] {
+  return buildStamps(loadVisitedAtSync(), loadStampDetailsSync());
+}
+
+export interface CheckInDetail {
+  /** Set when the user is proven to be at the spot; makes it an on-site stamp. */
+  onsiteVia?: StampVia;
+  meta?: StampMeta;
 }
 
 /**
@@ -125,17 +184,28 @@ export async function saveVisitedSpots(map: VisitedMap): Promise<void> {
  * another surface (e.g. the grouped map toggle) wrote its own change would
  * stomp that other spot's timestamp when saved back.
  *
- * If the spot is already checked in, this is a no-op — the ORIGINAL stamp is
- * preserved, never overwritten with `at`. The first visit time is the honest
- * one (Rule 8); re-stamping on a repeat tap would fabricate a "revisit" we
- * don't actually track.
+ * If the spot is already checked in, the ORIGINAL time is preserved, never
+ * overwritten with `at` (Rule 8: we don't track revisits). An on-site proof in
+ * `detail` still upgrades an existing manual note, dated `at`.
  */
-export async function checkInSpot(spotId: string, at: number = Date.now()): Promise<void> {
+export async function checkInSpot(
+  spotId: string,
+  at: number = Date.now(),
+  detail?: CheckInDetail
+): Promise<void> {
   try {
     const prev = loadVisitedAtSync();
-    if (spotId in prev) return; // already checked in — keep the original stamp
-    const next: VisitedAtMap = { ...prev, [spotId]: at };
-    kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify(next));
+    if (!(spotId in prev)) {
+      kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify({ ...prev, [spotId]: at }));
+    }
+    if (!detail) return;
+    const details = loadStampDetailsSync();
+    const next = applyCheckIn(details[spotId], {
+      onsiteAt: detail.onsiteVia ? at : undefined,
+      via: detail.onsiteVia,
+      meta: detail.meta,
+    });
+    if (next) saveStampDetails({ ...details, [spotId]: next });
   } catch (err) {
     Logger.warn('[VisitedPrefs] checkIn failed', err);
   }
@@ -143,7 +213,8 @@ export async function checkInSpot(spotId: string, at: number = Date.now()): Prom
 
 /**
  * Check out a single spot: read-modify-write to drop just that spot's entry
- * from the v2 timestamp map, leaving every other spot's timestamp untouched.
+ * from the v2 timestamp map (and its stamp detail), leaving every other spot
+ * untouched.
  */
 export async function checkOutSpot(spotId: string): Promise<void> {
   try {
@@ -152,8 +223,63 @@ export async function checkOutSpot(spotId: string): Promise<void> {
     const next: VisitedAtMap = { ...prev };
     delete next[spotId];
     kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify(next));
+    const details = loadStampDetailsSync();
+    if (spotId in details) {
+      const kept = { ...details };
+      delete kept[spotId];
+      saveStampDetails(kept);
+    }
   } catch (err) {
     Logger.warn('[VisitedPrefs] checkOut failed', err);
+  }
+}
+
+/** Stores spot snapshots for visited spots that lack one (or lack its municipality). */
+export function fillStampMeta(metas: Readonly<Record<string, StampMeta>>): number {
+  try {
+    const visitedAt = loadVisitedAtSync();
+    const details = loadStampDetailsSync();
+    const next: StampDetailMap = { ...details };
+    let written = 0;
+    for (const [id, meta] of Object.entries(metas)) {
+      if (!(id in visitedAt)) continue;
+      const updated = applyCheckIn(details[id], { meta });
+      if (!updated || updated.meta === details[id]?.meta) continue;
+      next[id] = updated;
+      written += 1;
+    }
+    if (written > 0) saveStampDetails(next);
+    return written;
+  } catch (err) {
+    Logger.warn('[VisitedPrefs] fill meta failed', err);
+    return 0;
+  }
+}
+
+/** Raw stored values for a backup; null when nothing is stored. */
+export function exportStampRecords(): { visited: string | null; details: string | null } {
+  const visitedAt = loadVisitedAtSync();
+  return {
+    visited: Object.keys(visitedAt).length ? JSON.stringify(visitedAt) : null,
+    details: kvGet(STAMP_DETAILS_STORAGE_KEY) ?? null,
+  };
+}
+
+/** Merges a backup into what is on the device; no stamp on either side is lost. */
+export function restoreStampRecords(backup: { visited: string | null; details: string | null }) {
+  try {
+    if (!backup.visited) return;
+    const merged = mergeStampRecords(
+      { visitedAt: loadVisitedAtSync(), details: loadStampDetailsSync() },
+      {
+        visitedAt: sanitizeAt(JSON.parse(backup.visited)),
+        details: backup.details ? sanitizeStampDetails(JSON.parse(backup.details)) : {},
+      }
+    );
+    kvSet(VISITED_SPOTS_STORAGE_KEY_V2, JSON.stringify(merged.visitedAt));
+    saveStampDetails(merged.details);
+  } catch (err) {
+    Logger.warn('[VisitedPrefs] restore failed', err);
   }
 }
 

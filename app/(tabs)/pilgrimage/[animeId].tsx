@@ -51,6 +51,8 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-series';
 import type { PilgrimageSpot } from '../../../libs/services/pilgrimage/types';
 import { nearestUnvisitedWithin } from '../../../libs/services/pilgrimage/proximity-checkin';
+import { spotsOnsite } from '../../../libs/services/pilgrimage/stamp-grade';
+import { StampPressOverlay } from '../../../components/pilgrimage/rally/StampPressOverlay';
 import { usePilgrimageDetailView } from '../../../hooks/usePilgrimageDetailView';
 import { usePilgrimageDetailData } from '../../../hooks/usePilgrimageDetailData';
 import { bannerEnter, bannerExit } from '../../../libs/animations/presets';
@@ -259,12 +261,15 @@ export default function PilgrimageDetailScreen() {
     },
   });
   const userLocation = tracking.location;
-  const interactions = usePilgrimageInteractions();
+  const interactions = usePilgrimageInteractions(anime);
   const {
     visited,
+    stampDetails,
+    lastStamp,
     spotIntents,
     captures,
     toggleVisitedPoint,
+    checkInHere,
     toggleGroupedVisited,
     toggleSpotIntent,
     hasIntentForGroup,
@@ -298,6 +303,15 @@ export default function PilgrimageDetailScreen() {
   // tracking hook throttles it — Rule 9), and the ref gate below means this
   // effect only ever sets state once per spot per session, never on every
   // GPS tick.
+  // Being there can still prove a spot noted earlier by hand, so the prompt
+  // skips only spots that already carry an on-site stamp.
+  const provenOnsite = useMemo(() => {
+    const out: Record<string, true> = {};
+    for (const [id, detail] of Object.entries(stampDetails)) {
+      if (detail.onsiteAt !== undefined && visited[id]) out[id] = true;
+    }
+    return out;
+  }, [stampDetails, visited]);
   const promptedSpotIdsRef = useRef<Set<string>>(new Set());
   const [proximityTarget, setProximityTarget] = useState<{
     spot: PilgrimageSpot;
@@ -305,29 +319,34 @@ export default function PilgrimageDetailScreen() {
   } | null>(null);
   useEffect(() => {
     if (!userLocation) return;
-    const near = nearestUnvisitedWithin(points, visited, userLocation, PROXIMITY_RADIUS_METERS);
+    const near = nearestUnvisitedWithin(points, provenOnsite, userLocation, PROXIMITY_RADIUS_METERS);
     if (near && !promptedSpotIdsRef.current.has(near.spot.id)) {
       promptedSpotIdsRef.current.add(near.spot.id);
       setProximityTarget({ spot: near.spot, distanceMeters: near.distanceMeters });
     }
-  }, [userLocation, points, visited]);
+  }, [userLocation, points, provenOnsite]);
   // The banner targets a specific spot snapshot. If that spot gets checked in
   // some other way while the banner is still up, derive it away instead of
   // synchronously clearing state from an effect.
   const visibleProximityTarget =
-    proximityTarget && !visited[proximityTarget.spot.id] ? proximityTarget : null;
+    proximityTarget && !provenOnsite[proximityTarget.spot.id] ? proximityTarget : null;
   const handleProximityCheckIn = useCallback(() => {
-    // Guard against a stale banner: `toggleVisitedPoint` is bidirectional, so
-    // if the spot was already checked in elsewhere while the banner sat open,
-    // tapping it must not reverse (check OUT) a real visit.
-    if (!visibleProximityTarget) {
-      setProximityTarget(null);
-      return;
-    }
-    toggleVisitedPoint(visibleProximityTarget.spot);
+    // `checkInHere` only ever stamps or upgrades, so a stale banner can never
+    // reverse (check OUT) a real visit.
+    if (visibleProximityTarget) checkInHere(visibleProximityTarget.spot);
     setProximityTarget(null);
-  }, [visibleProximityTarget, toggleVisitedPoint]);
+  }, [visibleProximityTarget, checkInHere]);
   const handleProximityDismiss = useCallback(() => setProximityTarget(null), []);
+  // How many unstamped scenes share this place — the check-in stamps them all.
+  const proximityCount = useMemo(() => {
+    if (!visibleProximityTarget || !userLocation) return 1;
+    const now = Date.now();
+    const here = { ...userLocation, accuracy: null, at: now };
+    const others = points.filter(
+      (spot) => spot.id !== visibleProximityTarget.spot.id && !provenOnsite[spot.id]
+    );
+    return 1 + spotsOnsite(others, here, now).length;
+  }, [visibleProximityTarget, userLocation, points, provenOnsite]);
 
   const sheet = usePilgrimageSpotSheet({
     groupedSpotByPointId,
@@ -424,6 +443,20 @@ export default function PilgrimageDetailScreen() {
     },
     [toggleSpotIntent, groupedSpotByPointId, anime]
   );
+
+  const handleOpenStampBook = useCallback(() => {
+    if (!anime) return;
+    Haptics.selectionAsync().catch(() => undefined);
+    router.push({
+      pathname: '/pilgrimage/stampbook/[workKey]',
+      params: {
+        workKey: anime.key,
+        title: animeTitles?.primary ?? fallbackTitle,
+        ...(posterUri ? { poster: posterUri } : {}),
+        themeColor,
+      },
+    });
+  }, [anime, animeTitles?.primary, fallbackTitle, posterUri, router, themeColor]);
 
   const handleOpenBrowse = useCallback(() => {
     if (!anime) return;
@@ -747,6 +780,7 @@ export default function PilgrimageDetailScreen() {
                   <ProximityCheckInBanner
                     spotName={getPilgrimageSpotTitles(visibleProximityTarget.spot).primary}
                     distanceMeters={visibleProximityTarget.distanceMeters}
+                    count={proximityCount}
                     theme={theme}
                     t={t}
                     onCheckIn={handleProximityCheckIn}
@@ -789,7 +823,9 @@ export default function PilgrimageDetailScreen() {
               onSpotFilterChange={handleSpotFilterChange}
               onSpotPress={openGroup}
               onClearSelection={clearSelection}
+              stampDetails={stampDetails}
               onToggleVisited={toggleGroupedVisited}
+              onOpenStampBook={handleOpenStampBook}
               onOpenMaps={handleOpenMaps}
               onStartCamera={handleStartCamera}
               onFrameShot={handleFrameShot}
@@ -870,6 +906,8 @@ export default function PilgrimageDetailScreen() {
           onClose={closeCluster}
           onPick={pickFromCluster}
         />
+
+        <StampPressOverlay event={lastStamp} accent={themeColor} />
       </View>
     </>
   );

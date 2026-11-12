@@ -15,6 +15,8 @@ export const Springs = {
   sheet: { damping: 20, stiffness: 220, mass: 0.9 },
   /** Toggle confirmation (pick, bell): overshoots once, settles fast. */
   pop: { damping: 9, stiffness: 380 },
+  /** A rubber stamp landing: drops from large, one firm settle. */
+  stamp: { damping: 12, stiffness: 420, mass: 0.9 },
 } as const;
 
 export const sheetEnter = () => FadeInUp.duration(260).easing(Easing.out(Easing.cubic));
@@ -48,3 +50,6 @@ export const listItemEnterDown = (index: number, stagger = 40) =>
   FadeInDown.delay(index * stagger)
     .duration(280)
     .easing(Easing.out(Easing.cubic));
+
+/** Stamp press overlay: starts oversized, holds once landed, then fades. */
+export const StampPress = { fromScale: 1.9, holdMs: 1100, fadeMs: 220, tiltDeg: -8 } as const;

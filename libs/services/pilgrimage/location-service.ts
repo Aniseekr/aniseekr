@@ -13,6 +13,14 @@ export interface LatLng {
   longitude: number;
 }
 
+/** A position with what is needed to judge how far it can be trusted. */
+export interface LocationFix extends LatLng {
+  /** Horizontal accuracy in metres, or null when the OS did not report one. */
+  accuracy: number | null;
+  /** Epoch ms the OS took the fix. */
+  at: number;
+}
+
 export type LocationPermission = 'granted' | 'denied' | 'unavailable';
 
 /** Disposer returned by {@link LocationService.subscribeToUpdates}. */
@@ -59,6 +67,19 @@ const EARTH_RADIUS_KM = 6371;
 
 const toRadians = (deg: number): number => (deg * Math.PI) / 180;
 
+function toFix(
+  fix: { coords: { latitude: number; longitude: number; accuracy?: number | null }; timestamp?: number },
+  now: number
+): LocationFix {
+  const accuracy = fix.coords.accuracy;
+  return {
+    latitude: fix.coords.latitude,
+    longitude: fix.coords.longitude,
+    accuracy: typeof accuracy === 'number' && Number.isFinite(accuracy) ? accuracy : null,
+    at: typeof fix.timestamp === 'number' && fix.timestamp > 0 ? fix.timestamp : now,
+  };
+}
+
 /**
  * Singleton wrapper around `expo-location`.
  * - Caches the last-known location for {@link LOCATION_CACHE_TTL_MS}
@@ -73,6 +94,7 @@ export class LocationService {
   private cacheTtlMs: number;
 
   private cached: { value: LatLng; at: number } | null = null;
+  private lastFix: LocationFix | null = null;
 
   constructor(opts: ServiceOptions = {}) {
     this.now = opts.now ?? (() => Date.now());
@@ -137,6 +159,33 @@ export class LocationService {
     return this.cached.value;
   }
 
+  /** The most recent OS fix this session, with its accuracy and time. Sync, never prompts. */
+  getLastFix(): LocationFix | null {
+    return this.lastFix;
+  }
+
+  /**
+   * A new fix from the OS, only when permission is already granted (never
+   * prompts). Null when not granted or the device cannot deliver one.
+   */
+  async getFreshFix(): Promise<LocationFix | null> {
+    try {
+      const status = await this.module.getForegroundPermissionsAsync();
+      if (status.status !== 'granted') return null;
+      const fix = await this.module.getCurrentPositionAsync({
+        accuracy: this.module.Accuracy?.High ?? 4,
+      });
+      this.lastFix = toFix(fix, this.now());
+      this.cached = {
+        value: { latitude: fix.coords.latitude, longitude: fix.coords.longitude },
+        at: this.now(),
+      };
+      return this.lastFix;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Best-effort "where were we last?" without prompting for permission and
    * without spinning up GPS. Used to seed the user dot on first paint so the
@@ -164,6 +213,7 @@ export class LocationService {
         latitude: fix.coords.latitude,
         longitude: fix.coords.longitude,
       };
+      this.lastFix = toFix(fix, this.now());
       this.cached = { value, at: this.now() };
       return value;
     } catch (err) {
@@ -205,6 +255,7 @@ export class LocationService {
         latitude: fix.coords.latitude,
         longitude: fix.coords.longitude,
       };
+      this.lastFix = toFix(fix, this.now());
       this.cached = { value, at: this.now() };
       return value;
     } catch (err) {
@@ -273,6 +324,7 @@ export class LocationService {
               latitude: fix.coords.latitude,
               longitude: fix.coords.longitude,
             };
+            this.lastFix = toFix(fix, this.now());
             this.cached = { value, at: this.now() };
             callback(value);
           }
