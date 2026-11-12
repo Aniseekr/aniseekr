@@ -1272,7 +1272,8 @@
       "folderSummary": "{spots} places · {photos} photos",
       "emptyJournal": "Your photos will appear here after your first capture.",
       "segmentPhotos": "Photos",
-      "segmentStamps": "Stamp book",
+      "segmentStamps": "Stamps",
+      "segmentMap": "Map",
       "statVisitedScenes": "Places visited",
       "statPhotoCount": "Photos",
       "statStamps": "Stamps",
@@ -1347,6 +1348,11 @@
       "mountConfirm": "Attach to scene",
       "mountDismiss": "Keep as free capture",
       "entryA11y": "Free capture camera"
+    },
+    "footprint": {
+      "summary": "Prefectures {prefs} · Cities {cities}",
+      "empty": "No footprints yet",
+      "unplaced": "{count} not placed yet"
     },
     "stamps": {
       "book": "Stamp book",

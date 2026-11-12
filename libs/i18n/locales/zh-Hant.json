@@ -1273,6 +1273,7 @@
       "emptyJournal": "拍下第一張照片後，足跡會出現在這裡。",
       "segmentPhotos": "照片",
       "segmentStamps": "集章冊",
+      "segmentMap": "地圖",
       "statVisitedScenes": "去過的場景",
       "statPhotoCount": "張照片",
       "statStamps": "枚集章",
@@ -1347,6 +1348,11 @@
       "mountConfirm": "掛到此場景",
       "mountDismiss": "留在自由拍攝",
       "entryA11y": "自由拍攝相機"
+    },
+    "footprint": {
+      "summary": "{prefs} 個都道府縣・{cities} 個市區町村",
+      "empty": "還沒有足跡",
+      "unplaced": "{count} 個還沒歸類"
     },
     "stamps": {
       "book": "集章帳",

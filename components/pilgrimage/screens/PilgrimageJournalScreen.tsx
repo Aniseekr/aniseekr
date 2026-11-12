@@ -31,6 +31,7 @@ import {
 } from '../../../libs/services/pilgrimage/pilgrimage-localization';
 import { buildJournalPreviewParams } from '../../../libs/services/pilgrimage/preview-capture';
 import { SpotImage } from '../../../components/pilgrimage/SpotImage';
+import { FootprintMap } from '../../../components/pilgrimage/journal/FootprintMap';
 import { StampBookSection } from '../../../components/pilgrimage/journal/StampBookSection';
 import { JournalTimeline } from '../../../components/pilgrimage/journal/JournalTimeline';
 import { ImportResultCard } from '../../../components/pilgrimage/journal/ImportResultCard';
@@ -43,8 +44,14 @@ import { usePhotoImport } from '../../../hooks/usePhotoImport';
 import { PaywallSheet } from '../../../components/subscription/PaywallSheet';
 
 type AlbumEntry = PilgrimageAlbumEntry;
-type JournalSegment = 'timeline' | 'works' | 'stamps';
-const SEGMENTS: readonly JournalSegment[] = ['timeline', 'works', 'stamps'];
+type JournalSegment = 'timeline' | 'works' | 'stamps' | 'map';
+const SEGMENTS: readonly JournalSegment[] = ['timeline', 'works', 'stamps', 'map'];
+const SEGMENT_LABEL = {
+  timeline: 'pilgrimage.album.segmentTimeline',
+  works: 'pilgrimage.album.segmentWorks',
+  stamps: 'pilgrimage.album.segmentStamps',
+  map: 'pilgrimage.album.segmentMap',
+} as const;
 
 function folderTitle(folder: JournalFolder, t: ReturnType<typeof useT>): string {
   return folder.key === 'free' ? t('pilgrimage.album.freeCapturesFolder') : folder.title;
@@ -74,7 +81,12 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
   const awaitingFolderRef = useRef(false);
   const scrollRef = useRef<ScrollViewInstance>(null);
   const selectedFolder = useMemo(
-    () => folders.find((folder) => folder.key === selectedAnimeId || folder.anime?.bgm?.some((id) => String(id) === selectedAnimeId)) ?? null,
+    () =>
+      folders.find(
+        (folder) =>
+          folder.key === selectedAnimeId ||
+          folder.anime?.bgm?.some((id) => String(id) === selectedAnimeId)
+      ) ?? null,
     [folders, selectedAnimeId]
   );
   useEffect(() => {
@@ -180,7 +192,9 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
             <ThemedIconButton
               onPress={importPhotos}
               disabled={importing}
-              accessibilityLabel={t(importing ? 'pilgrimage.album.importing' : 'pilgrimage.album.importPhotos')}
+              accessibilityLabel={t(
+                importing ? 'pilgrimage.album.importing' : 'pilgrimage.album.importPhotos'
+              )}
               haptic="none"
               icon={(color) =>
                 importing ? (
@@ -243,22 +257,20 @@ export default function PilgrimageJournalScreen({ tabRoot = false }: { tabRoot?:
                 {SEGMENTS.map((value) => (
                   <ThemedButton
                     key={value}
-                    label={t(
-                      value === 'timeline'
-                        ? 'pilgrimage.album.segmentTimeline'
-                        : value === 'works'
-                          ? 'pilgrimage.album.segmentWorks'
-                          : 'pilgrimage.album.segmentStamps'
-                    )}
+                    label={t(SEGMENT_LABEL[value])}
                     variant={segment === value ? 'primary' : 'ghost'}
                     size="md"
                     onPress={() => setSegment(value)}
                     style={styles.segmentButton}
+                    // Four segments share one row: the dense label size keeps them whole.
+                    textStyle={Typography.caption}
                   />
                 ))}
               </View>
               {segment === 'stamps' ? (
                 <StampBookSection onBrowseRallies={() => router.push('/pilgrimage/news')} />
+              ) : segment === 'map' ? (
+                <FootprintMap />
               ) : folders.length && segment === 'timeline' ? (
                 <JournalTimeline
                   trips={trips}
@@ -422,7 +434,11 @@ function CompareCard({
         {entry.isFree && entry.capture.referenceUri ? (
           <>
             <View style={[styles.compareHalf, { height: animeH }]}>
-              <SpotImage uri={entry.capture.referenceUri} style={styles.compareImgFill} contentFit="cover" />
+              <SpotImage
+                uri={entry.capture.referenceUri}
+                style={styles.compareImgFill}
+                contentFit="cover"
+              />
               <View style={styles.cornerTag}>
                 <ThemedText variant="badge" style={{ color: ON_DARK }}>
                   {t('pilgrimageUi.referencePicker.tagReference')}

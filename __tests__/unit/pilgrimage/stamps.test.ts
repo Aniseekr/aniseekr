@@ -6,6 +6,11 @@ import {
   mergeStampRecords,
   sanitizeStampDetails,
 } from '../../../libs/services/pilgrimage/stamp-details';
+import {
+  buildFootprint,
+  PREFECTURE_GRID,
+  PREFECTURE_TILES,
+} from '../../../libs/services/pilgrimage/footprint';
 import { atlasSpotShardOf } from '../../../libs/services/pilgrimage/atlas/atlas-client';
 import {
   resolveStampMeta,
@@ -101,5 +106,42 @@ describe('spot stamps', () => {
     expect(photoProvesSpot({ spotGeo })).toBe(false);
     expect(photoProvesSpot({ userLocation: at })).toBe(false);
     expect(photoProvesSpot({ spotGeo, userLocation: at, legacy: true })).toBe(false);
+  });
+
+  it('PILG-120 the footprint groups stamps by prefecture and city and never guesses a place', () => {
+    const stamp = (spotId: string, workKey: string, muniCd?: string, onsiteAt: number | null = null) => ({
+      spotId,
+      at: 1,
+      onsiteAt,
+      via: null,
+      meta: { workKey, name: spotId, ...(muniCd ? { muniCd } : {}) },
+    });
+    const footprint = buildFootprint([
+      stamp('a', 'hyouka', '21203', NOW),
+      stamp('b', 'hyouka', '21203'),
+      stamp('c', 'hyouka', '22213'),
+      stamp('d', 'other', '21203'),
+      stamp('e', 'hyouka'), // municipality unknown
+      stamp('f', 'hyouka', '99999'), // not a prefecture
+      { spotId: 'g', at: 1, onsiteAt: null, via: null, meta: null },
+    ]);
+    expect(footprint.cityCount).toBe(2);
+    expect(footprint.unplaced).toBe(3);
+    expect(footprint.prefectures).toEqual([
+      {
+        code: '21',
+        spots: 3,
+        onsite: 1,
+        places: [
+          { muniCd: '21203', workKey: 'hyouka', spots: 2, onsite: 1 },
+          { muniCd: '21203', workKey: 'other', spots: 1, onsite: 0 },
+        ],
+      },
+      { code: '22', spots: 1, onsite: 0, places: [{ muniCd: '22213', workKey: 'hyouka', spots: 1, onsite: 0 }] },
+    ]);
+    // The tile grid holds each of the 47 prefectures once, on its own square, inside the grid.
+    expect(new Set(PREFECTURE_TILES.map((t) => t.code)).size).toBe(47);
+    expect(new Set(PREFECTURE_TILES.map((t) => `${t.x},${t.y}`)).size).toBe(47);
+    expect(PREFECTURE_TILES.every((t) => t.x < PREFECTURE_GRID.columns && t.y < PREFECTURE_GRID.rows)).toBe(true);
   });
 });

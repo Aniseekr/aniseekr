@@ -2,8 +2,8 @@
 // stamping first. Everything comes from on-device stamp records, so it paints
 // on frame 1; old check-ins without a snapshot are filled from Atlas once.
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -13,12 +13,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { listItemEnter } from '@/libs/animations/presets';
 import { useT } from '@/libs/i18n';
 import { hapticsBridge } from '@/modules/haptics/hapticsBridge';
-import { atlasClient } from '@/libs/services/pilgrimage/atlas/atlas-client';
-import type { AtlasWork } from '@/libs/services/pilgrimage/atlas/types';
+import { stampBookRoute, useAtlasWorkMap, useStamps } from '@/hooks/useStamps';
 import { getPilgrimageAnimeTitles } from '@/libs/services/pilgrimage/pilgrimage-localization';
-import { backfillStampMeta } from '@/libs/services/pilgrimage/stamp-backfill';
 import type { Stamp } from '@/libs/services/pilgrimage/stamp-details';
-import { loadStampsSync } from '@/libs/services/pilgrimage/visited-prefs';
 
 import { LOCALITY_CARD_RADIUS } from '../common/LocalityAesthetic';
 import { StampMark } from '../rally/StampMark';
@@ -55,17 +52,7 @@ function groupByWork(stamps: readonly Stamp[]): WorkBook[] {
 }
 
 export function useWorkStampBooks(): WorkBook[] {
-  const [stamps, setStamps] = useState<Stamp[]>(loadStampsSync);
-  useFocusEffect(useCallback(() => setStamps(loadStampsSync()), []));
-  useEffect(() => {
-    let cancelled = false;
-    void backfillStampMeta().then((written) => {
-      if (!cancelled && written > 0) setStamps(loadStampsSync());
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const stamps = useStamps();
   return useMemo(() => groupByWork(stamps), [stamps]);
 }
 
@@ -73,20 +60,7 @@ export function WorkStampBooks({ books }: { books: readonly WorkBook[] }) {
   const t = useT();
   const { theme } = useTheme();
   const router = useRouter();
-  const [works, setWorks] = useState<ReadonlyMap<string, AtlasWork>>(new Map());
-
-  useEffect(() => {
-    let cancelled = false;
-    atlasClient
-      .works()
-      .then((index) => {
-        if (!cancelled) setWorks(new Map(index.works.map((work) => [work.key, work])));
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const works = useAtlasWorkMap();
 
   if (books.length === 0) return null;
 
@@ -98,12 +72,13 @@ export function WorkStampBooks({ books }: { books: readonly WorkBook[] }) {
       {books.map((book, index) => {
         const row = works.get(book.workKey);
         const title = row ? getPilgrimageAnimeTitles(row).primary : book.workKey;
-        const bgm = row?.bgm?.[0];
         const manual = book.stamps.length - book.onsite;
         const summary = [
           t('pilgrimage.stamps.onsiteCount', { count: book.onsite }),
           t('pilgrimage.stamps.manualCount', { count: manual }),
-          row ? t('pilgrimage.stamps.progress', { collected: book.stamps.length, total: row.n }) : null,
+          row
+            ? t('pilgrimage.stamps.progress', { collected: book.stamps.length, total: row.n })
+            : null,
         ]
           .filter(Boolean)
           .join(' · ');
@@ -112,16 +87,7 @@ export function WorkStampBooks({ books }: { books: readonly WorkBook[] }) {
             <Pressable
               onPress={() => {
                 hapticsBridge.tap();
-                router.push({
-                  pathname: '/pilgrimage/stampbook/[workKey]',
-                  params: {
-                    workKey: book.workKey,
-                    title,
-                    ...(bgm
-                      ? { poster: `https://api.bgm.tv/v0/subjects/${bgm}/image?type=common` }
-                      : {}),
-                  },
-                });
+                router.push(stampBookRoute(book.workKey, title, row));
               }}
               accessibilityRole="button"
               accessibilityLabel={t('pilgrimage.stamps.openBookA11y', {
@@ -130,7 +96,11 @@ export function WorkStampBooks({ books }: { books: readonly WorkBook[] }) {
               style={({ pressed }) => [pressed && styles.pressed]}>
               <ThemedSurface padded radius={LOCALITY_CARD_RADIUS} style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <ThemedText variant="bodyMedium" weight="800" numberOfLines={1} style={styles.flex}>
+                  <ThemedText
+                    variant="bodyMedium"
+                    weight="800"
+                    numberOfLines={1}
+                    style={styles.flex}>
                     {title}
                   </ThemedText>
                   <Ionicons name="chevron-forward" size={16} color={theme.text.tertiary} />
