@@ -53,9 +53,15 @@ export function usePilgrimageJournalData() {
   const { rows, collectedAt } = useStampRallyRows();
 
   useFocusEffect(useCallback(() => setCapturesV2(loadCapturesV2Sync()), []));
-  // Spot stamps (on-site and manual notes); refreshed with the captures on focus.
-  const [spotStamps, setSpotStamps] = useState(loadStampsSync);
-  useFocusEffect(useCallback(() => setSpotStamps(loadStampsSync()), []));
+  // Spot stamps (on-site and manual notes). Re-read on focus and whenever the
+  // captures change, because saving a photo at a spot stamps it.
+  const [stampTick, setStampTick] = useState(0);
+  useFocusEffect(useCallback(() => setStampTick((tick) => tick + 1), []));
+  const spotStamps = useMemo(() => {
+    void stampTick;
+    void capturesV2;
+    return loadStampsSync();
+  }, [stampTick, capturesV2]);
 
   useEffect(() => {
     let cancelled = false;

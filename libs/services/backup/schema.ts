@@ -69,6 +69,11 @@ export interface BackupPrefsV1 {
   user: string | null; // aniseekr.user.prefs.v1
   collectionSortMode: string | null; // aniseekr.collection.sortMode.v1
   bangumi: string | null; // aniseekr.bangumi.prefs.v1
+  /**
+   * Pilgrimage check-ins and their stamp details, raw JSON. Absent in backups
+   * made before stamps existed. Restored by merging, never by overwriting.
+   */
+  pilgrimageStamps?: { visited: string | null; details: string | null };
 }
 
 export interface BackupLegacyMeta {
@@ -209,11 +214,18 @@ function normalizePrefs(raw: unknown): BackupPrefsV1 {
   if (!isPlainObject(raw)) {
     return { user: null, collectionSortMode: null, bangumi: null };
   }
-  return {
+  const prefs: BackupPrefsV1 = {
     user: asNullableString(raw.user),
     collectionSortMode: asNullableString(raw.collectionSortMode),
     bangumi: asNullableString(raw.bangumi),
   };
+  if (isPlainObject(raw.pilgrimageStamps)) {
+    prefs.pilgrimageStamps = {
+      visited: asNullableString(raw.pilgrimageStamps.visited),
+      details: asNullableString(raw.pilgrimageStamps.details),
+    };
+  }
+  return prefs;
 }
 
 function normalizeLegacyMeta(raw: unknown): BackupLegacyMeta | undefined {

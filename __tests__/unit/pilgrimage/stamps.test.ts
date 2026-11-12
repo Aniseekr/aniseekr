@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { isOnsite, spotsOnsite } from '../../../libs/services/pilgrimage/stamp-grade';
+import { isOnsite, photoProvesSpot, spotsOnsite } from '../../../libs/services/pilgrimage/stamp-grade';
 import {
   applyCheckIn,
   buildStamps,
@@ -91,5 +91,15 @@ describe('spot stamps', () => {
     expect(metas).toEqual({
       old: { workKey: 'hyouka', name: '花里跨線橋', lat: 36.13, lon: 137.25, muniCd: '21203' },
     });
+  });
+
+  it('PILG-119 a photo proves a spot only with its own coordinates near the spot', () => {
+    const spotGeo: [number, number] = [36.1336, 137.2593];
+    const at = { latitude: 36.1345, longitude: 137.2593 }; // ~100 m
+    expect(photoProvesSpot({ spotGeo, userLocation: at })).toBe(true);
+    expect(photoProvesSpot({ spotGeo, userLocation: { latitude: 35.68, longitude: 139.76 } })).toBe(false);
+    expect(photoProvesSpot({ spotGeo })).toBe(false);
+    expect(photoProvesSpot({ userLocation: at })).toBe(false);
+    expect(photoProvesSpot({ spotGeo, userLocation: at, legacy: true })).toBe(false);
   });
 });

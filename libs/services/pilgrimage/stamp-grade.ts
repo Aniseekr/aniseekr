@@ -72,3 +72,25 @@ export function spotsOnsite<T extends StampSpotLike>(
   if (!isUsableFix(fix, now)) return [];
   return spots.filter((spot) => isOnsite(spot, fix, now));
 }
+
+/**
+ * A photo proves presence when it was taken (or imported with EXIF GPS) within
+ * the distance the photo importer already treats as "at this spot".
+ */
+export const PHOTO_ONSITE_RADIUS_METERS = 150;
+
+export function photoProvesSpot(capture: {
+  legacy?: true;
+  userLocation?: { latitude: number; longitude: number };
+  spotGeo?: [number, number];
+}): boolean {
+  if (capture.legacy || !capture.userLocation || !capture.spotGeo) return false;
+  const [lat, lon] = capture.spotGeo;
+  if (![lat, lon, capture.userLocation.latitude, capture.userLocation.longitude].every(Number.isFinite)) {
+    return false;
+  }
+  return (
+    distanceMeters(capture.userLocation, { latitude: lat, longitude: lon }) <=
+    PHOTO_ONSITE_RADIUS_METERS
+  );
+}

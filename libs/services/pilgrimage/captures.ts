@@ -15,6 +15,8 @@
 
 import { kvGet, kvSet } from '../storage/app-storage';
 import { CAPTURES_STORAGE_KEY, CAPTURES_STORAGE_KEY_V2 } from '../storage/keys';
+import { photoProvesSpot } from './stamp-grade';
+import { checkInSpot } from './visited-prefs';
 
 export { CAPTURES_STORAGE_KEY, CAPTURES_STORAGE_KEY_V2 };
 
@@ -266,8 +268,24 @@ function mergeCapture(base: Partial<PilgrimageCapture>, capture: PilgrimageCaptu
   return merged;
 }
 
+/** A photo taken at the spot is proof of being there: on-site stamp dated at the shutter. */
+function stampFromPhoto(capture: PilgrimageCapture) {
+  if (!photoProvesSpot(capture)) return;
+  const meta =
+    capture.workKey && capture.spotGeo
+      ? {
+          workKey: capture.workKey,
+          name: capture.spotName ?? '',
+          lat: capture.spotGeo[0],
+          lon: capture.spotGeo[1],
+        }
+      : undefined;
+  void checkInSpot(capture.spotId, capture.capturedAt, { onsiteVia: 'photo', meta });
+}
+
 /** Upsert by uri: same spot → merge in place; elsewhere → move here (newest-first). */
 export async function recordCapture(capture: PilgrimageCapture): Promise<void> {
+  stampFromPhoto(capture);
   const idx = loadV2();
   const existing = idx.spots[capture.spotId] ?? [];
   const at = existing.findIndex((c) => c.uri === capture.uri);

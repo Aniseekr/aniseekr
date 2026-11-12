@@ -13,6 +13,8 @@ import {
   type BackupRatingRow,
   type BackupUserAnimeRow,
 } from './schema';
+import { exportStampRecords, restoreStampRecords } from '../pilgrimage/visited-prefs';
+import { VISITED_SPOTS_STORAGE_KEY_V2 } from '../storage/keys';
 
 const USER_PREFS_KEY = 'aniseekr.user.prefs.v1';
 const COLLECTION_SORT_MODE_KEY = 'aniseekr.collection.sortMode.v1';
@@ -91,6 +93,7 @@ export class BackupService {
         user: userPrefs,
         collectionSortMode: sortMode,
         bangumi: bangumiPrefs,
+        pilgrimageStamps: exportStampRecords(),
       },
     };
   }
@@ -154,6 +157,11 @@ export class BackupService {
     if (env.prefs.bangumi !== null) {
       await storage.setItem(BANGUMI_PREFS_KEY, env.prefs.bangumi);
       summary.prefsRestored.push(BANGUMI_PREFS_KEY);
+    }
+    if (env.prefs.pilgrimageStamps?.visited) {
+      // Merged with what is on the device, so stamps made since the backup survive.
+      restoreStampRecords(env.prefs.pilgrimageStamps);
+      summary.prefsRestored.push(VISITED_SPOTS_STORAGE_KEY_V2);
     }
 
     Logger.info('[BackupService] restoreSnapshot summary', summary);
