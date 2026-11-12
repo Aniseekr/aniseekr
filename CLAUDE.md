@@ -36,7 +36,10 @@ Anime tracking app built with Expo Router + React Native. Local-first storage, m
                         // text.{primary,secondary,tertiary},
                         // glassBorder, gradient
   themeId: ThemeId      // 'aniseeker' | 'cyberpunk' | 'midnight' | 'forest' |
-                        //  'ocean' | 'attackOnTitan' | 'sunset' | 'candy'
+                        //  'ocean' | 'attackOnTitan' | 'sunset' | 'candy' |
+                        //  'washi' | 'screentone' | 'twilight' | 'yozakura' |
+                        //  'cel' | 'natsuzora' — the list is `ThemeId` in
+                        //  context/ThemeContext.tsx; read it there, it grows
   themeMode: 'light' | 'dark' | 'auto'
   tintIntensity: 'subtle' | 'balanced' | 'vivid'
   increaseContrast: boolean
