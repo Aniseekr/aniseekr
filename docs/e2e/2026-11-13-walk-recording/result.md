@@ -62,3 +62,20 @@
 
 - Paywall 的福利清單沒有列「匯出 GPX」。
 - iOS 定位用途說明（英文與四個語系）已改成含「記錄巡禮路線」；送審時 App Store 審核備註要說明背景定位用途。Play Console 要申報「前景服務・位置」。
+
+## Code review 之後的重跑（commit `b917def`）
+
+Review 修了：結束時等進行中的定位批次寫完、景點索引載入失敗不快取、記錄頁只讀新增的點、只有 1 個章的日子不顯示「整理成相簿」、現地章只接受 60 秒內的定位（較舊的先重新定位）、路線卡只畫路線上的章、通知點了會開記錄頁。
+Bundle：從 `b917def` 的乾淨 worktree 匯出（工作目錄當時有別的 session 未提交的小工具功能，需要這個 build 沒有的 `ExpoUI` 原生模組，直接匯出會一啟動就當掉）。
+
+| 案例 | 預期 | 實際 | 判定 | 證據 |
+|---|---|---|---|---|
+| R1 啟動 | 記錄頁正常開啟 | 正常；清單三筆 | PASS | `R1-idle-after-review-fixes.jpg` |
+| R2 記錄＋只讀新增的點 | L 形 190 m 路線完整畫出 | 185 m，L 形路線完整 | PASS | `R2-recording-after-review-fixes.jpg` |
+| R3 結束＋存檔 | 存成第 4 筆 | 這時另一個 session（airing-widget）開始操作同一台模擬器、換掉了 bundle，我的點擊落在它的畫面上 | INVALID | — |
+| R3 重跑（03:27） | 存成第 4 筆 | 按「結束」→ 摘要「2026/11/13 03:23　185 m　1:10」，L 形路線完整；`Documents/tracks` 變 4 個檔。這時裝置上是小工具 session 的 build（含我已 commit 的程式＋它未 commit 的小工具） | PASS（非乾淨 build，見註） | `Z2-cleanup-before.jpg`、`R3-finished-after-review-fixes.jpg` |
+
+- R1 那張的返回鍵與箭頭圖示是空白的：這次只換了 jsbundle、沒帶字型資產，是測試手法造成的，不是程式問題（R2 重啟後圖示正常）。
+- R2 中途 App 被另一個 session 重啟過一次，記錄有接續下來。
+- **留下的狀態（03:27 更新）**：那段沒結束的測試記錄已經按「結束」存成第 4 筆，沒有進行中的記錄；`simctl location clear` 已做；模擬器沒有關機（管理 session 要求留著）。裝置上現在是小工具 session 03:23 編的 build，不是我的。
+- 結束時的競態修正、60 秒定位規則、路線卡只畫路線上的章、通知導向：只有 typecheck 與單元測試（PILG-124 已更新），沒有在裝置上跑到。UNVERIFIED。
