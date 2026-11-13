@@ -25,10 +25,14 @@ import { useAnimeDisplayTitle } from '../libs/i18n/use-display-title';
 import { useTranslatedGenre } from '../libs/i18n/use-translated-genre';
 import { listItemEnter } from '../libs/animations/presets';
 import { formatScore } from '../libs/utils/format-score';
+import { InlineNativeAd } from '../components/ads/InlineNativeAd';
 
 type TrendRange = 'week' | 'all';
 
 const PER_PAGE = 50;
+// One ad row in the list, after this many ranks. Spaced like the row separator.
+const AD_AFTER_RANK = 5;
+const AD_ROW_STYLE = { marginTop: 10 };
 
 function parseRange(value: string | undefined): TrendRange {
   return value === 'all' ? 'all' : 'week';
@@ -118,7 +122,15 @@ export default function TrendingScreen() {
       const row = (
         <TrendingListRow anime={item} rank={index + 1} onPress={() => handleAnimePress(item)} />
       );
-      return index < 8 ? <Animated.View entering={listItemEnter(index)}>{row}</Animated.View> : row;
+      const entry =
+        index < 8 ? <Animated.View entering={listItemEnter(index)}>{row}</Animated.View> : row;
+      if (index !== AD_AFTER_RANK - 1) return entry;
+      return (
+        <>
+          {entry}
+          <InlineNativeAd variant="row" style={AD_ROW_STYLE} />
+        </>
+      );
     },
     [handleAnimePress]
   );

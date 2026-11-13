@@ -71,7 +71,6 @@ export const ANIME_AUTOTRANSLATE_KEY = '@aniseekr/anime/autotranslate-synopsis';
 /** Whether to render original text alongside every translation. */
 export const ANIME_SHOW_ORIGINAL_KEY = '@aniseekr/anime/show-original';
 export const GACHA_USER_DATA_KEY = '@gacha_user_data';
-export const RATE_NATIVE_AD_SUPPRESS_UNTIL_KEY = '@aniseekr/ads/rate-native/suppressUntil';
 /** Prefix for one-shot collection tip-dismissal flags (`@aniseekr/${tip}`). */
 export const COLLECTION_TIP_KEY_PREFIX = '@aniseekr/';
 /** Prefix for swipe-action tip-dismissal flags (`@aniseekr/tip/${id}`). */

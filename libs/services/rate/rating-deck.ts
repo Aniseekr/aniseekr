@@ -1,6 +1,9 @@
 import type { DeckItem, Photo } from '../../../components/rate/types';
 
 const AD_INTERVAL = 12;
+// The first ad of a deck comes sooner: most sessions end before 12 swipes, so
+// a flat interval meant most users never reached one.
+const FIRST_AD_AFTER = 8;
 // Ads are inserted at least this far past the visual top, so a new ad card
 // enters from behind the stack (the window is top/next/third) and never pops
 // into a slot the user can already see.
@@ -11,8 +14,9 @@ export function buildRatingDeck(photos: Photo[]): DeckItem[] {
 }
 
 /**
- * Where the next ad card belongs: at least AD_INTERVAL photos after the last
- * ad, just behind the visible window, never as the last card. `null` = not due.
+ * Where the next ad card belongs: FIRST_AD_AFTER photos into a deck with no ad
+ * yet, then at least AD_INTERVAL photos after the last ad — just behind the
+ * visible window, never as the last card. `null` = not due.
  */
 export function findAdInsertIndex(deck: DeckItem[], currentIndex: number): number | null {
   let lastAd = -1;
@@ -23,12 +27,13 @@ export function findAdInsertIndex(deck: DeckItem[], currentIndex: number): numbe
     }
   }
 
+  const interval = lastAd < 0 ? FIRST_AD_AFTER : AD_INTERVAL;
   let photos = 0;
   let due = -1;
   for (let index = lastAd + 1; index < deck.length; index += 1) {
     if (deck[index]?.kind !== 'photo') continue;
     photos += 1;
-    if (photos === AD_INTERVAL) {
+    if (photos === interval) {
       due = index + 1;
       break;
     }

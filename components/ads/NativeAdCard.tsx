@@ -22,9 +22,9 @@ import { scheduleOnRN } from 'react-native-worklets';
 import {
   getClaimedRateNativeAd,
   releaseRateNativeAd,
-  type NativeAdLike,
 } from '../../libs/services/ads/rate-native-ad-pool';
-import { RATE_NATIVE_AD_DWELL_MS } from '../../libs/services/ads/rate-native-ad-session';
+import type { NativeAdLike } from '../../libs/services/ads/native-ad-request';
+import { nativeAdMediaAspectRatio } from './native-ad-media';
 import { useTheme } from '../../context/ThemeContext';
 import { readableTextOn } from '../themed';
 import { Radius, Shadow, Spacing, Typography } from '../../constants/DesignSystem';
@@ -66,7 +66,11 @@ try {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const AD_MEDIA_HEIGHT = 260;
+// Time the ad stays on top before it can be swiped away. Above the 1s an
+// impression needs to count as viewable — a card flicked off sooner is worth
+// little to advertisers — and short enough not to feel stuck. The progress
+// bar at the bottom shows it running.
+const AD_DWELL_MS = 1500;
 // Drag follow factor while the dwell window is still running — the card
 // gives under the finger instead of feeling dead, then springs back.
 const LOCKED_DRAG_RESISTANCE = 0.2;
@@ -176,7 +180,7 @@ export function NativeAdCard({ adId, isTop, onSwipe, activeTranslation, ref }: P
 
   useEffect(() => {
     if (!isTop || !nativeAd) return;
-    progress.value = withTiming(1, { duration: RATE_NATIVE_AD_DWELL_MS }, (finished) => {
+    progress.value = withTiming(1, { duration: AD_DWELL_MS }, (finished) => {
       if (!finished) return;
       unlocked.value = true;
       scheduleOnRN(unlock);
@@ -262,6 +266,7 @@ export function NativeAdCard({ adId, isTop, onSwipe, activeTranslation, ref }: P
 
   const renderLive = isTop && nativeAd && NativeAds;
   const previewImage = nativeAd?.images?.[0]?.url ?? null;
+  const mediaShape = { aspectRatio: nativeAdMediaAspectRatio(nativeAd) };
   const sponsored = (
     <Text style={[styles.advertiser, colors.secondaryText]}>{t('ads.sponsored')}</Text>
   );
@@ -272,7 +277,10 @@ export function NativeAdCard({ adId, isTop, onSwipe, activeTranslation, ref }: P
       const { NativeAdView, NativeMediaView, NativeAsset, NativeAssetType } = NativeAds!;
       return (
         <NativeAdView nativeAd={nativeAd} style={styles.adBody}>
-          <NativeMediaView resizeMode="cover" style={[styles.media, colors.tertiary]} />
+          <NativeMediaView
+            resizeMode="contain"
+            style={[styles.media, mediaShape, colors.tertiary]}
+          />
           <View style={styles.content}>
             <View style={styles.headerRow}>
               {nativeAd.icon ? (
@@ -324,9 +332,13 @@ export function NativeAdCard({ adId, isTop, onSwipe, activeTranslation, ref }: P
     return (
       <View style={styles.adBody}>
         {previewImage ? (
-          <Image source={{ uri: previewImage }} style={[styles.media, colors.tertiary]} />
+          <Image
+            source={{ uri: previewImage }}
+            resizeMode="contain"
+            style={[styles.media, mediaShape, colors.tertiary]}
+          />
         ) : (
-          <View style={[styles.media, colors.tertiary]} />
+          <View style={[styles.media, mediaShape, colors.tertiary]} />
         )}
         <View style={styles.content}>
           <View style={styles.headerRow}>
@@ -420,7 +432,6 @@ const styles = StyleSheet.create({
   },
   media: {
     width: '100%',
-    height: AD_MEDIA_HEIGHT,
   },
   content: {
     flex: 1,

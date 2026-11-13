@@ -42,6 +42,7 @@ import { PlatformLogo } from '../../components/streaming/PlatformLogo';
 import { AnimePilgrimageCard } from '../../components/pilgrimage/AnimePilgrimageCard';
 import type { PilgrimageWork } from '../../libs/services/pilgrimage/types';
 import { AddToCollectionSheet } from '../../components/collection/AddToCollectionSheet';
+import { InlineNativeAd, type InlineNativeAdRef } from '../../components/ads/InlineNativeAd';
 import { trackingService } from '../../libs/services/tracking/tracking-service';
 import { collectionService } from '../../libs/services/collection/collection-service';
 import {
@@ -423,6 +424,8 @@ export default function AnimeDetailScreen() {
   // back to something other than '1' we reset the latch so a second
   // notification arriving while the page is still mounted still works.
   const openWatchFiredRef = useRef(false);
+  // The ad sits mid-page; it is only requested once the user starts scrolling.
+  const inlineAdRef = useRef<InlineNativeAdRef>(null);
   useEffect(() => {
     if (openWatch !== '1') {
       openWatchFiredRef.current = false;
@@ -553,7 +556,10 @@ export default function AnimeDetailScreen() {
     <View className="flex-1 bg-black">
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 120 }}
+        onScrollBeginDrag={() => inlineAdRef.current?.load()}>
         <View className="relative h-64 w-full">
           <Image
             source={{ uri: anime.bannerImage || anime.image }}
@@ -751,6 +757,8 @@ export default function AnimeDetailScreen() {
                   />
                 </View>
               ) : null}
+
+              <InlineNativeAd ref={inlineAdRef} variant="card" deferred style={styles.inlineAd} />
 
               {relations.length > 0 ? <RelationsSection items={relations} /> : null}
 
@@ -1347,6 +1355,9 @@ function PlatformRatingCard({
 }
 
 const styles = StyleSheet.create({
+  inlineAd: {
+    marginTop: Spacing.xxl,
+  },
   actionTile: {
     width: Size.minTouchTarget,
     height: Size.minTouchTarget,

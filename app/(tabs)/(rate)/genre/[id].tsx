@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenHeader, Skeleton, ThemedButton, ThemedText } from '../../../../components/themed';
+import { InlineNativeAd } from '../../../../components/ads/InlineNativeAd';
 import { TrendingRow } from '../../../../components/rate/discover/DiscoverAnimeCards';
 import type { Anime } from '../../../../components/rate/types';
 import { bottomPad, Radius, Spacing, TabBar } from '../../../../constants/DesignSystem';
@@ -13,6 +14,9 @@ import { peekDeck } from '../../../../libs/services/rate/deck-cache';
 import { loadGenreSwipePage } from '../../../../libs/services/rate/genre-deck-prefetch';
 import { useT } from '../../../../libs/i18n';
 import { useTranslatedGenre } from '../../../../libs/i18n/use-translated-genre';
+
+// One ad row in the popular list, after this many ranks.
+const AD_AFTER_RANK = 5;
 
 type Popular = { status: 'loading' | 'ready' | 'error'; data: Anime[] };
 
@@ -121,7 +125,10 @@ export default function GenreScreen() {
             </ThemedText>
           ) : (
             popular.data.map((anime, index) => (
-              <TrendingRow key={anime.id} anime={anime} rank={index + 1} />
+              <Fragment key={anime.id}>
+                <TrendingRow anime={anime} rank={index + 1} />
+                {index === AD_AFTER_RANK - 1 ? <InlineNativeAd variant="row" /> : null}
+              </Fragment>
             ))
           )}
         </View>

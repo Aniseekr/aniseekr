@@ -15,20 +15,21 @@ describe('rating-deck', () => {
   const photos = (count: number): DeckItem[] =>
     Array.from({ length: count }, (_, index) => ({ kind: 'photo', photo: photo(String(index)) }));
 
-  it('places the next ad 12+ photos after the last one, just behind the visible window', () => {
-    expect(findAdInsertIndex(photos(11), 0)).toBeNull();
-    expect(findAdInsertIndex(photos(20), 8)).toBe(12);
+  it('places the first ad after 8 photos, then 12+ photos after the last one', () => {
+    expect(findAdInsertIndex(photos(7), 3)).toBeNull();
+    expect(findAdInsertIndex(photos(20), 3)).toBeNull();
+    expect(findAdInsertIndex(photos(20), 4)).toBe(8);
 
-    const withAd = insertAdCard(photos(40), 12, 'ad-0');
-    expect(findAdInsertIndex(withAd, 20)).toBeNull();
-    expect(findAdInsertIndex(withAd, 21)).toBe(25);
+    const withAd = insertAdCard(photos(40), 8, 'ad-0');
+    expect(findAdInsertIndex(withAd, 16)).toBeNull();
+    expect(findAdInsertIndex(withAd, 17)).toBe(21);
   });
 
   it('does not pre-insert ads down the loaded deck', () => {
     // Regression: right after one insert, every later due slot in a long
     // deck was claimed at once, burning one ad request per slot.
     expect(findAdInsertIndex(photos(60), 0)).toBeNull();
-    expect(findAdInsertIndex(insertAdCard(photos(60), 12, 'ad-0'), 9)).toBeNull();
+    expect(findAdInsertIndex(insertAdCard(photos(60), 8, 'ad-0'), 5)).toBeNull();
   });
 
   it('never inserts an ad into the visible window or as the last card', () => {
