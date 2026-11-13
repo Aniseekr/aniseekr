@@ -36,6 +36,7 @@
     "locality:sync": "bun scripts/sync-locality.ts"
   },
   "dependencies": {
+    "@expo/ui": "~58.0.28",
     "@expo/vector-icons": "^15.1.1",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@gorhom/portal": "1.0.14",
@@ -79,6 +80,7 @@
     "expo-status-bar": "~58.0.4",
     "expo-system-ui": "~58.0.7",
     "expo-task-manager": "~58.0.14",
+    "expo-widgets": "~58.0.28",
     "nativewind": "preview",
     "opencc-js": "1.4.2",
     "piexif-ts": "^2.1.0",

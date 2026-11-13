@@ -318,7 +318,23 @@
       "expo-router",
       "expo-secure-store",
       "expo-sharing",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "AiringWidget",
+              "displayName": "Aniseekr",
+              "description": "Next episodes of the shows you're watching",
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"],
+                "initialLayout": "widgets/AiringWidget.tsx"
+              }
+            }
+          ]
+        }
+      ]
     ],
     "orientation": "default",
     "icon": "./assets/icon.png",
