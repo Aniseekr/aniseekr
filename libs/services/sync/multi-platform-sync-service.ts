@@ -102,7 +102,22 @@ export class MultiPlatformSyncService {
     );
   }
 
-  async syncAll(): Promise<SyncResult> {
+  private syncInFlight: Promise<SyncResult> | null = null;
+
+  /**
+   * One full sync at a time: the Sync hub button and the Pro auto-sync can
+   * ask at the same moment, and both then get the same run.
+   */
+  syncAll(): Promise<SyncResult> {
+    if (!this.syncInFlight) {
+      this.syncInFlight = this.runSyncAll().finally(() => {
+        this.syncInFlight = null;
+      });
+    }
+    return this.syncInFlight;
+  }
+
+  private async runSyncAll(): Promise<SyncResult> {
     await authService.initialize();
     const platforms = authService.getConnectedPlatforms();
     const errors: { platform: PlatformType; error: string }[] = [];

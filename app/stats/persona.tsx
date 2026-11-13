@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { ReactNode, useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { ThemedText, readableTextOn, Skeleton } from '../../components/themed';
 import { EmptyStateView } from '../../components/common/EmptyStateView';
 import { StatsExhibitFrame } from '../../components/collection/stats/StatsExhibitFrame';
+import { StatsShareSheet } from '../../components/collection/stats/StatsShareSheet';
 import { useT } from '../../libs/i18n';
 import { loadUserAnimeRows, summarize } from '../../libs/services/collection/stats-service';
 import { computePersona, PersonaResult } from '../../libs/services/collection/persona';
@@ -16,6 +17,7 @@ export default function PersonaExhibit() {
   const [persona, setPersona] = useState<PersonaResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasNoData, setHasNoData] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,21 +41,6 @@ export default function PersonaExhibit() {
     };
   }, []);
 
-  const handleShare = useMemo(
-    () =>
-      persona
-        ? async () => {
-            await Share.share({
-              message: t('collectionStats.persona.shareMessage', {
-                title: persona.archetype.title,
-                match: persona.match,
-              }),
-            });
-          }
-        : undefined,
-    [persona]
-  );
-
   if (loading) {
     return (
       <StatsExhibitFrame title={t('collectionStats.persona.title')}>
@@ -74,78 +61,13 @@ export default function PersonaExhibit() {
     );
   }
 
-  const { archetype, match, watchHours, sinceLabel, dimensions } = persona;
-  const onArt = readableTextOn(archetype.imageBg.from);
+  const { dimensions } = persona;
 
   return (
-    <StatsExhibitFrame title={t('collectionStats.persona.title')} onShare={handleShare}>
-      <LinearGradient
-        colors={[archetype.imageBg.from, archetype.imageBg.to]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.heroCard, { borderColor: theme.glassBorder }]}>
-        <View style={styles.heroRow}>
-          <View style={[styles.chip, { backgroundColor: `${onArt}26` }]}>
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={{ color: onArt, letterSpacing: 1 }}>
-              {t('collectionStats.persona.typeLabel', {
-                index: String(archetype.index).padStart(2, '0'),
-                total: archetype.total,
-              })}
-            </ThemedText>
-          </View>
-          <View style={[styles.chip, { backgroundColor: `${onArt}26` }]}>
-            <ThemedText variant="captionSmall" weight="700" style={{ color: onArt }}>
-              {t('collectionStats.persona.rarityLabel', { rarity: archetype.rarity })}
-            </ThemedText>
-          </View>
-        </View>
-        <View style={styles.heroBody}>
-          <ThemedText style={[styles.heroTitle, { color: onArt }]}>{archetype.title}</ThemedText>
-          <ThemedText variant="bodyMedium" style={{ color: `${onArt}E0`, marginTop: 6 }}>
-            {archetype.description}
-          </ThemedText>
-        </View>
-        <View style={styles.heroStats}>
-          <View style={styles.heroStat}>
-            <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
-              {t('collectionStats.persona.statMatch')}
-            </ThemedText>
-            <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{match}%</ThemedText>
-          </View>
-          {watchHours > 0 ? (
-            <View style={styles.heroStat}>
-              <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
-                {t('collectionStats.persona.statViewed')}
-              </ThemedText>
-              <ThemedText style={[styles.heroStatValue, { color: onArt }]}>
-                {watchHours}h
-              </ThemedText>
-            </View>
-          ) : null}
-          {sinceLabel ? (
-            <View style={styles.heroStat}>
-              <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
-                {t('collectionStats.persona.statSince')}
-              </ThemedText>
-              <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{sinceLabel}</ThemedText>
-            </View>
-          ) : null}
-        </View>
-        <View style={styles.tagRow}>
-          {archetype.tags.map((tag) => (
-            <View
-              key={tag}
-              style={[styles.tag, { backgroundColor: `${onArt}1A`, borderColor: `${onArt}40` }]}>
-              <ThemedText variant="captionSmall" weight="600" style={{ color: onArt }}>
-                {tag}
-              </ThemedText>
-            </View>
-          ))}
-        </View>
-      </LinearGradient>
+    <StatsExhibitFrame
+      title={t('collectionStats.persona.title')}
+      onShare={() => setShareVisible(true)}>
+      <PersonaHero persona={persona} />
 
       <View
         style={[
@@ -181,7 +103,85 @@ export default function PersonaExhibit() {
           ))}
         </View>
       </View>
+      <StatsShareSheet
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        markInk={readableTextOn(persona.archetype.imageBg.from)}>
+        {(mark) => <PersonaHero persona={persona} footer={mark} />}
+      </StatsShareSheet>
     </StatsExhibitFrame>
+  );
+}
+
+/** The archetype card. Also the image that gets shared, with `footer` as the mark. */
+function PersonaHero({ persona, footer }: { persona: PersonaResult; footer?: ReactNode }) {
+  const { theme } = useTheme();
+  const t = useT();
+  const { archetype, match, watchHours, sinceLabel } = persona;
+  const onArt = readableTextOn(archetype.imageBg.from);
+
+  return (
+    <LinearGradient
+      colors={[archetype.imageBg.from, archetype.imageBg.to]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.heroCard, { borderColor: theme.glassBorder }]}>
+      <View style={styles.heroRow}>
+        <View style={[styles.chip, { backgroundColor: `${onArt}26` }]}>
+          <ThemedText
+            variant="captionSmall"
+            weight="700"
+            style={{ color: onArt, letterSpacing: 1 }}>
+            {t('collectionStats.persona.typeLabel', {
+              index: String(archetype.index).padStart(2, '0'),
+              total: archetype.total,
+            })}
+          </ThemedText>
+        </View>
+      </View>
+      <View style={styles.heroBody}>
+        <ThemedText style={[styles.heroTitle, { color: onArt }]}>{archetype.title}</ThemedText>
+        <ThemedText variant="bodyMedium" style={{ color: `${onArt}E0`, marginTop: 6 }}>
+          {archetype.description}
+        </ThemedText>
+      </View>
+      <View style={styles.heroStats}>
+        <View style={styles.heroStat}>
+          <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
+            {t('collectionStats.persona.statMatch')}
+          </ThemedText>
+          <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{match}%</ThemedText>
+        </View>
+        {watchHours > 0 ? (
+          <View style={styles.heroStat}>
+            <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
+              {t('collectionStats.persona.statViewed')}
+            </ThemedText>
+            <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{watchHours}h</ThemedText>
+          </View>
+        ) : null}
+        {sinceLabel ? (
+          <View style={styles.heroStat}>
+            <ThemedText variant="captionSmall" style={{ color: `${onArt}AA` }}>
+              {t('collectionStats.persona.statSince')}
+            </ThemedText>
+            <ThemedText style={[styles.heroStatValue, { color: onArt }]}>{sinceLabel}</ThemedText>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.tagRow}>
+        {archetype.tags.map((tag) => (
+          <View
+            key={tag}
+            style={[styles.tag, { backgroundColor: `${onArt}1A`, borderColor: `${onArt}40` }]}>
+            <ThemedText variant="captionSmall" weight="600" style={{ color: onArt }}>
+              {tag}
+            </ThemedText>
+          </View>
+        ))}
+      </View>
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
+    </LinearGradient>
   );
 }
 
@@ -196,6 +196,9 @@ const styles = StyleSheet.create({
   heroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  footer: {
+    alignItems: 'flex-end',
   },
   chip: {
     paddingHorizontal: 10,

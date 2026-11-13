@@ -4,6 +4,8 @@ import { LocalDB } from '../../db';
 import { isObject, safeJsonParse } from '../../utils/safe-json';
 import { kvGet, kvSet } from '../storage/app-storage';
 import { NOTIFICATION_PREFS_KEY } from '../storage/keys';
+import { getAppLanguageSync } from '../../i18n/app-language';
+import { translate } from '../../i18n/engine';
 
 export type NotificationKind =
   | 'episode_reminder'
@@ -19,6 +21,10 @@ export interface NotificationPreferences {
   achievementAlerts: boolean;
   pilgrimageEventReminders: boolean;
   leadTimeMinutes: number;
+  /** Pro: keep a reminder set for every show being watched, without tapping each bell. */
+  autoEpisodeReminders: boolean;
+  /** Shows whose bell the user turned off; the auto pass leaves these alone. */
+  autoMutedAnimeIds: string[];
 }
 
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -27,6 +33,8 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
   achievementAlerts: true,
   pilgrimageEventReminders: true,
   leadTimeMinutes: 15,
+  autoEpisodeReminders: true,
+  autoMutedAnimeIds: [],
 };
 
 export { NOTIFICATION_PREFS_KEY };
@@ -46,6 +54,14 @@ function pickValidPreferences(value: unknown): Partial<NotificationPreferences> 
   }
   if (typeof value.leadTimeMinutes === 'number' && Number.isFinite(value.leadTimeMinutes)) {
     out.leadTimeMinutes = value.leadTimeMinutes;
+  }
+  if (typeof value.autoEpisodeReminders === 'boolean') {
+    out.autoEpisodeReminders = value.autoEpisodeReminders;
+  }
+  if (Array.isArray(value.autoMutedAnimeIds)) {
+    out.autoMutedAnimeIds = value.autoMutedAnimeIds.filter(
+      (id): id is string => typeof id === 'string'
+    );
   }
   return out;
 }
@@ -223,9 +239,14 @@ export class NotificationService {
     const triggerDate = new Date(fireAt.getTime());
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: `${title} drops in ${leadTimeMinutes}m`,
-        body: 'Tap to open Aniseekr and get ready.',
-        data: { kind: 'episode_reminder', animeId },
+        title: translate(getAppLanguageSync(), 'bangumiTab.reminderPush.title', {
+          title,
+          minutes: leadTimeMinutes,
+        }),
+        body: translate(getAppLanguageSync(), 'bangumiTab.reminderPush.body'),
+        // fireAt: after a relaunch iOS reports the trigger as an interval, so
+        // lists read the real time from here instead of guessing from `seconds`.
+        data: { kind: 'episode_reminder', animeId, fireAt: fireAt.getTime() },
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,

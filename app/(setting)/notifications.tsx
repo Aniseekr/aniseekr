@@ -32,6 +32,14 @@ import {
 import { useT } from '../../libs/i18n';
 import { CapsText } from '../../components/themed/CapsText';
 import { ThemedSwitch } from '../../components/themed/ThemedSwitch';
+import { ProBadge } from '../../components/subscription/ProBadge';
+import { animeNotificationService } from '../../modules/notifications/animeNotificationService';
+import { PaywallSheet } from '../../components/subscription/PaywallSheet';
+import { useSubscription } from '../../context/SubscriptionContext';
+import {
+  refreshAutoEpisodeReminders,
+  resetAutoReminderThrottle,
+} from '../../libs/services/notifications/auto-episode-reminders';
 
 // Storage now lives on MMKV via notification-service.saveNotificationPrefs.
 
@@ -95,6 +103,10 @@ function extractScheduled(n: Notifications.NotificationRequest): Date | undefine
     seconds?: number;
     value?: number;
   } | null;
+  // Our own reminders carry the real fire time; after a relaunch iOS reports
+  // the trigger as an interval, and `now + seconds` drifts later every minute.
+  const fireAt = (n.content.data as { fireAt?: unknown } | null)?.fireAt;
+  if (typeof fireAt === 'number') return new Date(fireAt);
   if (!trigger) return undefined;
   if (trigger.date) {
     const d = new Date(trigger.date);
@@ -168,7 +180,7 @@ export default function NotificationsScreen() {
     async (id: string) => {
       hapticsBridge.warning();
       try {
-        await Notifications.cancelScheduledNotificationAsync(id);
+        await animeNotificationService.cancelByIdentifier(id);
         setPending((prev) => prev.filter((p) => p.identifier !== id));
         await refreshSchedule();
       } catch (e) {
@@ -196,6 +208,17 @@ export default function NotificationsScreen() {
       .filter((k) => buckets[k].length > 0)
       .map((k) => ({ key: k, label: t(GROUP_LABEL_KEYS[k]), items: buckets[k] }));
   }, [pending, t]);
+
+  const { isPro } = useSubscription();
+  const [paywallVisible, setPaywallVisible] = useState(false);
+
+  const setAutoReminders = async (enabled: boolean) => {
+    await update({ ...prefs, autoEpisodeReminders: enabled });
+    if (!enabled) return;
+    resetAutoReminderThrottle();
+    await refreshAutoEpisodeReminders(isPro);
+    await refreshSchedule();
+  };
 
   const update = async (next: NotificationPreferences) => {
     hapticsBridge.selection();
@@ -301,6 +324,7 @@ export default function NotificationsScreen() {
         </View>
       ) : null}
 
+      <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
       <SettingsSection title={t('settings.notificationsScreen.section.whatToSend')}>
         <ToggleSwitchRow
           label={t('settings.notificationsScreen.episodeReminders')}
@@ -308,6 +332,14 @@ export default function NotificationsScreen() {
           value={prefs.episodeReminders}
           onChange={(v) => update({ ...prefs, episodeReminders: v })}
           icon="notifications-active"
+        />
+        <Divider />
+        <ToggleSwitchRow
+          label={t('settings.notificationsScreen.autoEpisodeReminders')}
+          value={isPro && prefs.episodeReminders && prefs.autoEpisodeReminders}
+          onChange={(v) => void setAutoReminders(v)}
+          onLocked={isPro ? undefined : () => setPaywallVisible(true)}
+          icon="auto-awesome"
         />
         <Divider />
         <ToggleSwitchRow
@@ -479,12 +511,15 @@ function ToggleSwitchRow({
   description,
   value,
   onChange,
+  onLocked,
 }: {
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
   label: string;
   description?: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  /** Set when the row needs Pro: shows the Pro badge instead of the switch. */
+  onLocked?: () => void;
 }) {
   const { theme } = useTheme();
   return (
@@ -501,7 +536,18 @@ function ToggleSwitchRow({
         ) : null}
       </View>
       {/* The row callers' update helper already fires the selection haptic. */}
-      <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
+      {onLocked ? (
+        <Pressable
+          onPress={onLocked}
+          hitSlop={14}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+          <ProBadge locked />
+        </Pressable>
+      ) : (
+        <ThemedSwitch value={value} onValueChange={onChange} haptic={false} />
+      )}
     </View>
   );
 }

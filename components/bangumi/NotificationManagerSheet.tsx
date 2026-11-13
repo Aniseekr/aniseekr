@@ -49,7 +49,10 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
       const mapped: PendingNotification[] = items.map((n) => {
         let scheduledFor: Date | undefined;
         const trigger = n.trigger as any;
-        if (trigger?.date) {
+        const fireAt = (n.content.data as { fireAt?: unknown } | null)?.fireAt;
+        if (typeof fireAt === 'number') {
+          scheduledFor = new Date(fireAt);
+        } else if (trigger?.date) {
           scheduledFor = new Date(trigger.date);
         } else if (trigger?.seconds) {
           scheduledFor = new Date(Date.now() + trigger.seconds * 1000);
@@ -77,7 +80,7 @@ function NotificationManagerSheetComponent({ visible, onClose }: NotificationMan
   const handleDelete = async (id: string) => {
     hapticsBridge.warning();
     try {
-      await Notifications.cancelScheduledNotificationAsync(id);
+      await animeNotificationService.cancelByIdentifier(id);
       setPending((prev) => prev.filter((p) => p.identifier !== id));
       // Keep facade mirror in sync so the bell icon on cards reflects OS state.
       await animeNotificationService.rehydrate();

@@ -104,21 +104,48 @@ describe('Experience tabs', () => {
     expect(toggleSeekerTab(full, 'collection')).toEqual(['discover', 'bangumi', 'explorerJournal']);
   });
 
-  it('EXP-TABS-010 clamps persisted Seeker tabs to the visible navigation capacity', () => {
-    expect(
-      normalizeExperiencePrefs({
-        mode: 'seeker',
-        seekerTabs: [
-          'explorerCamera',
-          'explorerSearch',
-          'explorerMap',
-          'explorerJournal',
-          'discover',
-          'bangumi',
-          'collection',
-        ],
-      }).seekerTabs
-    ).toEqual(['explorerCamera', 'explorerJournal', 'discover', 'bangumi']);
+  it('EXP-TABS-010 keeps five stored Seeker tabs but shows the fifth only with Pro', () => {
+    const prefs = normalizeExperiencePrefs({
+      mode: 'seeker',
+      seekerTabs: [
+        'explorerCamera',
+        'explorerSearch',
+        'explorerMap',
+        'explorerJournal',
+        'discover',
+        'bangumi',
+        'collection',
+        'pilgrimage',
+      ],
+    });
+    expect(prefs.seekerTabs).toEqual([
+      'explorerCamera',
+      'explorerJournal',
+      'discover',
+      'bangumi',
+      'collection',
+    ]);
+    expect(resolveExperienceTabs(prefs)).toEqual([
+      'explorerCamera',
+      'explorerJournal',
+      'discover',
+      'bangumi',
+      'profile',
+    ]);
+    expect(resolveExperienceTabs(prefs, true)).toEqual([...prefs.seekerTabs, 'profile']);
+    // A lapsed subscription edits the four visible tabs; the hidden fifth is dropped.
+    expect(toggleSeekerTab(prefs.seekerTabs, 'bangumi')).toEqual([
+      'explorerCamera',
+      'explorerJournal',
+      'discover',
+    ]);
+    expect(toggleSeekerTab(prefs.seekerTabs.slice(0, 4), 'pilgrimage', 5)).toEqual([
+      'explorerCamera',
+      'explorerJournal',
+      'discover',
+      'bangumi',
+      'pilgrimage',
+    ]);
   });
 
   it('normalizes saved Seeker tabs containing only removed routes to the default four', () => {

@@ -1,33 +1,24 @@
-import { Alert, View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Radius, Spacing, Size } from '../../constants/DesignSystem';
+import { useCallback, useEffect, useState } from 'react';
+import { Radius, Spacing } from '../../constants/DesignSystem';
 import { FeatureFlags } from '../../constants/FeatureFlags';
 import { useSubscription } from '../../context/SubscriptionContext';
-import {
-  isThemeUnlocked,
-  useTheme,
-  type ThemeId,
-  type ThemeMode,
-} from '../../context/ThemeContext';
+import { useTheme, type ThemeMode } from '../../context/ThemeContext';
 import { PaywallSheet } from '../../components/subscription/PaywallSheet';
 import { EditDisplayNameSheet } from '../../components/profile/EditDisplayNameSheet';
 import {
-  SettingsHeader,
-  SettingsSection,
   SettingsRow,
-  SettingsSwitchRow,
-} from '../../components/settings/SettingsList';
-import { QuickActionSheet, type QuickAction } from '../../components/settings/QuickActionSheet';
-import { ThemedText, readableTextOn } from '../../components/themed';
+  SettingsScreenLayout,
+  SettingsSection,
+} from '../../components/setting/SettingsScreenLayout';
+import { ThemedSurface, ThemedSwitch, ThemedText, readableTextOn } from '../../components/themed';
 import { AniseekrLogo } from '../../components/brand/AniseekrLogo';
+import { SEEKR_POSES } from '../../components/brand/SeekrPose';
 import { supportsAlternateIcons } from '../../libs/brand/app-icon';
 import { useT } from '../../libs/i18n';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
@@ -38,11 +29,7 @@ import {
   type UserPrefs,
 } from '../../libs/services/user-prefs';
 import { UserRepository, type UserProfile } from '../../libs/repositories/user-repository';
-import { SEEKR_POSES } from '../../components/brand/SeekrPose';
 import { authService } from '../../libs/services/auth/auth-service';
-
-type QuickSheetKind =
-  'appearance' | 'theme' | 'themeMode' | 'accent' | 'platforms' | 'premium' | null;
 
 const THEME_MODE_LABEL_KEY = {
   light: 'settingsUi.light',
@@ -50,51 +37,25 @@ const THEME_MODE_LABEL_KEY = {
   auto: 'commonUi.auto',
 } as const satisfies Record<ThemeMode, string>;
 
-const PRESET_ACCENTS: { hex: string; name: string }[] = [
-  { hex: '#FF9F0A', name: 'Aniseekr Orange' },
-  { hex: '#FF2A6D', name: 'Cyber Pink' },
-  { hex: '#5E5CE6', name: 'Midnight Indigo' },
-  { hex: '#10B981', name: 'Forest Green' },
-  { hex: '#0A84FF', name: 'Ocean Blue' },
-  { hex: '#BF5AF2', name: 'Candy Purple' },
-];
-
 export default function SettingsScreen() {
   const subscription = useSubscription();
   const t = useT();
-  const {
-    theme,
-    themeId,
-    themeMode,
-    customAccent,
-    setTheme,
-    setThemeMode,
-    setCustomAccent,
-    themes,
-    grandfatheredThemeId,
-  } = useTheme();
+  const { theme, themeId, themeMode, themes } = useTheme();
 
   const [prefs, setPrefs] = useState<UserPrefs>(loadUserPrefsSync);
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [nameSheetVisible, setNameSheetVisible] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [connectedCount, setConnectedCount] = useState(0);
-  const [activeSheet, setActiveSheet] = useState<QuickSheetKind>(null);
 
   const appVersion =
     Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '1.0.0';
 
-  useEffect(() => {
-    // Prefs are seeded synchronously above; the subscription below catches
-    // any subsequent edits made on other settings screens.
-    const unsub = subscribeUserPrefs(setPrefs);
-    return unsub;
-  }, []);
+  // Prefs are seeded synchronously above; this catches edits made on sub-pages.
+  useEffect(() => subscribeUserPrefs(setPrefs), []);
 
-  // Re-read profile + connected platform count whenever this screen regains
-  // focus (e.g. coming back from /account after connecting/disconnecting).
-  // Per CLAUDE.md Rule 10: silent revalidation — don't clear state, don't
-  // flash a loading skeleton. We just overwrite when the fresh values land.
+  // Rule 10: silent revalidation on re-focus (e.g. back from Account) — never
+  // clear state or flash a skeleton, just overwrite when fresh values land.
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -103,14 +64,13 @@ export default function SettingsScreen() {
           const next = await UserRepository.getProfile();
           if (!cancelled) setUser(next);
         } catch {
-          // ignore — keep showing whatever we last had
+          // keep showing whatever we last had
         }
         try {
           await authService.initialize();
-          if (cancelled) return;
-          setConnectedCount(authService.getAllCredentials().length);
+          if (!cancelled) setConnectedCount(authService.getAllCredentials().length);
         } catch {
-          // ignore
+          // keep the last count
         }
       })();
       return () => {
@@ -148,7 +108,7 @@ export default function SettingsScreen() {
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Enable',
+          text: t('settings.prefs.enableR18'),
           style: 'destructive',
           onPress: () => {
             void updatePref('allowAdultContent', true);
@@ -158,566 +118,222 @@ export default function SettingsScreen() {
     );
   };
 
-  const isPro = subscription.isPro;
-  const ctaFg = readableTextOn(theme.accent);
-  const upgradeBtnBg = theme.background.primary;
-
-  const activeThemeName = useMemo(() => {
-    const found = themes.find((t) => t.id === themeId);
-    return found?.name ?? 'Aniseekr';
-  }, [themes, themeId]);
-
-  const activeAccentHex = customAccent ?? theme.accent;
-
-  const themeActions: QuickAction[] = useMemo(
-    () =>
-      themes.map((themeOption) => {
-        const locked = !isThemeUnlocked(themeOption, {
-          isPro,
-          activeThemeId: themeId,
-          grandfatheredThemeId,
-        });
-        return {
-          key: themeOption.id,
-          label: themeOption.name,
-          description: locked ? t('settingsUi.premiumOnly') : undefined,
-          icon: 'color-palette-outline',
-          selected: themeOption.id === themeId,
-          onPress: () => {
-            if (locked) {
-              setPaywallVisible(true);
-              return;
-            }
-            void setTheme(themeOption.id as ThemeId);
-          },
-        };
-      }),
-    [themes, themeId, isPro, grandfatheredThemeId, setTheme, t]
-  );
-
-  const themeModeActions: QuickAction[] = useMemo(
-    () => [
-      {
-        key: 'light',
-        label: t('settingsUi.light'),
-        icon: 'sunny-outline',
-        selected: themeMode === 'light',
-        onPress: () => void setThemeMode('light'),
-      },
-      {
-        key: 'dark',
-        label: t('settingsUi.dark'),
-        icon: 'moon-outline',
-        selected: themeMode === 'dark',
-        onPress: () => void setThemeMode('dark'),
-      },
-      {
-        key: 'auto',
-        label: t('commonUi.auto'),
-        description: t('settingsUi.followSystemAppearance'),
-        icon: 'contrast-outline',
-        selected: themeMode === 'auto',
-        onPress: () => void setThemeMode('auto'),
-      },
-    ],
-    [themeMode, setThemeMode, t]
-  );
-
-  const accentActions: QuickAction[] = useMemo(() => {
-    const actions: QuickAction[] = PRESET_ACCENTS.map((p) => ({
-      key: p.hex,
-      label: p.name,
-      description: p.hex.toUpperCase(),
-      icon: 'ellipse',
-      selected: activeAccentHex.toUpperCase() === p.hex.toUpperCase(),
-      onPress: () => void setCustomAccent(p.hex),
-    }));
-    if (customAccent) {
-      actions.push({
-        key: 'reset',
-        label: t('settingsUi.resetToThemeDefault'),
-        icon: 'refresh-outline',
-        onPress: () => void setCustomAccent(null),
-      });
-    }
-    actions.push({
-      key: 'open-picker',
-      label: 'Open full picker…',
-      icon: 'color-wand-outline',
-      onPress: () => router.push('/(setting)/accent-color'),
-    });
-    return actions;
-  }, [activeAccentHex, customAccent, setCustomAccent, t]);
-
-  const platformActions: QuickAction[] = useMemo(
-    () => [
-      {
-        key: 'manage',
-        label: t('settingsUi.managePlatforms'),
-        description: t('settingsUi.connectOrDisconnectAccounts'),
-        icon: 'link-outline',
-        onPress: () => router.push('/(setting)/account'),
-      },
-      {
-        key: 'sync-now',
-        label: t('settingsUi.syncNow'),
-        description: t('settingsUi.pullTheLatestFromConnected'),
-        icon: 'refresh-circle-outline',
-        onPress: () => {
-          UserRepository.syncAllPlatforms().then(
-            (result) => {
-              if (result.errors.length > 0) {
-                hapticsBridge.error();
-                Alert.alert(
-                  t('settingsUi.syncNow'),
-                  result.errors.map((e) => `${e.platform}: ${e.error}`).join('\n')
-                );
-              } else {
-                hapticsBridge.success();
-              }
-            },
-            (e) => {
-              hapticsBridge.error();
-              Alert.alert(t('settingsUi.syncNow'), e instanceof Error ? e.message : String(e));
-            }
-          );
-        },
-      },
-      {
-        key: 'import',
-        label: t('settingsUi.importWizard'),
-        icon: 'cloud-upload-outline',
-        onPress: () => router.push('/(setting)/import-wizard'),
-      },
-    ],
-    [t]
-  );
-
-  const appearanceActions: QuickAction[] = useMemo(() => {
-    const modeRows: QuickAction[] = [
-      {
-        key: 'light',
-        label: t('settingsUi.light'),
-        icon: 'sunny-outline' as const,
-        mode: 'light' as ThemeMode,
-      },
-      {
-        key: 'dark',
-        label: t('settingsUi.dark'),
-        icon: 'moon-outline' as const,
-        mode: 'dark' as ThemeMode,
-      },
-      {
-        key: 'auto',
-        label: t('commonUi.auto'),
-        icon: 'contrast-outline' as const,
-        mode: 'auto' as ThemeMode,
-      },
-    ].map((m) => ({
-      key: `mode-${m.key}`,
-      label: m.label,
-      description:
-        m.key === 'auto' ? t('settingsUi.followSystemAppearance') : t('settingsUi.themeMode'),
-      icon: m.icon,
-      selected: themeMode === m.mode,
-      onPress: () => void setThemeMode(m.mode),
-    }));
-
-    const accentRows: QuickAction[] = PRESET_ACCENTS.slice(0, 4).map((p) => ({
-      key: `accent-${p.hex}`,
-      label: p.name,
-      description: t('settingsUi.accentColor'),
-      icon: 'ellipse',
-      selected: activeAccentHex.toUpperCase() === p.hex.toUpperCase(),
-      onPress: () => void setCustomAccent(p.hex),
-    }));
-
-    return [
-      ...modeRows,
-      ...accentRows,
-      {
-        key: 'open-theme',
-        label: 'Switch theme…',
-        description: `Currently ${activeThemeName}`,
-        icon: 'color-palette-outline',
-        onPress: () => setActiveSheet('theme'),
-      },
-      {
-        key: 'open-appearance',
-        label: t('settingsUi.openFullAppearance'),
-        icon: 'open-outline',
-        onPress: () => router.push('/(setting)/appearance'),
-      },
-    ];
-  }, [themeMode, setThemeMode, activeAccentHex, setCustomAccent, activeThemeName, t]);
-
-  const premiumActions: QuickAction[] = useMemo(() => {
-    if (isPro) {
-      return [
-        {
-          key: 'manage',
-          label: t('settingsUi.manageSubscription'),
-          icon: 'card-outline',
-          onPress: () => router.push('/(setting)/subscription'),
-        },
-      ];
-    }
-    return [
-      {
-        key: 'upgrade',
-        label: t('settingsUi.upgradeNow'),
-        description: t('settingsUi.unlockThemesSyncNoAds'),
-        icon: 'ribbon-outline',
-        onPress: () => setPaywallVisible(true),
-      },
-      {
-        key: 'restore',
-        label: t('commonUi.restorePurchases'),
-        icon: 'refresh-outline',
-        onPress: () => {
-          void subscription.restore?.();
-        },
-      },
-    ];
-  }, [isPro, subscription, t]);
-
-  const sheetConfig = useMemo(() => {
-    switch (activeSheet) {
-      case 'appearance':
-        return {
-          title: t('settingsUi.appearance'),
-          subtitle: `${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`,
-          actions: appearanceActions,
-        };
-      case 'theme':
-        return {
-          title: t('settingsUi.theme'),
-          subtitle: 'Tap to switch · long-press a row anywhere to open quick actions',
-          actions: themeActions,
-        };
-      case 'themeMode':
-        return {
-          title: t('settingsUi.themeMode'),
-          subtitle: t('settingsUi.chooseHowSurfacesRespondTo'),
-          actions: themeModeActions,
-        };
-      case 'accent':
-        return {
-          title: t('settingsUi.accentColor'),
-          subtitle: t('settingsUi.pickAPresetOrOpen'),
-          actions: accentActions,
-        };
-      case 'platforms':
-        return {
-          title: t('settingsUi.connectedPlatforms'),
-          subtitle: `${connectedCount} connected`,
-          actions: platformActions,
-        };
-      case 'premium':
-        return {
-          title: isPro ? t('settingsUi.premium') : t('settingsUi.aniseekrPremium'),
-          subtitle: isPro ? t('settingsUi.manageSubscription') : t('settingsUi.premiumPitch'),
-          actions: premiumActions,
-        };
-      default:
-        return null;
-    }
-  }, [
-    activeSheet,
-    appearanceActions,
-    themeActions,
-    themeModeActions,
-    accentActions,
-    platformActions,
-    premiumActions,
-    connectedCount,
-    isPro,
-    activeThemeName,
-    themeMode,
-    t,
-  ]);
-
   const handleSaveName = useCallback(async (name: string) => {
     await UserRepository.setDisplayName(name);
-    const next = await UserRepository.getProfile();
-    setUser(next);
+    setUser(await UserRepository.getProfile());
   }, []);
 
+  const isPro = subscription.isPro;
+  const activeThemeName = themes.find((option) => option.id === themeId)?.name ?? 'Aniseekr';
   const displayName = user?.username || t('tabs.profileScreen.anonName');
   const avatarUri = user?.avatarUrl ?? '';
-  const mascot = prefs.profileMascot;
+  const open = (route: Parameters<typeof router.push>[0]) => () => router.push(route);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background.primary }]}>
-      <LinearGradient colors={theme.gradient} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <SettingsHeader title={t('settings.title')} onBack={() => router.back()} />
-
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* User header card */}
-          <Pressable
-            onPress={() => setNameSheetVisible(true)}
-            onLongPress={() => {
-              hapticsBridge.longPress();
-              setNameSheetVisible(true);
-            }}
-            style={({ pressed }) => [pressed && { opacity: 0.92 }]}
-            accessibilityRole="button"
-            accessibilityLabel={t('settingsUi.editProfileName')}>
+    <>
+      <SettingsScreenLayout title={t('settings.title')}>
+        <Pressable
+          onPress={() => {
+            hapticsBridge.tap();
+            setNameSheetVisible(true);
+          }}
+          style={({ pressed }) => pressed && styles.pressed}
+          accessibilityRole="button"
+          accessibilityLabel={t('settingsUi.editProfileName')}>
+          <ThemedSurface style={styles.userCard}>
             <View
               style={[
-                styles.userCard,
-                {
-                  backgroundColor: theme.background.secondary,
-                  borderColor: theme.glassBorder,
-                },
+                styles.avatar,
+                { backgroundColor: theme.background.primary, borderColor: theme.accent },
               ]}>
-              <LinearGradient
-                colors={[theme.accent, theme.accentDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}>
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-                ) : (
-                  <Image
-                    source={SEEKR_POSES[mascot]}
-                    style={styles.avatarImage}
-                    contentFit="cover"
-                    contentPosition="top"
-                  />
-                )}
-              </LinearGradient>
-
-              <View style={styles.userInfo}>
-                <View style={styles.nameRow}>
-                  <ThemedText variant="titleLarge" weight="700" numberOfLines={1}>
-                    {displayName}
-                  </ThemedText>
-                  {FeatureFlags.PREMIUM_ENABLED && isPro ? (
-                    <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
-                      <ThemedText
-                        variant="captionSmall"
-                        weight="800"
-                        style={[styles.proBadgeText, { color: ctaFg }]}>
-                        PRO
-                      </ThemedText>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.editPill,
-                  { backgroundColor: theme.background.tertiary, borderColor: theme.glassBorder },
-                ]}>
-                <ThemedText variant="captionSmall" weight="700">
-                  {t('common.edit')}
-                </ThemedText>
-              </View>
-            </View>
-          </Pressable>
-
-          {/* Premium hero — hidden while FeatureFlags.PREMIUM_ENABLED is false */}
-          {FeatureFlags.PREMIUM_ENABLED ? (
-            <Pressable
-              onPress={() => {
-                hapticsBridge.tap();
-                if (isPro) router.push('/(setting)/subscription');
-                else setPaywallVisible(true);
-              }}
-              onLongPress={() => {
-                hapticsBridge.longPress();
-                setActiveSheet('premium');
-              }}
-              style={({ pressed }) => [styles.premiumHeroWrap, pressed && { opacity: 0.92 }]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isPro
-                  ? t('settingsUi.manageSubscriptionA11y')
-                  : t('settingsUi.upgradeToPremiumA11y')
-              }>
-              <LinearGradient
-                colors={[theme.accent, theme.accentDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.premiumHero}>
-                <View style={styles.premiumHeroLeft}>
-                  <Ionicons name="ribbon" size={22} color={ctaFg} />
-                  <View style={styles.premiumTextWrap}>
-                    <ThemedText variant="titleMedium" weight="700" style={{ color: ctaFg }}>
-                      {isPro ? t('settings.premium.active') : t('settings.premium.unlock')}
-                    </ThemedText>
-                    <ThemedText variant="bodySmall" style={{ color: ctaFg, opacity: 0.85 }}>
-                      {isPro ? t('settings.premium.activeDesc') : t('settings.premium.pitch')}
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={[styles.upgradePill, { backgroundColor: upgradeBtnBg }]}>
-                  <ThemedText variant="titleSmall" weight="700">
-                    {isPro ? t('settings.premium.manage') : t('settings.premium.upgrade')}
-                  </ThemedText>
-                </View>
-              </LinearGradient>
-            </Pressable>
-          ) : null}
-
-          <SettingsSection title={t('settings.sections.account')}>
-            <SettingsRow
-              icon="people-circle-outline"
-              label={t('settings.connectedPlatforms')}
-              value={connectedCount > 0 ? `${connectedCount}` : t('settings.connectedNone')}
-              onPress={() => router.push('/(setting)/account')}
-              onLongPress={() => setActiveSheet('platforms')}
-            />
-            <SettingsRow
-              icon="trophy-outline"
-              label={t('settings.achievements')}
-              onPress={() => router.push('/(setting)/achievements')}
-            />
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.sections.contentSync')}>
-            <SettingsRow
-              icon="cloud-outline"
-              label={t('settings.browseSource')}
-              onPress={() => router.push('/(setting)/data-source')}
-            />
-            <SettingsRow
-              icon="play-circle-outline"
-              label={t('settings.watchPlatforms')}
-              description={
-                prefs.streamingPlatforms.enabled.length > 0
-                  ? t('settings.watchPlatformsSummary', {
-                      count: prefs.streamingPlatforms.enabled.length,
-                      primary:
-                        prefs.streamingPlatforms.primary ?? t('settings.watchPlatformsNoPrimary'),
-                    })
-                  : undefined
-              }
-              onPress={() => router.push('/(setting)/watch-platforms')}
-            />
-            <SettingsRow
-              icon="server-outline"
-              label={t('settings.cache')}
-              onPress={() => router.push('/(setting)/cache')}
-            />
-            <SettingsRow
-              icon="cloud-upload-outline"
-              label={t('settings.backup')}
-              description={t('settings.backupHint')}
-              onPress={() => router.push('/(setting)/backup')}
-            />
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.sections.appearance')}>
-            <SettingsRow
-              icon="color-palette-outline"
-              label={t('settings.appearanceTitle')}
-              description={`${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`}
-              right={
-                <View
-                  style={[
-                    styles.accentSwatch,
-                    { backgroundColor: activeAccentHex, borderColor: theme.glassBorder },
-                  ]}
-                />
-              }
-              onPress={() => router.push('/(setting)/appearance')}
-              onLongPress={() => setActiveSheet('appearance')}
-            />
-            <SettingsRow
-              icon="language-outline"
-              label={t('settings.language')}
-              description={t('settings.languageSubtitle')}
-              onPress={() => router.push('/(setting)/language')}
-            />
-            {supportsAlternateIcons ? (
-              <SettingsRow
-                icon="apps-outline"
-                label={t('brand.appIcon.title')}
-                onPress={() => router.push('/(setting)/app-icon')}
+              <Image
+                source={avatarUri ? { uri: avatarUri } : SEEKR_POSES[prefs.profileMascot]}
+                style={styles.avatarImage}
+                contentFit="cover"
+                contentPosition="top"
               />
-            ) : null}
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.sections.preferences')}>
-            <SettingsSwitchRow
-              icon="warning-outline"
-              label={t('settings.prefs.allowR18')}
-              description={t('settings.prefs.allowR18Desc')}
-              value={prefs.allowAdultContent}
-              onValueChange={handleAdultToggle}
-            />
-            <SettingsSwitchRow
-              icon="game-controller-outline"
-              label={t('settings.prefs.includeGames')}
-              description={t('settings.prefs.includeGamesDesc')}
-              value={prefs.bangumiIncludeGames}
-              onValueChange={(v) => void updatePref('bangumiIncludeGames', v)}
-            />
-            <SettingsSwitchRow
-              icon="star-outline"
-              label={t('settings.prefs.showScore')}
-              description={t('settings.prefs.showScoreDesc')}
-              value={prefs.bangumiShowScoreProminently}
-              onValueChange={(v) => void updatePref('bangumiShowScoreProminently', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title={t('settings.sections.notificationsAbout')}>
-            <SettingsRow
-              icon="notifications-outline"
-              label={t('settings.reminders')}
-              onPress={() => router.push('/(setting)/notifications')}
-            />
-            <SettingsRow
-              icon="ribbon-outline"
-              label={t('settings.attribution')}
-              onPress={() => router.push('/(setting)/attribution')}
-            />
-            <SettingsRow
-              icon="lock-closed-outline"
-              label={t('settings.privacyLong')}
-              onPress={() => router.push('/(setting)/privacy')}
-            />
-            <SettingsRow
-              icon="document-text-outline"
-              label={t('settings.termsLong')}
-              onPress={() => router.push('/(setting)/terms')}
-            />
-          </SettingsSection>
-
-          <View style={styles.brandFooter}>
-            <AniseekrLogo height={34} />
-            <ThemedText variant="bodySmall" tone="secondary" align="center">
-              {t('brand.tagline')}
+            </View>
+            <View style={styles.nameRow}>
+              <ThemedText variant="titleLarge" weight="700" numberOfLines={1} style={styles.name}>
+                {displayName}
+              </ThemedText>
+              {FeatureFlags.PREMIUM_ENABLED && isPro ? (
+                <View style={[styles.proBadge, { backgroundColor: theme.accent }]}>
+                  <ThemedText
+                    variant="captionSmall"
+                    weight="800"
+                    style={{ color: readableTextOn(theme.accent) }}>
+                    PRO
+                  </ThemedText>
+                </View>
+              ) : null}
+            </View>
+            <ThemedText variant="caption" tone="secondary" weight="700">
+              {t('common.edit')}
             </ThemedText>
-          </View>
+          </ThemedSurface>
+        </Pressable>
 
-          <Pressable
-            onPress={() => {
-              hapticsBridge.tap();
-              router.push('/(setting)/advanced');
-            }}
-            onLongPress={() => {
-              hapticsBridge.longPress();
-              router.push('/(setting)/design-tokens');
-            }}
-            delayLongPress={500}
-            style={styles.versionRow}
-            accessibilityRole="button"
-            accessibilityLabel={t('settingsUi.appVersionTapToOpen')}>
-            <ThemedText variant="caption" tone="tertiary" align="center">
-              Aniseekr v{appVersion} (Expo)
-            </ThemedText>
-          </Pressable>
-        </ScrollView>
-      </SafeAreaView>
+        <SettingsSection title={t('settings.sections.accountSync')} divided>
+          {FeatureFlags.PREMIUM_ENABLED ? (
+            <SettingsRow
+              icon="workspace-premium"
+              label={isPro ? t('settings.premium.active') : t('settings.premium.unlock')}
+              onPress={isPro ? open('/(setting)/subscription') : () => setPaywallVisible(true)}
+            />
+          ) : null}
+          <SettingsRow
+            icon="people"
+            label={t('settings.connectedPlatforms')}
+            value={connectedCount > 0 ? `${connectedCount}` : t('settings.connectedNone')}
+            onPress={open('/(setting)/account')}
+          />
+          <SettingsRow
+            icon="sync"
+            label={t('settings.syncHub')}
+            onPress={open('/(setting)/sync-hub')}
+          />
+          <SettingsRow
+            icon="file-upload"
+            label={t('settings.importWizard.title')}
+            onPress={open('/(setting)/import-wizard')}
+          />
+          <SettingsRow
+            icon="cloud-upload"
+            label={t('settings.backup')}
+            onPress={open('/(setting)/backup')}
+          />
+          <SettingsRow
+            icon="emoji-events"
+            label={t('settings.achievements')}
+            onPress={open('/(setting)/achievements')}
+          />
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sections.content')} divided>
+          <SettingsRow
+            icon="cloud-queue"
+            label={t('settings.browseSource')}
+            onPress={open('/(setting)/data-source')}
+          />
+          <SettingsRow
+            icon="play-circle-outline"
+            label={t('settings.watchPlatforms')}
+            description={
+              prefs.streamingPlatforms.enabled.length > 0
+                ? t('settings.watchPlatformsSummary', {
+                    count: prefs.streamingPlatforms.enabled.length,
+                    primary:
+                      prefs.streamingPlatforms.primary ?? t('settings.watchPlatformsNoPrimary'),
+                  })
+                : undefined
+            }
+            onPress={open('/(setting)/watch-platforms')}
+          />
+          <SettingsRow
+            icon="warning-amber"
+            label={t('settings.prefs.allowR18')}
+            rightSlot={
+              <ThemedSwitch
+                accessibilityLabel={t('settings.prefs.allowR18')}
+                value={prefs.allowAdultContent}
+                onValueChange={(next) => void handleAdultToggle(next)}
+              />
+            }
+          />
+          <SettingsRow
+            icon="sports-esports"
+            label={t('settings.prefs.includeGames')}
+            description={t('settings.prefs.includeGamesDesc')}
+            rightSlot={
+              <ThemedSwitch
+                accessibilityLabel={t('settings.prefs.includeGames')}
+                value={prefs.bangumiIncludeGames}
+                onValueChange={(next) => void updatePref('bangumiIncludeGames', next)}
+              />
+            }
+          />
+          <SettingsRow
+            icon="star-outline"
+            label={t('settings.prefs.showScore')}
+            description={t('settings.prefs.showScoreDesc')}
+            rightSlot={
+              <ThemedSwitch
+                accessibilityLabel={t('settings.prefs.showScore')}
+                value={prefs.bangumiShowScoreProminently}
+                onValueChange={(next) => void updatePref('bangumiShowScoreProminently', next)}
+              />
+            }
+          />
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sections.appearance')} divided>
+          <SettingsRow
+            icon="palette"
+            label={t('settings.appearanceTitle')}
+            description={`${activeThemeName} · ${t(THEME_MODE_LABEL_KEY[themeMode])}`}
+            onPress={open('/(setting)/appearance')}
+          />
+          <SettingsRow
+            icon="translate"
+            label={t('settings.language')}
+            onPress={open('/(setting)/language')}
+          />
+          {supportsAlternateIcons ? (
+            <SettingsRow
+              icon="apps"
+              label={t('brand.appIcon.title')}
+              onPress={open('/(setting)/app-icon')}
+            />
+          ) : null}
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sections.notificationsStorage')} divided>
+          <SettingsRow
+            icon="notifications-none"
+            label={t('settings.reminders')}
+            onPress={open('/(setting)/notifications')}
+          />
+          <SettingsRow
+            icon="storage"
+            label={t('settings.cache')}
+            onPress={open('/(setting)/cache')}
+          />
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sections.about')} divided>
+          <SettingsRow
+            icon="favorite-border"
+            label={t('settings.attribution')}
+            onPress={open('/(setting)/attribution')}
+          />
+          <SettingsRow
+            icon="lock-outline"
+            label={t('settings.privacyLong')}
+            onPress={open('/(setting)/privacy')}
+          />
+          <SettingsRow
+            icon="description"
+            label={t('settings.termsLong')}
+            onPress={open('/(setting)/terms')}
+          />
+          <SettingsRow
+            icon="build"
+            label={t('settings.advanced.title')}
+            onPress={open('/(setting)/advanced')}
+          />
+        </SettingsSection>
+
+        <View style={styles.brandFooter}>
+          <AniseekrLogo height={34} />
+          <ThemedText variant="bodySmall" tone="secondary" align="center">
+            {t('brand.tagline')}
+          </ThemedText>
+          <ThemedText variant="caption" tone="tertiary" align="center">
+            {t('settings.version', { version: appVersion })}
+          </ThemedText>
+        </View>
+      </SettingsScreenLayout>
 
       <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
       <EditDisplayNameSheet
@@ -726,122 +342,45 @@ export default function SettingsScreen() {
         onClose={() => setNameSheetVisible(false)}
         onSave={handleSaveName}
       />
-
-      {sheetConfig ? (
-        <QuickActionSheet
-          visible={activeSheet !== null}
-          onClose={() => setActiveSheet(null)}
-          title={sheetConfig.title}
-          subtitle={sheetConfig.subtitle}
-          actions={sheetConfig.actions}
-        />
-      ) : null}
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: 120,
-    paddingTop: Spacing.xs,
-    gap: Spacing.md,
-  },
+  pressed: { opacity: 0.85 },
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm + 2,
-    padding: Spacing.sm + 2,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
   },
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: Radius.full,
+    borderWidth: 2,
     overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
-  userInfo: {
-    flex: 1,
-    gap: 4,
-  },
   nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  proBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.sm,
-  },
-  proBadgeText: {
-    letterSpacing: 1,
-  },
-  editPill: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: Radius.chip,
-    borderWidth: 1,
-  },
-  premiumHeroWrap: {
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-  },
-  premiumHero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: Radius.lg,
-  },
-  premiumHeroLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm + 2,
     flex: 1,
-  },
-  premiumTextWrap: {
-    flex: 1,
-    gap: 2,
-  },
-  upgradePill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: Radius.sm,
-  },
-  accentSwatch: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-  },
-  brandFooter: {
-    marginTop: Spacing.xxl,
+    flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
   },
-  versionRow: {
-    minHeight: Size.minTouchTarget,
+  name: { flexShrink: 1 },
+  proBadge: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xxs,
+    borderRadius: Radius.sm,
+  },
+  brandFooter: {
+    marginTop: Spacing.xl,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
+    gap: Spacing.xs,
   },
 });

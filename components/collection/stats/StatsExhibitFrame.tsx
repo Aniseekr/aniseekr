@@ -1,14 +1,12 @@
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../../../context/ThemeContext';
-import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
-import { ThemedIconButton, ThemedText } from '../../themed';
+import { Spacing } from '../../../constants/DesignSystem';
+import { ScreenHeader, ThemedIconButton } from '../../themed';
 import { useT } from '../../../libs/i18n';
-import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 interface Props {
   title: string;
@@ -25,7 +23,6 @@ export function StatsExhibitFrame({
   contentPaddingBottom,
   scrollable = true,
 }: Props) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const t = useT();
@@ -39,44 +36,20 @@ export function StatsExhibitFrame({
   return (
     <View style={[styles.root, { backgroundColor: theme.background.primary }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <LinearGradient
-        colors={[theme.background.primary, theme.background.secondary, theme.background.primary]}
-        style={StyleSheet.absoluteFill}
-      />
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <ThemedIconButton
-            accessibilityLabel={t('common.back')}
-            icon={(c) => <MaterialIcons name="arrow-back" size={20} color={c} />}
-            onPress={() => {
-              hapticsBridge.tap();
-              router.back();
-            }}
-          />
-          <ThemedText variant="headlineSmall" weight="700" style={styles.title}>
-            {title}
-          </ThemedText>
-          {onShare ? (
-            <Pressable
-              onPress={() => {
-                hapticsBridge.tap();
-                onShare();
-              }}
-              hitSlop={12}
-              style={[
-                styles.iconBtn,
-                {
-                  backgroundColor: theme.background.secondary,
-                  borderColor: theme.glassBorder,
-                },
-              ]}>
-              <MaterialIcons name="ios-share" size={16} color={theme.text.primary} />
-            </Pressable>
-          ) : (
-            <View style={{ width: 36 }} />
-          )}
-        </View>
-
+        <ScreenHeader
+          title={title}
+          right={
+            onShare ? (
+              <ThemedIconButton
+                accessibilityLabel={t('collectionUi.shareWithFriends')}
+                size={40}
+                icon={(color) => <MaterialIcons name="ios-share" size={18} color={color} />}
+                onPress={onShare}
+              />
+            ) : undefined
+          }
+        />
         {scrollable ? <ScrollView showsVerticalScrollIndicator={false}>{body}</ScrollView> : body}
       </SafeAreaView>
     </View>
@@ -86,28 +59,9 @@ export function StatsExhibitFrame({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    ...Typography.titleLarge,
-    fontWeight: '700',
-  },
   content: {
     paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
     gap: Spacing.md,
   },
 });

@@ -32,7 +32,13 @@ export interface ExperiencePrefs {
   seekerTabs: SeekerTabId[];
 }
 
-export const MAX_SEEKER_CONTENT_TABS = 4;
+/** Stored for everyone; the fifth tab only shows with Pro. */
+export const MAX_SEEKER_CONTENT_TABS = 5;
+export const FREE_SEEKER_CONTENT_TABS = 4;
+
+export function seekerTabLimit(isPro: boolean): number {
+  return isPro ? MAX_SEEKER_CONTENT_TABS : FREE_SEEKER_CONTENT_TABS;
+}
 
 export const SEEKER_TAB_CATALOG: readonly SeekerTabId[] = [
   'discover',
@@ -103,13 +109,16 @@ export function normalizeExperiencePrefs(input: unknown): ExperiencePrefs {
   return { mode, seekerTabs };
 }
 
-export function resolveExperienceTabs(prefs: ExperiencePrefs): ExperienceTabId[] {
+export function resolveExperienceTabs(prefs: ExperiencePrefs, isPro = false): ExperienceTabId[] {
   if (prefs.mode !== 'seeker') return [...FIXED_TABS[prefs.mode]];
-  return [...prefs.seekerTabs, 'profile'];
+  return [...prefs.seekerTabs.slice(0, seekerTabLimit(isPro)), 'profile'];
 }
 
-export function resolveExperienceRouteNames(prefs: ExperiencePrefs): ExperienceTabRouteName[] {
-  return resolveExperienceTabs(prefs).map((tab) => EXPERIENCE_TAB_ROUTE_NAMES[tab]);
+export function resolveExperienceRouteNames(
+  prefs: ExperiencePrefs,
+  isPro = false
+): ExperienceTabRouteName[] {
+  return resolveExperienceTabs(prefs, isPro).map((tab) => EXPERIENCE_TAB_ROUTE_NAMES[tab]);
 }
 
 export function resolveExperienceLandingHref(prefs: ExperiencePrefs): ExperienceTabHref {
@@ -128,11 +137,17 @@ export function resolveExperienceTabTarget<TFallback extends string>(
   return { href: fallbackHref, isVisibleTab: false };
 }
 
-export function toggleSeekerTab(tabs: readonly SeekerTabId[], tab: SeekerTabId): SeekerTabId[] {
+/** `stored` may hold a fifth tab from a Pro period; only the first `limit` count. */
+export function toggleSeekerTab(
+  stored: readonly SeekerTabId[],
+  tab: SeekerTabId,
+  limit: number = FREE_SEEKER_CONTENT_TABS
+): SeekerTabId[] {
+  const tabs = stored.slice(0, limit);
   if (tabs.includes(tab)) {
-    if (tabs.length <= 1) return [...tabs];
+    if (tabs.length <= 1) return tabs;
     return tabs.filter((candidate) => candidate !== tab);
   }
-  if (tabs.length >= MAX_SEEKER_CONTENT_TABS) return [...tabs];
+  if (tabs.length >= limit) return tabs;
   return [...tabs, tab];
 }

@@ -118,6 +118,7 @@ export default function FloatingTabBar({
   //   - active tab has drilled into a nested non-index route (e.g. (rate)/rating,
   //     anime/[id]). Nested screens may forget to call parent.setOptions, and
   //     racey setOptions inside useEffect can leave the bar visible for a frame.
+  const [rowWidth, setRowWidth] = useState(0);
   const shouldHide = useMemo(() => {
     if (externallyHidden) return true;
     if (!activeOptions) return true;
@@ -164,7 +165,12 @@ export default function FloatingTabBar({
         <View style={styles.pillBackground} pointerEvents="none" />
         <View style={styles.pillBorder} pointerEvents="none" />
 
-        <View style={styles.tabRow}>
+        <View
+          style={styles.tabRow}
+          onLayout={(e) => {
+            const w = Math.floor(e.nativeEvent.layout.width);
+            if (w !== rowWidth) setRowWidth(w);
+          }}>
           {visibleRoutes.map((route) => {
             const { options } = descriptors[route.key];
             const realIndex = state.routes.findIndex((r) => r.key === route.key);
@@ -201,6 +207,9 @@ export default function FloatingTabBar({
                 onPress={onPress}
                 onLongPress={onLongPress}
                 renderIcon={options.tabBarIcon}
+                maxWidth={
+                  rowWidth > 0 ? rowWidth - (visibleRoutes.length - 1) * COLLAPSED_WIDTH : 0
+                }
               />
             );
           })}
@@ -216,9 +225,11 @@ interface TabItemProps {
   onPress: () => void;
   onLongPress: () => void;
   renderIcon?: (props: { focused: boolean; color: string; size: number }) => React.ReactNode;
+  /** Room the focused tab may take; 0 until the row is measured. */
+  maxWidth: number;
 }
 
-function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItemProps) {
+function TabItem({ isFocused, label, onPress, onLongPress, renderIcon, maxWidth }: TabItemProps) {
   const [labelWidth, setLabelWidth] = useState(0);
   const pressScale = useSharedValue(1);
   const focusProgress = useSharedValue(isFocused ? 1 : 0);
@@ -236,8 +247,11 @@ function TabItem({ isFocused, label, onPress, onLongPress, renderIcon }: TabItem
     focusProgress.value = withSpring(isFocused ? 1 : 0, Springs.focus);
   }, [isFocused, focusProgress]);
 
-  const expandedWidth =
+  // With six tabs a long label no longer fits next to the other icons; the
+  // focused tab then stays icon-only instead of pushing the row off the bar.
+  const naturalWidth =
     labelWidth > 0 ? COLLAPSED_WIDTH + labelWidth + LABEL_TRAILING_PAD : COLLAPSED_WIDTH;
+  const expandedWidth = maxWidth > 0 && naturalWidth > maxWidth ? COLLAPSED_WIDTH : naturalWidth;
 
   const pillStyle = useAnimatedStyle(() => ({
     width: COLLAPSED_WIDTH + focusProgress.value * (expandedWidth - COLLAPSED_WIDTH),

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useT } from '../../../libs/i18n';
-import { Spacing } from '../../../constants/DesignSystem';
+import { IconSize, Spacing } from '../../../constants/DesignSystem';
 import { chartRamp, useTheme } from '../../../context/ThemeContext';
-import { ThemedText, Skeleton } from '../../themed';
+import { ThemedButton, ThemedText, Skeleton } from '../../themed';
 import { EmptyStateView } from '../../common/EmptyStateView';
 import { ErrorStateView } from '../../common/ErrorStateView';
 import { StatsHeroCard } from './StatsHeroCard';
@@ -12,9 +13,14 @@ import { StatusDonutCard } from './StatusDonutCard';
 import { MonthlyHoursBar } from './MonthlyHoursBar';
 import { AchievementsGrid } from './AchievementsGrid';
 import { ExhibitCard } from './ExhibitCard';
+import { ScoreDistributionCard } from './ScoreDistributionCard';
+import { PaywallSheet } from '../../subscription/PaywallSheet';
+import { useSubscription } from '../../../context/SubscriptionContext';
 import {
   loadUserAnimeRows,
   monthlyHours,
+  scoreDistribution,
+  ScoreBucket,
   summarize,
   StatsSummary,
 } from '../../../libs/services/collection/stats-service';
@@ -24,24 +30,18 @@ import {
 } from '../../../libs/services/achievements/achievement-service';
 
 interface Props {
-  /**
-   * Bucket label derived from total-count thresholds. Not a real percentile —
-   * keep `false` unless the surface intentionally mirrors the legacy hero card.
-   */
-  showThresholdHighlight?: boolean;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
 }
 
-export function StatsOverview({
-  showThresholdHighlight = false,
-  emptyActionLabel,
-  onEmptyAction,
-}: Props) {
+export function StatsOverview({ emptyActionLabel, onEmptyAction }: Props) {
   const router = useRouter();
   const t = useT();
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [monthly, setMonthly] = useState<ReturnType<typeof monthlyHours>>([]);
+  const [scores, setScores] = useState<ScoreBucket[]>([]);
+  const { isPro } = useSubscription();
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [achievements, setAchievements] = useState<AchievementWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +57,7 @@ export function StatsOverview({
         const s = summarize(rows);
         setSummary(s);
         setMonthly(monthlyHours(rows));
+        setScores(scoreDistribution(rows));
         setAchievements(ach);
       } catch (e) {
         if (!cancelled)
@@ -71,19 +72,11 @@ export function StatsOverview({
   }, [t]);
 
   const year = new Date().getFullYear();
-  const heroBadge = `Year in review · ${year}`;
-
-  const heroHighlight = useMemo(() => {
-    if (!showThresholdHighlight || !summary) return undefined;
-    if (summary.total >= 200) return 'Top 5%';
-    if (summary.total >= 100) return 'Top 10%';
-    if (summary.total >= 50) return 'Top 25%';
-    return undefined;
-  }, [summary, showThresholdHighlight]);
 
   // Status colours come from the theme's chart ramp (watching → dropped), so a
   // premium skin recolours the donut; free themes keep the old status colours.
-  const ramp = chartRamp(useTheme().theme);
+  const { theme } = useTheme();
+  const ramp = chartRamp(theme);
   const donutSlices = useMemo(() => {
     if (!summary) return [];
     return [
@@ -104,8 +97,6 @@ export function StatsOverview({
         title: t('collectionUi.animePersona'),
         subtitle: t('collectionUi.discoverYourViewingArchetype'),
         icon: 'psychology' as const,
-        gradientFrom: '#7C5BFF',
-        gradientTo: '#21D4FD',
         route: '/stats/persona',
         featured: true,
         minTotal: 3,
@@ -115,8 +106,6 @@ export function StatsOverview({
         title: t('collectionUi.yearInReview'),
         subtitle: t('collectionUi.yourWatchingYearRecapped'),
         icon: 'auto-stories' as const,
-        gradientFrom: '#FF6CAB',
-        gradientTo: '#FF8E1E',
         route: '/stats/year-in-review',
         minTotal: 1,
       },
@@ -125,8 +114,6 @@ export function StatsOverview({
         title: t('collectionUi.hallOfFame'),
         subtitle: t('collectionUi.trophiesMedallionsMilestones'),
         icon: 'emoji-events' as const,
-        gradientFrom: '#F2994A',
-        gradientTo: '#F2C94C',
         route: '/stats/hall-of-fame',
         minTotal: 0,
       },
@@ -135,18 +122,14 @@ export function StatsOverview({
         title: t('collectionUi.top10Picks'),
         subtitle: t('collectionUi.curatedByYourRatings'),
         icon: 'star-rate' as const,
-        gradientFrom: '#0F2027',
-        gradientTo: '#2C5364',
         route: '/stats/top-picks',
         minTotal: 3,
       },
       {
         id: 'top-favorites',
         title: t('collectionUi.myTopFavorites'),
-        subtitle: 'Why your #1 still hits',
+        subtitle: t('collectionUi.yourAllTimeFavorites'),
         icon: 'favorite' as const,
-        gradientFrom: '#FF5C8A',
-        gradientTo: '#7C5BFF',
         route: '/stats/top-favorites',
         minTotal: 1,
       },
@@ -173,8 +156,6 @@ export function StatsOverview({
   return (
     <>
       <StatsHeroCard
-        badge={heroBadge}
-        highlight={heroHighlight}
         values={[
           {
             label: t('collectionUi.watchHoursEst'),
@@ -193,13 +174,29 @@ export function StatsOverview({
         ]}
       />
 
-      <View style={styles.row}>
-        <View style={styles.flex1}>
-          <StatusDonutCard slices={donutSlices} total={summary.total} centerLabel="anime" />
-        </View>
-      </View>
+      <StatusDonutCard
+        slices={donutSlices}
+        total={summary.total}
+        centerLabel={t('commonUi.anime')}
+      />
 
       {monthlyHasData ? <MonthlyHoursBar data={monthly} year={year} /> : null}
+
+      {summary.rated === 0 ? null : isPro ? (
+        <ScoreDistributionCard title={t('collectionStats.scoreSpread.title')} data={scores} />
+      ) : (
+        <ThemedButton
+          variant="secondary"
+          size="md"
+          fullWidth
+          haptic="tap"
+          label={t('collectionStats.scoreSpread.locked')}
+          icon={
+            <Ionicons name="lock-closed-outline" size={IconSize.sm} color={theme.text.secondary} />
+          }
+          onPress={() => setPaywallVisible(true)}
+        />
+      )}
 
       {achievements.length > 0 ? (
         <AchievementsGrid
@@ -212,9 +209,6 @@ export function StatsOverview({
         <ThemedText variant="titleLarge" weight="700">
           {t('collectionUi.exhibits')}
         </ThemedText>
-        <ThemedText variant="bodySmall" tone="secondary">
-          {t('collectionUi.tapIntoAnyExhibitTo')}
-        </ThemedText>
         <View style={styles.exhibitGrid}>
           {exhibits.flatMap((e) =>
             summary.total >= e.minTotal
@@ -224,8 +218,6 @@ export function StatsOverview({
                     title={e.title}
                     subtitle={e.subtitle}
                     icon={e.icon}
-                    gradientFrom={e.gradientFrom}
-                    gradientTo={e.gradientTo}
                     featured={e.featured}
                     onPress={() => router.push(e.route as never)}
                   />,
@@ -234,21 +226,21 @@ export function StatsOverview({
           )}
         </View>
       </View>
+
+      <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  flex1: { flex: 1 },
   exhibitSection: {
     gap: Spacing.sm,
     marginTop: Spacing.sm,
   },
   exhibitGrid: {
-    gap: Spacing.sm,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: Spacing.sm,
   },
 });

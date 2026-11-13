@@ -219,9 +219,14 @@
       "contentSync": "CONTENT & SYNC",
       "appearance": "APPEARANCE",
       "preferences": "PREFERENCES",
-      "notificationsAbout": "NOTIFICATIONS & ABOUT"
+      "notificationsAbout": "NOTIFICATIONS & ABOUT",
+      "accountSync": "ACCOUNT & SYNC",
+      "content": "CONTENT",
+      "notificationsStorage": "NOTIFICATIONS & STORAGE",
+      "about": "ABOUT"
     },
     "prefs": {
+      "enableR18": "Enable",
       "allowR18": "Allow R18 content",
       "allowR18Desc": "Show 18+ entries in seasonal lists and search",
       "includeGames": "Include games",
@@ -267,9 +272,10 @@
       "otakuDnaDesc": "Insights derived from your library",
       "section": {
         "diagnostics": "Diagnostics",
+        "developer": "Developer tools",
         "sync": "Sync"
       },
-      "subtitle": "Beta and diagnostic features",
+      "subtitle": "Diagnostics and developer tools",
       "syncHubDesc": "Cross-platform syncing preferences",
       "title": "Advanced"
     },
@@ -528,7 +534,8 @@
         "granted": "On",
         "denied": "Off",
         "undetermined": "Not set"
-      }
+      },
+      "autoEpisodeReminders": "Remind me for everything I’m watching"
     },
     "otakuDna": {
       "title": "Otaku DNA"
@@ -669,7 +676,8 @@
       "jobAttempts": "Attempts: {count}",
       "jobUpdated": "Last updated: {date}",
       "noErrorDetail": "No error detail recorded.",
-      "queueLimited": "Showing the latest {count} dead-letter jobs."
+      "queueLimited": "Showing the latest {count} dead-letter jobs.",
+      "autoSync": "Sync when I open the app"
     },
     "termsScreen": {
       "effective": "Effective date: May 2026",
@@ -885,9 +893,10 @@
         "seeker": "Seeker",
         "seekerDescription": "Build your own mix of Explorer and Collector tabs.",
         "tabsSubtitle": "Choose the pages shown in your bottom navigation.",
-        "tabsLimit": "Choose up to four pages. Profile always stays available.",
+        "tabsLimit": "Up to {count} pages, plus Profile.",
         "tabsTitle": "Seeker tabs",
-        "tabsSeparator": ", "
+        "tabsSeparator": ", ",
+        "tabsUnlockMore": "A fifth page · Premium"
       },
       "settings": "Settings",
       "statLabel": {
@@ -1207,7 +1216,16 @@
       "statShows": "Shows",
       "title": "Year in Review",
       "topAnimeBadge": "#1 TOP ANIME",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "vsYear": "vs {year} · {shows} shows · {hours}h"
+    },
+    "share": {
+      "cta": "Share image",
+      "failed": "Couldn't share the image"
+    },
+    "scoreSpread": {
+      "title": "Scores you gave",
+      "locked": "Score spread · Premium"
     }
   },
   "pilgrimage": {
@@ -1726,7 +1744,18 @@
     "notInterestedA11y": "Not interested — hide this season",
     "restoreSkipped": "Restore {count} skipped",
     "scheduling": "Scheduling…",
-    "notificationSettings": "Reminder time & notifications"
+    "notificationSettings": "Reminder time & notifications",
+    "reminderPush": {
+      "title": "{title} airs in {minutes} min",
+      "body": "Open Aniseekr to get ready."
+    },
+    "widget": {
+      "heading": "Up next",
+      "locked": "Aniseekr Pro shows your next episodes here.",
+      "empty": "Nothing you’re watching airs soon.",
+      "stale": "Open Aniseekr to refresh.",
+      "itemDetail": "Ep {episode} · {when}"
+    }
   },
   "collectionUi": {
     "addAnime": "Add anime",
@@ -1797,6 +1826,8 @@
     "useTheRateShortcutOn": "Use the rate shortcut on the floating bar to clear your backlog.",
     "watchHoursEst": "Watch hours (est.)",
     "yearInReview": "Year in Review",
+    "yourAllTimeFavorites": "Your all-time favorites",
+    "unlocked": "Unlocked",
     "yearlyBest": "Yearly Best",
     "yourWatchingYearRecapped": "Your watching year, recapped",
     "editFolder": "Edit folder",
@@ -2277,6 +2308,7 @@
       "tokens": "Tokens",
       "empty": "Empty",
       "swapHint": "Swap with another slot",
+      "unlockMore": "4 more slots · Premium",
       "a11yTapToReplace": "{label}. Tap to replace.",
       "a11yLongPressToReplace": "{label}. Long-press to replace.",
       "a11yEmptySlot": "Empty shortcut slot",
@@ -2487,6 +2519,8 @@
     "batchImport": "Import a whole trip's photos at once",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "No ads",
+    "unlockedTitle": "You're Pro",
+    "unlockedCta": "Start using",
     "offlineTripPack": "Offline trip packs for Japan with no signal",
     "privacyPolicy": "Privacy Policy",
     "purchaseFailed": "Purchase failed",
@@ -2522,7 +2556,9 @@
       "included": "Included",
       "manageInStore": "Change or cancel in store",
       "manageHint": "Plan changes and cancellation are handled by the App Store or Google Play."
-    }
+    },
+    "moreLayout": "More room: 12 profile shortcuts, 5 Seeker tabs",
+    "trackingExtras": "Home-screen widget, auto reminders, auto-sync, deeper stats"
   },
   "explorer": {
     "rally": {

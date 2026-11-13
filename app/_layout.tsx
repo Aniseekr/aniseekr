@@ -12,6 +12,7 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import * as Notifications from 'expo-notifications';
 import { ThemeProvider } from '../context/ThemeContext';
 import { SubscriptionProvider } from '../context/SubscriptionContext';
+import { ProForegroundTasks } from '../components/subscription/ProForegroundTasks';
 import { I18nProvider } from '../libs/i18n';
 import { notificationService } from '../libs/services/notifications/notification-service';
 // Importing the recorder defines its background location task before the OS can wake the app.
@@ -228,6 +229,7 @@ export default function RootLayout() {
           <ThemeProvider>
             <I18nProvider>
               <SubscriptionProvider>
+                <ProForegroundTasks />
                 <StatusBar style="light" />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />

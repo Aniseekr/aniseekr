@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { Children, Fragment, ReactNode, isValidElement } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -87,9 +87,12 @@ interface SectionProps {
   title?: string;
   children: ReactNode;
   style?: ViewStyle;
+  /** Draws a hairline between rows, so plain row lists don't hand-place dividers. */
+  divided?: boolean;
 }
-export function SettingsSection({ title, children, style }: SectionProps) {
+export function SettingsSection({ title, children, style, divided }: SectionProps) {
   const { theme } = useTheme();
+  const rows = divided ? Children.toArray(children).filter(isValidElement) : null;
   return (
     <View style={[styles.section, style]}>
       {title ? (
@@ -108,7 +111,16 @@ export function SettingsSection({ title, children, style }: SectionProps) {
             borderColor: withAlpha(theme.text.primary, 0.22),
           },
         ]}>
-        {children}
+        {rows
+          ? rows.map((row, index) => (
+              <Fragment key={index}>
+                {index > 0 ? (
+                  <View style={[styles.divider, { backgroundColor: theme.glassBorder }]} />
+                ) : null}
+                {row}
+              </Fragment>
+            ))
+          : children}
       </View>
     </View>
   );
@@ -135,15 +147,8 @@ export function SettingsRow({
   const { theme } = useTheme();
   const labelColor = destructive ? Colors.error : theme.text.primary;
 
-  return (
-    <Pressable
-      onPress={() => {
-        if (onPress) {
-          hapticsBridge.selection();
-          onPress();
-        }
-      }}
-      style={({ pressed }) => [styles.row, { opacity: pressed && onPress ? 0.7 : 1 }]}>
+  const content = (
+    <>
       {icon ? (
         <View style={[styles.rowIcon, { backgroundColor: theme.background.tertiary }]}>
           <MaterialIcons name={icon} size={18} color={destructive ? Colors.error : theme.accent} />
@@ -164,6 +169,21 @@ export function SettingsRow({
         (onPress ? (
           <MaterialIcons name="chevron-right" size={20} color={theme.text.tertiary} />
         ) : null)}
+    </>
+  );
+
+  // A row that only hosts a control (a switch) is not itself a button.
+  if (!onPress) return <View style={styles.row}>{content}</View>;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => {
+        hapticsBridge.selection();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+      {content}
     </Pressable>
   );
 }
@@ -209,12 +229,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm + 2,
     paddingVertical: Spacing.sm + 2,
   },
+  rowPressed: { opacity: 0.7 },
   rowIcon: {
     width: 32,
     height: 32,
     borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Starts under the label, past the 32pt icon tile.
+  divider: {
+    height: 1,
+    marginLeft: Spacing.sm + 2 + 32 + Spacing.sm,
   },
   rowLabel: {
     ...Typography.titleMedium,

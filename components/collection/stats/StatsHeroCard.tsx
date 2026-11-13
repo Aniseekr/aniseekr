@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../context/ThemeContext';
-import { Radius, Spacing, Typography } from '../../../constants/DesignSystem';
-import { ThemedText, readableTextOn } from '../../themed';
+import { Spacing, Typography } from '../../../constants/DesignSystem';
+import { Halftone, ThemedSurface, ThemedText } from '../../themed';
 
 interface HeroValue {
   label: string;
@@ -10,101 +9,45 @@ interface HeroValue {
   hidden?: boolean;
 }
 
-interface Props {
-  badge?: string;
-  highlight?: string;
-  values: HeroValue[];
-}
-
-export function StatsHeroCard({ badge, highlight, values }: Props) {
+/** The headline numbers of the library, on the same halftone card as the profile. */
+export function StatsHeroCard({ values }: { values: HeroValue[] }) {
   const { theme } = useTheme();
-  const onAccent = readableTextOn(theme.accent);
+  const shown = values.filter((value) => !value.hidden);
 
   return (
-    <LinearGradient
-      colors={[`${theme.accent}33`, `${theme.background.secondary}E6`]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.card, { borderColor: theme.glassBorder }]}>
-      <View style={styles.headerRow}>
-        {badge ? (
-          <ThemedText
-            variant="captionSmall"
-            tone="secondary"
-            weight="700"
-            style={[styles.badge, { letterSpacing: 2 }]}>
-            {badge}
+    <ThemedSurface style={styles.card}>
+      <Halftone color={theme.accent} />
+      {shown.map((value, index) => (
+        <View
+          key={value.label}
+          style={[
+            styles.col,
+            index > 0 && { borderLeftWidth: 1, borderLeftColor: theme.glassBorder },
+          ]}>
+          <ThemedText style={styles.value} numberOfLines={1} adjustsFontSizeToFit>
+            {value.value}
           </ThemedText>
-        ) : (
-          <View />
-        )}
-        {highlight ? (
-          <View style={[styles.highlight, { backgroundColor: theme.accent }]}>
-            <ThemedText
-              variant="captionSmall"
-              weight="700"
-              style={[styles.highlightText, { color: onAccent }]}>
-              {highlight}
-            </ThemedText>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.valueRow}>
-        {values.flatMap((v) =>
-          v.hidden
-            ? []
-            : [
-                <View key={v.label} style={styles.valueCol}>
-                  <ThemedText style={[styles.value, { color: theme.text.primary }]}>
-                    {v.value}
-                  </ThemedText>
-                  <ThemedText variant="captionSmall" tone="tertiary" style={styles.valueLabel}>
-                    {v.label}
-                  </ThemedText>
-                </View>,
-              ]
-        )}
-      </View>
-    </LinearGradient>
+          <ThemedText variant="caption" tone="secondary" numberOfLines={2}>
+            {value.label}
+          </ThemedText>
+        </View>
+      ))}
+    </ThemedSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.cardLg,
-    borderWidth: 1,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingVertical: Spacing.lg,
   },
-  badge: {
-    textTransform: 'uppercase',
-  },
-  highlight: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.sm,
-  },
-  highlightText: {
-    letterSpacing: 0.5,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  valueCol: {
+  col: {
     flex: 1,
-    gap: 2,
+    gap: Spacing.xxs,
+    paddingHorizontal: Spacing.md,
   },
   value: {
     ...Typography.displayLarge,
     fontWeight: '800',
-  },
-  valueLabel: {
-    textTransform: 'capitalize',
   },
 });

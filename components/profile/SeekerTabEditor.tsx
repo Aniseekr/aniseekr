@@ -2,21 +2,22 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ThemedSurface, ThemedSwitch, ThemedText } from '../themed';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ThemedButton, ThemedSurface, ThemedSwitch, ThemedText } from '../themed';
 import { useTheme } from '../../context/ThemeContext';
-import { Radius, Size, Spacing } from '../../constants/DesignSystem';
+import { IconSize, Radius, Size, Spacing } from '../../constants/DesignSystem';
 import { bannerEnter, bannerExit } from '../../libs/animations/presets';
 import { useT } from '../../libs/i18n';
-import {
-  MAX_SEEKER_CONTENT_TABS,
-  SEEKER_TAB_CATALOG,
-  type SeekerTabId,
-} from '../../libs/navigation/experience-tabs';
+import { SEEKER_TAB_CATALOG, type SeekerTabId } from '../../libs/navigation/experience-tabs';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { EXPERIENCE_TAB_META } from '../navigation/experience-tab-meta';
 
 interface SeekerTabEditorProps {
   tabs: readonly SeekerTabId[];
+  /** How many content tabs this user may show (4, or 5 with Pro). */
+  limit: number;
+  /** Shown as "one more with Premium" when set. */
+  onUpgrade?: () => void;
   onToggle: (tab: SeekerTabId) => void;
 }
 
@@ -24,11 +25,11 @@ interface SeekerTabEditorProps {
  * Seeker tab picker on the Profile screen. Collapsed by default to a single
  * row summarising the chosen tabs; the full toggle list only opens on demand.
  */
-export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
+export function SeekerTabEditor({ tabs, limit, onUpgrade, onToggle }: SeekerTabEditorProps) {
   const { theme } = useTheme();
   const t = useT();
   const [expanded, setExpanded] = useState(false);
-  const atCapacity = tabs.length >= MAX_SEEKER_CONTENT_TABS;
+  const atCapacity = tabs.length >= limit;
   const summary = tabs
     .map((tab) => t(EXPERIENCE_TAB_META[tab].labelKey))
     .join(t('tabs.profileScreen.experienceMode.tabsSeparator'));
@@ -63,7 +64,7 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
       {expanded ? (
         <Animated.View entering={bannerEnter()} exiting={bannerExit()} style={styles.body}>
           <ThemedText variant="caption" tone="tertiary">
-            {t('tabs.profileScreen.experienceMode.tabsLimit')}
+            {t('tabs.profileScreen.experienceMode.tabsLimit', { count: limit })}
           </ThemedText>
           <View>
             {SEEKER_TAB_CATALOG.map((tab, index) => {
@@ -103,6 +104,23 @@ export function SeekerTabEditor({ tabs, onToggle }: SeekerTabEditorProps) {
               );
             })}
           </View>
+          {onUpgrade ? (
+            <ThemedButton
+              variant="secondary"
+              size="md"
+              fullWidth
+              haptic="tap"
+              label={t('tabs.profileScreen.experienceMode.tabsUnlockMore')}
+              icon={
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={IconSize.sm}
+                  color={theme.text.secondary}
+                />
+              }
+              onPress={onUpgrade}
+            />
+          ) : null}
         </Animated.View>
       ) : null}
     </ThemedSurface>

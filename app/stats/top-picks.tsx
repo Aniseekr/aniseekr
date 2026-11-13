@@ -7,6 +7,7 @@ import { EmptyStateView } from '../../components/common/EmptyStateView';
 import { StatsExhibitFrame } from '../../components/collection/stats/StatsExhibitFrame';
 import { useT } from '../../libs/i18n';
 import {
+  formatScore,
   loadUserAnimeRows,
   summarize,
   UserAnimeRow,
@@ -43,7 +44,7 @@ export default function TopPicksExhibit() {
               .slice(0, 10)
               .map(
                 (p, i) =>
-                  `${i + 1}. ${p.title ?? t('collectionStats.topPicks.untitled')}${p.score ? ` — ${p.score}` : ''}`
+                  `${i + 1}. ${p.title ?? t('collectionStats.topPicks.untitled')}${p.score ? ` — ${formatScore(p.score)}` : ''}`
               );
             await Share.share({
               message: `${t('collectionStats.topPicks.shareHeading')}\n${lines.join('\n')}`,
@@ -126,7 +127,7 @@ export default function TopPicksExhibit() {
           {p.score ? (
             <View style={[styles.score, { backgroundColor: `${theme.accent}26` }]}>
               <ThemedText variant="titleSmall" weight="800" style={{ color: theme.accent }}>
-                {p.score}
+                {formatScore(p.score)}
               </ThemedText>
             </View>
           ) : null}

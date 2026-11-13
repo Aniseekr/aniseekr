@@ -13,9 +13,12 @@ import {
 
 export default function TabsLayout() {
   const t = useT();
-  const { experience, visibleTabs } = useExperienceMode();
+  const { experience, visibleTabs, isPro } = useExperienceMode();
   const visible = new Set<ExperienceTabId>(visibleTabs);
-  const visibleRouteNames = useMemo(() => resolveExperienceRouteNames(experience), [experience]);
+  const visibleRouteNames = useMemo(
+    () => resolveExperienceRouteNames(experience, isPro),
+    [experience, isPro]
+  );
   const href = (tab: ExperienceTabId) => (visible.has(tab) ? EXPERIENCE_TAB_HREFS[tab] : null);
 
   return (

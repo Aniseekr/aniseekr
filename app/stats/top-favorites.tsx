@@ -9,6 +9,8 @@ import { EmptyStateView } from '../../components/common/EmptyStateView';
 import { StatsExhibitFrame } from '../../components/collection/stats/StatsExhibitFrame';
 import { useT } from '../../libs/i18n';
 import {
+  formatScore,
+  scoreOutOfTen,
   loadUserAnimeRows,
   summarize,
   UserAnimeRow,
@@ -27,7 +29,7 @@ function metaFor(row: UserAnimeRow): FavMeta {
   return {
     remembered: row.total_episodes ?? row.progress ?? 0,
     locations: { visited: 0, total: 0 },
-    rating: typeof row.score === 'number' ? row.score : null,
+    rating: scoreOutOfTen(row.score),
   };
 }
 
@@ -64,7 +66,7 @@ export default function TopFavoritesExhibit() {
             await Share.share({
               message: t('collectionStats.topFavorites.shareMessage', {
                 title: top.title ?? t('collectionStats.topFavorites.untitled'),
-                score: top.score ? ` (${top.score})` : '',
+                score: top.score ? ` (${formatScore(top.score)})` : '',
               }),
             });
           }

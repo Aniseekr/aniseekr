@@ -1,11 +1,10 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ThemedText } from '../../themed';
+import { ThemedButton, ThemedText } from '../../themed';
 import type { AchievementWithProgress } from '../../../libs/services/achievements/achievement-service';
-import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 interface Props {
   achievements: AchievementWithProgress[];
@@ -26,18 +25,20 @@ export function AchievementsGrid({ achievements, title, maxItems = 6, onPressVie
         <ThemedText variant="titleLarge" weight="700">
           {title ?? t('commonUi.achievements')}
         </ThemedText>
-        <Pressable
-          onPress={() => {
-            if (onPressViewAll) {
-              hapticsBridge.tap();
-              onPressViewAll();
-            }
-          }}
-          hitSlop={8}>
+        {onPressViewAll ? (
+          <ThemedButton
+            variant="ghost"
+            size="sm"
+            haptic="tap"
+            label={`${unlockedCount} / ${achievements.length}`}
+            accessibilityLabel={title ?? t('commonUi.achievements')}
+            onPress={onPressViewAll}
+          />
+        ) : (
           <ThemedText variant="captionSmall" tone="secondary" weight="600">
             {unlockedCount} / {achievements.length}
           </ThemedText>
-        </Pressable>
+        )}
       </View>
       <View style={styles.grid}>
         {shown.map((a) => (
@@ -72,7 +73,7 @@ export function AchievementsGrid({ achievements, title, maxItems = 6, onPressVie
               {a.title}
             </ThemedText>
             <ThemedText variant="captionSmall" tone="tertiary" align="center" numberOfLines={1}>
-              {a.unlocked ? 'Unlocked' : `${a.progress} / ${a.target}`}
+              {a.unlocked ? t('collectionUi.unlocked') : `${a.progress} / ${a.target}`}
             </ThemedText>
           </View>
         ))}

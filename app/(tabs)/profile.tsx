@@ -37,7 +37,7 @@ import { MascotAvatarSheet } from '../../components/profile/MascotAvatarSheet';
 import { normalizeProfileShortcuts, type ShortcutId } from '../../libs/services/profile-shortcuts';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Radius, Spacing } from '../../constants/DesignSystem';
+import { Ink, Radius, Spacing } from '../../constants/DesignSystem';
 import { FeatureFlags } from '../../constants/FeatureFlags';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
@@ -67,7 +67,7 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const subscription = useSubscription();
   const t = useT();
-  const { mode, seekerTabs, setMode, toggleTab, visibleTabs } = useExperienceMode();
+  const { mode, seekerTabs, setMode, tabLimit, toggleTab, visibleTabs } = useExperienceMode();
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState(false);
@@ -183,6 +183,7 @@ export default function ProfileScreen() {
   const likedValue = stats.likedCount;
 
   const isPro = subscription.isPro;
+  const showProBadge = FeatureFlags.PREMIUM_ENABLED && isPro;
   const ctaFg = readableTextOn(theme.accent);
   const upgradeBtnBg = theme.background.primary;
 
@@ -235,7 +236,13 @@ export default function ProfileScreen() {
               <ThemedSurface
                 variant="card"
                 radius={Radius.card}
-                style={[styles.profileCard, { borderColor: theme.glassBorder }]}>
+                style={[
+                  styles.profileCard,
+                  // Pro wears the accent frame; the upgrade banner below goes away.
+                  showProBadge
+                    ? { borderColor: theme.accent, borderWidth: Ink.line }
+                    : { borderColor: theme.glassBorder },
+                ]}>
                 <Halftone color={theme.accent} />
                 <Pressable
                   accessibilityRole="button"
@@ -290,7 +297,19 @@ export default function ProfileScreen() {
             </Animated.View>
           )}
 
-          {/* Stats Row */}
+          {/* Stats: one header carries the way into the full stats page. */}
+          <View style={styles.sectionHeader}>
+            <ThemedText variant="titleLarge" weight="700">
+              {t('collectionStats.hub.title')}
+            </ThemedText>
+            <ThemedButton
+              variant="ghost"
+              size="sm"
+              haptic="tap"
+              label={t('tabs.profileScreen.statsHero.title')}
+              onPress={() => router.push('/stats')}
+            />
+          </View>
           {user === null && profileError ? (
             <ThemedSurface padded style={styles.statsEmpty}>
               <ThemedText variant="bodyMedium" tone="secondary">
@@ -331,69 +350,36 @@ export default function ProfileScreen() {
             </Animated.View>
           ) : (
             <Animated.View entering={listItemEnter(1)} style={styles.statsRow}>
-            <StatTile
-              value={watchedValue}
-              label={t('tabs.profileScreen.statLabel.cards')}
-              onPress={() => {
-                hapticsBridge.tap();
-                router.push('/stats/year-in-review');
-              }}
-            />
-            <StatTile
-              value={ratedValue}
-              label={t('tabs.profileScreen.statLabel.rated')}
-              onPress={() => {
-                hapticsBridge.tap();
-                router.push('/stats/top-picks');
-              }}
-            />
-            <StatTile
-              value={likedValue}
-              label={t('tabs.profileScreen.statLabel.liked')}
-              onPress={() => {
-                hapticsBridge.tap();
-                router.push('/stats/top-favorites');
-              }}
-            />
-          </Animated.View>
+              <StatTile
+                value={watchedValue}
+                label={t('tabs.profileScreen.statLabel.cards')}
+                onPress={() => {
+                  hapticsBridge.tap();
+                  router.push('/stats/year-in-review');
+                }}
+              />
+              <StatTile
+                value={ratedValue}
+                label={t('tabs.profileScreen.statLabel.rated')}
+                onPress={() => {
+                  hapticsBridge.tap();
+                  router.push('/stats/top-picks');
+                }}
+              />
+              <StatTile
+                value={likedValue}
+                label={t('tabs.profileScreen.statLabel.liked')}
+                onPress={() => {
+                  hapticsBridge.tap();
+                  router.push('/stats/top-favorites');
+                }}
+              />
+            </Animated.View>
           )}
 
-          {/* Library Stats Hero */}
-          <Animated.View entering={listItemEnter(2)}>
-            <Pressable
-              onPress={() => {
-                hapticsBridge.tap();
-                router.push('/stats');
-              }}
-              style={({ pressed }) => [
-                styles.statsHero,
-                {
-                  backgroundColor: theme.background.secondary,
-                  borderColor: theme.glassBorder,
-                },
-                pressed && { opacity: 0.92 },
-              ]}>
-              <View style={styles.statsHeroContent}>
-                <View
-                  style={[styles.statsHeroIcon, { backgroundColor: theme.background.tertiary }]}>
-                  <MaterialIcons name="bar-chart" size={20} color={theme.accent} />
-                </View>
-                <View style={styles.statsHeroText}>
-                  <ThemedText variant="titleMedium" weight="700">
-                    {t('tabs.profileScreen.statsHero.title')}
-                  </ThemedText>
-                  <ThemedText variant="bodySmall" tone="secondary">
-                    {t('tabs.profileScreen.statsHero.subtitle')}
-                  </ThemedText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.text.tertiary} />
-              </View>
-            </Pressable>
-          </Animated.View>
-
           {/* Premium CTA — hidden while FeatureFlags.PREMIUM_ENABLED is false */}
-          {FeatureFlags.PREMIUM_ENABLED ? (
-            <Animated.View entering={listItemEnter(3)}>
+          {FeatureFlags.PREMIUM_ENABLED && !isPro ? (
+            <Animated.View entering={listItemEnter(2)}>
               <Pressable
                 onPress={handleOpenPremium}
                 accessibilityRole="button"
@@ -446,19 +432,29 @@ export default function ProfileScreen() {
           ) : null}
 
           {mode === 'seeker' ? (
-            <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 4 : 3)}>
-              <SeekerTabEditor tabs={seekerTabs} onToggle={(tab) => void toggleTab(tab)} />
+            <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 3 : 2)}>
+              <SeekerTabEditor
+                tabs={seekerTabs}
+                limit={tabLimit}
+                onUpgrade={isPro ? undefined : () => setPaywallVisible(true)}
+                onToggle={(tab) => void toggleTab(tab)}
+              />
             </Animated.View>
           ) : null}
 
           {/* Quick Shortcuts */}
-          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 5 : 4)}>
-            <ProfileShortcutsGrid shortcuts={shortcuts} onChange={handleShortcutsChange} />
+          <Animated.View entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 4 : 3)}>
+            <ProfileShortcutsGrid
+              shortcuts={shortcuts}
+              onChange={handleShortcutsChange}
+              isPro={isPro}
+              onUpgrade={() => setPaywallVisible(true)}
+            />
           </Animated.View>
 
           {connectedPlatforms.length > 0 ? (
             <Animated.View
-              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 6 : 5)}
+              entering={listItemEnter(FeatureFlags.PREMIUM_ENABLED ? 5 : 4)}
               style={styles.platformsSection}>
               <PlatformSwitcher
                 platforms={switcherPlatforms}
@@ -611,28 +607,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.sm,
   },
-  statsHero: {
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  statsHeroContent: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-  },
-  // Same icon disc as the shortcut tiles below (ProfileShortcutsGrid iconWrap).
-  statsHeroIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsHeroText: {
-    flex: 1,
-    gap: 2,
+    justifyContent: 'space-between',
+    paddingLeft: Spacing.xxs,
+    marginBottom: -Spacing.xs,
   },
   premiumCta: {
     borderRadius: Radius.card,

@@ -219,9 +219,14 @@
       "contentSync": "內容與同步",
       "appearance": "外觀",
       "preferences": "偏好",
-      "notificationsAbout": "通知與關於"
+      "notificationsAbout": "通知與關於",
+      "accountSync": "帳號與同步",
+      "content": "內容",
+      "notificationsStorage": "通知與儲存",
+      "about": "關於"
     },
     "prefs": {
+      "enableR18": "啟用",
       "allowR18": "允許 R18 內容",
       "allowR18Desc": "在季番與搜尋中顯示 18+ 作品",
       "includeGames": "包含遊戲",
@@ -267,9 +272,10 @@
       "otakuDnaDesc": "從你的資料庫衍生的洞察",
       "section": {
         "diagnostics": "診斷",
+        "developer": "開發工具",
         "sync": "同步"
       },
-      "subtitle": "Beta 與診斷功能",
+      "subtitle": "診斷與開發工具",
       "syncHubDesc": "跨平台同步偏好設定",
       "title": "進階"
     },
@@ -528,7 +534,8 @@
         "granted": "已開啟",
         "denied": "已關閉",
         "undetermined": "尚未設定"
-      }
+      },
+      "autoEpisodeReminders": "在看的番自動提醒"
     },
     "otakuDna": {
       "title": "御宅 DNA"
@@ -669,7 +676,8 @@
       "jobAttempts": "嘗試次數：{count}",
       "jobUpdated": "最後更新：{date}",
       "noErrorDetail": "沒有記錄錯誤詳情。",
-      "queueLimited": "顯示最近 {count} 筆失敗工作。"
+      "queueLimited": "顯示最近 {count} 筆失敗工作。",
+      "autoSync": "開啟 App 時自動同步"
     },
     "termsScreen": {
       "effective": "生效日期:2026 年 5 月",
@@ -885,9 +893,10 @@
         "seeker": "Seeker",
         "seekerDescription": "自由組合 Explorer 與 Collector 的頁面。",
         "tabsSubtitle": "選擇要顯示在下方導覽列的頁面。",
-        "tabsLimit": "最多選擇四個頁面，個人頁面會固定保留。",
+        "tabsLimit": "最多 {count} 個頁面，另加個人頁面。",
         "tabsTitle": "Seeker 頁面",
-        "tabsSeparator": "、"
+        "tabsSeparator": "、",
+        "tabsUnlockMore": "第 5 個頁面 · Premium"
       },
       "settings": "設定",
       "statLabel": {
@@ -1207,7 +1216,16 @@
       "statShows": "作品",
       "title": "年度回顧",
       "topAnimeBadge": "#1 年度最佳",
-      "untitled": "未命名"
+      "untitled": "未命名",
+      "vsYear": "比 {year} 年 · {shows} 部 · {hours} 小時"
+    },
+    "share": {
+      "cta": "分享圖片",
+      "failed": "無法分享圖片"
+    },
+    "scoreSpread": {
+      "title": "評分分佈",
+      "locked": "評分分佈 · Premium"
     }
   },
   "pilgrimage": {
@@ -1726,7 +1744,18 @@
     "notInterestedA11y": "不想看 — 本季不再顯示",
     "restoreSkipped": "還原 {count} 部已略過",
     "scheduling": "排程中…",
-    "notificationSettings": "提醒時間與通知設定"
+    "notificationSettings": "提醒時間與通知設定",
+    "reminderPush": {
+      "title": "《{title}》{minutes} 分鐘後開播",
+      "body": "打開 Aniseekr 準備收看。"
+    },
+    "widget": {
+      "heading": "接下來",
+      "locked": "升級 Aniseekr Pro 後，這裡會顯示你追的下一集。",
+      "empty": "在看的番近期沒有新集數。",
+      "stale": "打開 Aniseekr 更新。",
+      "itemDetail": "第 {episode} 集 · {when}"
+    }
   },
   "collectionUi": {
     "addAnime": "新增動畫",
@@ -1797,6 +1826,8 @@
     "useTheRateShortcutOn": "使用浮動列上的評分捷徑清空待評清單。",
     "watchHoursEst": "觀看時數(估計)",
     "yearInReview": "年度回顧",
+    "yourAllTimeFavorites": "你心中的最愛",
+    "unlocked": "已解鎖",
     "yearlyBest": "年度最佳",
     "yourWatchingYearRecapped": "回顧你這一年的觀影",
     "editFolder": "編輯資料夾",
@@ -2277,6 +2308,7 @@
       "tokens": "設計參數",
       "empty": "空位",
       "swapHint": "與其他位置交換",
+      "unlockMore": "再多 4 格 · Premium",
       "a11yTapToReplace": "{label}。點一下以更換。",
       "a11yLongPressToReplace": "{label}。長按以更換。",
       "a11yEmptySlot": "空的捷徑位置",
@@ -2487,6 +2519,8 @@
     "batchImport": "一次匯入整趟旅程的照片",
     "aniseekrPro": "Aniseekr Pro",
     "noAds": "無廣告",
+    "unlockedTitle": "已升級 Pro",
+    "unlockedCta": "開始使用",
     "offlineTripPack": "離線行程包，在日本沒訊號也能用",
     "privacyPolicy": "隱私權政策",
     "purchaseFailed": "購買失敗",
@@ -2522,7 +2556,9 @@
       "included": "包含權益",
       "manageInStore": "在商店變更或取消",
       "manageHint": "變更方案與取消訂閱由 App Store 或 Google Play 處理。"
-    }
+    },
+    "moreLayout": "版面更大：捷徑 12 格、Seeker 頁面 5 個",
+    "trackingExtras": "主畫面小工具、自動提醒、自動同步、深度統計"
   },
   "explorer": {
     "rally": {

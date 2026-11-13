@@ -13,6 +13,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import { Radius, Spacing, Typography } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { ThemedButton, readableTextOn } from '../themed';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useSubscription } from '../../context/SubscriptionContext';
 import type { SubscriptionOfferingPackage } from '../../libs/services/subscription/subscription-service';
@@ -26,9 +27,11 @@ function unsupportedMessage(
 ): string {
   switch (reason) {
     case 'billing-unavailable':
-      return t(platform === 'android'
-        ? 'subscription.billingUnavailableAndroid'
-        : 'subscription.billingUnavailableIos');
+      return t(
+        platform === 'android'
+          ? 'subscription.billingUnavailableAndroid'
+          : 'subscription.billingUnavailableIos'
+      );
     case 'network':
       return t('subscription.networkUnavailable');
     case 'no-key':
@@ -50,10 +53,16 @@ const FEATURES: {
   available?: () => boolean;
 }[] = [
   { icon: 'cloud-download', labelKey: 'subscription.offlineTripPack' },
-  { icon: 'filter-vintage', labelKey: 'subscription.cameraLooks', available: isCameraLookAvailable },
+  {
+    icon: 'filter-vintage',
+    labelKey: 'subscription.cameraLooks',
+    available: isCameraLookAvailable,
+  },
   { icon: 'photo-library', labelKey: 'subscription.batchImport' },
   { icon: 'hd', labelKey: 'subscription.proExport' },
   { icon: 'palette', labelKey: 'subscription.allPremiumThemes' },
+  { icon: 'apps', labelKey: 'subscription.moreLayout' },
+  { icon: 'insights', labelKey: 'subscription.trackingExtras' },
   { icon: 'block', labelKey: 'subscription.noAds' },
 ];
 
@@ -68,6 +77,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
   const subscription = useSubscription();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
 
   const candidates = useMemo<SubscriptionOfferingPackage[]>(() => {
     const offerings = subscription.offerings;
@@ -90,7 +100,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
       const result = await subscription.purchase(pkg);
       if (result.isPro) {
         hapticsBridge.success();
-        onClose();
+        setUnlocked(true);
       } else {
         setError(t('subscription.purchaseIncomplete'));
       }
@@ -112,7 +122,7 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
       const next = await subscription.restore();
       if (next.isPro) {
         hapticsBridge.success();
-        onClose();
+        setUnlocked(true);
       } else {
         setError(t('subscription.noActiveSubscription'));
       }
@@ -122,6 +132,54 @@ export function PaywallSheet({ visible, onClose }: PaywallSheetProps) {
       setBusy(false);
     }
   };
+
+  // After a purchase or restore the sheet stays up as a receipt of what is now
+  // unlocked, instead of vanishing and leaving the user to hunt for the change.
+  if (unlocked) {
+    const finish = () => {
+      setUnlocked(false);
+      onClose();
+    };
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={finish}
+        statusBarTranslucent>
+        <View style={styles.backdrop}>
+          <View
+            style={[
+              styles.sheet,
+              { backgroundColor: theme.background.secondary, borderColor: theme.accent },
+            ]}>
+            <Text style={[styles.title, { color: theme.text.primary }]}>
+              {t('subscription.unlockedTitle')}
+            </Text>
+            <View style={styles.features}>
+              {FEATURES.filter((feature) => feature.available?.() ?? true).map((feature) => (
+                <View key={feature.labelKey} style={styles.featureRow}>
+                  <View style={[styles.featureIcon, { backgroundColor: theme.accent }]}>
+                    <MaterialIcons name="check" size={18} color={readableTextOn(theme.accent)} />
+                  </View>
+                  <Text style={[styles.featureLabel, { color: theme.text.primary }]}>
+                    {t(feature.labelKey)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <ThemedButton
+              size="lg"
+              fullWidth
+              haptic="success"
+              label={t('subscription.unlockedCta')}
+              onPress={finish}
+            />
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal

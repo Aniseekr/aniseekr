@@ -4,33 +4,44 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Radius, Spacing } from '../../constants/DesignSystem';
 import { useTheme } from '../../context/ThemeContext';
-import { ThemedText, readableTextOn } from '../themed';
+import { ThemedButton, ThemedText, readableTextOn } from '../themed';
 import { QuickActionSheet, type QuickAction } from '../settings/QuickActionSheet';
 import { hapticsBridge } from '../../modules/haptics/hapticsBridge';
 import { useT } from '../../libs/i18n';
 import {
-  PROFILE_SHORTCUT_COUNT,
   getShortcutSpec,
   listShortcuts,
+  visibleShortcutCount,
   type ShortcutId,
   type ShortcutSpec,
 } from '../../libs/services/profile-shortcuts';
 
+const PER_ROW = 4;
+
 interface ProfileShortcutsGridProps {
+  /** All stored slots; only the first `visibleShortcutCount(isPro)` are shown. */
   shortcuts: ShortcutId[];
   onChange: (next: ShortcutId[]) => void;
+  isPro: boolean;
+  /** Opens the paywall from the locked third row. */
+  onUpgrade: () => void;
 }
 
-export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGridProps) {
+export function ProfileShortcutsGrid({
+  shortcuts,
+  onChange,
+  isPro,
+  onUpgrade,
+}: ProfileShortcutsGridProps) {
   const { theme } = useTheme();
   const t = useT();
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const count = visibleShortcutCount(isPro);
 
   const slots = useMemo<(ShortcutSpec | null)[]>(
-    () =>
-      Array.from({ length: PROFILE_SHORTCUT_COUNT }, (_, i) => getShortcutSpec(shortcuts[i] ?? '')),
-    [shortcuts]
+    () => Array.from({ length: count }, (_, i) => getShortcutSpec(shortcuts[i] ?? '')),
+    [shortcuts, count]
   );
 
   const handleTilePress = (slot: number, spec: ShortcutSpec | null) => {
@@ -63,7 +74,8 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
 
   const sheetActions: QuickAction[] = useMemo(() => {
     if (editingSlot === null) return [];
-    const inUse = new Set(shortcuts);
+    // Only slots on screen count as "used": a hidden slot swaps silently.
+    const inUse = new Set(shortcuts.slice(0, count));
     const current = shortcuts[editingSlot];
     return listShortcuts().map((spec) => {
       const usedElsewhere = inUse.has(spec.id) && spec.id !== current;
@@ -76,9 +88,10 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
         onPress: () => handlePick(spec.id),
       };
     });
-  }, [editingSlot, shortcuts, t]);
+  }, [editingSlot, shortcuts, count, t]);
 
-  const rows: (ShortcutSpec | null)[][] = [slots.slice(0, 4), slots.slice(4, 8)];
+  const rows: (ShortcutSpec | null)[][] = [];
+  for (let i = 0; i < slots.length; i += PER_ROW) rows.push(slots.slice(i, i + PER_ROW));
 
   const pillBg = editMode ? theme.accent : theme.background.tertiary;
   const pillBorder = editMode ? theme.accent : theme.glassBorder;
@@ -117,7 +130,7 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
         {rows.map((row, ri) => (
           <View key={ri} style={styles.row}>
             {row.map((spec, ci) => {
-              const slotIdx = ri * 4 + ci;
+              const slotIdx = ri * PER_ROW + ci;
               return (
                 <ShortcutTile
                   key={slotIdx}
@@ -130,6 +143,17 @@ export function ProfileShortcutsGrid({ shortcuts, onChange }: ProfileShortcutsGr
             })}
           </View>
         ))}
+        {isPro ? null : (
+          <ThemedButton
+            variant="secondary"
+            size="md"
+            fullWidth
+            haptic="tap"
+            label={t('profile.shortcut.unlockMore')}
+            icon={<Ionicons name="lock-closed-outline" size={16} color={theme.text.secondary} />}
+            onPress={onUpgrade}
+          />
+        )}
       </View>
 
       {editingSlot !== null ? (

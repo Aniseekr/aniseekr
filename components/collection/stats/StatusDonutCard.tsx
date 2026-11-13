@@ -2,8 +2,8 @@ import { StyleSheet, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { useTheme } from '../../../context/ThemeContext';
 import { useT } from '../../../libs/i18n';
-import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ThemedText } from '../../themed';
+import { Spacing } from '../../../constants/DesignSystem';
+import { ThemedSurface, ThemedText } from '../../themed';
 
 export interface DonutSlice {
   label: string;
@@ -19,20 +19,13 @@ interface Props {
 }
 
 export function StatusDonutCard({ title, slices, total, centerLabel }: Props) {
-  const { theme } = useTheme();
   const t = useT();
+  const { theme } = useTheme();
   const data = slices.filter((s) => s.value > 0);
   const sumValue = total ?? data.reduce((acc, s) => acc + s.value, 0);
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.background.secondary,
-          borderColor: theme.glassBorder,
-        },
-      ]}>
+    <ThemedSurface style={styles.card}>
       <ThemedText variant="titleMedium" weight="700">
         {title ?? t('collectionUi.byStatus')}
       </ThemedText>
@@ -48,15 +41,19 @@ export function StatusDonutCard({ title, slices, total, centerLabel }: Props) {
               radius={56}
               innerRadius={36}
               donut
+              // The hole defaults to white, which hid the light total on dark themes.
+              innerCircleColor={theme.background.secondary}
               showTooltip={false}
               centerLabelComponent={() => (
                 <View style={styles.center}>
                   <ThemedText variant="titleLarge" weight="800">
                     {sumValue}
                   </ThemedText>
-                  <ThemedText variant="captionSmall" tone="tertiary">
-                    {centerLabel ?? 'total'}
-                  </ThemedText>
+                  {centerLabel ? (
+                    <ThemedText variant="captionSmall" tone="tertiary">
+                      {centerLabel}
+                    </ThemedText>
+                  ) : null}
                 </View>
               )}
             />
@@ -76,14 +73,12 @@ export function StatusDonutCard({ title, slices, total, centerLabel }: Props) {
           </>
         )}
       </View>
-    </View>
+    </ThemedSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.card,
-    borderWidth: 1,
     padding: Spacing.md,
     gap: Spacing.md,
   },

@@ -6,7 +6,7 @@ export default function CollectionStatsScreen() {
   const t = useT();
   return (
     <StatsExhibitFrame title={t('collectionStats.hub.title')}>
-      <StatsOverview showThresholdHighlight />
+      <StatsOverview />
     </StatsExhibitFrame>
   );
 }

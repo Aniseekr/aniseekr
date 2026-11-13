@@ -9,7 +9,11 @@ import {
   SettingsRow,
   SettingsSection,
 } from '../../components/setting/SettingsScreenLayout';
-import { ThemedButton, ThemedText } from '../../components/themed';
+import { ThemedButton, ThemedSwitch, ThemedText } from '../../components/themed';
+import { ProBadge } from '../../components/subscription/ProBadge';
+import { PaywallSheet } from '../../components/subscription/PaywallSheet';
+import { useSubscription } from '../../context/SubscriptionContext';
+import { isAutoSyncEnabled, setAutoSyncEnabled } from '../../libs/services/sync/auto-sync';
 import { useT } from '../../libs/i18n';
 import { authService } from '../../libs/services/auth/auth-service';
 import { PLATFORM_CONFIGS, type PlatformType } from '../../libs/services/auth/types';
@@ -47,6 +51,9 @@ export default function SyncHubScreen() {
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
   const [results, setResults] = useState<PlatformCheckResult[] | null>(null);
+  const { isPro } = useSubscription();
+  const [autoSync, setAutoSync] = useState(isAutoSyncEnabled);
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ errors: string[]; conflicts: number } | null>(
     null
@@ -230,6 +237,28 @@ export default function SyncHubScreen() {
           </ThemedText>
         )}
       </View>
+      <SettingsSection>
+        <SettingsRow
+          icon="autorenew"
+          label={t('settings.syncHubScreen.autoSync')}
+          onPress={isPro ? undefined : () => setPaywallVisible(true)}
+          rightSlot={
+            isPro ? (
+              <ThemedSwitch
+                accessibilityLabel={t('settings.syncHubScreen.autoSync')}
+                value={autoSync}
+                onValueChange={(next) => {
+                  setAutoSyncEnabled(next);
+                  setAutoSync(next);
+                }}
+              />
+            ) : (
+              <ProBadge locked />
+            )
+          }
+        />
+      </SettingsSection>
+      <PaywallSheet visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
       <View
         style={[
           styles.card,

@@ -14,10 +14,13 @@
 import { useSyncExternalStore } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Anime } from '../../components/rate/types';
+import { getAppLanguageSync } from '../../libs/i18n/app-language';
+import { resolveDisplayTitleSync } from '../../libs/i18n/use-display-title';
 import {
   getCachedNotificationPrefs,
   loadNotificationPrefs,
   notificationService,
+  saveNotificationPrefs,
 } from '../../libs/services/notifications/notification-service';
 
 const DEFAULT_LEAD_TIME_MINUTES = 15;
@@ -115,8 +118,13 @@ class AnimeNotificationService {
    * Schedule a reminder for an anime's next airing episode.
    * Returns the notification identifier, or null when no future air time is known.
    */
-  async scheduleAnimeNotification(anime: Anime): Promise<string | null> {
+  async scheduleAnimeNotification(
+    anime: Anime,
+    options: { auto?: boolean } = {}
+  ): Promise<string | null> {
     await this.init();
+    // Tapping the bell on again lifts the mute the auto pass respects.
+    if (!options.auto) this.setAutoMuted(anime.id, false);
 
     const prefs = getCachedNotificationPrefs();
     if (!prefs.episodeReminders) return null;
@@ -139,7 +147,8 @@ class AnimeNotificationService {
 
     const id = await notificationService.scheduleEpisodeReminder(
       anime.id,
-      anime.title,
+      // The title language the user picked, like everywhere else in the app.
+      resolveDisplayTitleSync(anime, getAppLanguageSync()),
       airDate,
       leadTimeMinutes
     );
@@ -150,11 +159,37 @@ class AnimeNotificationService {
     return id;
   }
 
+  /** The user turning a bell off also tells the Pro auto pass to leave that show alone. */
   async cancelAnimeNotification(animeId: string): Promise<void> {
     await this.init();
+    this.setAutoMuted(animeId, true);
     await notificationService.cancelByRef('episode_reminder', animeId);
     const removed = this.notifications.delete(animeId);
     if (removed) this.notify();
+  }
+
+  /**
+   * Cancel one pending notification picked from a list. An episode reminder
+   * goes through `cancelAnimeNotification`, so the auto pass won't re-add it.
+   */
+  async cancelByIdentifier(identifier: string): Promise<void> {
+    await this.init();
+    for (const [animeId, id] of this.notifications) {
+      if (id === identifier) return this.cancelAnimeNotification(animeId);
+    }
+    await Notifications.cancelScheduledNotificationAsync(identifier);
+  }
+
+  private setAutoMuted(animeId: string, muted: boolean): void {
+    const prefs = getCachedNotificationPrefs();
+    const has = prefs.autoMutedAnimeIds.includes(animeId);
+    if (has === muted) return;
+    saveNotificationPrefs({
+      ...prefs,
+      autoMutedAnimeIds: muted
+        ? [...prefs.autoMutedAnimeIds, animeId]
+        : prefs.autoMutedAnimeIds.filter((id) => id !== animeId),
+    });
   }
 
   async cancelAllNotifications(): Promise<void> {

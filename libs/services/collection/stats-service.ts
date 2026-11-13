@@ -2,6 +2,20 @@ import { LocalDB } from '../../db';
 
 const MINUTES_PER_EPISODE = 24;
 
+/**
+ * `user_anime.score` is stored 0–100 (see tracking-service). Every stat speaks
+ * the 10-point scale the rest of the app shows, so convert at this seam.
+ */
+export function scoreOutOfTen(raw: number | null | undefined): number | null {
+  return typeof raw === 'number' && raw > 0 ? raw / 10 : null;
+}
+
+/** "8.5" for a stored 85; empty string when unrated. */
+export function formatScore(raw: number | null | undefined): string {
+  const score = scoreOutOfTen(raw);
+  return score === null ? '' : score.toFixed(1);
+}
+
 export interface UserAnimeRow {
   anime_id: string;
   title: string | null;
@@ -78,7 +92,8 @@ export function summarize(rows: UserAnimeRow[]): StatsSummary {
         onHold += 1;
         break;
     }
-    if (typeof r.score === 'number' && r.score > 0) scores.push(r.score);
+    const score = scoreOutOfTen(r.score);
+    if (score !== null) scores.push(score);
     const eps =
       r.status === 'completed' ? (r.total_episodes ?? r.progress ?? 0) : (r.progress ?? 0);
     episodesWatched += Math.max(0, eps);
@@ -140,6 +155,62 @@ export function yearScope(rows: UserAnimeRow[], year: number): UserAnimeRow[] {
     if (!r.completed_at) return false;
     return new Date(r.completed_at).getFullYear() === year;
   });
+}
+
+/** Years that have at least one completed show, newest first. */
+export function yearsWithCompletions(rows: UserAnimeRow[]): number[] {
+  const years = new Set<number>();
+  for (const r of rows) {
+    if (r.completed_at) years.add(new Date(r.completed_at).getFullYear());
+  }
+  return Array.from(years).sort((a, b) => b - a);
+}
+
+export interface YearRecap {
+  year: number;
+  shows: number;
+  hours: number;
+  longestStreak: number;
+  monthly: MonthlyHourBucket[];
+  topAnime: { title: string; score: number | null; episodes: number } | null;
+}
+
+export function yearRecap(rows: UserAnimeRow[], year: number): YearRecap {
+  const yearRows = yearScope(rows, year);
+  const summary = summarize(yearRows);
+  const top = summary.topScored[0];
+  return {
+    year,
+    shows: yearRows.length,
+    hours: summary.watchHoursEst,
+    longestStreak: longestStreakDays(summary.completedDates),
+    monthly: monthlyHours(rows, year),
+    topAnime: top
+      ? {
+          title: top.title ?? '',
+          score: top.score,
+          episodes: top.total_episodes ?? top.progress ?? 0,
+        }
+      : null,
+  };
+}
+
+export interface ScoreBucket {
+  /** 1–10. */
+  score: number;
+  count: number;
+}
+
+/** How many shows got each score, 1 through 10. Unrated shows are left out. */
+export function scoreDistribution(rows: UserAnimeRow[]): ScoreBucket[] {
+  const buckets: ScoreBucket[] = Array.from({ length: 10 }, (_, i) => ({ score: i + 1, count: 0 }));
+  for (const r of rows) {
+    const score = scoreOutOfTen(r.score);
+    if (score === null) continue;
+    const index = Math.min(10, Math.max(1, Math.round(score))) - 1;
+    buckets[index].count += 1;
+  }
+  return buckets;
 }
 
 export function longestStreakDays(timestamps: number[]): number {

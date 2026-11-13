@@ -16,10 +16,10 @@ export type ShortcutId =
   | 'account'
   | 'achievements'
   | 'import'
-  | 'attribution'
-  | 'terms'
-  | 'theme-preview'
-  | 'design-tokens'
+  | 'backup'
+  | 'watch-platforms'
+  | 'trending'
+  | 'year-in-review'
   | 'characters';
 
 export interface ShortcutSpec {
@@ -76,7 +76,7 @@ const SHORTCUT_CATALOG: Record<ShortcutId, ShortcutSpec> = {
     id: 'otaku-dna',
     labelKey: 'profile.shortcut.otakuDna',
     icon: 'finger-print-outline',
-    route: '/(setting)/otaku-dna',
+    route: '/stats',
   },
   account: {
     id: 'account',
@@ -93,32 +93,32 @@ const SHORTCUT_CATALOG: Record<ShortcutId, ShortcutSpec> = {
   import: {
     id: 'import',
     labelKey: 'profile.shortcut.import',
-    icon: 'cloud-upload-outline',
+    icon: 'download-outline',
     route: '/(setting)/import-wizard',
   },
-  attribution: {
-    id: 'attribution',
-    labelKey: 'profile.shortcut.credits',
-    icon: 'ribbon-outline',
-    route: '/(setting)/attribution',
+  backup: {
+    id: 'backup',
+    labelKey: 'settings.backupShort',
+    icon: 'cloud-upload-outline',
+    route: '/(setting)/backup',
   },
-  terms: {
-    id: 'terms',
-    labelKey: 'profile.shortcut.terms',
-    icon: 'document-text-outline',
-    route: '/(setting)/terms',
+  'watch-platforms': {
+    id: 'watch-platforms',
+    labelKey: 'settings.watchPlatforms',
+    icon: 'play-circle-outline',
+    route: '/(setting)/watch-platforms',
   },
-  'theme-preview': {
-    id: 'theme-preview',
-    labelKey: 'profile.shortcut.preview',
-    icon: 'eye-outline',
-    route: '/(setting)/theme-preview',
+  trending: {
+    id: 'trending',
+    labelKey: 'settingsUi.trending',
+    icon: 'trending-up-outline',
+    route: '/trending',
   },
-  'design-tokens': {
-    id: 'design-tokens',
-    labelKey: 'profile.shortcut.tokens',
-    icon: 'cube-outline',
-    route: '/(setting)/design-tokens',
+  'year-in-review': {
+    id: 'year-in-review',
+    labelKey: 'collectionUi.yearInReview',
+    icon: 'book-outline',
+    route: '/stats/year-in-review',
   },
   characters: {
     id: 'characters',
@@ -128,17 +128,30 @@ const SHORTCUT_CATALOG: Record<ShortcutId, ShortcutSpec> = {
   },
 };
 
-export const PROFILE_SHORTCUT_COUNT = 8;
+/** Slots stored for everyone, so a Premium layout survives a lapsed subscription. */
+export const PROFILE_SHORTCUT_COUNT = 12;
+/** Slots shown without Premium: the first two rows. */
+export const FREE_PROFILE_SHORTCUT_COUNT = 8;
 
+export function visibleShortcutCount(isPro: boolean): number {
+  return isPro ? PROFILE_SHORTCUT_COUNT : FREE_PROFILE_SHORTCUT_COUNT;
+}
+
+// Features first: legal and developer pages live in Settings, not here.
+// The last four are the Premium third row.
 export const DEFAULT_PROFILE_SHORTCUTS: ShortcutId[] = [
-  'notifications',
-  'language',
-  'privacy',
-  'cache',
-  'appearance',
-  'sync-hub',
-  'data-source',
   'otaku-dna',
+  'achievements',
+  'account',
+  'sync-hub',
+  'import',
+  'characters',
+  'notifications',
+  'appearance',
+  'trending',
+  'year-in-review',
+  'backup',
+  'watch-platforms',
 ];
 
 export function getShortcutSpec(id: string): ShortcutSpec | null {

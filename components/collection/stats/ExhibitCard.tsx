@@ -1,92 +1,80 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../../../context/ThemeContext';
 import { Radius, Spacing } from '../../../constants/DesignSystem';
-import { ThemedText, readableTextOn } from '../../themed';
+import { Halftone, ThemedSurface, ThemedText } from '../../themed';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 
 export interface ExhibitCardProps {
   title: string;
   subtitle: string;
   icon: React.ComponentProps<typeof MaterialIcons>['name'];
-  gradientFrom: string;
-  gradientTo: string;
+  /** Full-width lead card; the rest sit two to a row. */
   featured?: boolean;
   onPress: () => void;
 }
 
-export function ExhibitCard({
-  title,
-  subtitle,
-  icon,
-  gradientFrom,
-  gradientTo,
-  featured,
-  onPress,
-}: ExhibitCardProps) {
+export function ExhibitCard({ title, subtitle, icon, featured, onPress }: ExhibitCardProps) {
   const { theme } = useTheme();
-  const onAccent = readableTextOn(gradientFrom);
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityHint={subtitle}
       onPress={() => {
         hapticsBridge.tap();
         onPress();
       }}
-      style={({ pressed }) => [styles.wrap, { opacity: pressed ? 0.85 : 1 }]}>
-      <LinearGradient
-        colors={[gradientFrom, gradientTo]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          styles.card,
-          featured ? styles.featured : null,
-          { borderColor: theme.glassBorder },
-        ]}>
-        <View style={[styles.iconWrap, { backgroundColor: `${onAccent}26` }]}>
-          <MaterialIcons name={icon} size={featured ? 26 : 22} color={onAccent} />
+      style={({ pressed }) => [
+        featured ? styles.featuredWrap : styles.wrap,
+        pressed && styles.pressed,
+      ]}>
+      <ThemedSurface style={[styles.card, featured && styles.featured]}>
+        {featured ? <Halftone color={theme.accent} /> : null}
+        <View style={[styles.iconWrap, { backgroundColor: theme.background.tertiary }]}>
+          <MaterialIcons name={icon} size={22} color={theme.accent} />
         </View>
         <View style={styles.text}>
-          <ThemedText
-            variant={featured ? 'titleLarge' : 'titleMedium'}
-            weight="700"
-            style={{ color: onAccent }}>
+          <ThemedText variant={featured ? 'titleLarge' : 'titleMedium'} weight="700">
             {title}
           </ThemedText>
-          <ThemedText variant="bodySmall" style={{ color: `${onAccent}CC` }} numberOfLines={2}>
+          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={2}>
             {subtitle}
           </ThemedText>
         </View>
-        <MaterialIcons name="chevron-right" size={20} color={onAccent} />
-      </LinearGradient>
+        {featured ? (
+          <MaterialIcons name="chevron-right" size={22} color={theme.text.tertiary} />
+        ) : null}
+      </ThemedSurface>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1 },
+  wrap: { width: '48.5%' },
+  featuredWrap: { width: '100%' },
+  pressed: { opacity: 0.85 },
   card: {
-    borderRadius: Radius.card,
-    borderWidth: 1,
+    flex: 1,
     padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: Spacing.sm,
-    minHeight: 76,
+    minHeight: 124,
   },
   featured: {
-    minHeight: 110,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 88,
   },
   iconWrap: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     flex: 1,
-    gap: 2,
+    gap: Spacing.xxs,
   },
 });
