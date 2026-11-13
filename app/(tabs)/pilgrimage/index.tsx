@@ -24,6 +24,7 @@ import {
 import { ExplorerDiscoverSection } from '../../../components/pilgrimage/home/ExplorerDiscoverSection';
 import { HomeSearchField } from '../../../components/common/HomeSearchField';
 import { TrackShortcut } from '../../../components/pilgrimage/track/TrackEntry';
+import { WALK_RECORDING_SUPPORTED } from '../../../libs/services/pilgrimage/track/track-recorder';
 import { hapticsBridge } from '../../../modules/haptics/hapticsBridge';
 import { pilgrimageRepository } from '../../../libs/services/pilgrimage/pilgrimage-repository';
 import type { NearbySpotHit } from '../../../libs/services/pilgrimage/spot-index';
@@ -84,25 +85,29 @@ function ExplorerHomeList({
           label={t('tabs.pilgrimageHome.search')}
           onPress={() => router.push({ pathname: '/search', params: { context: 'pilgrimage' } })}
         />
-        <View style={styles.shortcuts}>
-          <TrackShortcut />
-          {!visibleTabs.includes('explorerCamera') ? (
-            <ThemedButton
-              size="sm"
-              variant="secondary"
-              label={t('tabs.explorerCamera')}
-              onPress={() => router.push('/pilgrimage/capture')}
-            />
-          ) : null}
-          {!visibleTabs.includes('explorerJournal') ? (
-            <ThemedButton
-              size="sm"
-              variant="secondary"
-              label={t('tabs.explorerJournal')}
-              onPress={() => router.push('/pilgrimage/album')}
-            />
-          ) : null}
-        </View>
+        {WALK_RECORDING_SUPPORTED ||
+        !visibleTabs.includes('explorerCamera') ||
+        !visibleTabs.includes('explorerJournal') ? (
+          <View style={styles.shortcuts}>
+            <TrackShortcut />
+            {!visibleTabs.includes('explorerCamera') ? (
+              <ThemedButton
+                size="sm"
+                variant="secondary"
+                label={t('tabs.explorerCamera')}
+                onPress={() => router.push('/pilgrimage/capture')}
+              />
+            ) : null}
+            {!visibleTabs.includes('explorerJournal') ? (
+              <ThemedButton
+                size="sm"
+                variant="secondary"
+                label={t('tabs.explorerJournal')}
+                onPress={() => router.push('/pilgrimage/album')}
+              />
+            ) : null}
+          </View>
+        ) : null}
         <View style={styles.section}>
           {/* The map is the entry: real nearby pins, or Japan plus one
               "enable location" action when we don't know where the user is. */}

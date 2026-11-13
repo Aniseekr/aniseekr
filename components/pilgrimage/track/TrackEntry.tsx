@@ -9,6 +9,7 @@ import { readableTextOn, ThemedButton } from '@/components/themed';
 import { useTheme } from '@/context/ThemeContext';
 import { useActiveTrack } from '@/hooks/useTrackRecording';
 import { useT } from '@/libs/i18n';
+import { WALK_RECORDING_SUPPORTED } from '@/libs/services/pilgrimage/track/track-recorder';
 
 /** Home shortcut: "Start a walk", or the live status while one is recording. */
 export function TrackShortcut() {
@@ -16,6 +17,7 @@ export function TrackShortcut() {
   const router = useRouter();
   const { theme } = useTheme();
   const active = useActiveTrack();
+  if (!WALK_RECORDING_SUPPORTED) return null;
   const label = active
     ? `${t(active.status === 'paused' ? 'pilgrimage.track.paused' : 'pilgrimage.track.recording')} · ${formatDistanceKm(active.meters / 1000)}`
     : t('pilgrimage.track.entry');
@@ -42,6 +44,7 @@ export function TrackHeaderButton({ tint }: { tint: string }) {
   const router = useRouter();
   const { theme } = useTheme();
   const active = useActiveTrack();
+  if (!WALK_RECORDING_SUPPORTED) return null;
   return (
     <RoundHeaderButton
       icon={active ? 'walk' : 'walk-outline'}

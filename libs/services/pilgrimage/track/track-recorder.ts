@@ -40,6 +40,15 @@ import {
   type TrackSpotEvent,
 } from './track-store';
 
+/**
+ * Recording a walk is iOS-only for now. On Android it needs a location
+ * foreground service, which Google Play only accepts with a filed declaration
+ * and a demo video; the app ships without that permission until then
+ * (`isAndroidForegroundServiceEnabled` in app.json). Saved walks from a
+ * restored backup still open on Android.
+ */
+export const WALK_RECORDING_SUPPORTED = Platform.OS === 'ios';
+
 export const TRACK_TASK = 'aniseekr-pilgrimage-track';
 /** A forgotten recording ends by itself. */
 export const TRACK_MAX_DURATION_MS = 12 * 60 * 60 * 1000;
@@ -292,6 +301,7 @@ export type StartResult = 'started' | 'already' | 'denied' | 'failed';
 
 /** Call from a tap (the app must be in front). Asks for while-in-use location if it can. */
 export async function startRecording(): Promise<StartResult> {
+  if (!WALK_RECORDING_SUPPORTED) return 'failed';
   if (loadActiveTrackSync()) return 'already';
   try {
     let permission = await Location.getForegroundPermissionsAsync();
