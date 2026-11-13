@@ -29,7 +29,7 @@
     "web": "expo start --web",
     "build:android": "bunx eas build --platform android --profile production",
     "build:android:local": "bunx eas build --platform android --profile production --local",
-    "build:ios:local": "bunx eas build --platform ios --profile production --local",
+    "build:ios:local": "EAS_LOCAL_BUILD_WORKINGDIR=$HOME/.eas-local-build/ios-$(date +%s) bunx eas build --platform ios --profile production --local",
     "submit:android": "./scripts/android-submit.sh",
     "gcp:bootstrap": "./scripts/gcp-bootstrap.sh",
     "gcp:rotate-key": "./scripts/gcp-rotate-key.sh",
